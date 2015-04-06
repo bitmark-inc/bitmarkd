@@ -1,0 +1,69 @@
+# bitmarkd.conf
+# -------------
+
+TestMode = true
+
+# Client RPC
+# ----------
+
+RpcClients = 6
+RpcListen = 0.0.0.0:2130
+#RpcListen = [::1]:2131
+
+# need to set up portforwarding on firewall and add appropriate address:port here
+#RpcAnnounce = ext-ip:ext-port
+
+RpcCert = bitmarkd-local-rpc.crt
+RpcKey = bitmarkd-local-rpc.key
+
+
+# Peering
+# -------
+
+PublicKey = bitmarkd-local.public
+PrivateKey = bitmarkd-local.private
+
+Peers = 50
+PeerListen = 0.0.0.0:2135
+#PeerListen = [::]:2136
+
+
+# Remote connections
+# ------------------
+
+#RemoteConnect =  'hR}n^Uv:4b3!zI<jfgg6Wrhhy.ssgk2S/s+t%rQE', 127.0.0.1:3135
+#RemoteConnect = '????',127.0.0.1:3235
+
+
+# Miner RPC
+# ---------
+
+Mines = 10
+MineListen = 0.0.0.0:2140
+#MineListen = [::]:2141
+MineCert = bitmarkd-local-mine.crt
+MineKey = bitmarkd-local-mine.key
+
+
+# Bitcoin access
+# --------------
+
+BitcoinUsername = local-btcusername
+BitcoinPassword = local-btcpassword
+BitcoinURL = http://127.0.0.1:18333
+BitcoinStart = 1
+BitcoinAddress = some-test-net-address
+
+# Log levels
+# ----------
+
+debug = rpc:info
+debug = peer:info
+debug = config:info
+debug = main:info
+debug = bitcoin:info
+debug = payment:info
+debug = bilateral:info
+
+debug = *:info
+#debug = *:debug
