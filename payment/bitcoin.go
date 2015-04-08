@@ -53,7 +53,7 @@ type bitcoinData struct {
 
 	// payment info
 	minerAddress      string
-	fee               float64
+	fee               uint64 // value in Satoshis avoid float because of rounding errors
 	latestBlockNumber uint64
 
 	// for garbage collection
@@ -79,7 +79,9 @@ var bitcoinProcesses = background.Processes{
 
 // initialise for bitcoin payments
 // also calls the internal initialisePayment() and register()
-func BitcoinInitialise(url string, username string, password string, minerAddress string, fee float64, start uint64) error {
+//
+// Note fee is a string value and is converted to Satoshis to avoid rounding errors
+func BitcoinInitialise(url string, username string, password string, minerAddress string, fee string, start uint64) error {
 
 	// ensure payments are initialised
 	if err := paymentInitialise(); nil != err {
@@ -109,7 +111,7 @@ func BitcoinInitialise(url string, username string, password string, minerAddres
 	globalBitcoinData.password = password
 	globalBitcoinData.url = url
 	globalBitcoinData.minerAddress = minerAddress
-	globalBitcoinData.fee = fee
+	globalBitcoinData.fee = convertToSatoshi([]byte(fee))
 	globalBitcoinData.latestBlockNumber = 0
 	globalBitcoinData.expire = make(map[uint64][]transaction.Link, bitcoinBlockRange)
 
@@ -186,7 +188,7 @@ type bitcoinScriptPubKey struct {
 }
 
 type bitcoinVout struct {
-	Value        float64             `json:"value"`
+	Value        json.RawMessage     `json:"value"`
 	ScriptPubKey bitcoinScriptPubKey `json:"scriptPubKey"`
 }
 
@@ -297,13 +299,13 @@ func bitcoinValidateTransaction(tx *bitcoinTransaction) ([]transaction.Link, []s
 
 	minerAddresses := make([]string, 0, transactionCount)
 
-	total := float64(0.0)
+	total := uint64(0)
 
 	for i, vout := range tx.Vout {
 		globalBitcoinData.log.Debugf("vout[%d]: %v", i, vout)
 		globalBitcoinData.log.Flush()
 
-		amount := vout.Value
+		amount := convertToSatoshi(vout.Value)
 
 		if 0 == amount && len(vout.ScriptPubKey.Hex) > 4 {
 			script := vout.ScriptPubKey.Hex
@@ -345,7 +347,7 @@ func bitcoinValidateTransaction(tx *bitcoinTransaction) ([]transaction.Link, []s
 	}
 
 	// check sufficient fee
-	expectedFee := globalBitcoinData.fee * float64(idIndex)
+	expectedFee := globalBitcoinData.fee * uint64(idIndex)
 	feeOk := total >= expectedFee
 
 	globalBitcoinData.log.Debugf("total:  BTC %17.8f  expected:  BTC %17.8f  ok: %v", total, expectedFee, feeOk)
@@ -617,4 +619,38 @@ func bitcoinLatestBlockNumber() uint64 {
 	}
 
 	return globalBitcoinData.latestBlockNumber
+}
+
+// convert a string to a Satoshi value
+//
+// i.e. "0.00000001" will convert to uint64(1)
+//
+// Note: Invalid characters are simply ignored and the conversion
+//       simply stops after 8 decimal places have been processed.
+//       Extra decimal points will also be ignored.
+func convertToSatoshi(btc []byte) uint64 {
+
+	s := uint64(0)
+	point := false
+	decimals := 0
+	for _, b := range btc {
+		if b >= '0' && b <= '9' {
+			s *= 10
+			s += uint64(b - '0')
+			if point {
+				decimals += 1
+				if decimals >= 8 {
+					break
+				}
+			}
+		} else if '.' == b {
+			point = true
+		}
+	}
+	for decimals < 8 {
+		s *= 10
+		decimals += 1
+	}
+
+	return s
 }

@@ -308,7 +308,7 @@ func main() {
 	}
 
 	// start up the peering
-	err = peer.Initialise(options.PeerListeners, publicKey, privateKey)
+	err = peer.Initialise(options.PeerListeners, mode.NetworkName(), publicKey, privateKey)
 	if nil != err {
 		log.Criticalf("failed to initialise peer  error: %v", err)
 		exitwithstatus.Exit(1)

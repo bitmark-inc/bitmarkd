@@ -124,7 +124,7 @@ type CommandOptions struct {
 	BitcoinPassword string  `long:"BitcoinPassword" description:"Password for Bitcoin RPC access"`
 	BitcoinURL      string  `long:"BitcoinURL" description:"URL for Bitcoin RPC access"`
 	BitcoinAddress  string  `long:"BitcoinAddress" description:"Bitcoin Address for miner"`
-	BitcoinFee      float64 `long:"BitcoinFee" description:"Bitcoin fee per transaction"`
+	BitcoinFee      string  `long:"BitcoinFee" description:"Bitcoin fee per transaction in BTC (e.g. 0.0002)"`
 	BitcoinStart    uint64  `long:"BitcoinStart" description:"Bitcoin start block for transaction dectection"`
 
 	Args struct {
