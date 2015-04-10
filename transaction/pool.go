@@ -7,6 +7,7 @@ package transaction
 import (
 	"bytes"
 	"encoding/binary"
+	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/pool"
 	"github.com/bitmark-inc/logger"
@@ -70,6 +71,41 @@ func Initialise(cacheSize int) {
 
 	startIndex := []byte{}
 
+	// make sure mined status is correct
+	lastBlock := block.Number()
+	stateBuffer := make([]byte, 9)
+	stateBuffer[0] = byte(MinedTransaction)
+
+	abort := false
+	for n := uint64(2); n < lastBlock; n += 1 {
+		transactionPool.log.Debugf("set mined from block: %d", n)
+		packed, found := block.Get(n)
+		if !found {
+			fault.Criticalf("transaction block recovery failed, missing block: %d", n)
+			fault.Panic("transaction block recovery failed")
+		}
+		var blk block.Block
+		err := packed.Unpack(&blk)
+		fault.PanicIfError("transaction block recovery failed, block unpack", err)
+
+		// rewrite as mined
+		for _, txId := range blk.TxIds {
+			indexBuffer := Link(txId).Bytes()
+			if _, found := transactionPool.dataPool.Get(indexBuffer); found {
+				transactionPool.statePool.Add(indexBuffer, stateBuffer)
+			} else {
+				transactionPool.log.Criticalf("missing tx: %#v", Link(txId))
+				fault.Criticalf("missing tx: %#v", Link(txId))
+				abort = true
+			}
+		}
+	}
+	if abort {
+		fault.Critical("Would panic in this case") // ***** REMOVE THIS *****
+		//fault.Panic("missing transactions")
+	}
+
+	// rebuild indexes
 loop:
 	for {
 		// read blocks of records
@@ -96,7 +132,7 @@ loop:
 			txId := e.Key
 			indexBuffer := e.Value[1:]
 
-			transactionPool.log.Infof("rebuild: %q %x", theState, txId)
+			transactionPool.log.Debugf("rebuild: %q %x", theState, txId)
 
 			switch theState {
 
@@ -188,7 +224,7 @@ func (data Packed) Write() (Link, bool) {
 			// must link to an Asset
 			previous, found := transactionPool.assetPool.Get(assetIndex)
 			if !found {
-				fault.PanicWithError("transaction.write", fault.ErrLinkNotFound)
+				fault.PanicWithError("transaction.write (no asset)", fault.ErrLinkNotFound)
 			}
 
 			// split the record
@@ -199,14 +235,14 @@ func (data Packed) Write() (Link, bool) {
 			// determine if asset is in waiting state
 			assetState, found := transactionPool.statePool.Get(assetDataLink)
 			if !found {
-				fault.PanicWithError("transaction.write", fault.ErrLinkNotFound)
+				fault.PanicWithError("transaction.write (no asset state)", fault.ErrLinkNotFound)
 			}
 
 			// if waiting update timestamp and write back
 			if WaitingIssueTransaction == State(assetState[0]) {
 				data, found := transactionPool.unpaidPool.Get(assetState[1:])
 				if !found {
-					fault.PanicWithError("transaction.write", fault.ErrLinkNotFound)
+					fault.PanicWithError("transaction.write (waiting)", fault.ErrLinkNotFound)
 				}
 
 				binary.BigEndian.PutUint64(data[LinkSize:], timestamp)

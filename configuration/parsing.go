@@ -120,12 +120,12 @@ type CommandOptions struct {
 	LogRotateCount int    `long:"LogRotateCount" description:"Maximum number of rotations to keep"`
 
 	// Bitcoin access
-	BitcoinUsername string  `long:"BitcoinUsername" description:"Username for Bitcoin RPC access"`
-	BitcoinPassword string  `long:"BitcoinPassword" description:"Password for Bitcoin RPC access"`
-	BitcoinURL      string  `long:"BitcoinURL" description:"URL for Bitcoin RPC access"`
-	BitcoinAddress  string  `long:"BitcoinAddress" description:"Bitcoin Address for miner"`
-	BitcoinFee      string  `long:"BitcoinFee" description:"Bitcoin fee per transaction in BTC (e.g. 0.0002)"`
-	BitcoinStart    uint64  `long:"BitcoinStart" description:"Bitcoin start block for transaction dectection"`
+	BitcoinUsername string `long:"BitcoinUsername" description:"Username for Bitcoin RPC access"`
+	BitcoinPassword string `long:"BitcoinPassword" description:"Password for Bitcoin RPC access"`
+	BitcoinURL      string `long:"BitcoinURL" description:"URL for Bitcoin RPC access"`
+	BitcoinAddress  string `long:"BitcoinAddress" description:"Bitcoin Address for miner"`
+	BitcoinFee      string `long:"BitcoinFee" description:"Bitcoin fee per transaction in BTC (e.g. 0.0002)"`
+	BitcoinStart    uint64 `long:"BitcoinStart" description:"Bitcoin start block for transaction dectection"`
 
 	Args struct {
 		Command   string   `name:"command" description:"Command: use 'help' to show list of commands"`

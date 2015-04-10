@@ -43,7 +43,7 @@ type thread struct {
 var globalData peerData
 
 // start up the peer communications system
-func Initialise(addresses []string, publicKey string, privateKey string) error {
+func Initialise(addresses []string, networkName string, publicKey string, privateKey string) error {
 
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -75,7 +75,7 @@ func Initialise(addresses []string, publicKey string, privateKey string) error {
 	}
 
 	// create the server
-	globalData.server = bilateralrpc.NewBilateral(publicKey, privateKey)
+	globalData.server = bilateralrpc.NewEncrypted(networkName, publicKey, privateKey)
 
 	// listen on a port
 	for _, address := range addresses {

@@ -116,7 +116,7 @@ decode:
 
 	case block.Mined: // block created by local miner thread
 		packedBlock := item.(block.Mined)
-		log.Infof("incoming block.Mined = %x...", packedBlock[:32])  // only shows first 32 bytes
+		log.Infof("incoming block.Mined = %x...", packedBlock[:32]) // only shows first 32 bytes
 
 		// our block, so send right away
 		blockArguments := BlockPutArguments{

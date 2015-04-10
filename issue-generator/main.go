@@ -191,7 +191,7 @@ func main() {
 	if rateLimit > 1.0 {
 		itemsPerCall = int(math.Ceil(rateLimit))
 	} else {
-		delay = time.Duration(1000.0 / rateLimit) * time.Millisecond
+		delay = time.Duration(1000.0/rateLimit) * time.Millisecond
 	}
 	if delay <= 0 {
 		delay = time.Millisecond
@@ -243,7 +243,7 @@ func doIssues(client *netrpc.Client, assetIndex *transaction.AssetIndex, issueCo
 	nonce := time.Now().UTC().Unix() * 1000
 	issues := make([]*transaction.BitmarkIssue, issueCount)
 	for i := 0; i < len(issues); i += 1 {
-		issues[i] = makeIssue(assetIndex, uint64(nonce) + uint64(i))
+		issues[i] = makeIssue(assetIndex, uint64(nonce)+uint64(i))
 	}
 
 	if verbose {

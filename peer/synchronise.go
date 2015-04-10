@@ -18,10 +18,10 @@ type BlockGetResult struct {
 }
 
 const (
-	retryCount     = 5   // attempts to retrieve block befor failing
-	blockRateLimit = 5.0 // maximum blocks per second to fetch
-	txRateLimit    = 5.0 // maximum transactions per second to put/get
-	txBatchSize    = 5   // number of transactions to fetch from database per loop
+	retryCount     = 5    // attempts to retrieve block befor failing
+	blockRateLimit = 5.0  // maximum blocks per second to fetch
+	txRateLimit    = 15.0 // maximum transactions per second to put/get
+	txBatchSize    = 10   // number of transactions to fetch from database per loop
 )
 
 // resync process
@@ -94,7 +94,8 @@ loop:
 			break loop
 		}
 
-		log.Debugf("result: %#v", result)
+		// this outputs a lot of data…
+		log.Tracef("result: %v", result)
 
 		// validate
 		packedBlock := block.Packed(result[0].Reply.Data)

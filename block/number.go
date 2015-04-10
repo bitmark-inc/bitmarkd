@@ -7,7 +7,6 @@ package block
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
@@ -90,7 +89,7 @@ func Initialise(cacheSize int) {
 
 	// recover block number
 	bn := binary.BigEndian.Uint64(last.Key)
-	fmt.Printf("Highest block on file: %d\n", bn)
+	globalBlock.log.Infof("Highest block on file: %d\n", bn)
 
 	// recover previous block digest
 	var blk Block

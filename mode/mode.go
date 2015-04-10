@@ -107,3 +107,14 @@ func IsTesting() bool {
 	defer globals.RUnlock()
 	return globals.testing
 }
+
+// name of the current network
+func NetworkName() string {
+	globals.RLock()
+	defer globals.RUnlock()
+	if globals.testing {
+		return "TEST"
+	} else {
+		return "LIVE"
+	}
+}

@@ -75,12 +75,7 @@ type InfoReply struct {
 
 func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 
-	if mode.IsTesting() {
-		reply.Network = "TEST"
-	} else {
-		reply.Network = "LIVE"
-	}
-
+	reply.Network = mode.NetworkName()
 	reply.Blocks = block.Number() - 1
 
 	return nil

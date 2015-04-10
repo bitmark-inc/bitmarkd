@@ -26,8 +26,8 @@ const (
 	bitcoinPollingTime    = 2 * time.Minute // sample bitcoin "blockcount" RPC at this interval
 	bitcoinMaximumRetries = 10              // panic after this many consecutive errors
 	bitcoinCurrencyName   = "bitcoin"       // all lowercase currency string
-	bitcoinBlockRange     = 100             // number of blocks to consider as relevant
-	bitcoinConfirmations  = 3               // stop processing this many block back from most recent block
+	bitcoinBlockRange     = 200             // number of blocks to consider as relevant
+	bitcoinConfirmations  = 3               // stop processing this many blocks back from most recent block
 
 	// this is how far back in the bitcoin block chain to star when process begins
 	bitcoinBlockOffset = bitcoinBlockRange + bitcoinConfirmations
@@ -340,7 +340,7 @@ func bitcoinValidateTransaction(tx *bitcoinTransaction) ([]transaction.Link, []s
 		// currently just allow my own address as valid
 		//if isMinerAddress(bitcoinCurrencyName, theAddress) {
 		if isMinerAddress(bitcoinCurrencyName, theAddress) || bitcoinAddress() == theAddress {
-			globalBitcoinData.log.Debugf("vout[%d]: address: %s -> BTC %17.8f", i, theAddress, amount)
+			globalBitcoinData.log.Debugf("vout[%d]: address: %s -> BTC %d", i, theAddress, amount)
 			minerAddresses = append(minerAddresses, theAddress)
 			total += amount
 		}
@@ -350,7 +350,7 @@ func bitcoinValidateTransaction(tx *bitcoinTransaction) ([]transaction.Link, []s
 	expectedFee := globalBitcoinData.fee * uint64(idIndex)
 	feeOk := total >= expectedFee
 
-	globalBitcoinData.log.Debugf("total:  BTC %17.8f  expected:  BTC %17.8f  ok: %v", total, expectedFee, feeOk)
+	globalBitcoinData.log.Debugf("total:  BTC %d  expected:  BTC %d  ok: %v", total, expectedFee, feeOk)
 
 	return txIds[0:idIndex], minerAddresses, feeOk
 
