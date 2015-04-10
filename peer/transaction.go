@@ -57,8 +57,10 @@ type TransactionGetReply struct {
 func (t *Transaction) Get(arguments *TransactionGetArguments, reply *TransactionGetReply) error {
 	state, data, found := arguments.TxId.Read()
 	if !found {
+		t.log.Warnf("Get: does not exist: txId: %#v", arguments.TxId)
 		return fault.ErrLinkNotFound
 	}
+	t.log.Infof("Get: state: %v  data: %x  txId: %#v", state, data[:8], arguments.TxId)
 	reply.State = state
 	reply.Data = data
 	return nil

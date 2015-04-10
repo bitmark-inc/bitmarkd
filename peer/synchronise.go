@@ -131,31 +131,14 @@ loop:
 			continue loop
 		}
 
-		if !t.fetchAssociatedTransactions(server, &blk, to) {
+		// get transactions and mark as mined
+		if !t.fetchAndMarkAssociatedTransactions(server, &blk, to) {
 			log.Errorf("missed some transactions from: %q", to)
 			continue loop
 		}
 
 		// save block
 		packedBlock.Save(n, &blk.Digest)
-
-		// flag all as mined
-		for _, txDigest := range blk.TxIds {
-			txid := transaction.Link(txDigest)
-			state, found := txid.State()
-			if !found {
-				log.Errorf("missing transaction: %#v", txid)
-				success = false
-				continue loop
-			}
-			// ***** FIX THIS: possibly need better transaction state machine *****
-			if transaction.WaitingIssueTransaction == state {
-				txid.SetState(transaction.MinedTransaction)
-			} else if transaction.MinedTransaction != state {
-				txid.SetState(transaction.AvailableTransaction)
-				txid.SetState(transaction.MinedTransaction)
-			}
-		}
 
 		// success want next block
 		success = true
@@ -172,8 +155,8 @@ type TransactionGetResult struct {
 	Err   error
 }
 
-// get all transactions from a block
-func (t *thread) fetchAssociatedTransactions(server *bilateralrpc.Bilateral, blk *block.Block, addresses []string) bool {
+// get all transactions from a block and mark as mined
+func (t *thread) fetchAndMarkAssociatedTransactions(server *bilateralrpc.Bilateral, blk *block.Block, addresses []string) bool {
 
 	log := t.log
 
@@ -208,8 +191,15 @@ loop:
 		txid := transaction.Link(txDigest)
 
 		// skip transactions already on file
-		_, found := txid.State()
+		state, found := txid.State()
 		if found {
+			// ***** FIX THIS: possibly need better transaction state machine *****
+			if transaction.WaitingIssueTransaction == state {
+				txid.SetState(transaction.MinedTransaction)
+			} else if transaction.MinedTransaction != state {
+				txid.SetState(transaction.AvailableTransaction)
+				txid.SetState(transaction.MinedTransaction)
+			}
 			continue
 		}
 
@@ -253,7 +243,23 @@ loop:
 				continue fetchOne
 			}
 
-			// got a valid tx
+			// got a valid tx - flag as mined
+			state, found := txid.State()
+			if !found {
+				log.Errorf("missing transaction: %#v", txid)
+				success = false
+				continue fetchOne
+			}
+
+			// ***** FIX THIS: possibly need better transaction state machine *****
+			if transaction.WaitingIssueTransaction == state {
+				txid.SetState(transaction.MinedTransaction)
+			} else if transaction.MinedTransaction != state {
+				txid.SetState(transaction.AvailableTransaction)
+				txid.SetState(transaction.MinedTransaction)
+			}
+
+			// transaction sucessfully processed
 			success = true
 			break fetchOne
 		}

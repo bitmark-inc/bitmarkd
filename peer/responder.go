@@ -80,10 +80,7 @@ decode:
 		}
 
 		// if matching "next" block save, otherwise ignore
-		if pair.unpacked.Number == block.Number() && pair.unpacked.Header.PreviousBlock == block.PreviousLink() {
-			log.Infof("save block: %d\n", pair.unpacked.Number)
-			pair.packed.Save(pair.unpacked.Number, &pair.unpacked.Digest)
-		} else {
+		if pair.unpacked.Number != block.Number() || pair.unpacked.Header.PreviousBlock != block.PreviousLink() {
 			log.Infof("ignore non-next block: %d\n", pair.unpacked.Number)
 			// ignore blocks too far ahead or fork occured
 			// (previous digests mismatch), then rely on
@@ -93,7 +90,18 @@ decode:
 			break decode
 		}
 
-		// send to everyone else
+		// ensure have all transactions
+		active := server.ActiveConnections()
+		if !t.fetchAndMarkAssociatedTransactions(server, &pair.unpacked, active) {
+			log.Errorf("missed some transactions from: %q", active)
+			break decode  // cannot continue
+		}
+
+		// save block only if sucessfully obtained all transactions
+		log.Infof("save block: %d\n", pair.unpacked.Number)
+		pair.packed.Save(pair.unpacked.Number, &pair.unpacked.Digest)
+
+		// send to everyone else - now local data is all saved
 		blockArguments := BlockPutArguments{
 			Block: []byte(pair.packed),
 		}
@@ -109,16 +117,11 @@ decode:
 			log.Infof("Block.Put = %v", blockResult)
 		}
 
-		active := server.ActiveConnections()
-		if !t.fetchAssociatedTransactions(server, &pair.unpacked, active) {
-			log.Errorf("missed some transactions from: %q", active)
-		}
-
 	case block.Mined: // block created by local miner thread
 		packedBlock := item.(block.Mined)
 		log.Infof("incoming block.Mined = %x...", packedBlock[:32]) // only shows first 32 bytes
 
-		// our block, so send right away
+		// our block, so send right away (since we must have all tx already saved)
 		blockArguments := BlockPutArguments{
 			Block: []byte(packedBlock),
 		}
