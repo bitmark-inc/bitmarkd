@@ -32,7 +32,6 @@ import (
 // for Bitmarkd RPC connection
 const (
 	certificateFileName = "~/.config/bitmarkd/bitmarkd-local-rpc.crt"
-	rpcConnect          = "127.0.0.1:2130"
 )
 
 // a dummy signature to begin
@@ -140,6 +139,10 @@ func main() {
 		fmt.Printf("options: %#v\n", options)
 	}
 
+	if len(options.RPCAnnounce) < 1 {
+		exitwithstatus.Usage("there were no RpcAnnounce configuration values\n")
+	}
+
 	if "rate" != options.Args.Command {
 		exitwithstatus.Usage("invalid command: %s\n", options.Args.Command)
 	}
@@ -167,7 +170,8 @@ func main() {
 		exitwithstatus.Usage("Certificate file: %q not found\n", cerfificateFile)
 	}
 
-	conn := connect(cerfificateFile, options.RPCListeners[0])
+	// connnect to first announced RPC port
+	conn := connect(cerfificateFile, options.RPCAnnounce[0])
 	defer conn.Close()
 
 	client := jsonrpc.NewClient(conn)
@@ -202,6 +206,8 @@ func main() {
 	// send out until stopped
 loop:
 	for {
+		doIssues(client, assetIndex, itemsPerCall, options.Verbose)
+
 		// compute block rate
 		counter += itemsPerCall
 		t := time.Since(startTime).Seconds()
@@ -233,8 +239,6 @@ loop:
 			default:
 			}
 		}
-
-		doIssues(client, assetIndex, itemsPerCall, options.Verbose)
 	}
 }
 
