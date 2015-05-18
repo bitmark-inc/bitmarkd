@@ -9,41 +9,27 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"encoding/hex"
-	"errors"
+	//"encoding/json"
+	//"errors"
 	"fmt"
+	//"github.com/bitmark-inc/bilateralrpc/rpc"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/gnomon"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/transaction"
-	rpc "github.com/bitmark-inc/go-rpc"             // "net/rpc"
-	jsonrpc "github.com/bitmark-inc/go-rpc/jsonrpc" // "net/rpc/jsonrpc"
-	"github.com/bitmark-inc/listener"
+	//rpc "github.com/bitmark-inc/go-rpc"             // "net/rpc"
+	//jsonrpc "github.com/bitmark-inc/go-rpc/jsonrpc" // "net/rpc/jsonrpc"
+	//"github.com/bitmark-inc/listener"
 	"github.com/bitmark-inc/logger"
 	"io"
 	"sync/atomic"
 	"time"
 )
 
-// error codes
-var (
-	ErrOtherUnknown       = errors.New("20")
-	ErrJobNotFound        = errors.New("21")
-	ErrDuplicateShare     = errors.New("22")
-	ErrLowDifficultyShare = errors.New("23")
-	ErrUnauthorizedWorker = errors.New("24")
-	ErrNotSubscribed      = errors.New("25")
-)
-
 // global data
 var globalMinerCount int64
-
-// type for null arguments
-type NoArguments struct{}
-
-// for array of arguments
-type GenericArguments []interface{}
 
 // type to hold Peer
 type Mining struct {
@@ -55,12 +41,6 @@ type Mining struct {
 	//m           sync.Mutex
 	//value       int
 }
-
-// generic reply
-type Reply []interface{}
-
-// boolean reply
-type BoolReply bool
 
 // sizes for nonces
 const (
@@ -79,17 +59,25 @@ type minerRegistration struct {
 // indexed by notifyId
 var activeRegistrations map[string]minerRegistration
 
-// mining subscribe function
-func (mining *Mining) Subscribe(arguments GenericArguments, reply *Reply) error {
+// miner subscription
+// ------------------
+
+type SubscribeArguments struct {
+	DifficultyId string `arg:"0"`
+	NotifyId     string `arg:"1"`
+}
+
+type SubscribeReply []interface{}
+
+func (mining *Mining) Subscribe(arguments SubscribeArguments, reply *SubscribeReply) error {
 
 	// check if there is an existing registration
-	if len(arguments) >= 2 {
-		notifyId := arguments[1].(string)
-		if r, ok := activeRegistrations[notifyId]; ok {
-			*reply = Reply{
+	if "" != arguments.NotifyId {
+		if r, ok := activeRegistrations[arguments.NotifyId]; ok {
+			*reply = SubscribeReply{
 				[][]string{
 					{"mining.set_difficulty", r.difficultyId},
-					{"mining.notify", notifyId},
+					{"mining.notify", arguments.NotifyId},
 				},
 				r.extraNonce1,
 				extraNonce2Size,
@@ -112,7 +100,7 @@ func (mining *Mining) Subscribe(arguments GenericArguments, reply *Reply) error 
 	mining.notifyId = notifyId
 	mining.difficultyId = difficultyId
 	mining.extraNonce1 = extraNonce1
-	*reply = Reply{
+	*reply = SubscribeReply{
 		[][]string{
 			{"mining.set_difficulty", difficultyId},
 			{"mining.notify", notifyId},
@@ -123,21 +111,35 @@ func (mining *Mining) Subscribe(arguments GenericArguments, reply *Reply) error 
 	return nil
 }
 
+// miner authorisation
+// -------------------
+
+type AuthoriseArguments struct {
+	Username string `arg:"0"`
+	Password string `arg:"1"`
+}
+
 // miner log in
-func (mining *Mining) Authorize(arguments GenericArguments, reply *BoolReply) error {
-	if len(arguments) != 2 {
-		return ErrOtherUnknown
-	}
-	name := arguments[0]
-	password := arguments[1]
+func (mining *Mining) Authorize(arguments AuthoriseArguments, reply *bool) error {
 
 	// ***** FIX THIS: need a proper config setting *****
-	if name == password {
+	if arguments.Username == arguments.Password {
 		return ErrUnauthorizedWorker
 	}
 
 	*reply = true
 	return nil
+}
+
+// miner submit
+// ------------
+
+type SubmitArguments struct {
+	Username    string `arg:"0"` // miner identifier
+	JobId       string `arg:"1"` // ID of the job from notification
+	ExtraNonce2 string `arg:"2"` // ExtraNonce2 used by miner found by miner
+	Ntime       string `arg:"3"` // Current ntime
+	Nonce       string `arg:"4"` // Nonce fount by miner
 }
 
 func fromBE(s string) uint32 {
@@ -161,31 +163,25 @@ func fromAny(s string, endian binary.ByteOrder) uint32 {
 }
 
 // miner submit result
-//
-// params: [name, job_id, extranonce2, ntime, nonce]
-func (mining *Mining) Submit(arguments GenericArguments, reply *BoolReply) error {
-	if len(arguments) != 5 {
-		return ErrOtherUnknown
-	}
-	name := arguments[0]
-	jobId := stringToJobId(arguments[1].(string))
+func (mining *Mining) Submit(arguments SubmitArguments, reply *bool) error {
+
+	jobId := stringToJobId(arguments.JobId)
 
 	log := mining.log
 
 	*reply = true
 
-	extraNonce2, err := hex.DecodeString(arguments[2].(string))
+	extraNonce2, err := hex.DecodeString(arguments.ExtraNonce2)
 	if nil != err {
 		return err
 	}
 
-	ntime := fromBE(arguments[3].(string))
-	nonce := fromBE(arguments[4].(string))
+	ntime := fromBE(arguments.Ntime)
+	nonce := fromBE(arguments.Nonce)
 
-	log.Infof("*SUBMIT* from name = %s", name)
+	log.Infof("*SUBMIT* from name = %s", arguments.Username)
 	log.Infof("jobId = 0x%x", jobId)
-	log.Infof("extraNonce1 = %x", mining.extraNonce1)
-	log.Infof("extraNonce2 = %x", extraNonce2)
+	log.Infof("extraNonce1..2 = %x .. %x", mining.extraNonce1, extraNonce2)
 	log.Infof("ntime = %x", ntime)
 	log.Infof("nonce = %x", nonce)
 
@@ -195,8 +191,7 @@ func (mining *Mining) Submit(arguments GenericArguments, reply *BoolReply) error
 	ids, addresses, timestamp, ok := jobQueue.getIds(jobId)
 	if !ok {
 		log.Warn("job not found")
-		//return ErrJobNotFound
-		return nil
+		return ErrJobNotFound
 	}
 
 	nonce12 := make([]byte, 0, extraNonceSize)
@@ -206,8 +201,7 @@ func (mining *Mining) Submit(arguments GenericArguments, reply *BoolReply) error
 	digest, blk, ok := block.MinerCheckIn(timestamp, ntime, nonce, nonce12, addresses, ids)
 	if !ok {
 		log.Warnf("difficulty NOT MET")
-		//return ErrLowDifficultyShare
-		return nil
+		return ErrLowDifficultyShare
 	}
 
 	log.Infof("difficulty met: digest: %s", digest)
@@ -225,32 +219,31 @@ func (mining *Mining) Submit(arguments GenericArguments, reply *BoolReply) error
 
 // --------------------
 
-// the argument passed to the callback
-type ServerArgument struct {
-	Log *logger.L
-}
-
 // send notifications
-func backgroundNotifier(log *logger.L, server *rpc.Server, stop <-chan bool) {
+//
+// The params array sent contains the following, in order:
+//    job_id        - ID of the job. Use this ID while submitting share generated from this job.
+//    prevhash      - Hash of previous block.
+//    coinbase1     - Initial part of coinbase transaction.
+//    coinbase2     - Final part of coinbase transaction.
+//    merkle_branch - List of hashes, will be used for calculation of merkle root.
+//                    This is not a list of all transactions, it only contains prepared hashes of steps of merkle tree algorithm.
+//    version       - Bitcoin block version.
+//    nbits         - Encoded current network difficulty.
+//    ntime         - Current ntime.
+//    clean_jobs    - When true, server indicates that submitting shares from previous jobs don't have a sense and such shares will be rejected.
+//                    When this flag is set, miner should also drop all previous jobs, so job_ids can be eventually rotated.
+func backgroundNotifier(conn Notifier, stop <-chan bool, argument interface{}) {
+
+	serverArgument := argument.(*ServerArgument)
+	log := serverArgument.Log
 
 	log.Info("backgroundNotifier: starting…")
 	interval := 6 * time.Second // one tenth of a minute
 
-	//    job_id        - ID of the job. Use this ID while submitting share generated from this job.
-	//    prevhash      - Hash of previous block.
-	//    coinbase1     - Initial part of coinbase transaction.
-	//    coinbase2     - Final part of coinbase transaction.
-	//    merkle_branch - List of hashes, will be used for calculation of merkle root.
-	//                    This is not a list of all transactions, it only contains prepared hashes of steps of merkle tree algorithm.
-	//    version       - Bitcoin block version.
-	//    nbits         - Encoded current network difficulty
-	//    ntime         - Current ntime
-	//    clean_jobs    - When true, server indicates that submitting shares from previous jobs don't have a sense and such shares will be rejected.
-	//                    When this flag is set, miner should also drop all previous jobs, so job_ids can be eventually rotated.
-
 	// send out difficulty
-	difficultyValue := difficulty.Current.Float64()
-	server.SendNotification("mining.set_difficulty", []interface{}{difficultyValue})
+	difficultyValue := difficulty.Current.Pdiff()
+	conn.Notify("mining.set_difficulty", []interface{}{difficultyValue})
 
 	currentJobId := jobIdentifierNil
 
@@ -263,10 +256,10 @@ loop:
 		}
 
 		// if difficulty changed, re-send
-		if d := difficulty.Current.Float64(); d != difficultyValue {
+		if d := difficulty.Current.Pdiff(); d != difficultyValue {
 			difficultyValue = d
 			log.Infof("set difficulty: %v", d)
-			server.SendNotification("mining.set_difficulty", []interface{}{difficultyValue})
+			conn.Notify("mining.set_difficulty", []interface{}{difficultyValue})
 		}
 
 		log.Info("poll for new job")
@@ -303,15 +296,49 @@ loop:
 			}
 
 			log.Infof("mining.notify data: %v", notificationData)
-			server.SendNotification("mining.notify", notificationData)
+			conn.Notify("mining.notify", notificationData)
 		}
 	}
 
 	log.Info("backgroundNotifier: shutting down…")
 }
 
+type AB struct {
+	A float64 `arg:"0"`
+	B float64 `arg:"1"`
+}
+
+type CC struct {
+	C float64 `json:"sum"`
+}
+
+func (mining *Mining) T(arguments AB, reply *CC) error {
+
+	fmt.Printf("T(%f, %f)\n", arguments.A, arguments.B)
+	if 0 == arguments.A {
+		return ErrDuplicateShare
+	}
+	if 0 == arguments.B {
+		return ErrJobNotFound
+	}
+
+	reply.C = arguments.A + arguments.B
+
+	return nil
+}
+
+// the server thread
+// -----------------
+
+// the argument passed to the callback
+type ServerArgument struct {
+	Log *logger.L
+}
+
 // listener callback
-func Callback(conn *listener.ClientConnection, argument interface{}) {
+func Callback(conn io.ReadWriteCloser, argument interface{}) {
+
+	defer conn.Close()
 
 	serverArgument := argument.(*ServerArgument)
 	if nil == serverArgument {
@@ -327,24 +354,14 @@ func Callback(conn *listener.ClientConnection, argument interface{}) {
 		log: log,
 	}
 
-	shutdown := make(chan bool)
-	defer close(shutdown)
-
-	server := rpc.NewServer()
+	//server := rpc.NewServer()
+	server := NewServer()
 
 	server.Register(mining)
-
-	shutdownNotifier := make(chan bool)
-	defer close(shutdownNotifier)
-	go backgroundNotifier(log, server, shutdownNotifier)
-
-	codec := jsonrpc.NewServerCodec(conn)
-	defer codec.Close()
 
 	// count miner connections
 	atomic.AddInt64(&globalMinerCount, 1)
 	defer atomic.AddInt64(&globalMinerCount, -1)
 
-	// allow miner to connect
-	server.ServeCodec(codec)
+	ServeConnection(conn, server, backgroundNotifier, serverArgument)
 }

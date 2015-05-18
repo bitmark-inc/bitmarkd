@@ -126,7 +126,7 @@ func TestBlockAssemblyFromCapturedData(t *testing.T) {
 	c := allCapturedData // debug data from miner
 
 	bits := difficulty.New()
-	bits.SetUint32(0x1c2ac4af)
+	bits.SetBits(0x1c2ac4af)
 
 	h := block.Header{
 		Version:       2,
@@ -181,7 +181,7 @@ func TestBlock(t *testing.T) {
 	}
 
 	bits := difficulty.New()
-	bits.SetUint32(fromBE(r.bits))
+	bits.SetBits(fromBE(r.bits))
 
 	h := block.Header{
 		Version:       fromBE(r.version),
