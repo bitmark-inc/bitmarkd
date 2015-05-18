@@ -7,6 +7,7 @@ package difficulty
 import (
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"math"
 	"math/big"
 	"sync"
 )
@@ -18,14 +19,21 @@ const DefaultUint32 = 0x1d00ffff
 type Difficulty struct {
 	sync.RWMutex
 
-	big   big.Int // master value
-	value float64 // cache
-	short uint32  // cache
+	big   big.Int // master value 256 bit integer in pool difficulty form
+	pdiff float64 // cache: pool difficulty
+	bits  uint32  // cache: bitcoin difficulty
+
+	iir *IIR // filter for difficulty auto-adjust
 }
 
 // current difficulty
-var Current = &Difficulty{}
+var Current = &Difficulty{
+	iir: &IIR{},
+}
 
+// constOne is for "pdiff" calculation as defined by:
+//   https://en.bitcoin.it/wiki/Difficulty#How_is_difficulty_calculated.3F_What_is_the_difference_between_bdiff_and_pdiff.3F
+//
 // pool difficulty of 1
 var constOne = []byte{
 	0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
@@ -44,34 +52,35 @@ var one big.Int   // for reciprocal calculation
 func init() {
 	one.SetBytes(constOne)
 	scale.SetUint64(10 * constScale)
-	Current.SetUint32(0x1d00ffff)
+	Current.SetBits(0x1d00ffff)
 }
 
 // create a difficulty with the default value
 func New() *Difficulty {
 	d := new(Difficulty)
-	return d.SetUint32(DefaultUint32)
+	return d.SetBits(DefaultUint32)
 }
 
 // Get 1/difficulty as normal floating-point value
-func (difficulty *Difficulty) Float64() float64 {
+// this is the Pdiff value
+func (difficulty *Difficulty) Pdiff() float64 {
 	difficulty.RLock()
 	defer difficulty.RUnlock()
-	return difficulty.value
+	return difficulty.pdiff
 }
 
 // Get difficulty as short packed value
-func (difficulty *Difficulty) Uint32() uint32 {
+func (difficulty *Difficulty) Bits() uint32 {
 	difficulty.RLock()
 	defer difficulty.RUnlock()
-	return difficulty.short
+	return difficulty.bits
 }
 
 // Get difficulty as the big endian hex encodes short packed value
 func (difficulty *Difficulty) String() string {
 	difficulty.RLock()
 	defer difficulty.RUnlock()
-	return fmt.Sprintf("%08x", difficulty.short)
+	return fmt.Sprintf("%08x", difficulty.bits)
 }
 
 // for the %#v format
@@ -87,25 +96,31 @@ func (difficulty *Difficulty) BigInt() *big.Int {
 	return d.Set(&difficulty.big)
 }
 
-// set from a 32 bit word
-func (difficulty *Difficulty) SetUint32(u uint32) *Difficulty {
+// reset difficulty to 1.0
+// ensure write locked before calling this
+func (difficulty *Difficulty) internalSetToUnity() *Difficulty {
+	difficulty.big.Set(&one)
+	difficulty.pdiff = 1.0
+	difficulty.bits = DefaultUint32
+	return difficulty
+}
+
+// set from a 32 bit word (bits)
+func (difficulty *Difficulty) SetBits(u uint32) *Difficulty {
 
 	// quick setup for default
 	if DefaultUint32 == u {
 		difficulty.Lock()
 		defer difficulty.Unlock()
-		difficulty.big.Set(&one)
-		difficulty.value = 1.0
-		difficulty.short = u
-		return difficulty
+		return difficulty.internalSetToUnity()
 	}
 
 	exponent := 8 * (int(u>>24)&0xff - 3)
 	mantissa := int64(u & 0x00ffffff)
 
 	if mantissa > 0x7fffff || mantissa < 0x008000 || exponent < 0 {
-		fault.Criticalf("difficulty.SetUint32(0x%08x) invalid value", u)
-		fault.Panic("difficulty.SetUint32: failed")
+		fault.Criticalf("difficulty.SetBits(0x%08x) invalid value", u)
+		fault.Panic("difficulty.SetBits: failed")
 	}
 	d := big.NewInt(mantissa)
 	d.Lsh(d, uint(exponent))
@@ -114,7 +129,7 @@ func (difficulty *Difficulty) SetUint32(u uint32) *Difficulty {
 	q := new(big.Int)
 	r := new(big.Int)
 	q.DivMod(&one, d, r)
-	r.Mul(r, &scale)
+	r.Mul(r, &scale) // note: big scale == 10 * constScale
 	r.Div(r, d)
 
 	result := float64(q.Uint64())
@@ -125,8 +140,75 @@ func (difficulty *Difficulty) SetUint32(u uint32) *Difficulty {
 	defer difficulty.Unlock()
 
 	difficulty.big.Set(d)
-	difficulty.value = result
-	difficulty.short = u
+	difficulty.pdiff = result
+	difficulty.bits = u
+
+	return difficulty
+}
+
+func (difficulty *Difficulty) SetPdiff(f float64) *Difficulty {
+	difficulty.Lock()
+	defer difficulty.Unlock()
+	return difficulty.internalSetPdiff(f)
+}
+
+// ensure write locked before calling this
+func (difficulty *Difficulty) internalSetPdiff(f float64) *Difficulty {
+	if f <= 1.0 {
+		return difficulty.internalSetToUnity()
+	}
+	difficulty.pdiff = f
+
+	intPart := math.Trunc(f)
+	fracPart := math.Trunc((f - intPart) * 10 * constScale)
+
+	q := new(big.Int)
+	r := new(big.Int)
+
+	q.SetUint64(uint64(intPart))
+	r.SetUint64(uint64(fracPart))
+	q.Mul(&scale, q)
+	q.Add(q, r)
+
+	q.DivMod(&one, q, r)
+
+	q.Mul(&scale, q)
+	q.Add(q, r)
+	difficulty.big.Set(q)
+
+	buffer := q.Bytes()
+	for i, b := range buffer {
+		if 0 != 0x80&b {
+			e := uint32(len(buffer) - i + 1)
+			u := e<<24 | uint32(b)<<8
+			if i+1 < len(buffer) {
+				u |= uint32(buffer[i+1])
+			}
+			if i+2 < len(buffer) && 0 != 0x80&buffer[i+2] {
+				if 0 == 0x00ff000&(u+1) {
+					u += 1
+				}
+			}
+			difficulty.bits = u
+			break
+		} else if 0 != b {
+			e := uint32(len(buffer) - i)
+			u := e<<24 | uint32(b)<<16
+			if i+1 < len(buffer) {
+				u |= uint32(buffer[i+1]) << 8
+			}
+			if i+2 < len(buffer) {
+				u |= uint32(buffer[i+2])
+			}
+			if i+3 < len(buffer) && 0 != 0x80&buffer[i+3] {
+				if 0 == 0x00800000&(u+1) {
+					u += 1
+				}
+			}
+			difficulty.bits = u
+			break
+		}
+	}
 
 	return difficulty
 }
@@ -138,5 +220,36 @@ func (difficulty *Difficulty) SetBytes(b []byte) *Difficulty {
 	}
 	u := uint32(b[0]) | uint32(b[1])<<8 | uint32(b[2])<<16 | uint32(b[3])<<24
 
-	return difficulty.SetUint32(u)
+	return difficulty.SetBits(u)
+}
+
+// adjustment based on error from desired cycle time
+// call as difficulty.Adjust(actualMinutes - desiredMinutes)
+// use float64 values for minutes
+func (difficulty *Difficulty) Adjust(delta float64) {
+	difficulty.Lock()
+	defer difficulty.Unlock()
+
+	k := difficulty.iir.Filter(delta)
+
+	difficulty.internalSetPdiff(difficulty.pdiff * (0.25*k + 1.0))
+}
+
+// logarithmic backoff of difficulty
+// call each cycle period if no sucessful block was mined
+// the modifier value is the number of cycles (without a block being mined)
+// and must be rest whenever a new block is mined or accepted from the network
+func (difficulty *Difficulty) Backoff(modifier int) {
+	switch {
+	case modifier < 1:
+		modifier = 1
+	case modifier > 19:
+		modifier = 19
+	default:
+	}
+
+	difficulty.Lock()
+	defer difficulty.Unlock()
+
+	difficulty.internalSetPdiff(difficulty.pdiff * math.Log10(10-0.5*float64(modifier)))
 }
