@@ -333,9 +333,8 @@ loop:
 
 			log.Infof("rebroadcast [%d/%d] TxId: %#v", i, len(txIds), txId)
 
-			var result []TransactionPutResult
-			if err := server.Call(bilateralrpc.SendToAll, "Transaction.Put", args, &result, 0); nil != err {
-				log.Errorf("Transaction.Pet: error: %v", err)
+			if err := server.Cast(bilateralrpc.SendToAll, "Transaction.Put", args); nil != err {
+				log.Errorf("Transaction.Put: error: %v", err)
 			}
 		}
 

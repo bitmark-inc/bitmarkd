@@ -104,23 +104,15 @@ func (t *thread) announceOne(server *bilateralrpc.Bilateral, recent *announce.Re
 		Certificate: certificate,
 	}
 
-	var putCertResult []struct {
-		From  string
-		Reply PutCertificateReply
-		Err   error
-	}
-
-	if err := server.Call(to, "Certificate.Put", &putCertArguments, &putCertResult, 0); nil != err {
+	if err := server.Cast(to, "Certificate.Put", &putCertArguments); nil != err {
 		// if remote does not accept it is not really a problem for this node - just warn
 		t.log.Warnf("Certificate.Put err = %v", err)
-		return
 	}
 
 	// send again to those that wanted certificate first
-	if err := server.Call(to, "RPCs.Put", &putArguments, &putResult, 0); nil != err {
+	if err := server.Cast(to, "RPCs.Put", &putArguments); nil != err {
 		// if remote does not accept it is not really a problem for this node - just warn
 		t.log.Warnf("RPCs.Put err = %v", err)
-		return
 	}
 
 }

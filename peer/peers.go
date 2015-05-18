@@ -73,7 +73,6 @@ type PeerReply struct {
 func (t *Peer) Put(arguments *PeerArguments, reply *PeerReply) error {
 
 	panic("not yet")
-	return nil
 
 	// reply.Added = false
 	// reply.NeedCertificate = false

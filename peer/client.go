@@ -34,13 +34,14 @@ loop:
 			delay = regularPollDelay
 		}
 
-		t.log.Infof("client loop")
+		t.log.Info("loop")
 		for i, a := range server.ActiveConnections() {
 			t.log.Infof("active[%d] = %q", i, a)
 		}
 
 	getBlocks:
 		for {
+			t.log.Infof("getBlocks retries left: %d", retries)
 			select {
 			case <-t.stop:
 				break loop
@@ -56,6 +57,7 @@ loop:
 					continue getBlocks
 				}
 				if mode.Is(mode.Resynchronise) {
+					t.log.Infof("normal")
 					mode.Set(mode.Normal)
 				}
 			} else {
@@ -63,6 +65,7 @@ loop:
 				if retries <= 0 {
 					// stand alone mode
 					if mode.Is(mode.Resynchronise) {
+						t.log.Infof("stand-alone")
 						mode.Set(mode.Normal)
 					}
 				}

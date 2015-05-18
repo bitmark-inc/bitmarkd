@@ -94,7 +94,7 @@ decode:
 		active := server.ActiveConnections()
 		if !t.fetchAndMarkAssociatedTransactions(server, &pair.unpacked, active) {
 			log.Errorf("missed some transactions from: %q", active)
-			break decode  // cannot continue
+			break decode // cannot continue
 		}
 
 		// save block only if sucessfully obtained all transactions
@@ -105,16 +105,9 @@ decode:
 		blockArguments := BlockPutArguments{
 			Block: []byte(pair.packed),
 		}
-		var blockResult []struct {
-			From  string
-			Reply BlockPutReply
-			Err   error
-		}
-		if err := server.Call(bilateralrpc.SendToAll, "Block.Put", &blockArguments, &blockResult, 0); nil != err {
+		if err := server.Cast(bilateralrpc.SendToAll, "Block.Put", &blockArguments); nil != err {
 			// if remote does not accept it is not really a problem for this node - just warn
 			log.Warnf("Block.Put err = %v", err)
-		} else {
-			log.Infof("Block.Put = %v", blockResult)
 		}
 
 	case block.Mined: // block created by local miner thread
@@ -125,16 +118,9 @@ decode:
 		blockArguments := BlockPutArguments{
 			Block: []byte(packedBlock),
 		}
-		var blockResult []struct {
-			From  string
-			Reply BlockPutReply
-			Err   error
-		}
-		if err := server.Call(bilateralrpc.SendToAll, "Block.Put", &blockArguments, &blockResult, 0); nil != err {
+		if err := server.Cast(bilateralrpc.SendToAll, "Block.Put", &blockArguments); nil != err {
 			// if remote does not accept it is not really a problem for this node - just warn
 			log.Warnf("Block.Put err = %v", err)
-		} else {
-			log.Infof("Block.Put = %v", blockResult)
 		}
 
 	case transaction.Packed: // any incoming Tx either from peers or client RPC
@@ -153,18 +139,11 @@ decode:
 			transactionArguments := TransactionPutArguments{
 				Tx: item.(transaction.Packed),
 			}
-			var transactionResult []struct {
-				From  string
-				Reply TransactionPutReply
-				Err   error
-			}
 			log.Debugf("put TxId: %#v", txId)
 
-			if err := server.Call(bilateralrpc.SendToAll, "Transaction.Put", &transactionArguments, &transactionResult, 0); nil != err {
+			if err := server.Cast(bilateralrpc.SendToAll, "Transaction.Put", &transactionArguments); nil != err {
 				// if remote does not accept it is not really a problem for this node - just warn
 				log.Warnf("Transaction.Put err = %v", err)
-			} else {
-				log.Infof("Transaction.Put = %v", transactionResult)
 			}
 		}
 
