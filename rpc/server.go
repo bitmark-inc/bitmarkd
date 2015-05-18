@@ -5,8 +5,8 @@
 package rpc
 
 import (
-	"github.com/bitmark-inc/listener"
 	"github.com/bitmark-inc/logger"
+	"io"
 	"net/rpc"
 	"net/rpc/jsonrpc"
 )
@@ -20,7 +20,7 @@ type ServerArgument struct {
 }
 
 // listener callback
-func Callback(conn *listener.ClientConnection, argument interface{}) {
+func Callback(conn io.ReadWriteCloser, argument interface{}) {
 
 	serverArgument := argument.(*ServerArgument)
 	if nil == serverArgument {
