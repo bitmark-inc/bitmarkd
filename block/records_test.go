@@ -106,7 +106,7 @@ func TestBlockDigestFromBlock(t *testing.T) {
 	}
 
 	bits := difficulty.New()
-	bits.SetUint32(fromLE(r.leBits))
+	bits.SetBits(fromLE(r.leBits))
 	h := block.Header{
 		Version:       fromLE(r.leVersion),
 		PreviousBlock: *prevLink,
@@ -166,7 +166,7 @@ func TestRawBlock328656(t *testing.T) {
 	merkleRoot := "2b44fc83c84e21817b0da633af7733a4872c2415a21bf9f6b4883a5751c3e020"
 
 	bits := difficulty.New()
-	bits.SetUint32(404472624)
+	bits.SetBits(404472624)
 	h := block.Header{
 		Version:       2,
 		PreviousBlock: hexEndianDigest(prevBlock),

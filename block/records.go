@@ -94,7 +94,7 @@ func (header *Header) Pack() PackedHeader {
 	copy(buffer[merkleRootOffset:], header.MerkleRoot[:])
 
 	binary.LittleEndian.PutUint32(buffer[timeOffset:], header.Time)
-	binary.LittleEndian.PutUint32(buffer[bitsOffset:], header.Bits.Uint32())
+	binary.LittleEndian.PutUint32(buffer[bitsOffset:], header.Bits.Bits())
 	binary.LittleEndian.PutUint32(buffer[nonceOffset:], header.Nonce)
 
 	return buffer

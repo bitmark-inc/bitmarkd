@@ -181,7 +181,7 @@ func doCalc(t *testing.T, title string, extraNonce1 []byte, extraNonce2 []byte, 
 			{
 				Method: "mining.set_difficulty",
 				Params: []interface{}{
-					difficulty.Current.Float64(),
+					difficulty.Current.Pdiff(),
 				},
 			},
 			{
