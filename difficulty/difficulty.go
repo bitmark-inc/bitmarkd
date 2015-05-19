@@ -23,7 +23,8 @@ type Difficulty struct {
 	pdiff float64 // cache: pool difficulty
 	bits  uint32  // cache: bitcoin difficulty
 
-	iir *IIR // filter for difficulty auto-adjust
+	modifier int  // filter backoff counter
+	iir      *IIR // filter for difficulty auto-adjust
 }
 
 // current difficulty
@@ -146,16 +147,17 @@ func (difficulty *Difficulty) SetBits(u uint32) *Difficulty {
 	return difficulty
 }
 
-func (difficulty *Difficulty) SetPdiff(f float64) *Difficulty {
+func (difficulty *Difficulty) SetPdiff(f float64) {
 	difficulty.Lock()
 	defer difficulty.Unlock()
-	return difficulty.internalSetPdiff(f)
+	difficulty.internalSetPdiff(f)
 }
 
 // ensure write locked before calling this
-func (difficulty *Difficulty) internalSetPdiff(f float64) *Difficulty {
+func (difficulty *Difficulty) internalSetPdiff(f float64) float64 {
 	if f <= 1.0 {
-		return difficulty.internalSetToUnity()
+		difficulty.internalSetToUnity()
+		return 1.0
 	}
 	difficulty.pdiff = f
 
@@ -210,7 +212,7 @@ func (difficulty *Difficulty) internalSetPdiff(f float64) *Difficulty {
 		}
 	}
 
-	return difficulty
+	return difficulty.pdiff
 }
 
 func (difficulty *Difficulty) SetBytes(b []byte) *Difficulty {
@@ -226,30 +228,36 @@ func (difficulty *Difficulty) SetBytes(b []byte) *Difficulty {
 // adjustment based on error from desired cycle time
 // call as difficulty.Adjust(actualMinutes - desiredMinutes)
 // use float64 values for minutes
-func (difficulty *Difficulty) Adjust(delta float64) {
+func (difficulty *Difficulty) Adjust(delta float64) float64 {
 	difficulty.Lock()
 	defer difficulty.Unlock()
 
+	// reset modifier
+	difficulty.modifier = 0
+
+	// compute filter
 	k := difficulty.iir.Filter(delta)
 
-	difficulty.internalSetPdiff(difficulty.pdiff * (0.25*k + 1.0))
+	// adjust difficulty
+	return difficulty.internalSetPdiff(difficulty.pdiff * (0.25*k + 1.0))
 }
 
 // logarithmic backoff of difficulty
 // call each cycle period if no sucessful block was mined
 // the modifier value is the number of cycles (without a block being mined)
 // and must be rest whenever a new block is mined or accepted from the network
-func (difficulty *Difficulty) Backoff(modifier int) {
-	switch {
-	case modifier < 1:
-		modifier = 1
-	case modifier > 19:
-		modifier = 19
-	default:
-	}
-
+func (difficulty *Difficulty) Backoff() float64 {
 	difficulty.Lock()
 	defer difficulty.Unlock()
 
-	difficulty.internalSetPdiff(difficulty.pdiff * math.Log10(10-0.5*float64(modifier)))
+	switch {
+	case difficulty.modifier < 1:
+		difficulty.modifier = 1
+	case difficulty.modifier > 19:
+		difficulty.modifier = 19
+	default:
+		difficulty.modifier += 1
+	}
+
+	return difficulty.internalSetPdiff(difficulty.pdiff * math.Log10(10-0.5*float64(difficulty.modifier)))
 }

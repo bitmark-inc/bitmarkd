@@ -99,7 +99,7 @@ decode:
 
 		// save block only if sucessfully obtained all transactions
 		log.Infof("save block: %d\n", pair.unpacked.Number)
-		pair.packed.Save(pair.unpacked.Number, &pair.unpacked.Digest)
+		pair.packed.Save(pair.unpacked.Number, &pair.unpacked.Digest, pair.unpacked.Timestamp)
 
 		// send to everyone else - now local data is all saved
 		blockArguments := BlockPutArguments{

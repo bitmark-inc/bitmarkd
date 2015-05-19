@@ -138,7 +138,7 @@ loop:
 		}
 
 		// save block
-		packedBlock.Save(n, &blk.Digest)
+		packedBlock.Save(n, &blk.Digest, blk.Timestamp)
 
 		// success want next block
 		success = true

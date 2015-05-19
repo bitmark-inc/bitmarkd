@@ -7,6 +7,7 @@ package block
 import (
 	"bytes"
 	"encoding/binary"
+	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
@@ -18,6 +19,8 @@ import (
 
 // constants
 const (
+	ExpectedMinutes = 3.0 // decimal minutes to mine a block
+
 	int16Size  = 2 // counts are encode little endian int16
 	uint64Size = 8 // for block number key
 )
@@ -54,8 +57,19 @@ var globalBlock struct {
 	// link to the previous block
 	previousBlock Digest
 
+	// retain the timestamp
+	previousTimestamp time.Time
+
 	// stored block data
 	blockData *pool.Pool
+
+	// for background processes
+	background *background.T
+}
+
+// list of background processes to start
+var processes = background.Processes{
+	backoff,
 }
 
 // initialise the block numbering system
@@ -81,6 +95,11 @@ func Initialise(cacheSize int) {
 
 	globalBlock.initialised = true
 
+	// start background processes
+	globalBlock.log.Info("start background")
+	globalBlock.background = background.Start(processes, globalBlock.log)
+
+
 	// determine the highest block on store
 	last, found := globalBlock.blockData.LastElement()
 	if !found {
@@ -97,6 +116,7 @@ func Initialise(cacheSize int) {
 	if nil == err {
 		globalBlock.currentBlockNumber = bn + 1
 		globalBlock.previousBlock = blk.Digest
+		globalBlock.previousTimestamp = blk.Timestamp
 		return
 	}
 
@@ -108,6 +128,8 @@ func Initialise(cacheSize int) {
 
 // finalise - flush unsaved data
 func Finalise() {
+	background.Stop(globalBlock.background)
+
 	globalBlock.log.Info("shutting down…")
 	globalBlock.blockData.Flush()
 }
@@ -150,7 +172,7 @@ func MinerCheckIn(timestamp time.Time, ntime uint32, nonce uint32, extraNonce []
 	}
 
 	// store
-	blk.internalSave(globalBlock.currentBlockNumber, &digest)
+	blk.internalSave(globalBlock.currentBlockNumber, &digest, timestamp)
 
 	return digest, blk, true
 }
@@ -189,14 +211,14 @@ func Get(number uint64) (Packed, bool) {
 // store a block
 // requires number to save an unpack step which was probably already done
 // or the number was known from the pack step
-func (blk Packed) Save(number uint64, digest *Digest) {
+func (blk Packed) Save(number uint64, digest *Digest, timestamp time.Time) {
 	globalBlock.Lock()
 	defer globalBlock.Unlock()
-	blk.internalSave(number, digest)
+	blk.internalSave(number, digest, timestamp)
 }
 
 // this does not lock, so use only when locked
-func (blk Packed) internalSave(number uint64, digest *Digest) {
+func (blk Packed) internalSave(number uint64, digest *Digest, timestamp time.Time) {
 
 	blockKey := make([]byte, uint64Size)
 	binary.BigEndian.PutUint64(blockKey, number)
@@ -208,6 +230,16 @@ func (blk Packed) internalSave(number uint64, digest *Digest) {
 	if number >= globalBlock.currentBlockNumber {
 		globalBlock.currentBlockNumber = number + 1
 		globalBlock.previousBlock = *digest
+
+		// compute decimal minutes taked to mine the block
+		minutes := timestamp.Sub(globalBlock.previousTimestamp).Minutes()
+
+		// adjust difficulty
+		d := difficulty.Current.Adjust(ExpectedMinutes - minutes)
+		globalBlock.log.Infof("adjust difficulty to: %10.4f", d)
+
+		// save latest timestamp
+		globalBlock.previousTimestamp = timestamp
 	}
 }
 
@@ -395,4 +427,29 @@ func (pack Packed) Unpack(blk *Block) error {
 	blk.TxIds = txIds
 
 	return nil
+}
+
+// difficulty backoff background
+// assemble records for mining
+func backoff(args interface{}, shutdown <-chan bool, finished chan<- bool) {
+
+	log := args.(*logger.L)
+	log.Info("backoff: starting…")
+
+loop:
+	for {
+		select {
+		case <-shutdown:
+			break loop
+
+		case <-time.After(ExpectedMinutes):
+			if mode.Is(mode.Normal) {
+				d := difficulty.Current.Backoff()
+				log.Infof("backoff difficulty to: %10.4f", d)
+			}
+		}
+	}
+
+	log.Info("backoff: shutting down…")
+	close(finished)
 }
