@@ -9,16 +9,22 @@ import (
 	"io"
 )
 
-func PrintBlockTimes(fh io.Writer) {
+func PrintBlockTimes(fh io.Writer, beginBlockNumber uint64, endBlockNumber uint64) {
 
 	n := Number()
-	fmt.Fprintf(fh, "%q %q %q %q\n", "block number", "timestamp", "minutes", "pool difficulty")
 
 	initialised := false
 	lastSeconds := int64(0)
 
-	// note: does not output the genesis block
-	for blockNumber := GenesisBlockNumber + 1; blockNumber < n; blockNumber += 1 {
+	if 0 == beginBlockNumber || beginBlockNumber <= GenesisBlockNumber {
+		beginBlockNumber = GenesisBlockNumber
+	}
+	if 0 == endBlockNumber || endBlockNumber >= n - 1 {
+		endBlockNumber = n - 1
+	}
+
+	fmt.Fprintf(fh, "%q %q %q %q\n", "block number", "timestamp", "minutes", "pool difficulty")
+	for blockNumber := beginBlockNumber; blockNumber <= endBlockNumber; blockNumber += 1 {
 
 		packed, exists := Get(blockNumber)
 		if !exists {

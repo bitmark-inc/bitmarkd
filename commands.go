@@ -11,6 +11,7 @@ import (
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/bitmark-inc/logger"
 	"os"
+	"strconv"
 )
 
 // setup command handler
@@ -135,7 +136,7 @@ func processSetupCommand(log *logger.L, options configuration.CommandOptions) bo
 		//fmt.Printf("  generate-peer-cert PREFIX IPs... - create private key in: '<PREFIX>.key' certificate in: '<PREFIX>.crt'\n")
 		fmt.Printf("  generate-mine-cert               - create private key in: '%s' and certificate in: '%s'\n", options.MineKey, options.MineCertificate)
 		fmt.Printf("  generate-mine-cert PREFIX IPs... - create private key in: '<PREFIX>.key' certificate in: '<PREFIX>.crt'\n")
-		fmt.Printf("  block-times FILE                 - write time and difficulty to text file\n")
+		fmt.Printf("  block-times FILE BEGIN END       - write time and difficulty to text file for a range of blocks\n")
 		exitwithstatus.Exit(1)
 	}
 
@@ -154,8 +155,19 @@ func processDataCommand(log *logger.L, options configuration.CommandOptions) boo
 	switch command {
 
 	case "block-times":
-		if len(arguments) < 1 {
-			fmt.Printf("missing filename argument (use '' for stdout)\n")
+		if len(arguments) < 3 {
+			fmt.Printf("missing arguments arguments (use '' for stdout, and '0' for min/max)\n")
+			exitwithstatus.Exit(1)
+		}
+
+		begin, err := strconv.ParseUint(arguments[1], 10, 64)
+		if nil != err {
+			fmt.Printf("error in begin block number: %v\n", err)
+			exitwithstatus.Exit(1)
+		}
+		end, err := strconv.ParseUint(arguments[2], 10, 64)
+		if nil != err {
+			fmt.Printf("error in end block number: %v\n", err)
 			exitwithstatus.Exit(1)
 		}
 
@@ -163,7 +175,7 @@ func processDataCommand(log *logger.L, options configuration.CommandOptions) boo
 		case "": // use stdout
 			fallthrough
 		case "-": // use stdout
-			block.PrintBlockTimes(os.Stdout)
+			block.PrintBlockTimes(os.Stdout, begin, end)
 
 		default:
 			fh, err := os.Create(filename)
@@ -173,7 +185,7 @@ func processDataCommand(log *logger.L, options configuration.CommandOptions) boo
 				exitwithstatus.Exit(1)
 			}
 			defer fh.Close()
-			block.PrintBlockTimes(fh)
+			block.PrintBlockTimes(fh, begin, end)
 		}
 
 
