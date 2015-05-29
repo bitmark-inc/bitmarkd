@@ -29,13 +29,13 @@ type TransactionPutReply struct {
 func (t *Transaction) Put(arguments *TransactionPutArguments, reply *TransactionPutReply) error {
 
 	packedTx := arguments.Tx
-	t.log.Infof("received tx: %x", packedTx)
+	t.log.Debugf("received tx: %x", packedTx)
 
 	_, reply.Duplicate = packedTx.Exists()
 
 	// propagate
 	if !reply.Duplicate {
-		t.log.Infof("propagate: Tx = %v", packedTx)
+		t.log.Tracef("propagate: Tx = %x", packedTx)
 		messagebus.Send(packedTx)
 	}
 

@@ -25,25 +25,25 @@ type rpcError []interface{}
 
 // incoming RPC request
 type rpcRequest struct {
-	ID     *string       `json:"id"`
+	ID     interface{}   `json:"id"`
 	Method string        `json:"method"`
 	Params []interface{} `json:"params"`
 }
 
 // outgoing successful reply only if "Error" is nil
 type rpcResponse struct {
-	ID     string      `json:"id"`
-	Result interface{} `json:"Result"`
+	ID     interface{} `json:"id"`
+	Result interface{} `json:"result"`
 	Error  rpcError    `json:"error"`
 }
 
 // success response
-func reply(conn io.Writer, id string, r interface{}) error {
+func reply(conn io.Writer, id interface{}, r interface{}) error {
 	return internalReply(conn, id, r, nil)
 }
 
 // failure response
-func errorReply(conn io.Writer, id string, e rpcError) error {
+func errorReply(conn io.Writer, id interface{}, e rpcError) error {
 	return internalReply(conn, id, nil, e)
 }
 
@@ -69,7 +69,7 @@ func ServeConnection(conn io.ReadWriter, server *Server, background Notification
 		} else if err != nil {
 			return err
 		}
-		go rpcCall(conn, server, *request.ID, request.Method, request.Params)
+		go rpcCall(conn, server, request.ID, request.Method, request.Params)
 	}
 	return nil
 }
@@ -101,7 +101,7 @@ func (conn *Notifier) Notify(method string, params []interface{}) error {
 }
 
 // handle the call
-func rpcCall(conn io.ReadWriter, server *Server, id string, method string, params []interface{}) error {
+func rpcCall(conn io.ReadWriter, server *Server, id interface{}, method string, params []interface{}) error {
 
 	var responseBuffer interface{}
 
@@ -114,7 +114,7 @@ func rpcCall(conn io.ReadWriter, server *Server, id string, method string, param
 }
 
 // the reply function sends response as '\n' terminated JSON string
-func internalReply(conn io.Writer, id string, message interface{}, e rpcError) error {
+func internalReply(conn io.Writer, id interface{}, message interface{}, e rpcError) error {
 	r := rpcResponse{
 		ID:     id,
 		Result: message,

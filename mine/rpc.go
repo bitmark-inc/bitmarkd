@@ -292,8 +292,8 @@ func (server *Server) Call(ServiceMethod string, in []interface{}, out interface
 		err = errors.New("rpc: service/method request ill-formed: " + ServiceMethod)
 		return
 	}
-	serviceName := ServiceMethod[:dot]
-	methodName := ServiceMethod[dot+1:]
+	serviceName := camel(ServiceMethod[:dot])
+	methodName := camel(ServiceMethod[dot+1:])
 
 	// Look up the request.
 	server.mu.RLock()
@@ -327,6 +327,7 @@ func (server *Server) Call(ServiceMethod string, in []interface{}, out interface
 
 	// iterate through fields and set values
 	n := argv.NumField()
+	argCount := len(in)
 	for i := 0; i < n; i += 1 {
 		fieldValue := argv.Field(i)
 		fieldType := argt.Field(i)
@@ -348,7 +349,7 @@ func (server *Server) Call(ServiceMethod string, in []interface{}, out interface
 		}
 
 		// if the value is outside the "in" slice it assumed to be an optional value
-		if j >= n {
+		if j >= argCount {
 			// no error here, just skip
 			continue
 		}
@@ -372,4 +373,22 @@ func (server *Server) Call(ServiceMethod string, in []interface{}, out interface
 
 	rOut.Elem().Set(replyv)
 	return nil
+}
+
+// capitalise after "_" and remove "_"
+// map "text"           -> "Text"
+// map "this_text"      -> "ThisText"
+func camel(s string) string {
+	toUpper := true
+	return strings.Map(func(r rune) rune {
+		if '_' == r {
+			toUpper = true
+			return -1
+		}
+		if toUpper {
+			toUpper = false
+			return unicode.ToUpper(r)
+		}
+		return r
+	}, s)
 }

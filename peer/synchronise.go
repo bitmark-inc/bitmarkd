@@ -7,6 +7,7 @@ package peer
 import (
 	"github.com/bitmark-inc/bilateralrpc"
 	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/transaction"
 	"time"
 )
@@ -111,7 +112,7 @@ loop:
 		log.Infof("block: %d  digest: %#v", blk.Number, blk.Digest)
 
 		// fetch the previous block from local storage and see if needs to be replaced
-		previousPackedBlock, found := block.Read(n - 1)
+		previousPackedBlock, found := block.Get(n - 1)
 		if !found {
 			log.Errorf("missing previous block: %d", n-1)
 			n -= 1
@@ -236,11 +237,19 @@ loop:
 
 			// write the transaction
 			log.Infof("txid: %#v", txid)
-			txid2, _ := packedTransaction.Write()
-			if txid != txid2 {
-				log.Errorf("txid: %#v changed to: %#v", txid, txid2)
-				success = false
-				continue fetchOne
+			var txid2 transaction.Link
+			switch err := packedTransaction.Write(&txid2); err {
+			case nil:
+				fallthrough
+			case fault.ErrTransactionAlreadyExists:
+				if txid != txid2 {
+					log.Errorf("txid: %#v changed to: %#v", txid, txid2)
+					success = false
+					continue fetchOne
+				}
+			default:
+				log.Criticalf("write tx error: %v", err)
+				fault.PanicWithError("synchronise.fetchAndMarkAssociatedTransactions", err)
 			}
 
 			// got a valid tx - flag as mined

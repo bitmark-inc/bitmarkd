@@ -69,6 +69,7 @@ var (
 	ErrPeerAlreadyExists             = ExistsError("peer already exists")
 	ErrPeerNotFound                  = NotFoundError("peer not found")
 	ErrSignatureTooLong              = LengthError("signature too long")
+	ErrTransactionAlreadyExists      = ExistsError("transaction already exists")
 	ErrWrongNetworkForPublicKey      = InvalidError("wrong network for public key")
 )
 

@@ -19,7 +19,7 @@ import (
 
 // constants
 const (
-	ExpectedMinutes = 3.0 // decimal minutes to mine a block
+	ExpectedMinutes = 3 // number of minutes to mine a block
 
 	int16Size  = 2 // counts are encode little endian int16
 	uint64Size = 8 // for block number key
@@ -243,23 +243,6 @@ func (blk Packed) internalSave(number uint64, digest *Digest, timestamp time.Tim
 	}
 }
 
-func Read(number uint64) (Packed, bool) {
-	if 0 == number {
-		fault.Panic("Cannot block.Read block zero")
-	} else if GenesisBlockNumber == number {
-		return GenesisBlock(), true
-	}
-
-	//globalBlock.Lock()
-	//defer globalBlock.Unlock()
-
-	blockKey := make([]byte, uint64Size)
-	binary.BigEndian.PutUint64(blockKey, number)
-
-	data, found := globalBlock.blockData.Get(blockKey)
-	return data, found
-}
-
 // create a packed block from various pieces
 func Pack(blockNumber uint64, timestamp time.Time, difficulty *difficulty.Difficulty, ntime uint32, nonce uint32, extraNonce []byte, addresses []MinerAddress, ids []Digest) (Digest, Packed, bool) {
 
@@ -442,7 +425,7 @@ loop:
 		case <-shutdown:
 			break loop
 
-		case <-time.After(ExpectedMinutes):
+		case <-time.After(ExpectedMinutes * time.Minute):
 			if mode.Is(mode.Normal) {
 				d := difficulty.Current.Backoff()
 				log.Infof("backoff difficulty to: %10.4f", d)

@@ -9,19 +9,13 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"encoding/hex"
-	//"encoding/json"
-	//"errors"
 	"fmt"
-	//"github.com/bitmark-inc/bilateralrpc/rpc"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/gnomon"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/transaction"
-	//rpc "github.com/bitmark-inc/go-rpc"             // "net/rpc"
-	//jsonrpc "github.com/bitmark-inc/go-rpc/jsonrpc" // "net/rpc/jsonrpc"
-	//"github.com/bitmark-inc/listener"
 	"github.com/bitmark-inc/logger"
 	"io"
 	"sync/atomic"
@@ -63,8 +57,8 @@ var activeRegistrations map[string]minerRegistration
 // ------------------
 
 type SubscribeArguments struct {
-	DifficultyId string `arg:"0"`
-	NotifyId     string `arg:"1"`
+	MinerName string `arg:"0"`
+	NotifyId  string `arg:"1"`
 }
 
 type SubscribeReply []interface{}
@@ -100,6 +94,11 @@ func (mining *Mining) Subscribe(arguments SubscribeArguments, reply *SubscribeRe
 	mining.notifyId = notifyId
 	mining.difficultyId = difficultyId
 	mining.extraNonce1 = extraNonce1
+
+	// ***** FIX THIS: save above in activeRegistrations *****
+	// but need to consider a way to expire these
+	// do for now just issue a new value
+
 	*reply = SubscribeReply{
 		[][]string{
 			{"mining.set_difficulty", difficultyId},
@@ -200,11 +199,11 @@ func (mining *Mining) Submit(arguments SubmitArguments, reply *bool) error {
 
 	digest, blk, ok := block.MinerCheckIn(timestamp, ntime, nonce, nonce12, addresses, ids)
 	if !ok {
-		log.Warnf("difficulty NOT MET")
+		log.Warnf("difficulty NOT MET: %x", digest)
 		return ErrLowDifficultyShare
 	}
 
-	log.Infof("difficulty met: digest: %s", digest)
+	log.Infof("difficulty met: digest: %x", digest)
 
 	// mark the tx as mined
 	for _, id := range jobQueue.confirm(jobId) {

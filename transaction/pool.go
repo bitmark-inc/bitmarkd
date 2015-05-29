@@ -181,9 +181,9 @@ func Finalise() {
 //   the ID of the transaction
 //
 // this enters the transaction as an unpaid new transaction
-func (data Packed) Write() (Link, bool) {
+func (data Packed) Write(link *Link) error {
 
-	link := data.MakeLink()
+	*link = data.MakeLink()
 	txId := link.Bytes()
 
 	transactionPool.Lock()
@@ -200,7 +200,10 @@ func (data Packed) Write() (Link, bool) {
 		// check for duplicate asset and return previous transaction id
 		tx, err := data.Unpack()
 		if nil != err {
-			transactionPool.log.Errorf("write tx, unpack: err = %v", err)
+			transactionPool.log.Criticalf("write tx, unpack error: %v", err)
+			fault.PanicIfError("transaction.write unpack", err)
+
+			return err // not reached
 		}
 		switch tx.(type) {
 		case *AssetData:
@@ -208,10 +211,11 @@ func (data Packed) Write() (Link, bool) {
 			assetIndex := asset.AssetIndex().Bytes()
 			txId, found := transactionPool.assetPool.Get(assetIndex)
 			if found {
-				var link Link
-				err := LinkFromBytes(&link, txId)
-				transactionPool.log.Errorf("write tx, link from bytes: err = %v", err)
-				return link, true
+				// determine link for pre-existing version of the same asset
+				err := LinkFromBytes(link, txId)
+				transactionPool.log.Criticalf("write tx, unpack error: %v", err)
+				fault.PanicIfError("transaction.write link from bytes", err)
+				return err // not reached
 			}
 			startingState = WaitingIssueTransaction
 
@@ -224,7 +228,8 @@ func (data Packed) Write() (Link, bool) {
 			// must link to an Asset
 			previous, found := transactionPool.assetPool.Get(assetIndex)
 			if !found {
-				fault.PanicWithError("transaction.write (no asset)", fault.ErrLinkNotFound)
+				transactionPool.log.Warnf("write tx, issue asset: %x", assetIndex)
+				return fault.ErrAssetNotFound
 			}
 
 			// split the record
@@ -235,14 +240,18 @@ func (data Packed) Write() (Link, bool) {
 			// determine if asset is in waiting state
 			assetState, found := transactionPool.statePool.Get(assetDataLink)
 			if !found {
-				fault.PanicWithError("transaction.write (no asset state)", fault.ErrLinkNotFound)
+				transactionPool.log.Criticalf("write tx, no asset state for assetIndex: %x", assetIndex)
+				fault.Panic("transaction.write (no asset state)")
+				return fault.ErrAssetNotFound // not reached
 			}
 
 			// if waiting update timestamp and write back
 			if WaitingIssueTransaction == State(assetState[0]) {
 				data, found := transactionPool.unpaidPool.Get(assetState[1:])
 				if !found {
-					fault.PanicWithError("transaction.write (waiting)", fault.ErrLinkNotFound)
+					transactionPool.log.Criticalf("write tx, no asset unpaid state for assetIndex: %x", assetIndex)
+					fault.Panic("transaction.write (no asset unpaid state)")
+					return fault.ErrAssetNotFound // not reached
 				}
 
 				binary.BigEndian.PutUint64(data[LinkSize:], timestamp)
@@ -281,11 +290,11 @@ func (data Packed) Write() (Link, bool) {
 		default:
 		}
 
-		transactionPool.log.Debugf("new transaction id: %#v  data: %#v", txId, data)
+		transactionPool.log.Debugf("new transaction id: %x  data: %x", txId, data)
 
-		return link, true
+		return nil
 	}
-	return link, false
+	return fault.ErrTransactionAlreadyExists
 }
 
 // read a transaction

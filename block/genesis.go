@@ -6,7 +6,7 @@ package block
 
 // the starting block number
 const (
-	GenesisBlockNumber = 1
+	GenesisBlockNumber = uint64(1)
 )
 
 // this is block 1, the Genesis Block

@@ -7,6 +7,7 @@ package peer
 import (
 	"github.com/bitmark-inc/bilateralrpc"
 	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/transaction"
@@ -127,11 +128,17 @@ decode:
 		log.Debugf("incoming Transaction.Packed = %x", item)
 
 		// save record
-		txId, justAdded := item.(transaction.Packed).Write()
-		log.Infof("incoming TxId = %#v  new = %v", txId, justAdded)
+		var txId transaction.Link
+		err := item.(transaction.Packed).Write(&txId)
+		switch err {
+		case fault.ErrAssetNotFound:
+			log.Infof("no asset, ignoring incoming TxId = %#v", txId)
 
-		// send out if this was new
-		if justAdded {
+		case fault.ErrTransactionAlreadyExists:
+			log.Infof("duplicate, ignoring incoming TxId = %#v", txId)
+
+		case nil: // send out as this is anewly stored transaction
+			log.Infof("new TxId = %#v", txId)
 
 			// set paid immediately if possible
 			payment.CheckPaid(txId)
