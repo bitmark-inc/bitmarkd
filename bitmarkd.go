@@ -94,8 +94,8 @@ func main() {
 	defer removeAppLock(options.PidFile)
 
 	// command processing - need lock so do not affect an already running process
-	if "" != options.Args.Command {
-		processCommand(log, options)
+	// these commands process data needed for initial setup
+	if "" != options.Args.Command && processSetupCommand(log, options) {
 		return
 	}
 
@@ -153,6 +153,11 @@ func main() {
 	log.Info("initialise transaction")
 	transaction.Initialise(options.TransactionCacheSize)
 	defer transaction.Finalise()
+
+	// these commands are allowed to access the internal database
+	if "" != options.Args.Command && processDataCommand(log, options) {
+		return
+	}
 
 	// network announcements - depends on pool
 	log.Info("initialise announce")
