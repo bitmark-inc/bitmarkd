@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -171,9 +172,21 @@ func main() {
 	}
 
 	// connnect to first announced RPC port
-	conn := connect(cerfificateFile, options.RPCAnnounce[0])
+	//conn := connect(cerfificateFile, options.RPCAnnounce[0])
+	//defer conn.Close()
+
+	// force the connection to localhost but with port from 1st rpc announce
+	// 10.0.0.1:1234 or [fe80::f279:59ff:fe6a:474]:1234
+	s := strings.Split(options.RPCAnnounce[0], ":")
+	port := s[len(s)-1] // port is last element
+	hostPort := "127.0.0.1:" + port
+	if '[' == s[0][0] {
+		hostPort = "[::1]:" + port
+	}
+	conn := connect(cerfificateFile, hostPort)
 	defer conn.Close()
 
+	// create a client
 	client := jsonrpc.NewClient(conn)
 	defer client.Close()
 

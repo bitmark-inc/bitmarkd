@@ -137,7 +137,7 @@ decode:
 		case fault.ErrTransactionAlreadyExists:
 			log.Infof("duplicate, ignoring incoming TxId = %#v", txId)
 
-		case nil: // send out as this is anewly stored transaction
+		case nil: // send out as this is a newly stored transaction
 			log.Infof("new TxId = %#v", txId)
 
 			// set paid immediately if possible

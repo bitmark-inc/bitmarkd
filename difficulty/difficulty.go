@@ -6,6 +6,7 @@ package difficulty
 
 import (
 	"fmt"
+	"github.com/bitmark-inc/bitmarkd/difficulty/filters"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"math"
 	"math/big"
@@ -23,13 +24,14 @@ type Difficulty struct {
 	pdiff float64 // cache: pool difficulty
 	bits  uint32  // cache: bitcoin difficulty
 
-	modifier int  // filter backoff counter
-	iir      *IIR // filter for difficulty auto-adjust
+	modifier int            // filter backoff counter
+	filter   filters.Filter // filter for difficulty auto-adjust
 }
 
 // current difficulty
 var Current = &Difficulty{
-	iir: &IIR{},
+	filter: filters.NewCamm(1.0, 21, 41),
+	//filter: filters.NewSMM(1.0, 15),
 }
 
 // constOne is for "pdiff" calculation as defined by:
@@ -172,7 +174,7 @@ func (difficulty *Difficulty) internalSetPdiff(f float64) float64 {
 	q.Mul(&scale, q)
 	q.Add(q, r)
 
-	q.DivMod(&one, q, r)
+	q.DivMod(&one, q, r) // can get divide by zero error
 
 	q.Mul(&scale, q)
 	q.Add(q, r)
@@ -226,20 +228,24 @@ func (difficulty *Difficulty) SetBytes(b []byte) *Difficulty {
 }
 
 // adjustment based on error from desired cycle time
-// call as difficulty.Adjust(actualMinutes - desiredMinutes)
-// use float64 values for minutes
-func (difficulty *Difficulty) Adjust(delta float64) float64 {
+// call as difficulty.Adjust(expectedMinutes, actualMinutes)
+func (difficulty *Difficulty) Adjust(expectedMinutes float64, actualMinutes float64) float64 {
 	difficulty.Lock()
 	defer difficulty.Unlock()
 
 	// reset modifier
 	difficulty.modifier = 0
 
+	// if k > 1 then difficulty is too low
+	k := expectedMinutes / actualMinutes
+
+	newPdiff := k * difficulty.pdiff
+
 	// compute filter
-	k := difficulty.iir.Filter(delta)
+	newPdiff = difficulty.filter.Process(newPdiff)
 
 	// adjust difficulty
-	return difficulty.internalSetPdiff(difficulty.pdiff * (0.25*k + 1.0))
+	return difficulty.internalSetPdiff(newPdiff)
 }
 
 // logarithmic backoff of difficulty
@@ -259,5 +265,8 @@ func (difficulty *Difficulty) Backoff() float64 {
 		difficulty.modifier += 1
 	}
 
-	return difficulty.internalSetPdiff(difficulty.pdiff * math.Log10(10-0.5*float64(difficulty.modifier)))
+	// return difficulty.internalSetPdiff(difficulty.pdiff * math.Log10(10-0.5*float64(difficulty.modifier)))
+
+	// disble backoff
+	return difficulty.pdiff
 }

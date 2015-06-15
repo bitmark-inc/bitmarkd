@@ -199,11 +199,11 @@ func (mining *Mining) Submit(arguments SubmitArguments, reply *bool) error {
 
 	digest, blk, ok := block.MinerCheckIn(timestamp, ntime, nonce, nonce12, addresses, ids)
 	if !ok {
-		log.Warnf("difficulty NOT MET: %x", digest)
+		log.Warnf("difficulty NOT MET: %s", digest)
 		return ErrLowDifficultyShare
 	}
 
-	log.Infof("difficulty met: digest: %x", digest)
+	log.Infof("difficulty met: digest: %s", digest)
 
 	// mark the tx as mined
 	for _, id := range jobQueue.confirm(jobId) {
@@ -254,13 +254,15 @@ loop:
 		case <-time.After(interval):
 		}
 
+		difficultySent := false
+
 		// if difficulty changed, re-send
 		if d := difficulty.Current.Pdiff(); d != difficultyValue {
 			difficultyValue = d
 			log.Infof("set difficulty: %v", d)
 			conn.Notify("mining.set_difficulty", []interface{}{difficultyValue})
+			difficultySent = true
 		}
-
 		log.Info("poll for new job")
 
 		// get a job if available
@@ -270,6 +272,10 @@ loop:
 			currentJobId = jobId
 
 			log.Infof("job id: %v  minMerkle: %v  addresses: %#v  clean: %v  ok: %v", jobId, minMerkle, addresses, clean, ok)
+
+			if clean && !difficultySent {
+				conn.Notify("mining.set_difficulty", []interface{}{difficulty.Current.Pdiff()})
+			}
 
 			cb1, cb2 := block.CurrentCoinbase(timestamp, extraNonce1Size+extraNonce2Size, addresses)
 

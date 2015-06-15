@@ -145,6 +145,7 @@ loop:
 				log.Info("assemble: initial ids")
 				ids = cursor.FetchAvailable(chunkSize)
 				if len(ids) > 0 {
+					log.Debugf("assemble: initial count: %d", len(ids))
 					restart = false
 					enqueue = true
 				}
@@ -155,14 +156,14 @@ loop:
 				moreIds := cursor.FetchAvailable(chunkSize)
 				enqueue = len(moreIds) > 0
 				if enqueue {
-					log.Infof("assemble: more ids: %#v", moreIds)
+					log.Infof("assemble: more ids: %d", len(moreIds))
 					ids = append(ids, moreIds...)
 					restart = len(ids)+chunkSize > maximumTransactions
 				}
 			}
 			if enqueue {
 				addresses := payment.MinerAddresses()
-				log.Infof("assemble: new job: ids: %#v  addresses: %#v", ids, addresses)
+				log.Infof("assemble: new job: ids: %d  addresses: %#v", len(ids), addresses)
 				timestamp := time.Now().UTC()
 				jobQueue.add(ids, addresses, timestamp)
 				restartPoint = timestamp.Add(restartTimeout) // new job so extend timeout

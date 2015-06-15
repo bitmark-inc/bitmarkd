@@ -1,6 +1,6 @@
 // IIR filter generated on: 2015-05-11 15:39:02
 
-package difficulty
+package filters
 
 // input parameters:
 //   filter type:                elliptic

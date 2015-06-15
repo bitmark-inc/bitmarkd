@@ -99,7 +99,6 @@ func Initialise(cacheSize int) {
 	globalBlock.log.Info("start background")
 	globalBlock.background = background.Start(processes, globalBlock.log)
 
-
 	// determine the highest block on store
 	last, found := globalBlock.blockData.LastElement()
 	if !found {
@@ -232,11 +231,11 @@ func (blk Packed) internalSave(number uint64, digest *Digest, timestamp time.Tim
 		globalBlock.previousBlock = *digest
 
 		// compute decimal minutes taked to mine the block
-		minutes := timestamp.Sub(globalBlock.previousTimestamp).Minutes()
+		actualMinutes := timestamp.Sub(globalBlock.previousTimestamp).Minutes()
 
 		// adjust difficulty
-		d := difficulty.Current.Adjust(ExpectedMinutes - minutes)
-		globalBlock.log.Infof("adjust difficulty to: %10.4f", d)
+		d := difficulty.Current.Adjust(ExpectedMinutes, actualMinutes)
+		globalBlock.log.Infof("adjust difficulty to: %10.4f  expected: %d min  actual: %10.4f min", d, ExpectedMinutes, actualMinutes)
 
 		// save latest timestamp
 		globalBlock.previousTimestamp = timestamp

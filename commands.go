@@ -120,7 +120,6 @@ func processSetupCommand(log *logger.L, options configuration.CommandOptions) bo
 		fmt.Printf("generated mine key: '%s' and certificate: '%s'\n", privateKeyFilename, certificateFilename)
 		log.Infof("generated mine key: '%s' and certificate: '%s'", privateKeyFilename, certificateFilename)
 
-
 	case "block-times":
 		return false // defer processing until database is loaded
 
@@ -187,7 +186,6 @@ func processDataCommand(log *logger.L, options configuration.CommandOptions) boo
 			defer fh.Close()
 			block.PrintBlockTimes(fh, begin, end)
 		}
-
 
 	default:
 		fmt.Printf("error: no such command: %v\n", command)

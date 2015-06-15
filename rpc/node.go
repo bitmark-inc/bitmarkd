@@ -7,8 +7,10 @@ package rpc
 import (
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/gnomon"
 	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/transaction"
 	"github.com/bitmark-inc/logger"
 )
 
@@ -69,14 +71,19 @@ func (node *Node) List(arguments *NodeArguments, reply *NodeReply) error {
 type InfoArguments struct{}
 
 type InfoReply struct {
-	Network string `json:"network"`
-	Blocks  uint64 `json:"blocks"`
+	Network   string  `json:"network"`
+	Blocks    uint64  `json:"blocks"`
+	Pdiff     float64 `json:"pdiff"`
+	Available uint64  `json:"available"`
+	Unpaid    uint64  `json:"unpaid"`
 }
 
 func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 
 	reply.Network = mode.NetworkName()
 	reply.Blocks = block.Number() - 1
+	reply.Pdiff = difficulty.Current.Pdiff()
+	transaction.ReadCounters(&reply.Unpaid, &reply.Available)
 
 	return nil
 }

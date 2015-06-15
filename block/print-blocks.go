@@ -14,16 +14,16 @@ func PrintBlockTimes(fh io.Writer, beginBlockNumber uint64, endBlockNumber uint6
 	n := Number()
 
 	initialised := false
-	lastSeconds := int64(0)
+	lastTimestampSeconds := int64(0)
 
 	if 0 == beginBlockNumber || beginBlockNumber <= GenesisBlockNumber {
 		beginBlockNumber = GenesisBlockNumber
 	}
-	if 0 == endBlockNumber || endBlockNumber >= n - 1 {
+	if 0 == endBlockNumber || endBlockNumber >= n-1 {
 		endBlockNumber = n - 1
 	}
 
-	fmt.Fprintf(fh, "%q %q %q %q\n", "block number", "timestamp", "minutes", "pool difficulty")
+	fmt.Fprintf(fh, "%q %q %q %q %q\n", "block number", "timestamp", "minutes", "pool difficulty", "Tx Count")
 	for blockNumber := beginBlockNumber; blockNumber <= endBlockNumber; blockNumber += 1 {
 
 		packed, exists := Get(blockNumber)
@@ -39,14 +39,18 @@ func PrintBlockTimes(fh io.Writer, beginBlockNumber uint64, endBlockNumber uint6
 			continue
 		}
 
-		seconds := blk.Timestamp.Unix()
+		timestampSeconds := blk.Timestamp.Unix()
 		if !initialised {
-			lastSeconds = seconds
+			lastTimestampSeconds = timestampSeconds
 			initialised = true
 		}
-		delta := seconds - lastSeconds
-		lastSeconds = seconds
+		delta := timestampSeconds - lastTimestampSeconds
+		lastTimestampSeconds = timestampSeconds
+		deltaMinutes := float64(delta) / 60
 
-		fmt.Fprintf(fh, "%d %d %f %f\n", blockNumber, seconds, float64(delta)/60, blk.Header.Bits.Pdiff())
+		txIdCount := len(blk.TxIds)
+		pdiff := blk.Header.Bits.Pdiff()
+
+		fmt.Fprintf(fh, "%d %d %f %f %d\n", blockNumber, timestampSeconds, deltaMinutes, pdiff, txIdCount)
 	}
 }

@@ -34,22 +34,7 @@ func (bitmark *Bitmark) Issue(arguments *transaction.BitmarkIssue, reply *Bitmar
 
 	log := bitmark.log
 
-	log.Infof("Bitmark.Transfer: %v", arguments)
-
-	// ***** FOR TESTING *****
-	// need check at some later point
-	// so issue needs asset + pay before being mined
-	// but removing the checks below allows for some client yesting
-
-	// state, _, found := arguments.AssetIndex.Read()
-	// if !found {
-	// 	return fault.ErrAssetNotFound
-	// }
-
-	// // predecessor must already be confirmed
-	// if state != transaction.MinedTransaction {
-	// 	return fault.ErrLinksToUnconfirmedTransaction
-	// }
+	log.Infof("Bitmark.Issue: %v", arguments)
 
 	packedIssue, err := arguments.Pack(arguments.Owner)
 	if nil != err {
@@ -169,7 +154,7 @@ type ProvenanceReply struct {
 func (bitmark *Bitmark) Provenance(arguments *ProvenanceArguments, reply *ProvenanceReply) error {
 	log := bitmark.log
 
-	log.Infof("Transaction.Provenance: %v", arguments)
+	log.Infof("Bitmark.Provenance: %v", arguments)
 
 	count := arguments.Count
 	id := arguments.TxId

@@ -33,6 +33,10 @@ var transactionPool struct {
 	unpaidPool    *pool.Pool // index of unpaid
 	availablePool *pool.Pool // index of available to be mined
 
+	// global counts
+	unpaidCounter    uint64
+	availableCounter uint64
+
 	// store of assets
 	assetPool *pool.Pool // all available assets
 
@@ -64,6 +68,9 @@ func Initialise(cacheSize int) {
 
 	transactionPool.unpaidPool = pool.New(pool.UnpaidIndex, cacheSize)
 	transactionPool.availablePool = pool.New(pool.AvailableIndex, cacheSize)
+
+	transactionPool.unpaidCounter = 0
+	transactionPool.availableCounter = 0
 
 	transactionPool.assetPool = pool.New(pool.AssetData, cacheSize)
 
@@ -137,6 +144,7 @@ loop:
 			switch theState {
 
 			case UnpaidTransaction, WaitingIssueTransaction:
+				transactionPool.unpaidCounter += 1
 				// ensure an old timestamp is not updated
 				if _, found := transactionPool.unpaidPool.Get(indexBuffer); !found {
 					// Link ++ int64[timestamp]
@@ -172,6 +180,14 @@ func Finalise() {
 	transactionPool.ownerPool.Flush()
 	transactionPool.log.Info("shutting down…")
 	transactionPool.log.Flush()
+}
+
+// sanpshot of counts
+func ReadCounters(unpaid *uint64, available *uint64) {
+	transactionPool.RLock()
+	defer transactionPool.RUnlock()
+	*unpaid = transactionPool.unpaidCounter
+	*available = transactionPool.availableCounter
 }
 
 // write a transaction
@@ -272,6 +288,9 @@ func (data Packed) Write(link *Link) error {
 		stateBuffer := make([]byte, 9)
 		stateBuffer[0] = byte(startingState)
 		copy(stateBuffer[1:], indexBuffer)
+
+		// mutex is locked: so safe to increment counter
+		transactionPool.unpaidCounter += 1
 
 		// Link ++ int64[timestamp]
 		unpaidData := make([]byte, LinkSize+8)
@@ -417,6 +436,10 @@ switchOldState:
 			// create available - remove unpaid
 			transactionPool.availablePool.Add(indexBuffer, txId)
 			transactionPool.unpaidPool.Remove(oldIndex)
+
+			// mutex is locked: so safe to increment counter
+			transactionPool.unpaidCounter -= 1
+			transactionPool.availableCounter += 1
 			ok = true
 
 		case ExpiredTransaction:
@@ -424,6 +447,9 @@ switchOldState:
 			transactionPool.unpaidPool.Remove(oldIndex)
 			transactionPool.statePool.Remove(txId)
 			transactionPool.dataPool.Remove(txId)
+
+			// mutex is locked: so safe to increment counter
+			transactionPool.unpaidCounter -= 1
 			ok = true
 		default:
 		}
@@ -453,6 +479,10 @@ switchOldState:
 				transactionPool.unpaidPool.Remove(oldIndex)
 				transactionPool.statePool.Remove(txId)
 				transactionPool.dataPool.Remove(txId)
+
+				// mutex is locked: so safe to increment counter
+				transactionPool.unpaidCounter -= 1
+
 				ok = true
 			}
 
@@ -484,6 +514,9 @@ switchOldState:
 				assetIndex := NewAssetIndex([]byte(asset.Fingerprint)).Bytes()
 				transactionPool.assetPool.Add(assetIndex, txId)
 
+				// mutex is locked: so safe to increment counter
+				transactionPool.unpaidCounter -= 1
+
 			case *BitmarkIssue:
 				transfer := record.(*BitmarkIssue)
 
@@ -503,6 +536,9 @@ switchOldState:
 
 				ownerData := append(transfer.Owner.PublicKeyBytes(), assetDataLink...)
 				transactionPool.ownerPool.Add(txId, ownerData)
+
+				// mutex is locked: so safe to increment counter
+				transactionPool.availableCounter -= 1
 
 			case *BitmarkTransfer:
 				transfer := record.(*BitmarkTransfer)
@@ -528,6 +564,9 @@ switchOldState:
 
 				transactionPool.ownerPool.Remove(previousLink)
 				transactionPool.ownerPool.Add(txId, ownerData)
+
+				// mutex is locked: so safe to increment counter
+				transactionPool.availableCounter -= 1
 
 			default:
 				fault.Panic("transaction.SetState - unknown transaction type")

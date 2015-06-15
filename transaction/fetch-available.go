@@ -15,7 +15,7 @@ import (
 // returns:
 //   list of ids (as digests for merkle tree processing later)
 //
-// note that an asset txId can be inserted just befor an issue txId
+// note that an asset txId can be inserted just before an issue txId
 //      if that asset was never seen before
 func (cursor *AvailableCursor) FetchAvailable(count int) []block.Digest {
 
