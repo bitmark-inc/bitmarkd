@@ -74,8 +74,9 @@ type InfoReply struct {
 	Network   string  `json:"network"`
 	Blocks    uint64  `json:"blocks"`
 	Pdiff     float64 `json:"pdiff"`
-	Available uint64  `json:"available"`
 	Unpaid    uint64  `json:"unpaid"`
+	Pending   uint64  `json:"pending"`
+	Confirmed uint64  `json:"confirmed"`
 }
 
 func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
@@ -83,7 +84,7 @@ func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 	reply.Network = mode.NetworkName()
 	reply.Blocks = block.Number() - 1
 	reply.Pdiff = difficulty.Current.Pdiff()
-	transaction.ReadCounters(&reply.Unpaid, &reply.Available)
+	transaction.ReadCounters(&reply.Unpaid, &reply.Pending, &reply.Confirmed)
 
 	return nil
 }

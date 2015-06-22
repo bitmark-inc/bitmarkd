@@ -10,7 +10,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 )
 
-// fetch some transaction ids for miner
+// fetch a list of transaction ids for miner
 //
 // returns:
 //   list of ids (as digests for merkle tree processing later)
@@ -21,15 +21,15 @@ func (cursor *AvailableCursor) FetchAvailable(count int) []block.Digest {
 
 	startIndex := cursor.count.Bytes()
 
-	available, err := transactionPool.availablePool.Fetch(startIndex, count)
+	confirmed, err := transactionPool.confirmedPool.Fetch(startIndex, count)
 	if nil != err {
 		// error represents a database failure - panic
-		fault.PanicWithError("transaction.FetchAvailable: availablePool.Fetch", err)
+		fault.PanicWithError("transaction.FetchAvailable: confirmedPool.Fetch", err)
 	}
 
-	length := len(available)
+	length := len(confirmed)
 
-	// if nothing available just return the same cursor value
+	// if nothing confirmed just return the same cursor value
 	if 0 == length {
 		return nil
 	}
@@ -37,15 +37,15 @@ func (cursor *AvailableCursor) FetchAvailable(count int) []block.Digest {
 	results := make([]block.Digest, 0, count)
 
 loop:
-	for _, e := range available {
+	for _, e := range confirmed {
 
 		var txId Link
-		LinkFromBytes(&txId, e.Value)
+		LinkFromBytes(&txId, e.Value[:LinkSize])
 
 		state, packedTx, found := txId.Read()
-		if !found || AvailableTransaction != state {
+		if !found || ConfirmedTransaction != state {
 			// error represents a database failure - panic
-			fault.Criticalf("transaction.FetchAvailable: problem TxId: %#v  state: %#v found : %v", txId, state, found)
+			fault.Criticalf("transaction.FetchAvailable: problem TxId: %#v  state: %s found: %v", txId, state, found)
 			//fault.Panic("transaction.FetchAvailable: read tx problem")
 
 			// if the tx disappeared then skip it (maybe was mined)
@@ -65,7 +65,7 @@ loop:
 			if !found {
 				continue // skip any issues lacking asset
 			}
-			if WaitingIssueTransaction == state {
+			if UnpaidTransaction == state {
 				if _, ok := cursor.assets[link]; !ok {
 
 					results = append(results, block.Digest(link))

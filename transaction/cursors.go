@@ -6,14 +6,15 @@ package transaction
 
 import (
 	"encoding/binary"
+	"sync/atomic"
 )
 
-// type to denote a index in the unpaid and available pools
+// type to denote a index in the unpaid, pending or confirmed pools
 // just a 64 bit unsigned integer - big endian byte order
-// (has a Bytes() to feth the big endian representation
+// (has a Bytes() to fetch the big endian representation
 type IndexCursor uint64
 
-// holds a cursor for fetching available
+// holds a cursor for fetching confirmed with associated assets
 type AvailableCursor struct {
 	count  IndexCursor
 	assets map[Link]struct{}
@@ -31,5 +32,16 @@ func NewAvailableCursor() *AvailableCursor {
 func (ic IndexCursor) Bytes() []byte {
 	buffer := make([]byte, 8)
 	binary.BigEndian.PutUint64(buffer, uint64(ic))
+	return buffer
+}
+
+// convert a next count to a byte slice (big endian)
+func (ic *IndexCursor) NextBytes() []byte {
+
+	// avoid needing a mutex lock
+	nextValue := atomic.AddUint64((*uint64)(ic), 1)
+
+	buffer := make([]byte, 8)
+	binary.BigEndian.PutUint64(buffer,nextValue)
 	return buffer
 }

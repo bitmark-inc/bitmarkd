@@ -53,10 +53,24 @@ func Criticalf(format string, arguments ...interface{}) {
 	}
 }
 
+// Panic with a formatted message a formatted string with arguments like fmt.Sprintf()
+func Panicf(format string, arguments ...interface{}) {
+	if _, file, line, ok := runtime.Caller(1); ok {
+		a := make([]interface{}, 2, 2+len(arguments))
+		a[0] = file
+		a[1] = line
+		a = append(a, arguments...)
+		log.Criticalf("(%q:%d) "+format, a...)
+	} else {
+		log.Criticalf(format, arguments...)
+	}
+	Panic("abort, see last messages in log file")
+}
+
 // final panic
 func Panic(message string) {
 	if nil != log {
-		log.Criticalf("PANIC: %s", message)
+		log.Criticalf("%s", message)
 		log.Flush()                        // make sure log file is saved
 		time.Sleep(100 * time.Millisecond) // to allow logging output
 	}

@@ -14,11 +14,51 @@ type State byte
 // possible states for a transaction
 const (
 	ExpiredTransaction      = State('E')
-	WaitingIssueTransaction = State('W')
 	UnpaidTransaction       = State('U')
-	AvailableTransaction    = State('A')
+	PendingTransaction      = State('P')
+	ConfirmedTransaction    = State('C')
 	MinedTransaction        = State('M')
 )
+
+func (state State) CanChangeTo(newState State) bool {
+	if state == newState {
+		return true
+	}
+
+	switch state {
+	case ExpiredTransaction:
+		return UnpaidTransaction == newState
+
+	case UnpaidTransaction:
+		return true
+
+	case PendingTransaction:
+		return ConfirmedTransaction == newState || MinedTransaction == newState
+	case ConfirmedTransaction:
+		return MinedTransaction == newState
+
+	default:
+		return false
+	}
+}
+
+func (state State) String() string {
+	s := "?"
+	switch state {
+	case ExpiredTransaction:
+		s = "Expired"
+	case UnpaidTransaction:
+		s = "Unpaid"
+	case PendingTransaction:
+		s = "Pending"
+	case ConfirmedTransaction:
+		s = "Confirmed"
+	case MinedTransaction:
+		s = "Mined"
+	default:
+	}
+	return s
+}
 
 // convert a state to text for JSON
 func (state State) MarshalJSON() ([]byte, error) {
@@ -35,19 +75,5 @@ func (state State) MarshalJSON() ([]byte, error) {
 // Note: Each string _MUST_ start with a unique capital letter
 // so client only need to test firrst character.
 func (state State) MarshalText() ([]byte, error) {
-	s := "?"
-	switch state {
-	case ExpiredTransaction:
-		s = "Expired"
-	case WaitingIssueTransaction:
-		s = "Waiting"
-	case UnpaidTransaction:
-		s = "Unpaid"
-	case AvailableTransaction:
-		s = "Available"
-	case MinedTransaction:
-		s = "Mined"
-	default:
-	}
-	return []byte(s), nil
+	return []byte(state.String()), nil
 }

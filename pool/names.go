@@ -16,9 +16,10 @@ package pool
 // Transactions:
 //
 //   T<tx-digest>          - packed transaction data
-//   S<tx-digest>          - state: byte[expired(E), unpaid(U), available(A), mined(M)] ++ int64[the U/A table count value]
-//   U<count>              - transaction-digest ++ int64[timestamp] (pool of unpaid transactions for checking)
-//   A<count>              - transaction-digest (pool of payment confirmed transactions, available for mining)
+//   S<tx-digest>          - state: byte[expired(E), unpaid(U), pending(P), confirmed(C), mined(M)] ++ int64[the U/N/A table count value]
+//   U<count>              - transaction-digest ++ int64[timestamp] (Unpaid transactions for checking)
+//   N<count>              - transaction-digest ++ int64[timestamp] (peNding payment confirmation transactions, _NOT_ available for mining)
+//   A<count>              - transaction-digest ++ int64[timestamp] (payment confirmed transactions, Available for mining)
 //
 // Assets:
 //
@@ -53,7 +54,8 @@ const (
 
 	// transaction index pools
 	UnpaidIndex    = nameb('U')
-	AvailableIndex = nameb('A')
+	PendingIndex = nameb('N')
+	ConfirmedIndex = nameb('A')
 
 	// asset
 	AssetData = nameb('I')

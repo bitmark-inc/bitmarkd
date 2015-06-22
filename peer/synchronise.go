@@ -194,12 +194,10 @@ loop:
 		// skip transactions already on file
 		state, found := txid.State()
 		if found {
-			// ***** FIX THIS: possibly need better transaction state machine *****
-			if transaction.WaitingIssueTransaction == state {
+			switch state {
+			case transaction.UnpaidTransaction, transaction.PendingTransaction, transaction.ConfirmedTransaction:
 				txid.SetState(transaction.MinedTransaction)
-			} else if transaction.MinedTransaction != state {
-				txid.SetState(transaction.AvailableTransaction)
-				txid.SetState(transaction.MinedTransaction)
+			default:
 			}
 			continue
 		}
@@ -260,12 +258,10 @@ loop:
 				continue fetchOne
 			}
 
-			// ***** FIX THIS: possibly need better transaction state machine *****
-			if transaction.WaitingIssueTransaction == state {
+			switch state {
+			case transaction.UnpaidTransaction, transaction.PendingTransaction, transaction.ConfirmedTransaction:
 				txid.SetState(transaction.MinedTransaction)
-			} else if transaction.MinedTransaction != state {
-				txid.SetState(transaction.AvailableTransaction)
-				txid.SetState(transaction.MinedTransaction)
+			default:
 			}
 
 			// transaction sucessfully processed
@@ -332,7 +328,7 @@ loop:
 
 			state, packedTx, found := transaction.Link(txId).Read()
 
-			if !found || transaction.AvailableTransaction != state {
+			if !found || transaction.ConfirmedTransaction != state {
 				continue
 			}
 
