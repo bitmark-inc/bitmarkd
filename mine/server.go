@@ -205,10 +205,10 @@ func (mining *Mining) Submit(arguments SubmitArguments, reply *bool) error {
 
 	log.Infof("difficulty met: digest: %s", digest)
 
-	// mark the tx as mined
+	// mark the tx as confirmed
 	for _, id := range jobQueue.confirm(jobId) {
 		txid := transaction.Link(id)
-		txid.SetState(transaction.MinedTransaction)
+		txid.SetState(transaction.ConfirmedTransaction)
 	}
 
 	messagebus.Send(block.Mined(blk))

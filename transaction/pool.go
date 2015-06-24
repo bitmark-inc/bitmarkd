@@ -27,17 +27,15 @@ var transactionPool struct {
 
 	// data storage pools
 	dataPool  *pool.Pool // raw transaction data
-	statePool *pool.Pool // state: unpaid, pending, confirmed or mined
+	statePool *pool.Pool // state: pending, verified or confirmed
 
 	// state index pools
-	unpaidPool    *pool.Pool // index of unpaid
-	pendingPool   *pool.Pool // index of payment seen
-	confirmedPool *pool.Pool // index of payment confirmed so tx can be mined
+	pendingPool  *pool.Pool // index of pending payment
+	verifiedPool *pool.Pool // index of payment veiified so tx can be mined
 
 	// global counts
-	unpaidCounter    ItemCounter
-	pendingCounter   ItemCounter
-	confirmedCounter ItemCounter
+	pendingCounter  ItemCounter
+	verifiedCounter ItemCounter
 
 	// store of assets
 	assetPool *pool.Pool // all assets
@@ -46,7 +44,7 @@ var transactionPool struct {
 	ownerPool *pool.Pool // index of leaves bitmark transfer
 
 	// counter for record index
-	// used as index for the unpaid/pending/confirmed pools
+	// used as index for the pending/verified pools
 	indexCounter IndexCursor
 }
 
@@ -68,13 +66,11 @@ func Initialise(cacheSize int) {
 	transactionPool.dataPool = pool.New(pool.TransactionData, cacheSize)
 	transactionPool.statePool = pool.New(pool.TransactionState, cacheSize)
 
-	transactionPool.unpaidPool = pool.New(pool.UnpaidIndex, cacheSize)
 	transactionPool.pendingPool = pool.New(pool.PendingIndex, cacheSize)
-	transactionPool.confirmedPool = pool.New(pool.ConfirmedIndex, cacheSize)
+	transactionPool.verifiedPool = pool.New(pool.VerifiedIndex, cacheSize)
 
-	transactionPool.unpaidCounter = 0
 	transactionPool.pendingCounter = 0
-	transactionPool.confirmedCounter = 0
+	transactionPool.verifiedCounter = 0
 
 	transactionPool.assetPool = pool.New(pool.AssetData, cacheSize)
 
@@ -85,11 +81,11 @@ func Initialise(cacheSize int) {
 	// make sure mined status is correct
 	lastBlock := block.Number()
 	stateBuffer := make([]byte, 9)
-	stateBuffer[0] = byte(MinedTransaction)
+	stateBuffer[0] = byte(ConfirmedTransaction)
 
 	abort := false
 	for n := uint64(2); n < lastBlock; n += 1 {
-		transactionPool.log.Debugf("set mined from block: %d", n)
+		transactionPool.log.Debugf("set confirmed from block: %d", n)
 		packed, found := block.Get(n)
 		if !found {
 			fault.Panicf("transaction.Initialise: missing block: %d", n)
@@ -98,7 +94,7 @@ func Initialise(cacheSize int) {
 		err := packed.Unpack(&blk)
 		fault.PanicIfError("transaction.Initialise: block recovery failed, block unpack", err)
 
-		// rewrite as mined
+		// rewrite as confirmed
 		for _, txId := range blk.TxIds {
 			indexBuffer := Link(txId).Bytes()
 			if _, found := transactionPool.dataPool.Get(indexBuffer); found {
@@ -126,7 +122,7 @@ loop:
 			break loop
 		}
 		// for pool/names.go
-		//   S<tx-digest>          - state: byte[expired(E), unpaid(U), pending(P), confirmed(C), mined(M)] ++ int64[the U/A table count value]
+		//   S<tx-digest>          - state: byte[expired(E), pending(P), verified(V), confirmed(C)] ++ int64[the U/A table count value]
 
 		// uint64 timestamp
 		timestamp := uint64(time.Now().UTC().Unix())
@@ -141,35 +137,26 @@ loop:
 
 			switch theState {
 
-			case UnpaidTransaction:
-				transactionPool.unpaidCounter.Increment()
-				// ensure an old timestamp is not updated
-				if _, found := transactionPool.unpaidPool.Get(indexBuffer); !found {
-					// Link ++ int64[timestamp]
-					unpaidData := make([]byte, LinkSize+8)
-					copy(unpaidData, txId)
-					binary.BigEndian.PutUint64(unpaidData[LinkSize:], timestamp)
-					transactionPool.unpaidPool.Add(indexBuffer, unpaidData)
-				}
-				transactionPool.pendingPool.Remove(indexBuffer)
-				transactionPool.confirmedPool.Remove(indexBuffer)
-
 			case PendingTransaction:
-				transactionPool.unpaidPool.Remove(indexBuffer)
-				transactionPool.confirmedPool.Remove(indexBuffer)
-				transactionPool.pendingPool.Add(indexBuffer, txId)
 				transactionPool.pendingCounter.Increment()
+				// ensure an old timestamp is not updated
+				if _, found := transactionPool.pendingPool.Get(indexBuffer); !found {
+					// Link ++ int64[timestamp]
+					pendingData := make([]byte, LinkSize+8)
+					copy(pendingData, txId)
+					binary.BigEndian.PutUint64(pendingData[LinkSize:], timestamp)
+					transactionPool.pendingPool.Add(indexBuffer, pendingData)
+				}
+				transactionPool.verifiedPool.Remove(indexBuffer)
+
+			case VerifiedTransaction:
+				transactionPool.pendingPool.Remove(indexBuffer)
+				transactionPool.verifiedPool.Add(indexBuffer, txId)
+				transactionPool.verifiedCounter.Increment()
 
 			case ConfirmedTransaction:
-				transactionPool.unpaidPool.Remove(indexBuffer)
 				transactionPool.pendingPool.Remove(indexBuffer)
-				transactionPool.confirmedPool.Add(indexBuffer, txId)
-				transactionPool.confirmedCounter.Increment()
-
-			case MinedTransaction:
-				transactionPool.unpaidPool.Remove(indexBuffer)
-				transactionPool.pendingPool.Remove(indexBuffer)
-				transactionPool.confirmedPool.Remove(indexBuffer)
+				transactionPool.verifiedPool.Remove(indexBuffer)
 
 			default:
 				// error represents an unexpected state of a transaction
@@ -187,9 +174,8 @@ loop:
 func Finalise() {
 	transactionPool.dataPool.Flush()
 	transactionPool.statePool.Flush()
-	transactionPool.unpaidPool.Flush()
 	transactionPool.pendingPool.Flush()
-	transactionPool.confirmedPool.Flush()
+	transactionPool.verifiedPool.Flush()
 	transactionPool.assetPool.Flush()
 	transactionPool.ownerPool.Flush()
 	transactionPool.log.Info("shutting down…")
@@ -197,12 +183,11 @@ func Finalise() {
 }
 
 // sanpshot of counts
-func ReadCounters(unpaid *uint64, pending *uint64, confirmed *uint64) {
+func ReadCounters(pending *uint64, verified *uint64) {
 	transactionPool.RLock()
 	defer transactionPool.RUnlock()
-	*unpaid = transactionPool.unpaidCounter.Uint64()
 	*pending = transactionPool.pendingCounter.Uint64()
-	*confirmed = transactionPool.confirmedCounter.Uint64()
+	*verified = transactionPool.verifiedCounter.Uint64()
 }
 
 // write a transaction
@@ -211,7 +196,7 @@ func ReadCounters(unpaid *uint64, pending *uint64, confirmed *uint64) {
 //   whether the values was added (false => already exists)
 //   the ID of the transaction
 //
-// this enters the transaction as an unpaid new transaction
+// this enters the transaction as an pending new transaction
 func (data Packed) Write(link *Link) error {
 
 	*link = data.MakeLink()
@@ -272,17 +257,17 @@ func (data Packed) Write(link *Link) error {
 			return fault.ErrAssetNotFound // not reached
 		}
 
-		// if asset is unpaid update timestamp and write back to give a longer expiry
-		if UnpaidTransaction == State(assetState[0]) {
-			data, found := transactionPool.unpaidPool.Get(assetState[1:])
+		// if asset is pending update timestamp and write back to give a longer expiry
+		if PendingTransaction == State(assetState[0]) {
+			data, found := transactionPool.pendingPool.Get(assetState[1:])
 			if !found {
-				fault.Panicf("write tx, no asset unpaid state for assetIndex: %x", assetIndex)
+				fault.Panicf("write tx, no asset pending state for assetIndex: %x", assetIndex)
 				return fault.ErrAssetNotFound // not reached
 			}
 
 			binary.BigEndian.PutUint64(data[LinkSize:], timestamp)
 
-			transactionPool.unpaidPool.Add(assetState[1:], data)
+			transactionPool.pendingPool.Add(assetState[1:], data)
 		}
 
 	default:
@@ -294,23 +279,23 @@ func (data Packed) Write(link *Link) error {
 	// order they were entered
 	indexBuffer := transactionPool.indexCounter.Bytes()
 
-	// first byte is state, next 8 bytes are big endian unpaid index
+	// first byte is state, next 8 bytes are big endian pending index
 	stateBuffer := make([]byte, 9)
-	stateBuffer[0] = byte(UnpaidTransaction)
+	stateBuffer[0] = byte(PendingTransaction)
 	copy(stateBuffer[1:], indexBuffer)
 
 	// update counter
-	transactionPool.unpaidCounter.Increment()
+	transactionPool.pendingCounter.Increment()
 
 	// Link ++ int64[timestamp]
-	unpaidData := make([]byte, LinkSize+8)
-	copy(unpaidData, txId)
-	binary.BigEndian.PutUint64(unpaidData[LinkSize:], timestamp)
+	pendingData := make([]byte, LinkSize+8)
+	copy(pendingData, txId)
+	binary.BigEndian.PutUint64(pendingData[LinkSize:], timestamp)
 
 	// store in database
-	transactionPool.statePool.Add(txId, stateBuffer)
-	transactionPool.unpaidPool.Add(indexBuffer, unpaidData)
 	transactionPool.dataPool.Add(txId, data)
+	transactionPool.statePool.Add(txId, stateBuffer)
+	transactionPool.pendingPool.Add(indexBuffer, pendingData)
 	switch tx.(type) {
 	case *AssetData:
 		asset := tx.(*AssetData)
@@ -411,18 +396,16 @@ func setAsset(assetNewState State, timestamp uint64, unpackedTransaction interfa
 	}
 
 	assetOldState, assetOldIndex := getStateIndex(assetTxId)
-	if assetOldState == assetNewState || !assetOldState.CanChangeTo(assetNewState) {
+	if !assetOldState.CanChangeTo(assetNewState) {
 		return
 	}
 
 	switch assetNewState {
 	case ExpiredTransaction:
-	case UnpaidTransaction:
 	case PendingTransaction:
-		setPending(assetOldIndex, assetTxId, timestamp)
+	case VerifiedTransaction:
+		setVerified(assetOldState, assetOldIndex, assetTxId, timestamp)
 	case ConfirmedTransaction:
-		setConfirmed(assetOldState, assetOldIndex, assetTxId, timestamp)
-	case MinedTransaction:
 		// fetch and decode the asset transaction
 		rawTx, found := transactionPool.dataPool.Get(assetTxId)
 		if !found {
@@ -431,7 +414,7 @@ func setAsset(assetNewState State, timestamp uint64, unpackedTransaction interfa
 		unpackedAssetTransaction, err := Packed(rawTx).Unpack()
 		fault.PanicIfError("transaction.SetState: unpack", err)
 
-		setMined(assetOldState, assetOldIndex, assetTxId, unpackedAssetTransaction)
+		setConfirmed(assetOldState, assetOldIndex, assetTxId, unpackedAssetTransaction)
 	default:
 	}
 
@@ -439,84 +422,50 @@ func setAsset(assetNewState State, timestamp uint64, unpackedTransaction interfa
 }
 
 // must be called with locked mutex
-func setPending(oldIndex []byte, txId []byte, timestamp uint64) {
+func setVerified(oldState State, oldIndex []byte, txId []byte, timestamp uint64) bool {
 
 	// create the index count in big endian order so
 	// iterator on the index will return items in the
 	// order they were entered
 	indexBuffer := transactionPool.indexCounter.NextBytes()
 
-	// first byte is state, next 8 bytes are big endian unpaid index
+	// first byte is state, next 8 bytes are big endian pending index
 	stateBuffer := make([]byte, 9)
-	stateBuffer[0] = byte(PendingTransaction)
+	stateBuffer[0] = byte(VerifiedTransaction)
 	copy(stateBuffer[1:], indexBuffer)
 
 	// rewrite as available
 	transactionPool.statePool.Add(txId, stateBuffer)
 
 	// Link ++ int64[timestamp]
-	pendingData := make([]byte, LinkSize+8)
-	copy(pendingData, txId)
-	binary.BigEndian.PutUint64(pendingData[LinkSize:], timestamp)
+	verifiedData := make([]byte, LinkSize+8)
+	copy(verifiedData, txId)
+	binary.BigEndian.PutUint64(verifiedData[LinkSize:], timestamp)
 
-	// create pending - remove unpaid
-	transactionPool.pendingPool.Add(indexBuffer, pendingData)
-	transactionPool.unpaidPool.Remove(oldIndex)
-
-	// update counters
-	transactionPool.unpaidCounter.Decrement()
-	transactionPool.pendingCounter.Increment()
-}
-
-// must be called with locked mutex
-func setConfirmed(oldState State, oldIndex []byte, txId []byte, timestamp uint64) bool {
-
-	// create the index count in big endian order so
-	// iterator on the index will return items in the
-	// order they were entered
-	indexBuffer := transactionPool.indexCounter.NextBytes()
-
-	// first byte is state, next 8 bytes are big endian unpaid index
-	stateBuffer := make([]byte, 9)
-	stateBuffer[0] = byte(ConfirmedTransaction)
-	copy(stateBuffer[1:], indexBuffer)
-
-	// rewrite as available
-	transactionPool.statePool.Add(txId, stateBuffer)
-
-	// Link ++ int64[timestamp]
-	confirmedData := make([]byte, LinkSize+8)
-	copy(confirmedData, txId)
-	binary.BigEndian.PutUint64(confirmedData[LinkSize:], timestamp)
-
-	// create confirmed
-	transactionPool.confirmedPool.Add(indexBuffer, confirmedData)
-	transactionPool.confirmedCounter.Increment()
+	// create verified
+	transactionPool.verifiedPool.Add(indexBuffer, verifiedData)
+	transactionPool.verifiedCounter.Increment()
 
 	// remove previous state
 	switch oldState {
-	case UnpaidTransaction:
-		transactionPool.unpaidPool.Remove(oldIndex)
-		transactionPool.unpaidCounter.Decrement()
-
 	case PendingTransaction:
 		transactionPool.pendingPool.Remove(oldIndex)
 		transactionPool.pendingCounter.Decrement()
 
 	default: // should not happen
-		fault.Panicf("transaction.setConfirmed: invalid old state: %s", oldState)
+		fault.Panicf("transaction.setVerified: invalid old state: %s", oldState)
 	}
 
 	return true
 }
 
-func setMined(oldState State, oldIndex []byte, txId []byte, unpackedTransaction interface{}) {
+func setConfirmed(oldState State, oldIndex []byte, txId []byte, unpackedTransaction interface{}) {
 
 	// first byte is state, next 8 bytes are big endian zero (for compatibility of other states)
 	stateBuffer := make([]byte, 9)
-	stateBuffer[0] = byte(MinedTransaction)
+	stateBuffer[0] = byte(ConfirmedTransaction)
 
-	// rewrite as mined
+	// rewrite as confirmed
 	transactionPool.statePool.Add(txId, stateBuffer)
 
 	// decode the transaction
@@ -535,7 +484,7 @@ func setMined(oldState State, oldIndex []byte, txId []byte, unpackedTransaction 
 		// must link to an Asset
 		previous, found := transactionPool.assetPool.Get(assetIndex)
 		if !found {
-			fault.PanicWithError("transaction.setMined", fault.ErrLinkNotFound)
+			fault.PanicWithError("transaction.setConfirmed", fault.ErrLinkNotFound)
 		}
 
 		// split the record
@@ -553,7 +502,7 @@ func setMined(oldState State, oldIndex []byte, txId []byte, unpackedTransaction 
 		previousLink := transfer.Link.Bytes()
 		previous, found := transactionPool.ownerPool.Get(previousLink)
 		if !found {
-			fault.PanicWithError("transaction.setMined", fault.ErrLinkNotFound)
+			fault.PanicWithError("transaction.setConfirmed", fault.ErrLinkNotFound)
 		}
 
 		// split the record
@@ -572,26 +521,22 @@ func setMined(oldState State, oldIndex []byte, txId []byte, unpackedTransaction 
 		transactionPool.ownerPool.Add(txId, ownerData)
 
 	default:
-		fault.Panicf("transaction.setMined: unknown transaction type: %v", unpackedTransaction)
+		fault.Panicf("transaction.setConfirmed: unknown transaction type: %v", unpackedTransaction)
 	}
 
 	// decrement apropriate counter
 	switch oldState {
 
-	case UnpaidTransaction:
-		transactionPool.unpaidPool.Remove(oldIndex)
-		transactionPool.unpaidCounter.Decrement()
-
 	case PendingTransaction:
 		transactionPool.pendingPool.Remove(oldIndex)
 		transactionPool.pendingCounter.Decrement()
 
-	case ConfirmedTransaction:
-		transactionPool.confirmedPool.Remove(oldIndex)
-		transactionPool.confirmedCounter.Decrement()
+	case VerifiedTransaction:
+		transactionPool.verifiedPool.Remove(oldIndex)
+		transactionPool.verifiedCounter.Decrement()
 
 	default:
-		fault.Panicf("transaction.setMined: invalid old state: %s", oldState)
+		fault.Panicf("transaction.setConfirmed: invalid old state: %s", oldState)
 	}
 }
 
@@ -636,14 +581,14 @@ func (link Link) SetState(newState State) {
 
 	// check allowable transitions
 	// Asset:
-	//   U   → P (when issue → P)
-	//   U,P → C (when issue → C)
-	//   *   → M (when issue → M)
+	//   P   → E (after timeout. E is not saved, records are just removed)
+	//   E   → P (when issue → P)
+	//   E,P → V (when issue → V)
+	//   *   → C (when issue → C)
 	// Issue, Transfer:
-	//   U   → E (after timeout. E is not saved, records are just removed)
-	//   U   → P (when payment tx is detected)
-	//   U,P → C (when payment is in currency block with 'N' confirmations)
-	//   C   → M (when miner has found block)
+	//   P   → E (after timeout. E is not saved, records are just removed)
+	//   P   → V (when payment is in currency block with 'N' confirmations)
+	//   V   → C (when miner has found block)
 
 	// flag to indicate if transaition was correct
 	ok := false
@@ -655,66 +600,44 @@ func (link Link) SetState(newState State) {
 		// should not happen
 		fault.Panicf("transaction.SetState - expired tx id: %#v", txId)
 
-	case UnpaidTransaction:
-		// allowed transitions: expired, pending, confirmed
+	case PendingTransaction:
+		// allowed transitions: expired, pending, verified
 		switch newState {
 
 		case ExpiredTransaction:
 			// delete all associated records
-			transactionPool.unpaidPool.Remove(oldIndex)
+			transactionPool.pendingPool.Remove(oldIndex)
 			transactionPool.statePool.Remove(txId)
 			transactionPool.dataPool.Remove(txId)
 
-			transactionPool.unpaidCounter.Decrement()
+			transactionPool.pendingCounter.Decrement()
 			ok = true
 
-		case PendingTransaction:
-			setPending(oldIndex, txId, timestamp)
-			setAsset(PendingTransaction, timestamp, unpackedTransaction)
+		case VerifiedTransaction:
+			setVerified(oldState, oldIndex, txId, timestamp)
+			setAsset(VerifiedTransaction, timestamp, unpackedTransaction)
 			ok = true
 
 		case ConfirmedTransaction:
-			setConfirmed(oldState, oldIndex, txId, timestamp)
+			setConfirmed(oldState, oldIndex, txId, unpackedTransaction)
 			setAsset(ConfirmedTransaction, timestamp, unpackedTransaction)
-			ok = true
-
-		case MinedTransaction:
-			setMined(oldState, oldIndex, txId, unpackedTransaction)
-			setAsset(MinedTransaction, timestamp, unpackedTransaction)
 			ok = true
 
 		default:
 		}
 
-	case PendingTransaction:
-		// allowed transitions: confirmed, mined
+	case VerifiedTransaction:
+		// allowed transitions: confirmed
 		switch newState {
-
 		case ConfirmedTransaction:
-			setConfirmed(oldState, oldIndex, txId, timestamp)
+			setConfirmed(oldState, oldIndex, txId, unpackedTransaction)
 			setAsset(ConfirmedTransaction, timestamp, unpackedTransaction)
-			ok = true
-
-		case MinedTransaction:
-			setMined(oldState, oldIndex, txId, unpackedTransaction)
-			setAsset(MinedTransaction, timestamp, unpackedTransaction)
 			ok = true
 
 		default:
 		}
 
 	case ConfirmedTransaction:
-		// allowed transitions: mined
-		switch newState {
-		case MinedTransaction:
-			setMined(oldState, oldIndex, txId, unpackedTransaction)
-			setAsset(MinedTransaction, timestamp, unpackedTransaction)
-			ok = true
-
-		default:
-		}
-
-	case MinedTransaction:
 
 	default:
 	}

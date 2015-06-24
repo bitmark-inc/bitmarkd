@@ -21,15 +21,15 @@ func (cursor *AvailableCursor) FetchAvailable(count int) []block.Digest {
 
 	startIndex := cursor.count.Bytes()
 
-	confirmed, err := transactionPool.confirmedPool.Fetch(startIndex, count)
+	verified, err := transactionPool.verifiedPool.Fetch(startIndex, count)
 	if nil != err {
 		// error represents a database failure - panic
-		fault.PanicWithError("transaction.FetchAvailable: confirmedPool.Fetch", err)
+		fault.PanicWithError("transaction.FetchAvailable: verifiedPool.Fetch", err)
 	}
 
-	length := len(confirmed)
+	length := len(verified)
 
-	// if nothing confirmed just return the same cursor value
+	// if nothing verified just return the same cursor value
 	if 0 == length {
 		return nil
 	}
@@ -37,13 +37,13 @@ func (cursor *AvailableCursor) FetchAvailable(count int) []block.Digest {
 	results := make([]block.Digest, 0, count)
 
 loop:
-	for _, e := range confirmed {
+	for _, e := range verified {
 
 		var txId Link
 		LinkFromBytes(&txId, e.Value[:LinkSize])
 
 		state, packedTx, found := txId.Read()
-		if !found || ConfirmedTransaction != state {
+		if !found || VerifiedTransaction != state {
 			// error represents a database failure - panic
 			fault.Criticalf("transaction.FetchAvailable: problem TxId: %#v  state: %s found: %v", txId, state, found)
 			//fault.Panic("transaction.FetchAvailable: read tx problem")
@@ -65,7 +65,7 @@ loop:
 			if !found {
 				continue // skip any issues lacking asset
 			}
-			if UnpaidTransaction == state {
+			if ConfirmedTransaction != state {
 				if _, ok := cursor.assets[link]; !ok {
 
 					results = append(results, block.Digest(link))

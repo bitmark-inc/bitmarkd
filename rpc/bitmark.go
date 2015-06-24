@@ -81,7 +81,7 @@ func (bitmark *Bitmark) Transfer(arguments *transaction.BitmarkTransfer, reply *
 	}
 
 	// predecessor must already be confirmed
-	if state != transaction.MinedTransaction {
+	if state != transaction.ConfirmedTransaction {
 		return fault.ErrLinksToUnconfirmedTransaction
 	}
 

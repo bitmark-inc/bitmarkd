@@ -35,7 +35,7 @@ loop:
 
 		// exclude the mined transactions
 		for _, e := range state {
-			if MinedTransaction == State(e.Value[0]) {
+			if ConfirmedTransaction == State(e.Value[0]) {
 				continue
 			}
 			var txid Link

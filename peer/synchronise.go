@@ -195,8 +195,8 @@ loop:
 		state, found := txid.State()
 		if found {
 			switch state {
-			case transaction.UnpaidTransaction, transaction.PendingTransaction, transaction.ConfirmedTransaction:
-				txid.SetState(transaction.MinedTransaction)
+			case transaction.PendingTransaction, transaction.VerifiedTransaction:
+				txid.SetState(transaction.ConfirmedTransaction)
 			default:
 			}
 			continue
@@ -226,7 +226,7 @@ loop:
 			// validate
 			packedTransaction := transaction.Packed(result[0].Reply.Data)
 
-			_, err := packedTransaction.Unpack()
+			unpackedTransaction, err := packedTransaction.Unpack()
 			if nil != err {
 				log.Errorf("received transaction from: %q  error: %v", to, err)
 				success = false
@@ -235,6 +235,7 @@ loop:
 
 			// write the transaction
 			log.Infof("txid: %#v", txid)
+			log.Debugf("tx: %#v", unpackedTransaction)
 			var txid2 transaction.Link
 			switch err := packedTransaction.Write(&txid2); err {
 			case nil:
@@ -259,8 +260,8 @@ loop:
 			}
 
 			switch state {
-			case transaction.UnpaidTransaction, transaction.PendingTransaction, transaction.ConfirmedTransaction:
-				txid.SetState(transaction.MinedTransaction)
+			case transaction.PendingTransaction, transaction.VerifiedTransaction:
+				txid.SetState(transaction.ConfirmedTransaction)
 			default:
 			}
 

@@ -285,8 +285,8 @@ func PaymentAddresses() []block.MinerAddress {
 // returns true on transition from unpaid to paid
 func CheckPaid(txId transaction.Link) bool {
 	if isPaid(txId) {
-		if state, found := txId.State(); found && transaction.UnpaidTransaction == state {
-			txId.SetState(transaction.ConfirmedTransaction)
+		if state, found := txId.State(); found && transaction.PendingTransaction == state {
+			txId.SetState(transaction.VerifiedTransaction)
 			return true
 		}
 	}

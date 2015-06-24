@@ -71,12 +71,11 @@ func (node *Node) List(arguments *NodeArguments, reply *NodeReply) error {
 type InfoArguments struct{}
 
 type InfoReply struct {
-	Network   string  `json:"network"`
-	Blocks    uint64  `json:"blocks"`
-	Pdiff     float64 `json:"pdiff"`
-	Unpaid    uint64  `json:"unpaid"`
-	Pending   uint64  `json:"pending"`
-	Confirmed uint64  `json:"confirmed"`
+	Network  string  `json:"network"`
+	Blocks   uint64  `json:"blocks"`
+	Pdiff    float64 `json:"pdiff"`
+	Pending  uint64  `json:"pending"`
+	Verified uint64  `json:"verified"`
 }
 
 func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
@@ -84,7 +83,7 @@ func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 	reply.Network = mode.NetworkName()
 	reply.Blocks = block.Number() - 1
 	reply.Pdiff = difficulty.Current.Pdiff()
-	transaction.ReadCounters(&reply.Unpaid, &reply.Pending, &reply.Confirmed)
+	transaction.ReadCounters(&reply.Pending, &reply.Verified)
 
 	return nil
 }
