@@ -5,7 +5,10 @@
 package transaction
 
 import (
+	"encoding/base64"
 	"encoding/binary"
+	"fmt"
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"sync/atomic"
 )
 
@@ -28,9 +31,13 @@ func NewAvailableCursor() *AvailableCursor {
 	}
 }
 
+const (
+	cursorByteLength = 8  // because of underlying uint64
+)
+
 // convert a count to a byte slice (big endian)
 func (ic IndexCursor) Bytes() []byte {
-	buffer := make([]byte, 8)
+	buffer := make([]byte, cursorByteLength)
 	binary.BigEndian.PutUint64(buffer, uint64(ic))
 	return buffer
 }
@@ -41,7 +48,74 @@ func (ic *IndexCursor) NextBytes() []byte {
 	// avoid needing a mutex lock
 	nextValue := atomic.AddUint64((*uint64)(ic), 1)
 
-	buffer := make([]byte, 8)
+	buffer := make([]byte, cursorByteLength)
 	binary.BigEndian.PutUint64(buffer,nextValue)
 	return buffer
+}
+
+// convert to string
+func (ic IndexCursor) String() string {
+	return fmt.Sprintf("IC:%08x", uint64(ic))
+}
+
+// convert link to little endian base64 text
+func (ic IndexCursor) MarshalText() ([]byte, error) {
+	buffer := make([]byte, cursorByteLength)
+	binary.BigEndian.PutUint64(buffer, uint64(ic))
+
+	stage := make([]byte, base64.StdEncoding.EncodedLen(cursorByteLength))
+
+	base64.StdEncoding.Encode(stage, buffer)
+	return stage, nil
+}
+
+// convert little endian base64 text into a link
+func (ic *IndexCursor) UnmarshalText(s []byte) error {
+
+	buffer := make([]byte, base64.StdEncoding.DecodedLen(len(s)))
+
+	byteCount, err := base64.StdEncoding.Decode(buffer, s)
+	if nil != err {
+		return err
+	}
+
+	if byteCount != cursorByteLength {
+		return fault.ErrInvalidLength
+	}
+
+	*ic = IndexCursor(binary.BigEndian.Uint64(buffer))
+	return nil
+}
+
+// convert to JSON
+func (ic IndexCursor) MarshalJSON() ([]byte, error) {
+
+	b, err := ic.MarshalText()
+	if nil != err {
+		return nil, err
+	}
+
+	// length = '"' + characters + '"'
+	s := make([]byte, len(b) + 2)
+	s[0] = '"'
+	copy(s[1:], b)
+	s[len(s)-1] = '"'
+
+	return s, nil
+}
+
+// convert from JSON
+func (ic *IndexCursor) UnmarshalJSON(s []byte) error {
+
+	// special case for null -> same as all '0'
+	if 4 == len(s) && "null" == string(s) {
+		*ic = 0
+		return nil
+	}
+
+	if '"' != s[0] || '"' != s[len(s)-1] {
+		return fault.ErrInvalidCharacter
+	}
+
+	return ic.UnmarshalText(s[1:len(s)-1])
 }

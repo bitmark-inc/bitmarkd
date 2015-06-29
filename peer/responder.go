@@ -23,7 +23,11 @@ loop:
 	for {
 		select {
 		case item := <-queue:
-			go t.processItem(peer.server, item)
+			go func() {
+				if t.processItem(peer.server, item) {
+					peer.rebroadcast = true
+				}
+			}()
 
 		case <-t.stop:
 			break loop
@@ -43,8 +47,9 @@ type BlockPair struct {
 }
 
 // process an item
-func (t *thread) processItem(server *bilateralrpc.Bilateral, item interface{}) {
+func (t *thread) processItem(server *bilateralrpc.Bilateral, item interface{}) bool {
 	log := t.log
+	result := false
 
 decode:
 	switch item.(type) {
@@ -110,6 +115,7 @@ decode:
 			// if remote does not accept it is not really a problem for this node - just warn
 			log.Warnf("Block.Put err = %v", err)
 		}
+		result = true
 
 	case block.Mined: // block created by local miner thread
 		packedBlock := item.(block.Mined)
@@ -123,6 +129,7 @@ decode:
 			// if remote does not accept it is not really a problem for this node - just warn
 			log.Warnf("Block.Put err = %v", err)
 		}
+		result = true
 
 	case transaction.Packed: // any incoming Tx either from peers or client RPC
 		log.Debugf("incoming Transaction.Packed = %x", item)
@@ -157,4 +164,5 @@ decode:
 	default:
 		log.Errorf("Spurious message: %v", item)
 	}
+	return result
 }

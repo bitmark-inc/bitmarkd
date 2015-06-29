@@ -17,7 +17,8 @@ import (
 
 // global constants
 const (
-	paymentVerifyInterval = 2 * time.Minute // block time of currency with lowest block mining time
+//	paymentVerifyInterval = 2 * time.Minute // block time of currency with lowest block mining time
+	paymentVerifyInterval = 45 * time.Second // block time of currency with lowest block mining time
 	paymentExpiryTime     = 2 * time.Hour   // how long to keep unpaid items
 	paymentChunkSize      = 100             // maximum transactions to process in one interval
 

@@ -26,8 +26,7 @@ func (cursor *IndexCursor) FetchUnpaid(count int) []UnpaidResult {
 	unpaid, err := transactionPool.pendingPool.Fetch(cursor.Bytes(), count)
 	if nil != err {
 		// error represents a database failure - panic
-		fault.Criticalf("transaction.FetchUnpaid: unpaidPool.Fetch failed, err = %v", err)
-		fault.Panic("transaction.FetchUnpaid: failed")
+		fault.PanicWithError("transaction.FetchUnpaid: pendingPool.Fetch", err)
 	}
 
 	length := len(unpaid)

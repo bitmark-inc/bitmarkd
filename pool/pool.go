@@ -8,6 +8,7 @@ import (
 	"container/list"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"sync"
 )
@@ -162,7 +163,7 @@ func (p *Pool) Remove(key []byte) {
 
 	if p.cacheSize > 0 {
 		stringKey := string(key)
-		// if item in LRU the move to front
+		// if item in LRU then remove
 		if element, ok := p.index[stringKey]; ok {
 			p.lru.Remove(element)
 			delete(p.index, stringKey)
@@ -181,6 +182,7 @@ func (p *Pool) Remove(key []byte) {
 // read a value for a given key
 //
 // this returns the actual element - copy it if you need to
+// returns "found" as boolean
 func (p *Pool) Get(key []byte) ([]byte, bool) {
 	p.Lock()
 	defer p.Unlock()
@@ -283,6 +285,57 @@ func (p *Pool) Fetch(key []byte, count int) ([]Element, error) {
 	iter.Release()
 	err := iter.Error()
 	return results, err
+}
+
+
+type Iterator struct {
+	iter iterator.Iterator
+}
+
+// fetch some elements starting from key
+func (p *Pool) Iterate(key []byte) *Iterator {
+
+	prefixedKey := make([]byte, 1, len(key)+1)
+	prefixedKey[0] = p.prefix
+	prefixedKey = append(prefixedKey, key...)
+
+	maxRange := util.Range{
+		Start: prefixedKey,          // Start of key range, included in the range
+		Limit: []byte{p.prefix + 1}, // Limit of key range, excluded from the range
+	}
+
+	return &Iterator{
+		iter: poolData.database.NewIterator(&maxRange, nil),
+	}
+}
+
+func (it *Iterator) Next() *Element {
+	if !it.iter.Next() {
+		return nil
+	}
+
+	// contents of the returned slice must not be modified, and are
+	// only valid until the next call to Next
+	key := it.iter.Key()
+	value := it.iter.Value()
+
+	dataKey := make([]byte, len(key)-1) // strip the prefix
+	copy(dataKey, key[1:])              // ...
+
+	dataValue := make([]byte, len(value))
+	copy(dataValue, value)
+
+	return &Element{
+		Key:   dataKey,
+		Value: dataValue,
+	}
+}
+
+// must release the iterator when finished with it
+func (it *Iterator) Release() {
+	it.iter.Release()
+	err := it.iter.Error()
+	fault.PanicIfError("pool.Iterator.Release", err)
 }
 
 // // fetch a range of elements starting from key prefix

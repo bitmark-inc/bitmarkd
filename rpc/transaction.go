@@ -40,7 +40,10 @@ func (t *Transaction) Pay(arguments *PayArguments, reply *PayReply) error {
 		}
 	}
 
-	return payment.Pay(arguments.Currency, paymentData, arguments.Count)
+	err = payment.Pay(arguments.Currency, paymentData, arguments.Count)
+	t.log.Debugf("Pay reply: %v", err)
+
+	return err
 }
 
 // fetch some transactions

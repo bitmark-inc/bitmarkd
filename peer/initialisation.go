@@ -26,6 +26,9 @@ type peerData struct {
 	//background *background.T
 	threads []*thread
 
+	// trigger to rebroadcast
+	rebroadcast bool
+
 	// set once during initialise
 	initialised bool
 }
@@ -52,6 +55,8 @@ func Initialise(addresses []string, networkName string, publicKey string, privat
 	if globalData.initialised {
 		return fault.ErrAlreadyInitialised
 	}
+
+	globalData.rebroadcast = false
 
 	globalData.threads = []*thread{
 		{name: "client", handler: globalData.client},

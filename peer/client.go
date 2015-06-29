@@ -74,8 +74,10 @@ loop:
 			break getBlocks
 		}
 
-		t.rebroadcastTransactions(server)
-
+		if peer.rebroadcast {
+			peer.rebroadcast = false
+			t.rebroadcastTransactions(server)
+		}
 	}
 
 	t.log.Info("shutting down…")

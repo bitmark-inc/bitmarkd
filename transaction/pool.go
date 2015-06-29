@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/pool"
 	"github.com/bitmark-inc/logger"
@@ -94,6 +95,8 @@ func Initialise(cacheSize int) {
 		err := packed.Unpack(&blk)
 		fault.PanicIfError("transaction.Initialise: block recovery failed, block unpack", err)
 
+		difficulty.Current.SetBits(blk.Header.Bits.Bits())
+
 		// rewrite as confirmed
 		for _, txId := range blk.TxIds {
 			indexBuffer := Link(txId).Bytes()
@@ -110,7 +113,9 @@ func Initialise(cacheSize int) {
 	}
 
 	// rebuild indexes
-loop:
+	// from pool/names.go
+	//   S<tx-digest> - state: byte[expired(E), pending(P), verified(V), confirmed(C)] ++ int64[the U/V table count value]
+	//   U<count>     - transaction-digest ++ int64[timestamp] (pending unverified transactions waiting for payment)
 	for {
 		// read blocks of records
 		state, err := transactionPool.statePool.Fetch(startIndex, 100)
@@ -119,10 +124,8 @@ loop:
 		// if no more records exit loop
 		n := len(state)
 		if n <= 1 {
-			break loop
+			break
 		}
-		// for pool/names.go
-		//   S<tx-digest>          - state: byte[expired(E), pending(P), verified(V), confirmed(C)] ++ int64[the U/A table count value]
 
 		// uint64 timestamp
 		timestamp := uint64(time.Now().UTC().Unix())
@@ -165,6 +168,50 @@ loop:
 			}
 		}
 		startIndex = state[n-1].Key
+	}
+
+	// drop expired pending
+	startIndex = []byte{}
+	for {
+		records, err := transactionPool.pendingPool.Fetch(startIndex, 100)
+		fault.PanicIfError("transaction.Initialise: pendingPool fetch", err)
+
+		// if no more records exit loop
+		n:= len(records)
+		if n <= 1 {
+			break
+		}
+
+		for _, record := range records {
+			if state, found := transactionPool.statePool.Get(record.Value[:LinkSize]); found {
+				if PendingTransaction != State(state[0]) {
+					transactionPool.pendingPool.Remove(record.Key)
+				}
+			}
+		}
+		startIndex = records[n-1].Key
+	}
+
+	// drop expired verified
+	startIndex = []byte{}
+	for {
+		records, err := transactionPool.verifiedPool.Fetch(startIndex, 100)
+		fault.PanicIfError("transaction.Initialise: verifiedPool fetch", err)
+
+		// if no more records exit loop
+		n:= len(records)
+		if n <= 1 {
+			break
+		}
+
+		for _, record := range records {
+			if state, found := transactionPool.statePool.Get(record.Value[:LinkSize]); found {
+				if PendingTransaction != State(state[0]) {
+					transactionPool.verifiedPool.Remove(record.Key)
+				}
+			}
+		}
+		startIndex = records[n-1].Key
 	}
 
 	transactionPool.initialised = true

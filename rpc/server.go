@@ -48,11 +48,15 @@ func Callback(conn io.ReadWriteCloser, argument interface{}) {
 		bitmark: bitmark,
 	}
 
+	blk := &Block{
+		log: serverArgument.Log,
+	}
+
 	tx := &Transaction{
 		log: serverArgument.Log,
 	}
 
-	blk := &Block{
+	pool := &Pool{
 		log: serverArgument.Log,
 	}
 
@@ -65,9 +69,10 @@ func Callback(conn io.ReadWriteCloser, argument interface{}) {
 	server.Register(assets)
 	server.Register(bitmark)
 	server.Register(bitmarks)
-	server.Register(node)
 	server.Register(blk)
 	server.Register(tx)
+	server.Register(pool)
+	server.Register(node)
 
 	codec := jsonrpc.NewServerCodec(conn)
 	defer codec.Close()

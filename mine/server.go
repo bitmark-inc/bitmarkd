@@ -179,7 +179,7 @@ func (mining *Mining) Submit(arguments SubmitArguments, reply *bool) error {
 	nonce := fromBE(arguments.Nonce)
 
 	log.Infof("*SUBMIT* from name = %s", arguments.Username)
-	log.Infof("jobId = 0x%x", jobId)
+	log.Infof("jobId = %s", jobId)
 	log.Infof("extraNonce1..2 = %x .. %x", mining.extraNonce1, extraNonce2)
 	log.Infof("ntime = %x", ntime)
 	log.Infof("nonce = %x", nonce)
