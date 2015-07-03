@@ -287,7 +287,6 @@ func (p *Pool) Fetch(key []byte, count int) ([]Element, error) {
 	return results, err
 }
 
-
 type Iterator struct {
 	iter iterator.Iterator
 }

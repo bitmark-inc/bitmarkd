@@ -32,7 +32,7 @@ func NewAvailableCursor() *AvailableCursor {
 }
 
 const (
-	cursorByteLength = 8  // because of underlying uint64
+	cursorByteLength = 8 // because of underlying uint64
 )
 
 // convert a count to a byte slice (big endian)
@@ -49,7 +49,7 @@ func (ic *IndexCursor) NextBytes() []byte {
 	nextValue := atomic.AddUint64((*uint64)(ic), 1)
 
 	buffer := make([]byte, cursorByteLength)
-	binary.BigEndian.PutUint64(buffer,nextValue)
+	binary.BigEndian.PutUint64(buffer, nextValue)
 	return buffer
 }
 
@@ -96,7 +96,7 @@ func (ic IndexCursor) MarshalJSON() ([]byte, error) {
 	}
 
 	// length = '"' + characters + '"'
-	s := make([]byte, len(b) + 2)
+	s := make([]byte, len(b)+2)
 	s[0] = '"'
 	copy(s[1:], b)
 	s[len(s)-1] = '"'
@@ -117,5 +117,5 @@ func (ic *IndexCursor) UnmarshalJSON(s []byte) error {
 		return fault.ErrInvalidCharacter
 	}
 
-	return ic.UnmarshalText(s[1:len(s)-1])
+	return ic.UnmarshalText(s[1 : len(s)-1])
 }

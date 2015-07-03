@@ -116,7 +116,7 @@ type CommandOptions struct {
 
 	// logging
 	LogFile        string `long:"LogFile" description:"Log file base name"`
-	LogSize        int    `long:"LogSize" description:"Maimum size of file before rotating"`
+	LogSize        int    `long:"LogSize" description:"Maximum size of file before rotating"`
 	LogRotateCount int    `long:"LogRotateCount" description:"Maximum number of rotations to keep"`
 
 	// Bitcoin access

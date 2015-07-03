@@ -12,7 +12,6 @@ import (
 // just a 64 bit unsigned integer
 type ItemCounter uint64
 
-
 // add 1 to a counter, returns new value
 func (ic *ItemCounter) Increment() uint64 {
 	return atomic.AddUint64((*uint64)(ic), 1)

@@ -24,8 +24,8 @@ type PoolArguments struct {
 }
 
 type PoolReply struct {
-	Transactions []transaction.PoolResult   `json:"transactions"`
-	NextIndex    transaction.IndexCursor `json:"nextIndex"`
+	Transactions []transaction.PoolResult `json:"transactions"`
+	NextIndex    transaction.IndexCursor  `json:"nextIndex"`
 }
 
 func (pool *Pool) List(arguments *PoolArguments, reply *PoolReply) error {

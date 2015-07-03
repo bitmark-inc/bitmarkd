@@ -13,10 +13,10 @@ type State byte
 
 // possible states for a transaction
 const (
-	ExpiredTransaction      = State('E')
-	PendingTransaction      = State('P')
-	VerifiedTransaction     = State('V')
-	ConfirmedTransaction    = State('C')
+	ExpiredTransaction   = State('E')
+	PendingTransaction   = State('P')
+	VerifiedTransaction  = State('V')
+	ConfirmedTransaction = State('C')
 )
 
 func (state State) CanChangeTo(newState State) bool {

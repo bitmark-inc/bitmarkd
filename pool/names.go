@@ -52,7 +52,7 @@ const (
 	TransactionState = nameb('S')
 
 	// transaction index pools
-	PendingIndex = nameb('U')
+	PendingIndex  = nameb('U')
 	VerifiedIndex = nameb('V')
 
 	// asset

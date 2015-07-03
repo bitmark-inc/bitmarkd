@@ -177,7 +177,7 @@ func Initialise(cacheSize int) {
 		fault.PanicIfError("transaction.Initialise: pendingPool fetch", err)
 
 		// if no more records exit loop
-		n:= len(records)
+		n := len(records)
 		if n <= 1 {
 			break
 		}
@@ -199,7 +199,7 @@ func Initialise(cacheSize int) {
 		fault.PanicIfError("transaction.Initialise: verifiedPool fetch", err)
 
 		// if no more records exit loop
-		n:= len(records)
+		n := len(records)
 		if n <= 1 {
 			break
 		}
@@ -465,7 +465,6 @@ func setAsset(assetNewState State, timestamp uint64, unpackedTransaction interfa
 	default:
 	}
 
-
 }
 
 // must be called with locked mutex
@@ -587,7 +586,7 @@ func setConfirmed(oldState State, oldIndex []byte, txId []byte, unpackedTransact
 	}
 }
 
-func getStateIndex(txId []byte) (oldState State, oldIndex []byte)  {
+func getStateIndex(txId []byte) (oldState State, oldIndex []byte) {
 	tempStateData, found := transactionPool.statePool.Get(txId)
 	if !found {
 		fault.Criticalf("transaction.getTx: cannot find txid: %x", txId)
