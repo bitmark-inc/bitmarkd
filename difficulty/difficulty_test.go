@@ -128,5 +128,15 @@ func TestPdiff(t *testing.T) {
 		if bigActual != item.bigf {
 			t.Errorf("%d: big: actual: %q  expected: %q", i, bigActual, item.bigf)
 		}
+		bitsString := fmt.Sprintf("%v", d)
+		if bitsString != hexExpected {
+			t.Errorf("%d: String(): actual: %q  expected: %q", i, bitsString, hexExpected)
+		}
+
+		bigString := fmt.Sprintf("%#v", d)
+		if bigString != item.bigf {
+			t.Errorf("%d: GoString(): actual: %v  expected: %q", i, bigString, item.bigf)
+		}
+
 	}
 }

@@ -31,7 +31,6 @@ type Difficulty struct {
 // current difficulty
 var Current = &Difficulty{
 	filter: filters.NewCamm(1.0, 21, 41),
-	//filter: filters.NewSMM(1.0, 15),
 }
 
 // constOne is for "pdiff" calculation as defined by:
@@ -86,9 +85,9 @@ func (difficulty *Difficulty) String() string {
 	return fmt.Sprintf("%08x", difficulty.bits)
 }
 
-// for the %#v format
+// for the %#v format use 256 bit value
 func (difficulty *Difficulty) GoString() string {
-	return difficulty.String()
+	return fmt.Sprintf("%064x", difficulty.BigInt())
 }
 
 // convert a uint32 difficulty value to a big.Int
