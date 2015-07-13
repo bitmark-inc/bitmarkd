@@ -19,10 +19,11 @@ import (
 
 // constants
 const (
-	chunkSize           = 500              // maximum number of transactions to add in one go
-	maximumTransactions = 25000            // maximum number of transactions that can go into a block
-	interval            = 10 * time.Second // rate limit transaction additions
-	restartTimeout      = 3 * time.Minute  // if nothing found in this time clear and restart the queue
+	chunkSize           = 500                          // maximum number of transactions to add in one go
+	maximumTransactions = 25000                        // maximum number of transactions that can go into a block
+	interval            = 10 * time.Second             // rate limit transaction additions
+	restartMinutes      = 10 * block.ExpectedMinutes   // if nothing found in this time clear and restart the queue
+	restartTimeout      = restartMinutes * time.Minute // … for time.After()
 )
 
 // globals for background proccess
