@@ -42,7 +42,7 @@ func (cursor *IndexCursor) FetchPool(count int) []PoolResult {
 	txIds := make([]Link, 1)
 
 	results := make([]PoolResult, count)
-	nextIndex := IndexCursor(0)
+	nextIndex := *cursor
 	length := 0
 	for n := 0; n < count; n += 1 {
 
