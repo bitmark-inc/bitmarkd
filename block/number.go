@@ -19,7 +19,8 @@ import (
 
 // constants
 const (
-	ExpectedMinutes = 3 // number of minutes to mine a block
+	//ExpectedMinutes = 3 // number of minutes to mine a block
+	ExpectedMinutes = 1 // number of minutes to mine a block
 
 	int16Size  = 2 // counts are encode little endian int16
 	uint64Size = 8 // for block number key
@@ -230,11 +231,13 @@ func (blk Packed) internalSave(number uint64, digest *Digest, timestamp time.Tim
 		globalBlock.currentBlockNumber = number + 1
 		globalBlock.previousBlock = *digest
 
-		// compute decimal minutes taked to mine the block
-		actualMinutes := timestamp.Sub(globalBlock.previousTimestamp).Minutes()
+		// compute decimal minutes taken to mine the block
+		// actualMinutes := timestamp.Sub(globalBlock.previousTimestamp).Minutes()
+		actualMinutes := time.Now().Sub(timestamp).Minutes()
 
 		// adjust difficulty
 		d := difficulty.Current.Adjust(ExpectedMinutes, actualMinutes)
+		globalBlock.log.Infof("adjust difficulty timstamp: %v", timestamp)
 		globalBlock.log.Infof("adjust difficulty to: %10.4f  expected: %d min  actual: %10.4f min", d, ExpectedMinutes, actualMinutes)
 
 		// save latest timestamp

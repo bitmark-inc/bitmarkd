@@ -42,6 +42,7 @@ type queue struct {
 
 	jobIdAllocator jobIdentifier          // only incremented, type is bigger that queue index to avoid clash
 	topIndex       int                    // head of queue
+	startTime      time.Time              // time of first entry (only set after queue was cleared)
 	jobs           [queueSize]job         // array of jobs
 	topJob         *job                   // fast access to top item
 	index          map[jobIdentifier]*job // index of active items
@@ -129,6 +130,9 @@ func (queue *queue) add(ids []block.Digest, addresses []block.MinerAddress, time
 
 	// index the entry for later recall
 	queue.index[queue.jobIdAllocator] = p
+	if nil == queue.topJob {
+		queue.startTime = timestamp
+	}
 	queue.topJob = p
 }
 
@@ -152,7 +156,8 @@ func (queue *queue) top() (jobId jobIdentifier, mintree []block.Digest, adddress
 
 	minTree := block.MinimumMerkleTree(topJob.ids)
 
-	return topJob.jobId, minTree, topJob.addresses, topJob.timestamp, 0 == queue.topIndex, true
+	//return topJob.jobId, minTree, topJob.addresses, topJob.timestamp, 0 == queue.topIndex, true
+	return topJob.jobId, minTree, topJob.addresses, queue.startTime, 0 == queue.topIndex, true
 }
 
 // get a list of transaction ids
@@ -168,7 +173,8 @@ func (queue *queue) getIds(jobId jobIdentifier) (ids []block.Digest, addresses [
 		return nil, nil, time.Time{}, false // fail if trying to confirm expired entry
 	}
 
-	return job.ids, job.addresses, job.timestamp, true
+	//return job.ids, job.addresses, job.timestamp, true
+	return job.ids, job.addresses, queue.startTime, true
 }
 
 // job was mined sucessfully

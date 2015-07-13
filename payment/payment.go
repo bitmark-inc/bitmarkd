@@ -17,10 +17,10 @@ import (
 
 // global constants
 const (
-//	paymentVerifyInterval = 2 * time.Minute // block time of currency with lowest block mining time
+	// paymentVerifyInterval = 2 * time.Minute // block time of currency with lowest block mining time
 	paymentVerifyInterval = 45 * time.Second // block time of currency with lowest block mining time
-	paymentExpiryTime     = 2 * time.Hour   // how long to keep unpaid items
-	paymentChunkSize      = 100             // maximum transactions to process in one interval
+	paymentExpiryTime     = 2 * time.Hour    // how long to keep unpaid items
+	paymentChunkSize      = 100              // maximum transactions to process in one interval
 
 	maximumAddresses         = 60 // keep addresses from this many blocks (2 minutes/block => 2 hours == 2 * record expiry)
 	forkProtection           = 10 // keep this far behind on bitmark block chain

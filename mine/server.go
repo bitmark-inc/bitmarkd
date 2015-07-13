@@ -197,6 +197,7 @@ func (mining *Mining) Submit(arguments SubmitArguments, reply *bool) error {
 	nonce12 = append(nonce12, mining.extraNonce1...)
 	nonce12 = append(nonce12, extraNonce2...)
 
+	log.Infof("current difficulty: %#v", difficulty.Current)
 	digest, blk, ok := block.MinerCheckIn(timestamp, ntime, nonce, nonce12, addresses, ids)
 	if !ok {
 		log.Warnf("difficulty NOT MET: %s", digest)

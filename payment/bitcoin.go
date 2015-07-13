@@ -29,7 +29,7 @@ const (
 	bitcoinBlockRange     = 200             // number of blocks to consider as relevant
 	bitcoinConfirmations  = 3               // stop processing this many blocks back from most recent block
 
-	// this is how far back in the bitcoin block chain to star when process begins
+	// this is how far back in the bitcoin block chain to start when process begins
 	bitcoinBlockOffset = bitcoinBlockRange + bitcoinConfirmations
 )
 
@@ -514,9 +514,9 @@ func bitcoinBackground(args interface{}, shutdown <-chan bool, finished chan<- b
 	log := args.(*logger.L)
 
 	// set up the starting block number
-	currentBlockNumber := globalBitcoinData.latestBlockNumber
+	currentBlockNumber := uint64(1)
 	if currentBlockNumber > bitcoinBlockOffset {
-		currentBlockNumber -= bitcoinBlockOffset
+		currentBlockNumber = globalBitcoinData.latestBlockNumber - bitcoinBlockOffset
 	}
 
 loop:
