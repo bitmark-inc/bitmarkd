@@ -59,6 +59,7 @@ loop:
 				if mode.Is(mode.Resynchronise) {
 					t.log.Infof("normal")
 					mode.Set(mode.Normal)
+					peer.rebroadcast = true
 				}
 			} else {
 				retries -= 1
@@ -67,6 +68,7 @@ loop:
 					if mode.Is(mode.Resynchronise) {
 						t.log.Infof("stand-alone")
 						mode.Set(mode.Normal)
+						peer.rebroadcast = true
 					}
 				}
 			}

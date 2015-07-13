@@ -56,7 +56,8 @@ func Initialise(addresses []string, networkName string, publicKey string, privat
 		return fault.ErrAlreadyInitialised
 	}
 
-	globalData.rebroadcast = false
+	// force an ititial rebroadcast
+	globalData.rebroadcast = true
 
 	globalData.threads = []*thread{
 		{name: "client", handler: globalData.client},
