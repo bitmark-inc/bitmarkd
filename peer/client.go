@@ -12,7 +12,7 @@ import (
 
 // number of retries before giving up
 const (
-	resynchroniseAttempts = 3
+	resynchroniseAttempts = 10 // need to allow enough time for RPC to connect up
 	initialPollDelay      = 2 * time.Minute
 	regularPollDelay      = 5 * time.Minute
 )

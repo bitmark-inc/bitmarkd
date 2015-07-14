@@ -20,6 +20,8 @@ import (
 func (cursor *AvailableCursor) FetchAvailable(count int) []block.Digest {
 
 	startIndex := cursor.count.Bytes()
+	fault.Criticalf("transaction.FetchAvailable: wanted count: %d", count)
+	fault.Criticalf("transaction.FetchAvailable: cursor: %v", startIndex)
 
 	verified, err := transactionPool.verifiedPool.Fetch(startIndex, count)
 	if nil != err {
@@ -28,6 +30,7 @@ func (cursor *AvailableCursor) FetchAvailable(count int) []block.Digest {
 	}
 
 	length := len(verified)
+	fault.Criticalf("transaction.FetchAvailable: verified count: %d", length)
 
 	// if nothing verified just return the same cursor value
 	if 0 == length {
@@ -63,6 +66,7 @@ loop:
 			issue := unpackedTx.(*BitmarkIssue)
 			state, link, found := issue.AssetIndex.Read()
 			if !found {
+				fault.Criticalf("transaction.FetchAvailable: TxId: %#v proble with asset index: %#v", txId, issue.AssetIndex)
 				continue // skip any issues lacking asset
 			}
 			if ConfirmedTransaction != state {
@@ -74,7 +78,7 @@ loop:
 					cursor.assets[link] = struct{}{}
 
 					// if adding asset causes count to reached
-					if len(results) == count {
+					if len(results) >= count {
 						// set cursor so that this issue will be first next time
 						cursor.count = IndexCursor(binary.BigEndian.Uint64(e.Key))
 						break loop

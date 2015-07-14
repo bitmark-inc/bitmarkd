@@ -192,28 +192,7 @@ func Initialise(cacheSize int) {
 		startIndex = records[n-1].Key
 	}
 
-	// drop expired verified
-	startIndex = []byte{}
-	for {
-		records, err := transactionPool.verifiedPool.Fetch(startIndex, 100)
-		fault.PanicIfError("transaction.Initialise: verifiedPool fetch", err)
-
-		// if no more records exit loop
-		n := len(records)
-		if n <= 1 {
-			break
-		}
-
-		for _, record := range records {
-			if state, found := transactionPool.statePool.Get(record.Value[:LinkSize]); found {
-				if PendingTransaction != State(state[0]) {
-					transactionPool.verifiedPool.Remove(record.Key)
-				}
-			}
-		}
-		startIndex = records[n-1].Key
-	}
-
+	// initialisation is complete
 	transactionPool.initialised = true
 }
 

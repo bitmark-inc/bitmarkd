@@ -315,6 +315,7 @@ loop:
 
 		txIds := cursor.FetchAvailable(txBatchSize)
 		if 0 == len(txIds) {
+			log.Info("no more transactions")
 			break loop
 		}
 		log.Infof("rebroadcast count: %d", len(txIds))
@@ -329,7 +330,7 @@ loop:
 
 			state, packedTx, found := transaction.Link(txId).Read()
 
-			if !found || transaction.ConfirmedTransaction != state {
+			if !found || transaction.VerifiedTransaction != state {
 				continue
 			}
 
