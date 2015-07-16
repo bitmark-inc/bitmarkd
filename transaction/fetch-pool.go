@@ -10,18 +10,12 @@ import (
 	"time"
 )
 
-// type to hold pool items
-type PoolResult struct {
-	Transaction Decoded
-	Timestamp   time.Time
-}
-
 // fetch some transaction ids from pool
 //
 // returns:
 //   list of ids
 //   cursor set to next start point
-func (cursor *IndexCursor) FetchPool(count int) []PoolResult {
+func (cursor *IndexCursor) FetchPool(count int) []Decoded {
 	// pick a default count
 	if count <= 0 {
 		count = 10
@@ -41,7 +35,7 @@ func (cursor *IndexCursor) FetchPool(count int) []PoolResult {
 
 	txIds := make([]Link, 1)
 
-	results := make([]PoolResult, count)
+	results := make([]Decoded, count)
 	nextIndex := *cursor
 	length := 0
 	for n := 0; n < count; n += 1 {
@@ -82,10 +76,11 @@ func (cursor *IndexCursor) FetchPool(count int) []PoolResult {
 
 		LinkFromBytes(&txIds[0], e.Value[:LinkSize]) // the transaction id
 		t := Decode(txIds)
-		results[n].Transaction = t[0]
+		results[n] = t[0]
 
 		seconds := binary.BigEndian.Uint64(e.Value[LinkSize:]) // the creation time
-		results[n].Timestamp = time.Unix(int64(seconds), 0).UTC()
+		results[n].Timestamp = new(time.Time)
+		*(results[n].Timestamp) = time.Unix(int64(seconds), 0).UTC()
 		length += 1
 	}
 

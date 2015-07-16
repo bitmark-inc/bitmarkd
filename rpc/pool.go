@@ -24,7 +24,7 @@ type PoolArguments struct {
 }
 
 type PoolReply struct {
-	Transactions []transaction.PoolResult `json:"transactions"`
+	Transactions []transaction.Decoded `json:"transactions"`
 	NextIndex    transaction.IndexCursor  `json:"nextIndex"`
 }
 

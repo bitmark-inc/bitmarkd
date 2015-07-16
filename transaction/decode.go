@@ -4,6 +4,10 @@
 
 package transaction
 
+import (
+	"time"
+)
+
 // a decoded transaction type - for JSON conversion
 type Decoded struct {
 	TxId        Link        `json:"txid"`
@@ -12,6 +16,7 @@ type Decoded struct {
 	State       State       `json:"state"`
 	Type        string      `json:"type"`
 	Transaction interface{} `json:"transaction"`
+	Timestamp   *time.Time  `json:"timestamp"`
 }
 
 // decode transaction from list of ids
@@ -26,6 +31,7 @@ func Decode(txIds []Link) []Decoded {
 		results[i].State = state
 		results[i].Exists = found
 		results[i].Transaction = []byte(nil)
+		results[i].Timestamp = nil
 
 		if !found {
 			continue // non-existant
