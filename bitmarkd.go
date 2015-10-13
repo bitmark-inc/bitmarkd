@@ -24,6 +24,7 @@ import (
 	"github.com/bitmark-inc/logger"
 	"os"
 	"os/signal"
+	"runtime/pprof"
 	"syscall"
 )
 
@@ -99,10 +100,21 @@ func main() {
 		return
 	}
 
+	// if requested start profiling
+	if "" != options.ProfileFile {
+		f, err := os.Create(options.ProfileFile)
+		if nil != err {
+			log.Criticalf("cannot ope profile output file: '%s'  error: %v", options.ProfileFile, err)
+			exitwithstatus.Exit(1)
+		}
+		defer f.Close()
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
+
 	// set the initial system mode - before any background tasks are started
-	mode.Initialise()
+	mode.Initialise(options.Chain)
 	defer mode.Finalise()
-	mode.SetTesting(options.TestMode)
 
 	// ensure keys are set
 	if "" == options.PublicKey || "" == options.PrivateKey {
@@ -311,9 +323,10 @@ func main() {
 		log.Criticalf("failed to initialise Bitcoin  error: %v", err)
 		exitwithstatus.Exit(1)
 	}
+	defer payment.BitcoinFinalise()
 
 	// start up the peering
-	err = peer.Initialise(options.PeerListeners, mode.NetworkName(), publicKey, privateKey)
+	err = peer.Initialise(options.PeerListeners, mode.ChainName(), publicKey, privateKey)
 	if nil != err {
 		log.Criticalf("failed to initialise peer  error: %v", err)
 		exitwithstatus.Exit(1)

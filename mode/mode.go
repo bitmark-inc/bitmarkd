@@ -5,6 +5,7 @@
 package mode
 
 import (
+	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/logger"
 	"sync"
@@ -23,26 +24,40 @@ const (
 
 var globals struct {
 	sync.RWMutex
-	log  *logger.L
-	mode Mode
-
-	// for enabling test mode
+	log     *logger.L
+	mode    Mode
 	testing bool
-	once    bool // to ensure that repeated swapping is disallowed
+	chain   string
 }
 
 // set up the mode system
-func Initialise() {
+func Initialise(chainName string) {
 
-	// ensure strt up in resynchronise mode
+	// ensure start up in resynchronise mode
 	globals.Lock()
-	globals.log = logger.New("mode")
-	globals.mode = Resynchronise
-	globals.once = false
-	globals.testing = false
-	globals.Unlock()
+	defer globals.Unlock()
 
+	globals.log = logger.New("mode")
 	globals.log.Info("starting…")
+
+	// default settings
+	globals.chain = chainName
+	globals.testing = false
+	globals.mode = Resynchronise
+
+	// override for specific chain
+	switch chainName {
+	case chain.Bitmark:
+		// no change
+	case chain.Testing:
+		globals.testing = true
+	case chain.Local:
+		globals.testing = true
+		globals.mode = Normal
+	default:
+		globals.log.Criticalf("mode cannot handle chain: '%s'", chainName)
+		fault.Panicf("mode cannot handle chain: '%s'", chainName)
+	}
 }
 
 // shutdown mode handling
@@ -79,28 +94,6 @@ func IsNot(mode Mode) bool {
 	return mode != globals.mode
 }
 
-// for testing
-func SetTesting(testing bool) {
-	globals.Lock()
-	defer globals.Unlock()
-
-	// no change is ok
-	if testing == globals.testing {
-		return
-	}
-
-	// only allow one change
-	if globals.once {
-		if nil != globals.log {
-			globals.log.Critical("cannot change testing mode a second time")
-		}
-		fault.Panic("cannot change testing mode a second time")
-	}
-
-	globals.testing = testing
-	globals.once = true
-}
-
 // special for testing
 func IsTesting() bool {
 	globals.RLock()
@@ -108,13 +101,25 @@ func IsTesting() bool {
 	return globals.testing
 }
 
-// name of the current network
-func NetworkName() string {
+// name of the current chain
+func ChainName() string {
 	globals.RLock()
 	defer globals.RUnlock()
-	if globals.testing {
-		return "TEST"
-	} else {
-		return "LIVE"
+	return globals.chain
+}
+
+// current mode rep[resented as a string
+func String() string {
+	globals.RLock()
+	defer globals.RUnlock()
+	switch globals.mode {
+	case Stopped:
+		return "Stopped"
+	case Resynchronise:
+		return "Resynchronise"
+	case Normal:
+		return "Normal"
+	default:
+		return "*Unknown*"
 	}
 }

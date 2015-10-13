@@ -27,7 +27,7 @@ func Callback(conn io.ReadWriteCloser, argument interface{}) {
 		panic("rpc: nil serverArgument")
 	}
 	if nil == serverArgument.Log {
-		panic("rpc: nil serverArgument.Log ")
+		panic("rpc: nil serverArgument.Log")
 	}
 
 	asset := &Asset{

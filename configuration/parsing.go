@@ -6,6 +6,7 @@ package configuration
 
 import (
 	"fmt"
+	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/exitwithstatus"
@@ -38,18 +39,20 @@ const (
 
 // path expanded or calculated defaults
 var (
-	appHomeDirectory        = util.AppDataDir("bitmarkd", false)
-	defaultPidFile          = filepath.Join(appHomeDirectory, "bitmarkd.pid")
-	defaultConfigFile       = filepath.Join(appHomeDirectory, defaultConfigFileName)
-	defaultDataDirectory    = filepath.Join(appHomeDirectory, defaultDataDirname)
-	defaultPublicKeyFile    = filepath.Join(appHomeDirectory, "bitmarkd.private")
-	defaultPrivateKeyFile   = filepath.Join(appHomeDirectory, "bitmarkd.public")
-	defaultKeyFile          = filepath.Join(appHomeDirectory, "bitmarkd.key")
-	defaultCertificateFile  = filepath.Join(appHomeDirectory, "bitmarkd.crt")
-	defaultLogDirectory     = filepath.Join(appHomeDirectory, defaultLogDirectoryName)
-	defaultLogFile          = filepath.Join(defaultLogDirectory, defaultLogFileName)
-	defaultTestDatabaseFile = filepath.Join(defaultDataDirectory, "testing.leveldb")
-	defaultLiveDatabaseFile = filepath.Join(defaultDataDirectory, "bitmark.leveldb")
+	appHomeDirectory       = util.AppDataDir("bitmarkd", false)
+	defaultPidFile         = filepath.Join(appHomeDirectory, "bitmarkd.pid")
+	defaultConfigFile      = filepath.Join(appHomeDirectory, defaultConfigFileName)
+	defaultDataDirectory   = filepath.Join(appHomeDirectory, defaultDataDirname)
+	defaultPublicKeyFile   = filepath.Join(appHomeDirectory, "bitmarkd.private")
+	defaultPrivateKeyFile  = filepath.Join(appHomeDirectory, "bitmarkd.public")
+	defaultKeyFile         = filepath.Join(appHomeDirectory, "bitmarkd.key")
+	defaultCertificateFile = filepath.Join(appHomeDirectory, "bitmarkd.crt")
+	defaultLogDirectory    = filepath.Join(appHomeDirectory, defaultLogDirectoryName)
+	defaultLogFile         = filepath.Join(defaultLogDirectory, defaultLogFileName)
+
+	defaultBitmarkDatabaseFile = filepath.Join(defaultDataDirectory, chain.Bitmark+".leveldb")
+	defaultTestingDatabaseFile = filepath.Join(defaultDataDirectory, chain.Testing+".leveldb")
+	defaultLocalDatabaseFile   = filepath.Join(defaultDataDirectory, chain.Local+".leveldb")
 
 	defaultDebug = map[string]string{
 		"main":            "info",
@@ -79,8 +82,11 @@ type CommandOptions struct {
 	// PID File
 	PidFile string `short:"p" long:"PidFile" description:"PID file name"`
 
-	// test mode or production mode
-	TestMode bool `long:"TestMode" description:"Set true to enable test mode"`
+	// Profile File
+	ProfileFile string `long:"ProfileFile" description:"Profile file name (blank turns off profiling)"`
+
+	// select the chain to connect to
+	Chain string `long:"Chain" description:"Set to mode string: [bitmark, testing, local]"`
 
 	// server identification in Z85 (ZeroMQ Base-85 Encoding) see: http://rfc.zeromq.org/spec:32
 	PublicKey  string `long:"PublicKey" description:"File containing Z85 encoded Curve Public Key"`
@@ -139,7 +145,7 @@ func ParseOptions() CommandOptions {
 		ConfigFile:           defaultConfigFile,
 		Debug:                defaultDebug,
 		PidFile:              defaultPidFile,
-		TestMode:             false,
+		Chain:                chain.Bitmark,
 		PublicKey:            defaultPublicKeyFile,
 		PrivateKey:           defaultPrivateKeyFile,
 		RPCClients:           defaultRPCClients,
@@ -150,7 +156,7 @@ func ParseOptions() CommandOptions {
 		Mines:                defaultMines,
 		MineCertificate:      defaultCertificateFile,
 		MineKey:              defaultKeyFile,
-		DatabaseFile:         defaultLiveDatabaseFile,
+		DatabaseFile:         defaultBitmarkDatabaseFile,
 		BlockCacheSize:       defaultBlockCacheSize,
 		TransactionCacheSize: defaultTransactionCacheSize,
 		LogFile:              defaultLogFile,
@@ -166,7 +172,7 @@ func ParseOptions() CommandOptions {
 	// start the real parsing
 	parser := flags.NewParser(&options, flags.Default)
 
-	if cfg := temporaryOptions.ConfigFile; cfg != "" {
+	if cfg := temporaryOptions.ConfigFile; "" != cfg {
 		// add to or override defaults using configuration file
 		err := flags.NewIniParser(parser).ParseFile(cfg)
 		if err != nil {
@@ -185,10 +191,26 @@ func ParseOptions() CommandOptions {
 		exitwithstatus.Exit(1)
 	}
 
-	// if test mode and the database file was not specified
-	// switch to test file
-	if options.TestMode && options.DatabaseFile == defaultLiveDatabaseFile {
-		options.DatabaseFile = defaultTestDatabaseFile
+	// if any test mode and the database file was not specified
+	// switch to appropriate default.  Abort if then chain name is
+	// not recognised.
+	options.Chain = strings.ToLower(options.Chain)
+	if !chain.Valid(options.Chain) {
+		exitwithstatus.Usage("Error: Chain: '%s' is not supported\n", options.Chain)
+	}
+
+	// if database was not changed from default
+	if options.DatabaseFile == defaultBitmarkDatabaseFile {
+		switch options.Chain {
+		case chain.Bitmark:
+			// already correct default
+		case chain.Testing:
+			options.DatabaseFile = defaultTestingDatabaseFile
+		case chain.Local:
+			options.DatabaseFile = defaultLocalDatabaseFile
+		default:
+			exitwithstatus.Usage("Error: Chain: '%s' no default databse setting\n", options.Chain)
+		}
 	}
 
 	// create the directories if they do not already exist

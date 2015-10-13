@@ -12,9 +12,8 @@ import (
 
 // number of retries before giving up
 const (
-	resynchroniseAttempts = 10 // need to allow enough time for RPC to connect up
-	initialPollDelay      = 2 * time.Minute
-	regularPollDelay      = 5 * time.Minute
+	initialPollDelay = 1 * time.Minute
+	regularPollDelay = 5 * time.Minute
 )
 
 // the client thread
@@ -23,25 +22,30 @@ func (peer *peerData) client(t *thread) {
 	t.log.Info("starting…")
 
 	server := peer.server
-	retries := resynchroniseAttempts
-	delay := initialPollDelay
+	delay := time.After(initialPollDelay)
 loop:
 	for {
 		select {
 		case <-t.stop:
 			break loop
-		case <-time.After(delay):
-			delay = regularPollDelay
+		case <-delay:
+			delay = time.After(regularPollDelay)
 		}
 
 		t.log.Info("loop")
+
+		if 0 == server.ConnectionCount() {
+			t.log.Info("no peers responding")
+			continue loop
+		}
+
 		for i, a := range server.ActiveConnections() {
 			t.log.Infof("active[%d] = %q", i, a)
 		}
 
 	getBlocks:
 		for {
-			t.log.Infof("getBlocks retries left: %d", retries)
+			t.log.Info("getBlocks")
 			select {
 			case <-t.stop:
 				break loop
@@ -49,30 +53,18 @@ loop:
 			}
 			if highest, from, ok := highestBlockNumber(server, t.log); ok {
 				t.log.Infof("highest bn = %d  from: %q", highest, from)
-				retries = resynchroniseAttempts
 				n := block.Number() // the number of block being mined
 				if highest >= n {   // equal because we need block 'n' if it is available
+					t.log.Infof("resynchronise blocks: %d → %d from: %)", n, highest, from)
 					mode.Set(mode.Resynchronise)
 					t.resynchronise(server, n, highest, []string{from})
 					continue getBlocks
-				}
-				if mode.Is(mode.Resynchronise) {
-					t.log.Infof("normal")
+				} else if mode.Is(mode.Resynchronise) {
+					t.log.Info("normal")
 					mode.Set(mode.Normal)
 					peer.rebroadcast = true
 				}
-			} else {
-				retries -= 1
-				if retries <= 0 {
-					// stand alone mode
-					if mode.Is(mode.Resynchronise) {
-						t.log.Infof("stand-alone")
-						mode.Set(mode.Normal)
-						peer.rebroadcast = true
-					}
-				}
 			}
-
 			break getBlocks
 		}
 

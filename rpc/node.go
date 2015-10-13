@@ -10,6 +10,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/gnomon"
 	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/peer"
 	"github.com/bitmark-inc/bitmarkd/transaction"
 	"github.com/bitmark-inc/logger"
 )
@@ -71,8 +72,10 @@ func (node *Node) List(arguments *NodeArguments, reply *NodeReply) error {
 type InfoArguments struct{}
 
 type InfoReply struct {
-	Network  string  `json:"network"`
+	Chain    string  `json:"chain"`
+	Mode     string  `json:"mode"`
 	Blocks   uint64  `json:"blocks"`
+	Peers    int     `json:"peers"`
 	Pdiff    float64 `json:"pdiff"`
 	Pending  uint64  `json:"pending"`
 	Verified uint64  `json:"verified"`
@@ -80,8 +83,10 @@ type InfoReply struct {
 
 func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 
-	reply.Network = mode.NetworkName()
+	reply.Chain = mode.ChainName()
+	reply.Mode = mode.String()
 	reply.Blocks = block.Number() - 1
+	reply.Peers = peer.ConnectionCount()
 	reply.Pdiff = difficulty.Current.Pdiff()
 	transaction.ReadCounters(&reply.Pending, &reply.Verified)
 

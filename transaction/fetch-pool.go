@@ -80,7 +80,7 @@ func (cursor *IndexCursor) FetchPool(count int) []Decoded {
 
 		seconds := binary.BigEndian.Uint64(e.Value[LinkSize:]) // the creation time
 		results[n].Timestamp = new(time.Time)
-		*(results[n].Timestamp) = time.Unix(int64(seconds), 0).UTC()
+		*results[n].Timestamp = time.Unix(int64(seconds), 0).UTC()
 		length += 1
 	}
 

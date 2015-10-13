@@ -119,7 +119,7 @@ loop:
 
 			// do not bother if no miners are connected
 			if 0 == atomic.LoadInt64(&globalMinerCount) {
-				log.Info("mine-assemble: waiting for first miner")
+				//log.Info("mine-assemble: waiting for first miner")
 				break assemble
 			}
 

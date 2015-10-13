@@ -128,9 +128,10 @@ func Initialise(cacheSize int) {
 
 // finalise - flush unsaved data
 func Finalise() {
+	globalBlock.log.Info("shutting down…")
+
 	background.Stop(globalBlock.background)
 
-	globalBlock.log.Info("shutting down…")
 	globalBlock.blockData.Flush()
 }
 

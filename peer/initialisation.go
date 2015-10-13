@@ -178,3 +178,10 @@ func Finalise() error {
 	globalData.initialised = false
 	return nil
 }
+
+// count of active connections
+func ConnectionCount() int {
+	globalData.Lock()
+	defer globalData.Unlock()
+	return globalData.server.ConnectionCount()
+}
