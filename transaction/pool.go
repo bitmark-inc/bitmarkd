@@ -38,11 +38,11 @@ var transactionPool struct {
 	pendingCounter  ItemCounter
 	verifiedCounter ItemCounter
 
-	// store of assets
+	// index of assets
 	assetPool *pool.Pool // all assets
 
 	// owner index pools
-	ownerPool *pool.Pool // index of leaves bitmark transfer
+	ownerPool *pool.Pool // index of leaf bitmark transfers == current owner
 
 	// counter for record index
 	// used as index for the pending/verified pools
@@ -238,7 +238,7 @@ func (data Packed) Write(link *Link) error {
 	// make a timestamp
 	timestamp := uint64(time.Now().UTC().Unix()) // int64 timestamp
 
-	// check for duplicate asset and return previous transaction id
+	// ensure transaction data is valid
 	tx, err := data.Unpack()
 	if nil != err {
 		fault.PanicIfError("transaction.write unpack", err)
@@ -255,7 +255,8 @@ func (data Packed) Write(link *Link) error {
 			// determine link for pre-existing version of the same asset
 			err := LinkFromBytes(link, txId)
 			fault.PanicIfError("transaction.write asset", err)
-			return err // not reached
+			//return err // not reached
+			return fault.ErrTransactionAlreadyExists
 		}
 
 	case *BitmarkIssue:

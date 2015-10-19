@@ -6,6 +6,7 @@ package mine
 
 import (
 	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"testing"
 	"time"
@@ -13,8 +14,7 @@ import (
 
 // setup for tests
 func setup() {
-	mode.Initialise()
-	mode.Set(mode.Normal)
+	mode.Initialise(chain.Local)
 }
 
 // test job id conversion

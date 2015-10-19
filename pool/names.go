@@ -28,9 +28,6 @@ package pool
 //
 //   O<bmtran-digest>      - owner public key ++ registration digest (to check current ownership of property)
 //
-//   K<pubkey><tx-digest>  - byte[asset(A), Bitmark Issue(I), bitmark transfer(T)] ++ asset index
-//                           (to list current ownership of asset/issue/bitmark)
-//
 // Networking:
 //
 //   P<IP:port>            - P2P: ZMQ public-key

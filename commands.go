@@ -124,10 +124,15 @@ func processSetupCommand(log *logger.L, options configuration.CommandOptions) bo
 		return false // defer processing until database is loaded
 
 	default:
-		if "help" != command {
+		switch command {
+		case "help", "h", "?":
+		case "", " ":
+			fmt.Printf("error: missing command\n")
+		default:
 			fmt.Printf("error: no such command: %v\n", command)
 		}
-		fmt.Printf("commands:\n")
+		fmt.Printf("supported commands:\n")
+		fmt.Printf("  help                             - display this message\n")
 		fmt.Printf("  generate-identity                - create server private key in: '%s' and public key in: '%s'\n", options.PrivateKey, options.PublicKey)
 		fmt.Printf("  generate-rpc-cert                - create private key in: '%s' and certificate in: '%s'\n", options.RPCKey, options.RPCCertificate)
 		fmt.Printf("  generate-rpc-cert PREFIX IPs...  - create private key in: '<PREFIX>.key' certificate in '<PREFIX>.crt'\n")

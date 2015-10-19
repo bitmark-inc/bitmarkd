@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/agl/ed25519"
+	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/transaction"
@@ -218,11 +219,10 @@ func TestPackAssetData(t *testing.T) {
 	}
 
 	// check test-network detection
-	mode.SetTesting(false) // default so will not panic
 	if _, err := packed.Unpack(); err != fault.ErrWrongNetworkForPublicKey {
 		t.Errorf("expected 'wrong network for public key' but got error: %v", err)
 	}
-	mode.SetTesting(true) // enter test mode - ONLY ALLOWED ONCE (or panic will occur
+	mode.Initialise(chain.Testing) // enter test mode - ONLY ALLOWED ONCE (or panic will occur
 
 	// test the unpacker
 	unpacked, err := packed.Unpack()

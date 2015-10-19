@@ -30,11 +30,6 @@ import (
 	"time"
 )
 
-// for Bitmarkd RPC connection
-const (
-	certificateFileName = "~/.config/bitmarkd/bitmarkd-local-rpc.crt"
-)
-
 // a dummy signature to begin
 var dummySignature transaction.Signature
 
@@ -126,7 +121,6 @@ var ownerTwo = keyPair{
 func main() {
 	// ensure exit handler is first
 	defer exitwithstatus.Handler()
-	defer fmt.Printf("\nprogram exit\n")
 
 	// read options and parse the configuration file
 	// also sets up and starts logging
@@ -142,28 +136,6 @@ func main() {
 
 	if len(options.RPCAnnounce) < 1 {
 		exitwithstatus.Usage("there were no RpcAnnounce configuration values\n")
-	}
-
-	if "rate" != options.Args.Command {
-		exitwithstatus.Usage("invalid command: %s\n", options.Args.Command)
-	}
-
-	if 2 != len(options.Args.Arguments) {
-		exitwithstatus.Usage("rate command needs rate(tx/s) and timeLimit(minutes): arg count: %d\n", len(options.Args.Arguments))
-	}
-
-	rateLimit, err := strconv.ParseFloat(options.Args.Arguments[0], 64)
-	if nil != err {
-		exitwithstatus.Usage("command invalid rate: %s  error: %v\n", options.Args.Arguments[0], err)
-	}
-
-	timeLimit, err := strconv.ParseFloat(options.Args.Arguments[1], 64)
-	if nil != err {
-		exitwithstatus.Usage("command invalid timeLimit: %s  error: %v\n", options.Args.Arguments[1], err)
-	}
-
-	if rateLimit <= 0 || timeLimit <= 0 {
-		exitwithstatus.Usage("rate command invalid parameters, rate %6.2f (tx/s) and timeLimit %6.2f (minutes)\n", rateLimit, timeLimit)
 	}
 
 	cerfificateFile, ok := configuration.ResolveFileName(options.RPCCertificate)
@@ -183,6 +155,57 @@ func main() {
 	if '[' == s[0][0] {
 		hostPort = "[::1]:" + port
 	}
+
+	// process the command and its arguments
+	command := options.Args.Command
+	args := options.Args.Arguments
+	switch command {
+
+	case "rate":
+		if 2 != len(args) {
+			exitwithstatus.Usage("rate command needs rate(tx/s) and timeLimit(minutes): arg count: %d\n", len(args))
+		}
+
+		rateLimit, err := strconv.ParseFloat(args[0], 64)
+		if nil != err {
+			exitwithstatus.Usage("command invalid rate: %s  error: %v\n", args[0], err)
+		}
+
+		timeLimit, err := strconv.ParseFloat(args[1], 64)
+		if nil != err {
+			exitwithstatus.Usage("command invalid timeLimit: %s  error: %v\n", args[1], err)
+		}
+
+		if rateLimit <= 0 || timeLimit <= 0 {
+			exitwithstatus.Usage("rate command invalid parameters, rate %6.2f (tx/s) and timeLimit %6.2f (minutes)\n", rateLimit, timeLimit)
+		}
+		process_rate(hostPort, cerfificateFile, rateLimit, timeLimit, options.Verbose)
+
+	case "one":
+		if 1 != len(args) {
+			exitwithstatus.Usage("one command needs name: arg count: %d\n", len(args))
+		}
+		process_one(hostPort, cerfificateFile, args[0], options.Verbose)
+
+	default:
+		switch command {
+		case "help", "h", "?":
+		case "", " ":
+			fmt.Printf("error: missing command\n")
+		default:
+			fmt.Printf("error: no such command: %v\n", command)
+		}
+		fmt.Printf("supported commands:\n")
+		fmt.Printf("  help                                 - display this message\n")
+		fmt.Printf("  rate tx/second time-limit(minutes)   - send one asset and a stream of issues for this asset\n")
+		fmt.Printf("  one name                             - send one asset and one issue with alternative name (same fingerprint)\n")
+		exitwithstatus.Exit(1)
+	}
+
+}
+
+func process_one(hostPort string, cerfificateFile string, name string, verbose bool) {
+
 	conn := connect(cerfificateFile, hostPort)
 	defer conn.Close()
 
@@ -190,7 +213,25 @@ func main() {
 	client := jsonrpc.NewClient(conn)
 	defer client.Close()
 
-	assetIndex := makeAsset(client)
+	assetIndex := makeAsset(client, name, verbose)
+	if nil == assetIndex {
+		exitwithstatus.Usage("unable to get asset index\n")
+	}
+
+	doIssues(client, assetIndex, 1, verbose)
+}
+
+
+func process_rate(hostPort string, cerfificateFile string, rateLimit float64, timeLimit float64, verbose bool) {
+
+	conn := connect(cerfificateFile, hostPort)
+	defer conn.Close()
+
+	// create a client
+	client := jsonrpc.NewClient(conn)
+	defer client.Close()
+
+	assetIndex := makeAsset(client, "Item's Name", verbose)
 	if nil == assetIndex {
 		exitwithstatus.Usage("unable to get asset index\n")
 	}
@@ -219,7 +260,7 @@ func main() {
 	// send out until stopped
 loop:
 	for {
-		doIssues(client, assetIndex, itemsPerCall, options.Verbose)
+		doIssues(client, assetIndex, itemsPerCall, verbose)
 
 		// compute block rate
 		counter += itemsPerCall
@@ -303,13 +344,13 @@ func makeAddress(publicKey *[32]byte) *transaction.Address {
 }
 
 // build a properly signed asset
-func makeAsset(client *netrpc.Client) *transaction.AssetIndex {
+func makeAsset(client *netrpc.Client, name string, verbose bool) *transaction.AssetIndex {
 
 	registrantAddress := makeAddress(&registrant.publicKey)
 
 	r := transaction.AssetData{
 		Description: "Just the description",
-		Name:        "Item's Name",
+		Name:        name,
 		Fingerprint: "0123456789abcdef",
 		Registrant:  registrantAddress,
 		Signature:   dummySignature,
@@ -332,13 +373,15 @@ func makeAsset(client *netrpc.Client) *transaction.AssetIndex {
 		return nil
 	}
 
-	b, err := json.MarshalIndent(r, "", "  ")
-	if nil != err {
-		fmt.Printf("json error: %v\n", err)
-		return nil
-	}
+	if verbose {
+		b, err := json.MarshalIndent(r, "", "  ")
+		if nil != err {
+			fmt.Printf("json error: %v\n", err)
+			return nil
+		}
 
-	fmt.Printf("JSON request:\n%s\n", b)
+		fmt.Printf("JSON request:\n%s\n", b)
+	}
 
 	var reply rpc.AssetRegisterReply
 	err = client.Call("Asset.Register", r, &reply)
@@ -347,13 +390,15 @@ func makeAsset(client *netrpc.Client) *transaction.AssetIndex {
 		return nil
 	}
 
-	b, err = json.MarshalIndent(reply, "", "  ")
-	if nil != err {
-		fmt.Printf("json error: %v\n", err)
-		return nil
-	}
+	if verbose {
+		b, err := json.MarshalIndent(reply, "", "  ")
+		if nil != err {
+			fmt.Printf("json error: %v\n", err)
+			return nil
+		}
 
-	fmt.Printf("JSON REPLY:\n%s\n", b)
+		fmt.Printf("JSON REPLY:\n%s\n", b)
+	}
 
 	return &reply.AssetIndex
 }
