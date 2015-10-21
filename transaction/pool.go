@@ -223,7 +223,7 @@ func ReadCounters(pending *uint64, verified *uint64) {
 //   the ID of the transaction
 //
 // this enters the transaction as an pending new transaction
-func (data Packed) Write(link *Link) error {
+func (data Packed) Write(link *Link, overwriteAssetIndex bool) error {
 
 	*link = data.MakeLink()
 	txId := link.Bytes()
@@ -231,8 +231,11 @@ func (data Packed) Write(link *Link) error {
 	transactionPool.Lock()
 	defer transactionPool.Unlock()
 
-	if _, found := transactionPool.statePool.Get(txId); found {
-		return fault.ErrTransactionAlreadyExists
+	// if in overwrite mode, skip the exists check
+	if !overwriteAssetIndex {
+		if _, found := transactionPool.statePool.Get(txId); found {
+			return fault.ErrTransactionAlreadyExists
+		}
 	}
 
 	// make a timestamp
@@ -246,20 +249,30 @@ func (data Packed) Write(link *Link) error {
 		return err // not reached
 	}
 
+	deletableTxId := []byte(nil)
+
 	switch tx.(type) {
 	case *AssetData:
 		asset := tx.(*AssetData)
 		assetIndex := asset.AssetIndex().Bytes()
-		txId, found := transactionPool.assetPool.Get(assetIndex)
+		altTxId, found := transactionPool.assetPool.Get(assetIndex)
+		transactionPool.log.Debugf("found: %v  txid: %x  new transaction id: %x", found, txId, altTxId)
 		if found {
 			// determine link for pre-existing version of the same asset
-			err := LinkFromBytes(link, txId)
+			err := LinkFromBytes(link, altTxId)
 			fault.PanicIfError("transaction.write asset", err)
-			//return err // not reached
-			return fault.ErrTransactionAlreadyExists
+			if !overwriteAssetIndex || bytes.Equal(txId, altTxId) {
+				return fault.ErrTransactionAlreadyExists
+			}
+			deletableTxId = altTxId
+			transactionPool.log.Debugf("deletable transaction id: %x", deletableTxId)
 		}
 
 	case *BitmarkIssue:
+		if overwriteAssetIndex {
+			transactionPool.log.Critical("cannot overwrite a non-asset")
+		}
+
 		transfer := tx.(*BitmarkIssue)
 
 		// previous record
@@ -298,6 +311,9 @@ func (data Packed) Write(link *Link) error {
 		}
 
 	default:
+		if overwriteAssetIndex {
+			transactionPool.log.Critical("cannot overwrite a non-asset")
+		}
 	}
 
 	transactionPool.indexCounter += 1 // safe because mutex is locked
@@ -328,6 +344,31 @@ func (data Packed) Write(link *Link) error {
 		asset := tx.(*AssetData)
 		assetIndex := asset.AssetIndex().Bytes()
 		transactionPool.assetPool.Add(assetIndex, txId)
+		// clean up unused asset tx/state/indexes now the correct one has be stored
+		if nil != deletableTxId {
+			transactionPool.log.Debugf("replacement  txid: %x", txId)
+			transactionPool.log.Debugf("delete asset txid: %x", deletableTxId)
+			transactionPool.dataPool.Remove(deletableTxId)
+			transactionPool.statePool.Remove(deletableTxId)
+
+			// need to remove from pending and/or verified if they exist and match
+			if oldAssetState, found := transactionPool.statePool.Get(deletableTxId); found {
+				indexBuffer := oldAssetState[1:] // get counter value
+				if pending, found := transactionPool.pendingPool.Get(indexBuffer); found {
+					if bytes.Equal(pending[:LinkSize], deletableTxId) {
+						transactionPool.log.Debugf("delete pending: %x", indexBuffer)
+						transactionPool.pendingPool.Remove(indexBuffer)
+					}
+				}
+				if verified, found := transactionPool.verifiedPool.Get(indexBuffer); found {
+					if bytes.Equal(verified[:LinkSize], deletableTxId) {
+						transactionPool.log.Debugf("delete verified: %x", indexBuffer)
+						transactionPool.verifiedPool.Remove(indexBuffer)
+					}
+				}
+			}
+		}
+
 	default:
 	}
 

@@ -136,7 +136,7 @@ decode:
 
 		// save record
 		var txId transaction.Link
-		err := item.(transaction.Packed).Write(&txId)
+		err := item.(transaction.Packed).Write(&txId, false)
 		switch err {
 		case fault.ErrAssetNotFound:
 			log.Infof("no asset, ignoring incoming TxId = %#v", txId)

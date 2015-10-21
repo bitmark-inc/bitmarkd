@@ -234,10 +234,20 @@ loop:
 			}
 
 			// write the transaction
+			log.Debugf("from: %q", to)
 			log.Infof("txid: %#v", txid)
 			log.Debugf("tx: %#v", unpackedTransaction)
+
+			overwriteFlag := false
+			switch unpackedTransaction.(type) {
+			case *transaction.AssetData:
+				overwriteFlag = true
+			default:
+			}
+			log.Debugf("overwrite: %v", overwriteFlag)
+
 			var txid2 transaction.Link
-			switch err := packedTransaction.Write(&txid2); err {
+			switch err := packedTransaction.Write(&txid2, overwriteFlag); err {
 			case nil:
 				fallthrough
 			case fault.ErrTransactionAlreadyExists:
