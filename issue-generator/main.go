@@ -221,7 +221,6 @@ func process_one(hostPort string, cerfificateFile string, name string, verbose b
 	doIssues(client, assetIndex, 1, verbose)
 }
 
-
 func process_rate(hostPort string, cerfificateFile string, rateLimit float64, timeLimit float64, verbose bool) {
 
 	conn := connect(cerfificateFile, hostPort)
