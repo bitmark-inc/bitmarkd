@@ -158,12 +158,12 @@ func main() {
 
 	// block data storage - depends on pool
 	log.Info("initialise block")
-	block.Initialise(options.BlockCacheSize)
+	block.Initialise()
 	defer block.Finalise()
 
 	// transaction data storage - depends on pool
 	log.Info("initialise transaction")
-	transaction.Initialise(options.TransactionCacheSize)
+	transaction.Initialise()
 	defer transaction.Finalise()
 
 	// these commands are allowed to access the internal database

@@ -10,11 +10,6 @@ import (
 	"sync"
 )
 
-// maximum entries in the list
-const (
-	certificateMaximum = 200
-)
-
 // global data
 var announce struct {
 	sync.Mutex
@@ -31,9 +26,9 @@ func Initialise() {
 	if nil != announce.peerPool || nil != announce.rpcPool || nil != announce.certificatePool {
 		fault.Panic("announce.Initialise - already done")
 	}
-	announce.peerPool = pool.NewIndexed(pool.Peers) //, announceMaximum)
-	announce.rpcPool = pool.NewIndexed(pool.RPCs)   //, announceMaximum)
-	announce.certificatePool = pool.New(pool.Certificates, certificateMaximum)
+	announce.peerPool = pool.NewIndexed(pool.Peers)
+	announce.rpcPool = pool.NewIndexed(pool.RPCs)
+	announce.certificatePool = pool.New(pool.Certificates)
 }
 
 // close the pools

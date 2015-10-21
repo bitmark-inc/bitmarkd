@@ -50,7 +50,7 @@ var transactionPool struct {
 }
 
 // initialise the transaction data pool
-func Initialise(cacheSize int) {
+func Initialise() {
 	transactionPool.Lock()
 	defer transactionPool.Unlock()
 
@@ -64,18 +64,18 @@ func Initialise(cacheSize int) {
 
 	transactionPool.indexCounter = 0
 
-	transactionPool.dataPool = pool.New(pool.TransactionData, cacheSize)
-	transactionPool.statePool = pool.New(pool.TransactionState, cacheSize)
+	transactionPool.dataPool = pool.New(pool.TransactionData)
+	transactionPool.statePool = pool.New(pool.TransactionState)
 
-	transactionPool.pendingPool = pool.New(pool.PendingIndex, cacheSize)
-	transactionPool.verifiedPool = pool.New(pool.VerifiedIndex, cacheSize)
+	transactionPool.pendingPool = pool.New(pool.PendingIndex)
+	transactionPool.verifiedPool = pool.New(pool.VerifiedIndex)
 
 	transactionPool.pendingCounter = 0
 	transactionPool.verifiedCounter = 0
 
-	transactionPool.assetPool = pool.New(pool.AssetData, cacheSize)
+	transactionPool.assetPool = pool.New(pool.AssetData)
 
-	transactionPool.ownerPool = pool.New(pool.OwnerIndex, cacheSize)
+	transactionPool.ownerPool = pool.New(pool.OwnerIndex)
 
 	startIndex := []byte{}
 

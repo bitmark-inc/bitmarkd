@@ -32,9 +32,6 @@ const (
 	defaultMines      = 125
 	defaultRemotes    = 25
 	//defaultBanDuration = time.Hour * 24
-
-	defaultBlockCacheSize       = 100
-	defaultTransactionCacheSize = 100
 )
 
 // path expanded or calculated defaults
@@ -116,9 +113,7 @@ type CommandOptions struct {
 	//MineAnnounce    []string `long:"MineAnnounce" description:"Publish a mine IP:port to network (Public/Firewall Forwarded/NAT)"`
 
 	// storage
-	DatabaseFile         string `long:"database" description:"LevelDB file for all data storage"`
-	BlockCacheSize       int    `long:"BlockCache" description:"Memory pool size for caching blocks"`
-	TransactionCacheSize int    `long:"TransactionCache" description:"Memory pool size for caching transactions"`
+	DatabaseFile string `long:"database" description:"LevelDB file for all data storage"`
 
 	// logging
 	LogFile        string `long:"LogFile" description:"Log file base name"`
@@ -142,26 +137,24 @@ type CommandOptions struct {
 func ParseOptions() CommandOptions {
 
 	options := CommandOptions{
-		ConfigFile:           defaultConfigFile,
-		Debug:                defaultDebug,
-		PidFile:              defaultPidFile,
-		Chain:                chain.Bitmark,
-		PublicKey:            defaultPublicKeyFile,
-		PrivateKey:           defaultPrivateKeyFile,
-		RPCClients:           defaultRPCClients,
-		RPCCertificate:       defaultCertificateFile,
-		RPCKey:               defaultKeyFile,
-		Peers:                defaultPeers,
-		Remotes:              defaultRemotes,
-		Mines:                defaultMines,
-		MineCertificate:      defaultCertificateFile,
-		MineKey:              defaultKeyFile,
-		DatabaseFile:         defaultBitmarkDatabaseFile,
-		BlockCacheSize:       defaultBlockCacheSize,
-		TransactionCacheSize: defaultTransactionCacheSize,
-		LogFile:              defaultLogFile,
-		LogSize:              defaultLogSize,
-		LogRotateCount:       defaultLogRotateCount,
+		ConfigFile:      defaultConfigFile,
+		Debug:           defaultDebug,
+		PidFile:         defaultPidFile,
+		Chain:           chain.Bitmark,
+		PublicKey:       defaultPublicKeyFile,
+		PrivateKey:      defaultPrivateKeyFile,
+		RPCClients:      defaultRPCClients,
+		RPCCertificate:  defaultCertificateFile,
+		RPCKey:          defaultKeyFile,
+		Peers:           defaultPeers,
+		Remotes:         defaultRemotes,
+		Mines:           defaultMines,
+		MineCertificate: defaultCertificateFile,
+		MineKey:         defaultKeyFile,
+		DatabaseFile:    defaultBitmarkDatabaseFile,
+		LogFile:         defaultLogFile,
+		LogSize:         defaultLogSize,
+		LogRotateCount:  defaultLogRotateCount,
 	}
 
 	temporaryOptions := options

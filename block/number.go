@@ -74,7 +74,7 @@ var processes = background.Processes{
 }
 
 // initialise the block numbering system
-func Initialise(cacheSize int) {
+func Initialise() {
 
 	// ensure single access
 	globalBlock.Lock()
@@ -85,7 +85,7 @@ func Initialise(cacheSize int) {
 
 	globalBlock.currentBlockNumber = 0
 
-	globalBlock.blockData = pool.New(pool.BlockData, cacheSize)
+	globalBlock.blockData = pool.New(pool.BlockData)
 
 	if mode.IsTesting() {
 		globalBlock.previousBlock = TestGenesisDigest
