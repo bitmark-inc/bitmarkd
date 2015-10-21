@@ -5,7 +5,6 @@
 package pool
 
 import (
-	"container/list"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
@@ -22,10 +21,7 @@ var poolData struct {
 // the pool handle
 type Pool struct {
 	sync.RWMutex
-	prefix    byte
-	cacheSize int
-	lru       list.List
-	index     map[string]*list.Element
+	prefix byte
 }
 
 // a binary data item
@@ -69,19 +65,14 @@ func Finalise() {
 }
 
 // create a new pool with a specific key prefix an optional local memory cache
-//
-// A separate index is created to provide a timestamp ordering
-func New(prefix nameb, cacheSize int) *Pool {
+func New(prefix nameb) *Pool {
 	poolData.Lock()
 	defer poolData.Unlock()
 	if nil == poolData.database {
 		fault.Panic("pool.New - not initialised")
 	}
 	pool := Pool{
-		prefix:    byte(prefix),
-		cacheSize: cacheSize,
-		lru:       list.List{},
-		index:     make(map[string]*list.Element),
+		prefix: byte(prefix),
 	}
 
 	return &pool
@@ -92,60 +83,6 @@ func (p *Pool) Add(key []byte, value []byte) {
 	p.Lock()
 	defer p.Unlock()
 
-	if p.cacheSize > 0 {
-		stringKey := string(key)
-		// if item in LRU the move to front
-		if element, ok := p.index[stringKey]; ok {
-
-			p.lru.MoveToFront(element)
-			e := element.Value.(*Element)
-
-			valueLen := len(value)
-			if cap(e.Value) < valueLen {
-				e.Value = make([]byte, valueLen)
-			}
-			copy(e.Value[:valueLen], value) // ensure all data is copied even if old data was shorter
-			e.Value = e.Value[:valueLen]    // truncate in case the new data is shorter than old data
-
-		} else if p.lru.Len() >= p.cacheSize {
-
-			// not in LRU - need to re-use element
-			element := p.lru.Back()
-			e := element.Value.(*Element)
-			delete(p.index, string(e.Key))
-
-			keyLen := len(key)
-			if cap(e.Key) < keyLen {
-				e.Key = make([]byte, keyLen)
-			}
-			copy(e.Key[:keyLen], key) // ensure all data is copied even if old data was shorter
-			e.Key = e.Key[:keyLen]    // truncate in case the new data is shorter than old data
-
-			valueLen := len(value)
-			if cap(e.Value) < valueLen {
-				e.Value = make([]byte, valueLen)
-			}
-			copy(e.Value[:valueLen], value) // ensure all data is copied even if old data was shorter
-			e.Value = e.Value[:valueLen]    // truncate in case the new data is shorter than old data
-
-			p.lru.MoveToFront(element)
-			p.index[stringKey] = element
-
-		} else {
-
-			// not in LRU - have space to add new entry
-			k := make([]byte, len(key))
-			v := make([]byte, len(value))
-			copy(k, key)
-			copy(v, value)
-			element := Element{
-				Key:   k,
-				Value: v,
-			}
-			p.index[stringKey] = p.lru.PushFront(&element)
-		}
-	}
-
 	// write to database
 	prefixedKey := make([]byte, 1, len(key)+1)
 	prefixedKey[0] = p.prefix
@@ -153,22 +90,12 @@ func (p *Pool) Add(key []byte, value []byte) {
 
 	err := poolData.database.Put(prefixedKey, value, nil)
 	fault.PanicIfError("pool.Add", err)
-
 }
 
 // remove a key from the database
 func (p *Pool) Remove(key []byte) {
 	p.Lock()
 	defer p.Unlock()
-
-	if p.cacheSize > 0 {
-		stringKey := string(key)
-		// if item in LRU then remove
-		if element, ok := p.index[stringKey]; ok {
-			p.lru.Remove(element)
-			delete(p.index, stringKey)
-		}
-	}
 
 	// delete from database
 	prefixedKey := make([]byte, 1, len(key)+1)
@@ -186,12 +113,6 @@ func (p *Pool) Remove(key []byte) {
 func (p *Pool) Get(key []byte) ([]byte, bool) {
 	p.Lock()
 	defer p.Unlock()
-
-	stringKey := string(key)
-	if element, ok := p.index[stringKey]; ok {
-		p.lru.MoveToFront(element)
-		return element.Value.(*Element).Value, true
-	}
 
 	prefixedKey := make([]byte, 1, len(key)+1)
 	prefixedKey[0] = p.prefix
@@ -337,87 +258,6 @@ func (it *Iterator) Release() {
 	fault.PanicIfError("pool.Iterator.Release", err)
 }
 
-// // fetch a range of elements starting from key prefix
-// //
-// // fetch all records with the same prefix
-// func (p *Pool) FetchPrefixed(key []byte) []Element {
-
-// 	length := len(key) + 1
-// 	prefixedStart := make([]byte, 1, length)
-// 	prefixedStart[0] = p.prefix
-// 	prefixedStart = append(prefixedStart, key...)
-
-// 	prefixedFinish := make([]byte, length)
-// 	copy(prefixedFinish, prefixedStart)
-
-// loop:
-// 	for i := length - 1; i >= 0; i -= 1 {
-// 		prefixedFinish[i] += 1
-// 		if 0 != prefixedFinish[i] {
-// 			break loop
-// 		}
-// 	}
-
-// 	maxRange := util.Range{
-// 		Start: prefixedStart,  // Start of key range, included in the range
-// 		Limit: prefixedFinish, // Limit of key range, excluded from the range
-// 	}
-
-// 	iter := poolData.database.NewIterator(&maxRange, nil)
-
-// 	results := make([]Element, 0, 100)
-
-// 	for iter.Next() {
-
-// 		// contents of the returned slice must not be modified, and are
-// 		// only valid until the next call to Next
-// 		key := iter.Key()
-// 		value := iter.Value()
-
-// 		dataKey := make([]byte, len(key)-1) // strip the prefix
-// 		copy(dataKey, key[1:])              // ...
-
-// 		dataValue := make([]byte, len(value))
-// 		copy(dataValue, value)
-
-// 		e := Element{
-// 			Key:   dataKey,
-// 			Value: dataValue,
-// 		}
-// 		results = append(results, e)
-// 	}
-// 	iter.Release()
-// 	err := iter.Error()
-// 	fault.PanicIfError("pool.FetchPrefixed", err)
-
-// 	return results
-// }
-
-// fetch the N most recent binary key and data pairs
-//
-// only used by test to ensure pool contents are correct
-func (p *Pool) Recent(count int) ([]Element, error) {
-	if count <= 0 {
-		return nil, fault.ErrInvalidCount
-	}
-
-	p.Lock()
-	defer p.Unlock()
-
-	n := 0
-	a := make([]Element, 0, count)
-	for element := p.lru.Front(); nil != element && n < count; element = element.Next() {
-
-		e := Element{
-			Key:   element.Value.(*Element).Key,
-			Value: element.Value.(*Element).Value,
-		}
-		a = append(a, e)
-		n += 1
-	}
-	return a, nil
-}
-
 // flush the pool channel
 //
 // create empty index and LRU cache
@@ -425,7 +265,5 @@ func (p *Pool) Flush() {
 	p.Lock()
 	defer p.Unlock()
 
-	p.lru = list.List{}
-	p.index = make(map[string]*list.Element)
 	return
 }

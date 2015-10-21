@@ -218,7 +218,7 @@ func (p *IndexedPool) Flush() error {
 func (p *IndexedPool) timestampKey(cursor *gnomon.Cursor) []byte {
 
 	buffer, err := cursor.MarshalBinary()
-	// error should always be nil, but just incase the lower level
+	// error should always be nil, but just in case the lower level
 	// code changes -> panic
 	if nil != err {
 		panic(err)

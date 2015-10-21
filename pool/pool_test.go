@@ -20,15 +20,12 @@ func poolRemove(t *testing.T, p *pool.Pool, key string) {
 	p.Remove([]byte(key))
 }
 
-// size for testing pools
-const poolSize = 5
-
 // main pool test
 func TestPool(t *testing.T) {
 	setup(t)
 	defer teardown(t)
 
-	p := pool.New(pool.TestData, poolSize)
+	p := pool.New(pool.TestData)
 
 	// ensure that pool was empty
 	checkAgain(t, true)
@@ -39,18 +36,18 @@ func TestPool(t *testing.T) {
 	poolAdd(t, p, "key-remove-me", "to be deleted")
 	poolRemove(t, p, "key-remove-me")
 	poolAdd(t, p, "key-three", "data-three")
-	poolAdd(t, p, "key-one", "data-one")     // move to front
-	poolAdd(t, p, "key-three", "data-three") // move to front
+	poolAdd(t, p, "key-one", "data-one")     // duplicate
+	poolAdd(t, p, "key-three", "data-three") // duplicate
 	poolAdd(t, p, "key-four", "data-four")
 	poolAdd(t, p, "key-delete-this", "to be deleted")
 	poolAdd(t, p, "key-five", "data-five")
 	poolAdd(t, p, "key-six", "data-six")
 	poolRemove(t, p, "key-delete-this")
 	poolAdd(t, p, "key-seven", "data-seven")
-	poolAdd(t, p, "key-one", "data-one(NEW)") // move to front
+	poolAdd(t, p, "key-one", "data-one(NEW)") // duplicate
 
 	// ensure we get all of the pool
-	data, err := p.Recent(poolSize * 2)
+	data, err := p.Fetch([]byte{}, 20)
 	if nil != err {
 		t.Errorf("Error on Recent: %v", err)
 		return
@@ -58,14 +55,15 @@ func TestPool(t *testing.T) {
 
 	// this is the expected order
 	check := makeElements([]stringElement{
+		{"key-five", "data-five"},
+		{"key-four", "data-four"},
 		{"key-one", "data-one(NEW)"},
 		{"key-seven", "data-seven"},
 		{"key-six", "data-six"},
-		{"key-five", "data-five"},
-		{"key-four", "data-four"},
-		// {"key-three", "data-three"},
-		// {"key-two", "data-two"},
-		// {"key-one", "data-one"},
+		{"key-three", "data-three"},
+		{"key-two", "data-two"},
+		// {"key-one", "data-one"}, // this was removed
+
 	})
 
 	// ensure lengths match
@@ -112,15 +110,15 @@ func TestPool(t *testing.T) {
 func checkAgain(t *testing.T, empty bool) {
 
 	// new pool, but same prefix so can access data entered above
-	p := pool.New(pool.TestData, poolSize)
+	p := pool.New(pool.TestData)
 
 	// cache will be empty
-	data, err := p.Recent(poolSize * 2)
+	data, err := p.Fetch([]byte{}, 5)
 	if nil != err {
 		t.Errorf("Error on Recent: %v", err)
 		return
 	}
-	if 0 != len(data) {
+	if empty && 0 != len(data) {
 		t.Errorf("Pool cache was not empty, count = %d", len(data))
 	}
 
@@ -132,7 +130,7 @@ func checkAgain(t *testing.T, empty bool) {
 		{"key-four", "data-four"},
 		{"key-three", "data-three"},
 		{"key-two", "data-two"},
-		//{"key-one", "data-one"},
+		// {"key-one", "data-one"}, // this was removed
 	})
 
 	for i, e := range check {
