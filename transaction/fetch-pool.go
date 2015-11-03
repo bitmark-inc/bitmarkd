@@ -6,6 +6,7 @@ package transaction
 
 import (
 	"encoding/binary"
+	"fmt"
 	"github.com/bitmark-inc/bitmarkd/pool"
 	"time"
 )
@@ -24,6 +25,13 @@ func (cursor *IndexCursor) FetchPool(count int) []Decoded {
 	transactionPool.Lock()
 	defer transactionPool.Unlock()
 
+	pc := transactionPool.pendingPool.NewFetchCursor()
+	pd, err := pc.Fetch(200)
+	fmt.Printf("rc.Fetch error: %v\n", err)
+	fmt.Printf("rc.Fetch   len: %v\n", len(pd))
+	fmt.Printf("rc.Fetch  data: %v\n", pd)
+
+
 	itPending := transactionPool.pendingPool.Iterate(cursor.Bytes())
 	defer itPending.Release()
 
@@ -35,6 +43,8 @@ func (cursor *IndexCursor) FetchPool(count int) []Decoded {
 
 	txIds := make([]Link, 1)
 
+	fmt.Printf("count: %d\n", count)
+
 	results := make([]Decoded, count)
 	nextIndex := *cursor
 	length := 0
@@ -42,9 +52,11 @@ func (cursor *IndexCursor) FetchPool(count int) []Decoded {
 
 		if nil == ePending {
 			ePending = itPending.Next()
+			fmt.Printf("pending: %#v\n", ePending)
 		}
 		if nil == eVerified {
 			eVerified = itVerified.Next()
+			fmt.Printf("verified: %#v\n", eVerified)
 		}
 
 		if nil == ePending && nil == eVerified {
@@ -72,6 +84,7 @@ func (cursor *IndexCursor) FetchPool(count int) []Decoded {
 			eVerified = nil
 		}
 
+		fmt.Printf("selected: %#v\n", e)
 		nextIndex = IndexCursor(binary.BigEndian.Uint64(e.Key) + 1)
 
 		LinkFromBytes(&txIds[0], e.Value[:LinkSize]) // the transaction id
@@ -84,6 +97,7 @@ func (cursor *IndexCursor) FetchPool(count int) []Decoded {
 		length += 1
 	}
 
+	fmt.Printf("length: %d\n", length)
 	*cursor = nextIndex
 	return results[:length]
 }

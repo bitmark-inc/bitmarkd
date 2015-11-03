@@ -67,3 +67,35 @@ func (assets *Assets) Get(arguments *AssetGetArguments, reply *AssetGetReply) er
 
 	return nil
 }
+
+// Asset index
+// -----------
+
+type AssetIndexesArguments struct {
+	Indexes []transaction.AssetIndex `json:"indexes"`
+}
+
+type AssetIndexesReply struct {
+	Assets []transaction.Decoded `json:"assets"`
+}
+
+func (assets *Assets) Index(arguments *AssetIndexesArguments, reply *AssetIndexesReply) error {
+
+	// restrict arguments size to reasonable value
+	size := len(arguments.Indexes)
+	if size > MaximumGetSize {
+		size = MaximumGetSize
+	}
+
+	txIds := make([]transaction.Link, size)
+	for i, assetIndex := range arguments.Indexes[:size] {
+		_, txid, found := assetIndex.Read()
+		if found {
+			txIds[i] = txid
+		}
+	}
+
+	reply.Assets = transaction.Decode(txIds)
+
+	return nil
+}

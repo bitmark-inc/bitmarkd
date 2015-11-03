@@ -35,28 +35,26 @@ func (asset *Asset) Register(arguments *transaction.AssetData, reply *AssetRegis
 	log.Infof("Asset.Register: %s", arguments.Fingerprint)
 	log.Infof("Asset.Register: %v", arguments)
 
-	packedAsset, err := arguments.Pack(arguments.Registrant)
-	if nil != err {
-		return err
+	reply.AssetIndex = arguments.AssetIndex()
+	_, id, found := reply.AssetIndex.Read()
+
+	if !found {
+		packedAsset, err := arguments.Pack(arguments.Registrant)
+		if nil != err {
+			return err
+		}
+		messagebus.Send(packedAsset)
+
+		log.Debugf("Sent asset packed tx: %x", packedAsset)
+
+		// get this tx id value - could be changed by later asset being mined
+		id = packedAsset.MakeLink()
 	}
 
-	log.Debugf("Asset packed tx: %x", packedAsset)
-
-	reply.AssetIndex = arguments.AssetIndex()
-	_, _, found := reply.AssetIndex.Read()
-
-	id, exists := packedAsset.Exists()
-
-	reply.Duplicate = found || exists
+	reply.Duplicate = found
 	reply.TxId = id            // this could be the id of an earlier version of the same asset
 	reply.PaymentAddress = nil // no payment for asset
 
-	// announce transaction to system
-	if !found {
-		messagebus.Send(packedAsset)
-	}
-
 	log.Infof("Asset.Register found: %v", found)
-	log.Infof("Asset.Register exists: %v", exists)
 	return nil
 }

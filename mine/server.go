@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/counter"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/gnomon"
@@ -18,12 +19,11 @@ import (
 	"github.com/bitmark-inc/bitmarkd/transaction"
 	"github.com/bitmark-inc/logger"
 	"io"
-	"sync/atomic"
 	"time"
 )
 
 // global data
-var globalMinerCount int64
+var globalMinerCount counter.Counter
 
 // type to hold Peer
 type Mining struct {
@@ -366,8 +366,12 @@ func Callback(conn io.ReadWriteCloser, argument interface{}) {
 	server.Register(mining)
 
 	// count miner connections
-	atomic.AddInt64(&globalMinerCount, 1)
-	defer atomic.AddInt64(&globalMinerCount, -1)
+	globalMinerCount.Increment()
+	defer globalMinerCount.Decrement()
 
 	ServeConnection(conn, server, backgroundNotifier, serverArgument)
+}
+
+func ConnectionCount() uint64 {
+	return globalMinerCount.Uint64()
 }

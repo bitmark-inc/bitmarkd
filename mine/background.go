@@ -13,7 +13,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/transaction"
 	"github.com/bitmark-inc/logger"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
@@ -118,7 +117,7 @@ loop:
 			}
 
 			// do not bother if no miners are connected
-			if 0 == atomic.LoadInt64(&globalMinerCount) {
+			if globalMinerCount.IsZero() {
 				//log.Info("mine-assemble: waiting for first miner")
 				break assemble
 			}

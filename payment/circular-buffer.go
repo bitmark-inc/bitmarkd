@@ -18,7 +18,7 @@ type circularNode struct {
 
 // circular buffer for addresses
 type circular struct {
-	sync.RWMutex // to allow locking
+	sync.Mutex // to allow locking need full mutex for hashtable - cannot use RWMutex
 
 	node *circularNode
 	set  map[string]int
@@ -103,8 +103,8 @@ func (c *circular) put(addresses []block.MinerAddress) {
 
 // check if a particular address is present in the buffer
 func (c *circular) isPresent(address block.MinerAddress) bool {
-	c.RLock()
-	defer c.RUnlock()
+	c.Lock()
+	defer c.Unlock()
 
 	_, present := c.set[address.String()]
 	return present

@@ -5,6 +5,7 @@
 package rpc
 
 import (
+	"github.com/bitmark-inc/bitmarkd/counter"
 	"github.com/bitmark-inc/logger"
 	"io"
 	"net/rpc"
@@ -12,12 +13,14 @@ import (
 )
 
 // limit the number of gets
-const MaximumGetSize = 50
+const MaximumGetSize = 100
 
 // the argument passed to the callback
 type ServerArgument struct {
 	Log *logger.L
 }
+
+var connectionCount counter.Counter
 
 // listener callback
 func Callback(conn io.ReadWriteCloser, argument interface{}) {
@@ -73,6 +76,9 @@ func Callback(conn io.ReadWriteCloser, argument interface{}) {
 	server.Register(tx)
 	server.Register(pool)
 	server.Register(node)
+
+	connectionCount.Increment()
+	defer connectionCount.Decrement()
 
 	codec := jsonrpc.NewServerCodec(conn)
 	defer codec.Close()

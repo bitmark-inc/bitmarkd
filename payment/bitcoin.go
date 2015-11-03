@@ -22,7 +22,7 @@ import (
 // global constants
 const (
 	bitcoinMinimumVersion = 90200           // do not start if bitcoind older than this
-	bitcoinRateLimit      = 5.0             // blocks/second
+	bitcoinRateLimit      = 15.0            // blocks/second
 	bitcoinPollingTime    = 2 * time.Minute // sample bitcoin "blockcount" RPC at this interval
 	bitcoinMaximumRetries = 10              // panic after this many consecutive errors
 	bitcoinCurrencyName   = "bitcoin"       // all lowercase currency string
@@ -144,7 +144,7 @@ func BitcoinInitialise(url string, username string, password string, minerAddres
 	globalBitcoinData.log.Debugf("block count: %d", globalBitcoinData.latestBlockNumber)
 
 	// start background processes
-	globalBitcoinData.log.Info("start background")
+	globalBitcoinData.log.Info("start background…")
 	globalBitcoinData.background = background.Start(bitcoinProcesses, globalBitcoinData.log)
 
 	register(bitcoinCurrencyName, &callType{
@@ -152,7 +152,6 @@ func BitcoinInitialise(url string, username string, password string, minerAddres
 		miner: bitcoinAddress,
 	})
 
-	globalBitcoinData.log.Info("about to return")
 	return nil
 }
 
@@ -259,31 +258,31 @@ func bitcoinAddress() string {
 // ------------------------------
 
 // make a payment for some bitmark transactions
-func bitcoinPay(payment []byte, count int) error {
+func bitcoinPay(payment []byte, count int) (string, error) {
 
 	var reply bitcoinTransaction
 	if err := bitcoinDecodeRawTransaction(payment, &reply); nil != err {
-		return err
+		return "", err
 	}
 	links, addresses, ok := bitcoinValidateTransaction(&reply)
 	if !ok {
-		return fault.ErrInsufficientPayment
+		return "", fault.ErrInsufficientPayment
 	}
 
 	if 0 == len(links) {
-		return fault.ErrNotABitmarkPayment
+		return "", fault.ErrNotABitmarkPayment
 	}
 
 	if 0 == len(addresses) {
-		return fault.ErrNoPaymentToMiner
+		return "", fault.ErrNoPaymentToMiner
 	}
 
 	if count > 0 && count != len(links) {
-		return fault.ErrInvalidCount
+		return "", fault.ErrInvalidCount
 	}
 
 	var btcId string
-	return bitcoinSendRawTransaction(payment, &btcId)
+	return btcId, bitcoinSendRawTransaction(payment, &btcId)
 }
 
 // validate and extract data from a decoded bitcoin transaction
@@ -301,11 +300,12 @@ func bitcoinValidateTransaction(tx *bitcoinTransaction) ([]transaction.Link, []s
 
 	total := uint64(0)
 
+	globalBitcoinData.log.Debugf("len vout: %d", len(tx.Vout))
+
 	for i, vout := range tx.Vout {
-		globalBitcoinData.log.Debugf("vout[%d]: %v", i, vout)
-		globalBitcoinData.log.Flush()
 
 		amount := convertToSatoshi(vout.Value)
+		globalBitcoinData.log.Tracef("vout[%d]: satoshi: %d  data: %v", i, amount, vout)
 
 		if 0 == amount && len(vout.ScriptPubKey.Hex) > 4 {
 			script := vout.ScriptPubKey.Hex
@@ -315,7 +315,7 @@ func bitcoinValidateTransaction(tx *bitcoinTransaction) ([]transaction.Link, []s
 				if nil != err {
 					continue
 				}
-				globalBitcoinData.log.Debugf("vout[%d]: link[%d]: %#v", i, idIndex, txIds[idIndex])
+				globalBitcoinData.log.Tracef("vout[%d]: link[%d]: %#v", i, idIndex, txIds[idIndex])
 				idIndex += 1
 			} else if "6a" == script[0:2] {
 				// uncounted "OP_RETURN txid"
@@ -323,7 +323,7 @@ func bitcoinValidateTransaction(tx *bitcoinTransaction) ([]transaction.Link, []s
 				if nil != err {
 					continue
 				}
-				globalBitcoinData.log.Debugf("vout[%d]: link[%d]: %#v", i, idIndex, txIds[idIndex])
+				globalBitcoinData.log.Tracef("vout[%d]: link[%d]: %#v", i, idIndex, txIds[idIndex])
 				idIndex += 1
 			}
 			continue
@@ -336,11 +336,12 @@ func bitcoinValidateTransaction(tx *bitcoinTransaction) ([]transaction.Link, []s
 		}
 
 		theAddress := addresses[0]
+
 		// ***** FIX THIS: need to figure out how to bootstrap *****
 		// currently just allow my own address as valid
 		//if isMinerAddress(bitcoinCurrencyName, theAddress) {
 		if isMinerAddress(bitcoinCurrencyName, theAddress) || bitcoinAddress() == theAddress {
-			globalBitcoinData.log.Debugf("vout[%d]: address: %s -> BTC %d", i, theAddress, amount)
+			globalBitcoinData.log.Tracef("vout[%d]: miner address: %s -> BTC %d", i, theAddress, amount)
 			minerAddresses = append(minerAddresses, theAddress)
 			total += amount
 		}
@@ -353,7 +354,6 @@ func bitcoinValidateTransaction(tx *bitcoinTransaction) ([]transaction.Link, []s
 	globalBitcoinData.log.Debugf("total:  BTC %d  expected:  BTC %d  ok: %v", total, expectedFee, feeOk)
 
 	return txIds[0:idIndex], minerAddresses, feeOk
-
 }
 
 // low level RPC
@@ -417,7 +417,7 @@ func bitcoinRPC(arguments *bitcoinArguments, reply *bitcoinReply) error {
 		return err
 	}
 
-	globalBitcoinData.log.Debugf("rpc send: %s", s)
+	globalBitcoinData.log.Tracef("rpc send: %s", s)
 
 	postData := bytes.NewBuffer(s)
 
@@ -454,30 +454,32 @@ func bitcoinScanBlock(number uint64) error {
 
 	log := globalBitcoinData.log
 
-	var hash string
-	err := bitcoinCall("getblockhash", []interface{}{number}, &hash)
-	if nil != err {
-		return err
-	}
+	transactions, err := bitcoinGetBlock(number)
 
-	log.Debugf("blk %d hash: %s", number, hash)
+	// var hash string
+	// err := bitcoinCall("getblockhash", []interface{}{number}, &hash)
+	// if nil != err {
+	// 	return err
+	// }
 
-	var blk struct {
-		Tx []string `json:"tx"`
-	}
-	err = bitcoinCall("getblock", []interface{}{hash}, &blk)
-	if nil != err {
-		return err
-	}
+	// log.Debugf("blk %d hash: %s", number, hash)
 
-	log.Debugf("blk %d data: %v", number, blk)
+	// var blk struct {
+	// 	Tx []string `json:"tx"`
+	// }
+	// err = bitcoinCall("getblock", []interface{}{hash}, &blk)
+	// if nil != err {
+	// 	return err
+	// }
 
-	if len(blk.Tx) < 1 {
+	// log.Debugf("blk %d data: %v", number, blk)
+
+	if len(transactions) < 1 {
 		log.Debugf("blk %d no transactions", number)
 		return nil
 	}
 
-	for i, tx := range blk.Tx {
+	for i, tx := range transactions {
 		log.Debugf("blk %d tx %d id: %s", number, i, tx)
 
 		var reply bitcoinTransaction
@@ -533,6 +535,7 @@ loop:
 			rate := float64(blockCount) / time.Since(startTime).Seconds()
 
 			if rate > bitcoinRateLimit {
+				log.Info("reading: waiting…")
 				select {
 				case <-shutdown:
 					break loop
@@ -546,7 +549,7 @@ loop:
 				}
 			}
 
-			log.Infof("block: %d", currentBlockNumber)
+			log.Infof("reading: process block: %d", currentBlockNumber)
 
 			if err := bitcoinScanBlock(currentBlockNumber); nil != err {
 
@@ -587,11 +590,14 @@ loop:
 		// poll until a new block or blocks are received
 	polling:
 		for {
+			log.Info("polling: waiting…")
 			select {
 			case <-shutdown:
 				break loop
 			case <-time.After(bitcoinPollingTime):
 			}
+
+			log.Info("polling: process")
 
 			// update the current block number
 			n := bitcoinLatestBlockNumber()
@@ -605,6 +611,34 @@ loop:
 	}
 
 	close(finished)
+}
+
+// get the transactions in a specific bitcoin block
+func bitcoinGetBlock(number uint64) ([]string, error) {
+	globalBitcoinData.Lock()
+	defer globalBitcoinData.Unlock()
+
+	log := globalBitcoinData.log
+
+	var hash string
+	err := bitcoinCall("getblockhash", []interface{}{number}, &hash)
+	if nil != err {
+		return nil, err
+	}
+
+	log.Debugf("blk %d hash: %s", number, hash)
+
+	var blk struct {
+		Tx []string `json:"tx"`
+	}
+	err = bitcoinCall("getblock", []interface{}{hash}, &blk)
+	if nil != err {
+		return nil, err
+	}
+
+	log.Debugf("blk %d data: %v", number, blk)
+
+	return blk.Tx, nil
 }
 
 // update and return the current block number

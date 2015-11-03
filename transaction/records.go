@@ -11,19 +11,21 @@ import (
 	"unicode/utf8"
 )
 
+type TagType uint64
+
 // enumerate the possible transaction record types
 // this is encoded a Varint64 at start of "Packed"
 const (
 	// null marks beginning of list - not used as a record type
-	NullTag = iota
+	NullTag = TagType(iota)
 
 	// valid record type
-	AssetDataTag       = iota
-	BitmarkIssueTag    = iota
-	BitmarkTransferTag = iota
+	AssetDataTag       = TagType(iota)
+	BitmarkIssueTag    = TagType(iota)
+	BitmarkTransferTag = TagType(iota)
 
 	// this item must be last
-	InvalidTag = iota
+	InvalidTag = TagType(iota)
 )
 
 // packed records are just a byte slice
@@ -62,6 +64,12 @@ type BitmarkTransfer struct {
 	Signature Signature `json:"signature"` // base64: corresponds to owner in linked record
 }
 
+// determine the record type code
+func (record Packed) Type() TagType {
+	recordType, _ := util.FromVarint64(record)
+	return TagType(recordType)
+}
+
 // turn a byte slice into a record
 //
 // must cast result to correct type
@@ -75,7 +83,7 @@ func (record Packed) Unpack() (interface{}, error) {
 
 	recordType, n := util.FromVarint64(record)
 
-	switch recordType {
+	switch TagType(recordType) {
 
 	case AssetDataTag:
 
@@ -237,7 +245,7 @@ func (assetData *AssetData) Pack(address *Address) (Packed, error) {
 	}
 
 	// concatenate bytes
-	message := util.ToVarint64(AssetDataTag)
+	message := util.ToVarint64(uint64(AssetDataTag))
 	message = appendString(message, assetData.Description)
 	message = appendString(message, assetData.Name)
 	message = appendString(message, assetData.Fingerprint)
@@ -265,7 +273,7 @@ func (issue *BitmarkIssue) Pack(address *Address) (Packed, error) {
 	}
 
 	// concatenate bytes
-	message := util.ToVarint64(BitmarkIssueTag)
+	message := util.ToVarint64(uint64(BitmarkIssueTag))
 	message = appendBytes(message, issue.AssetIndex.Bytes())
 	message = appendAddress(message, issue.Owner)
 	message = appendUint64(message, issue.Nonce)
@@ -293,7 +301,7 @@ func (transfer *BitmarkTransfer) Pack(address *Address) (Packed, error) {
 	}
 
 	// concatenate bytes
-	message := util.ToVarint64(BitmarkTransferTag)
+	message := util.ToVarint64(uint64(BitmarkTransferTag))
 	message = appendBytes(message, transfer.Link.Bytes())
 	message = appendAddress(message, transfer.Owner)
 

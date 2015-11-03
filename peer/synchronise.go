@@ -192,7 +192,7 @@ loop:
 		txid := transaction.Link(txDigest)
 
 		// skip transactions already on file
-		state, found := txid.State()
+		state, found := txid.GetState()
 		if found {
 			switch state {
 			case transaction.PendingTransaction, transaction.VerifiedTransaction:
@@ -262,7 +262,7 @@ loop:
 			}
 
 			// got a valid tx - flag as mined
-			state, found := txid.State()
+			state, found := txid.GetState()
 			if !found {
 				log.Errorf("missing transaction: %#v", txid)
 				success = false

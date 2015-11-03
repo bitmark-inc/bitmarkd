@@ -19,9 +19,10 @@ import (
 //      if that asset was never seen before
 func (cursor *AvailableCursor) FetchAvailable(count int) []block.Digest {
 
-	startIndex := cursor.count.Bytes()
+	fetchCursor := transactionPool.verifiedPool.NewFetchCursor()
+	fetchCursor.Seek(cursor.count.Bytes())
 
-	verified, err := transactionPool.verifiedPool.Fetch(startIndex, count)
+	verified, err := fetchCursor.Fetch(count)
 	if nil != err {
 		// error represents a database failure - panic
 		fault.PanicWithError("transaction.FetchAvailable: verifiedPool.Fetch", err)

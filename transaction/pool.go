@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/counter"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/pool"
@@ -32,11 +33,11 @@ var transactionPool struct {
 
 	// state index pools
 	pendingPool  *pool.Pool // index of pending payment
-	verifiedPool *pool.Pool // index of payment veiified so tx can be mined
+	verifiedPool *pool.Pool // index of payment verified so tx can be mined
 
 	// global counts
-	pendingCounter  ItemCounter
-	verifiedCounter ItemCounter
+	pendingCounter  counter.Counter
+	verifiedCounter counter.Counter
 
 	// index of assets
 	assetPool *pool.Pool // all assets
@@ -53,7 +54,6 @@ var transactionPool struct {
 func Initialise() {
 	transactionPool.Lock()
 	defer transactionPool.Unlock()
-
 	// no need to start if already started
 	if transactionPool.initialised {
 		return
@@ -77,14 +77,48 @@ func Initialise() {
 
 	transactionPool.ownerPool = pool.New(pool.OwnerIndex)
 
-	startIndex := []byte{}
+	// check if transactions are missing state
+	dataCursor := transactionPool.dataPool.NewFetchCursor()
+	abort := false
+	for {
+		// read blocks of records
+		transactions, err := dataCursor.Fetch(100)
+		fault.PanicIfError("transaction.Initialise: dataPool fetch", err)
+
+		// if no more records exit loop
+		if 0 == len(transactions) {
+			break
+		}
+
+		for _, t := range transactions {
+			txId := t.Key
+			transactionPool.log.Tracef("check state for: %x", txId)
+
+			if _, found := transactionPool.statePool.Get(txId); !found {
+				transactionPool.log.Criticalf("Initialise: missing state for TxId: %x", txId)
+				abort = true
+			}
+			// rebuild asset index
+			switch Packed(t.Value).Type() {
+			case AssetDataTag:
+				asset, err := Packed(t.Value).Unpack()
+				fault.PanicIfError("transaction.Initialise: unpack asset failed", err)
+				assetIndex := asset.(*AssetData).AssetIndex()
+				transactionPool.assetPool.Add(assetIndex.Bytes(), txId)
+			default:
+			}
+		}
+	}
+	if abort {
+		fault.Panic("transaction.Initialise: missing transaction state")
+	}
 
 	// make sure mined status is correct
 	lastBlock := block.Number()
 	stateBuffer := make([]byte, 9)
 	stateBuffer[0] = byte(ConfirmedTransaction)
 
-	abort := false
+	abort = false
 	for n := uint64(2); n < lastBlock; n += 1 {
 		transactionPool.log.Debugf("set confirmed from block: %d", n)
 		packed, found := block.Get(n)
@@ -103,7 +137,7 @@ func Initialise() {
 			if _, found := transactionPool.dataPool.Get(indexBuffer); found {
 				transactionPool.statePool.Add(indexBuffer, stateBuffer)
 			} else {
-				transactionPool.log.Criticalf("transaction.Initialise: missing tx: %#v", Link(txId))
+				transactionPool.log.Criticalf("Initialise: missing tx: %#v", Link(txId))
 				abort = true
 			}
 		}
@@ -112,18 +146,50 @@ func Initialise() {
 		fault.Panic("transaction.Initialise: missing transactions")
 	}
 
+	// check asset index
+	assetCursor := transactionPool.assetPool.NewFetchCursor()
+	for {
+		// read blocks of records
+		assets, err := assetCursor.Fetch(100)
+		fault.PanicIfError("transaction.Initialise: assetPool fetch", err)
+
+		// if no more records exit loop
+		if 0 == len(assets) {
+			break
+		}
+
+		for _, e := range assets {
+			if _, found := transactionPool.dataPool.Get(e.Value); !found {
+				var txId Link
+				err := LinkFromBytes(&txId, e.Value)
+				fault.PanicIfError("transaction.Initialise: failed to convert link", err)
+				var assetIndex AssetIndex
+				err = AssetIndexFromBytes(&assetIndex, e.Key)
+				fault.PanicIfError("transaction.Initialise: failed to convert asset index", err)
+
+				transactionPool.log.Warnf("Initialise: delete index: %#v  with missing tx: %#v", assetIndex, txId)
+				transactionPool.assetPool.Remove(e.Key)
+
+				abort = true
+			}
+		}
+	}
+	if abort {
+		fault.Panic("transaction.Initialise: missing asset transactions: e.g. an expiry failed to delete asset index record")
+	}
+
 	// rebuild indexes
 	// from pool/names.go
 	//   S<tx-digest> - state: byte[expired(E), pending(P), verified(V), confirmed(C)] ++ int64[the U/V table count value]
 	//   U<count>     - transaction-digest ++ int64[timestamp] (pending unverified transactions waiting for payment)
+	stateCursor := transactionPool.statePool.NewFetchCursor()
 	for {
 		// read blocks of records
-		state, err := transactionPool.statePool.Fetch(startIndex, 100)
+		state, err := stateCursor.Fetch(100)
 		fault.PanicIfError("transaction.Initialise: statePool fetch", err)
 
 		// if no more records exit loop
-		n := len(state)
-		if n <= 1 {
+		if 0 == len(state) {
 			break
 		}
 
@@ -135,6 +201,16 @@ func Initialise() {
 
 			txId := e.Key
 			indexBuffer := e.Value[1:]
+
+
+			if _, found := transactionPool.dataPool.Get(txId); !found {
+				var txId Link
+				err := LinkFromBytes(&txId, e.Value)
+				fault.PanicIfError("transaction.Initialise: failed to convert link", err)
+
+				transactionPool.log.Criticalf("Initialise: missing data for txid: %#v  with state: %#v", txId, theState)
+				abort = true
+			}
 
 			transactionPool.log.Debugf("rebuild: %q %x", theState, txId)
 
@@ -167,30 +243,35 @@ func Initialise() {
 
 			}
 		}
-		startIndex = state[n-1].Key
+	}
+	if abort {
+		fault.Panic("transaction.Initialise: missing data for transactions: e.g. an expiry failed to delete data record")
 	}
 
-	// drop expired pending
-	startIndex = []byte{}
+	transactionPool.log.Debugf("pending count: %d", transactionPool.pendingCounter.Uint64())
+	transactionPool.log.Debugf("verified count: %d", transactionPool.verifiedCounter.Uint64())
+
+	// drop expired/non-existant pending
+	pendingCursor := transactionPool.pendingPool.NewFetchCursor()
 	for {
-		records, err := transactionPool.pendingPool.Fetch(startIndex, 100)
+		records, err := pendingCursor.Fetch( 100)
 		fault.PanicIfError("transaction.Initialise: pendingPool fetch", err)
 
 		// if no more records exit loop
-		n := len(records)
-		if n <= 1 {
+		if 0 == len(records) {
 			break
 		}
 
 		for _, record := range records {
-			if state, found := transactionPool.statePool.Get(record.Value[:LinkSize]); found {
-				if PendingTransaction != State(state[0]) {
-					transactionPool.pendingPool.Remove(record.Key)
-				}
+			state, found := transactionPool.statePool.Get(record.Value[:LinkSize])
+			if !found || PendingTransaction != State(state[0]) {
+				transactionPool.pendingPool.Remove(record.Key)
+				transactionPool.pendingCounter.Decrement()
 			}
 		}
-		startIndex = records[n-1].Key
 	}
+
+	transactionPool.log.Debugf("pending count (after drop): %d", transactionPool.pendingCounter.Uint64())
 
 	// initialisation is complete
 	transactionPool.initialised = true
@@ -279,21 +360,21 @@ func (data Packed) Write(link *Link, overwriteAssetIndex bool) error {
 		assetIndex := transfer.AssetIndex.Bytes()
 
 		// must link to an Asset
-		previous, found := transactionPool.assetPool.Get(assetIndex)
+		assetLink, found := transactionPool.assetPool.Get(assetIndex)
 		if !found {
 			transactionPool.log.Warnf("write tx, issue asset: %x", assetIndex)
 			return fault.ErrAssetNotFound
 		}
 
-		// split the record
-		length := len(previous) - LinkSize
-		//previousOwner := previous[:length]
-		assetDataLink := previous[length:]
-
 		// check asset
-		assetState, found := transactionPool.statePool.Get(assetDataLink)
+		assetState, found := transactionPool.statePool.Get(assetLink)
 		if !found {
-			fault.Panicf("write tx, no asset state for assetIndex: %x", assetIndex)
+			_, dataFound := transactionPool.dataPool.Get(assetLink)
+			transactionPool.log.Criticalf("write tx, asset Index: %x", assetIndex)
+			transactionPool.log.Criticalf("write tx, asset tx id: %x", assetLink)
+			transactionPool.log.Criticalf("write tx, data found:  %v", dataFound)
+			transactionPool.log.Criticalf("write tx, state found: %v", found)
+			fault.Panicf("write tx, no asset state for id: %x", assetLink)
 			return fault.ErrAssetNotFound // not reached
 		}
 
@@ -316,11 +397,10 @@ func (data Packed) Write(link *Link, overwriteAssetIndex bool) error {
 		}
 	}
 
-	transactionPool.indexCounter += 1 // safe because mutex is locked
 	// create the index count in big endian order so
 	// iterator on the index will return items in the
 	// order they were entered
-	indexBuffer := transactionPool.indexCounter.Bytes()
+	indexBuffer := transactionPool.indexCounter.NextBytes()
 
 	// first byte is state, next 8 bytes are big endian pending index
 	stateBuffer := make([]byte, 9)
@@ -358,12 +438,14 @@ func (data Packed) Write(link *Link, overwriteAssetIndex bool) error {
 					if bytes.Equal(pending[:LinkSize], deletableTxId) {
 						transactionPool.log.Debugf("delete pending: %x", indexBuffer)
 						transactionPool.pendingPool.Remove(indexBuffer)
+						transactionPool.pendingCounter.Decrement()
 					}
 				}
 				if verified, found := transactionPool.verifiedPool.Get(indexBuffer); found {
 					if bytes.Equal(verified[:LinkSize], deletableTxId) {
 						transactionPool.log.Debugf("delete verified: %x", indexBuffer)
 						transactionPool.verifiedPool.Remove(indexBuffer)
+						transactionPool.verifiedCounter.Decrement()
 					}
 				}
 			}
@@ -402,7 +484,7 @@ func (link Link) Read() (State, Packed, bool) {
 // returns:
 //   state of record - see the const ExpiredTransaction,... above
 //   true if data was found
-func (link Link) State() (State, bool) {
+func (link Link) GetState() (State, bool) {
 	id := link.Bytes()
 	state, found := transactionPool.statePool.Get(id)
 	if !found {
@@ -526,6 +608,7 @@ func setVerified(oldState State, oldIndex []byte, txId []byte, timestamp uint64)
 	return true
 }
 
+// must be called with locked mutex
 func setConfirmed(oldState State, oldIndex []byte, txId []byte, unpackedTransaction interface{}) {
 
 	// first byte is state, next 8 bytes are big endian zero (for compatibility of other states)
@@ -672,6 +755,14 @@ func (link Link) SetState(newState State) {
 		switch newState {
 
 		case ExpiredTransaction:
+			switch unpackedTransaction.(type) {
+			case *AssetData:
+				// if tx is asset remove the asset index record
+				asset := unpackedTransaction.(*AssetData)
+				assetIndex := NewAssetIndex([]byte(asset.Fingerprint)).Bytes()
+				transactionPool.assetPool.Remove(assetIndex)
+			default:
+			}
 			// delete all associated records
 			transactionPool.pendingPool.Remove(oldIndex)
 			transactionPool.statePool.Remove(txId)
@@ -721,13 +812,29 @@ func (link Link) SetState(newState State) {
 // note this will panic if database inconsistancy is detected
 func (data Packed) Exists() (Link, bool) {
 
+	// if an asset then need a different check
+	switch data.Type() {
+	case AssetDataTag:
+		asset, err := data.Unpack()
+		fault.PanicIfError("transaction.pool.Exists: unpack asset error: %v", err)
+		idBytes, found := transactionPool.assetPool.Get(asset.(*AssetData).AssetIndex().Bytes())
+		var id Link
+		err = LinkFromBytes(&id, idBytes)
+		if found && nil != err {
+			fault.Panicf("transaction.pool.Exists: database corruption detected cannot convert asset link: %x  error: %v", idBytes, err)
+		}
+		return id, found
+	default:
+	}
+
 	id := data.MakeLink()
-	result, found := transactionPool.dataPool.Get(id.Bytes())
+	result, found := transactionPool.dataPool.Get(id.Bytes()) // ***** FIX THIS: implement Has(key) usin the level db Has() to save reading 'result'
 	if !found {
 		return id, false
 	}
+
+	// check for corrupted database - is this necessary?  // ***** FIX THIS: could eliminate and use Has() above
 	if !bytes.Equal(data, result) {
-		// hopefully this is never reached - if it does then log some data and panic
 		fault.Panicf("transaction.pool.Exists: database corruption detected received tx: %x  local copy: %X", data, result)
 	}
 

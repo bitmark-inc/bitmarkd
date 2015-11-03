@@ -47,9 +47,10 @@ func TestPool(t *testing.T) {
 	poolAdd(t, p, "key-one", "data-one(NEW)") // duplicate
 
 	// ensure we get all of the pool
-	data, err := p.Fetch([]byte{}, 20)
+	cursor := p.NewFetchCursor()
+	data, err := cursor.Fetch(20)
 	if nil != err {
-		t.Errorf("Error on Recent: %v", err)
+		t.Errorf("Error on Fetch: %v", err)
 		return
 	}
 
@@ -80,6 +81,22 @@ func TestPool(t *testing.T) {
 				a.Key, a.Value,
 				check[i].Key, check[i].Value)
 		}
+	}
+
+	// retrieve 2 elements then next 2 - ensure no overlap
+	cursor.Seek(nil)
+	firstPair, err := cursor.Fetch(2)
+	if nil != err {
+		t.Errorf("Error on Fetch: %v", err)
+		return
+	}
+	secondPair, err := cursor.Fetch(2)
+	if nil != err {
+		t.Errorf("Error on Fetch: %v", err)
+		return
+	}
+	if bytes.Equal(firstPair[1].Key, secondPair[0].Key) {
+		t.Errorf("Fetch Overlap got duplicate: '%s:%s'", firstPair[1].Key, firstPair[1].Value)
 	}
 
 	// retrieve a key not in the pool's cache
@@ -113,13 +130,14 @@ func checkAgain(t *testing.T, empty bool) {
 	p := pool.New(pool.TestData)
 
 	// cache will be empty
-	data, err := p.Fetch([]byte{}, 5)
+	cursor := p.NewFetchCursor()
+	data, err := cursor.Fetch(100)  // all data
 	if nil != err {
-		t.Errorf("Error on Recent: %v", err)
+		t.Errorf("Error on Fetch: %v", err)
 		return
 	}
 	if empty && 0 != len(data) {
-		t.Errorf("Pool cache was not empty, count = %d", len(data))
+		t.Errorf("Pool was not empty, count = %d", len(data))
 	}
 
 	check := makeElements([]stringElement{
@@ -149,6 +167,19 @@ func checkAgain(t *testing.T, empty bool) {
 			}
 		}
 	}
+
+	// try to retrieve some more data - shout be zero
+	data, err = cursor.Fetch(100)
+	if nil != err {
+		t.Errorf("Error on Fetch: %v", err)
+		return
+	}
+	n := len(data)
+	if 0 != n {
+		t.Errorf("checkAgain: extra: %d elements found", n)
+		t.Errorf("checkAgain: data: %s", data)
+	}
+
 
 	// attempt to retrieve a key that does not exist
 	dn, found := p.Get(nonExistantKey)

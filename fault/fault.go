@@ -38,6 +38,7 @@ var (
 	ErrInvalidCount                  = InvalidError("invalid count")
 	ErrInvalidCharacter              = InvalidError("invalid character")
 	ErrInvalidCurrency               = InvalidError("invalid currency")
+	ErrInvalidCursor                 = InvalidError("invalid cursor")
 	ErrInvalidIPAddress              = InvalidError("invalid IP Address")
 	ErrInvalidKeyLength              = InvalidError("invalid key length")
 	ErrInvalidKeyType                = InvalidError("invalid key type")

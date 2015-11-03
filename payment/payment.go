@@ -30,13 +30,13 @@ const (
 
 // for currency specific methods
 type callType struct {
-	pay   func(paymentData []byte, count int) error
+	pay   func(paymentData []byte, count int) (string, error)
 	miner func() string // returns string form of address in that currencies usual encoding
 }
 
 // globals for background proccess
 type paymentData struct {
-	sync.RWMutex // to allow locking
+	sync.Mutex // to allow locking
 
 	// logger
 	log *logger.L
@@ -106,7 +106,7 @@ func paymentInitialise() error {
 	globalData.initialised = true
 
 	// start background processes
-	globalData.log.Info("start background")
+	globalData.log.Info("start background…")
 	globalData.background = background.Start(paymentProcesses, globalData.log)
 
 	return nil
@@ -159,8 +159,9 @@ func register(currency string, c *callType) {
 // is a particular address a valid miner
 // called by currency module
 func isMinerAddress(currency string, address string) bool {
-	globalData.RLock()
-	defer globalData.RUnlock()
+
+	globalData.Lock()
+	defer globalData.Unlock()
 
 	if !globalData.initialised {
 		fault.Panic(panicMessage)
@@ -170,6 +171,7 @@ func isMinerAddress(currency string, address string) bool {
 		Currency: currency,
 		Address:  address,
 	}
+
 	return globalData.validMiners.isPresent(a)
 }
 
@@ -182,7 +184,7 @@ func markPaid(txId transaction.Link) {
 		fault.Panic(panicMessage)
 	}
 
-	globalData.log.Infof("mark paid: %#v", txId)
+	globalData.log.Tracef("mark paid: %#v", txId)
 
 	globalData.paid[txId] = struct{}{}
 }
@@ -208,17 +210,17 @@ func markExpired(txIds []transaction.Link) {
 
 // check if a transaction ID is already paid
 func isPaid(txId transaction.Link) bool {
-	globalData.RLock()
-	defer globalData.RUnlock()
+	globalData.Lock()
+	defer globalData.Unlock()
 
 	if !globalData.initialised {
 		fault.Panic(panicMessage)
 	}
 
-	globalData.log.Debugf("is paid: map: %#v", globalData.paid)
+	globalData.log.Tracef("is paid: map: %#v", globalData.paid)
 
 	if _, ok := globalData.paid[txId]; ok {
-		globalData.log.Infof("is paid: %#v  status: %v", txId, ok)
+		globalData.log.Debugf("is paid: %#v  status: %v", txId, ok)
 		return ok
 	}
 
@@ -232,27 +234,33 @@ func isPaid(txId transaction.Link) bool {
 
 // make a payment - primary payment API
 // detects currency and makes payment
-func Pay(currency string, paymentData []byte, count int) error {
-	globalData.RLock()
-	defer globalData.RUnlock()
+func Pay(currency string, paymentData []byte, count int) (string, error) {
+
+	// begin critcal region
+	globalData.Lock()
 
 	if !globalData.initialised {
 		fault.Panic(panicMessage)
 	}
 
 	c, ok := globalData.calls[strings.ToLower(currency)]
+
+	// end critcal region
+	globalData.Unlock()
+
 	if !ok {
-		return fault.ErrInvalidCurrency
+		return "", fault.ErrInvalidCurrency
 	}
 
+	// must be unlocked before call sin it will use locked items lik: isMinerAddress
 	return c.pay(paymentData, count)
 }
 
 // for miner routines to get this nodes addresses
 func MinerAddresses() []block.MinerAddress {
 
-	globalData.RLock()
-	defer globalData.RUnlock()
+	globalData.Lock()
+	defer globalData.Unlock()
 
 	if !globalData.initialised {
 		fault.Panic(panicMessage)
@@ -271,8 +279,8 @@ func MinerAddresses() []block.MinerAddress {
 // for RPC to get payment addresses - if any
 func PaymentAddresses() []block.MinerAddress {
 
-	globalData.RLock()
-	defer globalData.RUnlock()
+	globalData.Lock()
+	defer globalData.Unlock()
 
 	if !globalData.initialised {
 		fault.Panic(panicMessage)
@@ -286,7 +294,7 @@ func PaymentAddresses() []block.MinerAddress {
 // returns true on transition from unpaid to paid
 func CheckPaid(txId transaction.Link) bool {
 	if isPaid(txId) {
-		if state, found := txId.State(); found && transaction.PendingTransaction == state {
+		if state, found := txId.GetState(); found && transaction.PendingTransaction == state {
 			txId.SetState(transaction.VerifiedTransaction)
 			return true
 		}
@@ -302,6 +310,7 @@ func CheckPaid(txId transaction.Link) bool {
 func paymentBitmarkBlockScanner(args interface{}, shutdown <-chan bool, finished chan<- bool) {
 
 	log := args.(*logger.L)
+	log.Info("scanner: starting…")
 
 	currentBlockNumber := uint64(1)
 	highestBlockNumber := currentBlockNumber
@@ -325,7 +334,7 @@ loop:
 			default:
 			}
 		}
-		log.Infof("block: %d", currentBlockNumber)
+		log.Infof("scanner: block: %d", currentBlockNumber)
 		packedBlock, ok := block.Get(currentBlockNumber)
 		if !ok {
 			log.Criticalf("failed to get block: %d", currentBlockNumber)
@@ -344,6 +353,7 @@ loop:
 		currentBlockNumber += 1
 	}
 
+	log.Infof("scanner: shutting down…")
 	close(finished)
 }
 
@@ -408,6 +418,7 @@ loop:
 	for {
 		index := transaction.IndexCursor(0)
 
+		log.Info("verify: waiting…")
 		select {
 		case <-shutdown:
 			break loop
@@ -416,6 +427,10 @@ loop:
 		}
 
 		log.Info("verify: process")
+
+		pending := 0
+		paid := 0
+
 	process:
 		for {
 
@@ -430,25 +445,33 @@ loop:
 				break process
 			}
 
+			count := len(results)
+			pending += count
+			log.Debugf("verify: chunk count: %d", count)
+
 			// any unpaid tx older that this will be expired
 			expiryTime := time.Now().UTC().Add(-paymentExpiryTime)
+			log.Tracef("verify: expiry: %v", expiryTime)
 
 			for _, item := range results {
 				txId := item.Link
-				log.Debugf("verify: check: %#v", txId)
+				log.Tracef("verify: check: %#v", txId)
 				if CheckPaid(txId) {
-					log.Infof("verify: paid: %#v", txId)
-					continue
-				}
+					paid += 1
+					log.Debugf("verify: paid: %#v", txId)
+				} else {
 
-				log.Debugf("verify: time: exp: %v  created: %v", expiryTime, item.Timestamp)
-				// not paid so check if expired
-				if item.Timestamp.Before(expiryTime) {
-					log.Infof("verify: expired: %#v  created: %v", txId, item.Timestamp)
-					txId.SetState(transaction.ExpiredTransaction)
+					log.Tracef("verify: time: exp: %v  created: %v", expiryTime, item.Timestamp)
+					// not paid so check if expired
+					if item.Timestamp.Before(expiryTime) {
+						log.Debugf("verify: expired: %#v  created: %v", txId, item.Timestamp)
+						txId.SetState(transaction.ExpiredTransaction)
+					}
 				}
 			}
 		}
+		log.Infof("verify: paid: %d of: %d", paid, pending)
+
 	}
 
 	log.Infof("verify: shutting down…")

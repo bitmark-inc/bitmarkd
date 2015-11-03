@@ -11,13 +11,13 @@ import (
 // fetch some transactions for client
 func FetchPending() []Decoded {
 
-	startIndex := []byte{}
+	stateCursor := transactionPool.statePool.NewFetchCursor()
 	txids := make([]Link, 0, 100)
 
 loop:
 	for {
 		// read blocks of records
-		state, err := transactionPool.statePool.Fetch(startIndex, 100)
+		state, err := stateCursor.Fetch(100)
 		if nil != err {
 			// error represents a database failure - panic
 			fault.Criticalf("transaction.FetchPending: statePool.Fetch failed, err = %v", err)
@@ -25,13 +25,9 @@ loop:
 		}
 
 		// if only one or zero records exit loop
-		n := len(state)
-		if n <= 1 {
+		if 0 == len(state) {
 			break loop
 		}
-
-		// last key for next loop
-		startIndex = state[n-1].Key
 
 		// exclude the mined transactions
 		for _, e := range state {

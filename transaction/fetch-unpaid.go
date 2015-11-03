@@ -23,7 +23,10 @@ type UnpaidResult struct {
 //   next start point
 func (cursor *IndexCursor) FetchUnpaid(count int) []UnpaidResult {
 
-	unpaid, err := transactionPool.pendingPool.Fetch(cursor.Bytes(), count)
+	fetchCursor := transactionPool.pendingPool.NewFetchCursor()
+	fetchCursor.Seek(cursor.Bytes())
+
+	unpaid, err := fetchCursor.Fetch(count)
 	if nil != err {
 		// error represents a database failure - panic
 		fault.PanicWithError("transaction.FetchUnpaid: pendingPool.Fetch", err)

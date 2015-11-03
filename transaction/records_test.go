@@ -202,6 +202,11 @@ func TestPackAssetData(t *testing.T) {
 		return
 	}
 
+	// check the record type
+	if transaction.AssetDataTag != packed.Type() {
+		t.Errorf("pack record type: %x  expected: %x", packed.Type(), transaction.AssetDataTag)
+	}
+
 	// check txIds
 	txId := packed.MakeLink()
 

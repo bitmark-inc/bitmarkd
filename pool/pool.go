@@ -5,6 +5,7 @@
 package pool
 
 import (
+	"math/big"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
@@ -161,22 +162,45 @@ func (p *Pool) LastElement() (Element, bool) {
 	return result, found
 }
 
+// cursor structure
+type FetchCursor struct {
+	pool *Pool
+	maxRange util.Range
+}
+
+// initialise a cursor to the start of a key range
+func (p *Pool) NewFetchCursor() *FetchCursor {
+
+	return &FetchCursor {
+		pool: p,
+		maxRange: util.Range{
+			Start: []byte{p.prefix},     // Start of key range, included in the range
+			Limit: []byte{p.prefix + 1}, // Limit of key range, excluded from the range
+		},
+	}
+}
+
+func (cursor *FetchCursor) Seek(key []byte) *FetchCursor {
+	prefixedKey := make([]byte, 1, len(key)+1)
+	prefixedKey[0] = cursor.pool.prefix
+	prefixedKey = append(prefixedKey, key...)
+	cursor.maxRange.Start = prefixedKey
+	return cursor
+}
+
+// to increment the key
+var one = big.NewInt(1)
+
 // fetch some elements starting from key
-func (p *Pool) Fetch(key []byte, count int) ([]Element, error) {
+func (cursor *FetchCursor) Fetch(count int) ([]Element, error) {
+	if nil == cursor {
+		return nil, fault.ErrInvalidCursor
+	}
 	if count <= 0 {
 		return nil, fault.ErrInvalidCount
 	}
 
-	prefixedKey := make([]byte, 1, len(key)+1)
-	prefixedKey[0] = p.prefix
-	prefixedKey = append(prefixedKey, key...)
-
-	maxRange := util.Range{
-		Start: prefixedKey,          // Start of key range, included in the range
-		Limit: []byte{p.prefix + 1}, // Limit of key range, excluded from the range
-	}
-
-	iter := poolData.database.NewIterator(&maxRange, nil)
+	iter := poolData.database.NewIterator(&cursor.maxRange, nil)
 
 	results := make([]Element, 0, count)
 	n := 0
@@ -205,6 +229,16 @@ func (p *Pool) Fetch(key []byte, count int) ([]Element, error) {
 	}
 	iter.Release()
 	err := iter.Error()
+
+	if n > 0 {
+		keyLen := len(results[n-1].Key)
+		if len(cursor.maxRange.Start) != keyLen + 1 {
+			cursor.maxRange.Start = make([]byte, keyLen+1)
+		}
+		cursor.maxRange.Start[0] = cursor.pool.prefix
+		b := big.Int{}
+		copy(cursor.maxRange.Start[1:], b.SetBytes(results[n-1].Key).Add(&b, one).Bytes())
+	}
 	return results, err
 }
 

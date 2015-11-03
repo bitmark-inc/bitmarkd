@@ -26,11 +26,12 @@ type PayArguments struct {
 }
 
 type PayReply struct {
+	PaymentId string `json:"id"`
 }
 
 func (t *Transaction) Pay(arguments *PayArguments, reply *PayReply) error {
 
-	t.log.Debugf("Pay arguments: %v", arguments)
+	t.log.Infof("Pay arguments: %v", arguments)
 
 	paymentData, err := hex.DecodeString(arguments.Payment) // try hex first
 	if err != nil {                                         // if that fails -> try Base64
@@ -40,8 +41,13 @@ func (t *Transaction) Pay(arguments *PayArguments, reply *PayReply) error {
 		}
 	}
 
-	err = payment.Pay(arguments.Currency, paymentData, arguments.Count)
-	t.log.Debugf("Pay reply: %v", err)
+	paymentId, err := payment.Pay(arguments.Currency, paymentData, arguments.Count)
+	if nil == err {
+		t.log.Infof("Payment id: %s", paymentId)
+		reply.PaymentId = paymentId
+	} else {
+		t.log.Infof("Payment error: %v", err)
+	}
 
 	return err
 }
