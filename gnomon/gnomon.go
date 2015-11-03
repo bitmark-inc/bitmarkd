@@ -81,6 +81,15 @@ func (cursor Cursor) String() string {
 	return hex.EncodeToString(b)
 }
 
+// convert to byte slice
+func (cursor Cursor) Bytes() []byte {
+	b, err := cursor.MarshalBinary()
+	if nil != err {
+		fault.Panic("cursor to binary failed")
+	}
+	return b
+}
+
 // convert to binary
 //
 // marshal the value in big-endian order (so database indexing will be

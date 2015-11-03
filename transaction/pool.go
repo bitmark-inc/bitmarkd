@@ -273,6 +273,20 @@ func Initialise() {
 
 	transactionPool.log.Debugf("pending count (after drop): %d", transactionPool.pendingCounter.Uint64())
 
+	// setup the cursor value to highest key value from either index
+	if e, found := transactionPool.pendingPool.LastElement(); found {
+		n := binary.BigEndian.Uint64(e.Key)
+		if n > uint64(transactionPool.indexCounter) {
+			transactionPool.indexCounter = IndexCursor(n)
+		}
+	}
+	if e, found := transactionPool.verifiedPool.LastElement(); found {
+		n := binary.BigEndian.Uint64(e.Key)
+		if n > uint64(transactionPool.indexCounter) {
+			transactionPool.indexCounter = IndexCursor(n)
+		}
+	}
+
 	// initialisation is complete
 	transactionPool.initialised = true
 }
