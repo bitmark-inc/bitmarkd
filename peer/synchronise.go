@@ -116,7 +116,7 @@ loop:
 		if !found {
 			log.Errorf("missing previous block: %d", n-1)
 			n -= 1
-			success = true  // ok to keep trying
+			success = true // ok to keep trying
 			continue loop
 		}
 		var previousBlock block.Block
@@ -130,7 +130,7 @@ loop:
 		if previousBlock.Digest != blk.Header.PreviousBlock {
 			log.Infof("fork detected: digest: %#v  expected: %#v", blk.Header.PreviousBlock, previousBlock.Digest)
 			n -= 1
-			success = true  // ok to keep trying
+			success = true // ok to keep trying
 			continue loop
 		}
 

@@ -5,11 +5,11 @@
 package pool
 
 import (
-	"math/big"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/util"
+	"math/big"
 	"sync"
 )
 
@@ -164,14 +164,14 @@ func (p *Pool) LastElement() (Element, bool) {
 
 // cursor structure
 type FetchCursor struct {
-	pool *Pool
+	pool     *Pool
 	maxRange util.Range
 }
 
 // initialise a cursor to the start of a key range
 func (p *Pool) NewFetchCursor() *FetchCursor {
 
-	return &FetchCursor {
+	return &FetchCursor{
 		pool: p,
 		maxRange: util.Range{
 			Start: []byte{p.prefix},     // Start of key range, included in the range
@@ -232,7 +232,7 @@ func (cursor *FetchCursor) Fetch(count int) ([]Element, error) {
 
 	if n > 0 {
 		keyLen := len(results[n-1].Key)
-		if len(cursor.maxRange.Start) != keyLen + 1 {
+		if len(cursor.maxRange.Start) != keyLen+1 {
 			cursor.maxRange.Start = make([]byte, keyLen+1)
 		}
 		cursor.maxRange.Start[0] = cursor.pool.prefix

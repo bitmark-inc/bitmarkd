@@ -202,7 +202,6 @@ func Initialise() {
 			txId := e.Key
 			indexBuffer := e.Value[1:]
 
-
 			if _, found := transactionPool.dataPool.Get(txId); !found {
 				var txId Link
 				err := LinkFromBytes(&txId, e.Value)
@@ -254,7 +253,7 @@ func Initialise() {
 	// drop expired/non-existant pending
 	pendingCursor := transactionPool.pendingPool.NewFetchCursor()
 	for {
-		records, err := pendingCursor.Fetch( 100)
+		records, err := pendingCursor.Fetch(100)
 		fault.PanicIfError("transaction.Initialise: pendingPool fetch", err)
 
 		// if no more records exit loop

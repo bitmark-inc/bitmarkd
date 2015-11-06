@@ -131,7 +131,7 @@ func checkAgain(t *testing.T, empty bool) {
 
 	// cache will be empty
 	cursor := p.NewFetchCursor()
-	data, err := cursor.Fetch(100)  // all data
+	data, err := cursor.Fetch(100) // all data
 	if nil != err {
 		t.Errorf("Error on Fetch: %v", err)
 		return
@@ -179,7 +179,6 @@ func checkAgain(t *testing.T, empty bool) {
 		t.Errorf("checkAgain: extra: %d elements found", n)
 		t.Errorf("checkAgain: data: %s", data)
 	}
-
 
 	// attempt to retrieve a key that does not exist
 	dn, found := p.Get(nonExistantKey)

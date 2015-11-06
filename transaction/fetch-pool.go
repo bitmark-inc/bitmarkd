@@ -31,7 +31,6 @@ func (cursor *IndexCursor) FetchPool(count int) []Decoded {
 	fmt.Printf("rc.Fetch   len: %v\n", len(pd))
 	fmt.Printf("rc.Fetch  data: %v\n", pd)
 
-
 	itPending := transactionPool.pendingPool.Iterate(cursor.Bytes())
 	defer itPending.Release()
 
