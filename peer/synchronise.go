@@ -21,7 +21,7 @@ type BlockGetResult struct {
 const (
 	retryCount     = 5    // attempts to retrieve block befor failing
 	blockRateLimit = 5.0  // maximum blocks per second to fetch
-	txRateLimit    = 15.0 // maximum transactions per second to put/get
+	txRateLimit    = 50.0 // maximum transactions per second to put/get
 	txBatchSize    = 10   // number of transactions to fetch from database per loop
 )
 
@@ -91,7 +91,7 @@ loop:
 			continue loop
 		}
 		if nil != result[0].Err {
-			log.Infof("Block.Get error: %v", result[0].Err)
+			log.Errorf("Block.Get error: %v", result[0].Err)
 			break loop
 		}
 
@@ -116,6 +116,7 @@ loop:
 		if !found {
 			log.Errorf("missing previous block: %d", n-1)
 			n -= 1
+			success = true  // ok to keep trying
 			continue loop
 		}
 		var previousBlock block.Block
@@ -129,6 +130,7 @@ loop:
 		if previousBlock.Digest != blk.Header.PreviousBlock {
 			log.Infof("fork detected: digest: %#v  expected: %#v", blk.Header.PreviousBlock, previousBlock.Digest)
 			n -= 1
+			success = true  // ok to keep trying
 			continue loop
 		}
 
