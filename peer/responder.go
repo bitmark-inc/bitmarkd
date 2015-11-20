@@ -5,9 +5,11 @@
 package peer
 
 import (
+	"fmt"
 	"github.com/bitmark-inc/bilateralrpc"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/limitedset"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/transaction"
@@ -47,9 +49,15 @@ type BlockPair struct {
 }
 
 // process an item
-func (t *thread) processItem(server *bilateralrpc.Bilateral, item interface{}) bool {
+func (t *thread) processItem(server *bilateralrpc.Bilateral, message messagebus.Message) bool {
 	log := t.log
 	result := false
+
+	item := message.Item
+	from := message.From
+
+	blockSet := limitedset.New(100) // clients * number of blocks
+	txSet := limitedset.New(200) // clients * number of transactions
 
 decode:
 	switch item.(type) {
@@ -103,25 +111,43 @@ decode:
 			break decode // cannot continue
 		}
 
+		// tag the block
+		stringBlockNumber := fmt.Sprintf("%08x-", pair.unpacked.Number)
+		blockSet.Add(stringBlockNumber + from) // flag this
+
 		// save block only if sucessfully obtained all transactions
 		log.Infof("save block: %d\n", pair.unpacked.Number)
 		pair.packed.Save(pair.unpacked.Number, &pair.unpacked.Digest, pair.unpacked.Timestamp)
 
-		// send to everyone else - now local data is all saved
-		blockArguments := BlockPutArguments{
-			Block: []byte(pair.packed),
+		// need to filter connections that have not had this
+		var sendTo []string
+		for _, c := range server.ActiveConnections() {
+			tag := stringBlockNumber + c
+			if !txSet.Exists(tag) {
+				sendTo = append(sendTo, c)
+				txSet.Add(tag)
+			}
 		}
-		if err := server.Cast(bilateralrpc.SendToAll, "Block.Put", &blockArguments); nil != err {
-			// if remote does not accept it is not really a problem for this node - just warn
-			log.Warnf("Block.Put err = %v", err)
+
+		// if any
+		if 0 != len(sendTo) {
+			// send to everyone else - now local data is all saved
+			blockArguments := BlockPutArguments{
+				Block: []byte(pair.packed),
+			}
+			if err := server.Cast(bilateralrpc.SendToAll, "Block.Put", &blockArguments); nil != err {
+				// if remote does not accept it is not really a problem for this node - just warn
+				log.Warnf("Block.Put err = %v", err)
+			}
+			result = true
 		}
-		result = true
 
 	case block.Mined: // block created by local miner thread
 		packedBlock := item.(block.Mined)
 		log.Infof("incoming block.Mined = %x...", packedBlock[:32]) // only shows first 32 bytes
 
 		// our block, so send right away (since we must have all tx already saved)
+		// no need to restrict send since no other node will have our newly mined block
 		blockArguments := BlockPutArguments{
 			Block: []byte(packedBlock),
 		}
@@ -132,7 +158,7 @@ decode:
 		result = true
 
 	case transaction.Packed: // any incoming Tx either from peers or client RPC
-		log.Debugf("incoming Transaction.Packed = %x", item)
+		log.Debugf("incoming from: %s  Transaction.Packed = %x", from, item)
 
 		// save record
 		var txId transaction.Link
@@ -147,6 +173,8 @@ decode:
 		case nil: // send out as this is a newly stored transaction
 			log.Infof("new TxId = %#v", txId)
 
+			txSet.Add(txId.String() + from) // flag this
+
 			// set paid immediately if possible
 			payment.CheckPaid(txId)
 
@@ -155,9 +183,22 @@ decode:
 			}
 			log.Debugf("put TxId: %#v", txId)
 
-			if err := server.Cast(bilateralrpc.SendToAll, "Transaction.Put", &transactionArguments); nil != err {
-				// if remote does not accept it is not really a problem for this node - just warn
-				log.Warnf("Transaction.Put err = %v", err)
+			// need to filter connections that have not had this
+			var sendTo []string
+			for _, c := range server.ActiveConnections() {
+				tag := txId.String() + c
+				if !txSet.Exists(tag) {
+					sendTo = append(sendTo, c)
+					txSet.Add(tag)
+				}
+			}
+
+			// if any
+			if 0 != len(sendTo) {
+				if err := server.Cast(sendTo, "Transaction.Put", &transactionArguments); nil != err {
+					// if remote does not accept it is not really a problem for this node - just warn
+					log.Warnf("Transaction.Put err = %v", err)
+				}
 			}
 		}
 

@@ -43,7 +43,7 @@ func (asset *Asset) Register(arguments *transaction.AssetData, reply *AssetRegis
 		if nil != err {
 			return err
 		}
-		messagebus.Send(packedAsset)
+		messagebus.Send("", packedAsset)
 
 		log.Debugf("Sent asset packed tx: %x", packedAsset)
 

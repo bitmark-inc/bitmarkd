@@ -35,7 +35,8 @@ func (t *Block) Number(arguments *BlockNumberArguments, reply *BlockNumberReply)
 // ------------------------------------------------------------
 
 type BlockPutArguments struct {
-	Block block.Packed
+	Bilateral_SENDER string // magick field
+	Block            block.Packed
 }
 
 type BlockPutReply struct {
@@ -63,7 +64,8 @@ func (t *Block) Put(arguments *BlockPutArguments, reply *BlockPutReply) error {
 			unpacked: blk,
 			packed:   packedBlock,
 		}
-		messagebus.Send(blockPair)
+		from := arguments.Bilateral_SENDER
+		messagebus.Send(from, blockPair)
 	}
 
 	return nil

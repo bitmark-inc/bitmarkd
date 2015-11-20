@@ -18,7 +18,8 @@ type Transaction struct {
 // ------------------------------------------------------------
 
 type TransactionPutArguments struct {
-	Tx transaction.Packed
+	Bilateral_SENDER string // magick field
+	Tx               transaction.Packed
 }
 
 type TransactionPutReply struct {
@@ -29,14 +30,16 @@ type TransactionPutReply struct {
 func (t *Transaction) Put(arguments *TransactionPutArguments, reply *TransactionPutReply) error {
 
 	packedTx := arguments.Tx
-	t.log.Debugf("received tx: %x", packedTx)
+	from := arguments.Bilateral_SENDER
+
+	t.log.Debugf("received from: %q tx: %x", from, packedTx)
 
 	_, reply.Duplicate = packedTx.Exists()
 
 	// propagate
 	if !reply.Duplicate {
 		t.log.Tracef("propagate: Tx = %x", packedTx)
-		messagebus.Send(packedTx)
+		messagebus.Send(from, packedTx)
 	}
 
 	return nil

@@ -46,7 +46,7 @@ func (bitmark *Bitmark) Issue(arguments *transaction.BitmarkIssue, reply *Bitmar
 
 	// announce transaction to system
 	if !exists {
-		messagebus.Send(packedIssue)
+		messagebus.Send("", packedIssue)
 	}
 
 	log.Infof("Bitmark.Issue exists: %v", exists)
@@ -124,7 +124,7 @@ func (bitmark *Bitmark) Transfer(arguments *transaction.BitmarkTransfer, reply *
 
 	// announce transaction to system
 	if !exists {
-		messagebus.Send(packedTransfer)
+		messagebus.Send("", packedTransfer)
 	}
 
 	log.Infof("Bitmark.Transfer exists: %v", exists)

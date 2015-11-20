@@ -212,7 +212,7 @@ func (mining *Mining) Submit(arguments SubmitArguments, reply *bool) error {
 		txid.SetState(transaction.ConfirmedTransaction)
 	}
 
-	messagebus.Send(block.Mined(blk))
+	messagebus.Send("", block.Mined(blk))
 
 	return nil
 }
