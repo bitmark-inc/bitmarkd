@@ -726,8 +726,8 @@ func (link Link) SetState(newState State) {
 
 	oldState, oldIndex := getStateIndex(txId)
 
-	// if no change then ignore
-	if oldState == newState {
+	// if invalid change then ignore
+	if !oldState.CanChangeTo(newState) {
 		return
 	}
 
@@ -753,7 +753,7 @@ func (link Link) SetState(newState State) {
 	//   P   → V (when payment is in currency block with 'N' confirmations)
 	//   V   → C (when miner has found block)
 
-	// flag to indicate if transaition was correct
+	// flag to indicate if transition was correct
 	ok := false
 
 	// transition from old state to new state
@@ -841,7 +841,7 @@ func (data Packed) Exists() (Link, bool) {
 	}
 
 	id := data.MakeLink()
-	result, found := transactionPool.dataPool.Get(id.Bytes()) // ***** FIX THIS: implement Has(key) usin the level db Has() to save reading 'result'
+	result, found := transactionPool.dataPool.Get(id.Bytes()) // ***** FIX THIS: implement Has(key) using the level db Has() to save reading 'result'
 	if !found {
 		return id, false
 	}
