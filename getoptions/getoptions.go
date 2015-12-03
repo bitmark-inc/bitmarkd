@@ -6,8 +6,8 @@ package getoptions
 
 import (
 	"os"
-	"strings"
 	"path/filepath"
+	"strings"
 )
 
 // aliases

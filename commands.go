@@ -113,7 +113,7 @@ func processSetupCommand(log *logger.L, arguments []string, options *configurati
 		fmt.Printf("  help                             - display this message\n\n")
 
 		fmt.Printf("  generate-identity                - create private key in: %q\n", options.Peering.PrivateKey)
-                fmt.Printf("                                     and the public key in: %q\n", options.Peering.PublicKey)
+		fmt.Printf("                                     and the public key in: %q\n", options.Peering.PublicKey)
 		fmt.Printf("\n")
 
 		fmt.Printf("  generate-rpc-cert                - create private key in:  %q\n", options.ClientRPC.PrivateKey)
@@ -127,7 +127,6 @@ func processSetupCommand(log *logger.L, arguments []string, options *configurati
 		fmt.Printf("  generate-mine-cert               - create private key in:  %q\n", options.Mining.PrivateKey)
 		fmt.Printf("                                     and the certificate in: %q\n", options.Mining.Certificate)
 		fmt.Printf("\n")
-
 
 		fmt.Printf("  generate-mine-cert PREFIX IPs... - create private key in:  '<PREFIX>.key'\n")
 		fmt.Printf("                                     and the certificate in: '<PREFIX>.crt'\n")

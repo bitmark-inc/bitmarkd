@@ -18,22 +18,22 @@ type testItem struct {
 
 func TestGetOptions(t *testing.T) {
 
-	aliases := getoptions.AliasMap{"v":"verbose"}
+	aliases := getoptions.AliasMap{"v": "verbose"}
 
 	tests := []testItem{
 		{
 			in: []string{"-v", "-x", "-v", "-hello=yes", "--test", "argon", "999", "-verbose"},
-			op: getoptions.OptionsMap{"test":[]string{""}, "verbose":[]string{"", "", ""}, "x":[]string{""}, "hello":[]string{"yes"}},
+			op: getoptions.OptionsMap{"test": []string{""}, "verbose": []string{"", "", ""}, "x": []string{""}, "hello": []string{"yes"}},
 			ar: []string{"argon", "999"},
 		},
 		{
 			in: []string{"-v", "-x", "-hello=yes", "--", "multi-word", "999", "-verbose"},
-			op: getoptions.OptionsMap{"verbose":[]string{""}, "x":[]string{""}, "hello":[]string{"yes"}},
+			op: getoptions.OptionsMap{"verbose": []string{""}, "x": []string{""}, "hello": []string{"yes"}},
 			ar: []string{"multi-word", "999", "-verbose"},
 		},
 		{
 			in: []string{"-say=hello", "--say=there", "--say=world", "--", "hello", "earth"},
-			op: getoptions.OptionsMap{"say":[]string{"hello", "there", "world"}},
+			op: getoptions.OptionsMap{"say": []string{"hello", "there", "world"}},
 			ar: []string{"hello", "earth"},
 		},
 	}

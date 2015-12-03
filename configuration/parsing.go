@@ -8,8 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/chain"
-	//"github.com/bitmark-inc/bitmarkd/fault"
-	//"github.com/bitmark-inc/exitwithstatus"
 	"github.com/bitmark-inc/logger"
 	"os"
 	"path/filepath"
@@ -110,74 +108,6 @@ type Configuration struct {
 	Bitcoin   BitcoinAccess `libucl:"bitcoin"`
 	Logging   LoggerType    `libucl:"logging"`
 }
-
-// // all of the possible options
-// type CommandOptions struct {
-
-// 	// basic options
-// 	ConfigFile string   `short:"c" long:"config" description:"Path to configuration file (command arguments take precedence or supplement file values)"`
-// 	Version    bool     `short:"V" long:"version" description:"Display version information and exit"`
-// 	Quiet      bool     `short:"q" long:"quiet" description:"Suppress messages to stdout/stderr"`
-// 	Debug      debugMap `short:"D" long:"debug" description:"Set debugging level as module:level where: module=(default,rpc,net,block) and level=(debug,info,warning,error,critcal)"`
-// 	Verbose    bool     `short:"v" long:"verbose" description:"More output independant of log levels"`
-
-// 	// PID File
-// 	PidFile string `short:"p" long:"PidFile" description:"PID file name"`
-
-// 	// Profile File
-// 	ProfileFile string `long:"ProfileFile" description:"Profile file name (blank turns off profiling)"`
-
-// 	// select the chain to connect to
-// 	Chain string `long:"Chain" description:"Set to mode string: [bitmark, testing, local]"`
-
-// 	// server identification in Z85 (ZeroMQ Base-85 Encoding) see: http://rfc.zeromq.org/spec:32
-// 	PublicKey  string `long:"PublicKey" description:"File containing Z85 encoded Curve Public Key"`
-// 	PrivateKey string `long:"PrivateKey" description:"File containing Z85 encoded Curve Private Key"`
-
-// 	// Peers (incoming from other bitmarkd)
-// 	Peers         int      `long:"Peers" description:"Limit the number of peers that can connect"`
-// 	PeerListeners []string `long:"PeerListen" description:"Add an IP:port to listen for peer connections"`
-// 	PeerAnnounce  []string `long:"PeerAnnounce" description:"Publish a peer IP:port to network (Public/Firewall Forwarded/NAT)"`
-
-// 	// Connect (outgoing to other bitmarkd)
-// 	Remotes       int      `long:"Remotes" description:"Limit the number outgoing peer connections"`
-// 	RemoteConnect []Remote `long:"RemoteConnect" description:"Add a 'Z85-public-key',IP:port for a connection to a remote peer"`
-
-// 	// RPC (incoming from clients)
-// 	RPCClients     int      `long:"RpcClients" description:"Limit the number of RPC clients that can connect"`
-// 	RPCListeners   []string `long:"RpcListen" description:"Add an IP:port to listen for RPC connections"`
-// 	RPCCertificate string   `long:"RpcCert" description:"File containing the certificate"`
-// 	RPCKey         string   `long:"RpcKey" description:"File containing the private key"`
-// 	RPCAnnounce    []string `long:"RpcAnnounce" description:"Publish an RPC IP:port to network (Public/Firewall Forwarded/NAT)"`
-
-// 	// Mines (incoming from stratum+ssl miners)
-// 	Mines           int      `long:"Mines" description:"Limit the number of miners that can connect"`
-// 	MineListeners   []string `long:"MineListen" description:"Add an IP:port to listen for miner connections"`
-// 	MineCertificate string   `long:"MineCert" description:"File containing the certificate"`
-// 	MineKey         string   `long:"MineKey" description:"File containing the private key"`
-// 	//MineAnnounce    []string `long:"MineAnnounce" description:"Publish a mine IP:port to network (Public/Firewall Forwarded/NAT)"`
-
-// 	// storage
-// 	Database string `long:"database" description:"LevelDB file for all data storage"`
-
-// 	// logging
-// 	LogFile        string `long:"LogFile" description:"Log file base name"`
-// 	LogSize        int    `long:"LogSize" description:"Maximum size of file before rotating"`
-// 	LogRotateCount int    `long:"LogRotateCount" description:"Maximum number of rotations to keep"`
-
-// 	// Bitcoin access
-// 	BitcoinUsername string `long:"BitcoinUsername" description:"Username for Bitcoin RPC access"`
-// 	BitcoinPassword string `long:"BitcoinPassword" description:"Password for Bitcoin RPC access"`
-// 	BitcoinURL      string `long:"BitcoinURL" description:"URL for Bitcoin RPC access"`
-// 	BitcoinAddress  string `long:"BitcoinAddress" description:"Bitcoin Address for miner"`
-// 	BitcoinFee      string `long:"BitcoinFee" description:"Bitcoin fee per transaction in BTC (e.g. 0.0002)"`
-// 	BitcoinStart    uint64 `long:"BitcoinStart" description:"Bitcoin start block for transaction dectection"`
-
-// 	Args struct {
-// 		Command   string   `name:"command" description:"Command: use 'help' to show list of commands"`
-// 		Arguments []string `name:"args" description:"A optional arguments for command"`
-// 	} `positional-args:"yes"`
-// }
 
 // will read decode and verify the configuration
 func GetConfiguration(configurationFileName string) (*Configuration, error) {
