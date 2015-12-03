@@ -1,69 +1,125 @@
-# bitmarkd.conf
-# -------------
+# bitmarkd.conf  -*- mode: libucl -*-
 
-TestMode = true
+# "." is a special case - it uses the path from the configuration file
+# as the data directory.
+# all certificates, logs and LevelDB files are relative to this  directory
+# unless the are overidden with absolute paths.
+data_directory = "."
 
-# Client RPC
-# ----------
-
-RpcClients = 6
-RpcListen = 0.0.0.0:2130
-#RpcListen = [::1]:2131
-
-# need to set up portforwarding on firewall and add appropriate address:port here
-#RpcAnnounce = ext-ip:ext-port
-
-RpcCert = bitmarkd-local-rpc.crt
-RpcKey = bitmarkd-local-rpc.key
+# select the chain of the network for peer connections
+# cross chain networking connects will not work
+#chain = bitmark
+#chain = testing
+chain = local
 
 
-# Peering
-# -------
+# Bitmark Vault clients connect using JSON RPC to these listening ports
+client_rpc {
 
-PublicKey = bitmarkd-local.public
-PrivateKey = bitmarkd-local.private
+  maximum_connections = 50
 
-Peers = 50
-PeerListen = 0.0.0.0:2135
-#PeerListen = [::]:2136
+  listen = 127.0.0.1:2130
+  listen = 127.0.0.1:2131
+  listen = "[::1]:2132"
 
+  # announce certain public IP:ports to network
+  # if using firewall port forwarding use the firewall IP:port
+  # announce = 127.0.0.1:2131
+  # announce = "[::1]:2132"
 
-# Remote connections
-# ------------------
-
-#RemoteConnect =  'hR}n^Uv:4b3!zI<jfgg6Wrhhy.ssgk2S/s+t%rQE', 127.0.0.1:3135
-#RemoteConnect = '????',127.0.0.1:3235
-
-
-# Miner RPC
-# ---------
-
-Mines = 10
-MineListen = 0.0.0.0:2140
-#MineListen = [::]:2141
-MineCert = bitmarkd-local-mine.crt
-MineKey = bitmarkd-local-mine.key
+  certificate = bitmarkd-local-rpc.crt
+  private_key = bitmarkd-local-rpc.key
+}
 
 
-# Bitcoin access
-# --------------
+# peer-to-peer networking configuration
+peering {
 
-BitcoinUsername = local-btcusername
-BitcoinPassword = local-btcpassword
-BitcoinURL = http://127.0.0.1:18333
-BitcoinStart = 1
-BitcoinAddress = some-test-net-address
+  maximum_connections = 10
 
-# Log levels
-# ----------
+  listen = 0.0.0.0:2135
+  listen = "[::]:2136"
+  # listen = "[::]:2137"
 
-debug = rpc:info
-debug = peer:info
-debug = config:info
-debug = main:info
-debug = bitcoin:info
-debug = payment:info
-debug = bilateral:info
+  # announce certain public IP:ports to network
+  # if using firewall port forwarding use the firewall IP:port
+  # announce = 127.0.0.1:2135
+  # announce = "[::]:2137"
 
-debug = *:info
-#debug = *:debug
+  public_key = bitmarkd-local.public
+  private_key = bitmarkd-local.private
+
+  # connections to other peers
+  # connect = {public_key = "hR}n^Uv:4b3!zI<jfgg6Wrhhy.ssgk2S/s+t%rQE", address = "127.0.0.1:3135"}
+  # connect = {public_key = "WssDb0.mqFph#y7fUxS6}9ht}zcs!%C[pxAi{t]K", address = "[::1]:3135"}
+
+}
+
+
+# configuration of stratum miner RPC
+mining {
+
+  maximum_connections = 10
+
+  listen = 0.0.0.0:2140
+  listen = "[::]:2141"
+
+  certificate = bitmarkd-local-mine.crt
+  private_key = bitmarkd-local-mine.key
+
+}
+
+
+# local bitcoin access to pool for blocks and forward clien payments
+# not recommended to vae this be a miner or retain any keys with funds
+bitcoin {
+  username = my-bitcoin-user
+  password = my-secret-bitcoin-password
+
+  url = http://127.0.0.1:18333
+  start = 1
+
+  # address to receive mining payments
+  # and for security the bitcoind above should not have its provate key
+  address = "some-test-net-address"
+
+}
+
+# logging configuration
+logging {
+  size = 1048576
+  count = 10
+
+  # set the logging level for various modules
+  # modules not overridden with get the value from "*"
+  # the default value for "*" is "critical"
+  levels {
+    "*" = info
+    # "*" = debug
+
+    # client RPC
+    rpc = info
+    rpc-server = info
+
+    # mining
+    mine-bg = info
+    mine-server = info
+
+    # data
+    mode = info
+    block = info
+    transaction = info
+    bitcoin = info
+    payment = info
+
+    # peering
+    peer = info
+    client = info
+    responder = info
+    announcer = info
+
+    # other
+    main = info
+    bilateral = info
+  }
+}

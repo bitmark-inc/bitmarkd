@@ -17,15 +17,18 @@ import (
 // setup command handler
 // commands that run to create key and certificate files
 // these commands cannot access any internal database or states
-func processSetupCommand(log *logger.L, options configuration.CommandOptions) bool {
+func processSetupCommand(log *logger.L, arguments []string, options *configuration.Configuration) bool {
 
-	command := options.Args.Command
-	arguments := options.Args.Arguments
+	command := "help"
+	if len(arguments) > 0 {
+		command = arguments[0]
+		arguments = arguments[1:]
+	}
 
 	switch command {
 	case "generate-identity":
-		publicKeyFilename := options.PublicKey
-		privateKeyFilename := options.PrivateKey
+		publicKeyFilename := options.Peering.PublicKey
+		privateKeyFilename := options.Peering.PrivateKey
 
 		if len(arguments) >= 1 && "" != arguments[0] {
 			publicKeyFilename = arguments[0] + ".public"
@@ -33,18 +36,18 @@ func processSetupCommand(log *logger.L, options configuration.CommandOptions) bo
 		}
 		err := makeKeyPair("rpc", publicKeyFilename, privateKeyFilename)
 		if nil != err {
-			fmt.Printf("cannot generate private key: '%s' and public key: '%s'\n", privateKeyFilename, publicKeyFilename)
-			log.Criticalf("cannot generate private key: '%s' and public key: '%s'\n", privateKeyFilename, publicKeyFilename)
+			fmt.Printf("cannot generate private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
+			log.Criticalf("cannot generate private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
 			fmt.Printf("error generating server key pair: %v\n", err)
 			log.Criticalf("error generating server key pair: %v\n", err)
 			exitwithstatus.Exit(1)
 		}
-		fmt.Printf("generated private key: '%s' and public key: '%s'\n", privateKeyFilename, publicKeyFilename)
-		log.Infof("generated private key: '%s' and public key: '%s'\n", privateKeyFilename, publicKeyFilename)
+		fmt.Printf("generated private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
+		log.Infof("generated private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
 
 	case "generate-rpc-cert":
-		certificateFilename := options.RPCCertificate
-		privateKeyFilename := options.RPCKey
+		certificateFilename := options.ClientRPC.Certificate
+		privateKeyFilename := options.ClientRPC.PrivateKey
 		addresses := []string{}
 		if len(arguments) >= 2 {
 			for _, a := range arguments[1:] {
@@ -59,44 +62,18 @@ func processSetupCommand(log *logger.L, options configuration.CommandOptions) bo
 		}
 		err := makeSelfSignedCertificate("rpc", certificateFilename, privateKeyFilename, 0 != len(addresses), addresses)
 		if nil != err {
-			fmt.Printf("cannot generate RPC key: '%s' and certificate: '%s'\n", privateKeyFilename, certificateFilename)
-			log.Criticalf("cannot generate RPC key: '%s' and certificate: '%s'", privateKeyFilename, certificateFilename)
+			fmt.Printf("cannot generate RPC key: %q and certificate: %q\n", privateKeyFilename, certificateFilename)
+			log.Criticalf("cannot generate RPC key: %q and certificate: %q", privateKeyFilename, certificateFilename)
 			fmt.Printf("error generating RPC key/certificate: %v\n", err)
 			log.Criticalf("error generating RPC key/certificate: %v", err)
 			exitwithstatus.Exit(1)
 		}
-		fmt.Printf("generated RPC key: '%s' and certificate: '%s'\n", privateKeyFilename, certificateFilename)
-		log.Infof("generated RPC key: '%s' and certificate: '%s'", privateKeyFilename, certificateFilename)
-
-	// case "generate-peer-cert" == command:
-	// 	certificateFilename := options.PeerCertificate
-	// 	privateKeyFilename := options.PeerKey
-	// 	addresses := []string{}
-	// 	if len(arguments) >= 2 {
-	// 		for _, a := range arguments[1:] {
-	// 			if "" != a {
-	// 				addresses = append(addresses, a)
-	// 			}
-	// 		}
-	// 	}
-	// 	if len(arguments) >= 1 && "" != arguments[0] {
-	// 		certificateFilename = arguments[0] + ".crt"
-	// 		privateKeyFilename = arguments[0] + ".key"
-	// 	}
-	// 	err := makeSelfSignedCertificate("peer", certificateFilename, privateKeyFilename, 0 != len(addresses), addresses)
-	// 	if nil != err {
-	// 		fmt.Printf("cannot generate peer key: '%s' and certificate: '%s'\n", privateKeyFilename, certificateFilename)
-	// 		log.Criticalf("cannot generate peer key: '%s' and certificate: '%s'", privateKeyFilename, certificateFilename)
-	// 		fmt.Printf("error generating peer key/certificate: %v\n", err)
-	// 		log.Criticalf("error generating peer key/certificate: %v", err)
-	// 		exitwithstatus.Exit(1)
-	// 	}
-	// 	fmt.Printf("generated peer key: '%s' and certificate: '%s'\n", privateKeyFilename, certificateFilename)
-	// 	log.Infof("generated peer key: '%s' and certificate: '%s'", privateKeyFilename, certificateFilename)
+		fmt.Printf("generated RPC key: %q and certificate: %q\n", privateKeyFilename, certificateFilename)
+		log.Infof("generated RPC key: %q and certificate: %q", privateKeyFilename, certificateFilename)
 
 	case "generate-mine-cert":
-		certificateFilename := options.MineCertificate
-		privateKeyFilename := options.MineKey
+		certificateFilename := options.Mining.Certificate
+		privateKeyFilename := options.Mining.PrivateKey
 		addresses := []string{}
 		if len(arguments) >= 2 {
 			for _, a := range arguments[1:] {
@@ -111,14 +88,14 @@ func processSetupCommand(log *logger.L, options configuration.CommandOptions) bo
 		}
 		err := makeSelfSignedCertificate("mine", certificateFilename, privateKeyFilename, 0 != len(addresses), addresses)
 		if nil != err {
-			fmt.Printf("cannot generate mine key: '%s' and certificate: '%s'\n", privateKeyFilename, certificateFilename)
-			log.Criticalf("cannot generate mine key: '%s' and certificate: '%s'", privateKeyFilename, certificateFilename)
+			fmt.Printf("cannot generate mine key: %q and certificate: %q\n", privateKeyFilename, certificateFilename)
+			log.Criticalf("cannot generate mine key: %q and certificate: %q", privateKeyFilename, certificateFilename)
 			fmt.Printf("error generating mine key/certificate: %v\n", err)
 			log.Criticalf("error generating mine key/certificate: %v", err)
 			exitwithstatus.Exit(1)
 		}
-		fmt.Printf("generated mine key: '%s' and certificate: '%s'\n", privateKeyFilename, certificateFilename)
-		log.Infof("generated mine key: '%s' and certificate: '%s'", privateKeyFilename, certificateFilename)
+		fmt.Printf("generated mine key: %q and certificate: %q\n", privateKeyFilename, certificateFilename)
+		log.Infof("generated mine key: %q and certificate: %q", privateKeyFilename, certificateFilename)
 
 	case "block-times":
 		return false // defer processing until database is loaded
@@ -131,15 +108,31 @@ func processSetupCommand(log *logger.L, options configuration.CommandOptions) bo
 		default:
 			fmt.Printf("error: no such command: %v\n", command)
 		}
-		fmt.Printf("supported commands:\n")
-		fmt.Printf("  help                             - display this message\n")
-		fmt.Printf("  generate-identity                - create server private key in: '%s' and public key in: '%s'\n", options.PrivateKey, options.PublicKey)
-		fmt.Printf("  generate-rpc-cert                - create private key in: '%s' and certificate in: '%s'\n", options.RPCKey, options.RPCCertificate)
-		fmt.Printf("  generate-rpc-cert PREFIX IPs...  - create private key in: '<PREFIX>.key' certificate in '<PREFIX>.crt'\n")
-		//fmt.Printf("  generate-peer-cert               - create private key in: '%s' and certificate in: '%s'\n", options.PeerKey, options.PeerCertificate)
-		//fmt.Printf("  generate-peer-cert PREFIX IPs... - create private key in: '<PREFIX>.key' certificate in: '<PREFIX>.crt'\n")
-		fmt.Printf("  generate-mine-cert               - create private key in: '%s' and certificate in: '%s'\n", options.MineKey, options.MineCertificate)
-		fmt.Printf("  generate-mine-cert PREFIX IPs... - create private key in: '<PREFIX>.key' certificate in: '<PREFIX>.crt'\n")
+
+		fmt.Printf("supported commands:\n\n")
+		fmt.Printf("  help                             - display this message\n\n")
+
+		fmt.Printf("  generate-identity                - create private key in: %q\n", options.Peering.PrivateKey)
+                fmt.Printf("                                     and the public key in: %q\n", options.Peering.PublicKey)
+		fmt.Printf("\n")
+
+		fmt.Printf("  generate-rpc-cert                - create private key in:  %q\n", options.ClientRPC.PrivateKey)
+		fmt.Printf("                                     and the certificate in: %q\n", options.ClientRPC.Certificate)
+		fmt.Printf("\n")
+
+		fmt.Printf("  generate-rpc-cert PREFIX IPs...  - create private key in: '<PREFIX>.key'\n")
+		fmt.Printf("                                     and the certificate in '<PREFIX>.crt'\n")
+		fmt.Printf("\n")
+
+		fmt.Printf("  generate-mine-cert               - create private key in:  %q\n", options.Mining.PrivateKey)
+		fmt.Printf("                                     and the certificate in: %q\n", options.Mining.Certificate)
+		fmt.Printf("\n")
+
+
+		fmt.Printf("  generate-mine-cert PREFIX IPs... - create private key in:  '<PREFIX>.key'\n")
+		fmt.Printf("                                     and the certificate in: '<PREFIX>.crt'\n")
+		fmt.Printf("\n")
+
 		fmt.Printf("  block-times FILE BEGIN END       - write time and difficulty to text file for a range of blocks\n")
 		exitwithstatus.Exit(1)
 	}
@@ -151,10 +144,13 @@ func processSetupCommand(log *logger.L, options configuration.CommandOptions) bo
 // data command handler
 // the internal block and transaction pools are enabled so these commands can
 // access and/or change these databases
-func processDataCommand(log *logger.L, options configuration.CommandOptions) bool {
+func processDataCommand(log *logger.L, arguments []string, options *configuration.Configuration) bool {
 
-	command := options.Args.Command
-	arguments := options.Args.Arguments
+	command := "help"
+	if len(arguments) > 0 {
+		command = arguments[0]
+		arguments = arguments[1:]
+	}
 
 	switch command {
 

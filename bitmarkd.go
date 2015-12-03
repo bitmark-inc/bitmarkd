@@ -11,6 +11,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/configuration"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/getoptions"
 	"github.com/bitmark-inc/bitmarkd/mine"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/payment"
@@ -24,7 +25,7 @@ import (
 	"github.com/bitmark-inc/logger"
 	"os"
 	"os/signal"
-	"runtime/pprof"
+	//"runtime/pprof"
 	"syscall"
 )
 
@@ -49,29 +50,48 @@ var lockWasCreated = false
 func main() {
 	// ensure exit handler is first
 	defer exitwithstatus.Handler()
-	defer fmt.Printf("\nprogram exit\n")
-	defer logger.Finalise()
+	//defer fmt.Printf("\nprogram exit\n")
+
+	program, options, arguments := getoptions.GetOS(getoptions.AliasMap{
+		"h": "help",
+		"?": "help",
+		"v": "verbose",
+		"q": "quiet",
+		"V": "version",
+		"c": "config-file",
+	})
+
+	if len(options["version"]) > 0 {
+		exitwithstatus.Message("%s: version: %s", program, Version())
+	}
+
+	if len(options["help"]) > 0 {
+		exitwithstatus.Message("usage: %s [--help] [--verbose] [--quiet] --config-file=FILE [[command|help] arguments...]", program)
+	}
+
+	if 1 != len(options["config-file"]) {
+		exitwithstatus.Message("%s: only one config-file option is required, %d were detected", program, len(options["config-file"]))
+	}
 
 	// read options and parse the configuration file
-	// also sets up and starts logging
-	options := configuration.ParseOptions()
-
-	if options.Version {
-		exitwithstatus.Usage("Version: %s\n", Version())
+	configurationFile := options["config-file"][0]
+	masterConfiguration, err := configuration.GetConfiguration(configurationFile)
+	if nil != err {
+		exitwithstatus.Message("%s: failed to read configuration from: %q  error: %v", program, configurationFile, err)
 	}
 
 	// start logging
-	err := logger.Initialise(options.LogFile, options.LogSize, options.LogRotateCount)
-	if err != nil {
-		exitwithstatus.Usage("Logger setup failed with error: %v\n", err)
+	if err = logger.Initialise(masterConfiguration.Logging.File, masterConfiguration.Logging.Size, masterConfiguration.Logging.Count); nil != err {
+		exitwithstatus.Message("%s: logger setup failed with error: %v", err)
 	}
-	logger.LoadLevels(options.Debug)
+	defer logger.Finalise()
+	logger.LoadLevels(masterConfiguration.Logging.Levels)
 
 	// create a logger channel for the main program
 	log := logger.New("main")
 	defer log.Info("shutting down…")
 	log.Info("starting…")
-	log.Debugf("options: %v", options)
+	log.Debugf("masterConfiguration: %v", masterConfiguration)
 
 	// set up the fault panic log (now that logging is available
 	fault.Initialise()
@@ -82,78 +102,71 @@ func main() {
 	// ------------------
 
 	// grab lock file or fail
-	lf, err := os.OpenFile(options.PidFile, os.O_WRONLY|os.O_EXCL|os.O_CREATE, os.ModeExclusive|0600)
+	lockFile, err := os.OpenFile(masterConfiguration.PidFile, os.O_WRONLY|os.O_EXCL|os.O_CREATE, os.ModeExclusive|0600)
 	if err != nil {
 		if os.IsExist(err) {
-			exitwithstatus.Usage("Another instance is already running\n")
+			exitwithstatus.Message("%s: another instance is already running", program)
 		}
-		exitwithstatus.Usage("PID file: %s creation failed with error: %v\n", options.PidFile, err)
+		exitwithstatus.Message("%s: PID file: %q creation failed, error: %v", program, masterConfiguration.PidFile, err)
 	}
-	fmt.Fprintf(lf, "%d\n", os.Getpid())
-	lf.Close()
+	fmt.Fprintf(lockFile, "%d\n", os.Getpid())
+	lockFile.Close()
 	lockWasCreated = true
-	defer removeAppLock(options.PidFile)
+	defer removeAppLock(masterConfiguration.PidFile)
 
 	// command processing - need lock so do not affect an already running process
 	// these commands process data needed for initial setup
-	if "" != options.Args.Command && processSetupCommand(log, options) {
+	if len(arguments) > 0 && processSetupCommand(log, arguments, masterConfiguration) {
 		return
 	}
 
-	// if requested start profiling
-	if "" != options.ProfileFile {
-		f, err := os.Create(options.ProfileFile)
-		if nil != err {
-			log.Criticalf("cannot ope profile output file: '%s'  error: %v", options.ProfileFile, err)
-			exitwithstatus.Exit(1)
-		}
-		defer f.Close()
-		pprof.StartCPUProfile(f)
-		defer pprof.StopCPUProfile()
-	}
+	// // if requested start profiling
+	// if "" != masterConfiguration.ProfileFile {
+	// 	f, err := os.Create(masterConfiguration.ProfileFile)
+	// 	if nil != err {
+	// 		log.Criticalf("cannot open profile output file: '%s'  error: %v", masterConfiguration.ProfileFile, err)
+	// 		exitwithstatus.Exit(1)
+	// 	}
+	// 	defer f.Close()
+	// 	pprof.StartCPUProfile(f)
+	// 	defer pprof.StopCPUProfile()
+	// }
 
 	// set the initial system mode - before any background tasks are started
-	mode.Initialise(options.Chain)
+	mode.Initialise(masterConfiguration.Chain)
 	defer mode.Finalise()
 
 	// ensure keys are set
-	if "" == options.PublicKey || "" == options.PrivateKey {
-		exitwithstatus.Usage("Both Public and Private keys must be specified\n")
+	if "" == masterConfiguration.Peering.PublicKey || "" == masterConfiguration.Peering.PrivateKey {
+		exitwithstatus.Message("%s: both peering Public and Private keys must be specified", program)
 	}
-	publicKey, err := readKeyFile(options.PublicKey)
+	publicKey, err := readKeyFile(masterConfiguration.Peering.PublicKey)
 	if nil != err {
-		log.Criticalf("read Public Key error = %v", err)
-		exitwithstatus.Usage("read Public Key error = %v\n", err)
+		log.Criticalf("read error on: %s  error: %v", masterConfiguration.Peering.PublicKey, err)
+		exitwithstatus.Message("%s: failed reading Public Key: %q  error: %v", program, masterConfiguration.Peering.PublicKey, err)
 	}
-	privateKey, err := readKeyFile(options.PrivateKey)
+	privateKey, err := readKeyFile(masterConfiguration.Peering.PrivateKey)
 	if nil != err {
-		log.Criticalf("read Private Key error = %v", err)
-		exitwithstatus.Usage("read Private Key error = %v\n", err)
+		log.Criticalf("read error on: %s  error: %v", masterConfiguration.Peering.PrivateKey, err)
+		exitwithstatus.Message("%s: failed reading Private Key: %q  error: %v", program, masterConfiguration.Peering.PrivateKey, err)
 	}
 
-	// server identification
-	log.Debugf("%s = '%v'", "PublicKey", options.PublicKey)
-	log.Debugf("%s = '%v'", "PrivateKey", options.PrivateKey)
-
-	// info abount mode
+	// general info
 	log.Infof("test mode: %v", mode.IsTesting())
-	log.Infof("database: %s", options.DatabaseFile)
+	log.Infof("database: %q", masterConfiguration.Database)
 
-	// RPC
-	log.Debugf("%s = '%v'", "RPCClients", options.RPCClients)
-	log.Debugf("%s = '%v'", "RPCListeners", options.RPCListeners)
-	log.Debugf("%s = '%v'", "RPCCertificate", options.RPCCertificate)
-	log.Debugf("%s = '%v'", "RPCKey", options.RPCKey)
+	// keys
+	log.Debugf("public key:  %q", publicKey)
+	log.Debugf("private key: %q", privateKey)
 
-	// peer
-	log.Debugf("%s = '%v'", "Peers", options.Peers)
-	log.Debugf("%s = '%v'", "PeerListeners", options.PeerListeners)
-	//log.Debugf("%s = '%v'", "PeerCertificate", options.PeerCertificate)
-	//log.Debugf("%s = '%v'", "PeerKey", options.PeerKey)
+	// connection info
+	log.Debugf("%s = %#v", "ClientRPC", masterConfiguration.ClientRPC)
+	log.Debugf("%s = %#v", "Peering", masterConfiguration.Peering)
+	log.Debugf("%s = %#v", "Mining", masterConfiguration.Mining)
 
 	// start the memory pool
 	log.Info("start pool")
-	pool.Initialise(options.DatabaseFile)
+	pool.Initialise(masterConfiguration.Database.Name)
 	defer pool.Finalise()
 
 	// block data storage - depends on pool
@@ -167,7 +180,7 @@ func main() {
 	defer transaction.Finalise()
 
 	// these commands are allowed to access the internal database
-	if "" != options.Args.Command && processDataCommand(log, options) {
+	if len(arguments) > 0 && processDataCommand(log, arguments, masterConfiguration) {
 		return
 	}
 
@@ -190,30 +203,20 @@ func main() {
 
 	servers := map[string]*serverChannel{
 		"rpc": {
-			limit:               options.RPCClients,
-			addresses:           options.RPCListeners,
-			certificateFileName: options.RPCCertificate,
-			keyFileName:         options.RPCKey,
+			limit:               masterConfiguration.ClientRPC.MaximumConnections,
+			addresses:           masterConfiguration.ClientRPC.Listen,
+			certificateFileName: masterConfiguration.ClientRPC.Certificate,
+			keyFileName:         masterConfiguration.ClientRPC.PrivateKey,
 			callback:            rpc.Callback,
 			argument: &rpc.ServerArgument{
 				Log: rpcLog,
 			},
 		},
-		// "peer": {
-		// 	limit:               options.Peers,
-		// 	addresses:           options.PeerListeners,
-		// 	certificateFileName: options.PeerCertificate,
-		// 	keyFileName:         options.PeerKey,
-		// 	callback:            p2p.Callback,
-		// 	argument: &p2p.ServerArgument{
-		// 		Log: peerLog,
-		// 	},
-		// },
 		"mine": {
-			limit:               options.Mines,
-			addresses:           options.MineListeners,
-			certificateFileName: options.MineCertificate,
-			keyFileName:         options.MineKey,
+			limit:               masterConfiguration.Mining.MaximumConnections,
+			addresses:           masterConfiguration.Mining.Listen,
+			certificateFileName: masterConfiguration.Mining.Certificate,
+			keyFileName:         masterConfiguration.Mining.PrivateKey,
 			callback:            mine.Callback,
 			argument: &mine.ServerArgument{
 				Log: mineLog,
@@ -251,11 +254,11 @@ func main() {
 		}
 		switch name {
 		case "rpc":
-			for _, address := range options.RPCAnnounce {
+			for _, address := range masterConfiguration.ClientRPC.Announce {
 				announce.AddPeer(address, announce.TypeRPC, &peerData)
 			}
 		case "peer":
-			for _, address := range options.PeerAnnounce {
+			for _, address := range masterConfiguration.Peering.Announce {
 				announce.AddPeer(address, announce.TypePeer, &peerData)
 			}
 		case "mine":
@@ -267,58 +270,8 @@ func main() {
 		}
 	}
 
-	// // read static certificates for remotes
-	// certificatePool := x509.NewCertPool()
-	// for i, certificateFileName := range options.RemoteCertificate {
-	// 	path, exists := resolveFileName(certificateFileName)
-	// 	if !exists {
-	// 		log.Errorf("certificate: %d: does not exist: in '%s' or '%s'", i, certificateFileName, path)
-	// 		continue
-	// 	}
-	// 	certificatePEM, err := ioutil.ReadFile(path)
-	// 	if err != nil {
-	// 		log.Errorf("failed to read certificate: %d: '%s' error: %v", i, path, err)
-	// 		continue
-	// 	}
-	// 	var certificateDER *pem.Block
-	// 	ok := false
-	// 	for {
-	// 		certificateDER, certificatePEM = pem.Decode(certificatePEM)
-	// 		if nil == certificateDER {
-	// 			break
-	// 		}
-	// 		if "CERTIFICATE" == certificateDER.Type {
-	// 			ok = false // ensure fail even if earlier certificates wer detected
-	// 			certificate, err := x509.ParseCertificate(certificateDER.Bytes)
-	// 			if err != nil {
-	// 				continue
-	// 			}
-
-	// 			certificatePool.AddCert(certificate)
-
-	// 			fingerprint := util.Fingerprint(certificate.Raw)
-	// 			log.Infof("remote fingerprint = %x", fingerprint)
-	// 			// store certificate
-	// 			announce.AddCertificate(&fingerprint, certificate.Raw)
-	// 			ok = true
-	// 		}
-	// 	}
-
-	// 	if !ok {
-	// 		log.Errorf("certificate: %d bad certificate in file: '%s'", i, certificateFileName)
-	// 	}
-	// }
-
-	// // P2P system start
-	// log.Infof("start p2p, maximum outgoing = %d", options.Remotes)
-	// if err := p2p.Initialise(options.Remotes, certificatePool, myFingerprints); nil != err {
-	// 	log.Criticalf("p2p start error: %v", err)
-	// 	exitwithstatus.Exit(1)
-	// }
-	// defer p2p.Finalise()
-
 	// connect to various payment services
-	err = payment.BitcoinInitialise(options.BitcoinURL, options.BitcoinUsername, options.BitcoinPassword, options.BitcoinAddress, options.BitcoinFee, options.BitcoinStart)
+	err = payment.BitcoinInitialise(masterConfiguration.Bitcoin.URL, masterConfiguration.Bitcoin.Username, masterConfiguration.Bitcoin.Password, masterConfiguration.Bitcoin.Address, masterConfiguration.Bitcoin.Fee, masterConfiguration.Bitcoin.Start)
 	if nil != err {
 		log.Criticalf("failed to initialise Bitcoin  error: %v", err)
 		exitwithstatus.Exit(1)
@@ -326,7 +279,7 @@ func main() {
 	defer payment.BitcoinFinalise()
 
 	// start up the peering
-	err = peer.Initialise(options.PeerListeners, mode.ChainName(), publicKey, privateKey)
+	err = peer.Initialise(masterConfiguration.Peering.Listen, mode.ChainName(), publicKey, privateKey)
 	if nil != err {
 		log.Criticalf("failed to initialise peer  error: %v", err)
 		exitwithstatus.Exit(1)
@@ -350,7 +303,7 @@ func main() {
 	}
 
 	// start up p2p clients
-	for i, remote := range options.RemoteConnect {
+	for i, remote := range masterConfiguration.Peering.Connect {
 		//err := p2p.Add(address)
 		err := peer.ConnectTo(remote.PublicKey, remote.Address)
 		if nil != err {
@@ -365,7 +318,7 @@ func main() {
 	defer mine.Finalise()
 
 	// wait for CTRL-C before shutting down to allow manual testing
-	if !options.Quiet {
+	if 0 == len(options["quiet"]) {
 		fmt.Printf("\n\nWaiting for CTRL-C (SIGINT) or 'kill <pid>' (SIGTERM)…")
 	}
 
@@ -374,7 +327,7 @@ func main() {
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-ch
 	log.Infof("received signal: %v", sig)
-	if !options.Quiet {
+	if 0 == len(options["quiet"]) {
 		fmt.Printf("\nreceived signal: %v\n", sig)
 		fmt.Printf("\nshutting down...\n")
 	}

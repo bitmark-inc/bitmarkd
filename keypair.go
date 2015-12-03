@@ -6,7 +6,6 @@ package main
 
 import (
 	"github.com/bitmark-inc/bilateralrpc"
-	"github.com/bitmark-inc/bitmarkd/configuration"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"io/ioutil"
 	"os"
@@ -14,13 +13,11 @@ import (
 
 // create a new public/private keypair
 func makeKeyPair(name string, publicKeyFileName string, privateKeyFileName string) error {
-	publicKeyFileName, exists := configuration.ResolveFileName(publicKeyFileName)
-	if exists {
+	if ensureFileExists(publicKeyFileName) {
 		return fault.ErrKeyFileAlreadyExists
 	}
 
-	privateKeyFileName, exists = configuration.ResolveFileName(privateKeyFileName)
-	if exists {
+	if ensureFileExists(privateKeyFileName) {
 		return fault.ErrKeyFileAlreadyExists
 	}
 
@@ -43,8 +40,7 @@ func makeKeyPair(name string, publicKeyFileName string, privateKeyFileName strin
 
 // read a key from a file
 func readKeyFile(keyFileName string) (string, error) {
-	keyFileName, exists := configuration.ResolveFileName(keyFileName)
-	if !exists {
+	if !ensureFileExists(keyFileName) {
 		return "", fault.ErrKeyFileNotFound
 	}
 	data, err := ioutil.ReadFile(keyFileName)

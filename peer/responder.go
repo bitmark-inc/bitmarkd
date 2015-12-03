@@ -57,7 +57,7 @@ func (t *thread) processItem(server *bilateralrpc.Bilateral, message messagebus.
 	from := message.From
 
 	blockSet := limitedset.New(100) // clients * number of blocks
-	txSet := limitedset.New(200) // clients * number of transactions
+	txSet := limitedset.New(200)    // clients * number of transactions
 
 decode:
 	switch item.(type) {

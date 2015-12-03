@@ -7,7 +7,6 @@ package main
 import (
 	"crypto/tls"
 	"github.com/bitmark-inc/bitmarkd/announce"
-	"github.com/bitmark-inc/bitmarkd/configuration"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/certgen"
@@ -36,20 +35,18 @@ func verifyListen(log *logger.L, name string, server *serverChannel) (*util.Fing
 		return nil, true
 	}
 
-	certificateFileName, exists := configuration.ResolveFileName(server.certificateFileName)
-	if !exists {
-		log.Errorf("certificate: does not exist: in '%s' or '%s'", certificateFileName, certificateFileName)
+	if !ensureFileExists(server.certificateFileName) {
+		log.Errorf("certificate: %q does not exist", server.certificateFileName)
 		return nil, false
 	}
 
-	keyFileName, exists := configuration.ResolveFileName(server.keyFileName)
-	if !exists {
-		log.Errorf("key: does not exist: in '%s' or '%s'", keyFileName, keyFileName)
+	if !ensureFileExists(server.keyFileName) {
+		log.Errorf("private key: %q does not exist", server.keyFileName)
 		return nil, false
 	}
 
 	// set up TLS
-	keyPair, err := tls.LoadX509KeyPair(certificateFileName, keyFileName)
+	keyPair, err := tls.LoadX509KeyPair(server.certificateFileName, server.keyFileName)
 	if err != nil {
 		log.Errorf("%s failed to load keypair: %v", name, err)
 		return nil, false
@@ -74,14 +71,13 @@ func verifyListen(log *logger.L, name string, server *serverChannel) (*util.Fing
 }
 
 // create a self-signed certificate
-func makeSelfSignedCertificate(name string, certificateFileName string, keyFileName string, override bool, extraHosts []string) error {
-	certificateFileName, exists := configuration.ResolveFileName(certificateFileName)
-	if exists {
+func makeSelfSignedCertificate(name string, certificateFileName string, privateKeyFileName string, override bool, extraHosts []string) error {
+
+	if ensureFileExists(certificateFileName) {
 		return fault.ErrCertificateFileAlreadyExists
 	}
 
-	keyFileName, exists = configuration.ResolveFileName(keyFileName)
-	if exists {
+	if ensureFileExists(privateKeyFileName) {
 		return fault.ErrKeyFileAlreadyExists
 	}
 
@@ -96,10 +92,16 @@ func makeSelfSignedCertificate(name string, certificateFileName string, keyFileN
 		return err
 	}
 
-	if err = ioutil.WriteFile(keyFileName, key, 0600); err != nil {
+	if err = ioutil.WriteFile(privateKeyFileName, key, 0600); err != nil {
 		os.Remove(certificateFileName)
 		return err
 	}
 
 	return nil
+}
+
+// check if file exists
+func ensureFileExists(name string) bool {
+	_, err := os.Stat(name)
+	return nil == err
 }

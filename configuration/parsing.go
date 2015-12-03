@@ -5,183 +5,229 @@
 package configuration
 
 import (
+	"errors"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/chain"
-	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/util"
-	"github.com/bitmark-inc/exitwithstatus"
+	//"github.com/bitmark-inc/bitmarkd/fault"
+	//"github.com/bitmark-inc/exitwithstatus"
 	"github.com/bitmark-inc/logger"
-	flags "github.com/jessevdk/go-flags"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
-// basic defaults
+// basic defaults (directories and files are relative to the "DataDirectory" from Configuration file)
 const (
-	defaultConfigFileName = "bitmarkd.conf"
-	defaultDataDirname    = "data"
+	defaultDataDirectory = "" // this will error; use "." for the same directory as the config file
+	defaultPidFile       = "bitmarkd.pid"
 
-	defaultLogDirectoryName = "log"
-	defaultLogFileName      = "bitmarkd.log"
-	defaultLogRotateCount   = 10          //  <logfile>.0 ... <logfile>.<N-1>
-	defaultLogSize          = 1024 * 1024 // rotate when <logfile> exceeds this size
+	defaultPublicKeyFile   = "bitmarkd.private"
+	defaultPrivateKeyFile  = "bitmarkd.public"
+	defaultKeyFile         = "bitmarkd.key"
+	defaultCertificateFile = "bitmarkd.crt"
+
+	defaultLevelDBDirectory = "data"
+	defaultBitmarkDatabase  = chain.Bitmark + ".leveldb"
+	defaultTestingDatabase  = chain.Testing + ".leveldb"
+	defaultLocalDatabase    = chain.Local + ".leveldb"
+
+	defaultLogDirectory = "log"
+	defaultLogFile      = "bitmarkd.log"
+	defaultLogCount     = 10          //  number of log files retained
+	defaultLogSize      = 1024 * 1024 // rotate when <logfile> exceeds this size
 
 	defaultRPCClients = 10
 	defaultPeers      = 125
 	defaultMines      = 125
-	defaultRemotes    = 25
-	//defaultBanDuration = time.Hour * 24
 )
+
+// to hold log levels
+type LoglevelMap map[string]string
 
 // path expanded or calculated defaults
 var (
-	appHomeDirectory       = util.AppDataDir("bitmarkd", false)
-	defaultPidFile         = filepath.Join(appHomeDirectory, "bitmarkd.pid")
-	defaultConfigFile      = filepath.Join(appHomeDirectory, defaultConfigFileName)
-	defaultDataDirectory   = filepath.Join(appHomeDirectory, defaultDataDirname)
-	defaultPublicKeyFile   = filepath.Join(appHomeDirectory, "bitmarkd.private")
-	defaultPrivateKeyFile  = filepath.Join(appHomeDirectory, "bitmarkd.public")
-	defaultKeyFile         = filepath.Join(appHomeDirectory, "bitmarkd.key")
-	defaultCertificateFile = filepath.Join(appHomeDirectory, "bitmarkd.crt")
-	defaultLogDirectory    = filepath.Join(appHomeDirectory, defaultLogDirectoryName)
-	defaultLogFile         = filepath.Join(defaultLogDirectory, defaultLogFileName)
-
-	defaultBitmarkDatabaseFile = filepath.Join(defaultDataDirectory, chain.Bitmark+".leveldb")
-	defaultTestingDatabaseFile = filepath.Join(defaultDataDirectory, chain.Testing+".leveldb")
-	defaultLocalDatabaseFile   = filepath.Join(defaultDataDirectory, chain.Local+".leveldb")
-
-	defaultDebug = map[string]string{
+	defaultLogLevels = LoglevelMap{
 		"main":            "info",
 		"config":          "info",
 		logger.DefaultTag: "critical",
 	}
 )
 
-type debugMap map[string]string
-
-// type to hold remote
-type Remote struct {
-	PublicKey string
-	Address   string
+type RPCType struct {
+	MaximumConnections int      `libucl:"maximum_connections"`
+	Listen             []string `libucl:"listen"`
+	Certificate        string   `libucl:"certificate"`
+	PrivateKey         string   `libucl:"private_key"`
+	Announce           []string `libucl:"announce"`
 }
 
-// all of the possible options
-type CommandOptions struct {
-
-	// basic options
-	ConfigFile string   `short:"c" long:"config" description:"Path to configuration file (command arguments take precedence or supplement file values)"`
-	Version    bool     `short:"V" long:"version" description:"Display version information and exit"`
-	Quiet      bool     `short:"q" long:"quiet" description:"Suppress messages to stdout/stderr"`
-	Debug      debugMap `short:"D" long:"debug" description:"Set debugging level as module:level where: module=(default,rpc,net,block) and level=(debug,info,warning,error,critcal)"`
-	Verbose    bool     `short:"v" long:"verbose" description:"More output independant of log levels"`
-
-	// PID File
-	PidFile string `short:"p" long:"PidFile" description:"PID file name"`
-
-	// Profile File
-	ProfileFile string `long:"ProfileFile" description:"Profile file name (blank turns off profiling)"`
-
-	// select the chain to connect to
-	Chain string `long:"Chain" description:"Set to mode string: [bitmark, testing, local]"`
-
-	// server identification in Z85 (ZeroMQ Base-85 Encoding) see: http://rfc.zeromq.org/spec:32
-	PublicKey  string `long:"PublicKey" description:"File containing Z85 encoded Curve Public Key"`
-	PrivateKey string `long:"PrivateKey" description:"File containing Z85 encoded Curve Private Key"`
-
-	// Peers (incoming from other bitmarkd)
-	Peers         int      `long:"Peers" description:"Limit the number of peers that can connect"`
-	PeerListeners []string `long:"PeerListen" description:"Add an IP:port to listen for peer connections"`
-	PeerAnnounce  []string `long:"PeerAnnounce" description:"Publish a peer IP:port to network (Public/Firewall Forwarded/NAT)"`
-
-	// Connect (outgoing to other bitmarkd)
-	Remotes       int      `long:"Remotes" description:"Limit the number outgoing peer connections"`
-	RemoteConnect []Remote `long:"RemoteConnect" description:"Add a 'Z85-public-key',IP:port for a connection to a remote peer"`
-
-	// RPC (incoming from clients)
-	RPCClients     int      `long:"RpcClients" description:"Limit the number of RPC clients that can connect"`
-	RPCListeners   []string `long:"RpcListen" description:"Add an IP:port to listen for RPC connections"`
-	RPCCertificate string   `long:"RpcCert" description:"File containing the certificate"`
-	RPCKey         string   `long:"RpcKey" description:"File containing the private key"`
-	RPCAnnounce    []string `long:"RpcAnnounce" description:"Publish an RPC IP:port to network (Public/Firewall Forwarded/NAT)"`
-
-	// Mines (incoming from stratum+ssl miners)
-	Mines           int      `long:"Mines" description:"Limit the number of miners that can connect"`
-	MineListeners   []string `long:"MineListen" description:"Add an IP:port to listen for miner connections"`
-	MineCertificate string   `long:"MineCert" description:"File containing the certificate"`
-	MineKey         string   `long:"MineKey" description:"File containing the private key"`
-	//MineAnnounce    []string `long:"MineAnnounce" description:"Publish a mine IP:port to network (Public/Firewall Forwarded/NAT)"`
-
-	// storage
-	DatabaseFile string `long:"database" description:"LevelDB file for all data storage"`
-
-	// logging
-	LogFile        string `long:"LogFile" description:"Log file base name"`
-	LogSize        int    `long:"LogSize" description:"Maximum size of file before rotating"`
-	LogRotateCount int    `long:"LogRotateCount" description:"Maximum number of rotations to keep"`
-
-	// Bitcoin access
-	BitcoinUsername string `long:"BitcoinUsername" description:"Username for Bitcoin RPC access"`
-	BitcoinPassword string `long:"BitcoinPassword" description:"Password for Bitcoin RPC access"`
-	BitcoinURL      string `long:"BitcoinURL" description:"URL for Bitcoin RPC access"`
-	BitcoinAddress  string `long:"BitcoinAddress" description:"Bitcoin Address for miner"`
-	BitcoinFee      string `long:"BitcoinFee" description:"Bitcoin fee per transaction in BTC (e.g. 0.0002)"`
-	BitcoinStart    uint64 `long:"BitcoinStart" description:"Bitcoin start block for transaction dectection"`
-
-	Args struct {
-		Command   string   `name:"command" description:"Command: use 'help' to show list of commands"`
-		Arguments []string `name:"args" description:"A optional arguments for command"`
-	} `positional-args:"yes"`
+type Connection struct {
+	PublicKey string `libucl:"public_key"`
+	Address   string `libucl:"address"`
 }
 
-func ParseOptions() CommandOptions {
+// server identification in Z85 (ZeroMQ Base-85 Encoding) see: http://rfc.zeromq.org/spec:32
+type PeerType struct {
+	MaximumConnections int          `libucl:"maximum_connections"`
+	Listen             []string     `libucl:"listen"`
+	Connect            []Connection `libucl:"connect"`
+	PrivateKey         string       `libucl:"private_key"`
+	PublicKey          string       `libucl:"public_key"`
+	Announce           []string     `libucl:"announce"`
+}
 
-	options := CommandOptions{
-		ConfigFile:      defaultConfigFile,
-		Debug:           defaultDebug,
-		PidFile:         defaultPidFile,
-		Chain:           chain.Bitmark,
-		PublicKey:       defaultPublicKeyFile,
-		PrivateKey:      defaultPrivateKeyFile,
-		RPCClients:      defaultRPCClients,
-		RPCCertificate:  defaultCertificateFile,
-		RPCKey:          defaultKeyFile,
-		Peers:           defaultPeers,
-		Remotes:         defaultRemotes,
-		Mines:           defaultMines,
-		MineCertificate: defaultCertificateFile,
-		MineKey:         defaultKeyFile,
-		DatabaseFile:    defaultBitmarkDatabaseFile,
-		LogFile:         defaultLogFile,
-		LogSize:         defaultLogSize,
-		LogRotateCount:  defaultLogRotateCount,
+type LoggerType struct {
+	Directory string            `libucl:"directory"`
+	File      string            `libucl:"file"`
+	Size      int               `libucl:"size"`
+	Count     int               `libucl:"count"`
+	Levels    map[string]string `libucl:"levels"`
+}
+
+type BitcoinAccess struct {
+	Username string `libucl:"Username"`
+	Password string `libucl:"Password"`
+	URL      string `libucl:"URL"`
+	Address  string `libucl:"Address"`
+	Fee      string `libucl:"Fee"`
+	Start    uint64 `libucl:"Start"`
+}
+
+type DatabaseType struct {
+	Directory string `libucl:"directory"`
+	Name      string `libucl:"name"`
+}
+
+type Configuration struct {
+	DataDirectory string       `libucl:"data_directory"`
+	PidFile       string       `libucl:"pidfile"`
+	Chain         string       `libucl:"chain"`
+	Database      DatabaseType `libucl:"database"`
+
+	ClientRPC RPCType       `libucl:"client_rpc"`
+	Peering   PeerType      `libucl:"peering"`
+	Mining    RPCType       `libucl:"mining"`
+	Bitcoin   BitcoinAccess `libucl:"bitcoin"`
+	Logging   LoggerType    `libucl:"logging"`
+}
+
+// // all of the possible options
+// type CommandOptions struct {
+
+// 	// basic options
+// 	ConfigFile string   `short:"c" long:"config" description:"Path to configuration file (command arguments take precedence or supplement file values)"`
+// 	Version    bool     `short:"V" long:"version" description:"Display version information and exit"`
+// 	Quiet      bool     `short:"q" long:"quiet" description:"Suppress messages to stdout/stderr"`
+// 	Debug      debugMap `short:"D" long:"debug" description:"Set debugging level as module:level where: module=(default,rpc,net,block) and level=(debug,info,warning,error,critcal)"`
+// 	Verbose    bool     `short:"v" long:"verbose" description:"More output independant of log levels"`
+
+// 	// PID File
+// 	PidFile string `short:"p" long:"PidFile" description:"PID file name"`
+
+// 	// Profile File
+// 	ProfileFile string `long:"ProfileFile" description:"Profile file name (blank turns off profiling)"`
+
+// 	// select the chain to connect to
+// 	Chain string `long:"Chain" description:"Set to mode string: [bitmark, testing, local]"`
+
+// 	// server identification in Z85 (ZeroMQ Base-85 Encoding) see: http://rfc.zeromq.org/spec:32
+// 	PublicKey  string `long:"PublicKey" description:"File containing Z85 encoded Curve Public Key"`
+// 	PrivateKey string `long:"PrivateKey" description:"File containing Z85 encoded Curve Private Key"`
+
+// 	// Peers (incoming from other bitmarkd)
+// 	Peers         int      `long:"Peers" description:"Limit the number of peers that can connect"`
+// 	PeerListeners []string `long:"PeerListen" description:"Add an IP:port to listen for peer connections"`
+// 	PeerAnnounce  []string `long:"PeerAnnounce" description:"Publish a peer IP:port to network (Public/Firewall Forwarded/NAT)"`
+
+// 	// Connect (outgoing to other bitmarkd)
+// 	Remotes       int      `long:"Remotes" description:"Limit the number outgoing peer connections"`
+// 	RemoteConnect []Remote `long:"RemoteConnect" description:"Add a 'Z85-public-key',IP:port for a connection to a remote peer"`
+
+// 	// RPC (incoming from clients)
+// 	RPCClients     int      `long:"RpcClients" description:"Limit the number of RPC clients that can connect"`
+// 	RPCListeners   []string `long:"RpcListen" description:"Add an IP:port to listen for RPC connections"`
+// 	RPCCertificate string   `long:"RpcCert" description:"File containing the certificate"`
+// 	RPCKey         string   `long:"RpcKey" description:"File containing the private key"`
+// 	RPCAnnounce    []string `long:"RpcAnnounce" description:"Publish an RPC IP:port to network (Public/Firewall Forwarded/NAT)"`
+
+// 	// Mines (incoming from stratum+ssl miners)
+// 	Mines           int      `long:"Mines" description:"Limit the number of miners that can connect"`
+// 	MineListeners   []string `long:"MineListen" description:"Add an IP:port to listen for miner connections"`
+// 	MineCertificate string   `long:"MineCert" description:"File containing the certificate"`
+// 	MineKey         string   `long:"MineKey" description:"File containing the private key"`
+// 	//MineAnnounce    []string `long:"MineAnnounce" description:"Publish a mine IP:port to network (Public/Firewall Forwarded/NAT)"`
+
+// 	// storage
+// 	Database string `long:"database" description:"LevelDB file for all data storage"`
+
+// 	// logging
+// 	LogFile        string `long:"LogFile" description:"Log file base name"`
+// 	LogSize        int    `long:"LogSize" description:"Maximum size of file before rotating"`
+// 	LogRotateCount int    `long:"LogRotateCount" description:"Maximum number of rotations to keep"`
+
+// 	// Bitcoin access
+// 	BitcoinUsername string `long:"BitcoinUsername" description:"Username for Bitcoin RPC access"`
+// 	BitcoinPassword string `long:"BitcoinPassword" description:"Password for Bitcoin RPC access"`
+// 	BitcoinURL      string `long:"BitcoinURL" description:"URL for Bitcoin RPC access"`
+// 	BitcoinAddress  string `long:"BitcoinAddress" description:"Bitcoin Address for miner"`
+// 	BitcoinFee      string `long:"BitcoinFee" description:"Bitcoin fee per transaction in BTC (e.g. 0.0002)"`
+// 	BitcoinStart    uint64 `long:"BitcoinStart" description:"Bitcoin start block for transaction dectection"`
+
+// 	Args struct {
+// 		Command   string   `name:"command" description:"Command: use 'help' to show list of commands"`
+// 		Arguments []string `name:"args" description:"A optional arguments for command"`
+// 	} `positional-args:"yes"`
+// }
+
+// will read decode and verify the configuration
+func GetConfiguration(configurationFileName string) (*Configuration, error) {
+
+	configurationFileName, err := filepath.Abs(filepath.Clean(configurationFileName))
+	if nil != err {
+		return nil, err
 	}
 
-	temporaryOptions := options
-	temporaryParser := flags.NewParser(&temporaryOptions, flags.None)
+	// absolute path to the main directory
+	dataDirectory, _ := filepath.Split(configurationFileName)
 
-	temporaryParser.Parse() // only want to get config file at this point
+	options := &Configuration{
 
-	// start the real parsing
-	parser := flags.NewParser(&options, flags.Default)
+		DataDirectory: defaultDataDirectory,
+		PidFile:       defaultPidFile,
+		Chain:         chain.Bitmark,
 
-	if cfg := temporaryOptions.ConfigFile; "" != cfg {
-		// add to or override defaults using configuration file
-		err := flags.NewIniParser(parser).ParseFile(cfg)
-		if err != nil {
-			if _, ok := err.(*os.PathError); !ok {
-				exitwithstatus.Usage("Error: %v parsing configuration from: %s\n", err, cfg)
-			}
-		}
+		Database: DatabaseType{
+			Directory: defaultLevelDBDirectory,
+			Name:      defaultBitmarkDatabase,
+		},
+
+		ClientRPC: RPCType{
+			MaximumConnections: defaultRPCClients,
+			Certificate:        defaultCertificateFile,
+			PrivateKey:         defaultKeyFile,
+		},
+
+		Peering: PeerType{
+			MaximumConnections: defaultPeers,
+		},
+
+		Mining: RPCType{
+			MaximumConnections: defaultMines,
+			Certificate:        defaultCertificateFile,
+			PrivateKey:         defaultKeyFile,
+		},
+
+		Logging: LoggerType{
+			Directory: defaultLogDirectory,
+			File:      defaultLogFile,
+			Size:      defaultLogSize,
+			Count:     defaultLogCount,
+			Levels:    defaultLogLevels,
+		},
 	}
 
-	// add to or override defaults / configuration file from command arguments
-	_, err := parser.Parse()
-	if err != nil {
-		if e, ok := err.(*flags.Error); !ok || e.Type != flags.ErrHelp {
-			exitwithstatus.Usage("Error: %v\n", err)
-		}
-		exitwithstatus.Exit(1)
+	if err := readConfigurationFile(configurationFileName, options); err != nil {
+		return nil, err
 	}
 
 	// if any test mode and the database file was not specified
@@ -189,82 +235,87 @@ func ParseOptions() CommandOptions {
 	// not recognised.
 	options.Chain = strings.ToLower(options.Chain)
 	if !chain.Valid(options.Chain) {
-		exitwithstatus.Usage("Error: Chain: '%s' is not supported\n", options.Chain)
+		return nil, errors.New(fmt.Sprintf("Chain: %q is not supported", options.Chain))
 	}
 
 	// if database was not changed from default
-	if options.DatabaseFile == defaultBitmarkDatabaseFile {
+	if options.Database.Name == defaultBitmarkDatabase {
 		switch options.Chain {
 		case chain.Bitmark:
 			// already correct default
 		case chain.Testing:
-			options.DatabaseFile = defaultTestingDatabaseFile
+			options.Database.Name = defaultTestingDatabase
 		case chain.Local:
-			options.DatabaseFile = defaultLocalDatabaseFile
+			options.Database.Name = defaultLocalDatabase
 		default:
-			exitwithstatus.Usage("Error: Chain: '%s' no default databse setting\n", options.Chain)
+			return nil, errors.New(fmt.Sprintf("Chain: %s no default databse setting", options.Chain))
 		}
 	}
 
-	// create the directories if they do not already exist
-	for _, d := range []string{appHomeDirectory, defaultDataDirectory, defaultLogDirectory} {
-		err = os.MkdirAll(d, 0700)
-		if err != nil {
-			exitwithstatus.Usage("Directory: %s creation failed with error: %v\n", d, err)
+	// ensure absolute data directory
+	if "" == options.DataDirectory || "~" == options.DataDirectory {
+		return nil, errors.New(fmt.Sprintf("Path: %q is not a valid directory", options.DataDirectory))
+	} else if "." == options.DataDirectory {
+		options.DataDirectory = dataDirectory // same directory as the configuration file
+	} else {
+		options.DataDirectory = filepath.Clean(options.DataDirectory)
+	}
+
+	// this directory must exist - i.e. must be created prior to running
+	if fileInfo, err := os.Stat(options.DataDirectory); nil != err {
+		return nil, err
+	} else if !fileInfo.IsDir() {
+		return nil, errors.New(fmt.Sprintf("Path: %q is not a directory", options.DataDirectory))
+	}
+
+	// force all relevant items to be absolute paths
+	// if not, assign them to the dsts directory
+	mustBeAbsolute := []*string{
+		&options.PidFile,
+		&options.Database.Directory,
+		&options.ClientRPC.Certificate,
+		&options.ClientRPC.PrivateKey,
+		&options.Peering.PublicKey,
+		&options.Peering.PrivateKey,
+		&options.Mining.Certificate,
+		&options.Mining.PrivateKey,
+		&options.Logging.Directory,
+	}
+	for _, f := range mustBeAbsolute {
+		*f = ensureAbsolute(options.DataDirectory, *f)
+	}
+
+	// fail if any of these are not simple file names i.e. must not contain path seperator
+	// then add the correct directory prefix, file item is first and corresponding directory is second
+	mustNotBePaths := [][2]*string{
+		{&options.Database.Name, &options.Database.Directory},
+		{&options.Logging.File, &options.Logging.Directory},
+	}
+	for _, f := range mustNotBePaths {
+		switch filepath.Dir(*f[0]) {
+		case "", ".":
+			*f[0] = ensureAbsolute(*f[1], *f[0])
+		default:
+			return nil, errors.New(fmt.Sprintf("Files: %q is not plain name", *f[0]))
+		}
+	}
+
+	// make absolute and create directories if they do not already exist
+	for _, d := range []*string{&options.Database.Directory, &options.Logging.Directory} {
+		*d = ensureAbsolute(options.DataDirectory, *d)
+		if err := os.MkdirAll(*d, 0700); nil != err {
+			return nil, err
 		}
 	}
 
 	// done
-	return options
+	return options, nil
 }
 
-// resolve a filename
-//
-// if starts with '/' then it is global
-// if not present in current directory try with appHomeDirectory as a prefix
-func ResolveFileName(name string) (string, bool) {
-
-	_, err := os.Stat(name)
-	if nil == err {
-		return name, true
+// ensure the path is absolute
+func ensureAbsolute(directory string, filePath string) string {
+	if !filepath.IsAbs(filePath) {
+		filePath = filepath.Join(directory, filePath)
 	}
-
-	if filepath.IsAbs(name) {
-		return name, false
-	}
-
-	path := filepath.Join(appHomeDirectory, name)
-	_, err = os.Stat(path)
-
-	return path, nil == err
-}
-
-// parse remote
-// expect:
-//   'z85 encoded publc key',127.0.0.1:1234
-//   'z85 encoded publc key',[::1]:1234
-func (r *Remote) UnmarshalFlag(value string) error {
-
-	parts := strings.Split(value, "'")
-	if 3 != len(parts) || "" != parts[0] || 0 == len(parts[1]) {
-		return fault.ErrInvalidRemote
-	}
-
-	parts2 := strings.Split(strings.Trim(parts[2], " "), ",")
-	if 2 != len(parts2) || 0 != len(parts2[0]) || 0 == len(parts2[1]) {
-		return fault.ErrInvalidRemote
-	}
-
-	address, err := util.CanonicalIPandPort(parts2[1])
-	if nil != err {
-		return err
-	}
-
-	r.PublicKey = parts[1]
-	r.Address = address
-	return nil
-}
-
-func (r Remote) MarshalFlag() (string, error) {
-	return fmt.Sprintf("'%s',%s", r.PublicKey, r.Address), nil
+	return filepath.Clean(filePath)
 }
