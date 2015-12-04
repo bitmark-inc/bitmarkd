@@ -3,7 +3,7 @@
 # "." is a special case - it uses the path from the configuration file
 # as the data directory.
 # all certificates, logs and LevelDB files are relative to this  directory
-# unless the are overidden with absolute paths.
+# unless the are overridden with absolute paths.
 data_directory = "."
 
 # select the chain of the network for peer connections
@@ -70,8 +70,8 @@ mining {
 }
 
 
-# local bitcoin access to pool for blocks and forward clien payments
-# not recommended to vae this be a miner or retain any keys with funds
+# local bitcoin access to pool for blocks and forward client payments
+# not recommended to have this be a miner or retain any keys with funds
 bitcoin {
   username = my-bitcoin-user
   password = my-secret-bitcoin-password
@@ -79,8 +79,11 @@ bitcoin {
   url = http://127.0.0.1:18333
   start = 1
 
+  # fee is a string to prevent rounding to float
+  fee = "0.0002"
+
   # address to receive mining payments
-  # and for security the bitcoind above should not have its provate key
+  # and for security the bitcoind above should not have its private key
   address = "some-test-net-address"
 
 }
