@@ -5,7 +5,6 @@
 package rpc
 
 import (
-	"encoding/base64"
 	"encoding/hex"
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/transaction"
@@ -33,12 +32,9 @@ func (t *Transaction) Pay(arguments *PayArguments, reply *PayReply) error {
 
 	t.log.Infof("Pay arguments: %v", arguments)
 
-	paymentData, err := hex.DecodeString(arguments.Payment) // try hex first
-	if err != nil {                                         // if that fails -> try Base64
-		paymentData, err = base64.StdEncoding.DecodeString(arguments.Payment)
-		if nil != err {
-			return err
-		}
+	paymentData, err := hex.DecodeString(arguments.Payment)
+	if err != nil {
+		return err
 	}
 
 	paymentId, err := payment.Pay(arguments.Currency, paymentData, arguments.Count)

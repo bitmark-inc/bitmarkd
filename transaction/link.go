@@ -5,7 +5,6 @@
 package transaction
 
 import (
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/block"
@@ -22,7 +21,7 @@ const (
 // the type for a link - same as block digest
 // stored as little endian byte array
 // represented as big endian hex value for print
-// represented as little endian base64 text for JSON encoding
+// represented as little endian hex text for JSON encoding
 type Link block.Digest
 
 // Create an link for a packed record
@@ -108,7 +107,7 @@ func (link *Link) Scan(state fmt.ScanState, verb rune) error {
 	return nil
 }
 
-// convert a binary link to little endian base64 text for JSON
+// convert a binary link to little endian hex text for JSON
 //
 // ***** possibly re-use MarshalText to save code duplication
 // ***** but would that cost more buffer copying?
@@ -122,16 +121,16 @@ func (link Link) MarshalJSON() ([]byte, error) {
 		stage[linkPrefixSize+i] = link[i]
 	}
 
-	// encode to base64
-	size := 2 + base64.StdEncoding.EncodedLen(stageSize)
+	// encode to hex
+	size := 2 + hex.EncodedLen(stageSize)
 	buffer := make([]byte, size)
 	buffer[0] = '"'
 	buffer[size-1] = '"'
-	base64.StdEncoding.Encode(buffer[1:], stage)
+	hex.Encode(buffer[1:], stage)
 	return buffer, nil
 }
 
-// convert a little endian base64 string to a link for conversion from JSON
+// convert a little endian hex string to a link for conversion from JSON
 func (link *Link) UnmarshalJSON(s []byte) error {
 	// length = '"' + characters + '"'
 	last := len(s) - 1
@@ -141,7 +140,7 @@ func (link *Link) UnmarshalJSON(s []byte) error {
 	return link.UnmarshalText(s[1:last])
 }
 
-// convert link to little endian base64 text
+// convert link to little endian hex text
 //
 // ***** possibly use NewEncoder and byte buffer to save copy
 func (link Link) MarshalText() ([]byte, error) {
@@ -154,17 +153,17 @@ func (link Link) MarshalText() ([]byte, error) {
 		stage[linkPrefixSize+i] = link[i]
 	}
 
-	// encode to base64
-	size := base64.StdEncoding.EncodedLen(stageSize)
+	// encode to hex
+	size := hex.EncodedLen(stageSize)
 	buffer := make([]byte, size)
-	base64.StdEncoding.Encode(buffer, stage)
+	hex.Encode(buffer, stage)
 	return buffer, nil
 }
 
-// convert little endian base64 text into a link
+// convert little endian hex text into a link
 func (link *Link) UnmarshalText(s []byte) error {
-	buffer := make([]byte, base64.StdEncoding.DecodedLen(len(s)))
-	byteCount, err := base64.StdEncoding.Decode(buffer, s)
+	buffer := make([]byte, hex.DecodedLen(len(s)))
+	byteCount, err := hex.Decode(buffer, s)
 	if nil != err {
 		return err
 	}
@@ -195,7 +194,7 @@ func LinkFromBytes(link *Link, buffer []byte) error {
 // convert and validate a little endian hex link string
 // Notes:
 // 1. hex code contains prefix at the beginning
-// 2. this is hex code in same order as base64 JSON above
+// 2. this is hex code in same order as hex JSON above
 func LinkFromHexString(link *Link, hexWithPrefix string) error {
 
 	buffer := make([]byte, linkPrefixSize+LinkSize)

@@ -95,7 +95,7 @@ func TestLink(t *testing.T) {
 	}
 
 	// check JSON conversion
-	expectedJSON := "{\"Link\":\"Qk1LMKoW2s+6NAgpyFeXt7aniHLIx+xIS+GXwK0uo6IcE/hL\"}"
+	expectedJSON := `{"Link":"424d4b30aa16dacfba340829c85797b7b6a78872c8c7ec484be197c0ad2ea3a21c13f84b"}`
 
 	item := struct {
 		Link transaction.Link

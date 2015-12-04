@@ -44,9 +44,9 @@ const (
 type AssetData struct {
 	Description string    `json:"description"` // utf-8
 	Name        string    `json:"name"`        // utf-8
-	Fingerprint string    `json:"fingerprint"` // utf-8 / hex / base64
+	Fingerprint string    `json:"fingerprint"` // utf-8
 	Registrant  *Address  `json:"registrant"`  // base58
-	Signature   Signature `json:"signature"`   // base64
+	Signature   Signature `json:"signature"`   // hex
 }
 
 // the unpacked BitmarkIssue structure
@@ -54,14 +54,14 @@ type BitmarkIssue struct {
 	AssetIndex AssetIndex `json:"asset"`     // previous record (or RegistrationTransfer if first record)
 	Owner      *Address   `json:"owner"`     // base58: the "destination" owner
 	Nonce      uint64     `json:"nonce"`     // to allow for multiple issues at the same time
-	Signature  Signature  `json:"signature"` // base64: corresponds to owner in linked record
+	Signature  Signature  `json:"signature"` // hex: corresponds to owner in linked record
 }
 
 // the unpacked BitmarkTransfer structure
 type BitmarkTransfer struct {
 	Link      Link      `json:"link"`      // previous record (or RegistrationTransfer if first record)
 	Owner     *Address  `json:"owner"`     // base58: the "destination" owner
-	Signature Signature `json:"signature"` // base64: corresponds to owner in linked record
+	Signature Signature `json:"signature"` // hex: corresponds to owner in linked record
 }
 
 // determine the record type code

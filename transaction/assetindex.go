@@ -6,7 +6,6 @@ package transaction
 
 import (
 	"crypto/sha512"
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -22,7 +21,7 @@ const (
 // the type for an iasset index - same as block digest
 // stored as little endian byte array
 // represented as big endian hex value for print
-// represented as little endian base64 text for JSON encoding
+// represented as little endian hex text for JSON encoding
 type AssetIndex [AssetIndexSize]byte
 
 // create an asset index from a byte slice
@@ -110,7 +109,7 @@ func (assetIndex *AssetIndex) Scan(state fmt.ScanState, verb rune) error {
 	return nil
 }
 
-// convert a binary assetIndex to little endian base64 text for JSON
+// convert a binary assetIndex to little endian hex text for JSON
 //
 // ***** possibly re-use MarshalText to save code duplication
 // ***** but would that cost more buffer copying?
@@ -124,16 +123,16 @@ func (assetIndex AssetIndex) MarshalJSON() ([]byte, error) {
 		stage[assetIndexPrefixSize+i] = assetIndex[i]
 	}
 
-	// encode to base64
-	size := 2 + base64.StdEncoding.EncodedLen(stageSize)
+	// encode to hex
+	size := 2 + hex.EncodedLen(stageSize)
 	buffer := make([]byte, size)
 	buffer[0] = '"'
 	buffer[size-1] = '"'
-	base64.StdEncoding.Encode(buffer[1:], stage)
+	hex.Encode(buffer[1:], stage)
 	return buffer, nil
 }
 
-// convert a little endian base64 string to a assetIndex for conversion from JSON
+// convert a little endian hex string to a assetIndex for conversion from JSON
 func (assetIndex *AssetIndex) UnmarshalJSON(s []byte) error {
 	// length = '"' + characters + '"'
 	last := len(s) - 1
@@ -143,7 +142,7 @@ func (assetIndex *AssetIndex) UnmarshalJSON(s []byte) error {
 	return assetIndex.UnmarshalText(s[1:last])
 }
 
-// convert assetIndex to little endian base64 text
+// convert assetIndex to little endian hex text
 //
 // ***** possibly use NewEncoder and byte buffer to save copy
 func (assetIndex AssetIndex) MarshalText() ([]byte, error) {
@@ -156,17 +155,17 @@ func (assetIndex AssetIndex) MarshalText() ([]byte, error) {
 		stage[assetIndexPrefixSize+i] = assetIndex[i]
 	}
 
-	// encode to base64
-	size := base64.StdEncoding.EncodedLen(stageSize)
+	// encode to hex
+	size := hex.EncodedLen(stageSize)
 	buffer := make([]byte, size)
-	base64.StdEncoding.Encode(buffer, stage)
+	hex.Encode(buffer, stage)
 	return buffer, nil
 }
 
-// convert little endian base64 text into a assetIndex
+// convert little endian hex text into a assetIndex
 func (assetIndex *AssetIndex) UnmarshalText(s []byte) error {
-	buffer := make([]byte, base64.StdEncoding.DecodedLen(len(s)))
-	byteCount, err := base64.StdEncoding.Decode(buffer, s)
+	buffer := make([]byte, hex.DecodedLen(len(s)))
+	byteCount, err := hex.Decode(buffer, s)
 	if nil != err {
 		return err
 	}

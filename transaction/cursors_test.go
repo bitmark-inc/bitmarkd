@@ -18,7 +18,7 @@ func TestCursor(t *testing.T) {
 	if nil != err {
 		t.Errorf("marshal text error: %v", err)
 	}
-	expected1 := []byte("AAAAAAAAAAA=")
+	expected1 := []byte("0000000000000000")
 	if !bytes.Equal(buffer1, expected1) {
 		t.Errorf("marshal text: actual: %s != expected: %s", buffer1, expected1)
 	}
@@ -34,7 +34,7 @@ func TestCursor(t *testing.T) {
 		t.Errorf("marshal JSON error: %v", err)
 	}
 
-	expected2 := []byte(`"AAAAAAAAAAA="`) // JSON includes quotes("")
+	expected2 := []byte(`"0000000000000000"`) // JSON includes quotes("")
 	if !bytes.Equal(buffer2, expected2) {
 		t.Errorf("marshal JSON: actual: %s != expected: %s", buffer2, expected2)
 	}
@@ -62,7 +62,7 @@ func TestCursor(t *testing.T) {
 		t.Errorf("marshal JSON: %s != %s", buffer1, buffer2)
 	}
 
-	expected := []byte(`"AAAAAAABfmg="`)
+	expected := []byte(`"0000000000017e68"`)
 	if !bytes.Equal(buffer1, expected) {
 		t.Errorf("marshal JSON: actual: %s != expected: %s", buffer1, expected)
 	}

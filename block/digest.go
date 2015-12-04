@@ -6,7 +6,6 @@ package block
 
 import (
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -19,7 +18,7 @@ const DigestSize = 32
 // the type for a digest
 // stored as little endian byte array
 // represented as big endian hex value for print
-// represented as little endian base64 text for JSON encoding
+// represented as little endian hex text for JSON encoding
 type Digest [DigestSize]byte
 
 // create a digest from a byte slice
@@ -108,17 +107,17 @@ func (digest *Digest) Scan(state fmt.ScanState, verb rune) error {
 	return nil
 }
 
-// convert a binary digest to little endian base64 for JSON
+// convert a binary digest to little endian hex for JSON
 func (digest Digest) MarshalJSON() ([]byte, error) {
-	size := 2 + base64.StdEncoding.EncodedLen(len(digest))
+	size := 2 + hex.EncodedLen(len(digest))
 	buffer := make([]byte, size)
 	buffer[0] = '"'
 	buffer[size-1] = '"'
-	base64.StdEncoding.Encode(buffer[1:], digest[:])
+	hex.Encode(buffer[1:], digest[:])
 	return buffer, nil
 }
 
-// convert a little endian base64 string to a digest for conversion from JSON
+// convert a little endian hex string to a digest for conversion from JSON
 func (digest *Digest) UnmarshalJSON(s []byte) error {
 	// length = '"' + characters + '"'
 	last := len(s) - 1
@@ -128,18 +127,18 @@ func (digest *Digest) UnmarshalJSON(s []byte) error {
 	return digest.UnmarshalText(s[1:last])
 }
 
-// convert digest to little endian base64 text
+// convert digest to little endian hex text
 func (digest Digest) MarshalText() ([]byte, error) {
-	size := base64.StdEncoding.EncodedLen(len(digest))
+	size := hex.EncodedLen(len(digest))
 	buffer := make([]byte, size)
-	base64.StdEncoding.Encode(buffer, digest[:])
+	hex.Encode(buffer, digest[:])
 	return buffer, nil
 }
 
-// convert little endian base 64 text into a digest
+// convert little endian hex text into a digest
 func (digest *Digest) UnmarshalText(s []byte) error {
-	buffer := make([]byte, base64.StdEncoding.DecodedLen(len(s)))
-	byteCount, err := base64.StdEncoding.Decode(buffer, s)
+	buffer := make([]byte, hex.DecodedLen(len(s)))
+	byteCount, err := hex.Decode(buffer, s)
 	if nil != err {
 		return err
 	}

@@ -100,7 +100,7 @@ func TestAssetIndex(t *testing.T) {
 	}
 
 	// check JSON conversion
-	expectedJSON := "{\"AssetIndex\":\"Qk1BMDfeMZW4ec9WkqVk5/Gb1iA+P9jP+oBk6+huyP/42/Mm/6TWXP74NQ201y2TQG9U+g0GzpgAWpOZle0FzDT7c0Q=\"}"
+	expectedJSON := `{"AssetIndex":"424d413037de3195b879cf5692a564e7f19bd6203e3fd8cffa8064ebe86ec8fff8dbf326ffa4d65cfef8350db4d72d93406f54fa0d06ce98005a939995ed05cc34fb7344"}`
 
 	item := struct {
 		AssetIndex transaction.AssetIndex

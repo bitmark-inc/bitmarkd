@@ -5,7 +5,6 @@
 package transaction
 
 import (
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -52,11 +51,11 @@ func (signature *Signature) Scan(state fmt.ScanState, verb rune) error {
 
 // convert a binary signature to hex for unpacking record to JSON
 func (signature Signature) MarshalJSON() ([]byte, error) {
-	size := 2 + base64.StdEncoding.EncodedLen(len(signature))
+	size := 2 + hex.EncodedLen(len(signature))
 	b := make([]byte, size)
 	b[0] = '"'
 	b[size-1] = '"'
-	base64.StdEncoding.Encode(b[1:], signature)
+	hex.Encode(b[1:], signature)
 	return b, nil
 }
 
@@ -72,16 +71,16 @@ func (signature *Signature) UnmarshalJSON(s []byte) error {
 
 // convert signature to text
 func (signature Signature) MarshalText() ([]byte, error) {
-	size := base64.StdEncoding.EncodedLen(len(signature))
+	size := hex.EncodedLen(len(signature))
 	b := make([]byte, size)
-	base64.StdEncoding.Encode(b, signature)
+	hex.Encode(b, signature)
 	return b, nil
 }
 
 // convert text into a signature
 func (signature *Signature) UnmarshalText(s []byte) error {
-	sig := make([]byte, base64.StdEncoding.DecodedLen(len(s)))
-	byteCount, err := base64.StdEncoding.Decode(sig, s)
+	sig := make([]byte, hex.DecodedLen(len(s)))
+	byteCount, err := hex.Decode(sig, s)
 	if nil != err {
 		return err
 	}

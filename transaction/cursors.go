@@ -5,7 +5,7 @@
 package transaction
 
 import (
-	"encoding/base64"
+	"encoding/hex"
 	"encoding/binary"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -58,23 +58,23 @@ func (ic IndexCursor) String() string {
 	return fmt.Sprintf("IC:%08x", uint64(ic))
 }
 
-// convert link to little endian base64 text
+// convert link to little endian hex text
 func (ic IndexCursor) MarshalText() ([]byte, error) {
 	buffer := make([]byte, cursorByteLength)
 	binary.BigEndian.PutUint64(buffer, uint64(ic))
 
-	stage := make([]byte, base64.StdEncoding.EncodedLen(cursorByteLength))
+	stage := make([]byte, hex.EncodedLen(cursorByteLength))
 
-	base64.StdEncoding.Encode(stage, buffer)
+	hex.Encode(stage, buffer)
 	return stage, nil
 }
 
-// convert little endian base64 text into a link
+// convert little endian hex text into a link
 func (ic *IndexCursor) UnmarshalText(s []byte) error {
 
-	buffer := make([]byte, base64.StdEncoding.DecodedLen(len(s)))
+	buffer := make([]byte, hex.DecodedLen(len(s)))
 
-	byteCount, err := base64.StdEncoding.Decode(buffer, s)
+	byteCount, err := hex.Decode(buffer, s)
 	if nil != err {
 		return err
 	}
