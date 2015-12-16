@@ -16,6 +16,12 @@ import (
 // the default uint32 value
 const DefaultUint32 = 0x1d00ffff
 
+// number of block times to decay the difficulty by 50%
+const HalfLife = 100
+
+// the decay constant
+const decayLambda = math.Ln2 / HalfLife
+
 // Type for difficulty
 type Difficulty struct {
 	sync.RWMutex
@@ -24,8 +30,7 @@ type Difficulty struct {
 	pdiff float64 // cache: pool difficulty
 	bits  uint32  // cache: bitcoin difficulty
 
-	modifier int            // filter backoff counter
-	filter   filters.Filter // filter for difficulty auto-adjust
+	filter filters.Filter // filter for difficulty auto-adjust
 }
 
 // current difficulty
@@ -232,9 +237,6 @@ func (difficulty *Difficulty) Adjust(expectedMinutes float64, actualMinutes floa
 	difficulty.Lock()
 	defer difficulty.Unlock()
 
-	// reset modifier
-	difficulty.modifier = 0
-
 	// if k > 1 then difficulty is too low
 	k := expectedMinutes / actualMinutes
 
@@ -247,25 +249,14 @@ func (difficulty *Difficulty) Adjust(expectedMinutes float64, actualMinutes floa
 	return difficulty.internalSetPdiff(newPdiff)
 }
 
-// logarithmic backoff of difficulty
-// call each cycle period if no sucessful block was mined
-// the modifier value is the number of cycles (without a block being mined)
-// and must be rest whenever a new block is mined or accepted from the network
-func (difficulty *Difficulty) Backoff() float64 {
+// exponential decay of difficulty
+// call each expected block period to decay the current difficulty
+func (difficulty *Difficulty) Decay() float64 {
 	difficulty.Lock()
 	defer difficulty.Unlock()
 
-	switch {
-	case difficulty.modifier < 1:
-		difficulty.modifier = 1
-	case difficulty.modifier > 19:
-		difficulty.modifier = 19
-	default:
-		difficulty.modifier += 1
-	}
+	newPdiff := difficulty.pdiff - decayLambda*(difficulty.pdiff-1.0)
 
-	// return difficulty.internalSetPdiff(difficulty.pdiff * math.Log10(10-0.5*float64(difficulty.modifier)))
-
-	// disble backoff
-	return difficulty.pdiff
+	// adjust difficulty
+	return difficulty.internalSetPdiff(newPdiff)
 }

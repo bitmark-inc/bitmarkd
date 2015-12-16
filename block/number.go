@@ -70,7 +70,7 @@ var globalBlock struct {
 
 // list of background processes to start
 var processes = background.Processes{
-	backoff,
+	decay,
 }
 
 // initialise the block numbering system
@@ -234,11 +234,11 @@ func (blk Packed) internalSave(number uint64, digest *Digest, timestamp time.Tim
 
 		// compute decimal minutes taken to mine the block
 		// actualMinutes := timestamp.Sub(globalBlock.previousTimestamp).Minutes()
-		actualMinutes := time.Now().Sub(timestamp).Minutes()
+		actualMinutes := globalBlock.previousTimestamp.Sub(timestamp).Minutes()
 
 		// adjust difficulty
 		d := difficulty.Current.Adjust(ExpectedMinutes, actualMinutes)
-		globalBlock.log.Infof("adjust difficulty timstamp: %v", timestamp)
+		globalBlock.log.Infof("adjust difficulty timestamp: %v", timestamp)
 		globalBlock.log.Infof("adjust difficulty to: %10.4f  expected: %d min  actual: %10.4f min", d, ExpectedMinutes, actualMinutes)
 
 		// save latest timestamp
@@ -415,12 +415,12 @@ func (pack Packed) Unpack(blk *Block) error {
 	return nil
 }
 
-// difficulty backoff background
+// difficulty decay background
 // assemble records for mining
-func backoff(args interface{}, shutdown <-chan bool, finished chan<- bool) {
+func decay(args interface{}, shutdown <-chan bool, finished chan<- bool) {
 
 	log := args.(*logger.L)
-	log.Info("backoff: starting…")
+	log.Info("decay: starting…")
 
 loop:
 	for {
@@ -430,12 +430,12 @@ loop:
 
 		case <-time.After(ExpectedMinutes * time.Minute):
 			if mode.Is(mode.Normal) {
-				d := difficulty.Current.Backoff()
-				log.Infof("backoff difficulty to: %10.4f", d)
+				d := difficulty.Current.Decay()
+				log.Infof("decay difficulty to: %10.4f", d)
 			}
 		}
 	}
 
-	log.Info("backoff: shutting down…")
+	log.Info("decay: shutting down…")
 	close(finished)
 }

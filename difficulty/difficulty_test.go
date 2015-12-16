@@ -7,6 +7,7 @@ package difficulty_test
 import (
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
+	"math"
 	"testing"
 )
 
@@ -138,5 +139,39 @@ func TestPdiff(t *testing.T) {
 			t.Errorf("%d: GoString(): actual: %v  expected: %q", i, bigString, item.bigf)
 		}
 
+	}
+}
+
+// test decay
+func TestDecay(t *testing.T) {
+
+	initialPdiff := 217.932
+
+	d := difficulty.New()
+	d.SetPdiff(initialPdiff)
+
+	percent := 100.0
+
+	// loop for three hal lives to test at 50% 25% and 12.5%
+	for j := 0; j < 3; j += 1 {
+
+		// this decay the value by one half life
+		for i := 0; i < difficulty.HalfLife; i += 1 {
+			d.Decay()
+		}
+
+		percent /= 2.0
+		expected := initialPdiff * percent / 100.0
+		actual := d.Pdiff()
+
+		// the decay is fairly coarse so allow a resoable tolerance before issuing error
+		diff := actual - expected
+		diffPercent := 100.0 * diff / initialPdiff
+		if math.Abs(diffPercent) > 0.5 {
+			t.Errorf("%5.2f%%: actual: %f  expected: %f", percent, actual, expected)
+			t.Errorf("%5.2f%%: diff: %g", percent, diff)
+			t.Errorf("%5.2f%%: relative: %6.2f%%", percent, 100*actual/initialPdiff)
+			t.Errorf("%5.2f%%: error:    %6.2f%%", percent, diffPercent)
+		}
 	}
 }
