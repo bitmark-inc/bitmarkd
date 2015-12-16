@@ -197,6 +197,10 @@ func LinkFromBytes(link *Link, buffer []byte) error {
 // 2. this is hex code in same order as hex JSON above
 func LinkFromHexString(link *Link, hexWithPrefix string) error {
 
+	if len(hexWithPrefix) != 2*(linkPrefixSize+LinkSize) {
+		return fault.ErrNotLink
+	}
+
 	buffer := make([]byte, linkPrefixSize+LinkSize)
 	byteCount, err := hex.Decode(buffer, []byte(hexWithPrefix))
 	if nil != err {

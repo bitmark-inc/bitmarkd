@@ -5,8 +5,8 @@
 package transaction
 
 import (
-	"encoding/hex"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"sync/atomic"

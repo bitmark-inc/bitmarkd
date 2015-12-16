@@ -47,6 +47,7 @@ func TestAddress(t *testing.T) {
 			continue
 		}
 		t.Logf("Created address from bytes test: %d result: %s", index, address)
+		t.Logf("Created address from bytes test: %d    hex: %x", index, address.Bytes())
 	}
 
 	// From address base58 encoded to address

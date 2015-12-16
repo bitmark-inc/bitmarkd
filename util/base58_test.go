@@ -53,6 +53,8 @@ var hexTests = []struct {
 	{"626262", "a3gV"},
 	{"636363", "aPEr"},
 	{"73696d706c792061206c6f6e6720737472696e67", "2cFupjhnEsSn59qHXstmK2ffpLv2"},
+	{"21f689a47aeb15231dfceb60925886b67d065299925915aeb172c06647", "2YRggCWYA4NomAjtgDyTVcy6gB46iKQ5RgFqVkiJ"},
+	{"eb15231dfceb60925886b67d065299925915aeb172c06647", "NS17iag9jJgTHD1VXjvLCEnZuQ3rJDE9L"},
 	{"00eb15231dfceb60925886b67d065299925915aeb172c06647", "1NS17iag9jJgTHD1VXjvLCEnZuQ3rJDE9L"},
 	{"516b6fcd0f", "ABnLTmg"},
 	{"bf4f89001e670274dd", "3SEo3LWLoPntC"},
@@ -81,8 +83,8 @@ func TestBase58(t *testing.T) {
 			continue
 		}
 		if res := util.FromBase58(test.out); bytes.Equal(res, b) != true {
-			t.Errorf("FromBase58 test #%d failed: got: %q want: %q",
-				x, res, test.in)
+			t.Errorf("FromBase58 test #%d failed: got: %x want: %x",
+				x, res, b)
 			continue
 		}
 	}

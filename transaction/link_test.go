@@ -154,3 +154,47 @@ func TestHexLink(t *testing.T) {
 	}
 
 }
+
+// test invalid hex link conversion
+func TestInvalidHexLink(t *testing.T) {
+
+	// little endian
+	expectedLink := transaction.Link{}
+
+	// bad values
+	testValues := []string{
+		"404d4b30aa16dacfba340829c85797b7b6a78872c8c7ec484be197c0ad2ea3a21c13f84b",
+		"424d4b30aa16dacfba340829c85797b7b6a78872c8c7ec484be197c0ad2ea3a21c13f84",
+		"424d4b30aa16dacfba340829c85797b7b6a78872c8c7ec484be197c0ad2ea3a21c13f8",
+		"424d4b30aa16dacfba340829c85797b7b6a78872c8c7ec484be197c0ad2ea3a21c13f",
+		"424d4b30aa16dacfba340829c85797b7b6a78872c8c7ec484be197c0ad2ea3a21c13",
+		"424d4b30aa16dacfba340829c85797b7b6a78872c8c7ec484be197c0ad2ea3a21c1",
+		"434d4b30aa16dacfba340829c85797b7b6a78872c8c7ec484be197c0ad2ea3a21c13f84b",
+		"424d4b30aa",
+		"424d4b30a",
+		"424d4b30",
+		"424d4b3",
+		"424d4b",
+		"424d4",
+		"424d",
+		"424",
+		"42",
+		"4",
+		"",
+		"424d4b30aa16dacfba340829c85797b7b6a78872c8c7ec484be197c0ad2ea3a21c13f84b8435983405932094750927692406802486092808420986042832468365",
+		"424d4b30aa16dacfba340829c85797b7b6a78872c8c7ec484be197c0ad2ea3a21c13f84b843598340593209475092769240680248609280842098604283246836",
+		"424d4b30aa16dacfba340829c85797b7b6a78872c8c7ec484be197c0ad2ea3a21c13f84b84359834059320947509276924068024860928084209860428324683",
+	}
+
+	for i, prefixedHex := range testValues {
+		var link transaction.Link
+		err := transaction.LinkFromHexString(&link, prefixedHex)
+		if nil == err {
+			t.Errorf("%d: LinkFromHexString unexpected success", i)
+		}
+
+		if link != expectedLink {
+			t.Errorf("%d: link: %#v  expected: %#v", i, link, expectedLink)
+		}
+	}
+}
