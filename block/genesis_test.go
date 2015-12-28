@@ -23,15 +23,34 @@ const (
 )
 
 // some data embedded into the genesis block
+// for live chain
 var (
-	// for live chain
+	// date -u -r $(printf '%d\n' 0x56809ab7)
+	// Mon 28 Dec 2015 02:13:11 UTC
+	// date -u -r $(printf '%d\n' 0x56809ab7) '+%FT%TZ'
+	// 2015-12-28T02:13:11Z
+
+	genesisLiveTimestamp = TS {0x56809ab7, "2015-12-28T02:13:11Z"}
+
 	genesisLiveAddresses = []block.MinerAddress{
 		{
 			Currency: "",
-			Address:  "Bitmark Genesis Block",
+			Address:  "DOWN the RABBIT hole",
 		},
 	}
-	genesisLiveRawAddress = "\x00\x15" + "Bitmark Genesis Block"
+	genesisLiveRawAddress = "\x00\x14" + "DOWN the RABBIT hole"
+)
+
+
+// some data embedded into the genesis block
+// for test chain
+var (
+	// date -u -r $(printf '%d\n' 0x5478424b)
+	// Fri Nov 28 09:37:15 UTC 2014
+	// date -u -r $(printf '%d\n' 0x5478424b) '+%FT%TZ'
+	// 2014-11-28T09:37:15Z
+
+	genesisTestTimestamp = TS {0x5478424b, "2014-11-28T09:37:15Z"}
 
 	// for testing chain
 	genesisTestAddresses = []block.MinerAddress{
@@ -45,7 +64,7 @@ var (
 
 // create the live genesis block
 //              worker       id, extranonce2,  ntime,      nonce.
-// {"params": ["miner-two", "42", "01000000", "5478424c", "f0202692"], "id": 1, "method": "mining.submit"}
+// {"params": ["miner-two", "42", "07000000", "56809ab7", "fdf14002"], "id": 1, "method": "mining.submit"}
 func TestLiveGenesisAssembly(t *testing.T) {
 
 	// fixed data used to create genesis block
@@ -55,10 +74,10 @@ func TestLiveGenesisAssembly(t *testing.T) {
 	extraNonce1 := []byte("BMRK") // "424d524b"
 
 	// nonces obtained from miner
-	nonce := uint32(0x70295b74)
-	extraNonce2 := []byte{0x01, 0x00, 0x00, 0x00}
+	nonce := uint32(0xfdf14002)
+	extraNonce2 := []byte{0x07, 0x00, 0x00, 0x00}
 
-	doCalc(t, "Live", extraNonce1, extraNonce2, nonce, genesisLiveAddresses, genesisLiveRawAddress, block.LiveGenesisDigest, block.LiveGenesisBlock)
+	doCalc(t, "Live", genesisLiveTimestamp, extraNonce1, extraNonce2, nonce, genesisLiveAddresses, genesisLiveRawAddress, block.LiveGenesisDigest, block.LiveGenesisBlock)
 }
 
 // create the test genesis block
@@ -74,24 +93,23 @@ func TestTestGenesisAssembly(t *testing.T) {
 	nonce := uint32(0xaecca83b)
 	extraNonce2 := []byte{0x01, 0x00, 0x00, 0x00}
 
-	doCalc(t, "Test", extraNonce1, extraNonce2, nonce, genesisTestAddresses, genesisTestRawAddress, block.TestGenesisDigest, block.TestGenesisBlock)
+	doCalc(t, "Test", genesisTestTimestamp, extraNonce1, extraNonce2, nonce, genesisTestAddresses, genesisTestRawAddress, block.TestGenesisDigest, block.TestGenesisBlock)
 }
 
-func doCalc(t *testing.T, title string, extraNonce1 []byte, extraNonce2 []byte, nonce uint32, addresses []block.MinerAddress, rawAddress string, gDigest block.Digest, gBlock block.Packed) {
+// hold chain specific timestamp
+type TS struct {
+	ntime uint32
+	utc string
+}
 
-	// timestamp conversion
+func doCalc(t *testing.T, title string, ts TS, extraNonce1 []byte, extraNonce2 []byte, nonce uint32, addresses []block.MinerAddress, rawAddress string, gDigest block.Digest, gBlock block.Packed) {
 
-	// date -u -r $(printf '%d\n' 0x5478424b)
-	// Fri Nov 28 09:37:15 UTC 2014
-	// date -u -r $(printf '%d\n' 0x5478424b) '+%FT%TZ'
-	// 2014-11-28T09:37:15Z
-
-	timestamp, err := time.Parse(time.RFC3339, "2014-11-28T09:37:15Z")
+	timestamp, err := time.Parse(time.RFC3339, ts.utc)
 	if nil != err {
 		t.Fatalf("failed to parse time: err = %v", err)
 	}
 	timeUint64 := uint64(timestamp.UTC().Unix())
-	ntime := uint32(0x5478424b)
+	ntime := ts.ntime
 	if timeUint64 != uint64(ntime) {
 		t.Fatalf("time converted to: 0x%08x  expectd: %08x", timeUint64, ntime)
 	}
@@ -138,6 +156,7 @@ func doCalc(t *testing.T, title string, extraNonce1 []byte, extraNonce2 []byte, 
 	t.Logf("coinbase: %x\n", coinbase)
 	t.Logf("coinbase digest: %#v\n", cDigest)
 	t.Logf("merkle tree: %#v\n", tree)
+	t.Logf("merkle root little endian hex: %x\n", [block.DigestSize]byte(tree[0]))
 	t.Logf("hDigest: %#v\n", hDigest)
 	t.Logf("hDigest little endian hex: %x\n", [block.DigestSize]byte(hDigest))
 
