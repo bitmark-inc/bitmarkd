@@ -4,7 +4,8 @@
 # as the data directory.
 # all certificates, logs and LevelDB files are relative to this  directory
 # unless the are overridden with absolute paths.
-data_directory = "."
+#data_directory = "."
+data_directory = "/var/lib/bitmarkd"
 
 # select the chain of the network for peer connections
 # cross chain networking connects will not work
