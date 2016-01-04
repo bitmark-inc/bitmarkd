@@ -6,6 +6,7 @@ package filters
 
 import (
 	"fmt"
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"sync"
 )
 
@@ -40,6 +41,9 @@ func (filter *Camm) Name() string {
 func (filter *Camm) Process(s float64) float64 {
 	filter.Lock()
 	defer filter.Unlock()
+	if s < 0 {
+		fault.Panicf("camm negative sample: %f", s)
+	}
 
 	for _, f := range filter.f {
 		s = f.Process(s)

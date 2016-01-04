@@ -6,6 +6,7 @@ package filters
 
 import (
 	"fmt"
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"sync"
 )
 
@@ -48,7 +49,7 @@ func (filter *WMA) Process(s float64) float64 {
 	defer filter.Unlock()
 
 	if s < 0 {
-		panic("negative sample")
+		fault.Panicf("wma negative sample: %f", s)
 	}
 
 	filter.numerator += filter.n*s - filter.total
@@ -62,6 +63,10 @@ func (filter *WMA) Process(s float64) float64 {
 	}
 
 	filter.current = filter.numerator / filter.denominator
+	if filter.current < 0 {
+		filter.current = 0
+	}
+
 	return filter.current
 }
 
