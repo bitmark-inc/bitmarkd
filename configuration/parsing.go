@@ -83,12 +83,15 @@ type LoggerType struct {
 }
 
 type BitcoinAccess struct {
-	Username string `libucl:"Username"`
-	Password string `libucl:"Password"`
-	URL      string `libucl:"URL"`
-	Address  string `libucl:"Address"`
-	Fee      string `libucl:"Fee"`
-	Start    uint64 `libucl:"Start"`
+	Username      string `libucl:"username"`
+	Password      string `libucl:"password"`
+	URL           string `libucl:"url"`
+	CACertificate string `libucl:"ca_certificate"`
+	Certificate   string `libucl:"certificate"`
+	PrivateKey    string `libucl:"private_key"`
+	Address       string `libucl:"address"`
+	Fee           string `libucl:"fee"`
+	Start         uint64 `libucl:"start"`
 }
 
 type DatabaseType struct {

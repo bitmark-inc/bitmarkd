@@ -74,10 +74,21 @@ mining {
 # local bitcoin access to pool for blocks and forward client payments
 # not recommended to have this be a miner or retain any keys with funds
 bitcoin {
+
+  # loacl connection to bitcoind
   username = my-bitcoin-user
   password = my-secret-bitcoin-password
-
   url = http://127.0.0.1:18333
+
+  # to enable client side TLS authentication
+  # for miniature-spoon proxy
+  # ca_certificate = ca.crt
+  # certificate = client.crt
+  # private_key = client.key
+  # url = https://127.0.0.1:18555/rpc-call
+
+
+  # the first block to read
   start = 1
 
   # fee is a string to prevent rounding to float

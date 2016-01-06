@@ -271,7 +271,7 @@ func main() {
 	}
 
 	// connect to various payment services
-	err = payment.BitcoinInitialise(masterConfiguration.Bitcoin.URL, masterConfiguration.Bitcoin.Username, masterConfiguration.Bitcoin.Password, masterConfiguration.Bitcoin.Address, masterConfiguration.Bitcoin.Fee, masterConfiguration.Bitcoin.Start)
+	err = payment.BitcoinInitialise(masterConfiguration.Bitcoin)
 	if nil != err {
 		log.Criticalf("failed to initialise Bitcoin  error: %v", err)
 		exitwithstatus.Exit(1)

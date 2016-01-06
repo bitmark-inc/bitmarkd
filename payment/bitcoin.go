@@ -6,9 +6,12 @@ package payment
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
 	"github.com/bitmark-inc/bitmarkd/background"
+	"github.com/bitmark-inc/bitmarkd/configuration"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/transaction"
 	"github.com/bitmark-inc/logger"
@@ -81,7 +84,7 @@ var bitcoinProcesses = background.Processes{
 // also calls the internal initialisePayment() and register()
 //
 // Note fee is a string value and is converted to Satoshis to avoid rounding errors
-func BitcoinInitialise(url string, username string, password string, minerAddress string, fee string, start uint64) error {
+func BitcoinInitialise(configuration configuration.BitcoinAccess) error {
 
 	// ensure payments are initialised
 	if err := paymentInitialise(); nil != err {
@@ -96,7 +99,7 @@ func BitcoinInitialise(url string, username string, password string, minerAddres
 		return fault.ErrAlreadyInitialised
 	}
 
-	if "" == minerAddress {
+	if "" == configuration.Address {
 		return fault.ErrPaymentAddressMissing
 	}
 
@@ -107,18 +110,57 @@ func BitcoinInitialise(url string, username string, password string, minerAddres
 	globalBitcoinData.log.Info("starting…")
 
 	globalBitcoinData.id = 0
-	globalBitcoinData.username = username
-	globalBitcoinData.password = password
-	globalBitcoinData.url = url
-	globalBitcoinData.minerAddress = minerAddress
-	globalBitcoinData.fee = convertToSatoshi([]byte(fee))
+	globalBitcoinData.username = configuration.Username
+	globalBitcoinData.password = configuration.Password
+	globalBitcoinData.url = configuration.URL
+	globalBitcoinData.minerAddress = configuration.Address
+	globalBitcoinData.fee = convertToSatoshi([]byte(configuration.Fee))
 	globalBitcoinData.latestBlockNumber = 0
 	globalBitcoinData.expire = make(map[uint64][]transaction.Link, bitcoinBlockRange)
 
-	globalBitcoinData.client = new(http.Client)
+	if "" != configuration.Certificate {
+		keyPair, err := tls.LoadX509KeyPair(configuration.Certificate, configuration.PrivateKey)
+		if nil != err {
+			return err
+		}
+
+		certificatePool := x509.NewCertPool()
+
+		data, err := ioutil.ReadFile(configuration.CACertificate)
+		if err != nil {
+			globalBitcoinData.log.Criticalf("failed to parse certificate from: %q", configuration.CACertificate)
+			return err
+		}
+
+		if !certificatePool.AppendCertsFromPEM(data) {
+			globalBitcoinData.log.Criticalf("failed to parse certificate from: %q", configuration.CACertificate)
+			return err
+		}
+
+		tlsConfiguration := &tls.Config{
+			Certificates:             []tls.Certificate{keyPair},
+			RootCAs:                  certificatePool,
+			InsecureSkipVerify:       false,
+			CipherSuites:             nil,
+			PreferServerCipherSuites: true,
+			MinVersion:               12, // force 1.2 and above
+			MaxVersion:               0,  // no maximum
+			CurvePreferences:         nil,
+		}
+
+		globalBitcoinData.client = &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: tlsConfiguration,
+			},
+		}
+	} else {
+		globalBitcoinData.client = &http.Client{}
+	}
 
 	// all data initialised
 	globalBitcoinData.initialised = true
+
+	globalBitcoinData.log.Debug("getinfo…")
 
 	// query bitcoind for status
 	// only need to have necessary fields as JSON unmarshaller will igtnore excess
@@ -378,6 +420,7 @@ func bitcoinCall(method string, params []interface{}, reply interface{}) error {
 	}
 	err := bitcoinRPC(&arguments, &response)
 	if nil != err {
+		globalBitcoinData.log.Tracef("rpc returned error: %v", err)
 		return err
 	}
 
@@ -436,6 +479,8 @@ func bitcoinRPC(arguments *bitcoinArguments, reply *bitcoinReply) error {
 	if nil != err {
 		return err
 	}
+
+	globalBitcoinData.log.Tracef("rpc response body: %s", body)
 
 	err = json.Unmarshal(body, &reply)
 	if nil != err {
