@@ -30,7 +30,7 @@ var (
 	// date -u -r $(printf '%d\n' 0x56809ab7) '+%FT%TZ'
 	// 2015-12-28T02:13:11Z
 
-	genesisLiveTimestamp = TS {0x56809ab7, "2015-12-28T02:13:11Z"}
+	genesisLiveTimestamp = TS{0x56809ab7, "2015-12-28T02:13:11Z"}
 
 	genesisLiveAddresses = []block.MinerAddress{
 		{
@@ -41,7 +41,6 @@ var (
 	genesisLiveRawAddress = "\x00\x14" + "DOWN the RABBIT hole"
 )
 
-
 // some data embedded into the genesis block
 // for test chain
 var (
@@ -50,7 +49,7 @@ var (
 	// date -u -r $(printf '%d\n' 0x5478424b) '+%FT%TZ'
 	// 2014-11-28T09:37:15Z
 
-	genesisTestTimestamp = TS {0x5478424b, "2014-11-28T09:37:15Z"}
+	genesisTestTimestamp = TS{0x5478424b, "2014-11-28T09:37:15Z"}
 
 	// for testing chain
 	genesisTestAddresses = []block.MinerAddress{
@@ -99,7 +98,7 @@ func TestTestGenesisAssembly(t *testing.T) {
 // hold chain specific timestamp
 type TS struct {
 	ntime uint32
-	utc string
+	utc   string
 }
 
 func doCalc(t *testing.T, title string, ts TS, extraNonce1 []byte, extraNonce2 []byte, nonce uint32, addresses []block.MinerAddress, rawAddress string, gDigest block.Digest, gBlock block.Packed) {

@@ -243,7 +243,6 @@ func (blk Packed) internalSave(number uint64, digest *Digest, timestamp time.Tim
 		d := difficulty.Current.Adjust(ExpectedMinutes, actualMinutes)
 		globalBlock.log.Debugf("adjust difficulty to: %10.4f", d)
 
-
 		// save latest timestamp
 		globalBlock.previousTimestamp = timestamp
 	}
