@@ -55,9 +55,10 @@ type bitcoinData struct {
 	id uint64
 
 	// payment info
-	minerAddress      string
-	fee               uint64 // value in Satoshis avoid float because of rounding errors
-	latestBlockNumber uint64
+	minerAddress        string
+	fee                 uint64 // value in Satoshis avoid float because of rounding errors
+	startingBlockNumber uint64 // value from config file
+	latestBlockNumber   uint64 // value from bitcoind
 
 	// for garbage collection
 	expire map[uint64][]transaction.Link
@@ -115,7 +116,7 @@ func BitcoinInitialise(configuration configuration.BitcoinAccess) error {
 	globalBitcoinData.url = configuration.URL
 	globalBitcoinData.minerAddress = configuration.Address
 	globalBitcoinData.fee = convertToSatoshi([]byte(configuration.Fee))
-	globalBitcoinData.latestBlockNumber = configuration.Start
+	globalBitcoinData.startingBlockNumber = configuration.Start
 	globalBitcoinData.expire = make(map[uint64][]transaction.Link, bitcoinBlockRange)
 
 	if "" != configuration.Certificate {
@@ -561,7 +562,7 @@ func bitcoinBackground(args interface{}, shutdown <-chan bool, finished chan<- b
 	log := args.(*logger.L)
 
 	// set up the starting block number
-	currentBlockNumber := uint64(1)
+	currentBlockNumber := 	globalBitcoinData.startingBlockNumber
 	if currentBlockNumber > bitcoinBlockOffset {
 		currentBlockNumber = globalBitcoinData.latestBlockNumber - bitcoinBlockOffset
 	}
