@@ -115,7 +115,7 @@ func BitcoinInitialise(configuration configuration.BitcoinAccess) error {
 	globalBitcoinData.url = configuration.URL
 	globalBitcoinData.minerAddress = configuration.Address
 	globalBitcoinData.fee = convertToSatoshi([]byte(configuration.Fee))
-	globalBitcoinData.latestBlockNumber = 0
+	globalBitcoinData.latestBlockNumber = configuration.Start
 	globalBitcoinData.expire = make(map[uint64][]transaction.Link, bitcoinBlockRange)
 
 	if "" != configuration.Certificate {
