@@ -562,7 +562,7 @@ func bitcoinBackground(args interface{}, shutdown <-chan bool, finished chan<- b
 	log := args.(*logger.L)
 
 	// set up the starting block number
-	currentBlockNumber := 	globalBitcoinData.startingBlockNumber
+	currentBlockNumber := globalBitcoinData.startingBlockNumber
 	if currentBlockNumber > bitcoinBlockOffset {
 		currentBlockNumber = globalBitcoinData.latestBlockNumber - bitcoinBlockOffset
 	}
