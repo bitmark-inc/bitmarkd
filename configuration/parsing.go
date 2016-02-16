@@ -181,7 +181,7 @@ func GetConfiguration(configurationFileName string) (*Configuration, error) {
 		case chain.Local:
 			options.Database.Name = defaultLocalDatabase
 		default:
-			return nil, errors.New(fmt.Sprintf("Chain: %s no default databse setting", options.Chain))
+			return nil, errors.New(fmt.Sprintf("Chain: %s no default database setting", options.Chain))
 		}
 	}
 
@@ -202,7 +202,7 @@ func GetConfiguration(configurationFileName string) (*Configuration, error) {
 	}
 
 	// force all relevant items to be absolute paths
-	// if not, assign them to the dsts directory
+	// if not, assign them to the data directory
 	mustBeAbsolute := []*string{
 		&options.PidFile,
 		&options.Database.Directory,
