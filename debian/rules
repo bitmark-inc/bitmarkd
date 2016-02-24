@@ -1,0 +1,87 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+
+include debian/versions.mk
+
+# temporary build path (see http://golang.org/doc/code.html#GOPATH)
+export GOPATH = ${CURDIR}/.gopath
+GOPATH_PACKAGED = /usr/share/gocode
+
+LIBUCL_SRC = ${CURDIR}/libucl
+GO_LIBUCL_SRC = ${GOPATH}/src/github.com/bitmark-inc/go-libucl
+
+SRC_DIR = ${GOPATH}/src/github.com/bitmark-inc/${APP_NAME}
+BIN_DIR = ${GOPATH}/bin
+
+versions.mk:
+
+override_dh_auto_build:
+	# extract all of the dependencies
+	mkdir -p "${GOPATH}"
+	for p in ${GO_PACKAGES} ; \
+	do \
+	  hash="$${p##*:}" ; \
+	  p="$${p%%:*}" ; \
+	  account=$$(basename $$(dirname "$${p}")) ; \
+	  repo=$$(basename "$${p}") ; \
+	  dir="${GOPATH}/src/$${p}" ; \
+	  if [ ! -d "$${dir}" ] ; \
+	  then \
+	    dist="$${account}-$${repo}-$${hash}_GH0.tar.gz" ; \
+	    echo untar: $${dist} ; \
+	    mkdir -p "$${dir}" ; \
+	    tar xf "$${dist}" -C "$${dir}" --transform 's@^[^/]*/@@' ; \
+            rmdir "$${dir}/$${repo}-$${hash}" ; \
+	  fi ; \
+	done
+
+	# extract libucl to its own work dir
+	mkdir -p "${LIBUCL_SRC}"
+	tar xf "${LIBUCL}" -C "${LIBUCL_SRC}" --transform 's@^[^/]*/@@' ; \
+
+	# build the libucl.a library first; for http support: ./configure --prefix=/usr --enable-urls --enable-signatures
+	cd "${LIBUCL_SRC}" && \
+	  ./autogen.sh && \
+	  ./configure --prefix=/usr && \
+	  make
+
+	# patch the go source
+	cd "${GO_LIBUCL_SRC}" && \
+	  printf 'package libucl\n// #cgo CFLAGS: -I${LIBUCL_SRC}/include\n// #cgo LDFLAGS: ${LIBUCL_SRC}/src/.libs/libucl.a\nimport "C"\n' > libucl.go
+
+	# compile the go programs
+	cd "${SRC_DIR}" && go install -buildmode=exe -v . ; \
+
+
+override_dh_auto_install:
+	# install app binary and configuration files
+	etc_dir="debian/tmp/etc" ; \
+	bin_dir="debian/tmp/bin" ; \
+	mkdir -p "$${etc_dir}" "$${bin_dir}" ; \
+	conf="${SRC_DIR}/${APP_NAME}.conf.sample" ; \
+	[ -f "$${conf}" ] && cp -p "$${conf}" "$${etc_dir}/${APP_NAME}.conf" ; \
+	exe="${BIN_DIR}/${APP_NAME}" ; \
+	[ -x "$${exe}" ] && cp -p "$${exe}" "$${bin_dir}" ; \
+	done
+
+
+override_dh_strip:
+	# Go has lots of problems with stripping
+
+
+override_dh_auto_test:
+
+
+override_dh_installinit:
+	#dh_installinit --name=docker --no-restart-on-upgrade
+
+
+override_dh_auto_clean:
+	dh_auto_clean
+
+	# GOPATH/LIBUCL_SRC are created by this file - need to remove it
+	rm -rf "${GOPATH}" "${LIBUCL_SRC}"
+
+# default rules
+%:
+	dh $@ --with=systemd

@@ -1,0 +1,21 @@
+[Unit]
+Description=Bitmark's distributed currency daemon
+After=network.target
+
+[Service]
+Type=simple
+Restart=on-failure
+
+User=bitmarkd
+Group=bitmarkd
+
+PIDFile=/run/bitmarkd.pid
+
+StandardOutput=journal
+StandardError=journal
+
+WorkingDirectory=/var/lib/bitmark
+ExecStart=/usr/sbin/bitmarkd --quiet --config-file=/etc/bitmarkd.conf
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,24 @@
+Source: bitmarkd
+Section: net
+Priority: optional
+Maintainer: Bitmark Developers <developers@bitmark.com>
+Uploaders: Bitmark Developers <developers@bitmark.com>
+Build-Depends: debhelper (>=9),
+               dh-systemd,
+               autoconf, automake, libtool, pkgconf,
+               libzmq3-dev,
+               golang [!powerpc],
+               gccgo [powerpc]
+Standards-Version: 3.9.6
+Homepage: https://bitmark.com
+Vcs-Git: git://github.com/bitmark-inc/bitmarkd.git
+#Vcs-Browser: http://anonscm.debian.org/cgit/server-control/server-control.git
+
+Package: bitmarkd
+Architecture: linux-any
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Recommends:
+Description: Bitmark Blockchain Daemon
+ This is the main program for the Bitmark P2P network.
+ .
+ This runs the Bitmark distributed ownership blockchain.

@@ -1,0 +1,43 @@
+#!/bin/sh
+# summary of how this script can be called:
+#        * <postinst> `configure' <most-recently-configured-version>
+#        * <old-postinst> `abort-upgrade' <new version>
+#        * <conflictor's-postinst> `abort-remove' `in-favour' <package>
+#          <new-version>
+#        * <postinst> `abort-remove'
+#        * <deconfigured's-postinst> `abort-deconfigure' `in-favour'
+#          <failed-install-package> <version> `removing'
+#          <conflicting-package> <version>
+# for details, see http://www.debian.org/doc/debian-policy/ or
+# the debian-policy package
+
+set -e
+
+case "$1" in
+  (configure)
+    # create group
+    id -g bitmarkd > /dev/null 2>&1 || addgroup --system bitmarkd
+    # create user
+    id bitmarkd > /dev/null 2>&1 || \
+      adduser --system --home /var/lib/bitmarkd \
+              --create-home --disabled-password \
+              --gecos "Bitmark Daemon" \
+              --ingroup bitmarkd bitmarkd
+
+    conf="/etc/bitmarkd.conf"
+    chown bitmarkd:bitmarkd "${conf}"
+    chmod 600 "${conf}"
+    # enable the unit, but don't start it
+    [ -x /bin/systemctl ] && systemctl enable bitmarkd.service >/dev/null 2>&1 || true
+    ;;
+
+  (abort-upgrade|abort-remove|abort-deconfigure)
+    ;;
+
+  (*)
+    echo "postinst called with unknown argument \`$1'" >&2
+    exit 1
+    ;;
+esac
+
+exit 0

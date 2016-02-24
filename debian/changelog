@@ -1,0 +1,6 @@
+bitmarkd (0.0.0+dfsg1-1) unstable; urgency=medium
+
+  * Initial release (Closes: #0, #0)
+  * Document initial release.
+
+ -- Bitmark Developers <developers@bitmark.com>  Fri, 19 Feb 2016 18:23:30 +0800
