@@ -24,7 +24,7 @@ case "$1" in
     ;;
 
   (purge)
-    [ -x /bin/systemctl ] && systemctl stop bitmarkd.service
+    [ -x /bin/systemctl ] && systemctl stop bitmarkd.service >/dev/null 2>&1 || true
     # By debian Policy §6.5, we may only rely on essential packages and
     # must fail gracefully if they are unavailable.
     # Use userdel/groupdel from passwd instead of deluser/delgroup from
@@ -38,7 +38,7 @@ case "$1" in
     ;;
 
   (remove|failed-upgrade|abort-install|abort-upgrade|disappear)
-    [ -x /bin/systemctl ] && systemctl stop bitmarkd.service
+    [ -x /bin/systemctl ] && systemctl stop bitmarkd.service >/dev/null 2>&1 || true
     ;;
 
   (*)

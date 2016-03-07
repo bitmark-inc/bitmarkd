@@ -20,7 +20,7 @@ case "$1" in
     # create user
     id bitmarkd > /dev/null 2>&1 || \
       adduser --system --home /var/lib/bitmarkd \
-              --create-home --disabled-password \
+              --disabled-password \
               --gecos "Bitmark Daemon" \
               --ingroup bitmarkd bitmarkd
 

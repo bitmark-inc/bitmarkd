@@ -1,4 +1,4 @@
-bitmarkd (0.0.0+dfsg1-1) unstable; urgency=medium
+bitmarkd (1.0+20160226.2+gitf5c23ca-1) wily; urgency=medium
 
   * Initial release (Closes: #0, #0)
   * Document initial release.
