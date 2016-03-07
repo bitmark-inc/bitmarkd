@@ -5,11 +5,8 @@
 package main
 
 // the version
-var (
-	version string = "1"
+const (
+	MajorVersion = "1"
+	MinorVersion = "0"
+	Version      = MajorVersion + "." + MinorVersion
 )
-
-// Return string representation of version
-func Version() string {
-	return version
-}

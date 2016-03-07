@@ -11,7 +11,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/configuration"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/getoptions"
 	"github.com/bitmark-inc/bitmarkd/mine"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/payment"
@@ -21,6 +20,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/transaction"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/exitwithstatus"
+	"github.com/bitmark-inc/getoptions"
 	"github.com/bitmark-inc/listener"
 	"github.com/bitmark-inc/logger"
 	"os"
@@ -50,19 +50,22 @@ var lockWasCreated = false
 func main() {
 	// ensure exit handler is first
 	defer exitwithstatus.Handler()
-	//defer fmt.Printf("\nprogram exit\n")
 
-	program, options, arguments := getoptions.GetOS(getoptions.AliasMap{
-		"h": "help",
-		"?": "help",
-		"v": "verbose",
-		"q": "quiet",
-		"V": "version",
-		"c": "config-file",
-	})
+	flags := []getoptions.Option{
+		{"help", getoptions.NO_ARGUMENT, 'h'},
+		{"verbose", getoptions.NO_ARGUMENT, 'v'},
+		{"quiet", getoptions.NO_ARGUMENT, 'q'},
+		{"version", getoptions.NO_ARGUMENT, 'V'},
+		{"config-file", getoptions.REQUIRED_ARGUMENT, 'c'},
+	}
+
+	program, options, arguments, err := getoptions.GetOS(flags)
+	if nil != err {
+		exitwithstatus.Message("%s: getoptions error: %v", program, err)
+	}
 
 	if len(options["version"]) > 0 {
-		exitwithstatus.Message("%s: version: %s", program, Version())
+		exitwithstatus.Message("%s: version: %s", program, Version)
 	}
 
 	if len(options["help"]) > 0 {
