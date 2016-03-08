@@ -7,6 +7,6 @@ package main
 // the version
 const (
 	MajorVersion = "1"
-	MinorVersion = "0"
+	MinorVersion = "1"
 	Version      = MajorVersion + "." + MinorVersion
 )
