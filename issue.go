@@ -13,7 +13,7 @@ import (
 	bFault "github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/transaction"
-	"github.com/bitmark-inc/go-programs/bitmark-cli/fault"
+	"github.com/bitmark-inc/bitmark-cli/fault"
 	"net"
 	netrpc "net/rpc"
 	"time"
