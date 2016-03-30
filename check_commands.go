@@ -6,8 +6,8 @@ package main
 
 import (
 	"github.com/bitmark-inc/exitwithstatus"
-	"github.com/bitmark-inc/go-programs/bitmark-cli/configuration"
-	"github.com/bitmark-inc/go-programs/bitmark-cli/fault"
+	"github.com/bitmark-inc/bitmark-cli/configuration"
+	"github.com/bitmark-inc/bitmark-cli/fault"
 	"os"
 	"strconv"
 )

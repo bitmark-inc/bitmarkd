@@ -5,7 +5,7 @@
 package configuration
 
 import (
-	"github.com/bitmark-inc/go-programs/bitmark-cli/fault"
+	"github.com/bitmark-inc/bitmark-cli/fault"
 	"os"
 	"path/filepath"
 )

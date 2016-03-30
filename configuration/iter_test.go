@@ -5,7 +5,7 @@
 package configuration_test
 
 import (
-	"github.com/bitmark-inc/go-programs/bitmark-cli/configuration"
+	"github.com/bitmark-inc/bitmark-cli/configuration"
 	"testing"
 )
 

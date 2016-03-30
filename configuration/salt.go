@@ -8,7 +8,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"github.com/bitmark-inc/go-programs/bitmark-cli/fault"
+	"github.com/bitmark-inc/bitmark-cli/fault"
 	"io"
 )
 
