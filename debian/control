@@ -6,7 +6,6 @@ Uploaders: Bitmark Developers <developers@bitmark.com>
 Build-Depends: debhelper (>=9),
                dh-systemd,
                autoconf, automake, libtool, pkgconf,
-               libzmq3-dev,
                golang [!powerpc],
                gccgo [powerpc]
 Standards-Version: 3.9.6
