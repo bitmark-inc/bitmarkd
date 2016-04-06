@@ -2,8 +2,8 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-// maintain a memory pool of a number of elements
+// maintain severa pools of a number of elements in key->value form
 //
-// This maintains an in memory LRU list upto a fixed number of elements
-// and permanently store the data in LevelDB.
+// This maintains a LevelDB database split into a series of tables.
+// Each table is defined by a prefix byte.
 package pool

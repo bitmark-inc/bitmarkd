@@ -99,19 +99,30 @@ func TestPool(t *testing.T) {
 		t.Errorf("Fetch Overlap got duplicate: '%s:%s'", firstPair[1].Key, firstPair[1].Value)
 	}
 
-	// retrieve a key not in the pool's cache
-	d2, found := p.Get([]byte("key-two"))
-	if !found {
-		t.Errorf("not found")
+	// check key exists
+	testKey := []byte("key-two")
+	if !p.Has(testKey) {
+		t.Errorf("not found: %q", testKey)
+	}
+
+	// retrieve a key
+	d2 := p.Get(testKey)
+	if nil == d2 {
+		t.Errorf("not found: %q", testKey)
 	}
 	e2 := "data-two"
 	if string(d2) != e2 {
 		t.Errorf("Mismatch on Get, got: '%s'  expected: '%s'", d2, e2)
 	}
 
+	// check that key does not exist
+	if p.Has([]byte(nonExistantKey)) {
+		t.Errorf("unexpectedly found: %q", nonExistantKey)
+	}
+
 	// retrieve a key not in the pool
-	dn, found := p.Get(nonExistantKey)
-	if found {
+	dn := p.Get(nonExistantKey)
+	if nil != dn {
 		t.Errorf("Unexpected data on Get, got: '%s'  expected: nil", dn)
 	}
 
@@ -153,13 +164,13 @@ func checkAgain(t *testing.T, empty bool) {
 
 	for i, e := range check {
 
-		data, found := p.Get([]byte(e.Key))
+		data := p.Get([]byte(e.Key))
 		if empty {
-			if found {
+			if nil != data {
 				t.Errorf("checkAgain: %d: Unexpected data on Get('%s'), got: '%s'  expected: nil", i, e.Key, data)
 			}
 		} else {
-			if !found {
+			if nil == data {
 				t.Errorf("checkAgain: %d: Error on Get('%s') not found", i, e.Key)
 			}
 			if !bytes.Equal(data, e.Value) {
@@ -180,9 +191,14 @@ func checkAgain(t *testing.T, empty bool) {
 		t.Errorf("checkAgain: data: %s", data)
 	}
 
+	// check that key does not exist
+	if p.Has([]byte(nonExistantKey)) {
+		t.Errorf("unexpectedly found: %q", nonExistantKey)
+	}
+
 	// attempt to retrieve a key that does not exist
-	dn, found := p.Get(nonExistantKey)
-	if found {
+	dn := p.Get(nonExistantKey)
+	if nil != dn {
 		t.Errorf("checkAgain: Unexpected data on Get('/nonexistant'), got: '%s'  expected: nil", dn)
 	}
 }

@@ -23,6 +23,7 @@ var poolData struct {
 type Pool struct {
 	sync.RWMutex
 	prefix byte
+	limit  []byte
 }
 
 // a binary data item
@@ -72,24 +73,37 @@ func New(prefix nameb) *Pool {
 	if nil == poolData.database {
 		fault.Panic("pool.New - not initialised")
 	}
+	limit := []byte(nil)
+	if prefix < 255 {
+		limit = []byte{byte(prefix) + 1}
+	}
 	pool := Pool{
 		prefix: byte(prefix),
+		limit:  limit,
 	}
 
 	return &pool
+}
+
+// flush the pool channel
+func (p *Pool) Flush() {
+	// p.Lock()
+	// defer p.Unlock()
+	// not needed
+}
+
+// prepend the prefix onto the key
+func (p *Pool) prefixKey(key []byte) []byte {
+	prefixedKey := make([]byte, 1, len(key)+1)
+	prefixedKey[0] = p.prefix
+	return append(prefixedKey, key...)
 }
 
 // add a key/value bytes pair to the database
 func (p *Pool) Add(key []byte, value []byte) {
 	p.Lock()
 	defer p.Unlock()
-
-	// write to database
-	prefixedKey := make([]byte, 1, len(key)+1)
-	prefixedKey[0] = p.prefix
-	prefixedKey = append(prefixedKey, key...)
-
-	err := poolData.database.Put(prefixedKey, value, nil)
+	err := poolData.database.Put(p.prefixKey(key), value, nil)
 	fault.PanicIfError("pool.Add", err)
 }
 
@@ -97,42 +111,38 @@ func (p *Pool) Add(key []byte, value []byte) {
 func (p *Pool) Remove(key []byte) {
 	p.Lock()
 	defer p.Unlock()
-
-	// delete from database
-	prefixedKey := make([]byte, 1, len(key)+1)
-	prefixedKey[0] = p.prefix
-	prefixedKey = append(prefixedKey, key...)
-
-	err := poolData.database.Delete(prefixedKey, nil)
+	err := poolData.database.Delete(p.prefixKey(key), nil)
 	fault.PanicIfError("pool.Remove", err)
 }
 
 // read a value for a given key
 //
-// this returns the actual element - copy it if you need to
-// returns "found" as boolean
-func (p *Pool) Get(key []byte) ([]byte, bool) {
+// this returns the actual element - copy the result if it must be preserved
+func (p *Pool) Get(key []byte) []byte {
 	p.Lock()
 	defer p.Unlock()
-
-	prefixedKey := make([]byte, 1, len(key)+1)
-	prefixedKey[0] = p.prefix
-	prefixedKey = append(prefixedKey, key...)
-	value, err := poolData.database.Get(prefixedKey, nil)
+	value, err := poolData.database.Get(p.prefixKey(key), nil)
 	if leveldb.ErrNotFound == err {
-		return nil, false
+		return nil
 	}
 	fault.PanicIfError("pool.Get", err)
+	return value
+}
 
-	return value, true
+// Check if a key exists
+func (p *Pool) Has(key []byte) bool {
+	p.Lock()
+	defer p.Unlock()
+	value, err := poolData.database.Has(p.prefixKey(key), nil)
+	fault.PanicIfError("pool.Has", err)
+	return value
 }
 
 // get the last element in a pool
 func (p *Pool) LastElement() (Element, bool) {
-
 	maxRange := util.Range{
-		Start: []byte{p.prefix},     // Start of key range, included in the range
-		Limit: []byte{p.prefix + 1}, // Limit of key range, excluded from the range
+		Start: []byte{p.prefix}, // Start of key range, included in the range
+		Limit: p.limit,          // Limit of key range, excluded from the range
 	}
 
 	iter := poolData.database.NewIterator(&maxRange, nil)
@@ -174,17 +184,14 @@ func (p *Pool) NewFetchCursor() *FetchCursor {
 	return &FetchCursor{
 		pool: p,
 		maxRange: util.Range{
-			Start: []byte{p.prefix},     // Start of key range, included in the range
-			Limit: []byte{p.prefix + 1}, // Limit of key range, excluded from the range
+			Start: []byte{p.prefix}, // Start of key range, included in the range
+			Limit: p.limit,          // Limit of key range, excluded from the range
 		},
 	}
 }
 
 func (cursor *FetchCursor) Seek(key []byte) *FetchCursor {
-	prefixedKey := make([]byte, 1, len(key)+1)
-	prefixedKey[0] = cursor.pool.prefix
-	prefixedKey = append(prefixedKey, key...)
-	cursor.maxRange.Start = prefixedKey
+	cursor.maxRange.Start = cursor.pool.prefixKey(key)
 	return cursor
 }
 
@@ -249,13 +256,9 @@ type Iterator struct {
 // fetch some elements starting from key
 func (p *Pool) Iterate(key []byte) *Iterator {
 
-	prefixedKey := make([]byte, 1, len(key)+1)
-	prefixedKey[0] = p.prefix
-	prefixedKey = append(prefixedKey, key...)
-
 	maxRange := util.Range{
-		Start: prefixedKey,          // Start of key range, included in the range
-		Limit: []byte{p.prefix + 1}, // Limit of key range, excluded from the range
+		Start: p.prefixKey(key), // Start of key range, included in the range
+		Limit: p.limit,          // Limit of key range, excluded from the range
 	}
 
 	return &Iterator{
@@ -290,14 +293,4 @@ func (it *Iterator) Release() {
 	it.iter.Release()
 	err := it.iter.Error()
 	fault.PanicIfError("pool.Iterator.Release", err)
-}
-
-// flush the pool channel
-//
-// create empty index and LRU cache
-func (p *Pool) Flush() {
-	p.Lock()
-	defer p.Unlock()
-
-	return
 }
