@@ -187,25 +187,25 @@ func GenesisBlock() Packed {
 }
 
 // fetch a stored block
-func Get(number uint64) (Packed, bool) {
+func Get(number uint64) Packed {
 
 	if number < 1 {
-		return nil, false
+		return nil
 	}
 
 	// genesis block
 	if GenesisBlockNumber == number {
-		return GenesisBlock(), true
+		return GenesisBlock()
 	}
 
 	blockKey := make([]byte, uint64Size)
 	binary.BigEndian.PutUint64(blockKey, number)
 
-	data, found := globalBlock.blockData.Get(blockKey)
-	if !found {
-		return nil, false
+	data := globalBlock.blockData.Get(blockKey)
+	if nil == data {
+		return nil
 	}
-	return Packed(data), true
+	return Packed(data)
 }
 
 // store a block

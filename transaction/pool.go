@@ -94,7 +94,7 @@ func Initialise() {
 			txId := t.Key
 			transactionPool.log.Tracef("check state for: %x", txId)
 
-			if _, found := transactionPool.statePool.Get(txId); !found {
+			if !transactionPool.statePool.Has(txId) {
 				transactionPool.log.Criticalf("Initialise: missing state for TxId: %x", txId)
 				abort = true
 			}
@@ -121,8 +121,8 @@ func Initialise() {
 	abort = false
 	for n := uint64(2); n < lastBlock; n += 1 {
 		transactionPool.log.Debugf("set confirmed from block: %d", n)
-		packed, found := block.Get(n)
-		if !found {
+		packed := block.Get(n)
+		if nil == packed {
 			fault.Panicf("transaction.Initialise: missing block: %d", n)
 		}
 		var blk block.Block
@@ -134,7 +134,7 @@ func Initialise() {
 		// rewrite as confirmed
 		for _, txId := range blk.TxIds {
 			indexBuffer := Link(txId).Bytes()
-			if _, found := transactionPool.dataPool.Get(indexBuffer); found {
+			if transactionPool.dataPool.Has(indexBuffer) {
 				transactionPool.statePool.Add(indexBuffer, stateBuffer)
 			} else {
 				transactionPool.log.Criticalf("Initialise: missing tx: %#v", Link(txId))
@@ -159,7 +159,7 @@ func Initialise() {
 		}
 
 		for _, e := range assets {
-			if _, found := transactionPool.dataPool.Get(e.Value); !found {
+			if !transactionPool.dataPool.Has(e.Value) {
 				var txId Link
 				err := LinkFromBytes(&txId, e.Value)
 				fault.PanicIfError("transaction.Initialise: failed to convert link", err)
@@ -202,7 +202,7 @@ func Initialise() {
 			txId := e.Key
 			indexBuffer := e.Value[1:]
 
-			if _, found := transactionPool.dataPool.Get(txId); !found {
+			if !transactionPool.dataPool.Has(txId) {
 				var txId Link
 				err := LinkFromBytes(&txId, e.Value)
 				fault.PanicIfError("transaction.Initialise: failed to convert link", err)
@@ -218,7 +218,7 @@ func Initialise() {
 			case PendingTransaction:
 				transactionPool.pendingCounter.Increment()
 				// ensure an old timestamp is not updated
-				if _, found := transactionPool.pendingPool.Get(indexBuffer); !found {
+				if !transactionPool.pendingPool.Has(indexBuffer) {
 					// Link ++ int64[timestamp]
 					pendingData := make([]byte, LinkSize+8)
 					copy(pendingData, txId)
@@ -262,8 +262,8 @@ func Initialise() {
 		}
 
 		for _, record := range records {
-			state, found := transactionPool.statePool.Get(record.Value[:LinkSize])
-			if !found || PendingTransaction != State(state[0]) {
+			state := transactionPool.statePool.Get(record.Value[:LinkSize])
+			if nil == state || PendingTransaction != State(state[0]) {
 				transactionPool.pendingPool.Remove(record.Key)
 				transactionPool.pendingCounter.Decrement()
 			}
@@ -327,7 +327,7 @@ func (data Packed) Write(link *Link, overwriteAssetIndex bool) error {
 
 	// if in overwrite mode, skip the exists check
 	if !overwriteAssetIndex {
-		if _, found := transactionPool.statePool.Get(txId); found {
+		if transactionPool.statePool.Has(txId) {
 			return fault.ErrTransactionAlreadyExists
 		}
 	}
@@ -349,9 +349,9 @@ func (data Packed) Write(link *Link, overwriteAssetIndex bool) error {
 	case *AssetData:
 		asset := tx.(*AssetData)
 		assetIndex := asset.AssetIndex().Bytes()
-		altTxId, found := transactionPool.assetPool.Get(assetIndex)
-		transactionPool.log.Debugf("found: %v  txid: %x  new transaction id: %x", found, txId, altTxId)
-		if found {
+		altTxId := transactionPool.assetPool.Get(assetIndex)
+		transactionPool.log.Debugf("txid: %x  new transaction id: %x", txId, altTxId)
+		if nil != altTxId {
 			// determine link for pre-existing version of the same asset
 			err := LinkFromBytes(link, altTxId)
 			fault.PanicIfError("transaction.write asset", err)
@@ -373,28 +373,28 @@ func (data Packed) Write(link *Link, overwriteAssetIndex bool) error {
 		assetIndex := transfer.AssetIndex.Bytes()
 
 		// must link to an Asset
-		assetLink, found := transactionPool.assetPool.Get(assetIndex)
-		if !found {
+		assetLink := transactionPool.assetPool.Get(assetIndex)
+		if nil == assetLink {
 			transactionPool.log.Warnf("write tx, issue asset: %x", assetIndex)
 			return fault.ErrAssetNotFound
 		}
 
 		// check asset
-		assetState, found := transactionPool.statePool.Get(assetLink)
-		if !found {
-			_, dataFound := transactionPool.dataPool.Get(assetLink)
+		assetState := transactionPool.statePool.Get(assetLink)
+		if nil == assetState {
+			dataFound := transactionPool.dataPool.Has(assetLink)
 			transactionPool.log.Criticalf("write tx, asset Index: %x", assetIndex)
 			transactionPool.log.Criticalf("write tx, asset tx id: %x", assetLink)
 			transactionPool.log.Criticalf("write tx, data found:  %v", dataFound)
-			transactionPool.log.Criticalf("write tx, state found: %v", found)
+			transactionPool.log.Criticalf("write tx, state found: %v", assetState)
 			fault.Panicf("write tx, no asset state for id: %x", assetLink)
 			return fault.ErrAssetNotFound // not reached
 		}
 
 		// if asset is pending update timestamp and write back to give a longer expiry
 		if PendingTransaction == State(assetState[0]) {
-			data, found := transactionPool.pendingPool.Get(assetState[1:])
-			if !found {
+			data := transactionPool.pendingPool.Get(assetState[1:])
+			if nil == data {
 				fault.Panicf("write tx, no asset pending state for assetIndex: %x", assetIndex)
 				return fault.ErrAssetNotFound // not reached
 			}
@@ -445,16 +445,16 @@ func (data Packed) Write(link *Link, overwriteAssetIndex bool) error {
 			transactionPool.statePool.Remove(deletableTxId)
 
 			// need to remove from pending and/or verified if they exist and match
-			if oldAssetState, found := transactionPool.statePool.Get(deletableTxId); found {
+			if oldAssetState := transactionPool.statePool.Get(deletableTxId); nil != oldAssetState {
 				indexBuffer := oldAssetState[1:] // get counter value
-				if pending, found := transactionPool.pendingPool.Get(indexBuffer); found {
+				if pending := transactionPool.pendingPool.Get(indexBuffer); nil != pending {
 					if bytes.Equal(pending[:LinkSize], deletableTxId) {
 						transactionPool.log.Debugf("delete pending: %x", indexBuffer)
 						transactionPool.pendingPool.Remove(indexBuffer)
 						transactionPool.pendingCounter.Decrement()
 					}
 				}
-				if verified, found := transactionPool.verifiedPool.Get(indexBuffer); found {
+				if verified := transactionPool.verifiedPool.Get(indexBuffer); nil != verified {
 					if bytes.Equal(verified[:LinkSize], deletableTxId) {
 						transactionPool.log.Debugf("delete verified: %x", indexBuffer)
 						transactionPool.verifiedPool.Remove(indexBuffer)
@@ -480,13 +480,13 @@ func (data Packed) Write(link *Link, overwriteAssetIndex bool) error {
 //   true if data was found
 func (link Link) Read() (State, Packed, bool) {
 	id := link.Bytes()
-	state, found := transactionPool.statePool.Get(id)
-	if !found {
+	state := transactionPool.statePool.Get(id)
+	if nil == state {
 		return ExpiredTransaction, nil, false
 	}
 
-	result, found := transactionPool.dataPool.Get(id)
-	if !found {
+	result := transactionPool.dataPool.Get(id)
+	if nil == result {
 		return ExpiredTransaction, nil, false
 	}
 	return State(state[0]), result, true
@@ -499,8 +499,8 @@ func (link Link) Read() (State, Packed, bool) {
 //   true if data was found
 func (link Link) GetState() (State, bool) {
 	id := link.Bytes()
-	state, found := transactionPool.statePool.Get(id)
-	if !found {
+	state := transactionPool.statePool.Get(id)
+	if nil == state {
 		return ExpiredTransaction, false
 	}
 	return State(state[0]), true
@@ -513,13 +513,13 @@ func (link Link) GetState() (State, bool) {
 //   transaction ID - can be used in link.READ
 //   true if data was found
 func (asset AssetIndex) Read() (State, Link, bool) {
-	id, found := transactionPool.assetPool.Get(asset.Bytes())
-	if !found {
+	id := transactionPool.assetPool.Get(asset.Bytes())
+	if nil == id {
 		return ExpiredTransaction, Link{}, false
 	}
 
-	state, found := transactionPool.statePool.Get(id)
-	if !found {
+	state := transactionPool.statePool.Get(id)
+	if nil == state {
 		return ExpiredTransaction, Link{}, false
 	}
 
@@ -533,8 +533,8 @@ func (asset AssetIndex) Read() (State, Link, bool) {
 
 // see if allowed to transfer ownership
 func (link Link) IsOwner(address *Address) bool {
-	publicKeyAndAssetDataLink, found := transactionPool.ownerPool.Get(link.Bytes())
-	if !found {
+	publicKeyAndAssetDataLink := transactionPool.ownerPool.Get(link.Bytes())
+	if nil == publicKeyAndAssetDataLink {
 		return false
 	}
 	length := len(publicKeyAndAssetDataLink)
@@ -553,8 +553,8 @@ func setAsset(assetNewState State, timestamp uint64, unpackedTransaction interfa
 	assetIndex := issue.AssetIndex.Bytes()
 
 	// fetch the TxId corresponding to the asset
-	assetTxId, found := transactionPool.assetPool.Get(assetIndex)
-	if !found {
+	assetTxId := transactionPool.assetPool.Get(assetIndex)
+	if nil == assetTxId {
 		fault.PanicWithError("transaction.SetState", fault.ErrLinkNotFound)
 	}
 
@@ -570,8 +570,8 @@ func setAsset(assetNewState State, timestamp uint64, unpackedTransaction interfa
 		setVerified(assetOldState, assetOldIndex, assetTxId, timestamp)
 	case ConfirmedTransaction:
 		// fetch and decode the asset transaction
-		rawTx, found := transactionPool.dataPool.Get(assetTxId)
-		if !found {
+		rawTx := transactionPool.dataPool.Get(assetTxId)
+		if nil == rawTx {
 			fault.Panicf("transaction.setAsset: missing transaction for asset id: %x", assetTxId)
 		}
 		unpackedAssetTransaction, err := Packed(rawTx).Unpack()
@@ -645,8 +645,8 @@ func setConfirmed(oldState State, oldIndex []byte, txId []byte, unpackedTransact
 		assetIndex := transfer.AssetIndex.Bytes()
 
 		// must link to an Asset
-		previous, found := transactionPool.assetPool.Get(assetIndex)
-		if !found {
+		previous := transactionPool.assetPool.Get(assetIndex)
+		if nil == previous {
 			fault.PanicWithError("transaction.setConfirmed", fault.ErrLinkNotFound)
 		}
 
@@ -663,20 +663,21 @@ func setConfirmed(oldState State, oldIndex []byte, txId []byte, unpackedTransact
 
 		// previous record
 		previousLink := transfer.Link.Bytes()
-		previous, found := transactionPool.ownerPool.Get(previousLink)
-		if !found {
+		previous := transactionPool.ownerPool.Get(previousLink)
+		if nil == previous {
+			fault.Criticalf("transaction.setConfirmed: no previous owner for: %v", previousLink)
 			fault.PanicWithError("transaction.setConfirmed", fault.ErrLinkNotFound)
 		}
 
 		// split the record
 		length := len(previous) - LinkSize
-		previousOwner := previous[:length]
+		//previousOwner := previous[:length]
 		assetDataLink := previous[length:]
 
-		// avoid side effect modification of assetDataLink
-		previousKey := make([]byte, 0, len(previousOwner)+LinkSize)
-		previousKey = append(previousKey, previousOwner...)
-		previousKey = append(previousKey, previousLink...)
+		// // avoid side effect modification of assetDataLink
+		// previousKey := make([]byte, 0, len(previousOwner)+LinkSize)
+		// previousKey = append(previousKey, previousOwner...)
+		// previousKey = append(previousKey, previousLink...)
 
 		ownerData := append(transfer.Owner.PublicKeyBytes(), assetDataLink...)
 
@@ -704,8 +705,8 @@ func setConfirmed(oldState State, oldIndex []byte, txId []byte, unpackedTransact
 }
 
 func getStateIndex(txId []byte) (oldState State, oldIndex []byte) {
-	tempStateData, found := transactionPool.statePool.Get(txId)
-	if !found {
+	tempStateData := transactionPool.statePool.Get(txId)
+	if nil == tempStateData {
 		fault.Criticalf("transaction.getTx: cannot find txid: %x", txId)
 		fault.Panic("transaction.getTx: missing transaction state")
 	}
@@ -732,8 +733,8 @@ func (link Link) SetState(newState State) {
 	}
 
 	// fetch and decode the transaction
-	rawTx, found := transactionPool.dataPool.Get(txId)
-	if !found {
+	rawTx := transactionPool.dataPool.Get(txId)
+	if nil == rawTx {
 		fault.Panicf("transaction.SetState: missing transaction for id: %#v", link)
 	}
 	unpackedTransaction, err := Packed(rawTx).Unpack()
@@ -830,27 +831,17 @@ func (data Packed) Exists() (Link, bool) {
 	case AssetDataTag:
 		asset, err := data.Unpack()
 		fault.PanicIfError("transaction.pool.Exists: unpack asset error: %v", err)
-		idBytes, found := transactionPool.assetPool.Get(asset.(*AssetData).AssetIndex().Bytes())
+		idBytes := transactionPool.assetPool.Get(asset.(*AssetData).AssetIndex().Bytes())
 		var id Link
 		err = LinkFromBytes(&id, idBytes)
-		if found && nil != err {
+		if nil != idBytes && nil != err {
 			fault.Panicf("transaction.pool.Exists: database corruption detected cannot convert asset link: %x  error: %v", idBytes, err)
 		}
-		return id, found
+		return id, nil != idBytes
 	default:
 	}
 
 	id := data.MakeLink()
-	result, found := transactionPool.dataPool.Get(id.Bytes()) // ***** FIX THIS: implement Has(key) using the level db Has() to save reading 'result'
-	if !found {
-		return id, false
-	}
-
-	// check for corrupted database - is this necessary?  // ***** FIX THIS: could eliminate and use Has() above
-	if !bytes.Equal(data, result) {
-		fault.Panicf("transaction.pool.Exists: database corruption detected received tx: %x  local copy: %X", data, result)
-	}
-
-	// found the record
-	return id, true
+	found := transactionPool.dataPool.Has(id.Bytes())
+	return id, found
 }

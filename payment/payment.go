@@ -335,8 +335,8 @@ loop:
 			}
 		}
 		log.Infof("scanner: block: %d", currentBlockNumber)
-		packedBlock, ok := block.Get(currentBlockNumber)
-		if !ok {
+		packedBlock := block.Get(currentBlockNumber)
+		if nil == packedBlock {
 			log.Criticalf("failed to get block: %d", currentBlockNumber)
 			fault.Panic("paymentBackground failed to get block")
 		}

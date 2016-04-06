@@ -71,8 +71,7 @@ func (t *RPCs) Put(arguments *RpcPutArguments, reply *RpcPutReply) error {
 		return nil
 	}
 
-	_, found := announce.GetCertificate(&arguments.Fingerprint)
-	if !found {
+	if !announce.HasCertificate(&arguments.Fingerprint) {
 		reply.NeedCertificate = true
 		return nil
 	}

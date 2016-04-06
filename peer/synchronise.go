@@ -112,8 +112,8 @@ loop:
 		log.Infof("block: %d  digest: %#v", blk.Number, blk.Digest)
 
 		// fetch the previous block from local storage and see if needs to be replaced
-		previousPackedBlock, found := block.Get(n - 1)
-		if !found {
+		previousPackedBlock := block.Get(n - 1)
+		if nil == previousPackedBlock {
 			log.Errorf("missing previous block: %d", n-1)
 			n -= 1
 			success = true // ok to keep trying

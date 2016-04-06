@@ -59,8 +59,8 @@ func (blk *Block) Get(arguments *BlockGetArguments, reply *BlockGetReply) error 
 
 	log.Infof("Block.get: %v", arguments)
 
-	packed, found := block.Get(arguments.Number)
-	if !found {
+	packed := block.Get(arguments.Number)
+	if nil == packed {
 		return fault.ErrBlockNotFound
 	}
 

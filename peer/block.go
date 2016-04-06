@@ -83,8 +83,8 @@ type BlockGetReply struct {
 
 // read a specific block
 func (t *Block) Get(arguments *BlockGetArguments, reply *BlockGetReply) error {
-	data, found := block.Get(arguments.Number)
-	if !found {
+	data := block.Get(arguments.Number)
+	if nil == data {
 		return fault.ErrBlockNotFound
 	}
 	reply.Data = data

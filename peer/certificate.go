@@ -28,8 +28,8 @@ type GetCertificateReply struct {
 
 func (t *Certificate) Get(arguments *GetCertificateArguments, reply *GetCertificateReply) error {
 
-	certificate, found := announce.GetCertificate(&arguments.Fingerprint)
-	if !found {
+	certificate := announce.GetCertificate(&arguments.Fingerprint)
+	if nil == certificate {
 		return fault.ErrCertificateNotFound
 	}
 	reply.Certificate = certificate

@@ -14,7 +14,11 @@ func AddCertificate(fingerprint *util.FingerprintBytes, certificate []byte) {
 }
 
 // fetch a certificate
-func GetCertificate(fingerprint *util.FingerprintBytes) ([]byte, bool) {
-	certificate, found := announce.certificatePool.Get(fingerprint[:])
-	return certificate, found
+func GetCertificate(fingerprint *util.FingerprintBytes) []byte {
+	return announce.certificatePool.Get(fingerprint[:])
+}
+
+// certificate already stored
+func HasCertificate(fingerprint *util.FingerprintBytes) bool {
+	return announce.certificatePool.Has(fingerprint[:])
 }

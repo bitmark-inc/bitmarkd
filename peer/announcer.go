@@ -93,8 +93,8 @@ func (t *thread) announceOne(server *bilateralrpc.Bilateral, recent *announce.Re
 		return
 	}
 
-	certificate, found := announce.GetCertificate(recent.Data.Fingerprint)
-	if !found {
+	certificate := announce.GetCertificate(recent.Data.Fingerprint)
+	if nil == certificate {
 		// should have certificate
 		t.log.Errorf("missing certificate for: %v", recent.Data.Fingerprint)
 		return

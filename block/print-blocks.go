@@ -26,8 +26,8 @@ func PrintBlockTimes(fh io.Writer, beginBlockNumber uint64, endBlockNumber uint6
 	fmt.Fprintf(fh, "%q %q %q %q %q\n", "block number", "timestamp", "minutes", "pool difficulty", "Tx Count")
 	for blockNumber := beginBlockNumber; blockNumber <= endBlockNumber; blockNumber += 1 {
 
-		packed, exists := Get(blockNumber)
-		if !exists {
+		packed := Get(blockNumber)
+		if nil == packed {
 			fmt.Fprintf(fh, "%d ***MISSING***\n", blockNumber)
 			continue
 		}
