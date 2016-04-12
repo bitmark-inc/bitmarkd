@@ -175,16 +175,14 @@ loop:
 
 		link := id // save for later
 
-		record := "*unknown*"
+		record, _ := transaction.RecordName(id)
 		done := false
 
 		switch tx.(type) {
 		case *transaction.AssetData:
-			record = "AssetData"
 			done = true
 
 		case *transaction.BitmarkIssue:
-			record = "BitmarkIssue"
 			_, id, found = tx.(*transaction.BitmarkIssue).AssetIndex.Read()
 			if !found {
 				done = true
@@ -192,7 +190,6 @@ loop:
 			//id = tx.(*transaction.BitmarkIssue).Link
 
 		case *transaction.BitmarkTransfer:
-			record = "BitmarkTransfer"
 			id = tx.(*transaction.BitmarkTransfer).Link
 
 		default:

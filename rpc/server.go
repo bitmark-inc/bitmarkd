@@ -51,6 +51,10 @@ func Callback(conn io.ReadWriteCloser, argument interface{}) {
 		bitmark: bitmark,
 	}
 
+	owner := &Owner{
+		log: serverArgument.Log,
+	}
+
 	blk := &Block{
 		log: serverArgument.Log,
 	}
@@ -72,6 +76,7 @@ func Callback(conn io.ReadWriteCloser, argument interface{}) {
 	server.Register(assets)
 	server.Register(bitmark)
 	server.Register(bitmarks)
+	server.Register(owner)
 	server.Register(blk)
 	server.Register(tx)
 	server.Register(pool)

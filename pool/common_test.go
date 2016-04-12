@@ -15,9 +15,6 @@ const (
 	databaseFileName = "test.leveldb"
 )
 
-// a key that must not exist
-var nonExistantKey = []byte("/nonexistant")
-
 // common test setup routines
 
 // remove all files created by test
@@ -54,3 +51,24 @@ func makeElements(input []stringElement) []pool.Element {
 	}
 	return output
 }
+
+// data for various test routines
+
+// this is the expected order
+var expectedElements = makeElements([]stringElement{
+	{"key-five", "data-five"},
+	{"key-four", "data-four"},
+	{"key-one", "data-one(NEW)"},
+	{"key-seven", "data-seven"},
+	{"key-six", "data-six"},
+	{"key-three", "data-three"},
+	{"key-two", "data-two"},
+	// {"key-one", "data-one"}, // this was removed
+})
+
+// a key that must not exist
+var nonExistantKey = []byte("/nonexistant")
+
+// sample key and data
+var testKey = []byte("key-two")
+var testData = "data-two"

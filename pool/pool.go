@@ -5,6 +5,7 @@
 package pool
 
 import (
+	"bytes"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
@@ -32,6 +33,10 @@ type Element struct {
 	Value []byte
 }
 
+// for database version
+var versionKey = []byte{internalPrefix, 'V', 'E', 'R', 'S', 'I', 'O', 'N'}
+var currentVersion = []byte{0x00, 0x00, 0x00, 0x01}
+
 // open up the database connection
 //
 // this must be called before any pool.New() is created
@@ -49,6 +54,18 @@ func Initialise(database string) {
 	fault.PanicIfError("pool.Initialise", err)
 
 	poolData.database = db
+
+	// ensure that the database is compatible
+	versionValue, err := poolData.database.Get(versionKey, nil)
+	if leveldb.ErrNotFound == err {
+		err := poolData.database.Put(versionKey, currentVersion, nil)
+		fault.PanicIfError("pool.Initialise set version", err)
+	} else if nil != err {
+		fault.PanicWithError("pool.Initialise get version", err)
+	}
+	if !bytes.Equal(versionValue, currentVersion) {
+		fault.Panicf("incompatible database version: expected: %x  actual: %x", currentVersion, versionValue)
+	}
 }
 
 // close the database connection
@@ -66,7 +83,7 @@ func Finalise() {
 	return
 }
 
-// create a new pool with a specific key prefix an optional local memory cache
+// create a new pool with a specific key prefix
 func New(prefix nameb) *Pool {
 	poolData.Lock()
 	defer poolData.Unlock()

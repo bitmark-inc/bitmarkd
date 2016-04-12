@@ -242,6 +242,11 @@ func (difficulty *Difficulty) Adjust(expectedMinutes float64, actualMinutes floa
 
 	newPdiff := k * difficulty.pdiff
 
+	// protect against underflow
+	if newPdiff < 1.0 {
+		newPdiff = 1.0
+	}
+
 	// compute filter
 	newPdiff = difficulty.filter.Process(newPdiff)
 

@@ -7,32 +7,33 @@ package pool
 // Notes:
 // 1. each separate pool has a single byte prefix (to spread the keys in LevelDB)
 // 2. digest = sha256(sha256(data)) i.e. must be compatible with Bitcoin merkle tree
-// 3. prop = registration-transfer-digest
 //
 // Blocks:
 //
-//   B<block-number>       - block store (already mined blocks) = header + cbLength + coinbase + count + merkle tree of transactions
+//   B<block-number>                - block store (already mined blocks) = header + cbLength + coinbase + count + merkle tree of transactions
 //
 // Transactions:
 //
-//   T<tx-digest>          - packed transaction data
-//   S<tx-digest>          - state: byte[expired(E), pending(P), verified(V), confirmed(C)] ++ int64[the U/V table count value]
-//   U<count>              - transaction-digest ++ int64[timestamp] (pending unverified transactions waiting for payment)
-//   V<count>              - transaction-digest ++ int64[timestamp] (verified transactions, Available for mining)
+//   T<tx-digest>                   - packed transaction data
+//   S<tx-digest>                   - state: byte[expired(E), pending(P), verified(V), confirmed(C)] ++ int64[the U/V table count value]
+//   U<count>                       - transaction-digest ++ int64[timestamp] (pending unverified transactions waiting for payment)
+//   V<count>                       - transaction-digest ++ int64[timestamp] (verified transactions, Available for mining)
 //
 // Assets:
 //
-//   I<assetIndex>         - transaction-digest (to locate the AssetData transaction)
+//   I<assetIndex>                  - transaction-digest (to locate the AssetData transaction)
 //
 // Ownership:
 //
-//   O<bmtran-digest>      - owner public key ++ registration digest (to check current ownership of property)
+//   N<owner-pubkey>                - count (for owner indexing)
+//   K<owner-pubkey><count>         - tx-digest ++ issue tx-digest ++ asset-digest
+//   D<owner-pubkey><tx-digest>     - count
 //
 // Networking:
 //
-//   P<IP:port>            - P2P: ZMQ public-key
-//   R<IP:port>            - RPC: certificate-fingerprint
-//   C<fingerprint>        - raw certificate
+//   P<IP:port>                     - P2P: ZMQ public-key
+//   R<IP:port>                     - RPC: certificate-fingerprint
+//   C<fingerprint>                 - raw certificate
 
 // type for pool name
 type nameb byte
@@ -56,11 +57,16 @@ const (
 	AssetData = nameb('I')
 
 	// ownership indexes
-	OwnerIndex = nameb('O')
+	OwnerCount  = nameb('N')
+	Ownership   = nameb('K')
+	OwnerDigest = nameb('D')
 
 	// blocks
 	BlockData = nameb('B')
 
 	// just for testing
 	TestData = nameb('Z')
+
+	// for internal pool use
+	internalPrefix = byte(0x00)
 )

@@ -46,6 +46,20 @@ func TestPool(t *testing.T) {
 	poolAdd(t, p, "key-seven", "data-seven")
 	poolAdd(t, p, "key-one", "data-one(NEW)") // duplicate
 
+	// ensure that data is correct
+	checkResults(t, p)
+
+	// recheck
+	checkAgain(t, false)
+
+	// check that restarting database keeps data
+	pool.Finalise()
+	pool.Initialise(databaseFileName)
+	checkAgain(t, false)
+}
+
+func checkResults(t *testing.T, p *pool.Pool) {
+
 	// ensure we get all of the pool
 	cursor := p.NewFetchCursor()
 	data, err := cursor.Fetch(20)
@@ -54,32 +68,19 @@ func TestPool(t *testing.T) {
 		return
 	}
 
-	// this is the expected order
-	check := makeElements([]stringElement{
-		{"key-five", "data-five"},
-		{"key-four", "data-four"},
-		{"key-one", "data-one(NEW)"},
-		{"key-seven", "data-seven"},
-		{"key-six", "data-six"},
-		{"key-three", "data-three"},
-		{"key-two", "data-two"},
-		// {"key-one", "data-one"}, // this was removed
-
-	})
-
 	// ensure lengths match
-	if len(data) != len(check) {
-		t.Errorf("Length mismatch, got: %d  expected: %d", len(data), len(check))
+	if len(data) != len(expectedElements) {
+		t.Errorf("Length mismatch, got: %d  expected: %d", len(data), len(expectedElements))
 	}
 
 	// compare all items from pool
 	for i, a := range data {
-		if i >= len(check) {
+		if i >= len(expectedElements) {
 			t.Errorf("%d: Excess, got: '%s'  expected: Nothing", i, a)
-		} else if !bytes.Equal(check[i].Key, a.Key) || !bytes.Equal(check[i].Value, a.Value) {
+		} else if !bytes.Equal(expectedElements[i].Key, a.Key) || !bytes.Equal(expectedElements[i].Value, a.Value) {
 			t.Errorf("%d: Mismatch, got: '%s:%s'  expected: '%s:%s'", i,
 				a.Key, a.Value,
-				check[i].Key, check[i].Value)
+				expectedElements[i].Key, expectedElements[i].Value)
 		}
 	}
 
@@ -100,7 +101,6 @@ func TestPool(t *testing.T) {
 	}
 
 	// check key exists
-	testKey := []byte("key-two")
 	if !p.Has(testKey) {
 		t.Errorf("not found: %q", testKey)
 	}
@@ -110,9 +110,8 @@ func TestPool(t *testing.T) {
 	if nil == d2 {
 		t.Errorf("not found: %q", testKey)
 	}
-	e2 := "data-two"
-	if string(d2) != e2 {
-		t.Errorf("Mismatch on Get, got: '%s'  expected: '%s'", d2, e2)
+	if string(d2) != testData {
+		t.Errorf("Mismatch on Get, got: '%s'  expected: '%s'", d2, testData)
 	}
 
 	// check that key does not exist
@@ -125,14 +124,6 @@ func TestPool(t *testing.T) {
 	if nil != dn {
 		t.Errorf("Unexpected data on Get, got: '%s'  expected: nil", dn)
 	}
-
-	// recheck
-	checkAgain(t, false)
-
-	// check that restarting database keeps data
-	pool.Finalise()
-	pool.Initialise(databaseFileName)
-	checkAgain(t, false)
 }
 
 func checkAgain(t *testing.T, empty bool) {
@@ -151,18 +142,7 @@ func checkAgain(t *testing.T, empty bool) {
 		t.Errorf("Pool was not empty, count = %d", len(data))
 	}
 
-	check := makeElements([]stringElement{
-		{"key-one", "data-one(NEW)"},
-		{"key-seven", "data-seven"},
-		{"key-six", "data-six"},
-		{"key-five", "data-five"},
-		{"key-four", "data-four"},
-		{"key-three", "data-three"},
-		{"key-two", "data-two"},
-		// {"key-one", "data-one"}, // this was removed
-	})
-
-	for i, e := range check {
+	for i, e := range expectedElements {
 
 		data := p.Get([]byte(e.Key))
 		if empty {

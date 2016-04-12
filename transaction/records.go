@@ -70,6 +70,23 @@ func (record Packed) Type() TagType {
 	return TagType(recordType)
 }
 
+// get the name of a transaction record as a string
+func RecordName(record interface{}) (string, bool) {
+	switch record.(type) {
+	case *AssetData, AssetData:
+		return "AssetData", true
+
+	case *BitmarkIssue, BitmarkIssue:
+		return "BitmarkIssue", true
+
+	case *BitmarkTransfer, BitmarkTransfer:
+		return "BitmarkTransfer", true
+
+	default:
+		return "*unknown*", false
+	}
+}
+
 // turn a byte slice into a record
 //
 // must cast result to correct type

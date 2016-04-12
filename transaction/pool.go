@@ -43,7 +43,9 @@ var transactionPool struct {
 	assetPool *pool.Pool // all assets
 
 	// owner index pools
-	ownerPool *pool.Pool // index of leaf bitmark transfers == current owner
+	ownerCountPool  *pool.Pool // couters for assigning indexes
+	ownershipPool   *pool.Pool // ownership data
+	ownerDigestPool *pool.Pool // back link for deletions after transfer
 
 	// counter for record index
 	// used as index for the pending/verified pools
@@ -75,7 +77,9 @@ func Initialise() {
 
 	transactionPool.assetPool = pool.New(pool.AssetData)
 
-	transactionPool.ownerPool = pool.New(pool.OwnerIndex)
+	transactionPool.ownerCountPool = pool.New(pool.OwnerCount)
+	transactionPool.ownershipPool = pool.New(pool.Ownership)
+	transactionPool.ownerDigestPool = pool.New(pool.OwnerDigest)
 
 	// check if transactions are missing state
 	dataCursor := transactionPool.dataPool.NewFetchCursor()
@@ -297,7 +301,6 @@ func Finalise() {
 	transactionPool.pendingPool.Flush()
 	transactionPool.verifiedPool.Flush()
 	transactionPool.assetPool.Flush()
-	transactionPool.ownerPool.Flush()
 	transactionPool.log.Info("shutting down…")
 	transactionPool.log.Flush()
 }
@@ -342,6 +345,10 @@ func (data Packed) Write(link *Link, overwriteAssetIndex bool) error {
 
 		return err // not reached
 	}
+
+	// batch updates
+	batch := pool.NewBatch()
+	defer batch.Commit()
 
 	deletableTxId := []byte(nil)
 
@@ -401,7 +408,7 @@ func (data Packed) Write(link *Link, overwriteAssetIndex bool) error {
 
 			binary.BigEndian.PutUint64(data[LinkSize:], timestamp)
 
-			transactionPool.pendingPool.Add(assetState[1:], data)
+			batch.Add(transactionPool.pendingPool, assetState[1:], data)
 		}
 
 	default:
@@ -429,20 +436,20 @@ func (data Packed) Write(link *Link, overwriteAssetIndex bool) error {
 	binary.BigEndian.PutUint64(pendingData[LinkSize:], timestamp)
 
 	// store in database
-	transactionPool.dataPool.Add(txId, data)
-	transactionPool.statePool.Add(txId, stateBuffer)
-	transactionPool.pendingPool.Add(indexBuffer, pendingData)
+	batch.Add(transactionPool.dataPool, txId, data)
+	batch.Add(transactionPool.statePool, txId, stateBuffer)
+	batch.Add(transactionPool.pendingPool, indexBuffer, pendingData)
 	switch tx.(type) {
 	case *AssetData:
 		asset := tx.(*AssetData)
 		assetIndex := asset.AssetIndex().Bytes()
-		transactionPool.assetPool.Add(assetIndex, txId)
+		batch.Add(transactionPool.assetPool, assetIndex, txId)
 		// clean up unused asset tx/state/indexes now the correct one has be stored
 		if nil != deletableTxId {
 			transactionPool.log.Debugf("replacement  txid: %x", txId)
 			transactionPool.log.Debugf("delete asset txid: %x", deletableTxId)
-			transactionPool.dataPool.Remove(deletableTxId)
-			transactionPool.statePool.Remove(deletableTxId)
+			batch.Remove(transactionPool.dataPool, deletableTxId)
+			batch.Remove(transactionPool.statePool, deletableTxId)
 
 			// need to remove from pending and/or verified if they exist and match
 			if oldAssetState := transactionPool.statePool.Get(deletableTxId); nil != oldAssetState {
@@ -450,14 +457,14 @@ func (data Packed) Write(link *Link, overwriteAssetIndex bool) error {
 				if pending := transactionPool.pendingPool.Get(indexBuffer); nil != pending {
 					if bytes.Equal(pending[:LinkSize], deletableTxId) {
 						transactionPool.log.Debugf("delete pending: %x", indexBuffer)
-						transactionPool.pendingPool.Remove(indexBuffer)
+						batch.Remove(transactionPool.pendingPool, indexBuffer)
 						transactionPool.pendingCounter.Decrement()
 					}
 				}
 				if verified := transactionPool.verifiedPool.Get(indexBuffer); nil != verified {
 					if bytes.Equal(verified[:LinkSize], deletableTxId) {
 						transactionPool.log.Debugf("delete verified: %x", indexBuffer)
-						transactionPool.verifiedPool.Remove(indexBuffer)
+						batch.Remove(transactionPool.verifiedPool, indexBuffer)
 						transactionPool.verifiedCounter.Decrement()
 					}
 				}
@@ -533,17 +540,12 @@ func (asset AssetIndex) Read() (State, Link, bool) {
 
 // see if allowed to transfer ownership
 func (link Link) IsOwner(address *Address) bool {
-	publicKeyAndAssetDataLink := transactionPool.ownerPool.Get(link.Bytes())
-	if nil == publicKeyAndAssetDataLink {
-		return false
-	}
-	length := len(publicKeyAndAssetDataLink)
-	publicKey := publicKeyAndAssetDataLink[:length-LinkSize]
-	return bytes.Equal(publicKey, address.PublicKeyBytes())
+	ownerDigestKey := append(address.PublicKeyBytes(), link.Bytes()...)
+	return transactionPool.ownerDigestPool.Has(ownerDigestKey)
 }
 
 // must be called with locked mutex
-func setAsset(assetNewState State, timestamp uint64, unpackedTransaction interface{}) {
+func setAsset(batch *pool.Batch, assetNewState State, timestamp uint64, unpackedTransaction interface{}) {
 	// if not a bitmark issue record the nothing to do
 	issue, ok := unpackedTransaction.(*BitmarkIssue)
 	if !ok {
@@ -567,7 +569,7 @@ func setAsset(assetNewState State, timestamp uint64, unpackedTransaction interfa
 	case ExpiredTransaction:
 	case PendingTransaction:
 	case VerifiedTransaction:
-		setVerified(assetOldState, assetOldIndex, assetTxId, timestamp)
+		setVerified(batch, assetOldState, assetOldIndex, assetTxId, timestamp)
 	case ConfirmedTransaction:
 		// fetch and decode the asset transaction
 		rawTx := transactionPool.dataPool.Get(assetTxId)
@@ -577,14 +579,14 @@ func setAsset(assetNewState State, timestamp uint64, unpackedTransaction interfa
 		unpackedAssetTransaction, err := Packed(rawTx).Unpack()
 		fault.PanicIfError("transaction.SetState: unpack", err)
 
-		setConfirmed(assetOldState, assetOldIndex, assetTxId, unpackedAssetTransaction)
+		setConfirmed(batch, assetOldState, assetOldIndex, assetTxId, unpackedAssetTransaction)
 	default:
 	}
 
 }
 
 // must be called with locked mutex
-func setVerified(oldState State, oldIndex []byte, txId []byte, timestamp uint64) bool {
+func setVerified(batch *pool.Batch, oldState State, oldIndex []byte, txId []byte, timestamp uint64) bool {
 
 	// create the index count in big endian order so
 	// iterator on the index will return items in the
@@ -597,7 +599,7 @@ func setVerified(oldState State, oldIndex []byte, txId []byte, timestamp uint64)
 	copy(stateBuffer[1:], indexBuffer)
 
 	// rewrite as available
-	transactionPool.statePool.Add(txId, stateBuffer)
+	batch.Add(transactionPool.statePool, txId, stateBuffer)
 
 	// Link ++ int64[timestamp]
 	verifiedData := make([]byte, LinkSize+8)
@@ -605,13 +607,13 @@ func setVerified(oldState State, oldIndex []byte, txId []byte, timestamp uint64)
 	binary.BigEndian.PutUint64(verifiedData[LinkSize:], timestamp)
 
 	// create verified
-	transactionPool.verifiedPool.Add(indexBuffer, verifiedData)
+	batch.Add(transactionPool.verifiedPool, indexBuffer, verifiedData)
 	transactionPool.verifiedCounter.Increment()
 
 	// remove previous state
 	switch oldState {
 	case PendingTransaction:
-		transactionPool.pendingPool.Remove(oldIndex)
+		batch.Remove(transactionPool.pendingPool, oldIndex)
 		transactionPool.pendingCounter.Decrement()
 
 	default: // should not happen
@@ -622,21 +624,21 @@ func setVerified(oldState State, oldIndex []byte, txId []byte, timestamp uint64)
 }
 
 // must be called with locked mutex
-func setConfirmed(oldState State, oldIndex []byte, txId []byte, unpackedTransaction interface{}) {
+func setConfirmed(batch *pool.Batch, oldState State, oldIndex []byte, txId []byte, unpackedTransaction interface{}) {
 
 	// first byte is state, next 8 bytes are big endian zero (for compatibility of other states)
 	stateBuffer := make([]byte, 9)
 	stateBuffer[0] = byte(ConfirmedTransaction)
 
 	// rewrite as confirmed
-	transactionPool.statePool.Add(txId, stateBuffer)
+	batch.Add(transactionPool.statePool, txId, stateBuffer)
 
 	// decode the transaction
 	switch unpackedTransaction.(type) {
 	case *AssetData:
 		asset := unpackedTransaction.(*AssetData)
 		assetIndex := NewAssetIndex([]byte(asset.Fingerprint)).Bytes()
-		transactionPool.assetPool.Add(assetIndex, txId)
+		batch.Add(transactionPool.assetPool, assetIndex, txId)
 
 	case *BitmarkIssue:
 		transfer := unpackedTransaction.(*BitmarkIssue)
@@ -645,44 +647,108 @@ func setConfirmed(oldState State, oldIndex []byte, txId []byte, unpackedTransact
 		assetIndex := transfer.AssetIndex.Bytes()
 
 		// must link to an Asset
-		previous := transactionPool.assetPool.Get(assetIndex)
-		if nil == previous {
-			fault.PanicWithError("transaction.setConfirmed", fault.ErrLinkNotFound)
+		assetDataLink := transactionPool.assetPool.Get(assetIndex)
+		if nil == assetDataLink {
+			fault.PanicWithError("transaction.setConfirmed: asset look up", fault.ErrLinkNotFound)
 		}
 
-		// split the record
-		length := len(previous) - LinkSize
-		//previousOwner := previous[:length]
-		assetDataLink := previous[length:]
+		count := uint64(0)
+		n := transactionPool.ownerCountPool.Get(transfer.Owner.PublicKeyBytes())
+		if nil == n {
+			n = make([]byte, 8)
+		} else if len(n) == 8 {
+			count = binary.BigEndian.Uint64(n)
+		} else {
+			fault.Panicf("transaction.setConfirmed: invalid n : %x", n)
+		}
+		count += 1
+		binary.BigEndian.PutUint64(n, count)
+		batch.Add(transactionPool.ownerCountPool, transfer.Owner.PublicKeyBytes(), n)
 
-		ownerData := append(transfer.Owner.PublicKeyBytes(), assetDataLink...)
-		transactionPool.ownerPool.Add(txId, ownerData)
+		ownershipKey := append(transfer.Owner.PublicKeyBytes(), n...)
+		ownershipData := append([]byte{}, txId...)     // also the issue digest
+		ownershipData = append(ownershipData, txId...) // the issue digest
+		ownershipData = append(ownershipData, assetDataLink...)
+		batch.Add(transactionPool.ownershipPool, ownershipKey, ownershipData)
+
+		ownerDigestKey := append(transfer.Owner.PublicKeyBytes(), txId...)
+		batch.Add(transactionPool.ownerDigestPool, ownerDigestKey, n)
 
 	case *BitmarkTransfer:
 		transfer := unpackedTransaction.(*BitmarkTransfer)
 
 		// previous record
 		previousLink := transfer.Link.Bytes()
-		previous := transactionPool.ownerPool.Get(previousLink)
+		previous := transactionPool.dataPool.Get(previousLink)
 		if nil == previous {
-			fault.Criticalf("transaction.setConfirmed: no previous owner for: %v", previousLink)
+			fault.Criticalf("transaction.setConfirmed: no previous transaction for: %v", previousLink)
 			fault.PanicWithError("transaction.setConfirmed", fault.ErrLinkNotFound)
 		}
 
-		// split the record
-		length := len(previous) - LinkSize
-		//previousOwner := previous[:length]
-		assetDataLink := previous[length:]
+		transaction, err := Packed(previous).Unpack()
+		fault.PanicIfError("transaction.setConfirmed: unpack previous:", err)
 
-		// // avoid side effect modification of assetDataLink
-		// previousKey := make([]byte, 0, len(previousOwner)+LinkSize)
-		// previousKey = append(previousKey, previousOwner...)
-		// previousKey = append(previousKey, previousLink...)
+		var previousOwner *Address
+		switch transaction.(type) {
+		case *BitmarkIssue:
+			previousIssue := transaction.(*BitmarkIssue)
+			previousOwner = previousIssue.Owner
+		case *BitmarkTransfer:
+			previousTransfer := transaction.(*BitmarkTransfer)
+			previousOwner = previousTransfer.Owner
+		default:
+			fault.Panic("transaction.setConfirmed: no previous transaction is invalid")
+		}
 
-		ownerData := append(transfer.Owner.PublicKeyBytes(), assetDataLink...)
+		// fetch previous owner data
 
-		transactionPool.ownerPool.Remove(previousLink)
-		transactionPool.ownerPool.Add(txId, ownerData)
+		previousOwnerDigestKey := append(previousOwner.PublicKeyBytes(), previousLink...)
+		previousN := transactionPool.ownerDigestPool.Get(previousOwnerDigestKey)
+		if nil == previousN {
+			fault.Panicf("Database corrupted: not found: previousOwnerDigestKey: %x", previousOwnerDigestKey)
+		} else if len(previousN) != 8 {
+			fault.Criticalf("Database corrupted: previousOwnerDigestKey: %x", previousOwnerDigestKey)
+			fault.Panicf("Database corrupted: invalid previousN: %x", previousN)
+		}
+
+		previousOwnershipKey := append(previousOwner.PublicKeyBytes(), previousN...)
+		previousOwnership := transactionPool.ownershipPool.Get(previousOwnershipKey)
+		if nil == previousOwnership {
+			fault.Panicf("Database corrupted: not found: previousOwnershipKey: %x", previousOwnershipKey)
+		}
+
+		//previousTxId := previousOwnership[:LinkSize]  // Verify this? should == previousLink
+		issueTxId := previousOwnership[LinkSize : 2*LinkSize]
+		assetTxId := previousOwnership[2*LinkSize:]
+
+		// set new owner index number
+
+		count := uint64(0)
+		n := transactionPool.ownerCountPool.Get(transfer.Owner.PublicKeyBytes())
+		if nil == n {
+			n = make([]byte, 8)
+		} else if len(n) == 8 {
+			count = binary.BigEndian.Uint64(n)
+		} else {
+			fault.Panicf("transaction.setConfirmed: invalid n : %x", n)
+		}
+		count += 1
+		binary.BigEndian.PutUint64(n, count)
+		batch.Add(transactionPool.ownerCountPool, transfer.Owner.PublicKeyBytes(), n)
+
+		// remove previous owner
+		batch.Remove(transactionPool.ownershipPool, previousOwnershipKey)
+		batch.Remove(transactionPool.ownerDigestPool, previousOwnerDigestKey)
+
+		// save new owner
+		ownershipKey := append(transfer.Owner.PublicKeyBytes(), n...)
+		ownershipData := append([]byte{}, txId...)
+		ownershipData = append(ownershipData, issueTxId...)
+		ownershipData = append(ownershipData, assetTxId...)
+		batch.Add(transactionPool.ownershipPool, ownershipKey, ownershipData)
+
+		ownerDigestKey := append(transfer.Owner.PublicKeyBytes(), txId...)
+		batch.Add(transactionPool.ownerDigestPool, ownerDigestKey, n)
 
 	default:
 		fault.Panicf("transaction.setConfirmed: unknown transaction type: %v", unpackedTransaction)
@@ -692,11 +758,11 @@ func setConfirmed(oldState State, oldIndex []byte, txId []byte, unpackedTransact
 	switch oldState {
 
 	case PendingTransaction:
-		transactionPool.pendingPool.Remove(oldIndex)
+		batch.Remove(transactionPool.pendingPool, oldIndex)
 		transactionPool.pendingCounter.Decrement()
 
 	case VerifiedTransaction:
-		transactionPool.verifiedPool.Remove(oldIndex)
+		batch.Remove(transactionPool.verifiedPool, oldIndex)
 		transactionPool.verifiedCounter.Decrement()
 
 	default:
@@ -731,6 +797,10 @@ func (link Link) SetState(newState State) {
 	if !oldState.CanChangeTo(newState) {
 		return
 	}
+
+	// batch the adds and removes
+	batch := pool.NewBatch()
+	defer batch.Commit()
 
 	// fetch and decode the transaction
 	rawTx := transactionPool.dataPool.Get(txId)
@@ -774,25 +844,25 @@ func (link Link) SetState(newState State) {
 				// if tx is asset remove the asset index record
 				asset := unpackedTransaction.(*AssetData)
 				assetIndex := NewAssetIndex([]byte(asset.Fingerprint)).Bytes()
-				transactionPool.assetPool.Remove(assetIndex)
+				batch.Remove(transactionPool.assetPool, assetIndex)
 			default:
 			}
 			// delete all associated records
-			transactionPool.pendingPool.Remove(oldIndex)
-			transactionPool.statePool.Remove(txId)
-			transactionPool.dataPool.Remove(txId)
+			batch.Remove(transactionPool.pendingPool, oldIndex)
+			batch.Remove(transactionPool.statePool, txId)
+			batch.Remove(transactionPool.dataPool, txId)
 
 			transactionPool.pendingCounter.Decrement()
 			ok = true
 
 		case VerifiedTransaction:
-			setVerified(oldState, oldIndex, txId, timestamp)
-			setAsset(VerifiedTransaction, timestamp, unpackedTransaction)
+			setVerified(batch, oldState, oldIndex, txId, timestamp)
+			setAsset(batch, VerifiedTransaction, timestamp, unpackedTransaction)
 			ok = true
 
 		case ConfirmedTransaction:
-			setConfirmed(oldState, oldIndex, txId, unpackedTransaction)
-			setAsset(ConfirmedTransaction, timestamp, unpackedTransaction)
+			setConfirmed(batch, oldState, oldIndex, txId, unpackedTransaction)
+			setAsset(batch, ConfirmedTransaction, timestamp, unpackedTransaction)
 			ok = true
 
 		default:
@@ -802,8 +872,8 @@ func (link Link) SetState(newState State) {
 		// allowed transitions: confirmed
 		switch newState {
 		case ConfirmedTransaction:
-			setConfirmed(oldState, oldIndex, txId, unpackedTransaction)
-			setAsset(ConfirmedTransaction, timestamp, unpackedTransaction)
+			setConfirmed(batch, oldState, oldIndex, txId, unpackedTransaction)
+			setAsset(batch, ConfirmedTransaction, timestamp, unpackedTransaction)
 			ok = true
 
 		default:
