@@ -74,7 +74,7 @@ func (t *thread) announceOne(server *bilateralrpc.Bilateral, recent *announce.Re
 		Err   error
 	}
 
-	if err := server.Call(bilateralrpc.SendToAll, "RPCs.Put", &putArguments, &putResult, 0); nil != err {
+	if err := server.Call(bilateralrpc.SendToAll, "RPCs.Put", &putArguments, &putResult); nil != err {
 		// if remote does not accept it is not really a problem for this node - just warn
 		t.log.Warnf("RPCs.Put err = %v", err)
 		return

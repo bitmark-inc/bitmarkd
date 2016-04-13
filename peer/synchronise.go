@@ -75,7 +75,7 @@ loop:
 			Number: n,
 		}
 		var result []BlockGetResult
-		if err := server.Call(to, "Block.Get", args, &result, 0); nil != err {
+		if err := server.Call(to, "Block.Get", args, &result); nil != err {
 			log.Errorf("Block.Get: error: %v", err)
 			if n >= highest {
 				break loop
@@ -213,7 +213,7 @@ loop:
 	fetchOne:
 		for _, to := range addresses {
 			var result []TransactionGetResult
-			if err := server.Call([]string{to}, "Transaction.Get", args, &result, 0); nil != err {
+			if err := server.Call([]string{to}, "Transaction.Get", args, &result); nil != err {
 				log.Errorf("Transaction.Get: error: %v", err)
 				success = false
 				continue fetchOne

@@ -33,7 +33,7 @@ func highestBlockNumber(server *bilateralrpc.Bilateral, log *logger.L) (uint64, 
 
 	args := BlockNumberArguments{}
 	var result []BlockNumberResult
-	if err := server.Call(bilateralrpc.SendToAll, "Block.Number", args, &result, 0); nil != err {
+	if err := server.Call(bilateralrpc.SendToAll, "Block.Number", args, &result); nil != err {
 		log.Errorf("highestBlockNumber: err = %v", err)
 		return 0, "", false
 	}
