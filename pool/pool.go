@@ -62,8 +62,7 @@ func Initialise(database string) {
 		fault.PanicIfError("pool.Initialise set version", err)
 	} else if nil != err {
 		fault.PanicWithError("pool.Initialise get version", err)
-	}
-	if !bytes.Equal(versionValue, currentVersion) {
+	} else if !bytes.Equal(versionValue, currentVersion) {
 		fault.Panicf("incompatible database version: expected: %x  actual: %x", currentVersion, versionValue)
 	}
 }
