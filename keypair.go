@@ -77,6 +77,7 @@ func encryptPassword(password string) (*configuration.Iter, *configuration.Salt,
 	}
 
 	cipher := generateKey(password, iter, salt)
+
 	return iter, salt, cipher, nil
 }
 
@@ -180,10 +181,6 @@ func promptPasswordReader() (string, error) {
 		return "", fault.ErrVerifiedPassword
 	}
 
-	// Clean memory
-	password = "00000000"
-	verifyPassword = "00000000"
-
 	return password, nil
 }
 
@@ -195,8 +192,6 @@ func promptCheckPasswordReader() (string, error) {
 		return "", err
 	}
 	terminal.Restore(fd, state)
-
-	password = "00000000"
 
 	return password, nil
 }
