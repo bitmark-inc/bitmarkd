@@ -1,5 +1,7 @@
 # bitmarkd - Main program
 
+[![GoDoc](https://godoc.org/github.com/bitmark-inc/bitmarkd?status.svg)](https://godoc.org/github.com/bitmark-inc/bitmarkd)
+
 Prerequisites
 
 * Install the go language package for your system
