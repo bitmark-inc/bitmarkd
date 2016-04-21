@@ -87,10 +87,6 @@ bitcoin {
   # private_key = client.key
   # url = https://127.0.0.1:18555/rpc-call
 
-
-  # the first block to read
-  start = 1
-
   # fee is a string to prevent rounding to float
   fee = "0.0002"
 

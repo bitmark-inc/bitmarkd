@@ -91,7 +91,6 @@ type BitcoinAccess struct {
 	PrivateKey    string `libucl:"private_key"`
 	Address       string `libucl:"address"`
 	Fee           string `libucl:"fee"`
-	Start         uint64 `libucl:"start"`
 }
 
 type DatabaseType struct {
