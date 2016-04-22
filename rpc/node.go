@@ -13,7 +13,9 @@ import (
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/peer"
 	"github.com/bitmark-inc/bitmarkd/transaction"
+	"github.com/bitmark-inc/bitmarkd/version"
 	"github.com/bitmark-inc/logger"
+	"time"
 )
 
 // --------------------
@@ -23,7 +25,8 @@ import (
 // {"id":2,"method":"Node.Peers","params":[{"Start":null,"Count":10}]}
 
 type Node struct {
-	log *logger.L
+	log   *logger.L
+	start time.Time
 }
 
 type NodeArguments struct {
@@ -82,6 +85,8 @@ type InfoReply struct {
 	Pdiff    float64 `json:"pdiff"`
 	Pending  uint64  `json:"pending"`
 	Verified uint64  `json:"verified"`
+	Version  string  `json:"version"`
+	Uptime   string  `json:"uptime"`
 }
 
 func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
@@ -93,6 +98,8 @@ func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 	reply.RPCs = connectionCount.Uint64()
 	reply.Miners = mine.ConnectionCount()
 	reply.Pdiff = difficulty.Current.Pdiff()
+	reply.Version = version.Version
+	reply.Uptime = time.Since(node.start).String()
 	transaction.ReadCounters(&reply.Pending, &reply.Verified)
 
 	return nil

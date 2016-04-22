@@ -19,6 +19,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/transaction"
 	"github.com/bitmark-inc/bitmarkd/util"
+	"github.com/bitmark-inc/bitmarkd/version"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/bitmark-inc/getoptions"
 	"github.com/bitmark-inc/listener"
@@ -65,7 +66,7 @@ func main() {
 	}
 
 	if len(options["version"]) > 0 {
-		exitwithstatus.Message("%s: version: %s", program, Version)
+		exitwithstatus.Message("%s: version: %s", program, version.Version)
 	}
 
 	if len(options["help"]) > 0 {

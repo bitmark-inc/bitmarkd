@@ -2,11 +2,5 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package main
-
-// the version
-const (
-	MajorVersion = "1"
-	MinorVersion = "1"
-	Version      = MajorVersion + "." + MinorVersion
-)
+// the version number so that other modules can access it
+package version

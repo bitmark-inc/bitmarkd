@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/rpc"
 	"net/rpc/jsonrpc"
+	"time"
 )
 
 // limit the number of gets
@@ -68,7 +69,8 @@ func Callback(conn io.ReadWriteCloser, argument interface{}) {
 	}
 
 	node := &Node{
-		log: serverArgument.Log,
+		log:   serverArgument.Log,
+		start: time.Now().UTC(),
 	}
 
 	server := rpc.NewServer()
