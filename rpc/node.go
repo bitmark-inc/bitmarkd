@@ -15,6 +15,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/transaction"
 	"github.com/bitmark-inc/bitmarkd/version"
 	"github.com/bitmark-inc/logger"
+	"strings"
 	"time"
 )
 
@@ -63,6 +64,10 @@ func (node *Node) List(arguments *NodeArguments, reply *NodeReply) error {
 	if nil == err {
 		for _, p := range peers {
 			recent := p.(announce.RecentData)
+			// quick hack to exclude localhost/IPv6 - client not ready
+			if strings.HasPrefix(recent.Address, "[") || strings.HasPrefix(recent.Address, "127.") {
+				continue
+			}
 			reply.Addresses = append(reply.Addresses, recent.Address)
 		}
 	}
