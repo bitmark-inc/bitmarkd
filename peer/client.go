@@ -52,7 +52,7 @@ loop:
 			default:
 			}
 			if highest, from, ok := highestBlockNumber(server, t.log); ok {
-				t.log.Infof("highest bn = %d  from: %q", highest, from)
+				t.log.Infof("highest bn: %d  from: %q", highest, from)
 				n := block.Number() // the number of block being mined
 				if highest >= n {   // equal because we need block 'n' if it is available
 					t.log.Infof("resynchronise blocks: %d → %d from: %)", n, highest, from)
