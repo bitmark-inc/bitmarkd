@@ -28,6 +28,7 @@ import (
 	"os/signal"
 	//"runtime/pprof"
 	"syscall"
+	"time"
 )
 
 type serverChannel struct {
@@ -213,7 +214,8 @@ func main() {
 			keyFileName:         masterConfiguration.ClientRPC.PrivateKey,
 			callback:            rpc.Callback,
 			argument: &rpc.ServerArgument{
-				Log: rpcLog,
+				Log:       rpcLog,
+				StartTime: time.Now().UTC(),
 			},
 		},
 		"mine": {

@@ -18,7 +18,8 @@ const MaximumGetSize = 100
 
 // the argument passed to the callback
 type ServerArgument struct {
-	Log *logger.L
+	Log       *logger.L
+	StartTime time.Time
 }
 
 var connectionCount counter.Counter
@@ -70,7 +71,7 @@ func Callback(conn io.ReadWriteCloser, argument interface{}) {
 
 	node := &Node{
 		log:   serverArgument.Log,
-		start: time.Now().UTC(),
+		start: serverArgument.StartTime,
 	}
 
 	server := rpc.NewServer()
