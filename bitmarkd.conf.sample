@@ -7,6 +7,10 @@
 #data_directory = "."
 data_directory = "/var/lib/bitmarkd"
 
+# optional pid file if not absolute path then is created relative to
+# the data directory
+# pidfile = "bitmarkd.pid"
+
 # select the chain of the network for peer connections
 # cross chain networking connects will not work
 #chain = bitmark

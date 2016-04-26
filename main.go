@@ -46,9 +46,6 @@ type serverChannel struct {
 	listener         *listener.MultiListener
 }
 
-// to check if PID file was created
-var lockWasCreated = false
-
 func main() {
 	// ensure exit handler is first
 	defer exitwithstatus.Handler()
@@ -106,18 +103,20 @@ func main() {
 	// start of real main
 	// ------------------
 
-	// grab lock file or fail
-	lockFile, err := os.OpenFile(masterConfiguration.PidFile, os.O_WRONLY|os.O_EXCL|os.O_CREATE, os.ModeExclusive|0600)
-	if err != nil {
-		if os.IsExist(err) {
-			exitwithstatus.Message("%s: another instance is already running", program)
+	// optional PID file
+	// use if not running under a supervisor program like daemon(8)
+	if "" != masterConfiguration.PidFile {
+		lockFile, err := os.OpenFile(masterConfiguration.PidFile, os.O_WRONLY|os.O_EXCL|os.O_CREATE, os.ModeExclusive|0600)
+		if err != nil {
+			if os.IsExist(err) {
+				exitwithstatus.Message("%s: another instance is already running", program)
+			}
+			exitwithstatus.Message("%s: PID file: %q creation failed, error: %v", program, masterConfiguration.PidFile, err)
 		}
-		exitwithstatus.Message("%s: PID file: %q creation failed, error: %v", program, masterConfiguration.PidFile, err)
+		fmt.Fprintf(lockFile, "%d\n", os.Getpid())
+		lockFile.Close()
+		defer os.Remove(masterConfiguration.PidFile)
 	}
-	fmt.Fprintf(lockFile, "%d\n", os.Getpid())
-	lockFile.Close()
-	lockWasCreated = true
-	defer removeAppLock(masterConfiguration.PidFile)
 
 	// command processing - need lock so do not affect an already running process
 	// these commands process data needed for initial setup
@@ -336,13 +335,5 @@ func main() {
 	if 0 == len(options["quiet"]) {
 		fmt.Printf("\nreceived signal: %v\n", sig)
 		fmt.Printf("\nshutting down...\n")
-	}
-}
-
-// remove the lock file - only if this instance created it
-func removeAppLock(appLockFile string) {
-	if lockWasCreated {
-		os.Remove(appLockFile)
-		lockWasCreated = false
 	}
 }

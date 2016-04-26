@@ -17,7 +17,6 @@ import (
 // basic defaults (directories and files are relative to the "DataDirectory" from Configuration file)
 const (
 	defaultDataDirectory = "" // this will error; use "." for the same directory as the config file
-	defaultPidFile       = "bitmarkd.pid"
 
 	defaultPublicKeyFile   = "bitmarkd.private"
 	defaultPrivateKeyFile  = "bitmarkd.public"
@@ -125,7 +124,7 @@ func GetConfiguration(configurationFileName string) (*Configuration, error) {
 	options := &Configuration{
 
 		DataDirectory: defaultDataDirectory,
-		PidFile:       defaultPidFile,
+		PidFile:       "", // no PidFile by default
 		Chain:         chain.Bitmark,
 
 		Database: DatabaseType{
@@ -203,7 +202,6 @@ func GetConfiguration(configurationFileName string) (*Configuration, error) {
 	// force all relevant items to be absolute paths
 	// if not, assign them to the data directory
 	mustBeAbsolute := []*string{
-		&options.PidFile,
 		&options.Database.Directory,
 		&options.ClientRPC.Certificate,
 		&options.ClientRPC.PrivateKey,
@@ -215,6 +213,16 @@ func GetConfiguration(configurationFileName string) (*Configuration, error) {
 	}
 	for _, f := range mustBeAbsolute {
 		*f = ensureAbsolute(options.DataDirectory, *f)
+	}
+
+	// optional absolute paths i.e. blank or an absolute path
+	optionalAbsolute := []*string{
+		&options.PidFile,
+	}
+	for _, f := range optionalAbsolute {
+		if "" != *f {
+			*f = ensureAbsolute(options.DataDirectory, *f)
+		}
 	}
 
 	// fail if any of these are not simple file names i.e. must not contain path seperator
