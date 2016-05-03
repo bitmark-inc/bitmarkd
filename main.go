@@ -8,10 +8,10 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/bitmark-inc/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmark-cli/fault"
 	"github.com/bitmark-inc/bitmark-cli/templates"
+	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/codegangsta/cli"
 	"io/ioutil"
 	"net/rpc/jsonrpc"
@@ -307,8 +307,8 @@ func runIssue(c *cli.Context, globals globalFlags) {
 	}
 
 	registrant := keyPair{
-		publicKey:  *publicKey,
-		privateKey: *privateKey,
+		publicKey:  publicKey,
+		privateKey: privateKey,
 	}
 
 	assetConfig := assetData{
@@ -360,18 +360,19 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 	}
 
 	ownerKeyPair := keyPair{
-		publicKey:  *publicKey,
-		privateKey: *privateKey,
+		publicKey:  publicKey,
+		privateKey: privateKey,
 	}
 
-	tmpPublicKey, err := hex.DecodeString(to.Public_key)
+	newPublicKey, err := hex.DecodeString(to.Public_key)
 	if nil != err {
 		fmt.Printf("Decode to public key error\n")
 		exitwithstatus.Message("Error: %s\n", err)
 	}
 
-	newOwnerKeyPair := keyPair{}
-	copy(newOwnerKeyPair.publicKey[:], tmpPublicKey[:])
+	newOwnerKeyPair := keyPair{
+		publicKey: newPublicKey,
+	}
 
 	// TODO: deal with IPv6?
 	bitmarkRpcConfig := bitmarkRPC{

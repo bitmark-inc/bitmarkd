@@ -11,9 +11,9 @@ import (
 	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
-	"github.com/agl/ed25519"
 	"github.com/bitmark-inc/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmark-cli/fault"
+	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/ssh/terminal"
 	"io"
@@ -42,20 +42,12 @@ func makeKeyPair(name string, password string) (string, string, *configuration.P
 	}
 
 	// use key to encrypt private key
-	publicBytes := make([]byte, publicKeySize)
-	privateBytes := make([]byte, privateKeySize)
-	for i, b := range *publicKey {
-		publicBytes[i] = b
-	}
-	for i, b := range *privateKey {
-		privateBytes[i] = b
-	}
-	encryptedPrivateKey, err := encryptPrivateKey(privateBytes, key)
+	encryptedPrivateKey, err := encryptPrivateKey(privateKey, key)
 	if nil != err {
 		return "", "", nil, err
 	}
 
-	publicStr := hex.EncodeToString(publicBytes)
+	publicStr := hex.EncodeToString(publicKey)
 	privateStr := hex.EncodeToString(encryptedPrivateKey)
 	privateKeyConfig := &configuration.PrivateKeyConfig{
 		Iter: iter.Integer(),
@@ -129,7 +121,7 @@ func decryptPrivateKey(ciphertext []byte, key []byte) ([]byte, error) {
 	return ciphertext, nil
 }
 
-func checkSignature(password string, publicKey *[publicKeySize]byte, privateKey *[privateKeySize]byte) bool {
+func checkSignature(password string, publicKey []byte, privateKey []byte) bool {
 	message := "Bitmark Command Line Interface"
 	signature := ed25519.Sign(privateKey, []byte(message))
 	return ed25519.Verify(publicKey, []byte(message), signature)
@@ -196,7 +188,7 @@ func promptCheckPasswordReader() (string, error) {
 	return password, nil
 }
 
-func promptAndCheckPassword(issuer *configuration.IdentityType) (*[publicKeySize]byte, *[privateKeySize]byte, error) {
+func promptAndCheckPassword(issuer *configuration.IdentityType) ([]byte, []byte, error) {
 	password, err := promptCheckPasswordReader()
 	if nil != err {
 		cleanPasswordMemory(&password)
@@ -213,7 +205,7 @@ func promptAndCheckPassword(issuer *configuration.IdentityType) (*[publicKeySize
 	return publicKey, privateKey, nil
 }
 
-func verifyPassword(password string, identity *configuration.IdentityType) (*[publicKeySize]byte, *[privateKeySize]byte, error) {
+func verifyPassword(password string, identity *configuration.IdentityType) ([]byte, []byte, error) {
 	iter := new(configuration.Iter)
 	salt := new(configuration.Salt)
 	iter.ConvertIntegerToIter(identity.Private_key_config.Iter)
@@ -225,26 +217,21 @@ func verifyPassword(password string, identity *configuration.IdentityType) (*[pu
 		return nil, nil, err
 	}
 
-	tmpPrivateKey, err := decryptPrivateKey(ciphertext, key)
+	privateKey, err := decryptPrivateKey(ciphertext, key)
 	if nil != err {
 		return nil, nil, err
 	}
 
-	tmpPublicKey, err := hex.DecodeString(identity.Public_key)
+	publicKey, err := hex.DecodeString(identity.Public_key)
 	if nil != err {
 		return nil, nil, err
 	}
 
-	var publicKey [publicKeySize]byte
-	var privateKey [privateKeySize]byte
-	copy(publicKey[:], tmpPublicKey[:])
-	copy(privateKey[:], tmpPrivateKey[:])
-
-	if !checkSignature(password, &publicKey, &privateKey) {
+	if !checkSignature(password, publicKey, privateKey) {
 		return nil, nil, fault.ErrWrongPassword
 	}
 
-	return &publicKey, &privateKey, err
+	return publicKey, privateKey, err
 }
 
 func cleanPasswordMemory(p *string) {

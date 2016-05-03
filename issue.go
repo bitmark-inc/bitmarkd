@@ -8,12 +8,12 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/agl/ed25519"
+	"github.com/bitmark-inc/bitmark-cli/fault"
 	"github.com/bitmark-inc/bitmarkd/block"
 	bFault "github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/transaction"
-	"github.com/bitmark-inc/bitmark-cli/fault"
+	"golang.org/x/crypto/ed25519"
 	"net"
 	netrpc "net/rpc"
 	"time"
@@ -21,8 +21,8 @@ import (
 
 // to hold a keypair for testing
 type keyPair struct {
-	publicKey  [32]byte
-	privateKey [64]byte
+	publicKey  []byte
+	privateKey []byte
 }
 
 type assetData struct {
@@ -54,11 +54,13 @@ type transferData struct {
 var dummySignature transaction.Signature
 
 // helper to make an address
-func makeAddress(publicKey *[32]byte, testNet bool) *transaction.Address {
+func makeAddress(publicKey []byte, testNet bool) *transaction.Address {
+	var tmpPublicKey [ed25519.PublicKeySize]byte
+	copy(tmpPublicKey[:], publicKey[:])
 	return &transaction.Address{
 		AddressInterface: &transaction.ED25519Address{
 			Test:      testNet,
-			PublicKey: publicKey,
+			PublicKey: &tmpPublicKey,
 		},
 	}
 }
@@ -66,7 +68,7 @@ func makeAddress(publicKey *[32]byte, testNet bool) *transaction.Address {
 // build a properly signed asset
 func makeAsset(client *netrpc.Client, testNet bool, assetConfig assetData, verbose bool) (*transaction.AssetIndex, error) {
 
-	registrantAddress := makeAddress(&assetConfig.registrant.publicKey, testNet)
+	registrantAddress := makeAddress(assetConfig.registrant.publicKey, testNet)
 
 	r := transaction.AssetData{
 		Description: assetConfig.description,
@@ -83,7 +85,7 @@ func makeAsset(client *netrpc.Client, testNet bool, assetConfig assetData, verbo
 	}
 
 	// manually sign the record and attach signature
-	signature := ed25519.Sign(&assetConfig.registrant.privateKey, packed)
+	signature := ed25519.Sign(assetConfig.registrant.privateKey, packed)
 	r.Signature = signature[:]
 
 	// re-pack with correct signature
@@ -117,7 +119,7 @@ func makeAsset(client *netrpc.Client, testNet bool, assetConfig assetData, verbo
 // build a properly signed issues
 func makeIssue(testNet bool, issueConfig issueData, nonce uint64) *transaction.BitmarkIssue {
 
-	issuerAddress := makeAddress(&issueConfig.issuer.publicKey, testNet)
+	issuerAddress := makeAddress(issueConfig.issuer.publicKey, testNet)
 
 	r := transaction.BitmarkIssue{
 		AssetIndex: *issueConfig.assetIndex,
@@ -133,7 +135,7 @@ func makeIssue(testNet bool, issueConfig issueData, nonce uint64) *transaction.B
 	}
 
 	// manually sign the record and attach signature
-	signature := ed25519.Sign(&issueConfig.issuer.privateKey, packed)
+	signature := ed25519.Sign(issueConfig.issuer.privateKey, packed)
 	r.Signature = signature[:]
 
 	// re-pack with correct signature
@@ -221,7 +223,7 @@ func makeTransfer(testNet bool, txId string, owner keyPair, newOwner keyPair) *t
 		return nil
 	}
 
-	newOwnerAddress := makeAddress(&newOwner.publicKey, testNet)
+	newOwnerAddress := makeAddress(newOwner.publicKey, testNet)
 	r := transaction.BitmarkTransfer{
 		Link:      link,
 		Owner:     newOwnerAddress,
@@ -234,8 +236,10 @@ func makeTransfer(testNet bool, txId string, owner keyPair, newOwner keyPair) *t
 		return nil
 	}
 
-	signature := ed25519.Sign(&owner.privateKey, packed)
-	ownerAddress := makeAddress(&owner.publicKey, testNet)
+	// manually sign the record and attach signature
+	signature := ed25519.Sign(owner.privateKey, packed)
+
+	ownerAddress := makeAddress(owner.publicKey, testNet)
 	r.Signature = signature[:]
 
 	// re-pack with correct signature
