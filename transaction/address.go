@@ -7,10 +7,10 @@ package transaction
 import (
 	"bytes"
 	"crypto/sha256"
-	"github.com/agl/ed25519"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
+	"golang.org/x/crypto/ed25519"
 )
 
 // enumeration of supported key algorithms
@@ -54,13 +54,13 @@ type AddressInterface interface {
 // for ed25519 signatures
 type ED25519Address struct {
 	Test      bool
-	PublicKey *[ed25519.PublicKeySize]byte
+	PublicKey []byte
 }
 
 // just for debugging
 type NothingAddress struct {
 	Test      bool
-	PublicKey *[2]byte
+	PublicKey []byte
 }
 
 // this converts a Base58 encoded string and returns an address
@@ -114,12 +114,11 @@ func AddressFromBase58(addressBase58Encoded string) (*Address, error) {
 		if keyLength != ed25519.PublicKeySize {
 			return nil, fault.ErrInvalidKeyLength
 		}
-		publicKey := [ed25519.PublicKeySize]byte{}
-		copy(publicKey[:], addressDecoded[keyVariantLength:checksumStart])
+		publicKey := addressDecoded[keyVariantLength:checksumStart]
 		address := &Address{
 			AddressInterface: &ED25519Address{
 				Test:      isTest,
-				PublicKey: &publicKey,
+				PublicKey: publicKey,
 			},
 		}
 		return address, nil
@@ -127,12 +126,11 @@ func AddressFromBase58(addressBase58Encoded string) (*Address, error) {
 		if 2 != keyLength {
 			return nil, fault.ErrInvalidKeyLength
 		}
-		publicKey := [2]byte{}
-		copy(publicKey[:], addressDecoded[keyVariantLength:checksumStart])
+		publicKey := addressDecoded[keyVariantLength:checksumStart]
 		address := &Address{
 			AddressInterface: &NothingAddress{
 				Test:      isTest,
-				PublicKey: &publicKey,
+				PublicKey: publicKey,
 			},
 		}
 		return address, nil
@@ -179,12 +177,11 @@ func AddressFromBytes(addressBytes []byte) (*Address, error) {
 		if keyLength != ed25519.PublicKeySize {
 			return nil, fault.ErrInvalidKeyLength
 		}
-		publicKey := [ed25519.PublicKeySize]byte{}
-		copy(publicKey[:], addressBytes[keyVariantLength:])
+		publicKey := addressBytes[keyVariantLength:]
 		address := &Address{
 			AddressInterface: &ED25519Address{
 				Test:      isTest,
-				PublicKey: &publicKey,
+				PublicKey: publicKey,
 			},
 		}
 		return address, nil
@@ -192,12 +189,11 @@ func AddressFromBytes(addressBytes []byte) (*Address, error) {
 		if 2 != keyLength {
 			return nil, fault.ErrInvalidKeyLength
 		}
-		publicKey := [2]byte{}
-		copy(publicKey[:], addressBytes[keyVariantLength:])
+		publicKey := addressBytes[keyVariantLength:]
 		address := &Address{
 			AddressInterface: &NothingAddress{
 				Test:      isTest,
-				PublicKey: &publicKey,
+				PublicKey: publicKey,
 			},
 		}
 		return address, nil
@@ -247,7 +243,7 @@ func (address *ED25519Address) CheckSignature(message []byte, signature Signatur
 	s := [ed25519.SignatureSize]byte{}
 	copy(s[:], signature[:])
 
-	if !ed25519.Verify(address.PublicKey, message, &s) {
+	if !ed25519.Verify(address.PublicKey[:], message, s[:]) {
 		return fault.ErrInvalidSignature
 	}
 	return nil
