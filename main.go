@@ -78,8 +78,9 @@ func main() {
 					Usage: "*identity description",
 				},
 			},
-			Action: func(c *cli.Context) {
+			Action: func(c *cli.Context) error {
 				runSetup(c, globals)
+				return nil
 			},
 		},
 		{
@@ -93,8 +94,9 @@ func main() {
 					Usage: "*identity descriptiont",
 				},
 			},
-			Action: func(c *cli.Context) {
+			Action: func(c *cli.Context) error {
 				runGenerate(c, globals)
+				return nil
 			},
 		},
 		{
@@ -123,8 +125,9 @@ func main() {
 					Usage: " quantity to issue [1]",
 				},
 			},
-			Action: func(c *cli.Context) {
+			Action: func(c *cli.Context) error {
 				runIssue(c, globals)
+				return nil
 			},
 		},
 		{
@@ -143,22 +146,25 @@ func main() {
 					Usage: "*identity name to receive the transactoin",
 				},
 			},
-			Action: func(c *cli.Context) {
+			Action: func(c *cli.Context) error {
 				runTransfer(c, globals)
+				return nil
 			},
 		},
 		{
 			Name:  "info",
 			Usage: "display bitmarkd status",
-			Action: func(c *cli.Context) {
+			Action: func(c *cli.Context) error {
 				runInfo(c, globals)
+				return nil
 			},
 		},
 		{
 			Name:  "version",
 			Usage: "display bitmark-cli version",
-			Action: func(c *cli.Context) {
+			Action: func(c *cli.Context) error {
 				fmt.Println(Version())
+				return nil
 			},
 		},
 	}
