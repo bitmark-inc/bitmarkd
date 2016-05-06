@@ -24,6 +24,7 @@ type globalFlags struct {
 	verbose  bool
 	config   string
 	identity string
+	password string
 }
 
 func main() {
@@ -54,6 +55,12 @@ func main() {
 			Value:       "",
 			Usage:       " identity name [default identity]",
 			Destination: &globals.identity,
+		},
+		cli.StringFlag{
+			Name:        "password, p",
+			Value:       "",
+			Usage:       " identity password",
+			Destination: &globals.password,
 		},
 	}
 	app.Commands = []cli.Command{
@@ -221,9 +228,11 @@ func runSetup(c *cli.Context, globals globalFlags) {
 	}
 
 	if !(generateConfiguration(configDir, configData) &&
-		generateIdentity(configDir, name, description)) {
+		generateIdentity(configDir, name, description, globals.password)) {
 		exitwithstatus.Message("Error: Setup failed\n")
 	}
+
+	cleanPasswordMemory(&globals.password)
 }
 
 func runGenerate(c *cli.Context, globals globalFlags) {
@@ -251,9 +260,11 @@ func runGenerate(c *cli.Context, globals globalFlags) {
 		fmt.Println()
 	}
 
-	if !generateIdentity(configDir, name, description) {
+	if !generateIdentity(configDir, name, description, globals.password) {
 		exitwithstatus.Message("Error: generate failed\n")
 	}
+
+	cleanPasswordMemory(&globals.password)
 }
 
 func runIssue(c *cli.Context, globals globalFlags) {
@@ -297,11 +308,21 @@ func runIssue(c *cli.Context, globals globalFlags) {
 		fmt.Printf("quantity: %d\n", quantity)
 	}
 
+	publicKey := []byte{}
+	privateKey := []byte{}
 	// check password
-	publicKey, privateKey, err := promptAndCheckPassword(issuer)
-	if nil != err {
-		exitwithstatus.Message("Error: %s\n", err)
+	if "" == globals.password {
+		publicKey, privateKey, err = promptAndCheckPassword(issuer)
+		if nil != err {
+			exitwithstatus.Message("Error: %s\n", err)
+		}
+	}else{
+		publicKey, privateKey, err = verifyPassword(globals.password, issuer)
+		if nil != err {
+			exitwithstatus.Message("Error: %s\n", err)
+		}
 	}
+
 
 	// TODO: deal with IPv6?
 	bitmarkRpcConfig := bitmarkRPC{
@@ -328,6 +349,8 @@ func runIssue(c *cli.Context, globals globalFlags) {
 	if !issue(bitmarkRpcConfig, assetConfig, verbose) {
 		exitwithstatus.Message("Error: issue failed\n")
 	}
+
+	cleanPasswordMemory(&globals.password)
 }
 
 func runTransfer(c *cli.Context, globals globalFlags) {
@@ -359,10 +382,19 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 		fmt.Printf("sender: %s\n", from.Name)
 	}
 
+	publicKey := []byte{}
+	privateKey := []byte{}
 	// check owner password
-	publicKey, privateKey, err := promptAndCheckPassword(from)
-	if nil != err {
-		exitwithstatus.Message("Error: %s\n", err)
+	if "" == globals.password {
+		publicKey, privateKey, err = promptAndCheckPassword(from)
+		if nil != err {
+			exitwithstatus.Message("Error: %s\n", err)
+		}
+	}else{
+		publicKey, privateKey, err = verifyPassword(globals.password, from)
+		if nil != err {
+			exitwithstatus.Message("Error: %s\n", err)
+		}
 	}
 
 	ownerKeyPair := keyPair{
@@ -398,6 +430,8 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 	if !transfer(bitmarkRpcConfig, transferConfig, verbose) {
 		exitwithstatus.Message("Error: Transfer failed\n")
 	}
+
+	cleanPasswordMemory(&globals.password)
 }
 
 func runInfo(c *cli.Context, globals globalFlags) {
@@ -442,7 +476,7 @@ func generateConfiguration(configDir string, configData configuration.Configurat
 	return true
 }
 
-func generateIdentity(configDir string, name string, description string) bool {
+func generateIdentity(configDir string, name string, description string, password string) bool {
 
 	configFile, err := configuration.GetConfigPath(configDir)
 	if nil != err {
@@ -468,12 +502,16 @@ func generateIdentity(configDir string, name string, description string) bool {
 		}
 	}
 
-	// prompt password and pwd confirm for private key encryption
-	password, err := promptPasswordReader()
-	if nil != err {
-		fmt.Printf("input password fail: %s\n", err)
-		return false
+
+	if "" == password {
+		// prompt password and pwd confirm for private key encryption
+		password, err = promptPasswordReader()
+		if nil != err {
+			fmt.Printf("input password fail: %s\n", err)
+			return false
+		}
 	}
+
 	publicKey, encryptPrivateKey, privateKeyConfig, err := makeKeyPair(name, password)
 	if nil != err {
 		cleanPasswordMemory(&password)
