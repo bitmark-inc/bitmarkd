@@ -2,32 +2,55 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package block
+package blockdigest
 
 import (
-	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/go-argon2"
 	"math/big"
 )
 
 // number of bytes in the digest
-const DigestSize = 32
+const Length = 32
 
-// the type for a digest
+// internal hashing parameters
+const (
+	digestMode        = argon2.ModeArgon2d
+	digestMemory      = 1 << 18 // 256 MiB
+	digestParallelism = 1
+	digestIterations  = 5
+	digestVersion     = argon2.Version13
+	digestSalt        = "BitmarkBlockchain2016"
+)
+
+// type for a digest
 // stored as little endian byte array
 // represented as big endian hex value for print
 // represented as little endian hex text for JSON encoding
-type Digest [DigestSize]byte
+type Digest [Length]byte
 
 // create a digest from a byte slice
-//
-// BTC compatible double SHA2-256 Hash
 func NewDigest(record []byte) Digest {
-	roundOne := sha256.Sum256(record)
-	roundTwo := sha256.Sum256(roundOne[:])
-	return Digest(roundTwo)
+
+	context := &argon2.Context{
+		Iterations:  digestIterations,
+		Memory:      digestMemory,
+		Parallelism: digestParallelism,
+		HashLen:     Length,
+		Mode:        digestMode,
+		Version:     digestVersion,
+	}
+
+	hash, err := argon2.Hash(context, record, []byte(digestSalt))
+	fault.PanicIfError("block.NewDigest", err)
+
+	var digest Digest
+	for i, b := range hash {
+		digest[i] = b
+	}
+	return digest
 }
 
 // convert the hash to its equivalent big.Int
@@ -39,31 +62,11 @@ func (digest Digest) Cmp(difficulty *big.Int) int {
 
 // internal function to return a reversed byte order copy of a digest
 func reversed(d Digest) []byte {
-	result := make([]byte, DigestSize)
-	for i := 0; i < DigestSize; i += 1 {
-		result[i] = d[DigestSize-1-i]
+	result := make([]byte, Length)
+	for i := 0; i < Length; i += 1 {
+		result[i] = d[Length-1-i]
 	}
 	return result
-}
-
-// convert a binary digest to BTC little endian word swapped hex string for use by miners
-func (digest Digest) BtcHex() string {
-	l := len(digest)
-	buffer := make([]byte, l)
-	for i := 0; i < l; i += 4 {
-		buffer[i+0] = digest[i+3]
-		buffer[i+1] = digest[i+2]
-		buffer[i+2] = digest[i+1]
-		buffer[i+3] = digest[i+0]
-	}
-	return hex.EncodeToString(buffer)
-}
-
-// convert a binary digest to hex string for use by the stratum miner
-//
-// the stored version and the output string are both little endian
-func (digest Digest) MinerHex() string {
-	return hex.EncodeToString(digest[:])
 }
 
 // convert a binary digest to hex string for use by the fmt package (for %s)
@@ -75,7 +78,7 @@ func (digest Digest) String() string {
 
 // convert a binary digest to big endian hex string for use by the fmt package (for %#v)
 func (digest Digest) GoString() string {
-	return "<sha256*2:" + hex.EncodeToString(reversed(digest)) + ">"
+	return "<Argon2d:" + hex.EncodeToString(reversed(digest)) + ">"
 }
 
 // convert a big endian hex representation to a digest for use by the format package scan routines
@@ -102,7 +105,7 @@ func (digest *Digest) Scan(state fmt.ScanState, verb rune) error {
 	}
 
 	for i, v := range buffer[:byteCount] {
-		digest[DigestSize-1-i] = v
+		digest[Length-1-i] = v
 	}
 	return nil
 }
@@ -150,10 +153,10 @@ func (digest *Digest) UnmarshalText(s []byte) error {
 
 // convert and validate little endian binary byte slice to a digest
 func DigestFromBytes(digest *Digest, buffer []byte) error {
-	if DigestSize != len(buffer) {
+	if Length != len(buffer) {
 		return fault.ErrNotLink
 	}
-	for i := 0; i < DigestSize; i += 1 {
+	for i := 0; i < Length; i += 1 {
 		digest[i] = buffer[i]
 	}
 	return nil

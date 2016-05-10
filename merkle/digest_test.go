@@ -2,12 +2,11 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package block_test
+package merkle_test
 
 import (
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/block"
-	"math/big"
+	"github.com/bitmark-inc/bitmarkd/merkle"
 	"testing"
 )
 
@@ -16,7 +15,7 @@ func TestScanFmt(t *testing.T) {
 	// big endian
 	stringDigest := "00000000440b921e1b77c6c0487ae5616de67f788f44ae2a5af6e2194d16b6f8"
 
-	var d block.Digest
+	var d merkle.Digest
 	n, err := fmt.Sscan(stringDigest, &d)
 	if nil != err {
 		t.Fatalf("hex to digest error: %v", err)
@@ -27,7 +26,7 @@ func TestScanFmt(t *testing.T) {
 	}
 
 	// bytes as little endian format
-	expected := block.Digest{
+	expected := merkle.Digest{
 		0xf8, 0xb6, 0x16, 0x4d,
 		0x19, 0xe2, 0xf6, 0x5a,
 		0x2a, 0xae, 0x44, 0x8f,
@@ -50,7 +49,7 @@ func TestScanFmt(t *testing.T) {
 	}
 
 	s = fmt.Sprintf("%#v", d)
-	if s != "<sha256*2:"+stringDigest+">" {
+	if s != "<SHA3-256:"+stringDigest+">" {
 		t.Errorf("hash-v: digest = %s expected %s", s, stringDigest)
 	}
 
@@ -59,31 +58,17 @@ func TestScanFmt(t *testing.T) {
 	if s != btcLittleEndianSwapped {
 		t.Errorf("btc: digest: %s  expected: %s", s, btcLittleEndianSwapped)
 	}
-
-	var expectedBig big.Int
-	n, err = fmt.Sscanf(stringDigest, "%x", &expectedBig)
-	if nil != err {
-		t.Fatalf("hex to big error: %v", err)
-	}
-
-	if 1 != n {
-		t.Fatalf("scanned %d items expected to scan 1", n)
-	}
-
-	if 0 != d.Cmp(&expectedBig) {
-		t.Errorf("digest: %s != expected: %x", d, expectedBig)
-	}
-
 }
 
 func TestDigest(t *testing.T) {
 	s := []byte("hello world")
-	d := block.NewDigest(s)
+	d := merkle.NewDigest(s)
 
 	// big endian
-	stringDigest := "2344b7a9b50f3cc2761a40722c05361f73119f4d5d6cc129da369e0db8d462bc"
+	// printf '%s' 'hello world' | sha3sum -a 256 | awk '{for(i=length($1);i>0;i-=2)x=x substr($1,i-1,2);print x}'
+	stringDigest := "38394ef2fb3b1ca394fd72d9a1fb71caf322769ec8aa9909047343567ecc4b64"
 
-	var expected block.Digest
+	var expected merkle.Digest
 	n, err := fmt.Sscan(stringDigest, &expected)
 	if nil != err {
 		t.Fatalf("hex to digest error: %v", err)

@@ -2,10 +2,10 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package block
+package merkle
 
 import (
-//"github.com/bitmark-inc/bitmarkd/block"
+//"github.com/bitmark-inc/bitmarkd/merkledigest"
 )
 
 // compute minimum merkle root from coinbase + minimum tree

@@ -2,18 +2,18 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package block_test
+package merkle_test
 
 import (
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/merkle"
 	"testing"
 )
 
 // hex -> link
 // prepend the prefix to allow easier conversion of sample data
-func hexToLink(t *testing.T, s string) *block.Digest {
-	var link block.Digest
+func hexToLink(t *testing.T, s string) *merkle.Digest {
+	var link merkle.Digest
 	n, err := fmt.Sscan(s, &link)
 	if nil != err {
 		t.Fatalf("hex to link error: %v", err)
@@ -28,6 +28,7 @@ func hexToLink(t *testing.T, s string) *block.Digest {
 
 // merkle hashing
 // sample hash list from: http://blockexplorer.com/rawblock/0000000000001e1917c4c6dfc89d9d6b9fdd195dba25b2d6b2d955c9a698641a
+// (note: tree hashes are SHA3 so only txids are the same)
 func TestMerkle(t *testing.T) {
 
 	// uncommented items are minimum to build merkle root from coinbase
@@ -43,43 +44,37 @@ func TestMerkle(t *testing.T) {
 		// "46afe1d6069aad653b31ac7d58f2be5ebd999b6895dcfdc1cc893659177187e7", // (_) tx8
 		// "bb83326a538a22f89fc012bb116c4d24b28fab947bab1e5940f98bf357b56f05", // (_) tx9
 		// ------------------------------------------------------------------
-		// "48fd61cf4344a0615745de8a9540a9d6b1c31467355e9acfad1bceaf792a664d", // (_) R10 = cb0+tx1
-		"0bfda76e5c9b9b1e4a00f6b7f41d9b8b489d340562dbf33b4cd8df5ed1f5e639", //    (V) R11 = tx2+tx3
-		// "78f32e02a758a4bc4cba417f837ff9d4b55911374052932cea6dc2764a4be01a", // (_) R12 = tx4+tx5
-		// "b8f69e074cea7cda3c04e5cab3a8d91c403630ce201fae58f95b801429af7927", // (_) R13 = tx6+tx7
-		// "73b8bc8b12c38c2c2a89ed4d10877abadbff46f298cdca215486aa36cdb91004", // (_) R14 = tx8+tx9
+		// "3742a1054e65746082b0ef133453978e06aa2a45fbfb1013d1278fc0ac1eb783", // (_) R10 = cb0+tx1
+		"54cef5e45189afebdd9a04e53810ab382e6558a4deff292d21931c66e2a4df3b", //    (V) R11 = tx2+tx3
+		// "81baadaa98dadb95762d6fec426d1b8ca55f37bccf65335db6d8479871f041e5", // (_) R12 = tx4+tx5
+		// "87e34ca4c4f977e25e49d0f4d712d3738a523ab566a7a0352dee5fb4fcebf8fe", // (_) R13 = tx6+tx7
+		// "ab63bc2f3ffaaac028eb78620c29ed1d78aac59b5beed257d98167bf4ee88346", // (_) R14 = tx8+tx9
 		// ------------------------------------------------------------------
-		// "21d732a0b3b5d1cd465f98201f4e1c893af8c2d1f3b9349a166e727566aa3f99", // (_) R20 = R10+R11
-		"6e5a1ebda631a996eb1e571d1b1b67095c4c8a1e8742fb84354273425a453f89", //    (V) R21 = R12+R13
-		// "5fc9e12dbcb5522b13ec46072af1610f7607eea150c76d22bf69915c0a1fd9d7", // (_) R22 = R14+R14 (duplicate because odd number)
+		// "e89439ff24a8ab115b33af5f8d68c0b9ac4baa866e833549311f3e33ccd05e04", // (_) R20 = R10+R11
+		"c23d928f811bfa0874004068a1104a9642384adcd4ec418db8d18b311686e569", //    (V) R21 = R12+R13
+		// "c0183f3b3d9014bead80e2fc8b5f9112b123ac6141557e00eb4e6e106947cda6", // (_) R22 = R14+R14 (duplicate because odd number)
 		// ------------------------------------------------------------------
-		// "80334c96b96656ed8993d289c607d1c1d88869129edce611dd8bc5a88426f40f", // (_) R30 = R20+R21
-		"a5993e4e7851740fc59124e30bb5d8b6987f27d3616888503c8ef4718fbcfa5e", //    (V) R31 = R22+R22 (duplicate because odd number)
+		// "febf86d148d5eebdeff70da441ad36033dd4c6e32724b6ea94ab8ec9c53bc6c1", // (_) R30 = R20+R21
+		"d426928cf44ba46f337735d0ca12df60f74a9751a35d9cbe3bc5b381cf66411c", //    (V) R31 = R22+R22 (duplicate because odd number)
 		// ------------------------------------------------------------------
-		// "b068c453940c31ae6281b4261954436758edb4a40ab80c1a2d8781e954b89fd7", // (_) root = R30+R31
+		// "f6a9305da1149452041b14fae1ec636936e56074235668b4f6090584f99401ff", // (_) root = R30+R31
 	}
 
-	hexRoot := "b068c453940c31ae6281b4261954436758edb4a40ab80c1a2d8781e954b89fd7"
+	hexRoot := "f6a9305da1149452041b14fae1ec636936e56074235668b4f6090584f99401ff"
 	expectedRoot := *hexToLink(t, hexRoot)
 
 	merkleRoot := *hexToLink(t, hexTree[0])
-	if verboseTesting { // turn on in all_test.go
-		t.Logf("coinbase = %#v", merkleRoot)
-	}
+	t.Logf("coinbase = %#v", merkleRoot)
 
 	for i := 1; i < len(hexTree); i += 1 {
 
 		hi := hexToLink(t, hexTree[i])
-		if verboseTesting { // turn on in all_test.go
-			t.Logf("h%d = %#v", i, hi)
-		}
+		t.Logf("h%d = %#v", i, hi)
 
 		b := append(merkleRoot[:], hi[:]...)
-		merkleRoot = block.NewDigest(b)
+		merkleRoot = merkle.NewDigest(b)
 
-		if verboseTesting { // turn on in all_test.go
-			t.Logf("hm = %#v", merkleRoot)
-		}
+		t.Logf("hm = %#v", merkleRoot)
 	}
 
 	if merkleRoot != expectedRoot {
@@ -102,36 +97,34 @@ func TestFullMerkle(t *testing.T) {
 		"46afe1d6069aad653b31ac7d58f2be5ebd999b6895dcfdc1cc893659177187e7", // (V) tx8
 		"bb83326a538a22f89fc012bb116c4d24b28fab947bab1e5940f98bf357b56f05", // (V) tx9
 		// ------------------------------------------------------------------
-		"48fd61cf4344a0615745de8a9540a9d6b1c31467355e9acfad1bceaf792a664d", // (V) R10 = cb0+tx1
-		"0bfda76e5c9b9b1e4a00f6b7f41d9b8b489d340562dbf33b4cd8df5ed1f5e639", // (V) R11 = tx2+tx3
-		"78f32e02a758a4bc4cba417f837ff9d4b55911374052932cea6dc2764a4be01a", // (V) R12 = tx4+tx5
-		"b8f69e074cea7cda3c04e5cab3a8d91c403630ce201fae58f95b801429af7927", // (V) R13 = tx6+tx7
-		"73b8bc8b12c38c2c2a89ed4d10877abadbff46f298cdca215486aa36cdb91004", // (V) R14 = tx8+tx9
+		"3742a1054e65746082b0ef133453978e06aa2a45fbfb1013d1278fc0ac1eb783", // (V) R10 = cb0+tx1
+		"54cef5e45189afebdd9a04e53810ab382e6558a4deff292d21931c66e2a4df3b", // (V) R11 = tx2+tx3
+		"81baadaa98dadb95762d6fec426d1b8ca55f37bccf65335db6d8479871f041e5", // (V) R12 = tx4+tx5
+		"87e34ca4c4f977e25e49d0f4d712d3738a523ab566a7a0352dee5fb4fcebf8fe", // (V) R13 = tx6+tx7
+		"ab63bc2f3ffaaac028eb78620c29ed1d78aac59b5beed257d98167bf4ee88346", // (V) R14 = tx8+tx9
 		// ------------------------------------------------------------------
-		"21d732a0b3b5d1cd465f98201f4e1c893af8c2d1f3b9349a166e727566aa3f99", // (V) R20 = R10+R11
-		"6e5a1ebda631a996eb1e571d1b1b67095c4c8a1e8742fb84354273425a453f89", // (V) R21 = R12+R13
-		"5fc9e12dbcb5522b13ec46072af1610f7607eea150c76d22bf69915c0a1fd9d7", // (V) R22 = R14+R14 (duplicate because odd number)
+		"e89439ff24a8ab115b33af5f8d68c0b9ac4baa866e833549311f3e33ccd05e04", // (V) R20 = R10+R11
+		"c23d928f811bfa0874004068a1104a9642384adcd4ec418db8d18b311686e569", // (V) R21 = R12+R13
+		"c0183f3b3d9014bead80e2fc8b5f9112b123ac6141557e00eb4e6e106947cda6", // (V) R22 = R14+R14 (duplicate because odd number)
 		// ------------------------------------------------------------------
-		"80334c96b96656ed8993d289c607d1c1d88869129edce611dd8bc5a88426f40f", // (V) R30 = R20+R21
-		"a5993e4e7851740fc59124e30bb5d8b6987f27d3616888503c8ef4718fbcfa5e", // (V) R31 = R22+R22 (duplicate because odd number)
+		"febf86d148d5eebdeff70da441ad36033dd4c6e32724b6ea94ab8ec9c53bc6c1", // (V) R30 = R20+R21
+		"d426928cf44ba46f337735d0ca12df60f74a9751a35d9cbe3bc5b381cf66411c", // (V) R31 = R22+R22 (duplicate because odd number)
 		// ------------------------------------------------------------------
-		"b068c453940c31ae6281b4261954436758edb4a40ab80c1a2d8781e954b89fd7", // (V) root = R30+R31
+		"f6a9305da1149452041b14fae1ec636936e56074235668b4f6090584f99401ff", // (V) root = R30+R31
 	}
 
 	length := len(hexTree)
-	expectedTree := make([]block.Digest, length)
+	expectedTree := make([]merkle.Digest, length)
 
 	for i := 0; i < length; i += 1 {
 		expectedTree[i] = *hexToLink(t, hexTree[i])
-		if verboseTesting { // turn on in all_test.go
-			t.Logf("h%d = %#v", i, expectedTree[i])
-		}
+		t.Logf("h%d = %#v", i, expectedTree[i])
 	}
 
 	coinbase := expectedTree[0]
 	ids := expectedTree[1:10]
 
-	actualTree := block.FullMerkleTree(coinbase, ids)
+	actualTree := merkle.FullMerkleTree(coinbase, ids)
 
 	for i := 0; i < length; i += 1 {
 		if actualTree[i] != expectedTree[i] {
@@ -148,19 +141,17 @@ func TestMerkleCoinbaseOnly(t *testing.T) {
 	}
 
 	length := len(hexTree)
-	expectedTree := make([]block.Digest, length)
+	expectedTree := make([]merkle.Digest, length)
 
 	for i := 0; i < length; i += 1 {
 		expectedTree[i] = *hexToLink(t, hexTree[i])
-		if verboseTesting { // turn on in all_test.go
-			t.Logf("h%d = %#v", i, expectedTree[i])
-		}
+		t.Logf("h%d = %#v", i, expectedTree[i])
 	}
 
 	coinbase := expectedTree[0]
-	ids := []block.Digest{} // empty
+	ids := []merkle.Digest{} // empty
 
-	actualTree := block.FullMerkleTree(coinbase, ids)
+	actualTree := merkle.FullMerkleTree(coinbase, ids)
 
 	for i := 0; i < length; i += 1 {
 		if actualTree[i] != expectedTree[i] {
@@ -176,25 +167,23 @@ func TestMerkleOneTx(t *testing.T) {
 		"90e0d4154e0484cf808d964b09bb4ce9cd32b18625665d8afbe72e31a708b5b1", // (V) cb0 (coinbase)
 		"4d222dd8e3fc1e4808de06c1ce4e1837fee1386f00fda94cf8946a8b42ea2af5", // (V) tx1
 		// ------------------------------------------------------------------
-		"48fd61cf4344a0615745de8a9540a9d6b1c31467355e9acfad1bceaf792a664d", // (V) root = cb0+tx1
+		"3742a1054e65746082b0ef133453978e06aa2a45fbfb1013d1278fc0ac1eb783", // (V) root = cb0+tx1
 	}
 
 	length := len(hexTree)
-	expectedTree := make([]block.Digest, length)
+	expectedTree := make([]merkle.Digest, length)
 
 	for i := 0; i < length; i += 1 {
 		expectedTree[i] = *hexToLink(t, hexTree[i])
-		if verboseTesting { // turn on in all_test.go
-			t.Logf("h%d = %#v", i, expectedTree[i])
-		}
+		t.Logf("h%d = %#v", i, expectedTree[i])
 	}
 
 	coinbase := expectedTree[0]
 	ids := expectedTree[1:2]
 
-	expectedRoot := block.NewDigest(append(coinbase[:], ids[0][:]...))
+	expectedRoot := merkle.NewDigest(append(coinbase[:], ids[0][:]...))
 
-	actualTree := block.FullMerkleTree(coinbase, ids)
+	actualTree := merkle.FullMerkleTree(coinbase, ids)
 
 	if actualTree[2] != expectedRoot {
 		t.Errorf("actual: %#v  expected: %#v", actualTree[1], expectedRoot)
@@ -230,72 +219,68 @@ func TestMinimumMerkleFromTransactions(t *testing.T) {
 		},
 		{ // 2
 			"4d222dd8e3fc1e4808de06c1ce4e1837fee1386f00fda94cf8946a8b42ea2af5", // tx1
-			"0ec0035fe3066cb33f3828c50e23bd3a35a881b71645291b2f7b68fe4bac5343", // tx2+tx2
+			"cb623b82bcbd8dcee08a3b77c726fb7fa7b8b05352e0da68849242ee6f6757fc", // tx2+tx2
 		},
 		{ // 3
 			"4d222dd8e3fc1e4808de06c1ce4e1837fee1386f00fda94cf8946a8b42ea2af5", // tx1
-			"0bfda76e5c9b9b1e4a00f6b7f41d9b8b489d340562dbf33b4cd8df5ed1f5e639", // tx2+tx3
+			"54cef5e45189afebdd9a04e53810ab382e6558a4deff292d21931c66e2a4df3b", // tx2+tx3
 		},
 		{ // 4
 			"4d222dd8e3fc1e4808de06c1ce4e1837fee1386f00fda94cf8946a8b42ea2af5", // tx1
-			"0bfda76e5c9b9b1e4a00f6b7f41d9b8b489d340562dbf33b4cd8df5ed1f5e639", // tx2+tx3
-			"9223d3b1fe3246b92d1b4a015c9745c9ef9399e812ec8929bd56de1d3a475a39", // (tx4+tx4) + (tx4+tx4)
+			"54cef5e45189afebdd9a04e53810ab382e6558a4deff292d21931c66e2a4df3b", // tx2+tx3
+			"5fbfeab2b0ec57dbd819934a97384f03ad3089f84dad486c4f8084a90884f157", // (tx4+tx4) + (tx4+tx4)
 		},
 		{ // 5
 			"4d222dd8e3fc1e4808de06c1ce4e1837fee1386f00fda94cf8946a8b42ea2af5", // tx1
-			"0bfda76e5c9b9b1e4a00f6b7f41d9b8b489d340562dbf33b4cd8df5ed1f5e639", // tx2+tx3
-			"e3fee74a800945aef565d1a60431b4a32cd1d2d068934d65451e5cc179776c8f", // (tx4+tx5) + (tx4+tx5)
+			"54cef5e45189afebdd9a04e53810ab382e6558a4deff292d21931c66e2a4df3b", // tx2+tx3
+			"599c3fda9699c6db1ffc5abe83f857380e7f75dd17c56971f6289bc821f96535", // (tx4+tx5) + (tx4+tx5)
 		},
 		{ // 6
 			"4d222dd8e3fc1e4808de06c1ce4e1837fee1386f00fda94cf8946a8b42ea2af5", // tx1
-			"0bfda76e5c9b9b1e4a00f6b7f41d9b8b489d340562dbf33b4cd8df5ed1f5e639", // tx2+tx3
-			"918efec79e7fa945cfd08d7b06e5e695635da2d8a44adbaddbea6ad77896da18", // (tx4+tx5) + (tx6+tx6)
+			"54cef5e45189afebdd9a04e53810ab382e6558a4deff292d21931c66e2a4df3b", // tx2+tx3
+			"aafe297140cfb3826d02e1f6437b1532c85fdcabc9c550b36783aa2ed0a424bb", // (tx4+tx5) + (tx6+tx6)
 		},
 		{ // 7
 			"4d222dd8e3fc1e4808de06c1ce4e1837fee1386f00fda94cf8946a8b42ea2af5", // tx1
-			"0bfda76e5c9b9b1e4a00f6b7f41d9b8b489d340562dbf33b4cd8df5ed1f5e639", // tx2+tx3
-			"6e5a1ebda631a996eb1e571d1b1b67095c4c8a1e8742fb84354273425a453f89", // (tx4+tx5) + (tx6+tx7)
+			"54cef5e45189afebdd9a04e53810ab382e6558a4deff292d21931c66e2a4df3b", // tx2+tx3
+			"c23d928f811bfa0874004068a1104a9642384adcd4ec418db8d18b311686e569", // (tx4+tx5) + (tx6+tx7)
 		},
 		{ // 8
 			"4d222dd8e3fc1e4808de06c1ce4e1837fee1386f00fda94cf8946a8b42ea2af5", // tx1
-			"0bfda76e5c9b9b1e4a00f6b7f41d9b8b489d340562dbf33b4cd8df5ed1f5e639", // tx2+tx3
-			"6e5a1ebda631a996eb1e571d1b1b67095c4c8a1e8742fb84354273425a453f89", // (tx4+tx5) + (tx6+tx7)
-			"42ba72b5567a40bea2763074d75503557eb0c3a6dad5e439b18d51283e112ad3", // (tx8+tx8) x 4)
+			"54cef5e45189afebdd9a04e53810ab382e6558a4deff292d21931c66e2a4df3b", // tx2+tx3
+			"c23d928f811bfa0874004068a1104a9642384adcd4ec418db8d18b311686e569", // (tx4+tx5) + (tx6+tx7)
+			"53422d94245337b5596209e5a31a362fef852c5104158ca3b367ba5201a23d89", // (tx8+tx8) x 4)
 		},
 		{ // 9
 			"4d222dd8e3fc1e4808de06c1ce4e1837fee1386f00fda94cf8946a8b42ea2af5", // tx1
-			"0bfda76e5c9b9b1e4a00f6b7f41d9b8b489d340562dbf33b4cd8df5ed1f5e639", // tx2+tx3
-			"6e5a1ebda631a996eb1e571d1b1b67095c4c8a1e8742fb84354273425a453f89", // (tx4+tx5) + (tx6+tx7)
-			"a5993e4e7851740fc59124e30bb5d8b6987f27d3616888503c8ef4718fbcfa5e", // (tx8+tx9) x 4)
+			"54cef5e45189afebdd9a04e53810ab382e6558a4deff292d21931c66e2a4df3b", // tx2+tx3
+			"c23d928f811bfa0874004068a1104a9642384adcd4ec418db8d18b311686e569", // (tx4+tx5) + (tx6+tx7)
+			"d426928cf44ba46f337735d0ca12df60f74a9751a35d9cbe3bc5b381cf66411c", // (tx8+tx9) x 4)
 		},
 	}
 
 	// transactions
 	txCount := len(hexTx)
-	tx := make([]block.Digest, txCount)
+	tx := make([]merkle.Digest, txCount)
 
 	// convert all transactions
 	for i := 0; i < txCount; i += 1 {
 		tx[i] = *hexToLink(t, hexTx[i])
-		if verboseTesting { // turn on in all_test.go
-			t.Logf("h%d = %#v", i, tx[i])
-		}
+		t.Logf("h%d = %#v", i, tx[i])
 	}
 
 	// expected
-	expected := make([][]block.Digest, txCount+1)
+	expected := make([][]merkle.Digest, txCount+1)
 
 	// convert all expected
 	for i := 0; i <= txCount; i += 1 {
 		expectedCount := len(hexExpected[i])
-		expected[i] = make([]block.Digest, expectedCount)
+		expected[i] = make([]merkle.Digest, expectedCount)
 
 		for j := 0; j < expectedCount; j += 1 {
 
 			expected[i][j] = *hexToLink(t, hexExpected[i][j])
-			if verboseTesting { // turn on in all_test.go
-				t.Logf("h%d,%d = %#v", i, j, expected[i][j])
-			}
+			t.Logf("h%d,%d = %#v", i, j, expected[i][j])
 		}
 	}
 
@@ -303,12 +288,10 @@ func TestMinimumMerkleFromTransactions(t *testing.T) {
 	for n := 1; n <= txCount; n += 1 {
 
 		// build the tree of 'n' transactions
-		merkleTree := block.MinimumMerkleTree(tx[:n])
+		merkleTree := merkle.MinimumMerkleTree(tx[:n])
 		treeLength := len(merkleTree)
 
-		if verboseTesting { // turn on in all_test.go
-			t.Logf("n: %d  mmt = %#v", n, merkleTree)
-		}
+		t.Logf("n: %d  mmt = %#v", n, merkleTree)
 
 		expectedLength := len(expected[n])
 		if treeLength != expectedLength {
@@ -330,29 +313,26 @@ func TestMinimumMerkleFromManyTransactions(t *testing.T) {
 
 	// transactions
 	txCount := block328656TransactionCount - 1 // len(hexTx)
-	tx := make([]block.Digest, txCount)
+	tx := make([]merkle.Digest, txCount)
 
 	// convert all transactions (skip tx[0] == coinbase)
 	for i := 0; i < txCount; i += 1 {
 		tx[i] = *hexToLink(t, block328656MerkleTree[i+1])
-		if verboseTesting { // turn on in all_test.go
-			t.Logf("h%d = %#v", i, tx[i])
-		}
+		t.Logf("h%d = %#v", i, tx[i])
 	}
 
 	// extract the required merkle data
 	nextChunkSize := block328656TransactionCount
 	totalCount := len(block328656MerkleTree)
-	expected := make([]block.Digest, 5000)
+	expected := make([]merkle.Digest, 5000)
 
 	offset := 0
 	chunkSize := nextChunkSize
 	for i := 0; i < totalCount-1; i += chunkSize {
 		expected[offset] = *hexToLink(t, block328656MerkleTree[i+1])
 		offset += 1
-		if verboseTesting { // turn on in all_test.go
-			t.Logf("h%d = %#v", i, expected[i])
-		}
+		t.Logf("h%d = %#v", i, expected[i])
+
 		chunkSize = nextChunkSize
 		nextChunkSize = (chunkSize + 1) / 2
 	}
@@ -363,12 +343,10 @@ func TestMinimumMerkleFromManyTransactions(t *testing.T) {
 loop:
 	for {
 		// build the tree of 'n' transactions
-		merkleTree := block.MinimumMerkleTree(tx[:n])
+		merkleTree := merkle.MinimumMerkleTree(tx[:n])
 		treeLength := len(merkleTree)
 
-		if verboseTesting { // turn on in all_test.go
-			t.Logf("n: %d  mmt = %#v", n, merkleTree)
-		}
+		t.Logf("n: %d  mmt = %#v", n, merkleTree)
 
 		// check results
 		for i := 0; i < treeLength; i += 1 {
@@ -1594,7 +1572,7 @@ var block328656MerkleTree = []string{
 	"94f1683b3daddb8df71b2f517c401fbb138a21f77340939524d384e85c8c789d",
 	// start of Merkle Tree
 	"d4fb3cd34278c727eeb20fb080da316863b63bcd2f9f4dc9d1278e4b2ea50e38",
-	"1995a8e2b53684fee000828155bdaeb3f282dd74acf5072c61951d5c7d14f831",
+	"ac94259ac7f20e653a736d6dba284450365a0d2a96268c99254bdca7e435477e",
 	"f5491eb3ab7776709ee27562fb1a1f4e57abd355288a86673c00788e3b321899",
 	"beac85b552d697fdaa2105b43a70f52f18f86426008b81947f3ea1b3cd4166db",
 	"c05da933ae6e63602e397a1835b2cfba1b84b416df000f0efe2af72bc0ee8b0a",
@@ -2194,7 +2172,7 @@ var block328656MerkleTree = []string{
 	"bfd31757346397cc0880704d2a6cf42f2139c7a285f9e0aba214820bb2db086d",
 	"d316bde8b6340d3806ef91f23ff407b6213aae583a08fae1ce446a2ed1962981",
 	"62a004d1873a56803deebab341f94c93836eb1bd025fdcf90335e03f0e239b30",
-	"ce198222228bacbb56ebc87b2d8ce8f03061a1724faaeb3e262407089e66d22b",
+	"32b6fb8599ee7f0907a565546d4ccb4b82137b0efea38dfe03ad7772fdfd3795",
 	"3c574e62a87d4ef338e67424c1eb0a6bb32e725e46df1ebe64062551a3e383fc",
 	"b9a2212d16b97c799ac738d5e199b98c5fc87a62462b337a9b26d8b957eb2db7",
 	"80f3e8dcc1f3d6d730bd2ae09ebb58f56c8a7e8b5857ab35100d2b96f8b7e085",
@@ -2494,7 +2472,7 @@ var block328656MerkleTree = []string{
 	"e0f8aecab436e962e3ecb407c178113ee6f8155f53a02d22f671dbf1acec7024",
 	"539dea267083160d755d72b7bb79a98b21053d9fde9c743ba9facdcb18783a3c",
 	"8ccff9c3525acdffdbc9c9eeeaa1a50a2ffb27aa9914b11cbd3f9ca367cc4d5e",
-	"c3710b6249fff213aff1d19a0bc7071edafc49dbbf7011a34b7ca71fb70fe00e",
+	"ea16b0ea5e708966f9db600405761fd82460061a1877c6aadfe5f292f1c3b888",
 	"efe1ed86525839b0df24ebe148ced5446b3627519f9a3ad155520602d17274ca",
 	"55160d8140cd02e2a92ea059dd77542b811f874c8f60450148a149237014bf41",
 	"0586d07ed62b3d123fc26ed27859a1bb3b09c10583239a7341839a5c61d1434d",
@@ -2644,7 +2622,7 @@ var block328656MerkleTree = []string{
 	"6f14feb5856c872f4c731ef1d7637ab9895849d61386925dc16da6454e969b78",
 	"69d393077d2185e465075fc270cf398f41311d072eda4facd0c25e4710c82035",
 	"79d62b7d8e454edd1d71f817d27f13e6476f6d03ceb972c4d47b99a2946f6fce",
-	"15b19a3b0628981fdf454321c7e4a9ea6006c387219ea769e18afa85ea1b2413",
+	"1972243a8c78834ef01542af94b3b746ec4d47c96a3b4040fe1677f574dbc75f",
 	"38268a54911621b479ba2e27cb3820cf8af9127695c0e983894e8ff4846a8ee4",
 	"85a69c54dcd936c62a01d8e420b9133196b6ad70ab05d4df0086651f9621f46a",
 	"7863b7ba18ae65afd05b9e62f0fd23cbdd137845a29ddc4f299ac97995428ad3",
@@ -2719,7 +2697,7 @@ var block328656MerkleTree = []string{
 	"5d75717e5870aa1cd0d54d80eb9e3c37a9ccb002c01a80b0da6e3b294b043516",
 	"1856454348df577916c44999f1e062cfa6ca5c56c5c50fed3244031c91b3f406",
 	"18a3947999dbb787fee325f291a7d8d83a4f85e0d56f9abeeb220d5d38e4dd21",
-	"2bd1f41dc7114909f3b5c34aa8583709b6e3f1324e192938278bae0786531b33",
+	"9bf576d0426149b47a4f9e97955f02f5e91757db6679df70779b9e74e39dd440",
 	"dbbdf62164ae4ca4515258a6a8b5daf7dd580ba49827cb447cde52de29097abb",
 	"838605339789c4f471c6a7bf3c645d427292ed82f63a8c12a837ef254bae8fc8",
 	"a00e6e926ad3c104d1a90f51552dff8df1e52eca9cbe351083e00a9a3a716e94",
@@ -2757,7 +2735,7 @@ var block328656MerkleTree = []string{
 	"a1c004296aca69fd6b63e560fca7e273044e21653556f970ceea30e8db3d3ca3",
 	"3ffa3e97407c7f334070b488325d0b8d0be8cc070d7c8669ba4eda7c9dae0495",
 	"80aa6d4140ded4ab78fc9d1ef5e3c4058a9c518fc9aa9dbb4711a732f18699c3",
-	"dc8986ca31e3e4c28b04031f91fb2558410fa3816faa00fca47258dc0b7ce273",
+	"9cfe2ec486f89540d8d0dedee6bf8f993036ad0b4720392679f8ce7d1dcb719d",
 	"351a40793ac3481189b9d9b828a9868e58349b2ec8e013cd847d5f5073988706",
 	"bccc3f02ff2c3c604108992004ff30316a5167c778d324128bc0f4e91090d2d7",
 	"2720532996f8e6dbc9133ec0a4bc0cc3966e1a53bbc595c40ac3b556ae4e8656",
@@ -2776,7 +2754,7 @@ var block328656MerkleTree = []string{
 	"27980e861d4570177cae080e9fb21f65190d5811e529e555c216790de5996f87",
 	"9a7870c0d6657e7b1674c5562acc1941227f36b15be3503bf5fe5423f11eafb0",
 	"746c1bddd15bac4924d1cdf9cb88b8c85fd39f81e6e23d8834a7b5a09963a85a",
-	"1b9c4b6b4a52f0673143cce122fffa4db06833efe65ab87dbc60892e0dc60737",
+	"0ecae31fc73c2db681342e461b08b28db89952798b85840f8498ecab06c6cf49",
 	"e3852c4361374b8e0227c2bf98f1a6c13fffe4b89a7393c41d4e6a0bfc1d4b3f",
 	"9c1e545a46992eefd3f820bc27c49f5781678d9dd8c8160c06fe643d632df9bd",
 	"15905feabb47b5f0b7e1f1c722bac75cf5b5124a4d28e8ada7c27e7d8860d8a0",
@@ -2786,14 +2764,14 @@ var block328656MerkleTree = []string{
 	"06d332dfe90b06c348798fc9ad72873072ee376a92dd2238ff5c5dc1823167da",
 	"8e4dd9bbfe64ce0daa65801fc6b679ce2fbbdc7c8d760dbbd29fd944a137a2ad",
 	"1a88b382dbfb53d1188d01f0bf577e0173be68304213c4366d2f6e9d2e7621ff",
-	"6ef65293e5da5fb41ab0e6505447b1ac44ccb5da8c63ff03876beda4aeeca04b",
+	"e2334d046718f3fe71067cbcd0048e97130c869e55290e471be4fe5a753bcebb",
 	"c281efa0d27d0ab67c8ff62def67fb0ccf6ed30e922ffc7fb1a6e82f0c466827",
 	"ae0fa9e22d69772339c46df7802d34560d1f008d132ad0568591dd75d6f56db2",
 	"7095b76adbbbd55eb8a3547d55b457f4a594a1f20a878e4dbbbc6d79ebc835ec",
 	"59f38dde4d03d3bd86a29f4bcea93e18566fe2e1506fa35454a218addf5d6258",
-	"8c5de855ce12d92d497a8ea05662288a38eb946c0cc945ae0798b675f821b4a4",
+	"aae7d326b16e3cee1774ce695a8310c59694ca9efe35f7a1dd777ed9ae379f37",
 	"fe291f7154f192d955be6bccb7aaaba0041405405c28a14e21225b43c23831a1",
 	"88e874bba360dba49f2f5bd9598aeed685196793f819d6a98ee4a44424348058",
-	"57a992f49842570a91a970e222484f471d0380a7ab6a46915f88129fc5413a0f",
+	"9f4dbd3dff28f964af4f776c34ebd24df4bc2c2160570b73496afa57633bb815",
 	"2b44fc83c84e21817b0da633af7733a4872c2415a21bf9f6b4883a5751c3e020",
 }
