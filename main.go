@@ -444,12 +444,13 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 }
 
 func runInfo(c *cli.Context, globals globalFlags) {
-	configuration, err := checkAndGetConfig(globals.config)
+
+	infoConfig, err := configuration.GetInfoConfiguration(globals.config)
 	if nil != err {
 		exitwithstatus.Message("Error: Get configuration failed: %v\n", err)
 	}
 
-	output, err := json.Marshal(configuration)
+	output, err := json.Marshal(infoConfig)
 	if nil != err {
 		exitwithstatus.Message("Error: Marshal config failed: %v\n", err)
 	}
