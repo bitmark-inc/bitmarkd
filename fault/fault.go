@@ -21,7 +21,7 @@ var (
 	ErrKeyLength                = InvalidError("Key Length is invalid")
 	ErrPasswordLength           = InvalidError("Password Length is invalid")
 	ErrVerifiedPassword         = InvalidError("Verified password is different")
-	ErrRequiredConfigDir        = InvalidError("Config folder is required")
+	ErrRequiredConfig           = InvalidError("Config file is required")
 	ErrConfigDirPath            = InvalidError("Config is not a folder")
 	ErrRequiredConnect          = InvalidError("connect is required")
 	ErrRequiredIdentity         = InvalidError("identity is required")

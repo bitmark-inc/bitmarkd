@@ -13,13 +13,13 @@ import (
 )
 
 // config is required
-func checkConfigDir(path string) (string, error) {
-	if "" == path {
-		return "", fault.ErrRequiredConfigDir
+func checkConfigFile(file string) (string, error) {
+	if "" == file {
+		return "", fault.ErrRequiredConfig
 	}
 
-	path = os.ExpandEnv(path)
-	return path, nil
+	file = os.ExpandEnv(file)
+	return file, nil
 }
 
 // identity is required, but not check the config file
@@ -127,12 +127,7 @@ func checkTransferFrom(from string, config *configuration.Configuration) (*confi
 }
 
 func checkAndGetConfig(path string) (*configuration.Configuration, error) {
-	configDir, err := checkConfigDir(path)
-	if nil != err {
-		return nil, err
-	}
-
-	configFile, err := configuration.GetConfigPath(configDir)
+	configFile, err := checkConfigFile(path)
 	if nil != err {
 		return nil, err
 	}

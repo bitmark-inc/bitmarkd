@@ -47,7 +47,7 @@ func main() {
 		cli.StringFlag{
 			Name:        "config, c",
 			Value:       "",
-			Usage:       "*bitmark-cli config folder",
+			Usage:       "*bitmark-cli config file",
 			Destination: &globals.config,
 		},
 		cli.StringFlag{
@@ -180,8 +180,7 @@ func main() {
 }
 
 func runSetup(c *cli.Context, globals globalFlags) {
-
-	configDir, err := checkConfigDir(globals.config)
+	configFile, err := checkConfigFile(globals.config)
 	if nil != err {
 		exitwithstatus.Message("Error: %s\n", err)
 	}
@@ -205,7 +204,7 @@ func runSetup(c *cli.Context, globals globalFlags) {
 
 	verbose := globals.verbose
 	if verbose {
-		fmt.Printf("config: %s\n", configDir)
+		fmt.Printf("config: %s\n", configFile)
 		fmt.Printf("network: %s\n", network)
 		fmt.Printf("connect: %s\n", connect)
 		fmt.Printf("identity: %s\n", name)
@@ -214,6 +213,8 @@ func runSetup(c *cli.Context, globals globalFlags) {
 	}
 
 	// Create the folder if not existed
+	folderIndex := strings.LastIndex(configFile, "/")
+	configDir := configFile[:folderIndex]
 	if !ensureFileExists(configDir) {
 		if err := os.MkdirAll(configDir, 0755); nil != err {
 			exitwithstatus.Message("Error: %v\n", err)
@@ -227,8 +228,8 @@ func runSetup(c *cli.Context, globals globalFlags) {
 		Identities:       make([]configuration.IdentityType, 0),
 	}
 
-	if !(generateConfiguration(configDir, configData) &&
-		generateIdentity(configDir, name, description, globals.password)) {
+	if !(generateConfiguration(configFile, configData) &&
+		generateIdentity(configFile, name, description, globals.password)) {
 		exitwithstatus.Message("Error: Setup failed\n")
 	}
 
@@ -237,7 +238,7 @@ func runSetup(c *cli.Context, globals globalFlags) {
 
 func runGenerate(c *cli.Context, globals globalFlags) {
 
-	configDir, err := checkConfigDir(globals.config)
+	configFile, err := checkConfigFile(globals.config)
 	if nil != err {
 		exitwithstatus.Message("Error: %s\n", err)
 	}
@@ -254,13 +255,13 @@ func runGenerate(c *cli.Context, globals globalFlags) {
 
 	verbose := globals.verbose
 	if verbose {
-		fmt.Printf("config: %s\n", configDir)
+		fmt.Printf("config: %s\n", configFile)
 		fmt.Printf("identity: %s\n", name)
 		fmt.Printf("description: %s\n", description)
 		fmt.Println()
 	}
 
-	if !generateIdentity(configDir, name, description, globals.password) {
+	if !generateIdentity(configFile, name, description, globals.password) {
 		exitwithstatus.Message("Error: generate failed\n")
 	}
 
@@ -316,13 +317,12 @@ func runIssue(c *cli.Context, globals globalFlags) {
 		if nil != err {
 			exitwithstatus.Message("Error: %s\n", err)
 		}
-	}else{
+	} else {
 		publicKey, privateKey, err = verifyPassword(globals.password, issuer)
 		if nil != err {
 			exitwithstatus.Message("Error: %s\n", err)
 		}
 	}
-
 
 	// TODO: deal with IPv6?
 	bitmarkRpcConfig := bitmarkRPC{
@@ -390,7 +390,7 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 		if nil != err {
 			exitwithstatus.Message("Error: %s\n", err)
 		}
-	}else{
+	} else {
 		publicKey, privateKey, err = verifyPassword(globals.password, from)
 		if nil != err {
 			exitwithstatus.Message("Error: %s\n", err)
@@ -447,13 +447,7 @@ func runInfo(c *cli.Context, globals globalFlags) {
 	}
 }
 
-func generateConfiguration(configDir string, configData configuration.Configuration) bool {
-
-	configFile, err := configuration.GetConfigPath(configDir)
-	if nil != err {
-		fmt.Printf("Get config file failed: %v\n", err)
-		return false
-	}
+func generateConfiguration(configFile string, configData configuration.Configuration) bool {
 
 	// Check if file exist
 	if !ensureFileExists(configFile) {
@@ -476,32 +470,25 @@ func generateConfiguration(configDir string, configData configuration.Configurat
 	return true
 }
 
-func generateIdentity(configDir string, name string, description string, password string) bool {
-
-	configFile, err := configuration.GetConfigPath(configDir)
-	if nil != err {
-		fmt.Printf("Get config file failed: %v\n", err)
-		return false
-	}
+func generateIdentity(configFile string, name string, description string, password string) bool {
 
 	if !ensureFileExists(configFile) {
 		fmt.Printf("Error: %v: %s\n", fault.ErrNotFoundConfigFile, configFile)
 		return false
-	} else {
-		configs, err := configuration.GetConfiguration(configFile)
-		if nil != err {
-			fmt.Printf("configuration fail: %s\n", err)
-			return false
-		}
-
-		for _, identity := range configs.Identities {
-			if name == identity.Name {
-				fmt.Printf("identity exists. Name: %s\n", name)
-				return false
-			}
-		}
 	}
 
+	configs, err := configuration.GetConfiguration(configFile)
+	if nil != err {
+		fmt.Printf("configuration fail: %s\n", err)
+		return false
+	}
+
+	for _, identity := range configs.Identities {
+		if name == identity.Name {
+			fmt.Printf("identity exists. Name: %s\n", name)
+			return false
+		}
+	}
 
 	if "" == password {
 		// prompt password and pwd confirm for private key encryption

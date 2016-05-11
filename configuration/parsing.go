@@ -5,8 +5,6 @@
 package configuration
 
 import (
-	"github.com/bitmark-inc/bitmark-cli/fault"
-	"os"
 	"path/filepath"
 )
 
@@ -32,20 +30,6 @@ type Configuration struct {
 	Network          string         `libucl:"network"`
 	Connect          string         `libucl:"connect"`
 	Identities       []IdentityType `libucl:"identities"`
-}
-
-func GetConfigPath(dir string) (string, error) {
-	fileInfo, err := os.Stat(dir)
-	if nil != err {
-		return "", err
-	}
-	if !fileInfo.IsDir() {
-		return "", fault.ErrConfigDirPath
-	}
-
-	path := dir + "/bitmark-cli.conf"
-
-	return path, nil
 }
 
 func GetConfiguration(configurationFileName string) (*Configuration, error) {
