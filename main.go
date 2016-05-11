@@ -7,6 +7,7 @@ package main
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"github.com/bitmark-inc/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmark-cli/fault"
@@ -160,9 +161,17 @@ func main() {
 		},
 		{
 			Name:  "info",
-			Usage: "display bitmarkd status",
+			Usage: "display bitmark-cli status",
 			Action: func(c *cli.Context) error {
 				runInfo(c, globals)
+				return nil
+			},
+		},
+		{
+			Name:  "bitmarkInfo",
+			Usage: "display bitmarkd status",
+			Action: func(c *cli.Context) error {
+				runBitmarkInfo(c, globals)
 				return nil
 			},
 		},
@@ -435,6 +444,20 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 }
 
 func runInfo(c *cli.Context, globals globalFlags) {
+	configuration, err := checkAndGetConfig(globals.config)
+	if nil != err {
+		exitwithstatus.Message("Error: Get configuration failed: %v\n", err)
+	}
+
+	output, err := json.Marshal(configuration)
+	if nil != err {
+		exitwithstatus.Message("Error: Marshal config failed: %v\n", err)
+	}
+
+	fmt.Println(string(output))
+}
+
+func runBitmarkInfo(c *cli.Context, globals globalFlags) {
 
 	configuration, err := checkAndGetConfig(globals.config)
 	if nil != err {
@@ -442,7 +465,7 @@ func runInfo(c *cli.Context, globals globalFlags) {
 	}
 
 	verbose := globals.verbose
-	if !info(configuration.Connect, verbose) {
+	if !bitmarkInfo(configuration.Connect, verbose) {
 		exitwithstatus.Message("Error: Get info failed\n")
 	}
 }
@@ -580,7 +603,7 @@ func transfer(rpcConfig bitmarkRPC, transferConfig transferData, verbose bool) b
 	return true
 }
 
-func info(hostPort string, verbose bool) bool {
+func bitmarkInfo(hostPort string, verbose bool) bool {
 	conn, err := connect(hostPort)
 	if nil != err {
 		fmt.Printf("Error: %v\n", err)
@@ -592,7 +615,7 @@ func info(hostPort string, verbose bool) bool {
 	client := jsonrpc.NewClient(conn)
 	defer client.Close()
 
-	err = getInfo(client, verbose)
+	err = getBitmarkInfo(client, verbose)
 	if nil != err {
 		fmt.Printf("Error: %v\n", err)
 		return false

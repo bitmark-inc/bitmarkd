@@ -294,7 +294,7 @@ func doTransfer(client *netrpc.Client, testNet bool, transferConfig transferData
 	return nil
 }
 
-func getInfo(client *netrpc.Client, verbose bool) error {
+func getBitmarkInfo(client *netrpc.Client, verbose bool) error {
 	var reply rpc.InfoReply
 	if err := client.Call("Node.Info", rpc.InfoArguments{}, &reply); err != nil {
 		fmt.Printf("Node.Info error: %v\n", err)
