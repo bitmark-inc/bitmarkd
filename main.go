@@ -151,7 +151,7 @@ func main() {
 				cli.StringFlag{
 					Name:  "receiver, r",
 					Value: "",
-					Usage: "*identity name to receive the transactoin",
+					Usage: "*identity public key to receive the transactoin",
 				},
 			},
 			Action: func(c *cli.Context) error {
@@ -374,7 +374,7 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 		exitwithstatus.Message("Error: %s\n", err)
 	}
 
-	to, err := checkTransferTo(c.String("receiver"), configuration.Identities)
+	to, err := checkTransferTo(c.String("receiver"))
 	if nil != err {
 		exitwithstatus.Message("Error: %s\n", err)
 	}
@@ -387,7 +387,7 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 	verbose := globals.verbose
 	if verbose {
 		fmt.Printf("txid: %s\n", txId)
-		fmt.Printf("receiver: %s\n", to.Name)
+		fmt.Printf("receiver: %s\n", to)
 		fmt.Printf("sender: %s\n", from.Name)
 	}
 
@@ -411,7 +411,7 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 		privateKey: privateKey,
 	}
 
-	newPublicKey, err := hex.DecodeString(to.Public_key)
+	newPublicKey, err := hex.DecodeString(to)
 	if nil != err {
 		fmt.Printf("Decode to public key error\n")
 		exitwithstatus.Message("Error: %s\n", err)

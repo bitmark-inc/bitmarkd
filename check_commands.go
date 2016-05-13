@@ -111,11 +111,11 @@ func checkTransferTxId(txId string) (string, error) {
 }
 
 // transfer to is required field
-func checkTransferTo(to string, identities []configuration.IdentityType) (*configuration.IdentityType, error) {
+func checkTransferTo(to string) (string, error) {
 	if "" == to {
-		return nil, fault.ErrRequiredTransferTo
+		return "", fault.ErrRequiredTransferTo
 	}
-	return getIdentity(to, identities)
+	return to, nil
 }
 
 func checkTransferFrom(from string, config *configuration.Configuration) (*configuration.IdentityType, error) {
