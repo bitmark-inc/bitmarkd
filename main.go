@@ -73,7 +73,7 @@ func main() {
 				cli.StringFlag{
 					Name:  "network, n",
 					Value: "",
-					Usage: " bitmark|testing. Connect to which bitmark network [testing]",
+					Usage: " bitmark|testing|local. Connect to which bitmark network [testing]",
 				},
 				cli.StringFlag{
 					Name:  "connect, x",
