@@ -35,7 +35,7 @@ type assetData struct {
 
 type bitmarkRPC struct {
 	hostPort string
-	testNet  bool
+	network  string
 }
 
 type issueData struct {
@@ -54,9 +54,15 @@ type transferData struct {
 var dummySignature transaction.Signature
 
 // helper to make an address
-func makeAddress(publicKey []byte, testNet bool) *transaction.Address {
+func makeAddress(publicKey []byte, network string) *transaction.Address {
 	var tmpPublicKey [ed25519.PublicKeySize]byte
 	copy(tmpPublicKey[:], publicKey[:])
+
+	testNet := true
+	if network == "bitmark" {
+		testNet = false
+	}
+
 	return &transaction.Address{
 		AddressInterface: &transaction.ED25519Address{
 			Test:      testNet,
@@ -66,9 +72,9 @@ func makeAddress(publicKey []byte, testNet bool) *transaction.Address {
 }
 
 // build a properly signed asset
-func makeAsset(client *netrpc.Client, testNet bool, assetConfig assetData, verbose bool) (*transaction.AssetIndex, error) {
+func makeAsset(client *netrpc.Client, network string, assetConfig assetData, verbose bool) (*transaction.AssetIndex, error) {
 
-	registrantAddress := makeAddress(assetConfig.registrant.publicKey, testNet)
+	registrantAddress := makeAddress(assetConfig.registrant.publicKey, network)
 
 	r := transaction.AssetData{
 		Description: assetConfig.description,
@@ -117,9 +123,9 @@ func makeAsset(client *netrpc.Client, testNet bool, assetConfig assetData, verbo
 }
 
 // build a properly signed issues
-func makeIssue(testNet bool, issueConfig issueData, nonce uint64) *transaction.BitmarkIssue {
+func makeIssue(network string, issueConfig issueData, nonce uint64) *transaction.BitmarkIssue {
 
-	issuerAddress := makeAddress(issueConfig.issuer.publicKey, testNet)
+	issuerAddress := makeAddress(issueConfig.issuer.publicKey, network)
 
 	r := transaction.BitmarkIssue{
 		AssetIndex: *issueConfig.assetIndex,
@@ -153,12 +159,12 @@ type issueReply struct {
 	Err            string                 `json:"error,omitempty"`
 }
 
-func doIssues(client *netrpc.Client, testNet bool, issueConfig issueData, verbose bool) error {
+func doIssues(client *netrpc.Client, network string, issueConfig issueData, verbose bool) error {
 
 	nonce := time.Now().UTC().Unix() * 1000
 	issues := make([]*transaction.BitmarkIssue, issueConfig.quantity)
 	for i := 0; i < len(issues); i += 1 {
-		if issues[i] = makeIssue(testNet, issueConfig, uint64(nonce)+uint64(i)); nil == issues[i] {
+		if issues[i] = makeIssue(network, issueConfig, uint64(nonce)+uint64(i)); nil == issues[i] {
 			return fault.ErrMakeIssueFail
 		}
 	}
@@ -216,14 +222,14 @@ func doIssues(client *netrpc.Client, testNet bool, issueConfig issueData, verbos
 	return nil
 }
 
-func makeTransfer(testNet bool, txId string, owner keyPair, newOwner keyPair) *transaction.BitmarkTransfer {
+func makeTransfer(network string, txId string, owner keyPair, newOwner keyPair) *transaction.BitmarkTransfer {
 	var link transaction.Link
 	if err := link.UnmarshalText([]byte(txId)); nil != err {
 		fmt.Printf("make txId to link fail: %s\n", err)
 		return nil
 	}
 
-	newOwnerAddress := makeAddress(newOwner.publicKey, testNet)
+	newOwnerAddress := makeAddress(newOwner.publicKey, network)
 	r := transaction.BitmarkTransfer{
 		Link:      link,
 		Owner:     newOwnerAddress,
@@ -239,7 +245,7 @@ func makeTransfer(testNet bool, txId string, owner keyPair, newOwner keyPair) *t
 	// manually sign the record and attach signature
 	signature := ed25519.Sign(owner.privateKey, packed)
 
-	ownerAddress := makeAddress(owner.publicKey, testNet)
+	ownerAddress := makeAddress(owner.publicKey, network)
 	r.Signature = signature[:]
 
 	// re-pack with correct signature
@@ -256,8 +262,8 @@ type transferReply struct {
 	Err            string               `json:"error,omitempty"`
 }
 
-func doTransfer(client *netrpc.Client, testNet bool, transferConfig transferData, verbose bool) error {
-	transfer := makeTransfer(testNet, transferConfig.txId, transferConfig.owner, transferConfig.newOwner)
+func doTransfer(client *netrpc.Client, network string, transferConfig transferData, verbose bool) error {
+	transfer := makeTransfer(network, transferConfig.txId, transferConfig.owner, transferConfig.newOwner)
 	if nil == transfer {
 		return fault.ErrMakeTransferFail
 	}

@@ -336,10 +336,7 @@ func runIssue(c *cli.Context, globals globalFlags) {
 	// TODO: deal with IPv6?
 	bitmarkRpcConfig := bitmarkRPC{
 		hostPort: configuration.Connect,
-		testNet:  true,
-	}
-	if configuration.Network != "testing" {
-		bitmarkRpcConfig.testNet = false
+		network:  configuration.Network,
 	}
 
 	registrant := keyPair{
@@ -424,10 +421,7 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 	// TODO: deal with IPv6?
 	bitmarkRpcConfig := bitmarkRPC{
 		hostPort: configuration.Connect,
-		testNet:  true,
-	}
-	if configuration.Network != "testing" {
-		bitmarkRpcConfig.testNet = false
+		network:  configuration.Network,
 	}
 
 	transferConfig := transferData{
@@ -562,7 +556,7 @@ func issue(rpcConfig bitmarkRPC, assetConfig assetData, verbose bool) bool {
 	defer client.Close()
 
 	// make asset
-	assetIndex, err := makeAsset(client, rpcConfig.testNet, assetConfig, verbose)
+	assetIndex, err := makeAsset(client, rpcConfig.network, assetConfig, verbose)
 	if nil != err {
 		fmt.Printf("Error: %v\n", err)
 		return false
@@ -574,7 +568,7 @@ func issue(rpcConfig bitmarkRPC, assetConfig assetData, verbose bool) bool {
 		assetIndex: assetIndex,
 		quantity:   assetConfig.quantity,
 	}
-	err = doIssues(client, rpcConfig.testNet, issueConfig, verbose)
+	err = doIssues(client, rpcConfig.network, issueConfig, verbose)
 	if nil != err {
 		fmt.Printf("Error: %v\n", err)
 		return false
@@ -596,7 +590,7 @@ func transfer(rpcConfig bitmarkRPC, transferConfig transferData, verbose bool) b
 	client := jsonrpc.NewClient(conn)
 	defer client.Close()
 
-	err = doTransfer(client, rpcConfig.testNet, transferConfig, verbose)
+	err = doTransfer(client, rpcConfig.network, transferConfig, verbose)
 	if nil != err {
 		fmt.Printf("Error: %v\n", err)
 		return false
