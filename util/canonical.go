@@ -16,7 +16,9 @@ import (
 // examples:
 //   IPv4:  127.0.0.1:1234
 //   IPv6:  [::1]:1234
-func CanonicalIPandPort(hostPort string) (string, error) {
+//
+// prefix is optional and can be empty ("")
+func CanonicalIPandPort(prefix string, hostPort string) (string, error) {
 
 	host, port, err := net.SplitHostPort(hostPort)
 
@@ -34,7 +36,7 @@ func CanonicalIPandPort(hostPort string) (string, error) {
 	}
 
 	if nil != IP.To4() {
-		return IP.String() + ":" + strconv.Itoa(numericPort), nil
+		return prefix + IP.String() + ":" + strconv.Itoa(numericPort), nil
 	}
-	return "[" + IP.String() + "]:" + strconv.Itoa(numericPort), nil
+	return prefix + "[" + IP.String() + "]:" + strconv.Itoa(numericPort), nil
 }

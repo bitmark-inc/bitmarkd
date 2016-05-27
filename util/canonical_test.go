@@ -27,7 +27,7 @@ func TestCanonical(t *testing.T) {
 	}
 
 	for i, d := range testData {
-		c, err := util.CanonicalIPandPort(d)
+		c, err := util.CanonicalIPandPort("", d)
 		if nil != err {
 			t.Errorf("failed on:[%d] %q  err = %v", i, d, err)
 			continue
@@ -53,7 +53,7 @@ func TestCanonicalIP(t *testing.T) {
 	}
 
 	for i, d := range testData {
-		c, err := util.CanonicalIPandPort(d)
+		c, err := util.CanonicalIPandPort("", d)
 		if fault.ErrInvalidIPAddress != err {
 			t.Errorf("failed on:[%d] %q  err = %v", i, d, err)
 			continue
@@ -72,7 +72,7 @@ func TestCanonicalPort(t *testing.T) {
 	}
 
 	for i, d := range testData {
-		c, err := util.CanonicalIPandPort(d)
+		c, err := util.CanonicalIPandPort("", d)
 		if fault.ErrInvalidPortNumber != err {
 			t.Errorf("failed on:[%d] %q  err = %v", i, d, err)
 			continue
