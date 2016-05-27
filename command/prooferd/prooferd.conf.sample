@@ -1,0 +1,72 @@
+# prooferd.conf  -*- mode: libucl -*-
+
+# "." is a special case - it uses the path from the configuration file
+# as the data directory.
+# all keys and logs are relative to this directory
+# unless the are overridden with absolute paths.
+#data_directory = "."
+data_directory = "/var/lib/prooferd"
+
+# optional pid file if not absolute path then is created relative to
+# the data directory
+# pidfile = "prooferd.pid"
+
+# select the chain of the network for peer connections
+# cross chain networking connects will not work
+#chain = bitmark
+#chain = testing
+chain = local
+
+# number of background hashing threads
+# default: number of CPUs
+# threads = 4
+
+
+# connect to bitmarkd
+peering {
+
+  # the miners keys
+  public_key = minerd-local.public
+  private_key = minerd-local.private
+
+  # connections to bitmarkd nodes
+  connect {
+    public_key = "hR}n^Uv:4b3!zI<jfgg6Wrhhy.ssgk2S/s+t%rQE"
+    blocks = "127.0.0.1:3749"
+    submit = "127.0.0.1:3750"
+  }
+  # connect {
+  #   public_key = "WssDb0.mqFph#y7fUxS6}9ht}zcs!%C[pxAi{t]K"
+  #   blocks = "[::1]:3135"
+  #   submit = "[::1]:3136"
+  # }
+
+}
+
+# ***** future possibility: allow prooferd to sign its own proof record
+# # address to receive work payments
+# payment {
+#   account = bitmark account ***** need access to corresponding private-key
+#   currency = bitcoin
+#   address = "some-test-net-address"
+# }
+
+# logging configuration
+logging {
+  size = 1048576
+  count = 20
+
+  # set the logging level for various modules
+  # modules not overridden with get the value from "*"
+  # the default value for "*" is "critical"
+  levels {
+    "*" = info
+    # "*" = debug
+
+    # data
+    mode = info
+
+    # other
+    main = info
+  }
+}
