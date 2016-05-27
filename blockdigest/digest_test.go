@@ -75,8 +75,42 @@ func TestDigest(t *testing.T) {
 	d := blockdigest.NewDigest(s)
 
 	// big endian
-	// printf '%s' 'hello world' | argon2 'BitmarkBlockchain2016' -d -h 32 -m 18 -t 5 -p 1 -r | awk '{for(i=length($1);i>0;i-=2)x=x substr($1,i-1,2);print x}'
-	stringDigest := "6e3c507fabee4eabc74a79d27a7f69250978c4cb468b8c4a2b457bb766049ea6"
+	// printf '%s' 'hello world' | argon2 'hello world' -d -h 32 -m 18 -t 5 -p 1 -r | awk '{for(i=length($1);i>0;i-=2)x=x substr($1,i-1,2);print x}'
+	stringDigest := "f8a17bc25cb53e848e2d09811ade4b8a037f628443661b88611faf5d9a5a1f33"
+
+	var expected blockdigest.Digest
+	n, err := fmt.Sscan(stringDigest, &expected)
+	if nil != err {
+		t.Fatalf("hex to digest error: %v", err)
+	}
+
+	if 1 != n {
+		t.Fatalf("scanned %d items expected to scan 1", n)
+	}
+
+	if d != expected {
+		t.Errorf("digest = %#v expected %#v", d, expected)
+	}
+}
+
+func TestBlockDataDigest(t *testing.T) {
+
+	blockdata := []byte{
+		0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x1e, 0x9a, 0xcb, 0x62,
+		0x37, 0xc5, 0x6b, 0x38, 0x91, 0x26, 0x40, 0x27,
+		0x2d, 0x74, 0xd1, 0xb4, 0x70, 0xb8, 0xfd, 0x22,
+		0xa6, 0x9a, 0x04, 0xeb, 0x6b, 0xf8, 0x72, 0xb5,
+		0xd1, 0x01, 0xd5, 0x26, 0xb7, 0x9a, 0x80, 0x56,
+		0xff, 0xff, 0x00, 0x1d, 0xa0, 0x00, 0x28, 0xd4,
+	}
+
+	d := blockdigest.NewDigest(blockdata)
+
+	stringDigest := "799caa04b138ebf218a37bc63a0ceadc9c3274402618b5e369725191c0c5fa6e"
 
 	var expected blockdigest.Digest
 	n, err := fmt.Sscan(stringDigest, &expected)

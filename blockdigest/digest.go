@@ -18,11 +18,10 @@ const Length = 32
 // internal hashing parameters
 const (
 	digestMode        = argon2.ModeArgon2d
-	digestMemory      = 1 << 18 // 256 MiB
+	digestMemory      = 1 << 17 // 128 MiB
 	digestParallelism = 1
-	digestIterations  = 5
+	digestIterations  = 4
 	digestVersion     = argon2.Version13
-	digestSalt        = "BitmarkBlockchain2016"
 )
 
 // type for a digest
@@ -43,7 +42,7 @@ func NewDigest(record []byte) Digest {
 		Version:     digestVersion,
 	}
 
-	hash, err := argon2.Hash(context, record, []byte(digestSalt))
+	hash, err := argon2.Hash(context, record, record)
 	fault.PanicIfError("block.NewDigest", err)
 
 	var digest Digest
