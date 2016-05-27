@@ -6,8 +6,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/block"
-	"github.com/bitmark-inc/bitmarkd/configuration"
+	//"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/bitmark-inc/logger"
 	"os"
@@ -17,7 +17,7 @@ import (
 // setup command handler
 // commands that run to create key and certificate files
 // these commands cannot access any internal database or states
-func processSetupCommand(log *logger.L, arguments []string, options *configuration.Configuration) bool {
+func processSetupCommand(log *logger.L, arguments []string, options *Configuration) bool {
 
 	command := "help"
 	if len(arguments) > 0 {
@@ -34,7 +34,7 @@ func processSetupCommand(log *logger.L, arguments []string, options *configurati
 			publicKeyFilename = arguments[0] + ".public"
 			privateKeyFilename = arguments[0] + ".private"
 		}
-		err := makeKeyPair("rpc", publicKeyFilename, privateKeyFilename)
+		err := zmqutil.MakeKeyPair(publicKeyFilename, privateKeyFilename)
 		if nil != err {
 			fmt.Printf("cannot generate private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
 			log.Criticalf("cannot generate private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
@@ -143,7 +143,7 @@ func processSetupCommand(log *logger.L, arguments []string, options *configurati
 // data command handler
 // the internal block and transaction pools are enabled so these commands can
 // access and/or change these databases
-func processDataCommand(log *logger.L, arguments []string, options *configuration.Configuration) bool {
+func processDataCommand(log *logger.L, arguments []string, options *Configuration) bool {
 
 	command := "help"
 	if len(arguments) > 0 {
@@ -170,11 +170,14 @@ func processDataCommand(log *logger.L, arguments []string, options *configuratio
 			exitwithstatus.Exit(1)
 		}
 
+		fmt.Printf("*********** ERROR: %d %d\n", begin, end) // ***** FIX THIS: remove later
+
 		switch filename := arguments[0]; filename {
 		case "": // use stdout
 			fallthrough
 		case "-": // use stdout
-			block.PrintBlockTimes(os.Stdout, begin, end)
+			// block.PrintBlockTimes(os.Stdout, begin, end)
+			panic("HERE")
 
 		default:
 			fh, err := os.Create(filename)
@@ -184,7 +187,8 @@ func processDataCommand(log *logger.L, arguments []string, options *configuratio
 				exitwithstatus.Exit(1)
 			}
 			defer fh.Close()
-			block.PrintBlockTimes(fh, begin, end)
+			//block.PrintBlockTimes(fh, begin, end)
+			panic("HERE")
 		}
 
 	default:

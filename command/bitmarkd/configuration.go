@@ -2,12 +2,14 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package configuration
+package main
 
 import (
 	"errors"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/chain"
+	"github.com/bitmark-inc/bitmarkd/configuration"
+	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 	"os"
 	"path/filepath"
@@ -111,7 +113,7 @@ type Configuration struct {
 }
 
 // will read decode and verify the configuration
-func GetConfiguration(configurationFileName string) (*Configuration, error) {
+func getConfiguration(configurationFileName string) (*Configuration, error) {
 
 	configurationFileName, err := filepath.Abs(filepath.Clean(configurationFileName))
 	if nil != err {
@@ -157,7 +159,7 @@ func GetConfiguration(configurationFileName string) (*Configuration, error) {
 		},
 	}
 
-	if err := readConfigurationFile(configurationFileName, options); err != nil {
+	if err := configuration.ParseConfigurationFile(configurationFileName, options); err != nil {
 		return nil, err
 	}
 
@@ -212,7 +214,7 @@ func GetConfiguration(configurationFileName string) (*Configuration, error) {
 		&options.Logging.Directory,
 	}
 	for _, f := range mustBeAbsolute {
-		*f = ensureAbsolute(options.DataDirectory, *f)
+		*f = util.EnsureAbsolute(options.DataDirectory, *f)
 	}
 
 	// optional absolute paths i.e. blank or an absolute path
@@ -221,7 +223,7 @@ func GetConfiguration(configurationFileName string) (*Configuration, error) {
 	}
 	for _, f := range optionalAbsolute {
 		if "" != *f {
-			*f = ensureAbsolute(options.DataDirectory, *f)
+			*f = util.EnsureAbsolute(options.DataDirectory, *f)
 		}
 	}
 
@@ -234,15 +236,18 @@ func GetConfiguration(configurationFileName string) (*Configuration, error) {
 	for _, f := range mustNotBePaths {
 		switch filepath.Dir(*f[0]) {
 		case "", ".":
-			*f[0] = ensureAbsolute(*f[1], *f[0])
+			*f[0] = util.EnsureAbsolute(*f[1], *f[0])
 		default:
 			return nil, errors.New(fmt.Sprintf("Files: %q is not plain name", *f[0]))
 		}
 	}
 
 	// make absolute and create directories if they do not already exist
-	for _, d := range []*string{&options.Database.Directory, &options.Logging.Directory} {
-		*d = ensureAbsolute(options.DataDirectory, *d)
+	for _, d := range []*string{
+		&options.Database.Directory,
+		&options.Logging.Directory,
+	} {
+		*d = util.EnsureAbsolute(options.DataDirectory, *d)
 		if err := os.MkdirAll(*d, 0700); nil != err {
 			return nil, err
 		}
@@ -250,12 +255,4 @@ func GetConfiguration(configurationFileName string) (*Configuration, error) {
 
 	// done
 	return options, nil
-}
-
-// ensure the path is absolute
-func ensureAbsolute(directory string, filePath string) string {
-	if !filepath.IsAbs(filePath) {
-		filePath = filepath.Join(directory, filePath)
-	}
-	return filepath.Clean(filePath)
 }
