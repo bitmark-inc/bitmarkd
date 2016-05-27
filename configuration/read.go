@@ -12,7 +12,7 @@ import (
 )
 
 // read a configuration file and parse using libucl
-func readConfigurationFile(fileName string, config interface{}) error {
+func ParseConfigurationFile(fileName string, config interface{}) error {
 
 	// since interface{} is untyped, have to verify type compatibility at run-time
 	rv := reflect.ValueOf(config)
