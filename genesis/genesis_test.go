@@ -2,7 +2,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package block_test
+package genesis_test
 
 import (
 	"bytes"
@@ -10,8 +10,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
+	"github.com/bitmark-inc/bitmarkd/genesis"
+	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/bitmark-inc/bitmarkd/util"
 	"strings"
 	"testing"
 	"time"
@@ -62,37 +65,39 @@ var (
 )
 
 // create the live genesis block
-//              worker       id, extranonce2,  ntime,      nonce.
-// {"params": ["miner-two", "42", "07000000", "56809ab7", "fdf14002"], "id": 1, "method": "mining.submit"}
+//
+// MinerUsername: "miner-arm"  JobId: "Live_efd7b4fe"  ExtraNonce2: "00000000"  Ntime: "56809ab7"  Nonce: "826f9a87"
 func TestLiveGenesisAssembly(t *testing.T) {
 
 	// fixed data used to create genesis block
 	// ---------------------------------------
 
 	// nonce provided by statum sserver
-	extraNonce1 := []byte("BMRK") // "424d524b"
+	extraNonce1 := []byte{0xef, 0xd7, 0xb4, 0xfe}
 
 	// nonces obtained from miner
-	nonce := uint32(0xfdf14002)
-	extraNonce2 := []byte{0x07, 0x00, 0x00, 0x00}
+	nonce := uint32(0x826f9a87)
+	extraNonce2 := []byte{0x00, 0x00, 0x00, 0x00}
 
-	doCalc(t, "Live", genesisLiveTimestamp, extraNonce1, extraNonce2, nonce, genesisLiveAddresses, genesisLiveRawAddress, block.LiveGenesisDigest, block.LiveGenesisBlock)
+	doCalc(t, "Live", genesisLiveTimestamp, extraNonce1, extraNonce2, nonce, genesisLiveAddresses, genesisLiveRawAddress, genesis.LiveGenesisDigest, genesis.LiveGenesisBlock)
 }
 
 // create the test genesis block
+//
+// MinerUsername: "miner-arm"  JobId: "Test_b201475b"  ExtraNonce2: "00000000"  Ntime: "5478424b"  Nonce: "1e26bad4"
 func TestTestGenesisAssembly(t *testing.T) {
 
 	// fixed data used to create genesis block
 	// ---------------------------------------
 
 	// nonce provided by statum server
-	extraNonce1 := []byte("BMRK") // "424d524b"
+	extraNonce1 := []byte{0xb2, 0x01, 0x47, 0x5b}
 
 	// nonces obtained from miner
-	nonce := uint32(0xaecca83b)
-	extraNonce2 := []byte{0x01, 0x00, 0x00, 0x00}
+	nonce := uint32(0x1e26bad4)
+	extraNonce2 := []byte{0x00, 0x00, 0x00, 0x00}
 
-	doCalc(t, "Test", genesisTestTimestamp, extraNonce1, extraNonce2, nonce, genesisTestAddresses, genesisTestRawAddress, block.TestGenesisDigest, block.TestGenesisBlock)
+	doCalc(t, "Test", genesisTestTimestamp, extraNonce1, extraNonce2, nonce, genesisTestAddresses, genesisTestRawAddress, genesis.TestGenesisDigest, genesis.TestGenesisBlock)
 }
 
 // hold chain specific timestamp
@@ -101,7 +106,7 @@ type TS struct {
 	utc   string
 }
 
-func doCalc(t *testing.T, title string, ts TS, extraNonce1 []byte, extraNonce2 []byte, nonce uint32, addresses []block.MinerAddress, rawAddress string, gDigest block.Digest, gBlock block.Packed) {
+func doCalc(t *testing.T, title string, ts TS, extraNonce1 []byte, extraNonce2 []byte, nonce uint32, addresses []block.MinerAddress, rawAddress string, gDigest blockdigest.Digest, gBlock blockrecord.PackedHeader) {
 
 	timestamp, err := time.Parse(time.RFC3339, ts.utc)
 	if nil != err {
@@ -114,20 +119,20 @@ func doCalc(t *testing.T, title string, ts TS, extraNonce1 []byte, extraNonce2 [
 	}
 
 	// some common static data
-	version := uint32(2) // snapshot of version number
-	previousBlock := block.Digest{}
+	version := uint32(1) // snapshot of version number
+	previousBlock := blockdigest.Digest{}
 
 	// Just calculations after this point
 	// ----------------------------------
 
 	coinbase := block.NewFullCoinbase(genesisBlockNumber, timestamp, append(extraNonce1, extraNonce2...), addresses)
-	cDigest := block.NewDigest(coinbase)
+	cDigest := merkle.NewDigest(coinbase)
 	coinbaseLength := len(coinbase)
 
 	transactionCount := 1
 
 	// merkle tree
-	tree := block.FullMerkleTree(cDigest, []block.Digest{})
+	tree := merkle.FullMerkleTree(cDigest, []merkle.Digest{})
 	if tree[len(tree)-1] != cDigest {
 		t.Fatalf("failed to compute tree: actual: %#v  expected: %#v", tree[len(tree)-1], cDigest)
 	}
@@ -136,7 +141,7 @@ func doCalc(t *testing.T, title string, ts TS, extraNonce1 []byte, extraNonce2 [
 	bits := difficulty.New() // defaults to 1
 
 	// block header
-	h := block.Header{
+	h := blockrecord.Header{
 		Version:       version,
 		PreviousBlock: previousBlock,
 		MerkleRoot:    tree[len(tree)-1],
@@ -155,9 +160,11 @@ func doCalc(t *testing.T, title string, ts TS, extraNonce1 []byte, extraNonce2 [
 	t.Logf("coinbase: %x\n", coinbase)
 	t.Logf("coinbase digest: %#v\n", cDigest)
 	t.Logf("merkle tree: %#v\n", tree)
-	t.Logf("merkle root little endian hex: %x\n", [block.DigestSize]byte(tree[0]))
+	t.Logf("merkle root little endian hex: %x\n", [blockdigest.Length]byte(tree[0]))
 	t.Logf("hDigest: %#v\n", hDigest)
-	t.Logf("hDigest little endian hex: %x\n", [block.DigestSize]byte(hDigest))
+	t.Logf("hDigest little endian hex: %x\n", [blockdigest.Length]byte(hDigest))
+
+	t.Log(util.FormatBytes(title+"ProposedLEhash", []byte(hDigest[:])))
 
 	// chack that it matches
 	if hDigest != gDigest {
@@ -174,7 +181,7 @@ func doCalc(t *testing.T, title string, ts TS, extraNonce1 []byte, extraNonce2 [
 			Error  []interface{} `json:"error"`
 		}{
 			{
-				ID:     0,
+				ID:     1,
 				Method: "mining.subscribe",
 				Result: []interface{}{
 					[][]string{
@@ -186,8 +193,13 @@ func doCalc(t *testing.T, title string, ts TS, extraNonce1 []byte, extraNonce2 [
 				},
 			},
 			{
-				ID:     "auth",
+				ID:     2,
 				Method: "mining.authorize",
+				Result: true,
+			},
+			{
+				ID:     3,
+				Method: "mining.extranonce.subscribe",
 				Result: true,
 			},
 		}
@@ -199,13 +211,20 @@ func doCalc(t *testing.T, title string, ts TS, extraNonce1 []byte, extraNonce2 [
 			{
 				Method: "mining.set_difficulty",
 				Params: []interface{}{
-					difficulty.Current.Pdiff(),
+					difficulty.Current.Reciprocal(),
+				},
+			},
+			{
+				Method: "mining.set_extranonce",
+				Params: []interface{}{
+					"08000002",
+					4,
 				},
 			},
 			{
 				Method: "mining.notify",
 				Params: []interface{}{
-					"42", // [0] job_id
+					title, // [0] job_id
 					fmt.Sprintf("%s", previousBlock), // [1] previous link
 					hexCoinbase[:n1],                 // [2] coinbase 1
 					hexCoinbase[n2:],                 // [3] coinbase 2
@@ -240,11 +259,11 @@ func doCalc(t *testing.T, title string, ts TS, extraNonce1 []byte, extraNonce2 [
 
 	// check difficulty
 	if hDigest.Cmp(bits.BigInt()) > 0 {
-		t.Fatalf("difficulty NOT met\n")
+		t.Errorf("difficulty NOT met\n")
 	}
 
 	// compute block size
-	blockSize := len(header) + 2 + coinbaseLength + 2 + len(tree)*block.DigestSize
+	blockSize := len(header) + 2 + coinbaseLength + 2 + len(tree)*merkle.DigestLength
 
 	// pack the block
 	blk := make([]byte, 0, blockSize)
@@ -267,9 +286,14 @@ func doCalc(t *testing.T, title string, ts TS, extraNonce1 []byte, extraNonce2 [
 		t.Fatalf("block size mismatch: actual: %d, expected: %d", len(blk), blockSize)
 	}
 
+	if !bytes.Equal(blk, gBlock) {
+		t.Errorf("initial block assembly mismatch actual: %x  expected: %x", blk, gBlock)
+		t.Log(util.FormatBytes(title+"GenesisBlock", blk))
+	}
+
 	// unpack the block
 	var unpacked block.Block
-	err = block.Packed(blk).Unpack(&unpacked)
+	err = blockrecord.PackedHeader(blk).Unpack(&unpacked)
 	if nil != err {
 		t.Fatalf("unpack block failed: err = %v", err)
 	}
@@ -325,7 +349,7 @@ func TestGenesisBlock(t *testing.T) {
 	doReal(t, "Test", block.TestGenesisDigest, block.TestGenesisBlock)
 }
 
-func doReal(t *testing.T, title string, gDigest block.Digest, gBlock block.Packed) {
+func doReal(t *testing.T, title string, gDigest blockdigest.Digest, gBlock blockrecord.PackedHeader) {
 
 	// unpack the block
 	var unpacked block.Block
