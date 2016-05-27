@@ -2,12 +2,12 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package transaction_test
+package account_test
 
 import (
 	"bytes"
 	"encoding/hex"
-	"github.com/bitmark-inc/bitmarkd/transaction"
+	"github.com/bitmark-inc/bitmarkd/account"
 	"testing"
 )
 
@@ -21,8 +21,8 @@ type addressTest struct {
 
 // Valid address
 var testAddress = []addressTest{
-	{transaction.ED25519, decodeHex("60b3c6e20cfff7091a86488b1656b96ec0a2f69907e2c035175918f42c37d72e"), "anF8SWxSRY5vnN3Bbyz9buRYW1hfCAAZxfbv8Fw9SFXanoTNEq"},
-	{transaction.Nothing, decodeHex("12fa"), "3MvzKPwWD"},
+	{account.ED25519, decodeHex("60b3c6e20cfff7091a86488b1656b96ec0a2f69907e2c035175918f42c37d72e"), "anF8SWxSRY5vnN3Bbyz9buRYW1hfCAAZxfbv8Fw9SFXanoTNEq"},
+	{account.Nothing, decodeHex("12fa"), "3MvzKPwWD"},
 }
 
 // Invalid address
@@ -41,7 +41,7 @@ func TestAddress(t *testing.T) {
 	for index, test := range testAddress {
 		buffer := []byte{byte(test.algorithm<<4 | 0x01)}
 		buffer = append(buffer, test.publicKey...)
-		address, err := transaction.AddressFromBytes(buffer)
+		address, err := account.AddressFromBytes(buffer)
 		if nil != err {
 			t.Errorf("Create address from bytes test: %d failed: %s", index, err)
 			continue
@@ -52,7 +52,7 @@ func TestAddress(t *testing.T) {
 
 	// From address base58 encoded to address
 	for index, test := range testAddress {
-		address, err := transaction.AddressFromBase58(test.base58Address)
+		address, err := account.AddressFromBase58(test.base58Address)
 		if nil != err {
 			t.Errorf("Create address from base58 string test: %d failed: %s", index, err)
 			continue
@@ -71,7 +71,7 @@ func TestAddress(t *testing.T) {
 	// Test invalid address parsing
 	// From address base58 encoded to address
 	for index, test := range testInvalidAddressFromBase58 {
-		_, err := transaction.AddressFromBase58(test)
+		_, err := account.AddressFromBase58(test)
 		if nil == err {
 			t.Errorf("Create address from invalid base58 string: %d failed: did not error on invalid input", index)
 		}
