@@ -5,6 +5,8 @@
 package difficulty
 
 import (
+	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/difficulty/filters"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -13,81 +15,99 @@ import (
 	"sync"
 )
 
-// the default uint32 value
-const DefaultUint32 = 0x1d00ffff
+// the default values
+const (
+	OneUint64         uint64  = 0x00ffffffffffffff
+	MinimumReciprocal float64 = 1.0
+)
 
 // number of block times to decay the difficulty by 50%
 const HalfLife = 100
 
 // the decay constant
-const decayLambda = math.Ln2 / HalfLife
+const decayLambda float64 = math.Ln2 / HalfLife
 
 // Type for difficulty
+//
+// bits is encoded as:
+//    8 bit exponent,
+//   57 bit mantissa normalised so msb is '1' and omitted
+// mantissa is shifted by exponent+8
+// examples:
+//   the "One" value: 00 ff  ff ff  ff ff  ff ff
+//   represents the 256 bit value: 00ff ffff ffff ffff 8000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000
+//   value: 01 ff  ff ff  ff ff  ff ff
+//   represents the 256 bit value: 007f ffff ffff ffff c000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000
 type Difficulty struct {
-	sync.RWMutex
+	m *sync.RWMutex // pointer since MarshallJSON is pass by value
 
-	big   big.Int // master value 256 bit integer in pool difficulty form
-	pdiff float64 // cache: pool difficulty
-	bits  uint32  // cache: bitcoin difficulty
+	big        big.Int // master value 256 bit integer expanded from bits
+	reciprocal float64 // cache: floating point reciprocal difficulty
+	bits       uint64  // cache: compat difficulty (encoded value)
 
 	filter filters.Filter // filter for difficulty auto-adjust
 }
 
 // current difficulty
-var Current = &Difficulty{
-	filter: filters.NewCamm(1.0, 21, 41),
-}
+var Current = New()
 
-// constOne is for "pdiff" calculation as defined by:
-//   https://en.bitcoin.it/wiki/Difficulty#How_is_difficulty_calculated.3F_What_is_the_difference_between_bdiff_and_pdiff.3F
-//
-// pool difficulty of 1
+// &Difficulty{
+// 	m:      new(sync.RWMutex),
+// 	filter: filters.NewCamm(MinimumReciprocal, 21, 41),
+// }
+
+// pool difficulty of 1 as 256 bit value
 var constOne = []byte{
-	0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+	0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+	0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 }
 
-// number of decimal places
-const constScale = 1000000000000
+// var constOne = []byte{
+// 	0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+// 	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+// 	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+// 	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+// }
 
-var scale big.Int // 10 times bigger for rounding
-var one big.Int   // for reciprocal calculation
+var one big.Int        // for reciprocal calculation
+var floatOne big.Float // for reciprocal calculation
 
 // on startup
 func init() {
 	one.SetBytes(constOne)
-	scale.SetUint64(10 * constScale)
-	Current.SetBits(0x1d00ffff)
+	floatOne.SetInt(&one)
+	Current.SetBits(OneUint64)
 }
 
-// create a difficulty with the default value
+// create a difficulty with the largest possible value
+// which is the easiest for the miners and has the fewest leading zeros
 func New() *Difficulty {
 	d := new(Difficulty)
-	return d.SetBits(DefaultUint32)
+	return d.internalReset()
 }
 
 // Get 1/difficulty as normal floating-point value
 // this is the Pdiff value
-func (difficulty *Difficulty) Pdiff() float64 {
-	difficulty.RLock()
-	defer difficulty.RUnlock()
-	return difficulty.pdiff
+func (difficulty *Difficulty) Reciprocal() float64 {
+	difficulty.m.RLock()
+	defer difficulty.m.RUnlock()
+	return difficulty.reciprocal
 }
 
 // Get difficulty as short packed value
-func (difficulty *Difficulty) Bits() uint32 {
-	difficulty.RLock()
-	defer difficulty.RUnlock()
+func (difficulty *Difficulty) Bits() uint64 {
+	difficulty.m.RLock()
+	defer difficulty.m.RUnlock()
 	return difficulty.bits
 }
 
 // Get difficulty as the big endian hex encodes short packed value
 func (difficulty *Difficulty) String() string {
-	difficulty.RLock()
-	defer difficulty.RUnlock()
-	return fmt.Sprintf("%08x", difficulty.bits)
+	difficulty.m.RLock()
+	defer difficulty.m.RUnlock()
+	return fmt.Sprintf("%016x", difficulty.bits)
 }
 
 // for the %#v format use 256 bit value
@@ -95,138 +115,171 @@ func (difficulty *Difficulty) GoString() string {
 	return fmt.Sprintf("%064x", difficulty.BigInt())
 }
 
-// convert a uint32 difficulty value to a big.Int
+// convert a uint64 difficulty value to a big.Int
 func (difficulty *Difficulty) BigInt() *big.Int {
-	difficulty.RLock()
-	defer difficulty.RUnlock()
+	difficulty.m.RLock()
+	defer difficulty.m.RUnlock()
 	d := new(big.Int)
 	return d.Set(&difficulty.big)
 }
 
-// reset difficulty to 1.0
+// reset difficulty to minimum
 // ensure write locked before calling this
-func (difficulty *Difficulty) internalSetToUnity() *Difficulty {
+func (difficulty *Difficulty) internalReset() *Difficulty {
+	if nil == difficulty.m {
+		difficulty.m = new(sync.RWMutex)
+	}
+	if nil == difficulty.filter {
+		difficulty.filter = filters.NewCamm(MinimumReciprocal, 21, 41)
+	}
 	difficulty.big.Set(&one)
-	difficulty.pdiff = 1.0
-	difficulty.bits = DefaultUint32
+	difficulty.reciprocal = MinimumReciprocal
+	difficulty.bits = OneUint64
 	return difficulty
 }
 
-// set from a 32 bit word (bits)
-func (difficulty *Difficulty) SetBits(u uint32) *Difficulty {
+// set from a 64 bit word (bits)
+func (difficulty *Difficulty) SetBits(u uint64) *Difficulty {
 
 	// quick setup for default
-	if DefaultUint32 == u {
-		difficulty.Lock()
-		defer difficulty.Unlock()
-		return difficulty.internalSetToUnity()
+	if OneUint64 == u {
+		difficulty.m.Lock()
+		defer difficulty.m.Unlock()
+		return difficulty.internalReset()
 	}
 
-	exponent := 8 * (int(u>>24)&0xff - 3)
-	mantissa := int64(u & 0x00ffffff)
+	exponent := (uint(u>>56) & 0xff)
+	mantissa := (u & 0x00ffffffffffffff) | 0x0100000000000000 // include hidden bit
 
-	if mantissa > 0x7fffff || mantissa < 0x008000 || exponent < 0 {
-		fault.Criticalf("difficulty.SetBits(0x%08x) invalid value", u)
+	// check for exponent overflow
+	if exponent >= 0xc0 {
+		fault.Criticalf("difficulty.SetBits(0x%16x) invalid value", u)
 		fault.Panic("difficulty.SetBits: failed")
 	}
-	d := big.NewInt(mantissa)
-	d.Lsh(d, uint(exponent))
+	d := big.NewInt(0)
+	d.SetUint64(mantissa)
+	d.Lsh(d, 256-65-exponent) // account for hidden 56th bit
 
 	// compute 1/d
-	q := new(big.Int)
-	r := new(big.Int)
-	q.DivMod(&one, d, r)
-	r.Mul(r, &scale) // note: big scale == 10 * constScale
-	r.Div(r, d)
-
-	result := float64(q.Uint64())
-	result += float64((r.Uint64()+5)/10) / constScale
+	denominator := new(big.Float)
+	denominator.SetInt(d)
+	q := new(big.Float)
+	result, _ := q.Quo(&floatOne, denominator).Float64()
 
 	// modify cache
-	difficulty.Lock()
-	defer difficulty.Unlock()
+	difficulty.m.Lock()
+	defer difficulty.m.Unlock()
 
 	difficulty.big.Set(d)
-	difficulty.pdiff = result
+	difficulty.reciprocal = result
 	difficulty.bits = u
 
 	return difficulty
 }
 
-func (difficulty *Difficulty) SetPdiff(f float64) {
-	difficulty.Lock()
-	defer difficulty.Unlock()
-	difficulty.internalSetPdiff(f)
+func (difficulty *Difficulty) SetReciprocal(f float64) {
+	difficulty.m.Lock()
+	defer difficulty.m.Unlock()
+	difficulty.internalSetReciprocal(f)
 }
 
 // ensure write locked before calling this
-func (difficulty *Difficulty) internalSetPdiff(f float64) float64 {
-	if f <= 1.0 {
-		difficulty.internalSetToUnity()
-		return 1.0
+func (difficulty *Difficulty) internalSetReciprocal(f float64) float64 {
+	if f < MinimumReciprocal {
+		difficulty.internalReset()
+		return difficulty.reciprocal
 	}
-	difficulty.pdiff = f
+	difficulty.reciprocal = f
 
-	intPart := math.Trunc(f)
-	fracPart := math.Trunc((f - intPart) * 10 * constScale)
+	r := new(big.Float)
+	r.SetMode(big.ToPositiveInf).SetPrec(256).SetFloat64(f).Quo(&floatOne, r)
 
-	q := new(big.Int)
-	r := new(big.Int)
+	d, _ := r.Int(&difficulty.big)
 
-	q.SetUint64(uint64(intPart))
-	r.SetUint64(uint64(fracPart))
-	q.Mul(&scale, q)
-	q.Add(q, r)
+	// fmt.Printf("f_1: %s\n", floatOne.Text('f', 80))
+	// fmt.Printf("rec: %s\n", r.Text('f', 80))
+	// fmt.Printf("big: %d\n", d)
+	// fmt.Printf("%f\n big: %064x\n", f, d)
+	// fmt.Printf("acc: %s\n", accuracy.String())
 
-	q.DivMod(&one, q, r) // can get divide by zero error
+	buffer := d.Bytes() // no more than 32 bytes (256 bits)
 
-	q.Mul(&scale, q)
-	q.Add(q, r)
-	difficulty.big.Set(q)
+	if len(buffer) > 32 {
+		fault.Criticalf("difficulty.internalSetReciprocal(%g) invalid value", f)
+		fault.Panic("difficulty.SetBits: failed - needs more than 256 bits")
+	}
 
-	buffer := q.Bytes()
+	// first non-zero byte will not exceed 0x7f as bigints are signed
+	// but the above calculation results in an unsigned value
+	// need to extract 56 bits with 1st bit as 1  and compute exponent
 	for i, b := range buffer {
-		if 0 != 0x80&b {
-			e := uint32(len(buffer) - i + 1)
-			u := e<<24 | uint32(b)<<8
+		if 0 != b {
+			u := uint64(b) << 56
 			if i+1 < len(buffer) {
-				u |= uint32(buffer[i+1])
-			}
-			if i+2 < len(buffer) && 0 != 0x80&buffer[i+2] {
-				if 0 == 0x00ff000&(u+1) {
-					u += 1
-				}
-			}
-			difficulty.bits = u
-			break
-		} else if 0 != b {
-			e := uint32(len(buffer) - i)
-			u := e<<24 | uint32(b)<<16
-			if i+1 < len(buffer) {
-				u |= uint32(buffer[i+1]) << 8
+				u |= uint64(buffer[i+1]) << 48
 			}
 			if i+2 < len(buffer) {
-				u |= uint32(buffer[i+2])
+				u |= uint64(buffer[i+2]) << 40
 			}
-			if i+3 < len(buffer) && 0 != 0x80&buffer[i+3] {
-				if 0 == 0x00800000&(u+1) {
-					u += 1
+			if i+3 < len(buffer) {
+				u |= uint64(buffer[i+3]) << 32
+			}
+			if i+4 < len(buffer) {
+				u |= uint64(buffer[i+4]) << 24
+			}
+			if i+5 < len(buffer) {
+				u |= uint64(buffer[i+5]) << 16
+			}
+			if i+6 < len(buffer) {
+				u |= uint64(buffer[i+6]) << 8
+			}
+			if i+7 < len(buffer) {
+				u |= uint64(buffer[i+7])
+			}
+
+			// compute exponent
+			e := uint64(32-len(buffer)+i)*8 - 1
+
+			// normalise
+			rounder := 0
+			for 0x0100000000000000 != 0xff00000000000000&u {
+				if 1 == u&1 {
+					rounder += 1
 				}
+				u >>= 1
+				e -= 1
 			}
+
+			if rounder > 4 {
+				u += 1
+			}
+			// hide 56th bit and incorporate exponent
+			u = u&0x00ffffffffffffff | (e << 56)
+			//fmt.Printf("bits: %016x\n", u)
+
 			difficulty.bits = u
 			break
 		}
 	}
 
-	return difficulty.pdiff
+	return difficulty.reciprocal
 }
 
+// set the difficulty from little endian bytes
 func (difficulty *Difficulty) SetBytes(b []byte) *Difficulty {
 
-	if len(b) < 4 {
-		panic("too few bytes")
+	if len(b) != 8 {
+		fault.Panicf("difficulty.SetBytes: too few bytes expeced 4 but had: %d", len(b))
 	}
-	u := uint32(b[0]) | uint32(b[1])<<8 | uint32(b[2])<<16 | uint32(b[3])<<24
+
+	u := uint64(b[0]) |
+		uint64(b[1])<<8 |
+		uint64(b[2])<<16 |
+		uint64(b[3])<<24 |
+		uint64(b[4])<<32 |
+		uint64(b[5])<<40 |
+		uint64(b[6])<<48 |
+		uint64(b[7])<<56
 
 	return difficulty.SetBits(u)
 }
@@ -234,34 +287,68 @@ func (difficulty *Difficulty) SetBytes(b []byte) *Difficulty {
 // adjustment based on error from desired cycle time
 // call as difficulty.Adjust(expectedMinutes, actualMinutes)
 func (difficulty *Difficulty) Adjust(expectedMinutes float64, actualMinutes float64) float64 {
-	difficulty.Lock()
-	defer difficulty.Unlock()
+	difficulty.m.Lock()
+	defer difficulty.m.Unlock()
 
 	// if k > 1 then difficulty is too low
 	k := expectedMinutes / actualMinutes
 
-	newPdiff := k * difficulty.pdiff
+	newReciprocal := k * difficulty.reciprocal
 
 	// protect against underflow
-	if newPdiff < 1.0 {
-		newPdiff = 1.0
+	if newReciprocal < MinimumReciprocal {
+		newReciprocal = MinimumReciprocal
 	}
 
 	// compute filter
-	newPdiff = difficulty.filter.Process(newPdiff)
+	newReciprocal = difficulty.filter.Process(newReciprocal)
 
 	// adjust difficulty
-	return difficulty.internalSetPdiff(newPdiff)
+	return difficulty.internalSetReciprocal(newReciprocal)
 }
 
 // exponential decay of difficulty
 // call each expected block period to decay the current difficulty
 func (difficulty *Difficulty) Decay() float64 {
-	difficulty.Lock()
-	defer difficulty.Unlock()
+	difficulty.m.Lock()
+	defer difficulty.m.Unlock()
 
-	newPdiff := difficulty.pdiff - decayLambda*(difficulty.pdiff-1.0)
+	newReciprocal := difficulty.reciprocal - decayLambda*(difficulty.reciprocal)
 
 	// adjust difficulty
-	return difficulty.internalSetPdiff(newPdiff)
+	return difficulty.internalSetReciprocal(newReciprocal)
+}
+
+// convert a difficulty to little endian hex for JSON
+func (difficulty Difficulty) MarshalJSON() ([]byte, error) {
+
+	bits := make([]byte, 8)
+	binary.LittleEndian.PutUint64(bits, difficulty.bits)
+
+	size := 2 + hex.EncodedLen(len(bits))
+	buffer := make([]byte, size)
+	buffer[0] = '"'
+	buffer[size-1] = '"'
+	hex.Encode(buffer[1:], bits)
+	return buffer, nil
+}
+
+// convert a difficulty little endian hex string to difficulty value
+func (difficulty *Difficulty) UnmarshalJSON(s []byte) error {
+	// length = '"' + characters + '"'
+	last := len(s) - 1
+	if '"' != s[0] || '"' != s[last] {
+		return fault.ErrInvalidCharacter
+	}
+
+	b := s[1:last]
+
+	buffer := make([]byte, hex.DecodedLen(len(b)))
+	_, err := hex.Decode(buffer, b)
+	if nil != err {
+		return err
+	}
+	difficulty.internalReset()
+	difficulty.SetBytes(buffer)
+	return nil
 }

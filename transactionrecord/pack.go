@@ -1,0 +1,193 @@
+// Copyright (c) 2014-2016 Bitmark Inc.
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
+package transactionrecord
+
+import (
+	"encoding/hex"
+	"github.com/bitmark-inc/bitmarkd/account"
+	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/util"
+	"unicode/utf8"
+)
+
+// pack BaseData
+//
+// Pack Varint64(tag) followed by fields in order as struct above with
+// signature last
+//
+// NOTE: returns the "unsigned" message on signature failure - for
+//       debugging/testing
+func (baseData *BaseData) Pack(address *account.Address) (Packed, error) {
+	if len(baseData.Signature) > maxSignatureLength {
+		return nil, fault.ErrSignatureTooLong
+	}
+
+	if utf8.RuneCountInString(baseData.Currency) > maxCurrencyLength {
+		return nil, fault.ErrCurrencyTooLong
+	}
+
+	if utf8.RuneCountInString(baseData.PaymentAddress) > maxPaymentAddressLength {
+		return nil, fault.ErrPaymentAddressTooLong
+	}
+
+	// concatenate bytes
+	message := util.ToVarint64(uint64(BaseDataTag))
+	message = appendUint64(message, baseData.BlockNumber)
+	message = appendUint64(message, baseData.TransactionCount)
+	message = appendString(message, baseData.Currency)
+	message = appendString(message, baseData.PaymentAddress)
+	message = appendAddress(message, baseData.Owner)
+	message = appendUint64(message, baseData.Nonce)
+
+	// signature
+	err := address.CheckSignature(message, baseData.Signature)
+	if nil != err {
+		return message, err
+	}
+	// Signature Last
+	return appendBytes(message, baseData.Signature), nil
+}
+
+// pack AssetData
+//
+// Pack Varint64(tag) followed by fields in order as struct above with
+// signature last
+//
+// NOTE: returns the "unsigned" message on signature failure - for
+//       debugging/testing
+func (assetData *AssetData) Pack(address *account.Address) (Packed, error) {
+	if len(assetData.Signature) > maxSignatureLength {
+		return nil, fault.ErrSignatureTooLong
+	}
+
+	if utf8.RuneCountInString(assetData.Description) > maxDescriptionLength {
+		return nil, fault.ErrDescriptionTooLong
+	}
+
+	if utf8.RuneCountInString(assetData.Name) > maxNameLength {
+		return nil, fault.ErrNameTooLong
+	}
+
+	if utf8.RuneCountInString(assetData.Fingerprint) > maxFingerprintLength {
+		return nil, fault.ErrFingerprintTooLong
+	}
+
+	// concatenate bytes
+	message := util.ToVarint64(uint64(AssetDataTag))
+	message = appendString(message, assetData.Description)
+	message = appendString(message, assetData.Name)
+	message = appendString(message, assetData.Fingerprint)
+	message = appendAddress(message, assetData.Registrant)
+
+	// signature
+	err := address.CheckSignature(message, assetData.Signature)
+	if nil != err {
+		return message, err
+	}
+	// Signature Last
+	return appendBytes(message, assetData.Signature), nil
+}
+
+// pack BitmarkIssue
+//
+// Pack Varint64(tag) followed by fields in order as struct above with
+// signature last
+//
+// NOTE: returns the "unsigned" message on signature failure - for
+//       debugging/testing
+func (issue *BitmarkIssue) Pack(address *account.Address) (Packed, error) {
+	if len(issue.Signature) > maxSignatureLength {
+		return nil, fault.ErrSignatureTooLong
+	}
+
+	// concatenate bytes
+	message := util.ToVarint64(uint64(BitmarkIssueTag))
+	message = appendBytes(message, issue.AssetIndex.Bytes())
+	message = appendAddress(message, issue.Owner)
+	message = appendUint64(message, issue.Nonce)
+
+	// signature
+	err := address.CheckSignature(message, issue.Signature)
+	if nil != err {
+		return message, err
+	}
+
+	// Signature Last
+	return appendBytes(message, issue.Signature), nil
+}
+
+// local function to pack BitmarkTransfer
+//
+// Pack Varint64(tag) followed by fields in order as struct above with
+// signature last
+//
+// NOTE: returns the "unsigned" message on signature failure - for
+//       debugging/testing
+func (transfer *BitmarkTransfer) Pack(address *account.Address) (Packed, error) {
+	if len(transfer.Signature) > maxSignatureLength {
+		return nil, fault.ErrSignatureTooLong
+	}
+
+	// concatenate bytes
+	message := util.ToVarint64(uint64(BitmarkTransferTag))
+	message = appendBytes(message, transfer.Link[:])
+	message = appendAddress(message, transfer.Owner)
+
+	// signature
+	err := address.CheckSignature(message, transfer.Signature)
+	if nil != err {
+		return message, err
+	}
+
+	// Signature Last
+	return appendBytes(message, transfer.Signature), nil
+}
+
+// append a single field to a buffer
+//
+// the field is prefixed by Varint64(length)
+func appendString(buffer Packed, s string) Packed {
+	l := util.ToVarint64(uint64(len(s)))
+	buffer = append(buffer, l...)
+	return append(buffer, s...)
+}
+
+// append a address to a buffer
+//
+// the field is prefixed by Varint64(length)
+func appendAddress(buffer Packed, address *account.Address) Packed {
+	data := address.Bytes()
+	l := util.ToVarint64(uint64(len(data)))
+	buffer = append(buffer, l...)
+	buffer = append(buffer, data...)
+	return buffer
+}
+
+// append a bytes to a buffer
+//
+// the field is prefixed by Varint64(length)
+func appendBytes(buffer Packed, data []byte) Packed {
+	l := util.ToVarint64(uint64(len(data)))
+	buffer = append(buffer, l...)
+	buffer = append(buffer, data...)
+	return buffer
+}
+
+// append a a Varint64 to buffer
+func appendUint64(buffer Packed, value uint64) Packed {
+	valueBytes := util.ToVarint64(value)
+	buffer = append(buffer, valueBytes...)
+	return buffer
+}
+
+// convert a packed to its hex JSON form
+func (p Packed) MarshalJSON() ([]byte, error) {
+	size := 2 + hex.EncodedLen(len(p))
+	b := make([]byte, size)
+	b[0] = '"'
+	b[size-1] = '"'
+	hex.Encode(b[1:], p)
+	return b, nil
+}
