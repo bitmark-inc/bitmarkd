@@ -6,11 +6,11 @@ package account
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"golang.org/x/crypto/ed25519"
+	"golang.org/x/crypto/sha3"
 )
 
 // enumeration of supported key algorithms
@@ -36,12 +36,12 @@ const (
 
 )
 
-// base type for addresses
-type Address struct {
-	AddressInterface
+// base type for accounts
+type Account struct {
+	AccountInterface
 }
 
-type AddressInterface interface {
+type AccountInterface interface {
 	KeyType() int
 	PublicKeyBytes() []byte
 	CheckSignature(message []byte, signature Signature) error
@@ -52,30 +52,30 @@ type AddressInterface interface {
 }
 
 // for ed25519 signatures
-type ED25519Address struct {
+type ED25519Account struct {
 	Test      bool
 	PublicKey []byte
 }
 
 // just for debugging
-type NothingAddress struct {
+type NothingAccount struct {
 	Test      bool
 	PublicKey []byte
 }
 
-// this converts a Base58 encoded string and returns an address
+// this converts a Base58 encoded string and returns an account
 //
-// one of the specific address types are returned using the base "AddressInterface"
+// one of the specific account types are returned using the base "AccountInterface"
 // interface type to allow individual methods to be called.
-func AddressFromBase58(addressBase58Encoded string) (*Address, error) {
-	// Decode the address
-	addressDecoded := util.FromBase58(addressBase58Encoded)
-	if 0 == len(addressDecoded) {
-		return nil, fault.ErrCannotDecodeAddress
+func AccountFromBase58(accountBase58Encoded string) (*Account, error) {
+	// Decode the account
+	accountDecoded := util.FromBase58(accountBase58Encoded)
+	if 0 == len(accountDecoded) {
+		return nil, fault.ErrCannotDecodeAccount
 	}
 
 	// Parse the key variant
-	keyVariant, keyVariantLength := util.FromVarint64(addressDecoded)
+	keyVariant, keyVariantLength := util.FromVarint64(accountDecoded)
 
 	// Check key type
 	if 0 == keyVariantLength || keyVariant&publicKeyCode != publicKeyCode {
@@ -95,58 +95,57 @@ func AddressFromBase58(addressBase58Encoded string) (*Address, error) {
 	}
 
 	// Compute key length
-	keyLength := len(addressDecoded) - keyVariantLength - checksumLength
+	keyLength := len(accountDecoded) - keyVariantLength - checksumLength
 	if keyLength <= 0 {
 		return nil, fault.ErrInvalidKeyLength
 	}
 
 	// Checksum
-	checksumStart := len(addressDecoded) - checksumLength
-	firstRound := sha256.Sum256(addressDecoded[:checksumStart])
-	checksum := sha256.Sum256(firstRound[:])
-	if !bytes.Equal(checksum[:checksumLength], addressDecoded[checksumStart:]) {
+	checksumStart := len(accountDecoded) - checksumLength
+	checksum := sha3.Sum256(accountDecoded[:checksumStart])
+	if !bytes.Equal(checksum[:checksumLength], accountDecoded[checksumStart:]) {
 		return nil, fault.ErrChecksumMismatch
 	}
 
-	// return a pointer to the specific address type
+	// return a pointer to the specific account type
 	switch keyAlgorithm {
 	case ED25519:
 		if keyLength != ed25519.PublicKeySize {
 			return nil, fault.ErrInvalidKeyLength
 		}
-		publicKey := addressDecoded[keyVariantLength:checksumStart]
-		address := &Address{
-			AddressInterface: &ED25519Address{
+		publicKey := accountDecoded[keyVariantLength:checksumStart]
+		account := &Account{
+			AccountInterface: &ED25519Account{
 				Test:      isTest,
 				PublicKey: publicKey,
 			},
 		}
-		return address, nil
+		return account, nil
 	case Nothing:
 		if 2 != keyLength {
 			return nil, fault.ErrInvalidKeyLength
 		}
-		publicKey := addressDecoded[keyVariantLength:checksumStart]
-		address := &Address{
-			AddressInterface: &NothingAddress{
+		publicKey := accountDecoded[keyVariantLength:checksumStart]
+		account := &Account{
+			AccountInterface: &NothingAccount{
 				Test:      isTest,
 				PublicKey: publicKey,
 			},
 		}
-		return address, nil
+		return account, nil
 	default:
 		return nil, fault.ErrInvalidKeyType
 	}
 }
 
-// this converts a byte encoded buffer and returns an address
+// this converts a byte encoded buffer and returns an account
 //
-// one of the specific address types are returned using the base "AddressInterface"
+// one of the specific account types are returned using the base "AccountInterface"
 // interface type to allow individual methods to be called.
-func AddressFromBytes(addressBytes []byte) (*Address, error) {
+func AccountFromBytes(accountBytes []byte) (*Account, error) {
 
 	// Parse the key variant
-	keyVariant, keyVariantLength := util.FromVarint64(addressBytes)
+	keyVariant, keyVariantLength := util.FromVarint64(accountBytes)
 
 	// Check key type
 	if 0 == keyVariantLength || keyVariant&publicKeyCode != publicKeyCode {
@@ -166,56 +165,56 @@ func AddressFromBytes(addressBytes []byte) (*Address, error) {
 	}
 
 	// Compute key length
-	keyLength := len(addressBytes) - keyVariantLength
+	keyLength := len(accountBytes) - keyVariantLength
 	if keyLength <= 0 {
 		return nil, fault.ErrInvalidKeyLength
 	}
 
-	// return a pointer to the specific address type
+	// return a pointer to the specific account type
 	switch keyAlgorithm {
 	case ED25519:
 		if keyLength != ed25519.PublicKeySize {
 			return nil, fault.ErrInvalidKeyLength
 		}
-		publicKey := addressBytes[keyVariantLength:]
-		address := &Address{
-			AddressInterface: &ED25519Address{
+		publicKey := accountBytes[keyVariantLength:]
+		account := &Account{
+			AccountInterface: &ED25519Account{
 				Test:      isTest,
 				PublicKey: publicKey,
 			},
 		}
-		return address, nil
+		return account, nil
 	case Nothing:
 		if 2 != keyLength {
 			return nil, fault.ErrInvalidKeyLength
 		}
-		publicKey := addressBytes[keyVariantLength:]
-		address := &Address{
-			AddressInterface: &NothingAddress{
+		publicKey := accountBytes[keyVariantLength:]
+		account := &Account{
+			AccountInterface: &NothingAccount{
 				Test:      isTest,
 				PublicKey: publicKey,
 			},
 		}
-		return address, nil
+		return account, nil
 	default:
 		return nil, fault.ErrInvalidKeyType
 	}
 }
 
-// convert an address from its Base58 JSON form to binary
+// convert an account from its Base58 JSON form to binary
 //
 // this cannot be forwarded by go compiler, since it needs to determine
 // the the resulting interface type from the encoded data
-func (address *Address) UnmarshalJSON(s []byte) error {
+func (account *Account) UnmarshalJSON(s []byte) error {
 	// length = '"' + Base58 characters + '"'
 	if '"' != s[0] || '"' != s[len(s)-1] {
 		return fault.ErrInvalidCharacter
 	}
-	a, err := AddressFromBase58(string(s[1 : len(s)-1]))
+	a, err := AccountFromBase58(string(s[1 : len(s)-1]))
 	if nil != err {
 		return err
 	}
-	address.AddressInterface = a.AddressInterface
+	account.AccountInterface = a.AccountInterface
 	return nil
 }
 
@@ -223,17 +222,17 @@ func (address *Address) UnmarshalJSON(s []byte) error {
 // -------
 
 // key type code (see enumeration above)
-func (address *ED25519Address) KeyType() int {
+func (account *ED25519Account) KeyType() int {
 	return ED25519
 }
 
 // fetch the public key as byte slice
-func (address *ED25519Address) PublicKeyBytes() []byte {
-	return address.PublicKey[:]
+func (account *ED25519Account) PublicKeyBytes() []byte {
+	return account.PublicKey[:]
 }
 
 // check the signature of a message
-func (address *ED25519Address) CheckSignature(message []byte, signature Signature) error {
+func (account *ED25519Account) CheckSignature(message []byte, signature Signature) error {
 
 	if ed25519.SignatureSize != len(signature) {
 		return fault.ErrInvalidSignature
@@ -243,35 +242,34 @@ func (address *ED25519Address) CheckSignature(message []byte, signature Signatur
 	s := [ed25519.SignatureSize]byte{}
 	copy(s[:], signature[:])
 
-	if !ed25519.Verify(address.PublicKey[:], message, s[:]) {
+	if !ed25519.Verify(account.PublicKey[:], message, s[:]) {
 		return fault.ErrInvalidSignature
 	}
 	return nil
 }
 
 // byte slice for encoded key
-func (address *ED25519Address) Bytes() []byte {
+func (account *ED25519Account) Bytes() []byte {
 	keyVariant := byte(ED25519<<algorithmShift) | publicKeyCode
-	if address.Test {
+	if account.Test {
 		keyVariant |= testKeyCode
 	}
-	return append([]byte{keyVariant}, address.PublicKey[:]...)
+	return append([]byte{keyVariant}, account.PublicKey[:]...)
 }
 
 // base58 encoding of encoded key
-func (address *ED25519Address) String() string {
-	buffer := address.Bytes()
-	firstRound := sha256.Sum256(buffer)
-	checksum := sha256.Sum256(firstRound[:])
+func (account *ED25519Account) String() string {
+	buffer := account.Bytes()
+	checksum := sha3.Sum256(buffer)
 	buffer = append(buffer, checksum[:checksumLength]...)
 	return util.ToBase58(buffer)
 }
 
-// convert an address to its Base58 JSON form
-func (address ED25519Address) MarshalJSON() ([]byte, error) {
+// convert an account to its Base58 JSON form
+func (account ED25519Account) MarshalJSON() ([]byte, error) {
 	b := make([]byte, 1)
 	b[0] = '"'
-	b = append(b, address.String()...)
+	b = append(b, account.String()...)
 	b = append(b, '"')
 	return b, nil
 }
@@ -280,43 +278,42 @@ func (address ED25519Address) MarshalJSON() ([]byte, error) {
 // -------
 
 // key type code (see enumeration above)
-func (address *NothingAddress) KeyType() int {
+func (account *NothingAccount) KeyType() int {
 	return Nothing
 }
 
 // fetch the public key as byte slice
-func (address *NothingAddress) PublicKeyBytes() []byte {
-	return address.PublicKey[:]
+func (account *NothingAccount) PublicKeyBytes() []byte {
+	return account.PublicKey[:]
 }
 
 // check the signature of a message
-func (address *NothingAddress) CheckSignature(message []byte, signature Signature) error {
+func (account *NothingAccount) CheckSignature(message []byte, signature Signature) error {
 	return fault.ErrInvalidSignature
 }
 
 // byte slice for encoded key
-func (address *NothingAddress) Bytes() []byte {
+func (account *NothingAccount) Bytes() []byte {
 	keyVariant := byte(Nothing<<algorithmShift) | publicKeyCode
-	if address.Test {
+	if account.Test {
 		keyVariant |= testKeyCode
 	}
-	return append([]byte{keyVariant}, address.PublicKey[:]...)
+	return append([]byte{keyVariant}, account.PublicKey[:]...)
 }
 
 // base58 encoding of encoded key
-func (address *NothingAddress) String() string {
-	buffer := address.Bytes()
-	firstRound := sha256.Sum256(buffer)
-	checksum := sha256.Sum256(firstRound[:])
+func (account *NothingAccount) String() string {
+	buffer := account.Bytes()
+	checksum := sha3.Sum256(buffer)
 	buffer = append(buffer, checksum[:checksumLength]...)
 	return util.ToBase58(buffer)
 }
 
-// convert an address to its Base58 JSON form
-func (address NothingAddress) MarshalJSON() ([]byte, error) {
+// convert an account to its Base58 JSON form
+func (account NothingAccount) MarshalJSON() ([]byte, error) {
 	b := make([]byte, 32)
 	b[0] = '"'
-	b = append(b, address.String()...)
+	b = append(b, account.String()...)
 	b[len(b)] = '"'
 	return b, nil
 }
