@@ -18,7 +18,7 @@ const (
 	AssetIndexSize       = 64
 )
 
-// the type for an asset index - same as block digest
+// the type for an asset index
 // stored as little endian byte array
 // represented as big endian hex value for print
 // represented as little endian hex text for JSON encoding

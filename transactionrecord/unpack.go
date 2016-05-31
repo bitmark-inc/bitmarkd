@@ -6,6 +6,7 @@ package transactionrecord
 
 import (
 	"github.com/bitmark-inc/bitmarkd/account"
+	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/util"
@@ -27,28 +28,20 @@ func (record Packed) Unpack() (interface{}, error) {
 	switch TagType(recordType) {
 
 	case BaseDataTag:
-		// blockNumber
-		blockNumber := uint64(0)
-		var blockNumberLength int
-		blockNumber, blockNumberLength = util.FromVarint64(record[n:])
-		n += int(blockNumberLength)
-
-		// transactionCount
-		transactionCount := uint64(0)
-		var transactionCountLength int
-		transactionCount, transactionCountLength = util.FromVarint64(record[n:])
-		n += int(transactionCountLength)
 
 		// currency
-		currencyLength, currencyOffset := util.FromVarint64(record[n:])
-		currency := make(Packed, currencyLength)
-		n += currencyOffset
-		copy(currency, record[n:])
+		c := uint64(0)
+		var currencyLength int
+		c, currencyLength = util.FromVarint64(record[n:])
 		n += int(currencyLength)
+		currency, err := currency.FromUint64(c)
+		if nil != err {
+			return nil, err
+		}
 
 		// paymentAddress
 		paymentAddressLength, paymentAddressOffset := util.FromVarint64(record[n:])
-		paymentAddress := make(Packed, paymentAddressLength)
+		paymentAddress := make([]byte, paymentAddressLength)
 		n += paymentAddressOffset
 		copy(paymentAddress, record[n:])
 		n += int(paymentAddressLength)
@@ -56,7 +49,7 @@ func (record Packed) Unpack() (interface{}, error) {
 		// owner public key
 		ownerLength, ownerOffset := util.FromVarint64(record[n:])
 		n += ownerOffset
-		owner, err := account.AddressFromBytes(record[n : n+int(ownerLength)])
+		owner, err := account.AccountFromBytes(record[n : n+int(ownerLength)])
 		if nil != err {
 			return nil, err
 		}
@@ -76,13 +69,11 @@ func (record Packed) Unpack() (interface{}, error) {
 		n += int(signatureLength)
 
 		r := &BaseData{
-			BlockNumber:      blockNumber,
-			TransactionCount: transactionCount,
-			Owner:            owner,
-			Currency:         string(currency),
-			PaymentAddress:   string(paymentAddress),
-			Nonce:            nonce,
-			Signature:        signature,
+			Owner:          owner,
+			Currency:       currency,
+			PaymentAddress: string(paymentAddress),
+			Nonce:          nonce,
+			Signature:      signature,
 		}
 		return r, nil
 
@@ -90,21 +81,21 @@ func (record Packed) Unpack() (interface{}, error) {
 
 		// description
 		descriptionLength, descriptionOffset := util.FromVarint64(record[n:])
-		description := make(Packed, descriptionLength)
+		description := make([]byte, descriptionLength)
 		n += descriptionOffset
 		copy(description, record[n:])
 		n += int(descriptionLength)
 
 		// name
 		nameLength, nameOffset := util.FromVarint64(record[n:])
-		name := make(Packed, nameLength)
+		name := make([]byte, nameLength)
 		n += nameOffset
 		copy(name, record[n:])
 		n += int(nameLength)
 
 		// fingerprint
 		fingerprintLength, fingerprintOffset := util.FromVarint64(record[n:])
-		fingerprint := make(Packed, fingerprintLength)
+		fingerprint := make([]byte, fingerprintLength)
 		n += fingerprintOffset
 		copy(fingerprint, record[n:])
 		n += int(fingerprintLength)
@@ -112,7 +103,7 @@ func (record Packed) Unpack() (interface{}, error) {
 		// registrant public key
 		registrantLength, registrantOffset := util.FromVarint64(record[n:])
 		n += registrantOffset
-		registrant, err := account.AddressFromBytes(record[n : n+int(registrantLength)])
+		registrant, err := account.AccountFromBytes(record[n : n+int(registrantLength)])
 		if nil != err {
 			return nil, err
 		}
@@ -149,7 +140,7 @@ func (record Packed) Unpack() (interface{}, error) {
 		// owner public key
 		ownerLength, ownerOffset := util.FromVarint64(record[n:])
 		n += ownerOffset
-		owner, err := account.AddressFromBytes(record[n : n+int(ownerLength)])
+		owner, err := account.AccountFromBytes(record[n : n+int(ownerLength)])
 		if nil != err {
 			return nil, err
 		}
@@ -188,10 +179,48 @@ func (record Packed) Unpack() (interface{}, error) {
 		}
 		n += int(linkLength)
 
+		// optional payment
+		payment := (*Payment)(nil)
+
+		if 0 == record[n] {
+			n += 1
+		} else if 1 == record[n] {
+			n += 1
+
+			// currency
+			c := uint64(0)
+			var currencyLength int
+			c, currencyLength = util.FromVarint64(record[n:])
+			n += int(currencyLength)
+			currency, err := currency.FromUint64(c)
+			if nil != err {
+				return nil, err
+			}
+
+			// address
+			addressLength, addressOffset := util.FromVarint64(record[n:])
+			address := make([]byte, addressLength)
+			n += addressOffset
+			copy(address, record[n:])
+			n += int(addressLength)
+
+			// amount
+			amount, amountLength := util.FromVarint64(record[n:])
+			n += int(amountLength)
+
+			payment = &Payment{
+				Currency: currency,
+				Address:  string(address),
+				Amount:   amount,
+			}
+		} else {
+			return nil, fault.ErrNotTransactionPack
+		}
+
 		// owner public key
 		ownerLength, ownerOffset := util.FromVarint64(record[n:])
 		n += ownerOffset
-		owner, err := account.AddressFromBytes(record[n : n+int(ownerLength)])
+		owner, err := account.AccountFromBytes(record[n : n+int(ownerLength)])
 		if nil != err {
 			return nil, err
 		}
@@ -206,6 +235,7 @@ func (record Packed) Unpack() (interface{}, error) {
 
 		r := &BitmarkTransfer{
 			Link:      Link(link),
+			Payment:   payment,
 			Owner:     owner,
 			Signature: signature,
 		}

@@ -19,13 +19,9 @@ import (
 //
 // NOTE: returns the "unsigned" message on signature failure - for
 //       debugging/testing
-func (baseData *BaseData) Pack(address *account.Address) (Packed, error) {
+func (baseData *BaseData) Pack(address *account.Account) (Packed, error) {
 	if len(baseData.Signature) > maxSignatureLength {
 		return nil, fault.ErrSignatureTooLong
-	}
-
-	if utf8.RuneCountInString(baseData.Currency) > maxCurrencyLength {
-		return nil, fault.ErrCurrencyTooLong
 	}
 
 	if utf8.RuneCountInString(baseData.PaymentAddress) > maxPaymentAddressLength {
@@ -34,11 +30,9 @@ func (baseData *BaseData) Pack(address *account.Address) (Packed, error) {
 
 	// concatenate bytes
 	message := util.ToVarint64(uint64(BaseDataTag))
-	message = appendUint64(message, baseData.BlockNumber)
-	message = appendUint64(message, baseData.TransactionCount)
-	message = appendString(message, baseData.Currency)
+	message = appendUint64(message, baseData.Currency.Uint64())
 	message = appendString(message, baseData.PaymentAddress)
-	message = appendAddress(message, baseData.Owner)
+	message = appendAccount(message, baseData.Owner)
 	message = appendUint64(message, baseData.Nonce)
 
 	// signature
@@ -57,7 +51,7 @@ func (baseData *BaseData) Pack(address *account.Address) (Packed, error) {
 //
 // NOTE: returns the "unsigned" message on signature failure - for
 //       debugging/testing
-func (assetData *AssetData) Pack(address *account.Address) (Packed, error) {
+func (assetData *AssetData) Pack(address *account.Account) (Packed, error) {
 	if len(assetData.Signature) > maxSignatureLength {
 		return nil, fault.ErrSignatureTooLong
 	}
@@ -79,7 +73,7 @@ func (assetData *AssetData) Pack(address *account.Address) (Packed, error) {
 	message = appendString(message, assetData.Description)
 	message = appendString(message, assetData.Name)
 	message = appendString(message, assetData.Fingerprint)
-	message = appendAddress(message, assetData.Registrant)
+	message = appendAccount(message, assetData.Registrant)
 
 	// signature
 	err := address.CheckSignature(message, assetData.Signature)
@@ -97,7 +91,7 @@ func (assetData *AssetData) Pack(address *account.Address) (Packed, error) {
 //
 // NOTE: returns the "unsigned" message on signature failure - for
 //       debugging/testing
-func (issue *BitmarkIssue) Pack(address *account.Address) (Packed, error) {
+func (issue *BitmarkIssue) Pack(address *account.Account) (Packed, error) {
 	if len(issue.Signature) > maxSignatureLength {
 		return nil, fault.ErrSignatureTooLong
 	}
@@ -105,7 +99,7 @@ func (issue *BitmarkIssue) Pack(address *account.Address) (Packed, error) {
 	// concatenate bytes
 	message := util.ToVarint64(uint64(BitmarkIssueTag))
 	message = appendBytes(message, issue.AssetIndex.Bytes())
-	message = appendAddress(message, issue.Owner)
+	message = appendAccount(message, issue.Owner)
 	message = appendUint64(message, issue.Nonce)
 
 	// signature
@@ -125,7 +119,7 @@ func (issue *BitmarkIssue) Pack(address *account.Address) (Packed, error) {
 //
 // NOTE: returns the "unsigned" message on signature failure - for
 //       debugging/testing
-func (transfer *BitmarkTransfer) Pack(address *account.Address) (Packed, error) {
+func (transfer *BitmarkTransfer) Pack(address *account.Account) (Packed, error) {
 	if len(transfer.Signature) > maxSignatureLength {
 		return nil, fault.ErrSignatureTooLong
 	}
@@ -133,7 +127,20 @@ func (transfer *BitmarkTransfer) Pack(address *account.Address) (Packed, error) 
 	// concatenate bytes
 	message := util.ToVarint64(uint64(BitmarkTransferTag))
 	message = appendBytes(message, transfer.Link[:])
-	message = appendAddress(message, transfer.Owner)
+
+	if nil == transfer.Payment {
+		message = append(message, 0)
+	} else {
+		if utf8.RuneCountInString(transfer.Payment.Address) > maxPaymentAddressLength {
+			return nil, fault.ErrPaymentAddressTooLong
+		}
+		message = append(message, 1)
+		message = appendUint64(message, transfer.Payment.Currency.Uint64())
+		message = appendString(message, transfer.Payment.Address)
+		message = appendUint64(message, transfer.Payment.Amount)
+	}
+
+	message = appendAccount(message, transfer.Owner)
 
 	// signature
 	err := address.CheckSignature(message, transfer.Signature)
@@ -157,7 +164,7 @@ func appendString(buffer Packed, s string) Packed {
 // append a address to a buffer
 //
 // the field is prefixed by Varint64(length)
-func appendAddress(buffer Packed, address *account.Address) Packed {
+func appendAccount(buffer Packed, address *account.Account) Packed {
 	data := address.Bytes()
 	l := util.ToVarint64(uint64(len(data)))
 	buffer = append(buffer, l...)

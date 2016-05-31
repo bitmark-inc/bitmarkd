@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/chain"
+	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
@@ -144,9 +145,9 @@ var ownerTwo = keyPair{
 }
 
 // helper to make an address
-func makeAddress(publicKey []byte) *account.Address {
-	return &account.Address{
-		AddressInterface: &account.ED25519Address{
+func makeAccount(publicKey []byte) *account.Account {
+	return &account.Account{
+		AccountInterface: &account.ED25519Account{
 			Test:      true,
 			PublicKey: publicKey,
 		},
@@ -158,33 +159,30 @@ func makeAddress(publicKey []byte) *account.Address {
 // ensures that pack->unpack returns the same original value
 func TestPackBaseData(t *testing.T) {
 
-	proofedbyAddress := makeAddress(proofedby.publicKey)
+	proofedbyAccount := makeAccount(proofedby.publicKey)
 
 	r := transactionrecord.BaseData{
-		BlockNumber:      1234,
-		TransactionCount: 25,
-		Currency:         "nullcoin",
-		PaymentAddress:   "nulladdress",
-		Owner:            proofedbyAddress,
-		Nonce:            0x12345678,
+		Currency:       currency.Nothing,
+		PaymentAddress: "nulladdress",
+		Owner:          proofedbyAccount,
+		Nonce:          0x12345678,
 	}
 
 	expected := []byte{
-		0x01, 0xd2, 0x09, 0x19, 0x08, 0x6e, 0x75, 0x6c,
-		0x6c, 0x63, 0x6f, 0x69, 0x6e, 0x0b, 0x6e, 0x75,
-		0x6c, 0x6c, 0x61, 0x64, 0x64, 0x72, 0x65, 0x73,
-		0x73, 0x21, 0x13, 0x55, 0xb2, 0x98, 0x88, 0x17,
-		0xf7, 0xea, 0xec, 0x37, 0x74, 0x1b, 0x82, 0x44,
-		0x71, 0x63, 0xca, 0xaa, 0x5a, 0x9d, 0xb2, 0xb6,
-		0xf0, 0xce, 0x72, 0x26, 0x26, 0x33, 0x8e, 0x5e,
-		0x3f, 0xd7, 0xf7, 0xf8, 0xac, 0xd1, 0x91, 0x01,
+		0x01, 0x00, 0x0b, 0x6e, 0x75, 0x6c, 0x6c, 0x61,
+		0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x21, 0x13,
+		0x55, 0xb2, 0x98, 0x88, 0x17, 0xf7, 0xea, 0xec,
+		0x37, 0x74, 0x1b, 0x82, 0x44, 0x71, 0x63, 0xca,
+		0xaa, 0x5a, 0x9d, 0xb2, 0xb6, 0xf0, 0xce, 0x72,
+		0x26, 0x26, 0x33, 0x8e, 0x5e, 0x3f, 0xd7, 0xf7,
+		0xf8, 0xac, 0xd1, 0x91, 0x01,
 	}
 
 	expectedTxId := transactionrecord.Link{
-		0xe9, 0x82, 0xf1, 0x77, 0xeb, 0x7b, 0x38, 0x3e,
-		0x1d, 0x56, 0x96, 0x17, 0xb9, 0x4a, 0x90, 0xce,
-		0x05, 0x93, 0x64, 0xb8, 0x2c, 0x55, 0x5d, 0xed,
-		0xcc, 0x2a, 0x69, 0xc7, 0x76, 0x6e, 0x5d, 0x14,
+		0x9e, 0xd1, 0x69, 0x58, 0x1f, 0xf3, 0x45, 0x02,
+		0x46, 0xdc, 0xfe, 0x20, 0xf3, 0x76, 0xd8, 0x5d,
+		0x56, 0xe3, 0x79, 0xc2, 0xe0, 0x97, 0xb9, 0x29,
+		0xf5, 0x52, 0x4a, 0x3e, 0x6b, 0x18, 0xf4, 0x2c,
 	}
 
 	// manually sign the record and attach signature to "expected"
@@ -196,7 +194,7 @@ func TestPackBaseData(t *testing.T) {
 	expected = append(expected, signature[:]...)
 
 	// test the packer
-	packed, err := r.Pack(proofedbyAddress)
+	packed, err := r.Pack(proofedbyAccount)
 	if nil != err {
 		t.Errorf("pack error: %v", err)
 	}
@@ -212,6 +210,8 @@ func TestPackBaseData(t *testing.T) {
 	if transactionrecord.BaseDataTag != packed.Type() {
 		t.Errorf("pack record type: %x  expected: %x", packed.Type(), transactionrecord.BaseDataTag)
 	}
+
+	t.Logf("Packed length: %d bytes", len(packed))
 
 	// check txIds
 	txId := packed.MakeLink()
@@ -276,13 +276,13 @@ func TestPackBaseData(t *testing.T) {
 // ensures that pack->unpack returns the same original value
 func TestPackAssetData(t *testing.T) {
 
-	registrantAddress := makeAddress(registrant.publicKey)
+	registrantAccount := makeAccount(registrant.publicKey)
 
 	r := transactionrecord.AssetData{
 		Description: "Just the description",
 		Name:        "Item's Name",
 		Fingerprint: "0123456789abcdef",
-		Registrant:  registrantAddress,
+		Registrant:  registrantAccount,
 	}
 
 	expected := []byte{
@@ -326,7 +326,7 @@ func TestPackAssetData(t *testing.T) {
 	expected = append(expected, signature[:]...)
 
 	// test the packer
-	packed, err := r.Pack(registrantAddress)
+	packed, err := r.Pack(registrantAccount)
 	if nil != err {
 		t.Errorf("pack error: %v", err)
 	}
@@ -342,6 +342,8 @@ func TestPackAssetData(t *testing.T) {
 	if transactionrecord.AssetDataTag != packed.Type() {
 		t.Errorf("pack record type: %x  expected: %x", packed.Type(), transactionrecord.AssetDataTag)
 	}
+
+	t.Logf("Packed length: %d bytes", len(packed))
 
 	// check txIds
 	txId := packed.MakeLink()
@@ -407,7 +409,7 @@ func TestPackAssetData(t *testing.T) {
 // ensures that pack->unpack returns the same original value
 func TestPackBitmarkIssue(t *testing.T) {
 
-	issuerAddress := makeAddress(issuer.publicKey)
+	issuerAccount := makeAccount(issuer.publicKey)
 
 	var asset transactionrecord.AssetIndex
 	_, err := fmt.Sscan("BMA159d06155d25dffdb982729de8dce9d7855ca094d8bab8124b347c40668477056b3c27ccb7d71b54043d207ccd187642bf9c8466f9a8d0dbefb4c41633a7e39ef", &asset)
@@ -418,7 +420,7 @@ func TestPackBitmarkIssue(t *testing.T) {
 
 	r := transactionrecord.BitmarkIssue{
 		AssetIndex: asset,
-		Owner:      issuerAddress,
+		Owner:      issuerAccount,
 		Nonce:      99,
 	}
 
@@ -453,7 +455,7 @@ func TestPackBitmarkIssue(t *testing.T) {
 	expected = append(expected, signature[:]...)
 
 	// test the packer
-	packed, err := r.Pack(issuerAddress)
+	packed, err := r.Pack(issuerAccount)
 	if nil != err {
 		t.Errorf("pack error: %v", err)
 	}
@@ -464,6 +466,8 @@ func TestPackBitmarkIssue(t *testing.T) {
 		t.Errorf("*** GENERATED Packed:\n%s", util.FormatBytes("expected", packed))
 		return
 	}
+
+	t.Logf("Packed length: %d bytes", len(packed))
 
 	// check txId
 	txId := packed.MakeLink()
@@ -519,8 +523,8 @@ func TestPackBitmarkIssue(t *testing.T) {
 // ensures that pack->unpack returns the same original value
 func TestPackBitmarkTransferOne(t *testing.T) {
 
-	issuerAddress := makeAddress(issuer.publicKey)
-	ownerOneAddress := makeAddress(ownerOne.publicKey)
+	issuerAccount := makeAccount(issuer.publicKey)
+	ownerOneAccount := makeAccount(ownerOne.publicKey)
 
 	var link transactionrecord.Link
 	_, err := fmt.Sscan("BMK1bb827af201df8dfd1476fb2350efec353e92f09cc3e2d16c3e3d9f159c90ac25", &link)
@@ -531,7 +535,7 @@ func TestPackBitmarkTransferOne(t *testing.T) {
 
 	r := transactionrecord.BitmarkTransfer{
 		Link:  link,
-		Owner: ownerOneAddress,
+		Owner: ownerOneAccount,
 	}
 
 	expected := []byte{
@@ -539,18 +543,18 @@ func TestPackBitmarkTransferOne(t *testing.T) {
 		0x3d, 0x3e, 0x6c, 0xd1, 0xe2, 0xc3, 0x9c, 0xf0,
 		0x92, 0x3e, 0x35, 0xec, 0xef, 0x50, 0x23, 0xfb,
 		0x76, 0x14, 0xfd, 0x8d, 0xdf, 0x01, 0xf2, 0x7a,
-		0x82, 0xbb, 0x21, 0x13, 0x27, 0x64, 0x0e, 0x4a,
-		0xab, 0x92, 0xd8, 0x7b, 0x4a, 0x6a, 0x2f, 0x30,
-		0xb8, 0x81, 0xf4, 0x49, 0x29, 0xf8, 0x66, 0x04,
-		0x3a, 0x84, 0x1c, 0x38, 0x14, 0xb1, 0x66, 0xb8,
-		0x89, 0x44, 0xb0, 0x92,
+		0x82, 0xbb, 0x00, 0x21, 0x13, 0x27, 0x64, 0x0e,
+		0x4a, 0xab, 0x92, 0xd8, 0x7b, 0x4a, 0x6a, 0x2f,
+		0x30, 0xb8, 0x81, 0xf4, 0x49, 0x29, 0xf8, 0x66,
+		0x04, 0x3a, 0x84, 0x1c, 0x38, 0x14, 0xb1, 0x66,
+		0xb8, 0x89, 0x44, 0xb0, 0x92,
 	}
 
 	expectedTxId := transactionrecord.Link{
-		0xf6, 0x1f, 0x5c, 0xdb, 0x07, 0x57, 0xcd, 0xee,
-		0x36, 0xc0, 0xae, 0x95, 0x14, 0xf6, 0xb8, 0x7d,
-		0x63, 0x06, 0x47, 0x5d, 0x57, 0x8e, 0xfb, 0xc1,
-		0x91, 0x98, 0x0a, 0x63, 0x32, 0x3b, 0x6a, 0xb6,
+		0x1c, 0xcf, 0x4b, 0x31, 0xd1, 0xe0, 0xb6, 0x1b,
+		0x6b, 0x64, 0x93, 0xd2, 0xc1, 0x8c, 0xe5, 0x3a,
+		0x75, 0x8e, 0x5f, 0xc3, 0x65, 0x70, 0x97, 0xb1,
+		0x77, 0x35, 0x9e, 0x52, 0xed, 0x4c, 0xa3, 0x49,
 	}
 
 	// manually sign the record and attach signature to "expected"
@@ -561,7 +565,7 @@ func TestPackBitmarkTransferOne(t *testing.T) {
 	expected = append(expected, signature[:]...)
 
 	// test the packer
-	packed, err := r.Pack(issuerAddress)
+	packed, err := r.Pack(issuerAccount)
 	if nil != err {
 		t.Errorf("pack error: %v", err)
 	}
@@ -572,6 +576,8 @@ func TestPackBitmarkTransferOne(t *testing.T) {
 		t.Errorf("*** GENERATED Packed:\n%s", util.FormatBytes("expected", packed))
 		return
 	}
+
+	t.Logf("Packed length: %d bytes", len(packed))
 
 	// check txId
 	txId := packed.MakeLink()
@@ -627,8 +633,8 @@ func TestPackBitmarkTransferOne(t *testing.T) {
 // ensures that pack->unpack returns the same original value
 func TestPackBitmarkTransferTwo(t *testing.T) {
 
-	ownerOneAddress := makeAddress(ownerOne.publicKey)
-	ownerTwoAddress := makeAddress(ownerTwo.publicKey)
+	ownerOneAccount := makeAccount(ownerOne.publicKey)
+	ownerTwoAccount := makeAccount(ownerTwo.publicKey)
 
 	var link transactionrecord.Link
 	_, err := fmt.Sscan("BMK1f61f5cdb0757cdee36c0ae9514f6b87d6306475d578efbc191980a63323b6ab6", &link)
@@ -638,8 +644,13 @@ func TestPackBitmarkTransferTwo(t *testing.T) {
 	}
 
 	r := transactionrecord.BitmarkTransfer{
-		Link:  link,
-		Owner: ownerTwoAddress,
+		Link: link,
+		Payment: &transactionrecord.Payment{
+			Currency: currency.Bitcoin,
+			Address:  "some-payment-address",
+			Amount:   5000,
+		},
+		Owner: ownerTwoAccount,
 	}
 
 	expected := []byte{
@@ -647,18 +658,21 @@ func TestPackBitmarkTransferTwo(t *testing.T) {
 		0x98, 0x91, 0xc1, 0xfb, 0x8e, 0x57, 0x5d, 0x47,
 		0x06, 0x63, 0x7d, 0xb8, 0xf6, 0x14, 0x95, 0xae,
 		0xc0, 0x36, 0xee, 0xcd, 0x57, 0x07, 0xdb, 0x5c,
-		0x1f, 0xf6, 0x21, 0x13, 0xa1, 0x36, 0x32, 0xd5,
-		0x42, 0x5a, 0xed, 0x3a, 0x6b, 0x62, 0xe2, 0xbb,
-		0x6d, 0xe4, 0xc9, 0x59, 0x48, 0x41, 0xc1, 0x5b,
-		0x70, 0x15, 0x69, 0xec, 0x99, 0x99, 0xdc, 0x20,
-		0x1c, 0x35, 0xf7, 0xb3,
+		0x1f, 0xf6, 0x01, 0x01, 0x14, 0x73, 0x6f, 0x6d,
+		0x65, 0x2d, 0x70, 0x61, 0x79, 0x6d, 0x65, 0x6e,
+		0x74, 0x2d, 0x61, 0x64, 0x64, 0x72, 0x65, 0x73,
+		0x73, 0x88, 0x27, 0x21, 0x13, 0xa1, 0x36, 0x32,
+		0xd5, 0x42, 0x5a, 0xed, 0x3a, 0x6b, 0x62, 0xe2,
+		0xbb, 0x6d, 0xe4, 0xc9, 0x59, 0x48, 0x41, 0xc1,
+		0x5b, 0x70, 0x15, 0x69, 0xec, 0x99, 0x99, 0xdc,
+		0x20, 0x1c, 0x35, 0xf7, 0xb3,
 	}
 
 	expectedTxId := transactionrecord.Link{
-		0x36, 0xcf, 0x30, 0xe2, 0x50, 0x58, 0x0d, 0x8d,
-		0x03, 0xa6, 0x52, 0x58, 0xfd, 0x5d, 0x34, 0xc2,
-		0x6a, 0xa7, 0xad, 0x91, 0x08, 0x27, 0x7d, 0xcb,
-		0x07, 0x16, 0x55, 0x07, 0xfc, 0x2e, 0x87, 0x38,
+		0xf4, 0x1e, 0xe0, 0xc7, 0xd4, 0x17, 0x99, 0xbd,
+		0x90, 0x47, 0x7e, 0x66, 0xce, 0x4c, 0xc4, 0xf8,
+		0xa7, 0x66, 0xb5, 0x13, 0xd6, 0xd2, 0x93, 0x07,
+		0x9c, 0x47, 0x32, 0xe5, 0x58, 0x8f, 0x95, 0xec,
 	}
 
 	// manually sign the record and attach signature to "expected"
@@ -669,7 +683,7 @@ func TestPackBitmarkTransferTwo(t *testing.T) {
 	expected = append(expected, signature[:]...)
 
 	// test the packer
-	packed, err := r.Pack(ownerOneAddress)
+	packed, err := r.Pack(ownerOneAccount)
 	if nil != err {
 		t.Errorf("pack error: %v", err)
 	}
@@ -680,6 +694,8 @@ func TestPackBitmarkTransferTwo(t *testing.T) {
 		t.Errorf("*** GENERATED Packed:\n%s", util.FormatBytes("expected", packed))
 		return
 	}
+
+	t.Logf("Packed length: %d bytes", len(packed))
 
 	// check txId
 	txId := packed.MakeLink()

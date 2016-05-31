@@ -18,15 +18,13 @@ const (
 	LinkLength       = merkle.DigestLength
 )
 
-// the type for a link - same as block digest
+// the type for a link - same as merkle digest
 // stored as little endian byte array
 // represented as big endian hex value for print
 // represented as little endian hex text for JSON encoding
 type Link merkle.Digest
 
 // Create an link for a packed record
-//
-// reuse the block algorithm
 func (record Packed) MakeLink() Link {
 	return Link(merkle.NewDigest(record))
 }
