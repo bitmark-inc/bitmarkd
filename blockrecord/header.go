@@ -17,27 +17,31 @@ type PackedHeader []byte
 
 // block version
 const (
-	Version = 3
+	Version = 1
 )
 
-// byte sizes for various fields these match Bitcoin header component sizes
+// byte sizes for various fields
 const (
-	versionSize       = 4                   // Block version number
-	previousBlockSize = blockdigest.Length  // 256-bit Argon2d hash of the previous block header
-	merkleRootSize    = merkle.DigestLength // 256-bit SHA3 hash based on all of the transactions in the block
-	timeSize          = 8                   // Current timestamp as seconds since 1970-01-01T00:00 UTC
-	bitsSize          = 8                   // Current target in compact format
-	nonceSize         = 8                   // 64-bit number (starts at 0)
+	versionSize          = 2                   // Block version number
+	transactionCountSize = 2                   // Count of transactions
+	numberSize           = 8                   // This block's number
+	previousBlockSize    = blockdigest.Length  // 256-bit Argon2d hash of the previous block header
+	merkleRootSize       = merkle.DigestLength // 256-bit SHA3 hash based on all of the transactions in the block
+	timestampSize        = 8                   // Current timestamp as seconds since 1970-01-01T00:00 UTC
+	difficultySize       = 8                   // Current target difficulty in compact format
+	nonceSize            = 8                   // 64-bit number (starts at 0)
 )
 
 // offsets of the fields
 const (
-	versionOffset       = 0
-	previousBlockOffset = versionOffset + versionSize
-	merkleRootOffset    = previousBlockOffset + previousBlockSize
-	timeOffset          = merkleRootOffset + merkleRootSize
-	bitsOffset          = timeOffset + timeSize
-	nonceOffset         = bitsOffset + bitsSize
+	versionOffset          = 0
+	transactionCountOffset = versionOffset + versionSize
+	numberOffset           = transactionCountOffset + transactionCountSize
+	previousBlockOffset    = numberOffset + numberSize
+	merkleRootOffset       = previousBlockOffset + previousBlockSize
+	timestampOffset        = merkleRootOffset + merkleRootSize
+	difficultyOffset       = timestampOffset + timestampSize
+	nonceOffset            = difficultyOffset + difficultySize
 
 	totalBlockSize = nonceOffset + nonceSize // total bytes in the header
 )
@@ -45,34 +49,45 @@ const (
 // the unpacked header structure
 // the types here must match Bitcoin header types
 type Header struct {
-	Version       uint64                 `json:"version"`
-	PreviousBlock blockdigest.Digest     `json:"previous_block"`
-	MerkleRoot    merkle.Digest          `json:"merkle_root"`
-	Time          uint64                 `json:"time,string"`
-	Bits          *difficulty.Difficulty `json:"bits"`
-	Nonce         NonceType              `json:"nonce"`
+	Version          uint16                 `json:"version"`
+	TransactionCount uint16                 `json:"transaction_count"`
+	Number           uint64                 `json:"number,string"`
+	PreviousBlock    blockdigest.Digest     `json:"previous_block"`
+	MerkleRoot       merkle.Digest          `json:"merkle_root"`
+	Timestamp        uint64                 `json:"timestamp,string"`
+	Difficulty       *difficulty.Difficulty `json:"difficulty"`
+	Nonce            NonceType              `json:"nonce"`
+}
+
+// create a new header with attached difficulty item
+func New() *Header {
+	return &Header{
+		Difficulty: difficulty.New(),
+	}
 }
 
 // turn a byte slice into a record
 func (record PackedHeader) Unpack(header *Header) error {
-	if len(record) != totalBlockSize {
+	if len(record) != totalBlockSize || nil == header.Difficulty {
 		return fault.ErrInvalidBlockHeader
 	}
 
-	header.Version = binary.LittleEndian.Uint64(record[versionOffset:])
+	header.Version = binary.LittleEndian.Uint16(record[versionOffset:])
+	header.TransactionCount = binary.LittleEndian.Uint16(record[transactionCountOffset:])
+	header.Number = binary.LittleEndian.Uint64(record[numberOffset:])
 
 	err := blockdigest.DigestFromBytes(&header.PreviousBlock, record[previousBlockOffset:merkleRootOffset])
 	if nil != err {
 		return err
 	}
 
-	err = merkle.DigestFromBytes(&header.MerkleRoot, record[merkleRootOffset:timeOffset])
+	err = merkle.DigestFromBytes(&header.MerkleRoot, record[merkleRootOffset:timestampOffset])
 	if nil != err {
 		return err
 	}
 
-	header.Time = binary.LittleEndian.Uint64(record[timeOffset:])
-	header.Bits.SetBytes(record[bitsOffset:])
+	header.Timestamp = binary.LittleEndian.Uint64(record[timestampOffset:difficultyOffset])
+	header.Difficulty.SetBytes(record[difficultyOffset:nonceOffset])
 	header.Nonce = NonceType(binary.LittleEndian.Uint64(record[nonceOffset:]))
 
 	return nil
@@ -87,14 +102,16 @@ func (record PackedHeader) Digest() blockdigest.Digest {
 func (header *Header) Pack() PackedHeader {
 	buffer := make([]byte, totalBlockSize)
 
-	binary.LittleEndian.PutUint64(buffer[versionOffset:], header.Version)
+	binary.LittleEndian.PutUint16(buffer[versionOffset:], header.Version)
+	binary.LittleEndian.PutUint16(buffer[transactionCountOffset:], header.TransactionCount)
+	binary.LittleEndian.PutUint64(buffer[numberOffset:], header.Number)
 
 	// these are in little endian order so can just copy them
 	copy(buffer[previousBlockOffset:], header.PreviousBlock[:])
 	copy(buffer[merkleRootOffset:], header.MerkleRoot[:])
 
-	binary.LittleEndian.PutUint64(buffer[timeOffset:], header.Time)
-	binary.LittleEndian.PutUint64(buffer[bitsOffset:], header.Bits.Bits())
+	binary.LittleEndian.PutUint64(buffer[timestampOffset:], header.Timestamp)
+	binary.LittleEndian.PutUint64(buffer[difficultyOffset:], header.Difficulty.Bits())
 	binary.LittleEndian.PutUint64(buffer[nonceOffset:], uint64(header.Nonce))
 
 	return buffer

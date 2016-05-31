@@ -17,30 +17,34 @@ import (
 )
 
 type recordsTestType struct {
-	leVersion        string
-	lePrevious       string
-	leMerkle         string
-	leTime           string
-	leBits           string
-	leNonce          string
-	beExpectedDigest string
+	leVersion          string
+	leTransactionCount string
+	leNumber           string
+	lePrevious         string
+	leMerkle           string
+	leTimestamp        string
+	leDifficultyBits   string
+	leNonce            string
+	beExpectedDigest   string
 }
 
 var recordsTestData = recordsTestType{
-	leVersion:  "03000000",
-	lePrevious: "81cd02ab7e569e8bcd9317e2fe99f2de44d49ab2b8851ba4a308000000000000",
-	leMerkle:   "e320b6c2fffc8d750423db8b1eb942ae710e951ed797f7affc8892b0f1fc122b",
-	leTime:     "c7f5d74d00000000",
-	leBits:     "f2b9441a3243250d",
-	leNonce:    "42a1469535a7d421",
+	leVersion:          "0100",
+	leTransactionCount: "0100",
+	leNumber:           "2000000000000000",
+	lePrevious:         "81cd02ab7e569e8bcd9317e2fe99f2de44d49ab2b8851ba4a308000000000000",
+	leMerkle:           "e320b6c2fffc8d750423db8b1eb942ae710e951ed797f7affc8892b0f1fc122b",
+	leTimestamp:        "c7f5d74d00000000",
+	leDifficultyBits:   "f2b9441a3243250d",
+	leNonce:            "42a1469535a7d421",
 
-	beExpectedDigest: "ad1917d50a83fad46c6dfe9144d98c1fdebbf9928fb04666ebf2a3ca11abaa42",
+	beExpectedDigest: "08c7539a6d2cf618637f3db6792af495273b04ea946dfc170e6ca4b71fbf1d46",
 }
 
 func TestBlockDigestFromHex(t *testing.T) {
 	r := recordsTestData // the test data block
 
-	leBlock := r.leVersion + r.lePrevious + r.leMerkle + r.leTime + r.leBits + r.leNonce
+	leBlock := r.leVersion + r.leTransactionCount + r.leNumber + r.lePrevious + r.leMerkle + r.leTimestamp + r.leDifficultyBits + r.leNonce
 
 	leBinaryBlock, err := hex.DecodeString(leBlock)
 
@@ -113,6 +117,13 @@ func TestBlockDigestFromBlock(t *testing.T) {
 		b := bytes.NewBuffer(h)
 		n := len(h)
 		switch n {
+		case 2:
+			n := uint16(0)
+			err = binary.Read(b, binary.LittleEndian, &n)
+			if nil != err {
+				t.Fatalf("fromLE read error: %v", err)
+			}
+			return uint64(n)
 		case 4:
 			n := uint32(0)
 			err = binary.Read(b, binary.LittleEndian, &n)
@@ -133,15 +144,17 @@ func TestBlockDigestFromBlock(t *testing.T) {
 		return 0
 	}
 
-	bits := difficulty.New()
-	bits.SetBits(fromLE(r.leBits))
+	difficulty := difficulty.New()
+	difficulty.SetBits(fromLE(r.leDifficultyBits))
 	h := blockrecord.Header{
-		Version:       fromLE(r.leVersion),
-		PreviousBlock: *prevLink,
-		MerkleRoot:    *merkleRoot,
-		Time:          fromLE(r.leTime),
-		Bits:          bits,
-		Nonce:         blockrecord.NonceType(fromLE(r.leNonce)),
+		Version:          uint16(fromLE(r.leVersion)),
+		TransactionCount: uint16(fromLE(r.leTransactionCount)),
+		Number:           fromLE(r.leNumber),
+		PreviousBlock:    *prevLink,
+		MerkleRoot:       *merkleRoot,
+		Timestamp:        fromLE(r.leTimestamp),
+		Difficulty:       difficulty,
+		Nonce:            blockrecord.NonceType(fromLE(r.leNonce)),
 	}
 
 	p := h.Pack()
@@ -181,14 +194,14 @@ func TestBlockDigestFromBlock(t *testing.T) {
 // 	prevBlock := "0000000000000000009cc28fdf5919a73d4e04e6048d1063ef7cdd24dfab49d3"
 // 	merkleRoot := "2b44fc83c84e21817b0da633af7733a4872c2415a21bf9f6b4883a5751c3e020"
 
-// 	bits := difficulty.New()
-// 	bits.SetBits(404472624)
+// 	difficultyBits := difficulty.New()
+// 	difficultyBits.SetBits(404472624)
 // 	h := block.Header{
 // 		Version:       2,
 // 		PreviousBlock: hexEndianDigest(prevBlock),
 // 		MerkleRoot:    hexEndianDigest(merkleRoot),
 // 		Time:          1415178957,
-// 		Bits:          *bits,
+// 		DifficultyBits:          *difficultyBits,
 // 		Nonce:         698985022,
 // 	}
 
