@@ -2,6 +2,6 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-// types a functions for converting Bitmark accounts (the publi key)
+// types and functions for converting Bitmark accounts (the public key)
 // and their signatures
 package account
