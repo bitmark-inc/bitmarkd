@@ -268,8 +268,9 @@ func (difficulty *Difficulty) internalSetReciprocal(f float64) float64 {
 // set the difficulty from little endian bytes
 func (difficulty *Difficulty) SetBytes(b []byte) *Difficulty {
 
-	if len(b) != 8 {
-		fault.Panicf("difficulty.SetBytes: too few bytes expeced 4 but had: %d", len(b))
+	const byteLength = 8
+	if len(b) != byteLength {
+		fault.Panicf("difficulty.SetBytes: too few bytes expeced: %d had: %d", byteLength, len(b))
 	}
 
 	u := uint64(b[0]) |
