@@ -17,6 +17,7 @@ type Currency uint64
 const (
 	Nothing Currency = iota
 	Bitcoin
+	maximumValue uint64 = iota // this must be the last value
 )
 
 // internal conversion
