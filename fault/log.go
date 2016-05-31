@@ -27,16 +27,17 @@ func Initialise() {
 
 // flush any data
 func Finalise() {
-	log.Flush()
+	if nil != log {
+		log.Flush()
+	}
 }
 
 // Log a simple string
 func Critical(message string) {
-
 	if _, file, line, ok := runtime.Caller(1); ok {
-		log.Criticalf("(%q:%d) "+message, file, line)
+		internalCriticalf("(%q:%d) "+message, file, line)
 	} else {
-		log.Critical(message)
+		internalCriticalf("%s", message)
 	}
 }
 
@@ -47,9 +48,9 @@ func Criticalf(format string, arguments ...interface{}) {
 		a[0] = file
 		a[1] = line
 		a = append(a, arguments...)
-		log.Criticalf("(%q:%d) "+format, a...)
+		internalCriticalf("(%q:%d) "+format, a...)
 	} else {
-		log.Criticalf(format, arguments...)
+		internalCriticalf(format, arguments...)
 	}
 }
 
@@ -60,31 +61,25 @@ func Panicf(format string, arguments ...interface{}) {
 		a[0] = file
 		a[1] = line
 		a = append(a, arguments...)
-		log.Criticalf("(%q:%d) "+format, a...)
+		internalCriticalf("(%q:%d) "+format, a...)
 	} else {
-		log.Criticalf(format, arguments...)
+		internalCriticalf(format, arguments...)
 	}
 	Panic("abort, see last messages in log file")
 }
 
 // final panic
 func Panic(message string) {
-	if nil != log {
-		log.Criticalf("%s", message)
-		log.Flush()                        // make sure log file is saved
-		time.Sleep(100 * time.Millisecond) // to allow logging output
-	}
+	internalCriticalf("%s", message)
+	time.Sleep(100 * time.Millisecond) // to allow logging output
 	panic(message)
 }
 
 // final panic
 func PanicWithError(message string, err error) {
 	s := fmt.Sprintf("%s failed with error: %v", message, err)
-	if nil != log {
-		log.Critical(s)
-		log.Flush()                        // make sure log file is saved
-		time.Sleep(100 * time.Millisecond) // to allow logging output
-	}
+	internalCriticalf("%s", s)
+	time.Sleep(100 * time.Millisecond) // to allow logging output
 	panic(s)
 }
 
@@ -94,4 +89,14 @@ func PanicIfError(message string, err error) {
 		return
 	}
 	PanicWithError(message, err)
+}
+
+// internal routines to handle uninitilaise logger channel
+func internalCriticalf(format string, arguments ...interface{}) {
+	if nil == log {
+		fmt.Printf("*** "+format+"\n", arguments...)
+	} else {
+		log.Criticalf(format, arguments...)
+		log.Flush() // make sure log file is saved
+	}
 }
