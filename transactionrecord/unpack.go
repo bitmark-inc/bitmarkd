@@ -21,7 +21,7 @@ import (
 // or:
 //   switch result.(type) {
 //   case *transaction.Registration:
-func (record Packed) Unpack() (interface{}, error) {
+func (record Packed) Unpack() (Transaction, int, error) {
 
 	recordType, n := util.FromVarint64(record)
 
@@ -36,7 +36,7 @@ func (record Packed) Unpack() (interface{}, error) {
 		n += int(currencyLength)
 		currency, err := currency.FromUint64(c)
 		if nil != err {
-			return nil, err
+			return nil, 0, err
 		}
 
 		// paymentAddress
@@ -51,7 +51,7 @@ func (record Packed) Unpack() (interface{}, error) {
 		n += ownerOffset
 		owner, err := account.AccountFromBytes(record[n : n+int(ownerLength)])
 		if nil != err {
-			return nil, err
+			return nil, 0, err
 		}
 		n += int(ownerLength)
 
@@ -75,7 +75,7 @@ func (record Packed) Unpack() (interface{}, error) {
 			Nonce:          nonce,
 			Signature:      signature,
 		}
-		return r, nil
+		return r, n, nil
 
 	case AssetDataTag:
 
@@ -105,7 +105,7 @@ func (record Packed) Unpack() (interface{}, error) {
 		n += registrantOffset
 		registrant, err := account.AccountFromBytes(record[n : n+int(registrantLength)])
 		if nil != err {
-			return nil, err
+			return nil, 0, err
 		}
 		n += int(registrantLength)
 
@@ -123,7 +123,7 @@ func (record Packed) Unpack() (interface{}, error) {
 			Registrant:  registrant,
 			Signature:   signature,
 		}
-		return r, nil
+		return r, n, nil
 
 	case BitmarkIssueTag:
 
@@ -133,7 +133,7 @@ func (record Packed) Unpack() (interface{}, error) {
 		var assetIndex AssetIndex
 		err := AssetIndexFromBytes(&assetIndex, record[n:n+int(assetIndexLength)])
 		if nil != err {
-			return nil, err
+			return nil, 0, err
 		}
 		n += int(assetIndexLength)
 
@@ -142,7 +142,7 @@ func (record Packed) Unpack() (interface{}, error) {
 		n += ownerOffset
 		owner, err := account.AccountFromBytes(record[n : n+int(ownerLength)])
 		if nil != err {
-			return nil, err
+			return nil, 0, err
 		}
 		n += int(ownerLength)
 
@@ -165,7 +165,7 @@ func (record Packed) Unpack() (interface{}, error) {
 			Signature:  signature,
 			Nonce:      nonce,
 		}
-		return r, nil
+		return r, n, nil
 
 	case BitmarkTransferTag:
 
@@ -175,7 +175,7 @@ func (record Packed) Unpack() (interface{}, error) {
 		var link merkle.Digest
 		err := merkle.DigestFromBytes(&link, record[n:n+int(linkLength)])
 		if nil != err {
-			return nil, err
+			return nil, 0, err
 		}
 		n += int(linkLength)
 
@@ -194,7 +194,7 @@ func (record Packed) Unpack() (interface{}, error) {
 			n += int(currencyLength)
 			currency, err := currency.FromUint64(c)
 			if nil != err {
-				return nil, err
+				return nil, 0, err
 			}
 
 			// address
@@ -214,7 +214,7 @@ func (record Packed) Unpack() (interface{}, error) {
 				Amount:   amount,
 			}
 		} else {
-			return nil, fault.ErrNotTransactionPack
+			return nil, 0, fault.ErrNotTransactionPack
 		}
 
 		// owner public key
@@ -222,7 +222,7 @@ func (record Packed) Unpack() (interface{}, error) {
 		n += ownerOffset
 		owner, err := account.AccountFromBytes(record[n : n+int(ownerLength)])
 		if nil != err {
-			return nil, err
+			return nil, 0, err
 		}
 		n += int(ownerLength)
 
@@ -239,9 +239,9 @@ func (record Packed) Unpack() (interface{}, error) {
 			Owner:     owner,
 			Signature: signature,
 		}
-		return r, nil
+		return r, n, nil
 
 	default:
 	}
-	return nil, fault.ErrNotTransactionPack
+	return nil, 0, fault.ErrNotTransactionPack
 }

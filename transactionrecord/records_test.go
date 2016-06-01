@@ -203,7 +203,7 @@ func TestPackBaseData(t *testing.T) {
 	if !bytes.Equal(packed, expected) {
 		t.Errorf("pack record: %x  expected: %x", packed, expected)
 		t.Errorf("*** GENERATED Packed:\n%s", util.FormatBytes("expected", packed))
-		return
+		t.Fatal("fatal error")
 	}
 
 	// check the record type
@@ -226,23 +226,25 @@ func TestPackBaseData(t *testing.T) {
 	//
 	// NOTE: this can only be done in the first record test since
 	//       mode.Initialise may not be repeated
-	if _, err := packed.Unpack(); err != fault.ErrWrongNetworkForPublicKey {
+	if _, _, err := packed.Unpack(); err != fault.ErrWrongNetworkForPublicKey {
 		t.Errorf("expected 'wrong network for public key' but got error: %v", err)
 	}
 	mode.Initialise(chain.Testing) // enter test mode - ONLY ALLOWED ONCE (or panic will occur
 	// =====
 
 	// test the unpacker
-	unpacked, err := packed.Unpack()
+	unpacked, n, err := packed.Unpack()
 	if nil != err {
-		t.Errorf("unpack error: %v", err)
-		return
+		t.Fatalf("unpack error: %v", err)
+	}
+
+	if len(packed) != n {
+		t.Errorf("did not unpack all data: only used: %d of: %d bytes", n, len(packed))
 	}
 
 	baseData, ok := unpacked.(*transactionrecord.BaseData)
 	if !ok {
-		t.Errorf("did not unpack to BaseData")
-		return
+		t.Fatalf("did not unpack to BaseData")
 	}
 
 	// display a JSON version for information
@@ -257,8 +259,7 @@ func TestPackBaseData(t *testing.T) {
 	}
 	b, err := json.MarshalIndent(item, "", "  ")
 	if nil != err {
-		t.Errorf("json error: %v", err)
-		return
+		t.Fatalf("json error: %v", err)
 	}
 
 	t.Logf("BaseData: JSON: %s", b)
@@ -267,7 +268,6 @@ func TestPackBaseData(t *testing.T) {
 	// note reg is a pointer here
 	if !reflect.DeepEqual(r, *baseData) {
 		t.Errorf("different, original: %v  recovered: %v", r, *baseData)
-		return
 	}
 }
 
@@ -335,7 +335,7 @@ func TestPackAssetData(t *testing.T) {
 	if !bytes.Equal(packed, expected) {
 		t.Errorf("pack record: %x  expected: %x", packed, expected)
 		t.Errorf("*** GENERATED Packed:\n%s", util.FormatBytes("expected", packed))
-		return
+		t.Fatal("fatal error")
 	}
 
 	// check the record type
@@ -362,16 +362,17 @@ func TestPackAssetData(t *testing.T) {
 	}
 
 	// test the unpacker
-	unpacked, err := packed.Unpack()
+	unpacked, n, err := packed.Unpack()
 	if nil != err {
-		t.Errorf("unpack error: %v", err)
-		return
+		t.Fatalf("unpack error: %v", err)
+	}
+	if len(packed) != n {
+		t.Errorf("did not unpack all data: only used: %d of: %d bytes", n, len(packed))
 	}
 
 	reg, ok := unpacked.(*transactionrecord.AssetData)
 	if !ok {
-		t.Errorf("did not unpack to AssetData")
-		return
+		t.Fatalf("did not unpack to AssetData")
 	}
 
 	// display a JSON version for information
@@ -390,8 +391,7 @@ func TestPackAssetData(t *testing.T) {
 	}
 	b, err := json.MarshalIndent(item, "", "  ")
 	if nil != err {
-		t.Errorf("json error: %v", err)
-		return
+		t.Fatalf("json error: %v", err)
 	}
 
 	t.Logf("AssetData: JSON: %s", b)
@@ -399,8 +399,7 @@ func TestPackAssetData(t *testing.T) {
 	// check that structure is preserved through Pack/Unpack
 	// note reg is a pointer here
 	if !reflect.DeepEqual(r, *reg) {
-		t.Errorf("different, original: %v  recovered: %v", r, *reg)
-		return
+		t.Fatalf("different, original: %v  recovered: %v", r, *reg)
 	}
 }
 
@@ -414,8 +413,7 @@ func TestPackBitmarkIssue(t *testing.T) {
 	var asset transactionrecord.AssetIndex
 	_, err := fmt.Sscan("BMA159d06155d25dffdb982729de8dce9d7855ca094d8bab8124b347c40668477056b3c27ccb7d71b54043d207ccd187642bf9c8466f9a8d0dbefb4c41633a7e39ef", &asset)
 	if nil != err {
-		t.Errorf("hex to link error: %v", err)
-		return
+		t.Fatalf("hex to link error: %v", err)
 	}
 
 	r := transactionrecord.BitmarkIssue{
@@ -464,7 +462,7 @@ func TestPackBitmarkIssue(t *testing.T) {
 	if !bytes.Equal(packed, expected) {
 		t.Errorf("pack record: %x  expected: %x", packed, expected)
 		t.Errorf("*** GENERATED Packed:\n%s", util.FormatBytes("expected", packed))
-		return
+		t.Fatal("fatal error")
 	}
 
 	t.Logf("Packed length: %d bytes", len(packed))
@@ -475,20 +473,21 @@ func TestPackBitmarkIssue(t *testing.T) {
 	if txId != expectedTxId {
 		t.Errorf("pack tx id: %#v  expected: %x", txId, expectedTxId)
 		t.Errorf("*** GENERATED tx id:\n%s", util.FormatBytes("expectedTxId", txId.Bytes()))
-		return
+		t.Fatal("fatal error")
 	}
 
 	// test the unpacker
-	unpacked, err := packed.Unpack()
+	unpacked, n, err := packed.Unpack()
 	if nil != err {
-		t.Errorf("unpack error: %v", err)
-		return
+		t.Fatalf("unpack error: %v", err)
+	}
+	if len(packed) != n {
+		t.Errorf("did not unpack all data: only used: %d of: %d bytes", n, len(packed))
 	}
 
 	bmt, ok := unpacked.(*transactionrecord.BitmarkIssue)
 	if !ok {
-		t.Errorf("did not unpack to BitmarkIssue")
-		return
+		t.Fatalf("did not unpack to BitmarkIssue")
 	}
 
 	// display a JSON version for information
@@ -503,8 +502,7 @@ func TestPackBitmarkIssue(t *testing.T) {
 	}
 	b, err := json.MarshalIndent(item, "", "  ")
 	if nil != err {
-		t.Errorf("json error: %v", err)
-		return
+		t.Fatalf("json error: %v", err)
 	}
 
 	t.Logf("Bitmark Issue: JSON: %s", b)
@@ -512,8 +510,7 @@ func TestPackBitmarkIssue(t *testing.T) {
 	// check that structure is preserved through Pack/Unpack
 	// note reg is a pointer here
 	if !reflect.DeepEqual(r, *bmt) {
-		t.Errorf("different, original: %v  recovered: %v", r, *bmt)
-		return
+		t.Fatalf("different, original: %v  recovered: %v", r, *bmt)
 	}
 }
 
@@ -529,8 +526,7 @@ func TestPackBitmarkTransferOne(t *testing.T) {
 	var link transactionrecord.Link
 	_, err := fmt.Sscan("BMK1bb827af201df8dfd1476fb2350efec353e92f09cc3e2d16c3e3d9f159c90ac25", &link)
 	if nil != err {
-		t.Errorf("hex to link error: %v", err)
-		return
+		t.Fatalf("hex to link error: %v", err)
 	}
 
 	r := transactionrecord.BitmarkTransfer{
@@ -574,7 +570,7 @@ func TestPackBitmarkTransferOne(t *testing.T) {
 	if !bytes.Equal(packed, expected) {
 		t.Errorf("pack record: %x  expected: %x", packed, expected)
 		t.Errorf("*** GENERATED Packed:\n%s", util.FormatBytes("expected", packed))
-		return
+		t.Fatal("fatal error")
 	}
 
 	t.Logf("Packed length: %d bytes", len(packed))
@@ -585,20 +581,21 @@ func TestPackBitmarkTransferOne(t *testing.T) {
 	if txId != expectedTxId {
 		t.Errorf("pack txId: %#v  expected: %x", txId, expectedTxId)
 		t.Errorf("*** GENERATED txId:\n%s", util.FormatBytes("expectedTxId", txId.Bytes()))
-		return
+		t.Fatal("fatal error")
 	}
 
 	// test the unpacker
-	unpacked, err := packed.Unpack()
+	unpacked, n, err := packed.Unpack()
 	if nil != err {
-		t.Errorf("unpack error: %v", err)
-		return
+		t.Fatalf("unpack error: %v", err)
+	}
+	if len(packed) != n {
+		t.Errorf("did not unpack all data: only used: %d of: %d bytes", n, len(packed))
 	}
 
 	bmt, ok := unpacked.(*transactionrecord.BitmarkTransfer)
 	if !ok {
-		t.Errorf("did not unpack to BitmarkTransfer")
-		return
+		t.Fatalf("did not unpack to BitmarkTransfer")
 	}
 
 	// display a JSON version for information
@@ -613,8 +610,7 @@ func TestPackBitmarkTransferOne(t *testing.T) {
 	}
 	b, err := json.MarshalIndent(item, "", "  ")
 	if nil != err {
-		t.Errorf("json error: %v", err)
-		return
+		t.Fatalf("json error: %v", err)
 	}
 
 	t.Logf("Bitmark Transfer: JSON: %s", b)
@@ -622,8 +618,7 @@ func TestPackBitmarkTransferOne(t *testing.T) {
 	// check that structure is preserved through Pack/Unpack
 	// note reg is a pointer here
 	if !reflect.DeepEqual(r, *bmt) {
-		t.Errorf("different, original: %v  recovered: %v", r, *bmt)
-		return
+		t.Fatalf("different, original: %v  recovered: %v", r, *bmt)
 	}
 }
 
@@ -639,8 +634,7 @@ func TestPackBitmarkTransferTwo(t *testing.T) {
 	var link transactionrecord.Link
 	_, err := fmt.Sscan("BMK1f61f5cdb0757cdee36c0ae9514f6b87d6306475d578efbc191980a63323b6ab6", &link)
 	if nil != err {
-		t.Errorf("hex to link error: %v", err)
-		return
+		t.Fatalf("hex to link error: %v", err)
 	}
 
 	r := transactionrecord.BitmarkTransfer{
@@ -692,7 +686,7 @@ func TestPackBitmarkTransferTwo(t *testing.T) {
 	if !bytes.Equal(packed, expected) {
 		t.Errorf("pack record: %x  expected: %x", packed, expected)
 		t.Errorf("*** GENERATED Packed:\n%s", util.FormatBytes("expected", packed))
-		return
+		t.Fatal("fatal error")
 	}
 
 	t.Logf("Packed length: %d bytes", len(packed))
@@ -703,20 +697,21 @@ func TestPackBitmarkTransferTwo(t *testing.T) {
 	if txId != expectedTxId {
 		t.Errorf("pack txId: %#v  expected: %x", txId, expectedTxId)
 		t.Errorf("*** GENERATED txId:\n%s", util.FormatBytes("expectedTxId", txId.Bytes()))
-		return
+		t.Fatal("fatal error")
 	}
 
 	// test the unpacker
-	unpacked, err := packed.Unpack()
+	unpacked, n, err := packed.Unpack()
 	if nil != err {
-		t.Errorf("unpack error: %v", err)
-		return
+		t.Fatalf("unpack error: %v", err)
+	}
+	if len(packed) != n {
+		t.Errorf("did not unpack all data: only used: %d of: %d bytes", n, len(packed))
 	}
 
 	bmt, ok := unpacked.(*transactionrecord.BitmarkTransfer)
 	if !ok {
-		t.Errorf("did not unpack to BitmarkTransfer")
-		return
+		t.Fatalf("did not unpack to BitmarkTransfer")
 	}
 
 	// display a JSON version for information
@@ -731,8 +726,7 @@ func TestPackBitmarkTransferTwo(t *testing.T) {
 	}
 	b, err := json.MarshalIndent(item, "", "  ")
 	if nil != err {
-		t.Errorf("json error: %v", err)
-		return
+		t.Fatalf("json error: %v", err)
 	}
 
 	t.Logf("Bitmark Transfer: JSON: %s", b)
@@ -740,7 +734,6 @@ func TestPackBitmarkTransferTwo(t *testing.T) {
 	// check that structure is preserved through Pack/Unpack
 	// note reg is a pointer here
 	if !reflect.DeepEqual(r, *bmt) {
-		t.Errorf("different, original: %v  recovered: %v", r, *bmt)
-		return
+		t.Fatalf("different, original: %v  recovered: %v", r, *bmt)
 	}
 }

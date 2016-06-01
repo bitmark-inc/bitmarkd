@@ -31,6 +31,11 @@ const (
 // packed records are just a byte slice
 type Packed []byte
 
+// generic transaction interface
+type Transaction interface {
+	Pack(account *account.Account) (Packed, error)
+}
+
 // byte sizes for various fields
 const (
 	maxDescriptionLength    = 256
