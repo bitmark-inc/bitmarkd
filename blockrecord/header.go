@@ -43,7 +43,8 @@ const (
 	difficultyOffset       = timestampOffset + timestampSize
 	nonceOffset            = difficultyOffset + difficultySize
 
-	totalBlockSize = nonceOffset + nonceSize // total bytes in the header
+	// only the total size is exported
+	TotalBlockSize = nonceOffset + nonceSize // total bytes in the header
 )
 
 // the unpacked header structure
@@ -68,7 +69,7 @@ func New() *Header {
 
 // turn a byte slice into a record
 func (record PackedHeader) Unpack(header *Header) error {
-	if len(record) != totalBlockSize || nil == header.Difficulty {
+	if len(record) != TotalBlockSize || nil == header.Difficulty {
 		return fault.ErrInvalidBlockHeader
 	}
 
@@ -100,7 +101,7 @@ func (record PackedHeader) Digest() blockdigest.Digest {
 
 // turn a record into an array of bytes
 func (header *Header) Pack() PackedHeader {
-	buffer := make([]byte, totalBlockSize)
+	buffer := make([]byte, TotalBlockSize)
 
 	binary.LittleEndian.PutUint16(buffer[versionOffset:], header.Version)
 	binary.LittleEndian.PutUint16(buffer[transactionCountOffset:], header.TransactionCount)

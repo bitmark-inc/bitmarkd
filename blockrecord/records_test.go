@@ -8,11 +8,13 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/merkle"
+	"reflect"
 	"testing"
 )
 
@@ -182,6 +184,29 @@ func TestBlockDigestFromBlock(t *testing.T) {
 	if dp != expected {
 		t.Logf("packed: %x", p)
 		t.Errorf("digest: %#v  expected: %#v", dp, expected)
+	}
+
+	// marshal to JSON
+	j, err := json.Marshal(h)
+	if nil != err {
+		t.Fatalf("marshal to JSON error: %v", err)
+	}
+
+	je := `{"version":1,"transaction_count":1,"number":"32","previous_block":"81cd02ab7e569e8bcd9317e2fe99f2de44d49ab2b8851ba4a308000000000000","merkle_root":"e320b6c2fffc8d750423db8b1eb942ae710e951ed797f7affc8892b0f1fc122b","timestamp":"1305998791","difficulty":"f2b9441a3243250d","nonce":"42a1469535a7d421"}`
+
+	if je != string(j) {
+		t.Fatalf("JSON mismatch: actual: %s  expected: %s", j, je)
+	}
+
+	// unmarshal json
+	var uHeader blockrecord.Header
+	err = json.Unmarshal(j, &uHeader)
+	if nil != err {
+		t.Fatalf("unmarshal from JSON error: %v", err)
+	}
+
+	if !reflect.DeepEqual(uHeader, h) {
+		t.Fatalf("JSON mismatch: actual: %v  expected: %v", uHeader, h)
 	}
 }
 
