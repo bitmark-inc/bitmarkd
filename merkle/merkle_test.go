@@ -31,9 +31,9 @@ func hexToLink(t *testing.T, s string) *merkle.Digest {
 // (note: tree hashes are SHA3 so only txids are the same)
 func TestMerkle(t *testing.T) {
 
-	// uncommented items are minimum to build merkle root from coinbase
+	// uncommented items are minimum to build merkle root from base
 	hexTree := []string{
-		"90e0d4154e0484cf808d964b09bb4ce9cd32b18625665d8afbe72e31a708b5b1", //    (V) cb0 (coinbase)
+		"90e0d4154e0484cf808d964b09bb4ce9cd32b18625665d8afbe72e31a708b5b1", //    (V) ba0 (base)
 		"4d222dd8e3fc1e4808de06c1ce4e1837fee1386f00fda94cf8946a8b42ea2af5", //    (V) tx1
 		// "0cd62ff72b30769f477665ce9c2689f91b3d457f922adee395338292d1bc5356", // (_) tx2
 		// "b7c1ae668ca0f4ad82a77d6b1495c9e94f03dd0a39e63ea11ef10c2bd0f39050", // (_) tx3
@@ -44,7 +44,7 @@ func TestMerkle(t *testing.T) {
 		// "46afe1d6069aad653b31ac7d58f2be5ebd999b6895dcfdc1cc893659177187e7", // (_) tx8
 		// "bb83326a538a22f89fc012bb116c4d24b28fab947bab1e5940f98bf357b56f05", // (_) tx9
 		// ------------------------------------------------------------------
-		// "3742a1054e65746082b0ef133453978e06aa2a45fbfb1013d1278fc0ac1eb783", // (_) R10 = cb0+tx1
+		// "3742a1054e65746082b0ef133453978e06aa2a45fbfb1013d1278fc0ac1eb783", // (_) R10 = ba0+tx1
 		"54cef5e45189afebdd9a04e53810ab382e6558a4deff292d21931c66e2a4df3b", //    (V) R11 = tx2+tx3
 		// "81baadaa98dadb95762d6fec426d1b8ca55f37bccf65335db6d8479871f041e5", // (_) R12 = tx4+tx5
 		// "87e34ca4c4f977e25e49d0f4d712d3738a523ab566a7a0352dee5fb4fcebf8fe", // (_) R13 = tx6+tx7
@@ -64,7 +64,7 @@ func TestMerkle(t *testing.T) {
 	expectedRoot := *hexToLink(t, hexRoot)
 
 	merkleRoot := *hexToLink(t, hexTree[0])
-	t.Logf("coinbase = %#v", merkleRoot)
+	t.Logf("base = %#v", merkleRoot)
 
 	for i := 1; i < len(hexTree); i += 1 {
 
@@ -84,9 +84,9 @@ func TestMerkle(t *testing.T) {
 
 func TestFullMerkle(t *testing.T) {
 
-	// uncommented items are minimum to build merkle root from coinbase
+	// uncommented items are minimum to build merkle root from base
 	hexTree := []string{
-		"90e0d4154e0484cf808d964b09bb4ce9cd32b18625665d8afbe72e31a708b5b1", // (V) cb0 (coinbase)
+		"90e0d4154e0484cf808d964b09bb4ce9cd32b18625665d8afbe72e31a708b5b1", // (V) ba0 (base)
 		"4d222dd8e3fc1e4808de06c1ce4e1837fee1386f00fda94cf8946a8b42ea2af5", // (V) tx1
 		"0cd62ff72b30769f477665ce9c2689f91b3d457f922adee395338292d1bc5356", // (V) tx2
 		"b7c1ae668ca0f4ad82a77d6b1495c9e94f03dd0a39e63ea11ef10c2bd0f39050", // (V) tx3
@@ -97,7 +97,7 @@ func TestFullMerkle(t *testing.T) {
 		"46afe1d6069aad653b31ac7d58f2be5ebd999b6895dcfdc1cc893659177187e7", // (V) tx8
 		"bb83326a538a22f89fc012bb116c4d24b28fab947bab1e5940f98bf357b56f05", // (V) tx9
 		// ------------------------------------------------------------------
-		"3742a1054e65746082b0ef133453978e06aa2a45fbfb1013d1278fc0ac1eb783", // (V) R10 = cb0+tx1
+		"3742a1054e65746082b0ef133453978e06aa2a45fbfb1013d1278fc0ac1eb783", // (V) R10 = ba0+tx1
 		"54cef5e45189afebdd9a04e53810ab382e6558a4deff292d21931c66e2a4df3b", // (V) R11 = tx2+tx3
 		"81baadaa98dadb95762d6fec426d1b8ca55f37bccf65335db6d8479871f041e5", // (V) R12 = tx4+tx5
 		"87e34ca4c4f977e25e49d0f4d712d3738a523ab566a7a0352dee5fb4fcebf8fe", // (V) R13 = tx6+tx7
@@ -121,10 +121,9 @@ func TestFullMerkle(t *testing.T) {
 		t.Logf("h%d = %#v", i, expectedTree[i])
 	}
 
-	coinbase := expectedTree[0]
-	ids := expectedTree[1:10]
+	ids := expectedTree[0:10]
 
-	actualTree := merkle.FullMerkleTree(coinbase, ids)
+	actualTree := merkle.FullMerkleTree(ids)
 
 	for i := 0; i < length; i += 1 {
 		if actualTree[i] != expectedTree[i] {
@@ -133,11 +132,11 @@ func TestFullMerkle(t *testing.T) {
 	}
 }
 
-func TestMerkleCoinbaseOnly(t *testing.T) {
+func TestMerkleBaseOnly(t *testing.T) {
 
-	// uncommented items are minimum to build merkle root from coinbase
+	// uncommented items are minimum to build merkle root from base
 	hexTree := []string{
-		"90e0d4154e0484cf808d964b09bb4ce9cd32b18625665d8afbe72e31a708b5b1", // (V) root = cb0 (coinbase)
+		"90e0d4154e0484cf808d964b09bb4ce9cd32b18625665d8afbe72e31a708b5b1", // (V) root = ba0 (base)
 	}
 
 	length := len(hexTree)
@@ -148,10 +147,9 @@ func TestMerkleCoinbaseOnly(t *testing.T) {
 		t.Logf("h%d = %#v", i, expectedTree[i])
 	}
 
-	coinbase := expectedTree[0]
-	ids := []merkle.Digest{} // empty
+	ids := expectedTree[0:1]
 
-	actualTree := merkle.FullMerkleTree(coinbase, ids)
+	actualTree := merkle.FullMerkleTree(ids)
 
 	for i := 0; i < length; i += 1 {
 		if actualTree[i] != expectedTree[i] {
@@ -162,12 +160,12 @@ func TestMerkleCoinbaseOnly(t *testing.T) {
 
 func TestMerkleOneTx(t *testing.T) {
 
-	// uncommented items are minimum to build merkle root from coinbase
+	// uncommented items are minimum to build merkle root from base
 	hexTree := []string{
-		"90e0d4154e0484cf808d964b09bb4ce9cd32b18625665d8afbe72e31a708b5b1", // (V) cb0 (coinbase)
+		"90e0d4154e0484cf808d964b09bb4ce9cd32b18625665d8afbe72e31a708b5b1", // (V) ba0 (base)
 		"4d222dd8e3fc1e4808de06c1ce4e1837fee1386f00fda94cf8946a8b42ea2af5", // (V) tx1
 		// ------------------------------------------------------------------
-		"3742a1054e65746082b0ef133453978e06aa2a45fbfb1013d1278fc0ac1eb783", // (V) root = cb0+tx1
+		"3742a1054e65746082b0ef133453978e06aa2a45fbfb1013d1278fc0ac1eb783", // (V) root = ba0+tx1
 	}
 
 	length := len(hexTree)
@@ -178,12 +176,11 @@ func TestMerkleOneTx(t *testing.T) {
 		t.Logf("h%d = %#v", i, expectedTree[i])
 	}
 
-	coinbase := expectedTree[0]
-	ids := expectedTree[1:2]
+	ids := expectedTree[0:2]
 
-	expectedRoot := merkle.NewDigest(append(coinbase[:], ids[0][:]...))
+	expectedRoot := merkle.NewDigest(append(ids[0][:], ids[1][:]...))
 
-	actualTree := merkle.FullMerkleTree(coinbase, ids)
+	actualTree := merkle.FullMerkleTree(ids)
 
 	if actualTree[2] != expectedRoot {
 		t.Errorf("actual: %#v  expected: %#v", actualTree[1], expectedRoot)
@@ -315,7 +312,7 @@ func TestMinimumMerkleFromManyTransactions(t *testing.T) {
 	txCount := block328656TransactionCount - 1 // len(hexTx)
 	tx := make([]merkle.Digest, txCount)
 
-	// convert all transactions (skip tx[0] == coinbase)
+	// convert all transactions (skip tx[0] == base)
 	for i := 0; i < txCount; i += 1 {
 		tx[i] = *hexToLink(t, block328656MerkleTree[i+1])
 		t.Logf("h%d = %#v", i, tx[i])

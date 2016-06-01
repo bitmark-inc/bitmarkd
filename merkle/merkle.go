@@ -11,18 +11,17 @@ import (
 // compute minimum merkle root from coinbase + minimum tree
 //
 // structure is:
-//   1. coinbase digest
-//   2. N * transaction digests
-//   3. level 1..m digests
-//   4. merkle root digest
+//   1. N * transaction digests
+//   2. level 1..m digests
+//   3. merkle root digest
 //
 // Note for an empty txIds array the result is just one element
 //      i.e. merkle root == coinbase (Digest)
 //      only the genesis block is like this
-func FullMerkleTree(coinbase Digest, txIds []Digest) []Digest {
+func FullMerkleTree(txIds []Digest) []Digest {
 
 	// compute length of ids + all tree levels including root
-	idCount := len(txIds) + 1 // extra +1 for coinbase
+	idCount := len(txIds)
 
 	totalLength := 1 // all ids + space for the final root
 	for n := idCount; n > 1; n = (n + 1) / 2 {
@@ -31,8 +30,7 @@ func FullMerkleTree(coinbase Digest, txIds []Digest) []Digest {
 
 	// add initial ids
 	tree := make([]Digest, totalLength)
-	tree[0] = coinbase
-	copy(tree[1:], txIds)
+	copy(tree[:], txIds)
 
 	n := idCount
 	j := 0
@@ -52,8 +50,8 @@ func FullMerkleTree(coinbase Digest, txIds []Digest) []Digest {
 
 // merkle hashing
 //
-// build a minimised tree lacking a coinbase
-// i.e. ids[0] is 2nd transaction (the one after the coinbase)
+// build a minimised tree lacking a base
+// i.e. ids[0] is 2nd transaction (the one after the base)
 func MinimumMerkleTree(ids []Digest) []Digest {
 
 	length := len(ids)
