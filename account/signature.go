@@ -7,7 +7,6 @@ package account
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/fault"
 )
 
 // the type for a signature
@@ -47,26 +46,6 @@ func (signature *Signature) Scan(state fmt.ScanState, verb rune) error {
 	}
 	*signature = sig[:byteCount]
 	return nil
-}
-
-// convert a binary signature to hex for unpacking record to JSON
-func (signature Signature) MarshalJSON() ([]byte, error) {
-	size := 2 + hex.EncodedLen(len(signature))
-	b := make([]byte, size)
-	b[0] = '"'
-	b[size-1] = '"'
-	hex.Encode(b[1:], signature)
-	return b, nil
-}
-
-// convert an hex string to a signature for conversion from JSON
-func (signature *Signature) UnmarshalJSON(s []byte) error {
-	// length = '"' + hex characters + '"'
-	last := len(s) - 1
-	if '"' != s[0] || '"' != s[last] {
-		return fault.ErrInvalidCharacter
-	}
-	return signature.UnmarshalText(s[1:last])
 }
 
 // convert signature to text

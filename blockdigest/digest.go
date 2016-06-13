@@ -109,26 +109,6 @@ func (digest *Digest) Scan(state fmt.ScanState, verb rune) error {
 	return nil
 }
 
-// convert a binary digest to little endian hex for JSON
-func (digest Digest) MarshalJSON() ([]byte, error) {
-	size := 2 + hex.EncodedLen(len(digest))
-	buffer := make([]byte, size)
-	buffer[0] = '"'
-	buffer[size-1] = '"'
-	hex.Encode(buffer[1:], digest[:])
-	return buffer, nil
-}
-
-// convert a little endian hex string to a digest for conversion from JSON
-func (digest *Digest) UnmarshalJSON(s []byte) error {
-	// length = '"' + characters + '"'
-	last := len(s) - 1
-	if '"' != s[0] || '"' != s[last] {
-		return fault.ErrInvalidCharacter
-	}
-	return digest.UnmarshalText(s[1:last])
-}
-
 // convert digest to little endian hex text
 func (digest Digest) MarshalText() ([]byte, error) {
 	size := hex.EncodedLen(len(digest))

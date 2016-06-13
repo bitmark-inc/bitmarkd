@@ -190,11 +190,9 @@ func appendUint64(buffer Packed, value uint64) Packed {
 }
 
 // convert a packed to its hex JSON form
-func (p Packed) MarshalJSON() ([]byte, error) {
-	size := 2 + hex.EncodedLen(len(p))
+func (p Packed) MarshalText() ([]byte, error) {
+	size := hex.EncodedLen(len(p))
 	b := make([]byte, size)
-	b[0] = '"'
-	b[size-1] = '"'
-	hex.Encode(b[1:], p)
+	hex.Encode(b, p)
 	return b, nil
 }

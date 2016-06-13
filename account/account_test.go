@@ -7,6 +7,7 @@ package account_test
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"testing"
@@ -49,31 +50,48 @@ func TestValid(t *testing.T) {
 		buffer = append(buffer, test.publicKey...)
 		account, err := account.AccountFromBytes(buffer)
 		if nil != err {
-			t.Errorf("Create account from bytes test: %d failed: %s", index, err)
+			t.Errorf("%d: Create account from bytes failed: %s", index, err)
 			continue
 		}
-		t.Logf("Created account from bytes test: %d result: %s", index, account)
-		t.Logf("Created account from bytes test: %d    hex: %x", index, account.Bytes())
+		t.Logf("%d: result: %s", index, account)
+		t.Logf("%d:    hex: %x", index, account.Bytes())
 	}
 }
 
 // From valid base58 string to account
 func TestValidBase58(t *testing.T) {
 	for index, test := range testAccount {
-		account, err := account.AccountFromBase58(test.base58Account)
+		acc, err := account.AccountFromBase58(test.base58Account)
 		if nil != err {
-			t.Errorf("Create account from base58 string test: %d failed: %s", index, err)
+			t.Errorf("%d: from base58 error: %s", index, err)
 			continue
 		}
-		if account.KeyType() != test.algorithm {
-			t.Errorf("Create account from base58: %d type: %d  expected: %d", index, account.KeyType(), test.algorithm)
+		if acc.KeyType() != test.algorithm {
+			t.Errorf("%d: from base58 type: %d  expected: %d", index, acc.KeyType(), test.algorithm)
 		}
-		if !bytes.Equal(account.PublicKeyBytes(), test.publicKey) {
-			t.Errorf("Create account from base58: %d pubkey: %x  expected %x", index, account.PublicKeyBytes(), test.publicKey)
+		if !bytes.Equal(acc.PublicKeyBytes(), test.publicKey) {
+			t.Errorf("%d: from base58 pubkey: %x  expected %x", index, acc.PublicKeyBytes(), test.publicKey)
 		}
-		if account.String() != test.base58Account {
-			t.Errorf("Create account to base58: %d got: %s  expected %s", index, account, test.base58Account)
+		if acc.String() != test.base58Account {
+			t.Errorf("%d: to base58: %d got: %s  expected %s", index, acc, test.base58Account)
 		}
+
+		// test unmarshal JSON
+		j := `"` + test.base58Account + `"`
+		var a account.Account
+		err = json.Unmarshal([]byte(j), &a)
+		if nil != err {
+			t.Errorf("%d: from JSON string error: %s", index, err)
+			continue
+		}
+		t.Logf("%d: from JSON: %#v", index, a)
+
+		buffer, err := json.Marshal(a)
+		t.Logf("%d: account to JSON: %s", index, buffer)
+		if j != string(buffer) {
+			t.Errorf("%d: marshal JSON:failed: expected %s  actual: %s", index, j, buffer)
+		}
+
 	}
 }
 

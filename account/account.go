@@ -47,8 +47,7 @@ type AccountInterface interface {
 	CheckSignature(message []byte, signature Signature) error
 	Bytes() []byte
 	String() string
-	MarshalJSON() ([]byte, error)
-	//UnmarshalJSON([]byte) error
+	MarshalText() ([]byte, error)
 }
 
 // for ed25519 signatures
@@ -205,12 +204,21 @@ func AccountFromBytes(accountBytes []byte) (*Account, error) {
 //
 // this cannot be forwarded by go compiler, since it needs to determine
 // the the resulting interface type from the encoded data
-func (account *Account) UnmarshalJSON(s []byte) error {
-	// length = '"' + Base58 characters + '"'
-	if '"' != s[0] || '"' != s[len(s)-1] {
-		return fault.ErrInvalidCharacter
-	}
-	a, err := AccountFromBase58(string(s[1 : len(s)-1]))
+// func (account *Account) UnmarshalJSON(s []byte) error {
+// 	// length = '"' + Base58 characters + '"'
+// 	if '"' != s[0] || '"' != s[len(s)-1] {
+// 		return fault.ErrInvalidCharacter
+// 	}
+// 	a, err := AccountFromBase58(string(s[1 : len(s)-1]))
+// 	if nil != err {
+// 		return err
+// 	}
+// 	account.AccountInterface = a.AccountInterface
+// 	return nil
+// }
+
+func (account *Account) UnmarshalText(s []byte) error {
+	a, err := AccountFromBase58(string(s))
 	if nil != err {
 		return err
 	}
@@ -266,12 +274,8 @@ func (account *ED25519Account) String() string {
 }
 
 // convert an account to its Base58 JSON form
-func (account ED25519Account) MarshalJSON() ([]byte, error) {
-	b := make([]byte, 1)
-	b[0] = '"'
-	b = append(b, account.String()...)
-	b = append(b, '"')
-	return b, nil
+func (account ED25519Account) MarshalText() ([]byte, error) {
+	return []byte(account.String()), nil
 }
 
 // Nothing
@@ -310,10 +314,6 @@ func (account *NothingAccount) String() string {
 }
 
 // convert an account to its Base58 JSON form
-func (account NothingAccount) MarshalJSON() ([]byte, error) {
-	b := make([]byte, 32)
-	b[0] = '"'
-	b = append(b, account.String()...)
-	b[len(b)] = '"'
-	return b, nil
+func (account NothingAccount) MarshalText() ([]byte, error) {
+	return []byte(account.String()), nil
 }

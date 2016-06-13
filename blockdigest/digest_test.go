@@ -5,6 +5,7 @@
 package blockdigest_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"math/big"
@@ -111,6 +112,7 @@ func TestBlockDataDigest(t *testing.T) {
 	d := blockdigest.NewDigest(blockdata)
 
 	stringDigest := "799caa04b138ebf218a37bc63a0ceadc9c3274402618b5e369725191c0c5fa6e"
+	expectedJSON := `"6efac5c091517269e3b518264074329cdcea0c3ac67ba318f2eb38b104aa9c79"`
 
 	var expected blockdigest.Digest
 	n, err := fmt.Sscan(stringDigest, &expected)
@@ -122,7 +124,27 @@ func TestBlockDataDigest(t *testing.T) {
 		t.Fatalf("scanned %d items expected to scan 1", n)
 	}
 
-	if d != expected {
-		t.Errorf("digest = %#v expected %#v", d, expected)
+	if expected != d {
+		t.Errorf("digest: expected: %#v actual: %#v", expected, d)
+	}
+
+	// test JSON
+	buffer, err := json.Marshal(d)
+	if nil != err {
+		t.Fatalf("marshal JSON error: %v", err)
+	}
+
+	if expectedJSON != string(buffer) {
+		t.Errorf("json digest expected: %s  actual: %s", expectedJSON, buffer)
+	}
+
+	var jd blockdigest.Digest
+	err = json.Unmarshal([]byte(expectedJSON), &jd)
+	if nil != err {
+		t.Fatalf("unmarshal JSON error: %v", err)
+	}
+
+	if d != jd {
+		t.Errorf("digest: expected: %#v  actual: %#v", d, jd)
 	}
 }

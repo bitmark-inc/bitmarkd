@@ -4,38 +4,17 @@
 
 package currency
 
-import (
-	"github.com/bitmark-inc/bitmarkd/fault"
-)
-
 // convert a currency into JSON
-func (currency Currency) MarshalJSON() ([]byte, error) {
-	s := currency.String()
-	size := 2 + len(s)
-	buffer := make([]byte, size)
-	buffer[0] = '"'
-	buffer[size-1] = '"'
-	copy(buffer[1:], s)
-	return buffer, nil
+func (currency Currency) MarshalText() ([]byte, error) {
+	return []byte(currency.String()), nil
 }
 
 // convert currency string to a currency enumeration value from JSON
-func (currency *Currency) UnmarshalJSON(s []byte) error {
-	// length = '"' + characters + '"'
-	last := len(s) - 1
-	if '"' != s[0] || '"' != s[last] {
-		return fault.ErrInvalidCharacter
-	}
-	c, err := fromString(string(s[1:last]))
+func (currency *Currency) UnmarshalText(s []byte) error {
+	c, err := fromString(string(s))
 	if nil != err {
 		return err
 	}
 	*currency = c
 	return nil
 }
-
-// func (currency Currency) MarshalText() ([]byte, error) {
-// }
-
-// func (currency *Currency) UnmarshalText(s []byte) error {
-// }

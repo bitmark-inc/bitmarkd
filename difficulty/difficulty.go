@@ -321,31 +321,21 @@ func (difficulty *Difficulty) Decay() float64 {
 }
 
 // convert a difficulty to little endian hex for JSON
-func (difficulty Difficulty) MarshalJSON() ([]byte, error) {
+func (difficulty Difficulty) MarshalText() ([]byte, error) {
 
 	bits := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bits, difficulty.bits)
 
-	size := 2 + hex.EncodedLen(len(bits))
+	size := hex.EncodedLen(len(bits))
 	buffer := make([]byte, size)
-	buffer[0] = '"'
-	buffer[size-1] = '"'
-	hex.Encode(buffer[1:], bits)
+	hex.Encode(buffer, bits)
 	return buffer, nil
 }
 
 // convert a difficulty little endian hex string to difficulty value
-func (difficulty *Difficulty) UnmarshalJSON(s []byte) error {
-	// length = '"' + characters + '"'
-	last := len(s) - 1
-	if '"' != s[0] || '"' != s[last] {
-		return fault.ErrInvalidCharacter
-	}
-
-	b := s[1:last]
-
-	buffer := make([]byte, hex.DecodedLen(len(b)))
-	_, err := hex.Decode(buffer, b)
+func (difficulty *Difficulty) UnmarshalText(s []byte) error {
+	buffer := make([]byte, hex.DecodedLen(len(s)))
+	_, err := hex.Decode(buffer, s)
 	if nil != err {
 		return err
 	}

@@ -105,42 +105,7 @@ func (link *Link) Scan(state fmt.ScanState, verb rune) error {
 	return nil
 }
 
-// convert a binary link to little endian hex text for JSON
-//
-// ***** possibly re-use MarshalText to save code duplication
-// ***** but would that cost more buffer copying?
-func (link Link) MarshalJSON() ([]byte, error) {
-	// stage the prefix and link
-	stageSize := linkPrefixLength + len(link)
-	stage := make([]byte, stageSize)
-	copy(stage, linkPrefix)
-
-	for i := 0; i < LinkLength; i += 1 {
-		stage[linkPrefixLength+i] = link[i]
-	}
-
-	// encode to hex
-	size := 2 + hex.EncodedLen(stageSize)
-	buffer := make([]byte, size)
-	buffer[0] = '"'
-	buffer[size-1] = '"'
-	hex.Encode(buffer[1:], stage)
-	return buffer, nil
-}
-
-// convert a little endian hex string to a link for conversion from JSON
-func (link *Link) UnmarshalJSON(s []byte) error {
-	// length = '"' + characters + '"'
-	last := len(s) - 1
-	if '"' != s[0] || '"' != s[last] {
-		return fault.ErrInvalidCharacter
-	}
-	return link.UnmarshalText(s[1:last])
-}
-
 // convert link to little endian hex text
-//
-// ***** possibly use NewEncoder and byte buffer to save copy
 func (link Link) MarshalText() ([]byte, error) {
 	// stage the prefix and link
 	stageSize := linkPrefixLength + len(link)

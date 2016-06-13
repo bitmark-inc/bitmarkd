@@ -107,42 +107,7 @@ func (assetIndex *AssetIndex) Scan(state fmt.ScanState, verb rune) error {
 	return nil
 }
 
-// convert a binary assetIndex to little endian hex text for JSON
-//
-// ***** possibly re-use MarshalText to save code duplication
-// ***** but would that cost more buffer copying?
-func (assetIndex AssetIndex) MarshalJSON() ([]byte, error) {
-	// stage the prefix and assetIndex
-	stageSize := assetIndexPrefixSize + len(assetIndex)
-	stage := make([]byte, stageSize)
-	copy(stage, assetIndexPrefix)
-
-	for i := 0; i < AssetIndexSize; i += 1 {
-		stage[assetIndexPrefixSize+i] = assetIndex[i]
-	}
-
-	// encode to hex
-	size := 2 + hex.EncodedLen(stageSize)
-	buffer := make([]byte, size)
-	buffer[0] = '"'
-	buffer[size-1] = '"'
-	hex.Encode(buffer[1:], stage)
-	return buffer, nil
-}
-
-// convert a little endian hex string to a assetIndex for conversion from JSON
-func (assetIndex *AssetIndex) UnmarshalJSON(s []byte) error {
-	// length = '"' + characters + '"'
-	last := len(s) - 1
-	if '"' != s[0] || '"' != s[last] {
-		return fault.ErrInvalidCharacter
-	}
-	return assetIndex.UnmarshalText(s[1:last])
-}
-
 // convert assetIndex to little endian hex text
-//
-// ***** possibly use NewEncoder and byte buffer to save copy
 func (assetIndex AssetIndex) MarshalText() ([]byte, error) {
 	// stage the prefix and assetIndex
 	stageSize := assetIndexPrefixSize + len(assetIndex)
