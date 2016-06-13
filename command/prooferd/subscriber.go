@@ -13,6 +13,13 @@ import (
 	zmq "github.com/pebbe/zmq4"
 )
 
+// sent by bitmarkd
+// ***** FIX THIS: need to refactor
+type PublishedItem struct {
+	Job    string
+	Header blockrecord.Header
+}
+
 // subscriber thread
 func Subscribe(i int, connectTo string, serverPublicKey string, publicKey string, privateKey string, log *logger.L) error {
 
@@ -76,9 +83,9 @@ func Subscribe(i int, connectTo string, serverPublicKey string, publicKey string
 			log.Infof("received data: %s", data)
 
 			// ***** FIX THIS: just debugging? or really split block into multiple nonce ranges
-			var blk blockrecord.Header
-			err = json.Unmarshal([]byte(data), &blk)
-			log.Infof("received block: %v", blk)
+			var item PublishedItem
+			err = json.Unmarshal([]byte(data), &item)
+			log.Infof("received : %v", item)
 
 			// initial try just forward block
 			_, err = proof.Send(mySubmitterIdentity, zmq.SNDMORE)

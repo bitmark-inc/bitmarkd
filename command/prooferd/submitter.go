@@ -123,7 +123,7 @@ func Submitter(i int, connectTo string, serverPublicKey string, publicKey string
 		for {
 			request, err := dequeue.RecvMessageBytes(0)
 			fault.PanicIfError("dequeue.RecvMessageBytes", err)
-			log.Infof("received data: %s", request)
+			//log.Infof("received data: %s", request)
 
 			// safety check
 			if identity != string(request[0]) {
@@ -134,10 +134,12 @@ func Submitter(i int, connectTo string, serverPublicKey string, publicKey string
 			// compose a request for bitmarkd
 			toSend := struct {
 				Request string
+				Job     string
 				Packed  []byte
 			}{
 				Request: "block.header",
-				Packed:  request[1],
+				Job:     string(request[1]),
+				Packed:  request[2],
 			}
 
 			data, err := json.Marshal(toSend)

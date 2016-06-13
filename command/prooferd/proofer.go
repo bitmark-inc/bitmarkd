@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	//"fmt"
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
-	"github.com/bitmark-inc/bitmarkd/blockrecord"
+	//"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
@@ -143,14 +143,15 @@ func ProofThread(log *logger.L) error {
 
 			MaximumSeconds := 120 * time.Second
 
-			var blk blockrecord.Header
-			err = json.Unmarshal(block, &blk)
-			log.Infof("received block: %v", blk)
+			var item PublishedItem
+			err = json.Unmarshal(block, &item)
+			log.Infof("received item: %v", item)
 
 			// attempt to determine nonce
 			timeout := time.After(MaximumSeconds)
 			start := time.Now()
 			count := 0
+			blk := item.Header
 		nonceLoop:
 			for i := 0; true; i += 1 {
 
@@ -180,6 +181,7 @@ func ProofThread(log *logger.L) error {
 				// possible value if leading zero byte
 				if 0 == digest[31] {
 
+					log.Infof("job: %q nonce: 0x%016x", item.Job, blk.Nonce)
 					log.Infof("digest: %v", digest)
 
 					// request := struct {
@@ -200,6 +202,8 @@ func ProofThread(log *logger.L) error {
 					_, err := submit.SendBytes(submitter, zmq.SNDMORE) // routing address
 					fault.PanicIfError("submit send", err)
 					_, err = submit.SendBytes(submitter, zmq.SNDMORE) // destination check
+					fault.PanicIfError("submit send", err)
+					_, err = submit.Send(item.Job, zmq.SNDMORE) // job id
 					fault.PanicIfError("submit send", err)
 					_, err = submit.SendBytes(packed, 0) // actual data
 					fault.PanicIfError("submit send", err)
