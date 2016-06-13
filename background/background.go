@@ -6,22 +6,26 @@ package background
 
 // the shudown and completed type for a background
 type shutdown struct {
-	shutdown chan bool
-	finished chan bool
+	shutdown chan struct{}
+	finished chan struct{}
 }
 
-// handle type
+// handle type for the stop
 type T struct {
 	s []shutdown
 }
 
 // type signature for background process
-type Process func(args interface{}, shutdown <-chan bool, done chan<- bool)
+// and type that implements this Run is a process
+type Process interface {
+	Run(args interface{}, shutdown <-chan struct{})
+}
 
 // list of processes to start
 type Processes []Process
 
 // start up a set of background processes
+// all with the same arg value
 func Start(processes Processes, args interface{}) *T {
 
 	register := new(T)
@@ -29,17 +33,22 @@ func Start(processes Processes, args interface{}) *T {
 
 	// start each background
 	for i, p := range processes {
-		shutdown := make(chan bool)
-		finished := make(chan bool)
+		shutdown := make(chan struct{})
+		finished := make(chan struct{})
 		register.s[i].shutdown = shutdown
 		register.s[i].finished = finished
-		go p(args, shutdown, finished)
+		go func(p Process, shutdown <-chan struct{}, finished chan<- struct{}) {
+			// pass the shutdown to the Run loop for shutdown signalling
+			p.Run(args, shutdown)
+			// flag for the stop routine to wait for shutdown
+			close(finished)
+		}(p, shutdown, finished)
 	}
 	return register
 }
 
 // stop a set of background processes
-func Stop(t *T) {
+func (t *T) Stop() {
 
 	// shutdown all background tasks
 	for _, shutdown := range t.s {
