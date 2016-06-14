@@ -10,6 +10,7 @@ import (
 	"crypto/rand"
 	"crypto/sha512"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"github.com/bitmark-inc/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmark-cli/fault"
@@ -28,11 +29,33 @@ const (
 
 var passwordConsole *terminal.Terminal
 
+type RawKeyPair struct {
+	PublicKey  string `json:"public_key"`
+	PrivateKey string `json:"private_key"`
+}
+
 // create a new public/private keypair
-func makeKeyPair(name string, password string) (string, string, *configuration.PrivateKeyConfig, error) {
-	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
-	if nil != err {
-		return "", "", nil, err
+func makeKeyPair(name string, privateKeyStr string, password string) (string, string, *configuration.PrivateKeyConfig, error) {
+	var publicKey, privateKey []byte
+	var err error
+	// if privateKey is empty, make a new one
+	if "" == privateKeyStr {
+		publicKey, privateKey, err = ed25519.GenerateKey(rand.Reader)
+		if nil != err {
+			return "", "", nil, err
+		}
+	} else {
+		privateKey, err = hex.DecodeString(privateKeyStr)
+		if nil != err {
+			return "", "", nil, err
+		}
+		//check privateKey is valid
+		if len(privateKey) != privateKeySize {
+			return "", "", nil, fault.ErrInvalidPrivateKey
+		}
+
+		publicKey = make([]byte, publicKeySize)
+		copy(publicKey, privateKey[32:])
 	}
 
 	// encrypt password to get key
@@ -52,6 +75,17 @@ func makeKeyPair(name string, password string) (string, string, *configuration.P
 	privateKeyConfig := &configuration.PrivateKeyConfig{
 		Iter: iter.Integer(),
 		Salt: salt.String(),
+	}
+
+	rawKeyPair := RawKeyPair{
+		PublicKey:  publicStr,
+		PrivateKey: hex.EncodeToString(privateKey),
+	}
+	if b, err := json.MarshalIndent(rawKeyPair, "", "  "); nil != err {
+		fmt.Printf("json error: %v\n", err)
+		return "", "", nil, fault.ErrJsonParseFail
+	} else {
+		fmt.Printf("%s\n", b)
 	}
 
 	return publicStr, privateStr, privateKeyConfig, nil

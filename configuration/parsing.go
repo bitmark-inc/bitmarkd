@@ -33,15 +33,15 @@ type Configuration struct {
 }
 
 type InfoIdentityType struct {
-	Name               string           `libucl:"name"`
-	Description        string           `libucl:"description"`
-	Public_key         string           `libucl:"public_key"`
+	Name        string `libucl:"name"`
+	Description string `libucl:"description"`
+	Public_key  string `libucl:"public_key"`
 }
 
 type InfoConfiguration struct {
-	Default_identity string         `libucl:"default_identity"`
-	Network          string         `libucl:"network"`
-	Connect          string         `libucl:"connect"`
+	Default_identity string             `libucl:"default_identity"`
+	Network          string             `libucl:"network"`
+	Connect          string             `libucl:"connect"`
 	Identities       []InfoIdentityType `libucl:"identities"`
 }
 
@@ -60,7 +60,7 @@ func GetConfiguration(configurationFileName string) (*Configuration, error) {
 	return options, nil
 }
 
-func GetInfoConfiguration(configurationFileName string) (*InfoConfiguration, error){
+func GetInfoConfiguration(configurationFileName string) (*InfoConfiguration, error) {
 	configurationFileName, err := filepath.Abs(filepath.Clean(configurationFileName))
 	if nil != err {
 		return nil, err

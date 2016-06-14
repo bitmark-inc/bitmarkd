@@ -33,6 +33,7 @@ var (
 	ErrRequiredTransferTxId     = InvalidError("Transaction id is required")
 	ErrWrongPassword            = InvalidError("Wrong password")
 	ErrInvalidSignature         = InvalidError("Invalid signature")
+	ErrInvalidPrivateKey        = InvalidError("Invalid privateKey")
 	ErrNotFoundIdentity         = NotFoundError("Identity name is invalid")
 	ErrNotFoundConfigFile       = NotFoundError("Config file is not found")
 	ErrJsonParseFail            = ProcessError("Parse to json failed")

@@ -85,6 +85,11 @@ func main() {
 					Value: "",
 					Usage: "*identity description",
 				},
+				cli.StringFlag{
+					Name:  "privateKey, k",
+					Value: "",
+					Usage: "using existed privateKey",
+				},
 			},
 			Action: func(c *cli.Context) error {
 				runSetup(c, globals)
@@ -211,6 +216,8 @@ func runSetup(c *cli.Context, globals globalFlags) {
 		exitwithstatus.Message("Error: %s\n", err)
 	}
 
+	privateKey := c.String("privateKey")
+
 	verbose := globals.verbose
 	if verbose {
 		fmt.Printf("config: %s\n", configFile)
@@ -238,7 +245,7 @@ func runSetup(c *cli.Context, globals globalFlags) {
 	}
 
 	if !(generateConfiguration(configFile, configData) &&
-		generateIdentity(configFile, name, description, globals.password)) {
+		generateIdentity(configFile, name, description, privateKey, globals.password)) {
 		exitwithstatus.Message("Error: Setup failed\n")
 	}
 
@@ -270,7 +277,7 @@ func runGenerate(c *cli.Context, globals globalFlags) {
 		fmt.Println()
 	}
 
-	if !generateIdentity(configFile, name, description, globals.password) {
+	if !generateIdentity(configFile, name, description, "", globals.password) {
 		exitwithstatus.Message("Error: generate failed\n")
 	}
 
@@ -488,7 +495,7 @@ func generateConfiguration(configFile string, configData configuration.Configura
 	return true
 }
 
-func generateIdentity(configFile string, name string, description string, password string) bool {
+func generateIdentity(configFile string, name string, description string, privateKeyStr string, password string) bool {
 
 	if !ensureFileExists(configFile) {
 		fmt.Printf("Error: %v: %s\n", fault.ErrNotFoundConfigFile, configFile)
@@ -517,7 +524,7 @@ func generateIdentity(configFile string, name string, description string, passwo
 		}
 	}
 
-	publicKey, encryptPrivateKey, privateKeyConfig, err := makeKeyPair(name, password)
+	publicKey, encryptPrivateKey, privateKeyConfig, err := makeKeyPair(name, privateKeyStr, password)
 	if nil != err {
 		cleanPasswordMemory(&password)
 		fmt.Printf("error generating server key pair: %v\n", err)

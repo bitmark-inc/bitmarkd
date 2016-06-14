@@ -35,7 +35,7 @@ func checkNetwork(network string) string {
 	if "" == network {
 		network = configuration.DefaultNetwork
 	} else {
-		if "testing" != network && "bitmark" != network && "local" != network{
+		if "testing" != network && "bitmark" != network && "local" != network {
 			exitwithstatus.Message("Error: Wrong Network value [bitmark | testing]: %s", network)
 		}
 	}
