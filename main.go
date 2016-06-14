@@ -48,7 +48,7 @@ func main() {
 		cli.StringFlag{
 			Name:        "config, c",
 			Value:       "",
-			Usage:       "*bitmark-cli config file",
+			Usage:       "bitmark-cli config file",
 			Destination: &globals.config,
 		},
 		cli.StringFlag{
@@ -65,6 +65,16 @@ func main() {
 		},
 	}
 	app.Commands = []cli.Command{
+		{
+			Name:      "generate",
+			Usage:     "generate key pair, will not store in config file",
+			ArgsUsage: "\n   (* = required)",
+			Flags:     []cli.Flag{},
+			Action: func(c *cli.Context) error {
+				runGenerate(c, globals)
+				return nil
+			},
+		},
 		{
 			Name:      "setup",
 			Usage:     "Initialise bitmark-cli configuration",
@@ -97,8 +107,8 @@ func main() {
 			},
 		},
 		{
-			Name:      "generate",
-			Usage:     "new identity",
+			Name:      "add",
+			Usage:     "add identity to config file, set it as default",
 			ArgsUsage: "\n   (* = required)",
 			Flags: []cli.Flag{
 				cli.StringFlag{
@@ -108,7 +118,7 @@ func main() {
 				},
 			},
 			Action: func(c *cli.Context) error {
-				runGenerate(c, globals)
+				runAdd(c, globals)
 				return nil
 			},
 		},
@@ -193,6 +203,12 @@ func main() {
 	app.Run(os.Args)
 }
 
+func runGenerate(c *cli.Context, globals globalFlags) {
+	if err := makeRawKeyPair(); nil != err {
+		exitwithstatus.Message("Error: %s\n", err)
+	}
+}
+
 func runSetup(c *cli.Context, globals globalFlags) {
 	configFile, err := checkConfigFile(globals.config)
 	if nil != err {
@@ -252,7 +268,7 @@ func runSetup(c *cli.Context, globals globalFlags) {
 	cleanPasswordMemory(&globals.password)
 }
 
-func runGenerate(c *cli.Context, globals globalFlags) {
+func runAdd(c *cli.Context, globals globalFlags) {
 
 	configFile, err := checkConfigFile(globals.config)
 	if nil != err {
@@ -278,7 +294,7 @@ func runGenerate(c *cli.Context, globals globalFlags) {
 	}
 
 	if !generateIdentity(configFile, name, description, "", globals.password) {
-		exitwithstatus.Message("Error: generate failed\n")
+		exitwithstatus.Message("Error: add failed\n")
 	}
 
 	cleanPasswordMemory(&globals.password)

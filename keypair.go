@@ -34,6 +34,25 @@ type RawKeyPair struct {
 	PrivateKey string `json:"private_key"`
 }
 
+func makeRawKeyPair() error {
+	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
+	if nil != err {
+		return err
+	}
+
+	rawKeyPair := RawKeyPair{
+		PublicKey:  hex.EncodeToString(publicKey),
+		PrivateKey: hex.EncodeToString(privateKey),
+	}
+	if b, err := json.MarshalIndent(rawKeyPair, "", "  "); nil != err {
+		fmt.Printf("json error: %v\n", err)
+		return fault.ErrJsonParseFail
+	} else {
+		fmt.Printf("%s\n", b)
+	}
+	return nil
+}
+
 // create a new public/private keypair
 func makeKeyPair(name string, privateKeyStr string, password string) (string, string, *configuration.PrivateKeyConfig, error) {
 	var publicKey, privateKey []byte
@@ -75,17 +94,6 @@ func makeKeyPair(name string, privateKeyStr string, password string) (string, st
 	privateKeyConfig := &configuration.PrivateKeyConfig{
 		Iter: iter.Integer(),
 		Salt: salt.String(),
-	}
-
-	rawKeyPair := RawKeyPair{
-		PublicKey:  publicStr,
-		PrivateKey: hex.EncodeToString(privateKey),
-	}
-	if b, err := json.MarshalIndent(rawKeyPair, "", "  "); nil != err {
-		fmt.Printf("json error: %v\n", err)
-		return "", "", nil, fault.ErrJsonParseFail
-	} else {
-		fmt.Printf("%s\n", b)
 	}
 
 	return publicStr, privateStr, privateKeyConfig, nil
