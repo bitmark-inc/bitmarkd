@@ -5,9 +5,9 @@
 package rpc
 
 import (
-	"github.com/bitmark-inc/bitmarkd/block"
-	"github.com/bitmark-inc/bitmarkd/messagebus"
-	"github.com/bitmark-inc/bitmarkd/transaction"
+	//"github.com/bitmark-inc/bitmarkd/block"
+	//"github.com/bitmark-inc/bitmarkd/messagebus"
+	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
 )
 
@@ -22,38 +22,37 @@ type Asset struct {
 // ------------------
 
 type AssetRegisterReply struct {
-	TxId           transaction.Link       `json:"txid"`
-	AssetIndex     transaction.AssetIndex `json:"asset"`
-	PaymentAddress []block.MinerAddress   `json:"paymentAddress"`
-	Duplicate      bool                   `json:"duplicate"`
-	Err            string                 `json:"error,omitempty"`
+	AssetIndex transactionrecord.AssetIndex `json:"asset"`
+	Duplicate  bool                         `json:"duplicate"`
+	Err        string                       `json:"error,omitempty"`
 }
 
-func (asset *Asset) Register(arguments *transaction.AssetData, reply *AssetRegisterReply) error {
+func (asset *Asset) Register(arguments *transactionrecord.AssetData, reply *AssetRegisterReply) error {
 	log := asset.log
 
 	log.Infof("Asset.Register: %s", arguments.Fingerprint)
 	log.Infof("Asset.Register: %v", arguments)
 
 	reply.AssetIndex = arguments.AssetIndex()
-	_, id, found := reply.AssetIndex.Read()
+	// _, id, found := reply.AssetIndex.Read()
+
+	found := false // ***** FIX THIS: temporary for testing
 
 	if !found {
 		packedAsset, err := arguments.Pack(arguments.Registrant)
 		if nil != err {
 			return err
 		}
-		messagebus.Send("", packedAsset)
+		//messagebus.Send("", packedAsset) // ***** FIX THIS: need to resore broadcast
 
 		log.Debugf("Sent asset packed tx: %x", packedAsset)
 
 		// get this tx id value - could be changed by later asset being mined
-		id = packedAsset.MakeLink()
+		//***** FIX THIS: is this needed
+		//id = packedAsset.MakeLink()
 	}
 
 	reply.Duplicate = found
-	reply.TxId = id            // this could be the id of an earlier version of the same asset
-	reply.PaymentAddress = nil // no payment for asset
 
 	log.Infof("Asset.Register found: %v", found)
 	return nil

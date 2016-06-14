@@ -4,87 +4,56 @@
 
 package rpc
 
-import (
-	"encoding/hex"
-	"github.com/bitmark-inc/bitmarkd/payment"
-	"github.com/bitmark-inc/bitmarkd/transaction"
-	"github.com/bitmark-inc/logger"
-)
+// import (
+// 	"encoding/hex"
+// 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
+// 	"github.com/bitmark-inc/logger"
+// )
 
-// Transaction
-// -----------
+// // Transaction
+// // -----------
 
-type Transaction struct {
-	log *logger.L
-}
+// type Transaction struct {
+// 	log *logger.L
+// }
 
-type PayArguments struct {
-	Count    int    `json:"count"` // expected Bitmark transactions in payment, 0 => disable check
-	Currency string `json:"currency"`
-	Payment  string `json:"payment"`
-}
+// // fetch some transactions
+// // -----------------------
 
-type PayReply struct {
-	PaymentId string `json:"id"`
-}
+// type TransactionGetArguments struct {
+// 	TxIds []transaction.Link `json:"txids"`
+// }
 
-func (t *Transaction) Pay(arguments *PayArguments, reply *PayReply) error {
+// type TransactionGetReply struct {
+// 	Transactions []transaction.Decoded `json:"transactions"`
+// }
 
-	t.log.Infof("Pay arguments: %v", arguments)
+// func (t *Transaction) Get(arguments *TransactionGetArguments, reply *TransactionGetReply) error {
 
-	paymentData, err := hex.DecodeString(arguments.Payment)
-	if err != nil {
-		return err
-	}
+// 	// restrict arguments size to reasonable value
+// 	size := len(arguments.TxIds)
+// 	if size > MaximumGetSize {
+// 		size = MaximumGetSize
+// 	}
 
-	paymentId, err := payment.Pay(arguments.Currency, paymentData, arguments.Count)
-	if nil == err {
-		t.log.Infof("Payment id: %s", paymentId)
-		reply.PaymentId = paymentId
-	} else {
-		t.log.Infof("Payment error: %v", err)
-	}
+// 	txIds := arguments.TxIds[:size]
 
-	return err
-}
+// 	reply.Transactions = transaction.Decode(txIds)
+// 	return nil
+// }
 
-// fetch some transactions
-// -----------------------
+// // fetch all pending transactions
+// // ------------------------------
 
-type TransactionGetArguments struct {
-	TxIds []transaction.Link `json:"txids"`
-}
+// type TransactionPendingArguments struct {
+// }
 
-type TransactionGetReply struct {
-	Transactions []transaction.Decoded `json:"transactions"`
-}
+// type TransactionPendingReply struct {
+// 	Transactions []transaction.Decoded `json:"transactions"`
+// }
 
-func (t *Transaction) Get(arguments *TransactionGetArguments, reply *TransactionGetReply) error {
+// func (t *Transaction) Pending(arguments *TransactionPendingArguments, reply *TransactionPendingReply) error {
 
-	// restrict arguments size to reasonable value
-	size := len(arguments.TxIds)
-	if size > MaximumGetSize {
-		size = MaximumGetSize
-	}
-
-	txIds := arguments.TxIds[:size]
-
-	reply.Transactions = transaction.Decode(txIds)
-	return nil
-}
-
-// fetch all pending transactions
-// ------------------------------
-
-type TransactionPendingArguments struct {
-}
-
-type TransactionPendingReply struct {
-	Transactions []transaction.Decoded `json:"transactions"`
-}
-
-func (t *Transaction) Pending(arguments *TransactionPendingArguments, reply *TransactionPendingReply) error {
-
-	reply.Transactions = transaction.FetchPending()
-	return nil
-}
+// 	reply.Transactions = transaction.FetchPending()
+// 	return nil
+// }

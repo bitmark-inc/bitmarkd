@@ -17,7 +17,7 @@ import (
 	//"github.com/bitmark-inc/bitmarkd/payment"
 	//"github.com/bitmark-inc/bitmarkd/peer"
 	//"github.com/bitmark-inc/bitmarkd/pool"
-	rpc "github.com/bitmark-inc/bitmarkd/rpc2" // ***** FIX THIS: sort out rpc directory
+	"github.com/bitmark-inc/bitmarkd/rpc"
 	//"github.com/bitmark-inc/bitmarkd/transaction"
 	//"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/version"
@@ -218,29 +218,19 @@ func main() {
 				StartTime: time.Now().UTC(),
 			},
 		},
-		// "mine": {
-		// 	limit:               masterConfiguration.Mining.MaximumConnections,
-		// 	addresses:           masterConfiguration.Mining.Listen,
-		// 	certificateFileName: masterConfiguration.Mining.Certificate,
-		// 	keyFileName:         masterConfiguration.Mining.PrivateKey,
-		// 	callback:            mine.Callback,
-		// 	argument: &mine.ServerArgument{
-		// 		Log: mineLog,
-		// 	},
-		// },
 	}
 
-	// // capture a set of this certificate fingerprints
-	//myFingerprints := make(map[CertificateFingerprint]bool)
+	// // capture a set of this nodes certificate fingerprints  (obsolete?)
+	// myFingerprints := make(map[CertificateFingerprint]bool)
 
 	// validate server parameters
 	for name, server := range servers {
 		log.Infof("validate: %s", name)
-		// fingerprint, ok := verifyListen(log, name, server)
-		// if !ok {
-		// 	log.Criticalf("invalid %s parameters", name)
-		// 	exitwithstatus.Exit(1)
-		// }
+		certificate, ok := verifyListen(log, name, server)
+		if !ok {
+			log.Criticalf("invalid %s parameters", name)
+			exitwithstatus.Exit(1)
+		}
 		if 0 == server.limit {
 			continue
 		}
@@ -251,7 +241,14 @@ func main() {
 			exitwithstatus.Exit(1)
 		}
 		server.listener = ml
-		// myFingerprints[*fingerprint] = true
+
+		fingerprint := CertificateFingerprint(certificate)
+		log.Infof("%s: SHA3-256 fingerprint: %x", name, fingerprint)
+
+		// store certificate
+		//announce.AddCertificate(fingerprint, keyPair.Certificate[0]) // ***** FIX THIS: restore when ready
+
+		//myFingerprints[fingerprint] = true
 
 		// peerData := announce.PeerData{
 		// 	// Type:        announce.TypeNone,

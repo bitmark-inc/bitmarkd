@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/configuration"
+	"github.com/bitmark-inc/bitmarkd/payment/bitcoin" // ***** FIX THIS: configurartion dependency
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 	"os"
@@ -83,17 +84,6 @@ type LoggerType struct {
 	Levels    map[string]string `libucl:"levels"`
 }
 
-type BitcoinAccess struct {
-	Username      string `libucl:"username"`
-	Password      string `libucl:"password"`
-	URL           string `libucl:"url"`
-	CACertificate string `libucl:"ca_certificate"`
-	Certificate   string `libucl:"certificate"`
-	PrivateKey    string `libucl:"private_key"`
-	Address       string `libucl:"address"`
-	Fee           string `libucl:"fee"`
-}
-
 type DatabaseType struct {
 	Directory string `libucl:"directory"`
 	Name      string `libucl:"name"`
@@ -105,11 +95,11 @@ type Configuration struct {
 	Chain         string       `libucl:"chain"`
 	Database      DatabaseType `libucl:"database"`
 
-	ClientRPC RPCType       `libucl:"client_rpc"`
-	Peering   PeerType      `libucl:"peering"`
-	Mining    RPCType       `libucl:"mining"`
-	Bitcoin   BitcoinAccess `libucl:"bitcoin"`
-	Logging   LoggerType    `libucl:"logging"`
+	ClientRPC RPCType               `libucl:"client_rpc"`
+	Peering   PeerType              `libucl:"peering"`
+	Mining    RPCType               `libucl:"mining"`
+	Bitcoin   bitcoin.Configuration `libucl:"bitcoin"`
+	Logging   LoggerType            `libucl:"logging"`
 }
 
 // will read decode and verify the configuration

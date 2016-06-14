@@ -4,43 +4,43 @@
 
 package rpc
 
-import (
-	"github.com/bitmark-inc/bitmarkd/transaction"
-	"github.com/bitmark-inc/logger"
-)
+// import (
+// 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
+// 	"github.com/bitmark-inc/logger"
+// )
 
-// --------------------
+// // --------------------
 
-// e.g.
-// {"id":1,"method":"Pool.List","params":[{"Index":0,"Count":10}]}
+// // e.g.
+// // {"id":1,"method":"Pool.List","params":[{"Index":0,"Count":10}]}
 
-type Pool struct {
-	log *logger.L
-}
+// type Pool struct {
+// 	log *logger.L
+// }
 
-type PoolArguments struct {
-	Index *transaction.IndexCursor `json:"index"`
-	Count int                      `json:"count"`
-}
+// type PoolArguments struct {
+// 	Index *transaction.IndexCursor `json:"index"`
+// 	Count int                      `json:"count"`
+// }
 
-type PoolReply struct {
-	Transactions []transaction.Decoded   `json:"transactions"`
-	NextIndex    transaction.IndexCursor `json:"nextIndex"`
-}
+// type PoolReply struct {
+// 	Transactions []transaction.Decoded   `json:"transactions"`
+// 	NextIndex    transaction.IndexCursor `json:"nextIndex"`
+// }
 
-func (pool *Pool) List(arguments *PoolArguments, reply *PoolReply) error {
-	if arguments.Count <= 0 {
-		arguments.Count = 10
-	}
-	index := arguments.Index
-	if nil == index {
-		c := transaction.IndexCursor(0)
-		index = &c
-	}
-	txs := index.FetchPool(arguments.Count)
-	for _, e := range txs {
-		reply.Transactions = append(reply.Transactions, e)
-	}
-	reply.NextIndex = *index
-	return nil
-}
+// func (pool *Pool) List(arguments *PoolArguments, reply *PoolReply) error {
+// 	if arguments.Count <= 0 {
+// 		arguments.Count = 10
+// 	}
+// 	index := arguments.Index
+// 	if nil == index {
+// 		c := transaction.IndexCursor(0)
+// 		index = &c
+// 	}
+// 	txs := index.FetchPool(arguments.Count)
+// 	for _, e := range txs {
+// 		reply.Transactions = append(reply.Transactions, e)
+// 	}
+// 	reply.NextIndex = *index
+// 	return nil
+// }

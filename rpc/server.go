@@ -44,46 +44,47 @@ func Callback(conn io.ReadWriteCloser, argument interface{}) {
 		asset: asset,
 	}
 
-	bitmark := &Bitmark{
-		log: serverArgument.Log,
-	}
+	// bitmark := &Bitmark{
+	// 	log: serverArgument.Log,
+	// }
 
 	bitmarks := &Bitmarks{
-		log:     serverArgument.Log,
-		bitmark: bitmark,
-	}
-
-	owner := &Owner{
 		log: serverArgument.Log,
 	}
 
-	blk := &Block{
-		log: serverArgument.Log,
-	}
+	// ***** FIX THIS: restore
+	// owner := &Owner{
+	// 	log: serverArgument.Log,
+	// }
 
-	tx := &Transaction{
-		log: serverArgument.Log,
-	}
+	// blk := &Block{
+	// 	log: serverArgument.Log,
+	// }
 
-	pool := &Pool{
-		log: serverArgument.Log,
-	}
+	// tx := &Transaction{
+	// 	log: serverArgument.Log,
+	// }
 
-	node := &Node{
-		log:   serverArgument.Log,
-		start: serverArgument.StartTime,
-	}
+	// pool := &Pool{
+	// 	log: serverArgument.Log,
+	// }
+
+	// node := &Node{
+	// 	log:   serverArgument.Log,
+	// 	start: serverArgument.StartTime,
+	// }
 
 	server := rpc.NewServer()
 	server.Register(asset)
 	server.Register(assets)
-	server.Register(bitmark)
+	//server.Register(bitmark)
 	server.Register(bitmarks)
-	server.Register(owner)
-	server.Register(blk)
-	server.Register(tx)
-	server.Register(pool)
-	server.Register(node)
+	// ***** FIX THIS: restore
+	// server.Register(owner)
+	// server.Register(blk)
+	// server.Register(tx)
+	// server.Register(pool)
+	// server.Register(node)
 
 	connectionCount.Increment()
 	defer connectionCount.Decrement()

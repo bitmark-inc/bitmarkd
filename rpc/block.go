@@ -4,90 +4,90 @@
 
 package rpc
 
-import (
-	"github.com/bitmark-inc/bitmarkd/block"
-	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/transaction"
-	"github.com/bitmark-inc/logger"
-	"time"
-)
+// import (
+// 	"github.com/bitmark-inc/bitmarkd/block"
+// 	"github.com/bitmark-inc/bitmarkd/fault"
+// 	"github.com/bitmark-inc/bitmarkd/transaction"
+// 	"github.com/bitmark-inc/logger"
+// 	"time"
+// )
 
-// Block
-// -------
+// // Block
+// // -------
 
-type Block struct {
-	log *logger.L
-}
+// type Block struct {
+// 	log *logger.L
+// }
 
-// current block number
-// --------------------
+// // current block number
+// // --------------------
 
-// number arguments
-type NumberArguments struct {
-}
+// // number arguments
+// type NumberArguments struct {
+// }
 
-// number reply
-type NumberReply struct {
-	Number uint64 `json:"number"`
-}
+// // number reply
+// type NumberReply struct {
+// 	Number uint64 `json:"number"`
+// }
 
-// Block.Number function
-func (blk *Block) Number(arguments *NumberArguments, reply *NumberReply) error {
+// // Block.Number function
+// func (blk *Block) Number(arguments *NumberArguments, reply *NumberReply) error {
 
-	// return the highest block number that is currently stored
-	reply.Number = block.Number() - 1
+// 	// return the highest block number that is currently stored
+// 	reply.Number = block.Number() - 1
 
-	return nil
-}
+// 	return nil
+// }
 
-// Block get
-// ---------
+// // Block get
+// // ---------
 
-type BlockGetArguments struct {
-	Number uint64 `json:"number"`
-}
+// type BlockGetArguments struct {
+// 	Number uint64 `json:"number"`
+// }
 
-type BlockGetReply struct {
-	Digest       block.Digest          `json:"digest"`
-	Number       uint64                `json:"number"`
-	Timestamp    time.Time             `json:"timestamp"`
-	Transactions []transaction.Decoded `json:"transactions"`
-}
+// type BlockGetReply struct {
+// 	Digest       block.Digest          `json:"digest"`
+// 	Number       uint64                `json:"number"`
+// 	Timestamp    time.Time             `json:"timestamp"`
+// 	Transactions []transaction.Decoded `json:"transactions"`
+// }
 
-func (blk *Block) Get(arguments *BlockGetArguments, reply *BlockGetReply) error {
-	log := blk.log
+// func (blk *Block) Get(arguments *BlockGetArguments, reply *BlockGetReply) error {
+// 	log := blk.log
 
-	log.Infof("Block.get: %v", arguments)
+// 	log.Infof("Block.get: %v", arguments)
 
-	packed := block.Get(arguments.Number)
-	if nil == packed {
-		return fault.ErrBlockNotFound
-	}
+// 	packed := block.Get(arguments.Number)
+// 	if nil == packed {
+// 		return fault.ErrBlockNotFound
+// 	}
 
-	var theBlock block.Block
-	err := packed.Unpack(&theBlock)
-	if nil != err {
-		return err
-	}
+// 	var theBlock block.Block
+// 	err := packed.Unpack(&theBlock)
+// 	if nil != err {
+// 		return err
+// 	}
 
-	reply.Digest = theBlock.Digest
-	reply.Number = theBlock.Number
-	reply.Timestamp = theBlock.Timestamp
-	// reply.RawAddress = theBlock.RawAddress
+// 	reply.Digest = theBlock.Digest
+// 	reply.Number = theBlock.Number
+// 	reply.Timestamp = theBlock.Timestamp
+// 	// reply.RawAddress = theBlock.RawAddress
 
-	size := len(theBlock.TxIds)
-	if 0 == size {
-		return nil
-	}
+// 	size := len(theBlock.TxIds)
+// 	if 0 == size {
+// 		return nil
+// 	}
 
-	// kind of awkward since Link and Digest are the same type
-	// but cannot cats arrays directly
-	txIds := make([]transaction.Link, len(theBlock.TxIds))
-	for i, v := range theBlock.TxIds {
-		txIds[i] = transaction.Link(v)
-	}
+// 	// kind of awkward since Link and Digest are the same type
+// 	// but cannot copy arrays directly
+// 	txIds := make([]transaction.Link, len(theBlock.TxIds))
+// 	for i, v := range theBlock.TxIds {
+// 		txIds[i] = transaction.Link(v)
+// 	}
 
-	reply.Transactions = transaction.Decode(txIds)
+// 	reply.Transactions = transaction.Decode(txIds)
 
-	return nil
-}
+// 	return nil
+// }

@@ -6,7 +6,6 @@ package main
 
 import (
 	"crypto/tls"
-	//"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/certgen"
@@ -54,12 +53,6 @@ func verifyListen(log *logger.L, name string, server *serverChannel) ([]byte, bo
 			keyPair,
 		},
 	}
-
-	// fingerprint := CertificateFingerprint(keyPair.Certificate[0])
-	// log.Infof("SHA3-256 fingerprint: %x", fingerprint)
-
-	// store certificate
-	//announce.AddCertificate(fingerprint, keyPair.Certificate[0]) // ***** FIX THIS: restore when ready
 
 	// create limiter
 	server.limiter = listener.NewLimiter(server.limit)
