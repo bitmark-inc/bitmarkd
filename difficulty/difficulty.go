@@ -39,24 +39,17 @@ const decayLambda float64 = math.Ln2 / HalfLife
 //   value: 01 ff  ff ff  ff ff  ff ff
 //   represents the 256 bit value: 007f ffff ffff ffff c000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000
 type Difficulty struct {
-	m *sync.RWMutex // pointer since MarshallJSON is pass by value
-
-	big        big.Int // master value 256 bit integer expanded from bits
-	reciprocal float64 // cache: floating point reciprocal difficulty
-	bits       uint64  // cache: compat difficulty (encoded value)
-
-	filter filters.Filter // filter for difficulty auto-adjust
+	m          *sync.RWMutex  // pointer since MarshallJSON is pass by value
+	big        big.Int        // master value 256 bit integer expanded from bits
+	reciprocal float64        // cache: floating point reciprocal difficulty
+	bits       uint64         // cache: compat difficulty (encoded value)
+	filter     filters.Filter // filter for difficulty auto-adjust
 }
 
 // current difficulty
 var Current = New()
 
-// &Difficulty{
-// 	m:      new(sync.RWMutex),
-// 	filter: filters.NewCamm(MinimumReciprocal, 21, 41),
-// }
-
-// pool difficulty of 1 as 256 bit value
+// difficulty of 1 as 256 bit big endian value
 var constOne = []byte{
 	0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 	0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
