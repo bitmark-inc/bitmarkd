@@ -5,24 +5,11 @@
 package bitcoin
 
 import (
-	// "bytes"
 	"container/heap"
-	// "encoding/binary"
-	// "github.com/bitmark-inc/bitmarkd/block"
-	//"github.com/bitmark-inc/bitmarkd/account"
-	//"github.com/bitmark-inc/bitmarkd/currency"
-	// "github.com/bitmark-inc/bitmarkd/counter"
-	// "github.com/bitmark-inc/bitmarkd/difficulty"
-	// "github.com/bitmark-inc/bitmarkd/fault"
-	// "github.com/bitmark-inc/bitmarkd/pool"
-	//"github.com/bitmark-inc/bitmarkd/transactionrecord"
-	//"github.com/bitmark-inc/logger"
-	//"sync"
-	// "time"
 )
 
 // accept a new payment to monitor
-func QueueItem(payId PayId, txId string, confirmations uint64) {
+func QueueItem(payId string, txId string, confirmations uint64) {
 	globalData.itemQueue <- &priorityItem{
 		payId:         payId,
 		txId:          txId,
@@ -81,8 +68,7 @@ loop:
 
 		ok := false
 		for _, vout := range reply.Vout {
-			if OP_RETURN == vout.ScriptPubKey.Hex[0:2] {
-				//***** FIX THIS: && vout.ScriptPubKey.Hex[2:] == item.payId { // need hexstring→[]byte
+			if OP_RETURN == vout.ScriptPubKey.Hex[0:2] && vout.ScriptPubKey.Hex[2:] == item.payId {
 				ok = true
 				break
 			}

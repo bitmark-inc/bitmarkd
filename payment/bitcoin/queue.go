@@ -4,29 +4,9 @@
 
 package bitcoin
 
-import (
-// "bytes"
-//"container/heap"
-// "encoding/binary"
-// "github.com/bitmark-inc/bitmarkd/block"
-//"github.com/bitmark-inc/bitmarkd/account"
-//"github.com/bitmark-inc/bitmarkd/currency"
-// "github.com/bitmark-inc/bitmarkd/counter"
-// "github.com/bitmark-inc/bitmarkd/difficulty"
-// "github.com/bitmark-inc/bitmarkd/fault"
-// "github.com/bitmark-inc/bitmarkd/pool"
-//"github.com/bitmark-inc/bitmarkd/transactionrecord"
-// "github.com/bitmark-inc/logger"
-//"sync"
-// "time"
-)
-
-// ***** FIX THIS: where should this type go
-type PayId [48]byte
-
 // An item managed in a priority queue.
 type priorityItem struct {
-	payId         PayId  // indicates block of transactions
+	payId         string // indicates block of transactions
 	txId          string // the currency transaction to monitor
 	confirmations uint64 // required number of confirmations
 	blockNumber   uint64 // the expected block number

@@ -5,6 +5,8 @@
 package rpc
 
 import (
+	"github.com/bitmark-inc/bitmarkd/currency" // ***** FIX THIS: remove when real currency/address is available
+	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
@@ -20,14 +22,13 @@ type Bitmarks struct {
 
 const (
 	maximumIssues = 100
-	PayNonceSize  = 8 // ***** FIX THIS: proper placement for this value
 )
 
 // Bitmarks issue
 // --------------
 
 type IssueStatus struct {
-	TxId      transactionrecord.Link `json:"txids"`
+	TxId      transactionrecord.Link `json:"txid"`
 	Duplicate bool                   `json:"duplicate"`
 }
 
@@ -36,22 +37,23 @@ type BitmarksIssueReply struct {
 	PayId      payment.PayId    `json:"pay_id"`
 	PayNonce   payment.PayNonce `json:"pay_nonce"`
 	Difficulty string           `json:"difficulty"`
-	//PaymentAddress []block.MinerAddress `json:"paymentAddress"`
+	//PaymentAddress []block.MinerAddress `json:"paymentAddress"`// ***** FIX THIS: where to get addresses?
 	//Err       string `json:"error,omitempty"`
 }
 
 func (bitmarks *Bitmarks) Issue(arguments *[]transactionrecord.BitmarkIssue, reply *BitmarksIssueReply) error {
 
 	log := bitmarks.log
+	count := len(*arguments)
 
-	if len(*arguments) > maximumIssues {
+	if count > maximumIssues {
 		return fault.ErrTooManyItemsToProcess
 	}
 
 	log.Infof("Bitmark.Issue: %v", arguments)
 
 	result := BitmarksIssueReply{
-		Tx: make([]IssueStatus, len(*arguments)),
+		Tx: make([]IssueStatus, count),
 	}
 
 	//exists := true		// ***** FIX THIS: true only if all tx exist
@@ -78,12 +80,9 @@ func (bitmarks *Bitmarks) Issue(arguments *[]transactionrecord.BitmarkIssue, rep
 		packed = append(packed, packedIssue...)
 	}
 
-	result.PayId = payment.NewPayId(packed)
-	result.PayNonce = payment.NewPayNonce()
-
-	d := payment.ScaledDifficulty(len(*arguments))
+	var d *difficulty.Difficulty
+	result.PayId, result.PayNonce, d = payment.Store(currency.Bitcoin, packed, count, true)
 	result.Difficulty = d.GoString()
-
 	// ***** FIX THIS: restore broadcasting
 	// announce transaction block to system
 	// if !exists {

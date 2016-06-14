@@ -89,7 +89,7 @@ type Configuration struct {
 // also calls the internal initialisePayment() and register()
 //
 // Note fee is a string value and is converted to Satoshis to avoid rounding errors
-func Initialise(configuration Configuration) error {
+func Initialise(configuration *Configuration) error {
 
 	// // ensure payments are initialised
 	// if err := payment.Initialise(); nil != err {

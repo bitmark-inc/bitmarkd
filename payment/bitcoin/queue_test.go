@@ -5,19 +5,7 @@
 package bitcoin
 
 import (
-	// "bytes"
 	"container/heap"
-	// "encoding/binary"
-	//"github.com/bitmark-inc/bitmarkd/payment/bitcoin"
-	//"github.com/bitmark-inc/bitmarkd/account"
-	//"github.com/bitmark-inc/bitmarkd/currency"
-	// "github.com/bitmark-inc/bitmarkd/counter"
-	// "github.com/bitmark-inc/bitmarkd/difficulty"
-	// "github.com/bitmark-inc/bitmarkd/fault"
-	// "github.com/bitmark-inc/bitmarkd/pool"
-	//"github.com/bitmark-inc/bitmarkd/transactionrecord"
-	//"github.com/bitmark-inc/logger"
-	//"sync"
 	"testing"
 )
 
@@ -25,37 +13,37 @@ func TestQueue(t *testing.T) {
 
 	items := []*priorityItem{
 		&priorityItem{
-			payId:         PayId{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
+			payId:         "1234ac76f0",
 			txId:          "123456",
 			confirmations: 14,
 			blockNumber:   7,
 		},
 		&priorityItem{
-			payId:         PayId{1, 2, 3, 4, 5, 6, 7, 8, 9, 6},
+			payId:         "1234ac76fb",
 			txId:          "12342e3",
 			confirmations: 24,
 			blockNumber:   6,
 		},
 		&priorityItem{
-			payId:         PayId{1, 2, 3, 4, 5, 6, 7, 8, 9, 7},
+			payId:         "1234ac76f9",
 			txId:          "1234454",
 			confirmations: 1,
 			blockNumber:   67,
 		},
 		&priorityItem{
-			payId:         PayId{1, 2, 3, 4, 5, 6, 7, 8, 9, 3},
+			payId:         "1234ac76fe",
 			txId:          "1234u88765",
 			confirmations: 3,
 			blockNumber:   12,
 		},
 		&priorityItem{
-			payId:         PayId{1, 2, 3, 4, 5, 6, 7, 8, 9, 2},
+			payId:         "1234ac76f1",
 			txId:          "1234999",
 			confirmations: 8,
 			blockNumber:   146,
 		},
 		&priorityItem{
-			payId:         PayId{1, 2, 3, 4, 5, 6, 7, 8, 9, 2},
+			payId:         "1234ac76f5",
 			txId:          "1234777",
 			confirmations: 1,
 			blockNumber:   46,

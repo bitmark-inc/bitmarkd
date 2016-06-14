@@ -15,9 +15,11 @@ type Currency uint64
 
 // possible currency values
 const (
-	Nothing Currency = iota
-	Bitcoin
-	maximumValue uint64 = iota // this must be the last value
+	Nothing      Currency = iota // this must be the first value
+	Bitcoin      Currency = iota
+	maximumValue Currency = iota // this must be the last value
+	First        Currency = Nothing + 1
+	Last         Currency = maximumValue - 1
 )
 
 // internal conversion

@@ -15,7 +15,7 @@ func (currency Currency) Uint64() uint64 {
 
 // convert a number to a currency
 func FromUint64(n uint64) (Currency, error) {
-	if n < maximumValue {
+	if Currency(n) < maximumValue {
 		return Currency(n), nil
 	}
 	return Nothing, fault.ErrInvalidCurrency

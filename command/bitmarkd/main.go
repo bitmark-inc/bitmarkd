@@ -14,7 +14,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	//"github.com/bitmark-inc/bitmarkd/mine"
 	"github.com/bitmark-inc/bitmarkd/mode"
-	//"github.com/bitmark-inc/bitmarkd/payment"
+	"github.com/bitmark-inc/bitmarkd/payment"
 	//"github.com/bitmark-inc/bitmarkd/peer"
 	//"github.com/bitmark-inc/bitmarkd/pool"
 	"github.com/bitmark-inc/bitmarkd/rpc"
@@ -273,13 +273,16 @@ func main() {
 		// }
 	}
 
-	// // connect to various payment services
-	// err = payment.BitcoinInitialise(masterConfiguration.Bitcoin)
-	// if nil != err {
-	// 	log.Criticalf("failed to initialise Bitcoin  error: %v", err)
-	// 	exitwithstatus.Exit(1)
-	// }
-	// defer payment.BitcoinFinalise()
+	// start payment services
+	paymentConfiguration := &payment.Configuration{
+		Bitcoin: &masterConfiguration.Bitcoin,
+	}
+	err = payment.Initialise(paymentConfiguration)
+	if nil != err {
+		log.Criticalf("failed to initialise payment  error: %v", err)
+		exitwithstatus.Exit(1)
+	}
+	defer payment.Finalise()
 
 	// // start up the peering
 	// err = peer.Initialise(masterConfiguration.Peering.Listen, mode.ChainName(), publicKey, privateKey)
