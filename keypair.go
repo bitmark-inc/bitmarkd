@@ -54,7 +54,7 @@ func makeRawKeyPair() error {
 }
 
 // create a new public/private keypair
-func makeKeyPair(name string, privateKeyStr string, password string) (string, string, *configuration.PrivateKeyConfig, error) {
+func makeKeyPair(privateKeyStr string, password string) (string, string, *configuration.PrivateKeyConfig, error) {
 	var publicKey, privateKey []byte
 	var err error
 	// if privateKey is empty, make a new one

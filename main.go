@@ -540,7 +540,7 @@ func generateIdentity(configFile string, name string, description string, privat
 		}
 	}
 
-	publicKey, encryptPrivateKey, privateKeyConfig, err := makeKeyPair(name, privateKeyStr, password)
+	publicKey, encryptPrivateKey, privateKeyConfig, err := makeKeyPair(privateKeyStr, password)
 	if nil != err {
 		cleanPasswordMemory(&password)
 		fmt.Printf("error generating server key pair: %v\n", err)
