@@ -6,15 +6,17 @@ package bitcoin
 
 import (
 	"container/heap"
+	"github.com/bitmark-inc/bitmarkd/fault"
 )
 
 // accept a new payment to monitor
-func QueueItem(payId string, txId string, confirmations uint64) {
+func QueueItem(payId string, txId string, confirmations uint64, transactions []byte) {
 	globalData.itemQueue <- &priorityItem{
 		payId:         payId,
 		txId:          txId,
 		confirmations: confirmations,
 		blockNumber:   globalData.latestBlockNumber + confirmations,
+		transactions:  transactions,
 	}
 }
 
@@ -35,7 +37,7 @@ loop:
 			break loop
 		case blockNumber := <-state.blockQueue:
 			//state.latestBlockNumber := blockNumber
-			process(pq, blockNumber)
+			process(pq, blockNumber, state.verifier)
 		case item := <-state.itemQueue:
 			//item.blockNumber = state.latestBlockNumber + item.confirmations
 			heap.Push(pq, item)
@@ -44,7 +46,7 @@ loop:
 }
 
 // process all items <= block number
-func process(pq *priorityQueue, blockNumber uint64) {
+func process(pq *priorityQueue, blockNumber uint64, verifier chan<- []byte) {
 
 loop:
 	for pq.Len() > 0 {
@@ -63,7 +65,8 @@ loop:
 		// fetch transaction and decode
 		err := bitcoinGetRawTransaction(item.txId, &reply)
 		if nil != err {
-			////////now what // ***** FIX THIS:
+			////////now what // ***** FIX THIS: how?
+			fault.PanicWithError("bitcoin background", err)
 		}
 
 		ok := false
@@ -79,7 +82,8 @@ loop:
 		}
 
 		if reply.Confirmations >= item.confirmations {
-			// ***** FIX THIS: set verified for: item.payId
+			// send the transaction block to verifier
+			verifier <- item.transactions
 		} else {
 			// if not yet at required confirmations, requeue at next possible block
 			item.blockNumber = blockNumber + item.confirmations - reply.Confirmations

@@ -10,6 +10,7 @@ type priorityItem struct {
 	txId          string // the currency transaction to monitor
 	confirmations uint64 // required number of confirmations
 	blockNumber   uint64 // the expected block number
+	transactions  []byte // bitmarck transactions waiting for verification
 	index         int    // index needed for container/heap
 }
 

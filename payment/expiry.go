@@ -5,12 +5,6 @@
 package payment
 
 import (
-	// "github.com/bitmark-inc/bitmarkd/difficulty"
-	// "github.com/bitmark-inc/bitmarkd/fault"
-	// "github.com/bitmark-inc/bitmarkd/payment/bitcoin"
-	// "golang.org/x/crypto/sha3"
-	// "math/big"
-	// "sync"
 	"container/list"
 	"time"
 )

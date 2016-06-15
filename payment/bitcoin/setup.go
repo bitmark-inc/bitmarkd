@@ -9,12 +9,10 @@ import (
 	"crypto/x509"
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	// "github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/logger"
 	"io/ioutil"
 	"net/http"
 	"sync"
-	// "time"
 )
 
 // global constants
@@ -49,6 +47,9 @@ type bitcoinData struct {
 	// queueing
 	blockQueue chan uint64
 	itemQueue  chan *priorityItem
+
+	// verification
+	verifier chan<- []byte
 
 	// identifier for the RPC
 	id uint64
@@ -89,7 +90,7 @@ type Configuration struct {
 // also calls the internal initialisePayment() and register()
 //
 // Note fee is a string value and is converted to Satoshis to avoid rounding errors
-func Initialise(configuration *Configuration) error {
+func Initialise(configuration *Configuration, verifier chan<- []byte) error {
 
 	// // ensure payments are initialised
 	// if err := payment.Initialise(); nil != err {
@@ -119,6 +120,8 @@ func Initialise(configuration *Configuration) error {
 	globalData.username = configuration.Username
 	globalData.password = configuration.Password
 	globalData.url = configuration.URL
+
+	globalData.verifier = verifier
 
 	// set up queues
 	globalData.blockQueue = make(chan uint64, 10)
