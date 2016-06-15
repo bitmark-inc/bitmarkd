@@ -48,11 +48,11 @@ const (
 
 // the unpacked Proofer Data structure
 type BaseData struct {
-	Currency       currency.Currency `json:"currency"`        // utf-8 → Enum
-	PaymentAddress string            `json:"payment_address"` // utf-8
-	Owner          *account.Account  `json:"owner"`           // base58
-	Nonce          uint64            `json:"nonce,string"`    // unsigned 0..N
-	Signature      account.Signature `json:"signature,"`      // hex
+	Currency       currency.Currency `json:"currency"`       // utf-8 → Enum
+	PaymentAddress string            `json:"paymentAddress"` // utf-8
+	Owner          *account.Account  `json:"owner"`          // base58
+	Nonce          uint64            `json:"nonce,string"`   // unsigned 0..N
+	Signature      account.Signature `json:"signature,"`     // hex
 }
 
 // the unpacked Asset Data structure

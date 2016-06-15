@@ -51,10 +51,10 @@ const (
 // the types here must match Bitcoin header types
 type Header struct {
 	Version          uint16                 `json:"version"`
-	TransactionCount uint16                 `json:"transaction_count"`
+	TransactionCount uint16                 `json:"transactionCount"`
 	Number           uint64                 `json:"number,string"`
-	PreviousBlock    blockdigest.Digest     `json:"previous_block"`
-	MerkleRoot       merkle.Digest          `json:"merkle_root"`
+	PreviousBlock    blockdigest.Digest     `json:"previousBlock"`
+	MerkleRoot       merkle.Digest          `json:"merkleRoot"`
 	Timestamp        uint64                 `json:"timestamp,string"`
 	Difficulty       *difficulty.Difficulty `json:"difficulty"`
 	Nonce            NonceType              `json:"nonce"`

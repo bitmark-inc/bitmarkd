@@ -34,10 +34,10 @@ type IssueStatus struct {
 
 type BitmarksIssueReply struct {
 	Tx         []IssueStatus    `json:"tx"`
-	PayId      payment.PayId    `json:"pay_id"`
-	PayNonce   payment.PayNonce `json:"pay_nonce"`
+	PayId      payment.PayId    `json:"payId"`
+	PayNonce   payment.PayNonce `json:"payNonce"`
 	Difficulty string           `json:"difficulty"`
-	//PaymentAddress []block.MinerAddress `json:"paymentAddress"`// ***** FIX THIS: where to get addresses?
+	//PaymentAlternatives []block.MinerAddress `json:"paymentAlternatives"`// ***** FIX THIS: where to get addresses?
 	//Err       string `json:"error,omitempty"`
 }
 
