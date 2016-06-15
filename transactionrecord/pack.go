@@ -161,7 +161,7 @@ func appendString(buffer Packed, s string) Packed {
 	return append(buffer, s...)
 }
 
-// append a address to a buffer
+// append an address to a buffer
 //
 // the field is prefixed by Varint64(length)
 func appendAccount(buffer Packed, address *account.Account) Packed {
@@ -182,7 +182,7 @@ func appendBytes(buffer Packed, data []byte) Packed {
 	return buffer
 }
 
-// append a a Varint64 to buffer
+// append a Varint64 to buffer
 func appendUint64(buffer Packed, value uint64) Packed {
 	valueBytes := util.ToVarint64(value)
 	buffer = append(buffer, valueBytes...)

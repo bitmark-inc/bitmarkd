@@ -29,17 +29,16 @@ const (
 // --------------
 
 type IssueStatus struct {
-	TxId      transactionrecord.Link `json:"txid"`
+	TxId      transactionrecord.Link `json:"txId"`
 	Duplicate bool                   `json:"duplicate"` // ***** FIX THIS: is this necessary?
 }
 
 type BitmarksIssueReply struct {
-	Tx         []IssueStatus    `json:"tx"`
-	PayId      payment.PayId    `json:"payId"`
-	PayNonce   payment.PayNonce `json:"payNonce"`
-	Difficulty string           `json:"difficulty"`
+	Transactions []IssueStatus    `json:"transactions"`
+	PayId        payment.PayId    `json:"payId"`
+	PayNonce     payment.PayNonce `json:"payNonce"`
+	Difficulty   string           `json:"difficulty"`
 	//PaymentAlternatives []block.MinerAddress `json:"paymentAlternatives"`// ***** FIX THIS: where to get addresses?
-	//Err       string `json:"error,omitempty"`
 }
 
 func (bitmarks *Bitmarks) Issue(arguments *[]transactionrecord.BitmarkIssue, reply *BitmarksIssueReply) error {
@@ -54,10 +53,10 @@ func (bitmarks *Bitmarks) Issue(arguments *[]transactionrecord.BitmarkIssue, rep
 	log.Infof("Bitmark.Issue: %v", arguments)
 
 	result := BitmarksIssueReply{
-		Tx: make([]IssueStatus, count),
+		Transactions: make([]IssueStatus, count),
 	}
 
-	//exists := true		// ***** FIX THIS: true only if all tx exist
+	//exists := true		// ***** FIX THIS: true only if all transactions exist
 
 	// pack each transaction
 	packed := []byte{}
@@ -69,16 +68,16 @@ func (bitmarks *Bitmarks) Issue(arguments *[]transactionrecord.BitmarkIssue, rep
 		}
 
 		// ***** FIX THIS: should exists only consider verified/confirmed
-		// ***** FIX THIS: then abort if even one tx "exists" since it has already been paid?
+		// ***** FIX THIS: then abort if even one transaction "exists" since it has already been paid?
 		// ***** FIX THIS: to get the id
 		// check record
 		// id, oneExists := packedIssue.Exists()
 		// log.Infof("Bitmark.Issue exists: %v", oneExists)
 		// exists &= oneExists
-		result.Tx[i].TxId = packedIssue.MakeLink() // ***** FIX THIS: replace with Exists() when code done
+		result.Transactions[i].TxId = packedIssue.MakeLink() // ***** FIX THIS: replace with Exists() when code done
 
-		log.Infof("packed issue: %x", packedIssue) // ***** FIX THIS: debugging
-		log.Infof("id: %v", result.Tx[i].TxId)     // ***** FIX THIS: debugging
+		log.Infof("packed issue: %x", packedIssue)       // ***** FIX THIS: debugging
+		log.Infof("id: %v", result.Transactions[i].TxId) // ***** FIX THIS: debugging
 
 		packed = append(packed, packedIssue...)
 	}
@@ -118,7 +117,7 @@ func (bitmarks *Bitmarks) Proof(arguments *Proofarguments, reply *ProofReply) er
 
 	size := hex.DecodedLen(len(arguments.Nonce))
 
-	// arbitrary size limit
+	// arbitrary byte size limit
 	if size < 1 || size > 16 {
 		return fault.ErrInvalidNonce
 	}
