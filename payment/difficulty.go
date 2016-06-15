@@ -20,9 +20,10 @@ const (
 // increase this to make hashing more difficult overall
 // (this is then scaled by count*discount)
 const (
-	//initialDifficulty = 1.0        // 8 leading zero bits
-	//initialDifficulty = 65536.0    // 24 leading zero bits
-	initialDifficulty = 16777216.0 // 32 leading zero bits
+	//initialDifficulty = 1.0 // 8 leading zero bits
+	//initialDifficulty = 256.0 // 16 leading zero bits
+	initialDifficulty = 65536.0 // 24 leading zero bits
+	//initialDifficulty = 16777216.0 // 32 leading zero bits
 )
 
 // produce a scaled difficulty based on the number of items

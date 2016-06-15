@@ -5,6 +5,7 @@
 package rpc
 
 import (
+	"encoding/hex"
 	"github.com/bitmark-inc/bitmarkd/currency" // ***** FIX THIS: remove when real currency/address is available
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -29,7 +30,7 @@ const (
 
 type IssueStatus struct {
 	TxId      transactionrecord.Link `json:"txid"`
-	Duplicate bool                   `json:"duplicate"`
+	Duplicate bool                   `json:"duplicate"` // ***** FIX THIS: is this necessary?
 }
 
 type BitmarksIssueReply struct {
@@ -67,6 +68,8 @@ func (bitmarks *Bitmarks) Issue(arguments *[]transactionrecord.BitmarkIssue, rep
 			return err
 		}
 
+		// ***** FIX THIS: should exists only consider verified/confirmed
+		// ***** FIX THIS: then abort if even one tx "exists" since it has already been paid?
 		// ***** FIX THIS: to get the id
 		// check record
 		// id, oneExists := packedIssue.Exists()
@@ -81,15 +84,61 @@ func (bitmarks *Bitmarks) Issue(arguments *[]transactionrecord.BitmarkIssue, rep
 	}
 
 	var d *difficulty.Difficulty
-	result.PayId, result.PayNonce, d = payment.Store(currency.Bitcoin, packed, count, true)
+	result.PayId, result.PayNonce, d = payment.Store(currency.Bitcoin, packed, count, true) // ***** FIX THIS: need actual currency value, not constant
 	result.Difficulty = d.GoString()
+
 	// ***** FIX THIS: restore broadcasting
-	// announce transaction block to system
+	// announce transaction block to other peers
 	// if !exists {
 	// 	messagebus.Send("", packed)
 	// }
 
 	*reply = result
+	return nil
+}
+
+// Bitmarks proof
+// --------------
+
+type Proofarguments struct {
+	PayId payment.PayId `json:"payId"`
+	Nonce string        `json:"nonce"`
+}
+
+type ProofReply struct {
+	Verified bool `json:"verified"`
+}
+
+func (bitmarks *Bitmarks) Proof(arguments *Proofarguments, reply *ProofReply) error {
+
+	log := bitmarks.log
+
+	log.Infof("proof for pay id: %x", arguments.PayId)
+	log.Infof("client nonce: %q", arguments.Nonce)
+
+	size := hex.DecodedLen(len(arguments.Nonce))
+
+	// arbitrary size limit
+	if size < 1 || size > 16 {
+		return fault.ErrInvalidNonce
+	}
+
+	nonce := make([]byte, size)
+	byteCount, err := hex.Decode(nonce, []byte(arguments.Nonce))
+	if nil != err {
+		return err
+	}
+	if byteCount != size {
+		return fault.ErrInvalidNonce
+	}
+
+	log.Infof("client nonce hex: %x", nonce)
+
+	reply.Verified = payment.TryProof(arguments.PayId, nonce)
+	if reply.Verified {
+		log.Warn("***need to broadcast pay id pay nonce and client nonce to peers") // ***** FIX THIS: add real broadcast
+	}
+
 	return nil
 }
 

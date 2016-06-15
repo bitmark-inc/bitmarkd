@@ -49,6 +49,7 @@ var (
 	ErrInvalidLength                  = InvalidError("invalid length")
 	ErrInvalidLoggerChannel           = InvalidError("invalid logger channel")
 	ErrInvalidPortNumber              = InvalidError("invalid port number")
+	ErrInvalidNonce                   = InvalidError("invalid nonce")
 	ErrInvalidSignature               = InvalidError("invalid signature")
 	ErrInvalidStructPointer           = InvalidError("invalid struct pointer")
 	ErrInvalidTransactionChain        = InvalidError("invalid transaction chain")

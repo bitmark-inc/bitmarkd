@@ -179,6 +179,8 @@ func TryProof(payId PayId, nonce []byte) bool {
 	h.Sum(digest[:0]) // ***** FIX THIS: should this be LE, (currently assumed as BE)
 	// ***** FIX THIS: reverse digest?   ^^^^^^^^^^^^^^^^^
 
+	globalData.log.Infof("TryProof: digest: %x", digest)
+
 	remove(payId) // remove record once done
 
 	// convert to big integer from BE byte slice

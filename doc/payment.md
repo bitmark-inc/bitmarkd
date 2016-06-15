@@ -90,7 +90,7 @@ present.
 
 Client must embed the `payId` into the `OP_RETURN` (or equivalent) into the
 currency transaction.  Next the client must send the following
-argument data as a `Transaction.Payment` RPC:
+argument data as a `Bitmarks.Payment` RPC:
 
 ```
 {
@@ -110,7 +110,7 @@ Client will use the bytes from `payId` and `payNonce` and up to 16
 bytes of its own nonce data.  To determine the nonce client keep
 iterating this data until the proof calculation meets the required
 difficulty.  Next, the client sends the `payId` (no need to send
-`payNonce`) and its computed nonce as argument to a `Transaction.Proof`
+`payNonce`) and its computed nonce as an argument to a `Bitmarks.Proof`
 RPC:
 
 ```
