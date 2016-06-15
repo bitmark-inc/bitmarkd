@@ -5,9 +5,9 @@
 package payment
 
 import (
-// "github.com/bitmark-inc/bitmarkd/datastore"
-// "github.com/bitmark-inc/bitmarkd/fault"
-//"time"
+	// "github.com/bitmark-inc/bitmarkd/datastore"
+	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 
 // verifier loop
@@ -30,7 +30,25 @@ loop:
 
 // store all transactions in disk storage to await confirmation
 func (state *verifierData) setVerified(transactions []byte) {
-	// ***** FIX THIS: add the verifiaction process
-	// ***** FIX THIS: add code here
-	state.log.Errorf("***** FIX THIS: received: transactions: %x", transactions)
+
+	// split transactions
+	records := transactionrecord.Packed(transactions)
+	for len(records) > 0 {
+
+		// consistency check
+		transaction, length, err := records.Unpack()
+		fault.PanicIfError("setVerified", err) // memory buffer was corrupted, hardware problem or invalid write?
+
+		// first item
+		packed := records[:length]
+		txId := packed.MakeLink()
+
+		state.log.Infof("unpacked: %v", transaction)
+		state.log.Infof("packed txid:%x data: %x", txId, packed)
+
+		//datastore.WriteVerified(packed) // ***** FIX THIS: need to commit to disk
+
+		// remaining items
+		records = records[length:]
+	}
 }
