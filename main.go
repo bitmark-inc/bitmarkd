@@ -191,6 +191,14 @@ func main() {
 			},
 		},
 		{
+			Name: "keypair",
+			Usage: "get default identity's raw key pair",
+			Action: func(c *cli.Context) error {
+				getDefaultRawKeyPair(c, globals)
+				return nil
+			},
+		},
+		{
 			Name:  "version",
 			Usage: "display bitmark-cli version",
 			Action: func(c *cli.Context) error {
@@ -640,6 +648,44 @@ func bitmarkInfo(hostPort string, verbose bool) bool {
 	}
 	return true
 }
+
+func getDefaultRawKeyPair(c *cli.Context, globals globalFlags) {
+	configuration, err := checkAndGetConfig(globals.config)
+	if nil != err {
+		exitwithstatus.Message("Error: Get configuration failed: %v\n", err)
+	}
+
+	identity, err := checkTransferFrom(globals.identity, configuration)
+	if nil != err {
+		exitwithstatus.Message("Error: %s\n", err)
+	}
+
+	publicKey := []byte{}
+	privateKey := []byte{}
+	// check owner password
+	if "" == globals.password {
+		publicKey, privateKey, err = promptAndCheckPassword(identity)
+		if nil != err {
+			exitwithstatus.Message("Error: %s\n", err)
+		}
+	} else {
+		publicKey, privateKey, err = verifyPassword(globals.password, identity)
+		if nil != err {
+			exitwithstatus.Message("Error: %s\n", err)
+		}
+	}
+
+	rawKeyPair := RawKeyPair{
+		PublicKey:  hex.EncodeToString(publicKey),
+		PrivateKey: hex.EncodeToString(privateKey),
+	}
+	if b, err := json.MarshalIndent(rawKeyPair, "", "  "); nil != err {
+		exitwithstatus.Message("Error: %s\n", err)
+	} else {
+		fmt.Printf("%s\n", b)
+	}
+}
+
 
 func writeIdentityToFile(identity configuration.IdentityType, configFile string) bool {
 
