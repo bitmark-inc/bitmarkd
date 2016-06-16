@@ -5,8 +5,8 @@
 package payment
 
 import (
-	// "github.com/bitmark-inc/bitmarkd/datastore"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 
@@ -46,7 +46,7 @@ func (state *verifierData) setVerified(transactions []byte) {
 		state.log.Infof("unpacked: %v", transaction)
 		state.log.Infof("packed txid:%x data: %x", txId, packed)
 
-		//datastore.WriteVerified(packed) // ***** FIX THIS: need to commit to disk
+		storage.Pool.VerifiedTransactions.Put(txId[:], packed)
 
 		// remaining items
 		records = records[length:]

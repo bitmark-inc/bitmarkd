@@ -9,8 +9,8 @@ import (
 	"fmt"
 	//"github.com/bitmark-inc/bitmarkd/announce"
 	//"github.com/bitmark-inc/bitmarkd/block"
-	"github.com/bitmark-inc/bitmarkd/datastore"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	//"github.com/bitmark-inc/bitmarkd/mine"
 	"github.com/bitmark-inc/bitmarkd/mode"
@@ -170,9 +170,9 @@ func main() {
 	log.Debugf("%s = %#v", "Mining", masterConfiguration.Mining)
 
 	// start the data storage
-	log.Info("start datastore")
-	datastore.Initialise(masterConfiguration.Database.Name)
-	defer datastore.Finalise()
+	log.Info("start storage")
+	storage.Initialise(masterConfiguration.Database.Name)
+	defer storage.Finalise()
 
 	// // block data storage - depends on pool
 	// log.Info("initialise block")
