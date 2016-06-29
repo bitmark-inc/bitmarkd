@@ -26,7 +26,7 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 	}
 
 	switch command {
-	case "generate-identity":
+	case "generate-peer-identity", "peer":
 		publicKeyFilename := options.Peering.PublicKey
 		privateKeyFilename := options.Peering.PrivateKey
 
@@ -45,7 +45,7 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 		fmt.Printf("generated private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
 		log.Infof("generated private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
 
-	case "generate-rpc-cert":
+	case "generate-rpc-cert", "rpc":
 		certificateFilename := options.ClientRPC.Certificate
 		privateKeyFilename := options.ClientRPC.PrivateKey
 		addresses := []string{}
@@ -71,31 +71,24 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 		fmt.Printf("generated RPC key: %q and certificate: %q\n", privateKeyFilename, certificateFilename)
 		log.Infof("generated RPC key: %q and certificate: %q", privateKeyFilename, certificateFilename)
 
-	case "generate-mine-cert":
-		certificateFilename := options.Mining.Certificate
-		privateKeyFilename := options.Mining.PrivateKey
-		addresses := []string{}
-		if len(arguments) >= 2 {
-			for _, a := range arguments[1:] {
-				if "" != a {
-					addresses = append(addresses, a)
-				}
-			}
-		}
+	case "generate-proof-identity", "proof":
+		publicKeyFilename := options.Proofing.PublicKey
+		privateKeyFilename := options.Proofing.PrivateKey
+
 		if len(arguments) >= 1 && "" != arguments[0] {
-			certificateFilename = arguments[0] + ".crt"
-			privateKeyFilename = arguments[0] + ".key"
+			publicKeyFilename = arguments[0] + ".public"
+			privateKeyFilename = arguments[0] + ".private"
 		}
-		err := makeSelfSignedCertificate("mine", certificateFilename, privateKeyFilename, 0 != len(addresses), addresses)
+		err := zmqutil.MakeKeyPair(publicKeyFilename, privateKeyFilename)
 		if nil != err {
-			fmt.Printf("cannot generate mine key: %q and certificate: %q\n", privateKeyFilename, certificateFilename)
-			log.Criticalf("cannot generate mine key: %q and certificate: %q", privateKeyFilename, certificateFilename)
-			fmt.Printf("error generating mine key/certificate: %v\n", err)
-			log.Criticalf("error generating mine key/certificate: %v", err)
+			fmt.Printf("cannot generate private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
+			log.Criticalf("cannot generate private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
+			fmt.Printf("error generating server key pair: %v\n", err)
+			log.Criticalf("error generating server key pair: %v\n", err)
 			exitwithstatus.Exit(1)
 		}
-		fmt.Printf("generated mine key: %q and certificate: %q\n", privateKeyFilename, certificateFilename)
-		log.Infof("generated mine key: %q and certificate: %q", privateKeyFilename, certificateFilename)
+		fmt.Printf("generated private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
+		log.Infof("generated private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
 
 	case "block-times":
 		return false // defer processing until database is loaded
@@ -110,26 +103,22 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 		}
 
 		fmt.Printf("supported commands:\n\n")
-		fmt.Printf("  help                             - display this message\n\n")
+		fmt.Printf("  help                   (h)       - display this message\n\n")
 
-		fmt.Printf("  generate-identity                - create private key in: %q\n", options.Peering.PrivateKey)
+		fmt.Printf("  gen-peer-identity      (peer)    - create private key in: %q\n", options.Peering.PrivateKey)
 		fmt.Printf("                                     and the public key in: %q\n", options.Peering.PublicKey)
 		fmt.Printf("\n")
 
-		fmt.Printf("  generate-rpc-cert                - create private key in:  %q\n", options.ClientRPC.PrivateKey)
+		fmt.Printf("  gen-rpc-cert           (rpc)     - create private key in:  %q\n", options.ClientRPC.PrivateKey)
 		fmt.Printf("                                     and the certificate in: %q\n", options.ClientRPC.Certificate)
 		fmt.Printf("\n")
 
-		fmt.Printf("  generate-rpc-cert PREFIX IPs...  - create private key in: '<PREFIX>.key'\n")
+		fmt.Printf("  gen-rpc-cert PREFIX IPs...       - create private key in: '<PREFIX>.key'\n")
 		fmt.Printf("                                     and the certificate in '<PREFIX>.crt'\n")
 		fmt.Printf("\n")
 
-		fmt.Printf("  generate-mine-cert               - create private key in:  %q\n", options.Mining.PrivateKey)
-		fmt.Printf("                                     and the certificate in: %q\n", options.Mining.Certificate)
-		fmt.Printf("\n")
-
-		fmt.Printf("  generate-mine-cert PREFIX IPs... - create private key in:  '<PREFIX>.key'\n")
-		fmt.Printf("                                     and the certificate in: '<PREFIX>.crt'\n")
+		fmt.Printf("  gen-proof-identity     (proof)   - create private key in:  %q\n", options.Proofing.PrivateKey)
+		fmt.Printf("                                     and the certificate in: %q\n", options.Proofing.PublicKey)
 		fmt.Printf("\n")
 
 		fmt.Printf("  block-times FILE BEGIN END       - write time and difficulty to text file for a range of blocks\n")

@@ -32,8 +32,8 @@ client_rpc {
   # announce = 127.0.0.1:2131
   # announce = "[::1]:2132"
 
-  certificate = bitmarkd-local-rpc.crt
-  private_key = bitmarkd-local-rpc.key
+  certificate = rpc.crt
+  private_key = rpc.key
 }
 
 
@@ -43,16 +43,15 @@ peering {
   maximum_connections = 10
 
   listen = 0.0.0.0:2135
-  listen = "[::]:2136"
-  # listen = "[::]:2137"
+  listen = "[::]:2135"
 
   # announce certain public IP:ports to network
   # if using firewall port forwarding use the firewall IP:port
   # announce = 127.0.0.1:2135
-  # announce = "[::]:2137"
+  # announce = "[::]:2135"
 
-  public_key = bitmarkd-local.public
-  private_key = bitmarkd-local.private
+  public_key = peer.public
+  private_key = peer.private
 
   # connections to other peers
   # connect = {public_key = "hR}n^Uv:4b3!zI<jfgg6Wrhhy.ssgk2S/s+t%rQE", address = "127.0.0.1:3135"}
@@ -61,16 +60,16 @@ peering {
 }
 
 
-# configuration of stratum miner RPC
-mining {
+# configuration of prooferd connections
+proofing {
 
-  maximum_connections = 10
+  public_key = proof.public
+  private_key = proof.private
 
-  listen = 0.0.0.0:2140
-  listen = "[::]:2141"
-
-  certificate = bitmarkd-local-mine.crt
-  private_key = bitmarkd-local-mine.key
+  publish =  "127.0.0.1:2140"
+  publish = "[::]:2140"
+  submit =  "127.0.0.1:2141"
+  submit = "[::]:2141"
 
 }
 

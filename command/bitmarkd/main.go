@@ -11,13 +11,12 @@ import (
 	//"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/storage"
-	"github.com/bitmark-inc/bitmarkd/zmqutil"
-	//"github.com/bitmark-inc/bitmarkd/mine"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/payment"
+	"github.com/bitmark-inc/bitmarkd/proof"
+	"github.com/bitmark-inc/bitmarkd/storage"
+	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	//"github.com/bitmark-inc/bitmarkd/peer"
-	//"github.com/bitmark-inc/bitmarkd/pool"
 	"github.com/bitmark-inc/bitmarkd/rpc"
 	//"github.com/bitmark-inc/bitmarkd/transaction"
 	//"github.com/bitmark-inc/bitmarkd/util"
@@ -168,7 +167,7 @@ func main() {
 	// connection info
 	log.Debugf("%s = %#v", "ClientRPC", masterConfiguration.ClientRPC)
 	log.Debugf("%s = %#v", "Peering", masterConfiguration.Peering)
-	log.Debugf("%s = %#v", "Mining", masterConfiguration.Mining)
+	log.Debugf("%s = %#v", "Proofing", masterConfiguration.Proofing)
 
 	// start the data storage
 	log.Info("start storage")
@@ -199,11 +198,6 @@ func main() {
 	rpcLog := logger.New("rpc-server")
 	if nil == rpcLog {
 		log.Critical("failed to create rpcLog")
-		exitwithstatus.Exit(1)
-	}
-	mineLog := logger.New("mine-server")
-	if nil == mineLog {
-		log.Critical("failed to create mineLog")
 		exitwithstatus.Exit(1)
 	}
 
@@ -265,13 +259,6 @@ func main() {
 		// 	for _, address := range masterConfiguration.Peering.Announce {
 		// 		announce.AddPeer(address, announce.TypePeer, &peerData)
 		// 	}
-		// case "mine":
-		// 	// no need to announce - currently assume only certain nodes will be mines (i.e. have attached miners)
-		// 	// and these will be local connections or be run as pools
-		// default:
-		// 	log.Criticalf("invalid server type: %s", name)
-		// 	exitwithstatus.Exit(1)
-		// }
 	}
 
 	// start payment services
@@ -292,6 +279,13 @@ func main() {
 		exitwithstatus.Exit(1)
 	}
 	defer asset.Finalise()
+
+	// initialise encryption
+	err = zmqutil.StartAuthentication()
+	if nil != err {
+		log.Criticalf("zmq.AuthStart: error: %v", err)
+		exitwithstatus.Exit(1)
+	}
 
 	// // start up the peering
 	// err = peer.Initialise(masterConfiguration.Peering.Listen, mode.ChainName(), publicKey, privateKey)
@@ -328,9 +322,13 @@ func main() {
 	// 	log.Infof("client: %d connected to %s", i, remote.Address)
 	// }
 
-	// // start mining background processes
-	// mine.Initialise()
-	// defer mine.Finalise()
+	// start proof background processes
+	err = proof.Initialise(&masterConfiguration.Proofing)
+	if nil != err {
+		log.Criticalf("failed to initialise proof  error: %v", err)
+		exitwithstatus.Exit(1)
+	}
+	defer proof.Finalise()
 
 	// wait for CTRL-C before shutting down to allow manual testing
 	if 0 == len(options["quiet"]) {

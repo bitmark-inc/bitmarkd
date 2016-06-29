@@ -9,7 +9,8 @@ import (
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/configuration"
-	"github.com/bitmark-inc/bitmarkd/payment/bitcoin" // ***** FIX THIS: configurartion dependency
+	"github.com/bitmark-inc/bitmarkd/payment/bitcoin"
+	"github.com/bitmark-inc/bitmarkd/proof"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 	"os"
@@ -21,10 +22,12 @@ import (
 const (
 	defaultDataDirectory = "" // this will error; use "." for the same directory as the config file
 
-	defaultPublicKeyFile   = "bitmarkd.private"
-	defaultPrivateKeyFile  = "bitmarkd.public"
-	defaultKeyFile         = "bitmarkd.key"
-	defaultCertificateFile = "bitmarkd.crt"
+	defaultPeerPublicKeyFile   = "peer.private"
+	defaultPeerPrivateKeyFile  = "peer.public"
+	defaultProofPublicKeyFile  = "proof.private"
+	defaultProofPrivateKeyFile = "proof.public"
+	defaultKeyFile             = "rpc.key"
+	defaultCertificateFile     = "rpc.crt"
 
 	defaultLevelDBDirectory = "data"
 	defaultBitmarkDatabase  = chain.Bitmark + ".leveldb"
@@ -97,7 +100,7 @@ type Configuration struct {
 
 	ClientRPC RPCType               `libucl:"client_rpc"`
 	Peering   PeerType              `libucl:"peering"`
-	Mining    RPCType               `libucl:"mining"`
+	Proofing  proof.Configuration   `libucl:"proofing"`
 	Bitcoin   bitcoin.Configuration `libucl:"bitcoin"`
 	Logging   LoggerType            `libucl:"logging"`
 }
@@ -132,12 +135,14 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 
 		Peering: PeerType{
 			MaximumConnections: defaultPeers,
+			PublicKey:          defaultPeerPublicKeyFile,
+			PrivateKey:         defaultPeerPrivateKeyFile,
 		},
 
-		Mining: RPCType{
-			MaximumConnections: defaultMines,
-			Certificate:        defaultCertificateFile,
-			PrivateKey:         defaultKeyFile,
+		Proofing: proof.Configuration{
+			//MaximumConnections: defaultProofers,
+			PublicKey:  defaultProofPublicKeyFile,
+			PrivateKey: defaultProofPrivateKeyFile,
 		},
 
 		Logging: LoggerType{
@@ -199,8 +204,8 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 		&options.ClientRPC.PrivateKey,
 		&options.Peering.PublicKey,
 		&options.Peering.PrivateKey,
-		&options.Mining.Certificate,
-		&options.Mining.PrivateKey,
+		&options.Proofing.PublicKey,
+		&options.Proofing.PrivateKey,
 		&options.Logging.Directory,
 	}
 	for _, f := range mustBeAbsolute {

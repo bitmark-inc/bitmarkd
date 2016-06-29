@@ -70,9 +70,6 @@ type bitcoinData struct {
 // global data
 var globalData bitcoinData
 
-// external API
-// ------------
-
 // a block of configuration data
 // this is read from a libucl configuration file
 type Configuration struct {
