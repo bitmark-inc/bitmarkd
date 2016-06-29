@@ -9,6 +9,7 @@ import (
 	"fmt"
 	//"github.com/bitmark-inc/bitmarkd/announce"
 	//"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
@@ -283,6 +284,14 @@ func main() {
 		exitwithstatus.Exit(1)
 	}
 	defer payment.Finalise()
+
+	// start asset cache
+	err = asset.Initialise()
+	if nil != err {
+		log.Criticalf("failed to initialise asset cache  error: %v", err)
+		exitwithstatus.Exit(1)
+	}
+	defer asset.Finalise()
 
 	// // start up the peering
 	// err = peer.Initialise(masterConfiguration.Peering.Listen, mode.ChainName(), publicKey, privateKey)

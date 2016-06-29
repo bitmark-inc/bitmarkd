@@ -11,6 +11,7 @@ import (
 )
 
 // type to represent a payment nonce
+// Note: no reversal is required for this
 type PayNonce [8]byte
 
 // create a random pay nonce
@@ -35,9 +36,8 @@ func (paynonce PayNonce) GoString() string {
 	return "<paynonce:" + hex.EncodeToString(paynonce[:]) + ">"
 }
 
-// convert pay nonce to little endian hex text
+// convert pay nonce to big endian hex text
 func (paynonce PayNonce) MarshalText() ([]byte, error) {
-	// encode to hex
 	size := hex.EncodedLen(len(paynonce))
 	buffer := make([]byte, size)
 	hex.Encode(buffer, paynonce[:])
@@ -46,16 +46,15 @@ func (paynonce PayNonce) MarshalText() ([]byte, error) {
 
 // convert little endian hex text into a pay nonce
 func (paynonce *PayNonce) UnmarshalText(s []byte) error {
-	buffer := make([]byte, hex.DecodedLen(len(s)))
-	byteCount, err := hex.Decode(buffer, s)
+	if len(*paynonce) != hex.DecodedLen(len(s)) {
+		return fault.ErrNotAPayNonce
+	}
+	byteCount, err := hex.Decode(paynonce[:], s)
 	if nil != err {
 		return err
 	}
 	if len(paynonce) != byteCount {
 		return fault.ErrNotAPayNonce
-	}
-	for i := 0; i < len(paynonce); i += 1 {
-		paynonce[i] = buffer[i]
 	}
 	return nil
 }

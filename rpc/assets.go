@@ -5,6 +5,8 @@
 package rpc
 
 import (
+	"github.com/bitmark-inc/bitmarkd/asset"
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
 )
@@ -13,23 +15,61 @@ import (
 // ------=----
 
 type Assets struct {
-	log   *logger.L
-	asset *Asset
+	log *logger.L
 }
+
+const (
+	maximumAssets = 100
+)
 
 // Assets registration
 // -------------------
+type AssetStatus struct {
+	AssetIndex *transactionrecord.AssetIndex `json:"index"`
+	Duplicate  bool                          `json:"duplicate"` // ***** FIX THIS: is this necessary?
+}
 
-func (assets *Assets) Register(arguments *[]transactionrecord.AssetData, reply *[]AssetRegisterReply) error {
+type AssetsRegisterReply struct {
+	Assets []AssetStatus `json:"assets"`
+}
 
-	asset := assets.asset
+func (assets *Assets) Register(arguments *[]transactionrecord.AssetData, reply *AssetsRegisterReply) error {
 
-	result := make([]AssetRegisterReply, len(*arguments))
+	log := assets.log
+	count := len(*arguments)
+
+	if count > maximumAssets {
+		return fault.ErrTooManyItemsToProcess
+	}
+
+	log.Infof("Assets.Register: %v", arguments)
+
+	result := AssetsRegisterReply{
+		Assets: make([]AssetStatus, count),
+	}
+
+	// pack each transaction
+	packed := []byte{}
 	for i, argument := range *arguments {
-		if err := asset.Register(&argument, &result[i]); err != nil {
-			result[i].Err = err.Error()
+
+		index, packedAsset, err := asset.Cache(&argument)
+		if nil != err {
+			return err
+		}
+
+		result.Assets[i].AssetIndex = index
+		if nil == packedAsset {
+			result.Assets[i].Duplicate = true
+		} else {
+			packed = append(packed, packedAsset...)
 		}
 	}
+
+	// ***** FIX THIS: restore broadcasting
+	// announce transaction block to other peers
+	// if len(packed) > 0 {
+	// 	messagebus.Send("", packed)
+	// }
 
 	*reply = result
 	return nil

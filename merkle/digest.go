@@ -34,26 +34,6 @@ func reversed(d Digest) []byte {
 	return result
 }
 
-// convert a binary digest to BTC little endian word swapped hex string for use by miners
-func (digest Digest) BtcHex() string {
-	l := len(digest)
-	buffer := make([]byte, l)
-	for i := 0; i < l; i += 4 {
-		buffer[i+0] = digest[i+3]
-		buffer[i+1] = digest[i+2]
-		buffer[i+2] = digest[i+1]
-		buffer[i+3] = digest[i+0]
-	}
-	return hex.EncodeToString(buffer)
-}
-
-// convert a binary digest to hex string for use by the stratum miner
-//
-// the stored version and the output string are both little endian
-func (digest Digest) MinerHex() string {
-	return hex.EncodeToString(digest[:])
-}
-
 // convert a binary digest to hex string for use by the fmt package (for %s)
 //
 // the stored version is in little endian, but the output string is big endian
@@ -121,8 +101,6 @@ func DigestFromBytes(digest *Digest, buffer []byte) error {
 	if DigestLength != len(buffer) {
 		return fault.ErrNotLink
 	}
-	for i := 0; i < DigestLength; i += 1 {
-		digest[i] = buffer[i]
-	}
+	copy(digest[:], buffer)
 	return nil
 }

@@ -28,6 +28,8 @@ type PoolHandle struct {
 // exported storage pools
 type pools struct {
 	Blocks               *PoolHandle `prefix:"B"`
+	Assets               *PoolHandle `prefix:"I"`
+	Transactions         *PoolHandle `prefix:"T"`
 	VerifiedTransactions *PoolHandle `prefix:"V"`
 	Peer                 *PoolHandle `prefix:"P"`
 	TestData             *PoolHandle `prefix:"Z"`

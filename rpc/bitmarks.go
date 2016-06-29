@@ -6,6 +6,7 @@ package rpc
 
 import (
 	"encoding/hex"
+	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/currency" // ***** FIX THIS: remove when real currency/address is available
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -50,7 +51,7 @@ func (bitmarks *Bitmarks) Issue(arguments *[]transactionrecord.BitmarkIssue, rep
 		return fault.ErrTooManyItemsToProcess
 	}
 
-	log.Infof("Bitmark.Issue: %v", arguments)
+	log.Infof("Bitmarks.Issue: %v", arguments)
 
 	result := BitmarksIssueReply{
 		Transactions: make([]IssueStatus, count),
@@ -65,6 +66,10 @@ func (bitmarks *Bitmarks) Issue(arguments *[]transactionrecord.BitmarkIssue, rep
 		packedIssue, err := argument.Pack(argument.Owner)
 		if nil != err {
 			return err
+		}
+
+		if !asset.Exists(argument.AssetIndex) {
+			return fault.ErrAssetNotFound
 		}
 
 		// ***** FIX THIS: should exists only consider verified/confirmed

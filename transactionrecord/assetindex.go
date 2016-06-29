@@ -13,14 +13,11 @@ import (
 
 // limits
 const (
-	assetIndexPrefix     = "BMA1"
-	assetIndexPrefixSize = len(assetIndexPrefix)
-	AssetIndexSize       = 64
+	AssetIndexSize = 64
 )
 
 // the type for an asset index
 // stored as little endian byte array
-// represented as big endian hex value for print
 // represented as little endian hex text for JSON encoding
 type AssetIndex [AssetIndexSize]byte
 
@@ -31,45 +28,24 @@ func NewAssetIndex(record []byte) AssetIndex {
 	return AssetIndex(sha3.Sum512(record))
 }
 
-// internal function to return a reversed byte order copy of a asset index
-func (d AssetIndex) reversed() []byte {
-	result := make([]byte, AssetIndexSize)
-	for i := 0; i < AssetIndexSize; i += 1 {
-		result[i] = d[AssetIndexSize-1-i]
-	}
-	return result
-}
-
-// internal function to return a reversed byte order copy of a asset index
-func (assetIndex *AssetIndex) reversedFromBytes(buffer []byte) {
-	for i := 0; i < AssetIndexSize; i += 1 {
-		assetIndex[i] = buffer[AssetIndexSize-1-i]
-	}
-}
-
 // convert a binary assetIndex to byte slice
 func (assetIndex AssetIndex) Bytes() []byte {
 	return assetIndex[:]
 }
 
-// convert a binary assetIndex to big endian hex string for use by the fmt package (for %s)
+// convert a binary assetIndex to little endian hex string for use by the fmt package (for %s)
 func (assetIndex AssetIndex) String() string {
-	return hex.EncodeToString(assetIndex.reversed())
+	return hex.EncodeToString(assetIndex[:])
 }
 
-// convert a binary assetIndex to big endian hex string for use by the fmt package (for %#v)
+// convert a binary assetIndex to little endian hex string for use by the fmt package (for %#v)
 func (assetIndex AssetIndex) GoString() string {
-	return "<asset:" + hex.EncodeToString(assetIndex.reversed()) + ">"
+	return "<asset:" + hex.EncodeToString(assetIndex[:]) + ">"
 }
 
-// convert a big endian hex text representation to a assetIndex for use by the format package scan routines
+// convert a little endian hex text representation to a assetIndex for use by the format package scan routines
 func (assetIndex *AssetIndex) Scan(state fmt.ScanState, verb rune) error {
-	count := 0
 	token, err := state.Token(true, func(c rune) bool {
-		if count < assetIndexPrefixSize { // allow anything for prefix - exact check later
-			count += 1
-			return true
-		}
 		if c >= '0' && c <= '9' {
 			return true
 		}
@@ -84,18 +60,11 @@ func (assetIndex *AssetIndex) Scan(state fmt.ScanState, verb rune) error {
 	if nil != err {
 		return err
 	}
-	expectedSize := assetIndexPrefixSize + hex.EncodedLen(AssetIndexSize)
-	actualSize := len(token)
-	if expectedSize != actualSize {
+	if len(token) != hex.EncodedLen(AssetIndexSize) {
 		return fault.ErrNotAssetIndex
 	}
 
-	if assetIndexPrefix != string(token[:assetIndexPrefixSize]) {
-		return fault.ErrNotAssetIndex
-	}
-
-	buffer := make([]byte, AssetIndexSize)
-	byteCount, err := hex.Decode(buffer, token[assetIndexPrefixSize:])
+	byteCount, err := hex.Decode(assetIndex[:], token)
 	if nil != err {
 		return err
 	}
@@ -103,44 +72,28 @@ func (assetIndex *AssetIndex) Scan(state fmt.ScanState, verb rune) error {
 	if AssetIndexSize != byteCount {
 		return fault.ErrNotAssetIndex
 	}
-	assetIndex.reversedFromBytes(buffer)
 	return nil
 }
 
 // convert assetIndex to little endian hex text
 func (assetIndex AssetIndex) MarshalText() ([]byte, error) {
-	// stage the prefix and assetIndex
-	stageSize := assetIndexPrefixSize + len(assetIndex)
-	stage := make([]byte, stageSize)
-	copy(stage, assetIndexPrefix)
-
-	for i := 0; i < AssetIndexSize; i += 1 {
-		stage[assetIndexPrefixSize+i] = assetIndex[i]
-	}
-
-	// encode to hex
-	size := hex.EncodedLen(stageSize)
+	size := hex.EncodedLen(len(assetIndex))
 	buffer := make([]byte, size)
-	hex.Encode(buffer, stage)
+	hex.Encode(buffer, assetIndex[:])
 	return buffer, nil
 }
 
 // convert little endian hex text into a assetIndex
 func (assetIndex *AssetIndex) UnmarshalText(s []byte) error {
-	buffer := make([]byte, hex.DecodedLen(len(s)))
-	byteCount, err := hex.Decode(buffer, s)
+	if len(assetIndex) != hex.DecodedLen(len(s)) {
+		return fault.ErrNotLink
+	}
+	byteCount, err := hex.Decode(assetIndex[:], s)
 	if nil != err {
 		return err
 	}
-	if assetIndexPrefixSize+AssetIndexSize != byteCount {
+	if AssetIndexSize != byteCount {
 		return fault.ErrNotAssetIndex
-	}
-	if assetIndexPrefix != string(buffer[:assetIndexPrefixSize]) {
-		return fault.ErrNotAssetIndex
-	}
-
-	for i := 0; i < AssetIndexSize; i += 1 {
-		assetIndex[i] = buffer[assetIndexPrefixSize+i]
 	}
 	return nil
 }
@@ -150,8 +103,6 @@ func AssetIndexFromBytes(assetIndex *AssetIndex, buffer []byte) error {
 	if AssetIndexSize != len(buffer) {
 		return fault.ErrNotAssetIndex
 	}
-	for i := 0; i < AssetIndexSize; i += 1 {
-		assetIndex[i] = buffer[i]
-	}
+	copy(assetIndex[:], buffer)
 	return nil
 }

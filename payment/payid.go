@@ -11,6 +11,8 @@ import (
 )
 
 // type to represent a payment identifier
+// this is considered as a big endian value for difficulty comparison
+// Note: no reversal is required for this
 type PayId [48]byte
 
 // create a payment identifier from a set of transactions
@@ -28,9 +30,8 @@ func (payid PayId) GoString() string {
 	return "<payid:" + hex.EncodeToString(payid[:]) + ">"
 }
 
-// convert pay id to little endian hex text
+// convert pay id to big endian hex text
 func (payid PayId) MarshalText() ([]byte, error) {
-	// encode to hex
 	size := hex.EncodedLen(len(payid))
 	buffer := make([]byte, size)
 	hex.Encode(buffer, payid[:])
@@ -39,16 +40,15 @@ func (payid PayId) MarshalText() ([]byte, error) {
 
 // convert little endian hex text into a pay id
 func (payid *PayId) UnmarshalText(s []byte) error {
-	buffer := make([]byte, hex.DecodedLen(len(s)))
-	byteCount, err := hex.Decode(buffer, s)
+	if len(*payid) != hex.DecodedLen(len(s)) {
+		return fault.ErrNotAPayId
+	}
+	byteCount, err := hex.Decode(payid[:], s)
 	if nil != err {
 		return err
 	}
 	if len(payid) != byteCount {
 		return fault.ErrNotAPayId
-	}
-	for i := 0; i < len(payid); i += 1 {
-		payid[i] = buffer[i]
 	}
 	return nil
 }
