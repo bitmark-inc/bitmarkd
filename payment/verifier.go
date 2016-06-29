@@ -5,6 +5,7 @@
 package payment
 
 import (
+	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
@@ -44,14 +45,16 @@ func (state *verifierData) setVerified(transactions []byte) {
 		txId := packed.MakeLink()
 
 		state.log.Infof("unpacked: %v", transaction)
-		state.log.Infof("packed txid:%x data: %x", txId, packed)
+		state.log.Infof("packed txid: %v data: %x", txId, packed)
+		switch transaction.(type) {
+		case *transactionrecord.BitmarkIssue:
+			issue := transaction.(*transactionrecord.BitmarkIssue)
+			assetIndex := issue.AssetIndex
+			state.log.Infof("issue: asset id: %v", assetIndex)
+			asset.Store(assetIndex)
 
-		// ***** FIX THIS: need to ensure asset is either already confirmed or verified
-		// ***** FIX THIS: if not then move it from memory buffer to verified store
-		// ***** FIX THIS: before saving issue
-		// ***** FIX THIS: Perhaps:
-		// ***** FIX THIS: should cache one asset in case the whole block of issues is for the same asset
-		// ***** FIX THIS: expect either all the same asset or all different
+		default:
+		}
 
 		storage.Pool.VerifiedTransactions.Put(txId[:], packed)
 

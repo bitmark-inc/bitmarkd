@@ -5,7 +5,6 @@
 package asset
 
 import (
-	"fmt"
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/storage"
@@ -80,6 +79,7 @@ func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIndex, t
 	}
 	assetIndex := asset.AssetIndex()
 
+	//***** FIX THIS: is this wanted or not
 	// txId := packedAsset.MakeLink()
 	// txIdBytes := txId[:]
 
@@ -87,6 +87,8 @@ func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIndex, t
 	if storage.Pool.Assets.Has(assetIndex[:]) {
 		return &assetIndex, nil, nil
 	}
+
+	//***** FIX THIS: is this wanted or not
 	// if storage.Pool.Transactions.Has(txIdBytes) || storage.Pool.VerifiedTransactions.Has(txIdBytes) {
 	// 	return &assetIndex, nil, nil
 	// }
@@ -100,10 +102,7 @@ func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIndex, t
 	// cache the record, will update partially expired item with new flag
 	// causing the expiry routine to allow an extra timeout period
 	globalData.Lock()
-	r, ok := globalData.cache[assetIndex]
-	if !ok {
-		fmt.Printf("set: %v\n", assetIndex)
-		fmt.Printf("  d: %v\n", d)
+	if r, ok := globalData.cache[assetIndex]; !ok {
 		globalData.cache[assetIndex] = d
 	} else {
 		r.flag = true     // extend timeout
@@ -126,10 +125,30 @@ func Exists(assetIndex transactionrecord.AssetIndex) bool {
 		return true
 	}
 
-	fmt.Printf("check: %v\n", assetIndex)
 	globalData.RLock()
 	_, ok := globalData.cache[assetIndex]
 	globalData.RUnlock()
-	fmt.Printf("ok: %v\n", ok)
 	return ok
+}
+
+// transfer a cached asset to permanent storage
+func Store(assetIndex transactionrecord.AssetIndex) {
+
+	// already confirmed or verified
+	if storage.Pool.Assets.Has(assetIndex[:]) {
+		return
+	}
+
+	// fetch the buffered data
+	globalData.RLock()
+	data, ok := globalData.cache[assetIndex]
+	globalData.RUnlock()
+
+	// fatal error if cache is missing
+	if !ok {
+		fault.Panicf("asset: Store: no cache for asset id: %v", assetIndex)
+	}
+
+	// save to permanent storage
+	storage.Pool.Assets.Put(assetIndex[:], data.packed)
 }
