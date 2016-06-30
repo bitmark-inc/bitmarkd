@@ -8,16 +8,12 @@ import (
 //"github.com/bitmark-inc/bitmarkd/merkledigest"
 )
 
-// compute minimum merkle root from coinbase + minimum tree
+// compute minimum merkle root from a set of transaction ids
 //
 // structure is:
 //   1. N * transaction digests
 //   2. level 1..m digests
 //   3. merkle root digest
-//
-// Note for an empty txIds array the result is just one element
-//      i.e. merkle root == coinbase (Digest)
-//      only the genesis block is like this
 func FullMerkleTree(txIds []Digest) []Digest {
 
 	// compute length of ids + all tree levels including root
@@ -50,8 +46,7 @@ func FullMerkleTree(txIds []Digest) []Digest {
 
 // merkle hashing
 //
-// build a minimised tree lacking a base
-// i.e. ids[0] is 2nd transaction (the one after the base)
+// build a minimised tree
 func MinimumMerkleTree(ids []Digest) []Digest {
 
 	length := len(ids)

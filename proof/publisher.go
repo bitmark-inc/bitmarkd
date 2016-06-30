@@ -5,17 +5,25 @@
 package proof
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
+	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
+	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/bitmark-inc/bitmarkd/storage"
+	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
+	"golang.org/x/crypto/ed25519"
+	"io/ioutil"
 	"time"
 )
 
@@ -29,11 +37,17 @@ const (
 type PublishedItem struct {
 	Job    string
 	Header blockrecord.Header
+	Base   []byte
+	TxIds  []merkle.Digest
 }
 
 type publisher struct {
-	log    *logger.L
-	socket *zmq.Socket
+	log             *logger.L
+	socket          *zmq.Socket
+	paymentCurrency currency.Currency
+	paymentAddress  string
+	owner           *account.Account
+	privateKey      []byte
 }
 
 // initialise the publisher
@@ -47,13 +61,41 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 
 	log.Info("initialising…")
 
+	var c currency.Currency
+	_, err := fmt.Sscan(configuration.Currency, &c)
+	if nil != err {
+		log.Errorf("currency: %q  error: %v", configuration.Currency, err)
+		return err
+	}
+	pub.paymentAddress = configuration.Address
+
+	if databytes, err := ioutil.ReadFile(configuration.SigningKey); err != nil {
+		return err
+	} else {
+		rand := bytes.NewBuffer(databytes)
+		publicKey, privateKey, err := ed25519.GenerateKey(rand)
+		if nil != err {
+			log.Errorf("public key generation  error: %v", err)
+			return err
+		}
+		pub.owner = &account.Account{
+			AccountInterface: &account.ED25519Account{
+				Test:      true,
+				PublicKey: publicKey,
+			},
+		}
+		pub.privateKey = privateKey
+	}
+
 	// read the keys
 	privateKey, err := zmqutil.ReadKeyFile(configuration.PrivateKey)
 	if nil != err {
+		log.Errorf("read private key file: %q  error: %v", configuration.PrivateKey, err)
 		return err
 	}
 	publicKey, err := zmqutil.ReadKeyFile(configuration.PublicKey)
 	if nil != err {
+		log.Errorf("read public key file: %q  error: %v", configuration.PublicKey, err)
 		return err
 	}
 
@@ -134,60 +176,127 @@ loop:
 // process some items into a block and publish it
 func (pub *publisher) process() {
 
-	test := true
+	seenAsset := make(map[transactionrecord.AssetIndex]struct{})
 
-	bits := difficulty.New()
+	cursor := storage.Pool.VerifiedTransactions.NewFetchCursor()
+	transactions, err := cursor.Fetch(20)
+	if nil != err {
+		pub.log.Errorf("Error on Fetch: %v", err)
+		return
+	}
 
+	// // ensure lengths match
+	// if len(transactions) != len(expectedElements) {
+	// 	t.Errorf("Length mismatch, got: %d  expected: %d", len(data), len(expectedElements))
+	// }
+
+	txids := make([]merkle.Digest, 1, len(transactions))
+
+	base := &transactionrecord.BaseData{
+		Currency:       pub.paymentCurrency,
+		PaymentAddress: pub.paymentAddress,
+		Owner:          pub.owner,
+		Nonce:          1234,
+	}
+
+	// sign the record and attach signature
+	partiallyPackedBase, _ := base.Pack(pub.owner) // ignore error to get packed without signature
+	signature := ed25519.Sign(pub.privateKey[:], partiallyPackedBase)
+	base.Signature = signature[:]
+
+	// re-pack to makesure signature is valid
+	packedBase, err := base.Pack(pub.owner)
+	if nil != err {
+		pub.log.Criticalf("pack base error: %v", err)
+		fault.PanicWithError("publisher packe base", err)
+	}
+
+	// first txid is the base
+	txids[0] = merkle.NewDigest(packedBase)
+
+	for _, item := range transactions {
+		unpacked, _, err := transactionrecord.Packed(item.Value).Unpack()
+		if nil != err {
+			pub.log.Criticalf("unpack error: %v", err)
+			fault.PanicWithError("publisher extraction transactions", err)
+		}
+
+		// only issues and transfers are allowed here
+		switch unpacked.(type) {
+		case *transactionrecord.BitmarkIssue:
+			issue := unpacked.(*transactionrecord.BitmarkIssue)
+
+			if _, ok := seenAsset[issue.AssetIndex]; !ok {
+				if !storage.Pool.Assets.Has(issue.AssetIndex[:]) {
+
+					asset := storage.Pool.VerifiedAssets.Get(issue.AssetIndex[:])
+					if nil == asset {
+						pub.log.Criticalf("missing asset: %v", issue.AssetIndex)
+						fault.Panicf("publisher missing asset: %v", issue.AssetIndex)
+					}
+					// add asset's transaction id to list
+					txId := merkle.NewDigest(asset)
+					txids = append(txids, txId)
+				}
+				seenAsset[issue.AssetIndex] = struct{}{}
+			}
+
+		case *transactionrecord.BitmarkTransfer:
+			// ok
+
+		default: // all other types cannot occure here
+			pub.log.Criticalf("unxpected transaction: %v", unpacked)
+			fault.Panicf("publisher unxpected transaction: %v", unpacked)
+		}
+
+		var digest merkle.Digest
+		copy(digest[:], item.Key)
+		txids = append(txids, digest)
+	}
+
+	// build the tree of transaction IDs
+	//merkleTree := merkle.MinimumMerkleTree(txids)
+	//treeLength := len(merkleTree)
+	//var merkleRoot merkle.Digest
+	fullMerkleTree := merkle.FullMerkleTree(txids)
+	merkleRoot := fullMerkleTree[len(fullMerkleTree)-1]
+
+	transactionCount := len(txids)
+	if transactionCount > blockrecord.MaximumTransactions {
+		pub.log.Criticalf("too many transactions in block: %d", transactionCount)
+		fault.Panicf("too many transactions in blok: %d", transactionCount)
+	}
+
+	// 64 bit nonce (8 bytes)
 	randomBytes := make([]byte, 8)
-	_, err := rand.Read(randomBytes)
+	_, err = rand.Read(randomBytes)
 	nonce := blockrecord.NonceType(binary.LittleEndian.Uint64(randomBytes))
 
-	liveMerkleRoot := merkle.Digest{
-		0x63, 0x8c, 0x15, 0x9c, 0x1f, 0x11, 0x3f, 0x70,
-		0xa9, 0x86, 0x6d, 0x9a, 0x9e, 0x52, 0xe9, 0xef,
-		0xe9, 0xb9, 0x92, 0x08, 0x48, 0xad, 0x1d, 0xf3,
-		0x48, 0x51, 0xbe, 0x8a, 0x56, 0x2a, 0x99, 0x8d,
-	}
-	testMerkleRoot := merkle.Digest{
-		0xee, 0x07, 0xbb, 0xc3, 0xd7, 0x49, 0xe0, 0x7d,
-		0x24, 0xb9, 0x0c, 0xd1, 0xec, 0x35, 0x14, 0x70,
-		0x2e, 0x87, 0x85, 0x22, 0xda, 0xf7, 0x16, 0xc1,
-		0x73, 0x24, 0xd6, 0x66, 0x69, 0x7b, 0x8a, 0x63,
-	}
+	bits := difficulty.Current
+	timestamp := uint64(time.Now().Unix())
 
-	var merkleRoot merkle.Digest
-	var timestamp uint64
 	job := "unknown"
-	if test {
-		job = "test"
-		merkleRoot = testMerkleRoot
-		timestamp = uint64(0x5478424b) // test
-		test = false
-	} else {
-		job = "live"
-		merkleRoot = liveMerkleRoot
-		timestamp = uint64(0x56809ab7) // live
-		test = true
-	}
 
 	// PreviousBlock is all zero
 	message := PublishedItem{
 		Job: job,
 		Header: blockrecord.Header{
-			Version:          1,
-			TransactionCount: 1,
-			Number:           1,
+			Version:          blockrecord.Version,
+			TransactionCount: uint16(transactionCount),
+			Number:           1, // ***** FIX THIS: real block number needed here
 			MerkleRoot:       merkleRoot,
 			Timestamp:        timestamp,
 			Difficulty:       bits,
 			Nonce:            nonce,
 		},
+		Base:  packedBase,
+		TxIds: txids,
 	}
 
 	data, err := json.Marshal(message)
 	fault.PanicIfError("JSON encode error: %v", err)
 
-	pub.log.Infof("json to send: %s\n", data)
+	pub.log.Infof("json to send: %s", data)
 
 	_, err = pub.socket.SendBytes(data, 0|zmq.DONTWAIT)
 	fault.PanicIfError("publisher", err)

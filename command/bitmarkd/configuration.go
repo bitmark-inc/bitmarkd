@@ -26,6 +26,7 @@ const (
 	defaultPeerPrivateKeyFile  = "peer.public"
 	defaultProofPublicKeyFile  = "proof.private"
 	defaultProofPrivateKeyFile = "proof.public"
+	defaultProofSigningKeyFile = "proof.sign"
 	defaultKeyFile             = "rpc.key"
 	defaultCertificateFile     = "rpc.crt"
 
@@ -143,6 +144,7 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 			//MaximumConnections: defaultProofers,
 			PublicKey:  defaultProofPublicKeyFile,
 			PrivateKey: defaultProofPrivateKeyFile,
+			SigningKey: defaultProofSigningKeyFile,
 		},
 
 		Logging: LoggerType{
@@ -206,6 +208,7 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 		&options.Peering.PrivateKey,
 		&options.Proofing.PublicKey,
 		&options.Proofing.PrivateKey,
+		&options.Proofing.SigningKey,
 		&options.Logging.Directory,
 	}
 	for _, f := range mustBeAbsolute {

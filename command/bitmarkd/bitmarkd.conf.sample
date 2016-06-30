@@ -65,6 +65,10 @@ proofing {
 
   public_key = proof.public
   private_key = proof.private
+  signing_key = proof.sign
+
+  currency = bitcoin
+  address = "msxN7C7cRNgbgyUzt3EcvrpmWXc59sZVN4"
 
   publish =  "127.0.0.1:2140"
   publish = "[::]:2140"

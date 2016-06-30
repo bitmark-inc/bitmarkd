@@ -20,6 +20,12 @@ const (
 	Version = 1
 )
 
+// maximum transactions in a block
+// limited by uint16 field
+const (
+	MaximumTransactions = 10000
+)
+
 // byte sizes for various fields
 const (
 	versionSize          = 2                   // Block version number

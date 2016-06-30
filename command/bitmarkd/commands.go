@@ -7,9 +7,11 @@ package main
 import (
 	"fmt"
 	//"github.com/bitmark-inc/bitmarkd/block"
+	"crypto/rand"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/bitmark-inc/logger"
+	"io/ioutil"
 	"os"
 	"strconv"
 )
@@ -37,13 +39,13 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 		err := zmqutil.MakeKeyPair(publicKeyFilename, privateKeyFilename)
 		if nil != err {
 			fmt.Printf("cannot generate private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
-			log.Criticalf("cannot generate private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
+			log.Criticalf("cannot generate private key: %q and public key: %q", privateKeyFilename, publicKeyFilename)
 			fmt.Printf("error generating server key pair: %v\n", err)
-			log.Criticalf("error generating server key pair: %v\n", err)
+			log.Criticalf("error generating server key pair: %v", err)
 			exitwithstatus.Exit(1)
 		}
 		fmt.Printf("generated private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
-		log.Infof("generated private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
+		log.Infof("generated private key: %q and public key: %q", privateKeyFilename, publicKeyFilename)
 
 	case "generate-rpc-cert", "rpc":
 		certificateFilename := options.ClientRPC.Certificate
@@ -74,21 +76,39 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 	case "generate-proof-identity", "proof":
 		publicKeyFilename := options.Proofing.PublicKey
 		privateKeyFilename := options.Proofing.PrivateKey
+		signingKeyFilename := options.Proofing.SigningKey
 
 		if len(arguments) >= 1 && "" != arguments[0] {
 			publicKeyFilename = arguments[0] + ".public"
 			privateKeyFilename = arguments[0] + ".private"
+			signingKeyFilename = arguments[0] + ".sign"
 		}
 		err := zmqutil.MakeKeyPair(publicKeyFilename, privateKeyFilename)
 		if nil != err {
 			fmt.Printf("cannot generate private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
-			log.Criticalf("cannot generate private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
+			log.Criticalf("cannot generate private key: %q and public key: %q", privateKeyFilename, publicKeyFilename)
 			fmt.Printf("error generating server key pair: %v\n", err)
-			log.Criticalf("error generating server key pair: %v\n", err)
+			log.Criticalf("error generating server key pair: %v", err)
 			exitwithstatus.Exit(1)
 		}
+
+		// new random key for signing base record
+		signingKey := make([]byte, 32)
+		if _, err := rand.Read(signingKey); err != nil {
+			fmt.Printf("error generating signing key error: %v\n", err)
+			log.Criticalf("error generating signing key error: %v", err)
+			exitwithstatus.Exit(1)
+		}
+		if err = ioutil.WriteFile(signingKeyFilename, signingKey, 0600); err != nil {
+			fmt.Printf("error writing signing key file error: %v\n", err)
+			log.Criticalf("error writing signing key file error: %v", err)
+			exitwithstatus.Exit(1)
+		}
+
 		fmt.Printf("generated private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
-		log.Infof("generated private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
+		log.Infof("generated private key: %q and public key: %q", privateKeyFilename, publicKeyFilename)
+		fmt.Printf("generated signing key: %q\n", signingKeyFilename)
+		log.Infof("generated signing key: %q", signingKeyFilename)
 
 	case "block-times":
 		return false // defer processing until database is loaded
@@ -117,8 +137,9 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 		fmt.Printf("                                     and the certificate in '<PREFIX>.crt'\n")
 		fmt.Printf("\n")
 
-		fmt.Printf("  gen-proof-identity     (proof)   - create private key in:  %q\n", options.Proofing.PrivateKey)
-		fmt.Printf("                                     and the certificate in: %q\n", options.Proofing.PublicKey)
+		fmt.Printf("  gen-proof-identity     (proof)   - create private key in: %q\n", options.Proofing.PrivateKey)
+		fmt.Printf("                                     the public key in:     %q\n", options.Proofing.PublicKey)
+		fmt.Printf("                                     and signing key in:    %q\n", options.Proofing.SigningKey)
 		fmt.Printf("\n")
 
 		fmt.Printf("  block-times FILE BEGIN END       - write time and difficulty to text file for a range of blocks\n")

@@ -51,7 +51,7 @@ func (state *verifierData) setVerified(transactions []byte) {
 			issue := transaction.(*transactionrecord.BitmarkIssue)
 			assetIndex := issue.AssetIndex
 			state.log.Infof("issue: asset id: %v", assetIndex)
-			asset.Store(assetIndex)
+			asset.SetVerified(assetIndex)
 
 		default:
 		}

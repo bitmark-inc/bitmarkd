@@ -87,11 +87,9 @@ func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIndex, t
 	if storage.Pool.Assets.Has(assetIndex[:]) {
 		return &assetIndex, nil, nil
 	}
-
-	//***** FIX THIS: is this wanted or not
-	// if storage.Pool.Transactions.Has(txIdBytes) || storage.Pool.VerifiedTransactions.Has(txIdBytes) {
-	// 	return &assetIndex, nil, nil
-	// }
+	if storage.Pool.VerifiedAssets.Has(assetIndex[:]) {
+		return &assetIndex, nil, nil
+	}
 
 	// create a cache entry
 	d := &cacheData{
@@ -124,6 +122,9 @@ func Exists(assetIndex transactionrecord.AssetIndex) bool {
 	if storage.Pool.Assets.Has(assetIndex[:]) {
 		return true
 	}
+	if storage.Pool.VerifiedAssets.Has(assetIndex[:]) {
+		return true
+	}
 
 	globalData.RLock()
 	_, ok := globalData.cache[assetIndex]
@@ -132,10 +133,13 @@ func Exists(assetIndex transactionrecord.AssetIndex) bool {
 }
 
 // transfer a cached asset to permanent storage
-func Store(assetIndex transactionrecord.AssetIndex) {
+func SetVerified(assetIndex transactionrecord.AssetIndex) {
 
 	// already confirmed or verified
 	if storage.Pool.Assets.Has(assetIndex[:]) {
+		return
+	}
+	if storage.Pool.VerifiedAssets.Has(assetIndex[:]) {
 		return
 	}
 
@@ -150,5 +154,5 @@ func Store(assetIndex transactionrecord.AssetIndex) {
 	}
 
 	// save to permanent storage
-	storage.Pool.Assets.Put(assetIndex[:], data.packed)
+	storage.Pool.VerifiedAssets.Put(assetIndex[:], data.packed)
 }

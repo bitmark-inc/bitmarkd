@@ -20,6 +20,9 @@ type Configuration struct {
 	Submit     []string `libucl:"submit"`
 	PrivateKey string   `libucl:"private_key"`
 	PublicKey  string   `libucl:"public_key"`
+	SigningKey string   `libucl:"signing_key"`
+	Currency   string   `libucl:"currency"`
+	Address    string   `libucl:"address"`
 }
 
 // globals for background proccess
