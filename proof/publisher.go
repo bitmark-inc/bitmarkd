@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/account"
+	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
@@ -31,15 +32,6 @@ const (
 	publishInterval    = 60 * time.Second
 	publisherZapDomain = "publisher"
 )
-
-// to send to proofer
-// ***** FIX THIS: need to refactor
-type PublishedItem struct {
-	Job    string
-	Header blockrecord.Header
-	Base   []byte
-	TxIds  []merkle.Digest
-}
 
 type publisher struct {
 	log             *logger.L
@@ -114,8 +106,8 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 	socket.SetCurveServer(1)
 	//socket.SetCurvePublickey(publicKey)
 	socket.SetCurveSecretkey(privateKey)
-	log.Infof("server public:  %q", publicKey)
-	log.Infof("server private: %q", privateKey)
+	log.Tracef("server public:  %q", publicKey)
+	log.Tracef("server private: %q", privateKey)
 
 	socket.SetZapDomain(publisherZapDomain)
 
@@ -179,18 +171,22 @@ func (pub *publisher) process() {
 	seenAsset := make(map[transactionrecord.AssetIndex]struct{})
 
 	cursor := storage.Pool.VerifiedTransactions.NewFetchCursor()
-	transactions, err := cursor.Fetch(20)
+	transactions, err := cursor.Fetch(blockrecord.MaximumTransactions)
 	if nil != err {
 		pub.log.Errorf("Error on Fetch: %v", err)
 		return
 	}
 
-	// // ensure lengths match
-	// if len(transactions) != len(expectedElements) {
-	// 	t.Errorf("Length mismatch, got: %d  expected: %d", len(data), len(expectedElements))
-	// }
+	if 0 == len(transactions) {
+		pub.log.Info("verified pool is empty")
+		return
+	}
 
-	txids := make([]merkle.Digest, 1, len(transactions))
+	txIds := make([]merkle.Digest, 1, len(transactions))
+	txData := make([]byte, 0, 256*len(transactions))
+
+	// to accumulate new assets
+	assetIds := make([]transactionrecord.AssetIndex, 0, len(transactions))
 
 	base := &transactionrecord.BaseData{
 		Currency:       pub.paymentCurrency,
@@ -212,7 +208,7 @@ func (pub *publisher) process() {
 	}
 
 	// first txid is the base
-	txids[0] = merkle.NewDigest(packedBase)
+	txIds[0] = merkle.NewDigest(packedBase)
 
 	for _, item := range transactions {
 		unpacked, _, err := transactionrecord.Packed(item.Value).Unpack()
@@ -236,7 +232,9 @@ func (pub *publisher) process() {
 					}
 					// add asset's transaction id to list
 					txId := merkle.NewDigest(asset)
-					txids = append(txids, txId)
+					txIds = append(txIds, txId)
+					assetIds = append(assetIds, issue.AssetIndex)
+					txData = append(txData, asset...)
 				}
 				seenAsset[issue.AssetIndex] = struct{}{}
 			}
@@ -251,17 +249,15 @@ func (pub *publisher) process() {
 
 		var digest merkle.Digest
 		copy(digest[:], item.Key)
-		txids = append(txids, digest)
+		txIds = append(txIds, digest)
+		txData = append(txData, item.Value...)
 	}
 
 	// build the tree of transaction IDs
-	//merkleTree := merkle.MinimumMerkleTree(txids)
-	//treeLength := len(merkleTree)
-	//var merkleRoot merkle.Digest
-	fullMerkleTree := merkle.FullMerkleTree(txids)
+	fullMerkleTree := merkle.FullMerkleTree(txIds)
 	merkleRoot := fullMerkleTree[len(fullMerkleTree)-1]
 
-	transactionCount := len(txids)
+	transactionCount := len(txIds)
 	if transactionCount > blockrecord.MaximumTransactions {
 		pub.log.Criticalf("too many transactions in block: %d", transactionCount)
 		fault.Panicf("too many transactions in blok: %d", transactionCount)
@@ -275,23 +271,25 @@ func (pub *publisher) process() {
 	bits := difficulty.Current
 	timestamp := uint64(time.Now().Unix())
 
-	job := "unknown"
-
 	// PreviousBlock is all zero
-	message := PublishedItem{
-		Job: job,
+	message := &PublishedItem{
+		Job: "?", // set by enqueue
 		Header: blockrecord.Header{
 			Version:          blockrecord.Version,
 			TransactionCount: uint16(transactionCount),
-			Number:           1, // ***** FIX THIS: real block number needed here
 			MerkleRoot:       merkleRoot,
 			Timestamp:        timestamp,
 			Difficulty:       bits,
 			Nonce:            nonce,
 		},
-		Base:  packedBase,
-		TxIds: txids,
+		Base:     packedBase,
+		TxIds:    txIds,
+		AssetIds: assetIds,
 	}
+	message.Header.PreviousBlock, message.Header.Number = block.Get()
+
+	// add job to the queue
+	enqueueToJobQueue(message, txData)
 
 	data, err := json.Marshal(message)
 	fault.PanicIfError("JSON encode error: %v", err)

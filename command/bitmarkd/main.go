@@ -8,8 +8,8 @@ import (
 	"crypto/tls"
 	"fmt"
 	//"github.com/bitmark-inc/bitmarkd/announce"
-	//"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/asset"
+	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/payment"
@@ -174,10 +174,10 @@ func main() {
 	storage.Initialise(masterConfiguration.Database.Name)
 	defer storage.Finalise()
 
-	// // block data storage - depends on pool
-	// log.Info("initialise block")
-	// block.Initialise()
-	// defer block.Finalise()
+	// block data storage - depends on storage ande mode
+	log.Info("initialise block")
+	block.Initialise()
+	defer block.Finalise()
 
 	// // transaction data storage - depends on pool
 	// log.Info("initialise transaction")

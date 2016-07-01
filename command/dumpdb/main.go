@@ -76,6 +76,6 @@ func main() {
 	}
 	for i, e := range data {
 		fmt.Printf("%d: Key: %x\n", i, e.Key)
-		fmt.Printf("%d:   V: %x\n", i, e.Value)
+		fmt.Printf("%d: Val: %x\n", i, e.Value)
 	}
 }

@@ -5,10 +5,10 @@
 package main
 
 import (
+	"encoding/binary"
 	"encoding/json"
-	//"fmt"
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
-	//"github.com/bitmark-inc/bitmarkd/blockrecord"
+	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
@@ -199,13 +199,16 @@ func ProofThread(log *logger.L) error {
 					// }
 					// log.Infof("submit: json to send: %s", data)
 
+					nonce := make([]byte, blockrecord.NonceSize)
+					binary.LittleEndian.PutUint64(nonce, uint64(blk.Nonce))
+
 					_, err := submit.SendBytes(submitter, zmq.SNDMORE) // routing address
 					fault.PanicIfError("submit send", err)
 					_, err = submit.SendBytes(submitter, zmq.SNDMORE) // destination check
 					fault.PanicIfError("submit send", err)
 					_, err = submit.Send(item.Job, zmq.SNDMORE) // job id
 					fault.PanicIfError("submit send", err)
-					_, err = submit.SendBytes(packed, 0) // actual data
+					_, err = submit.SendBytes(nonce, 0) // actual data
 					fault.PanicIfError("submit send", err)
 
 					// ************** if actual difficulty is met break

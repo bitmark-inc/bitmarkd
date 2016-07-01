@@ -72,6 +72,9 @@ func Initialise(configuration *Configuration) error {
 		return err
 	}
 
+	// create the job queue
+	initialiseJobQueue()
+
 	// all data initialised
 	globalData.initialised = true
 

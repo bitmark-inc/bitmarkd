@@ -137,7 +137,7 @@ func Submitter(i int, connectTo string, serverPublicKey string, publicKey string
 				Job     string
 				Packed  []byte
 			}{
-				Request: "block.header",
+				Request: "block.nonce",
 				Job:     string(request[1]),
 				Packed:  request[2],
 			}

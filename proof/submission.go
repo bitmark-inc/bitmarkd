@@ -87,8 +87,8 @@ func (sub *submission) initialise(configuration *Configuration) error {
 	socket.SetCurveServer(1)
 	//socket.SetCurvePublickey(publicKey)
 	socket.SetCurveSecretkey(privateKey)
-	log.Infof("server public:  %q", publicKey)
-	log.Infof("server private: %q", privateKey)
+	log.Tracef("server public:  %q", publicKey)
+	log.Tracef("server private: %q", privateKey)
 
 	socket.SetZapDomain(submissionZapDomain)
 
@@ -174,22 +174,24 @@ func (sub *submission) process() {
 
 	log.Infof("received message: %q", data)
 
-	// var request interface{}
-	// err = json.Unmarshal([]byte(data), &request)
-	// if nil != err {
-	// 	log.Errorf("JSON decode error: %v", err)
-	// 	continue
-	// }
+	var request SubmittedItem
+	err = json.Unmarshal([]byte(data[0]), &request)
+	if nil != err {
+		log.Errorf("JSON decode error: %v", err)
+	}
 
-	// log.Infof("received message: %v", request)
-	n := 1234
+	log.Infof("received message: %v", request)
+
+	ok := matchToJobQueue(&request)
+
+	log.Infof("maches: %v", ok)
 
 	response := struct {
-		N  int
-		OK bool
+		Job string `json:"job"`
+		OK  bool   `json:"ok"`
 	}{
-		N:  n,
-		OK: true,
+		Job: request.Job,
+		OK:  ok,
 	}
 
 	result, err := json.Marshal(response)
@@ -197,7 +199,7 @@ func (sub *submission) process() {
 		log.Errorf("JSON encode error: %v", err)
 		return
 	}
-	log.Infof("json to send: %s\n", result)
+	log.Infof("json to send: %s", result)
 
 	// if _, err := socket.Send(to, zmq.SNDMORE|zmq.DONTWAIT); nil != err {
 	// 	return err

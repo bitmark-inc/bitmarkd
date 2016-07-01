@@ -28,29 +28,29 @@ const (
 
 // byte sizes for various fields
 const (
-	versionSize          = 2                   // Block version number
-	transactionCountSize = 2                   // Count of transactions
-	numberSize           = 8                   // This block's number
-	previousBlockSize    = blockdigest.Length  // 256-bit Argon2d hash of the previous block header
-	merkleRootSize       = merkle.DigestLength // 256-bit SHA3 hash based on all of the transactions in the block
-	timestampSize        = 8                   // Current timestamp as seconds since 1970-01-01T00:00 UTC
-	difficultySize       = 8                   // Current target difficulty in compact format
-	nonceSize            = 8                   // 64-bit number (starts at 0)
+	VersionSize          = 2                   // Block version number
+	TransactionCountSize = 2                   // Count of transactions
+	NumberSize           = 8                   // This block's number
+	PreviousBlockSize    = blockdigest.Length  // 256-bit Argon2d hash of the previous block header
+	MerkleRootSize       = merkle.DigestLength // 256-bit SHA3 hash based on all of the transactions in the block
+	TimestampSize        = 8                   // Current timestamp as seconds since 1970-01-01T00:00 UTC
+	DifficultySize       = 8                   // Current target difficulty in compact format
+	NonceSize            = 8                   // 64-bit number (starts at 0)
 )
 
 // offsets of the fields
 const (
 	versionOffset          = 0
-	transactionCountOffset = versionOffset + versionSize
-	numberOffset           = transactionCountOffset + transactionCountSize
-	previousBlockOffset    = numberOffset + numberSize
-	merkleRootOffset       = previousBlockOffset + previousBlockSize
-	timestampOffset        = merkleRootOffset + merkleRootSize
-	difficultyOffset       = timestampOffset + timestampSize
-	nonceOffset            = difficultyOffset + difficultySize
+	transactionCountOffset = versionOffset + VersionSize
+	numberOffset           = transactionCountOffset + TransactionCountSize
+	previousBlockOffset    = numberOffset + NumberSize
+	merkleRootOffset       = previousBlockOffset + PreviousBlockSize
+	timestampOffset        = merkleRootOffset + MerkleRootSize
+	difficultyOffset       = timestampOffset + TimestampSize
+	nonceOffset            = difficultyOffset + DifficultySize
 
-	// only the total size is exported
-	TotalBlockSize = nonceOffset + nonceSize // total bytes in the header
+	// the total size is exported
+	TotalBlockSize = nonceOffset + NonceSize // total bytes in the header
 )
 
 // the unpacked header structure
