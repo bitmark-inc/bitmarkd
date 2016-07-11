@@ -181,11 +181,11 @@ func TryProof(payId PayId, clientNonce []byte) bool {
 	h := sha3.New256()
 	payNonce := make([]byte, 8)
 	iterator := block.NewRingReader()
-	i := 0
+	i := 0 // ***** FIX THIS: debug
 	for crc, ok := iterator.Get(); ok; crc, ok = iterator.Get() {
 
 		binary.BigEndian.PutUint64(payNonce[:], crc)
-		i += 1
+		i += 1 // ***** FIX THIS: debug
 		globalData.log.Infof("TryProof: payNonce[%d]: %x", i, payNonce)
 
 		h.Reset()
@@ -202,7 +202,7 @@ func TryProof(payId PayId, clientNonce []byte) bool {
 
 		globalData.log.Infof("TryProof: digest: 0x%64x", bigDigest)
 
-		// check difficulty
+		// check difficulty and verify if ok
 		if bigDigest.Cmp(bigDifficulty) <= 0 {
 			globalData.verifier.queue <- r.transactions
 			return true
