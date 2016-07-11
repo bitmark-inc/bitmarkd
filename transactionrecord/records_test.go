@@ -506,6 +506,50 @@ func TestPackBitmarkIssue(t *testing.T) {
 	}
 }
 
+// make 10 separate issues for testing
+//
+// This only prints out 10 valid issue records that can be used for
+// simple testing
+func TestPackTenBitmarkIssues(t *testing.T) {
+
+	issuerAccount := makeAccount(issuer.publicKey)
+
+	var asset transactionrecord.AssetIndex
+	_, err := fmt.Sscan("59d06155d25dffdb982729de8dce9d7855ca094d8bab8124b347c40668477056b3c27ccb7d71b54043d207ccd187642bf9c8466f9a8d0dbefb4c41633a7e39ef", &asset)
+	if nil != err {
+		t.Fatalf("hex to link error: %v", err)
+	}
+
+	rs := make([]*transactionrecord.BitmarkIssue, 10)
+	for i := 0; i < len(rs); i += 1 {
+		r := &transactionrecord.BitmarkIssue{
+			AssetIndex: asset,
+			Owner:      issuerAccount,
+			Nonce:      uint64(i) + 1,
+		}
+		rs[i] = r
+
+		partial, err := r.Pack(issuerAccount)
+		if fault.ErrInvalidSignature != err {
+			t.Fatalf("pack error: %v", err)
+		}
+		signature := ed25519.Sign(issuer.privateKey[:], partial)
+		r.Signature = signature[:]
+
+		_, err = r.Pack(issuerAccount)
+		if nil != err {
+			t.Fatalf("pack error: %v", err)
+		}
+	}
+	// display a JSON version for information
+	b, err := json.MarshalIndent(rs, "", "  ")
+	if nil != err {
+		t.Fatalf("json error: %v", err)
+	}
+
+	t.Logf("Bitmark Issue: JSON: %s", b)
+}
+
 // test the packing/unpacking of Bitmark transfer record
 //
 // transfer from issue

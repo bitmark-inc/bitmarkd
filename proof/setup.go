@@ -93,7 +93,6 @@ func Initialise(configuration *Configuration) error {
 }
 
 // finialise - stop all background tasks
-// also calls the internal finalisePayment()
 func Finalise() error {
 	globalData.Lock()
 	defer globalData.Unlock()

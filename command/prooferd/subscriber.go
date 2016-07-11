@@ -47,6 +47,7 @@ func Subscribe(i int, connectTo string, serverPublicKey string, publicKey string
 	// socket.SetRouterHandover(true) // allow quick reconnect for a given public key
 	// socket.SetImmediate(false)     // queue messages sent to disconnected peer
 
+	// set subscription prefix - empty => receive everything
 	socket.SetSubscribe("")
 
 	socket.Connect(connectTo)

@@ -10,7 +10,10 @@ import (
 	"github.com/bitmark-inc/bitmarkd/currency" // ***** FIX THIS: remove when real currency/address is available
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/messagebus"
+	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/payment"
+	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
 )
@@ -29,16 +32,11 @@ const (
 // Bitmarks issue
 // --------------
 
-type IssueStatus struct {
-	TxId      transactionrecord.Link `json:"txId"`
-	Duplicate bool                   `json:"duplicate"` // ***** FIX THIS: is this necessary?
-}
-
 type BitmarksIssueReply struct {
-	Transactions []IssueStatus    `json:"transactions"`
-	PayId        payment.PayId    `json:"payId"`
-	PayNonce     payment.PayNonce `json:"payNonce"`
-	Difficulty   string           `json:"difficulty"`
+	TxIds      []transactionrecord.Link `json:"txIds"`
+	PayId      payment.PayId            `json:"payId"`
+	PayNonce   payment.PayNonce         `json:"payNonce"`
+	Difficulty string                   `json:"difficulty"`
 	//PaymentAlternatives []block.MinerAddress `json:"paymentAlternatives"`// ***** FIX THIS: where to get addresses?
 }
 
@@ -49,15 +47,19 @@ func (bitmarks *Bitmarks) Issue(arguments *[]transactionrecord.BitmarkIssue, rep
 
 	if count > maximumIssues {
 		return fault.ErrTooManyItemsToProcess
+	} else if 0 == count {
+		return fault.ErrMissingParameters
+	}
+
+	if !mode.Is(mode.Normal) {
+		return fault.ErrNotAvailableDuringSynchronise
 	}
 
 	log.Infof("Bitmarks.Issue: %v", arguments)
 
 	result := BitmarksIssueReply{
-		Transactions: make([]IssueStatus, count),
+		TxIds: make([]transactionrecord.Link, count),
 	}
-
-	//exists := true		// ***** FIX THIS: true only if all transactions exist
 
 	// pack each transaction
 	packed := []byte{}
@@ -72,30 +74,33 @@ func (bitmarks *Bitmarks) Issue(arguments *[]transactionrecord.BitmarkIssue, rep
 			return fault.ErrAssetNotFound
 		}
 
-		// ***** FIX THIS: should exists only consider verified/confirmed
-		// ***** FIX THIS: then abort if even one transaction "exists" since it has already been paid?
-		// ***** FIX THIS: to get the id
-		// check record
-		// id, oneExists := packedIssue.Exists()
-		// log.Infof("Bitmark.Issue exists: %v", oneExists)
-		// exists &= oneExists
-		result.Transactions[i].TxId = packedIssue.MakeLink() // ***** FIX THIS: replace with Exists() when code done
+		link := packedIssue.MakeLink()
+		result.TxIds[i] = link
+		key := link[:]
 
-		log.Infof("packed issue: %x", packedIssue)       // ***** FIX THIS: debugging
-		log.Infof("id: %v", result.Transactions[i].TxId) // ***** FIX THIS: debugging
+		// even a single verified/confirmed issue fails the whole block
+		if storage.Pool.Transactions.Has(key) || storage.Pool.VerifiedTransactions.Has(key) {
+			return fault.ErrTransactionAlreadyExists
+		}
+
+		log.Tracef("packed issue[%d]: %x", i, packedIssue)
+		log.Debugf("id[%d]: %v", i, link)
 
 		packed = append(packed, packedIssue...)
 	}
 
+	// fail if no data sent
+	if 0 == len(packed) {
+		return fault.ErrMissingParameters
+	}
+
+	// get here if all issues are new
 	var d *difficulty.Difficulty
-	result.PayId, result.PayNonce, d = payment.Store(currency.Bitcoin, packed, count, true) // ***** FIX THIS: need actual currency value, not constant
+	result.PayId, result.PayNonce, d = payment.Store(currency.Bitcoin, packed, count, true)
 	result.Difficulty = d.GoString()
 
-	// ***** FIX THIS: restore broadcasting
 	// announce transaction block to other peers
-	// if !exists {
-	// 	messagebus.Send("", packed)
-	// }
+	messagebus.Send("issues", packed)
 
 	*reply = result
 	return nil
@@ -104,7 +109,7 @@ func (bitmarks *Bitmarks) Issue(arguments *[]transactionrecord.BitmarkIssue, rep
 // Bitmarks proof
 // --------------
 
-type Proofarguments struct {
+type ProofArguments struct {
 	PayId payment.PayId `json:"payId"`
 	Nonce string        `json:"nonce"`
 }
@@ -113,19 +118,22 @@ type ProofReply struct {
 	Verified bool `json:"verified"`
 }
 
-func (bitmarks *Bitmarks) Proof(arguments *Proofarguments, reply *ProofReply) error {
+func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) error {
 
 	log := bitmarks.log
 
-	log.Infof("proof for pay id: %x", arguments.PayId)
-	log.Infof("client nonce: %q", arguments.Nonce)
-
-	size := hex.DecodedLen(len(arguments.Nonce))
+	if !mode.Is(mode.Normal) {
+		return fault.ErrNotAvailableDuringSynchronise
+	}
 
 	// arbitrary byte size limit
+	size := hex.DecodedLen(len(arguments.Nonce))
 	if size < 1 || size > 16 {
 		return fault.ErrInvalidNonce
 	}
+
+	log.Infof("proof for pay id: %v", arguments.PayId)
+	log.Infof("client nonce: %q", arguments.Nonce)
 
 	nonce := make([]byte, size)
 	byteCount, err := hex.Decode(nonce, []byte(arguments.Nonce))
@@ -138,28 +146,16 @@ func (bitmarks *Bitmarks) Proof(arguments *Proofarguments, reply *ProofReply) er
 
 	log.Infof("client nonce hex: %x", nonce)
 
+	// announce proof block to other peers
+	packed := make([]byte, len(arguments.PayId), len(arguments.PayId)+len(nonce))
+	copy(packed, arguments.PayId[:])
+	packed = append(packed, nonce...)
+
+	log.Infof("broadcast proof: %x", packed)
+	messagebus.Send("proof", packed)
+
+	// check if proof matches
 	reply.Verified = payment.TryProof(arguments.PayId, nonce)
-	if reply.Verified {
-		log.Warn("***need to broadcast pay id pay nonce and client nonce to peers") // ***** FIX THIS: add real broadcast
-	}
 
 	return nil
 }
-
-// // Bitmarks transfer
-// // -----------------
-
-// func (bitmarks *Bitmarks) Transfer(arguments *[]transaction.BitmarkTransfer, reply *[]BitmarkTransferReply) error {
-
-// 	bitmark := bitmarks.bitmark
-
-// 	result := make([]BitmarkTransferReply, len(*arguments))
-// 	for i, argument := range *arguments {
-// 		if err := bitmark.Transfer(&argument, &result[i]); err != nil {
-// 			result[i].Err = err.Error()
-// 		}
-// 	}
-
-// 	*reply = result
-// 	return nil
-// }

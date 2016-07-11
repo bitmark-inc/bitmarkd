@@ -5,24 +5,26 @@
 package payment
 
 import (
-	"crypto/rand"
+	"encoding/binary"
 	"encoding/hex"
+	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"hash/crc64"
 )
 
 // type to represent a payment nonce
 // Note: no reversal is required for this
 type PayNonce [8]byte
 
+var table = crc64.MakeTable(crc64.ECMA)
+
 // create a random pay nonce
 func NewPayNonce() PayNonce {
 
-	buffer := make([]byte, 8)
-	_, err := rand.Read(buffer)
-	fault.PanicIfError("rand.Read failed", err)
+	crc := block.GetLatestCRC()
 
 	nonce := PayNonce{}
-	copy(nonce[:], buffer)
+	binary.BigEndian.PutUint64(nonce[:], crc)
 	return nonce
 }
 

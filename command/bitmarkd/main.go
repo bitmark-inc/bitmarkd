@@ -12,12 +12,12 @@ import (
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
+	peer "github.com/bitmark-inc/bitmarkd/p2p"
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/proof"
+	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
-	//"github.com/bitmark-inc/bitmarkd/peer"
-	"github.com/bitmark-inc/bitmarkd/rpc"
 	//"github.com/bitmark-inc/bitmarkd/transaction"
 	//"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/version"
@@ -141,28 +141,9 @@ func main() {
 	mode.Initialise(masterConfiguration.Chain)
 	defer mode.Finalise()
 
-	// ensure keys are set
-	if "" == masterConfiguration.Peering.PublicKey || "" == masterConfiguration.Peering.PrivateKey {
-		exitwithstatus.Message("%s: both peering Public and Private keys must be specified", program)
-	}
-	publicKey, err := zmqutil.ReadKeyFile(masterConfiguration.Peering.PublicKey)
-	if nil != err {
-		log.Criticalf("read error on: %s  error: %v", masterConfiguration.Peering.PublicKey, err)
-		exitwithstatus.Message("%s: failed reading Public Key: %q  error: %v", program, masterConfiguration.Peering.PublicKey, err)
-	}
-	privateKey, err := zmqutil.ReadKeyFile(masterConfiguration.Peering.PrivateKey)
-	if nil != err {
-		log.Criticalf("read error on: %s  error: %v", masterConfiguration.Peering.PrivateKey, err)
-		exitwithstatus.Message("%s: failed reading Private Key: %q  error: %v", program, masterConfiguration.Peering.PrivateKey, err)
-	}
-
 	// general info
 	log.Infof("test mode: %v", mode.IsTesting())
 	log.Infof("database: %q", masterConfiguration.Database)
-
-	// keys
-	log.Debugf("public key:  %q", publicKey)
-	log.Debugf("private key: %q", privateKey)
 
 	// connection info
 	log.Debugf("%s = %#v", "ClientRPC", masterConfiguration.ClientRPC)
@@ -287,16 +268,15 @@ func main() {
 		exitwithstatus.Exit(1)
 	}
 
-	// // start up the peering
-	// err = peer.Initialise(masterConfiguration.Peering.Listen, mode.ChainName(), publicKey, privateKey)
-	// if nil != err {
-	// 	log.Criticalf("failed to initialise peer  error: %v", err)
-	// 	exitwithstatus.Exit(1)
-	// }
-	// defer peer.Finalise()
-	privateKey = ""
+	// start up the peering background processes
+	err = peer.Initialise(&masterConfiguration.Peering)
+	if nil != err {
+		log.Criticalf("failed to initialise peer  error: %v", err)
+		exitwithstatus.Exit(1)
+	}
+	defer peer.Finalise()
 
-	// now start listeners - these can access memory pools
+	// now start rpc listeners - these can access memory pools
 	serversStarted := 0
 	for name, server := range servers {
 		if nil != server.listener {

@@ -5,7 +5,9 @@
 package payment
 
 import (
+	"encoding/binary"
 	"github.com/bitmark-inc/bitmarkd/background"
+	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -116,7 +118,6 @@ func Store(currencyName currency.Currency, transactions []byte, count int, canPr
 
 	u := &unverified{
 		currencyName: currencyName,
-		payNonce:     payNonce,
 		difficulty:   nil,
 		tracking:     false,
 		transactions: t,
@@ -159,8 +160,8 @@ func TrackPayment(payId PayId, txId string, confirmations uint64) {
 	//return nil
 }
 
-// instead of paying, try a proof
-func TryProof(payId PayId, nonce []byte) bool {
+// instead of paying, try a proof from the client nonce
+func TryProof(payId PayId, clientNonce []byte) bool {
 	r, ok := get(payId)
 	if !ok {
 		return false // already paid/proven
@@ -170,26 +171,42 @@ func TryProof(payId PayId, nonce []byte) bool {
 		return false
 	}
 
-	// compute hash
-	h := sha3.New256()
-	h.Write(payId[:])
-	h.Write(r.payNonce[:])
-	h.Write(nonce)
-	var digest [32]byte
-	h.Sum(digest[:0]) // ***** FIX THIS: should this be LE, (currently assumed as BE)
-	// ***** FIX THIS: reverse digest?   ^^^^^^^^^^^^^^^^^
-
-	globalData.log.Infof("TryProof: digest: %x", digest)
-
+	// save difficulty
+	bigDifficulty := r.difficulty.BigInt()
 	remove(payId) // remove record once done
 
-	// convert to big integer from BE byte slice
-	bigDigest := new(big.Int).SetBytes(digest[:])
+	globalData.log.Infof("TryProof: difficulty: 0x%64x", bigDifficulty)
 
-	// check difficulty
-	if bigDigest.Cmp(r.difficulty.BigInt()) > 0 {
-		return false // difficult not reached
+	// compute hash with all possible payNonces
+	h := sha3.New256()
+	payNonce := make([]byte, 8)
+	iterator := block.NewRingReader()
+	i := 0
+	for crc, ok := iterator.Get(); ok; crc, ok = iterator.Get() {
+
+		binary.BigEndian.PutUint64(payNonce[:], crc)
+		i += 1
+		globalData.log.Infof("TryProof: payNonce[%d]: %x", i, payNonce)
+
+		h.Reset()
+		h.Write(payId[:])
+		h.Write(payNonce)
+		h.Write(clientNonce)
+		var digest [32]byte
+		h.Sum(digest[:0])
+
+		//globalData.log.Infof("TryProof: digest: %x", digest)
+
+		// convert to big integer from BE byte slice
+		bigDigest := new(big.Int).SetBytes(digest[:])
+
+		globalData.log.Infof("TryProof: digest: 0x%64x", bigDigest)
+
+		// check difficulty
+		if bigDigest.Cmp(bigDifficulty) <= 0 {
+			globalData.verifier.queue <- r.transactions
+			return true
+		}
 	}
-	globalData.verifier.queue <- r.transactions
-	return true
+	return false // difficulty not reached
 }

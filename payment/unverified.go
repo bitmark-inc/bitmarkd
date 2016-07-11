@@ -13,7 +13,6 @@ import (
 // a set of transactions awaiting payment
 type unverified struct {
 	currencyName currency.Currency      // currency identifier
-	payNonce     PayNonce               // for client-side hashing
 	tracking     bool                   // payment tracking requested
 	difficulty   *difficulty.Difficulty // for proof request
 	transactions []byte                 // all the transactions in this payment set

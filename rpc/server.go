@@ -35,10 +35,6 @@ func Callback(conn io.ReadWriteCloser, argument interface{}) {
 		panic("rpc: nil serverArgument.Log")
 	}
 
-	// asset := &Asset{
-	// 	log: serverArgument.Log,
-	// }
-
 	assets := &Assets{
 		log: serverArgument.Log,
 	}
@@ -74,7 +70,7 @@ func Callback(conn io.ReadWriteCloser, argument interface{}) {
 	// }
 
 	server := rpc.NewServer()
-	//server.Register(asset)
+
 	server.Register(assets)
 	//server.Register(bitmark)
 	server.Register(bitmarks)

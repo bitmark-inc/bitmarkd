@@ -10,8 +10,8 @@ const (
 )
 
 type Message struct {
-	From string
-	Item interface{}
+	Kind string // type of packed data
+	Data []byte // data bytes
 }
 
 var (
@@ -20,10 +20,10 @@ var (
 )
 
 // data to queue
-func Send(from string, item interface{}) {
+func Send(kind string, data []byte) {
 	queue <- Message{
-		From: from,
-		Item: item,
+		Kind: kind,
+		Data: data,
 	}
 }
 

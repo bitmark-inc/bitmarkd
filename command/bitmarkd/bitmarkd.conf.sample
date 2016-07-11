@@ -28,7 +28,7 @@ client_rpc {
   listen = "[::1]:2132"
 
   # announce certain public IP:ports to network
-  # if using firewall port forwarding use the firewall IP:port
+  # if using firewall port forwarding use the firewall external IP:port
   # announce = 127.0.0.1:2131
   # announce = "[::1]:2132"
 
@@ -40,22 +40,33 @@ client_rpc {
 # peer-to-peer networking configuration
 peering {
 
-  maximum_connections = 10
+  #maximum_connections = 50
 
-  listen = 0.0.0.0:2135
-  listen = "[::]:2135"
+  # for subscribers to receive various announcements
+  broadcast = 0.0.0.0:2135
+  broadcast = "[::]:2135"
+
+  # for incoming rpc connections
+  listen = 0.0.0.0:2136
+  listen = "[::]:2136"
 
   # announce certain public IP:ports to network
-  # if using firewall port forwarding use the firewall IP:port
-  # announce = 127.0.0.1:2135
-  # announce = "[::]:2135"
+  # if using firewall port forwarding use the firewall external IP:port
+  announce {
+    #broadcast = 127.0.0.1:2135
+    #broadcast= "[::1]:2135"
+    #listen = 127.0.0.1:2135
+    #listen = "[::1]:2135"
+  }
 
   public_key = peer.public
   private_key = peer.private
 
-  # connections to other peers
-  # connect = {public_key = "hR}n^Uv:4b3!zI<jfgg6Wrhhy.ssgk2S/s+t%rQE", address = "127.0.0.1:3135"}
-  # connect = {public_key = "WssDb0.mqFph#y7fUxS6}9ht}zcs!%C[pxAi{t]K", address = "[::1]:3135"}
+  # dedicated connections
+  subscribe = {public_key = "hR}n^Uv:4b3!zI<jfgg6Wrhhy.ssgk2S/s+t%rQE", address = "127.0.0.1:3135"}
+  #subscribe = {public_key = "hR}n^Uv:4b3!zI<jfgg6Wrhhy.ssgk2S/s+t%rQE", address = "[::1]:3135"}
+  connect = {public_key = "hR}n^Uv:4b3!zI<jfgg6Wrhhy.ssgk2S/s+t%rQE", address = "127.0.0.1:3136"}
+  #connect = {public_key = "hR}n^Uv:4b3!zI<jfgg6Wrhhy.ssgk2S/s+t%rQE", address = "[::1]:3136"}
 
 }
 

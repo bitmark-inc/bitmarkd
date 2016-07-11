@@ -40,33 +40,3 @@ func TestPayId(t *testing.T) {
 		t.Fatalf("pay id expected: %#v  actual: %#v", payId, payId2)
 	}
 }
-
-func TestPayNonce(t *testing.T) {
-
-	nonce := payment.PayNonce{0x2b, 0xa1, 0x54, 0x14, 0x46, 0x74, 0x29, 0x1d}
-	expected := `"2ba154144674291d"`
-
-	t.Logf("pay nonce: %#v", nonce)
-
-	buffer, err := json.Marshal(nonce)
-	if nil != err {
-		t.Fatalf("marshal JSON error: %v", err)
-	}
-
-	t.Logf("pay nonce: %s", buffer)
-
-	actual := string(buffer)
-	if expected != actual {
-		t.Fatalf("pay nonce expected: %#v  actual: %#v", expected, actual)
-	}
-
-	var nonce2 payment.PayNonce
-	err = json.Unmarshal(buffer, &nonce2)
-	if nil != err {
-		t.Fatalf("unmarshal JSON error: %v", err)
-	}
-
-	if nonce != nonce2 {
-		t.Fatalf("pay once expected: %#v  actual: %#v", nonce, nonce2)
-	}
-}

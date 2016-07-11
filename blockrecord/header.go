@@ -14,6 +14,7 @@ import (
 
 // packed records are just a byte slice
 type PackedHeader []byte
+type PackedBlock []byte
 
 // block version
 const (
@@ -74,10 +75,12 @@ func New() *Header {
 }
 
 // turn a byte slice into a record
-func (record PackedHeader) Unpack(header *Header) error {
-	if len(record) != TotalBlockSize || nil == header.Difficulty {
-		return fault.ErrInvalidBlockHeader
+func (record PackedHeader) Unpack() (*Header, error) {
+	if len(record) != TotalBlockSize {
+		return nil, fault.ErrInvalidBlockHeader
 	}
+
+	header := New()
 
 	header.Version = binary.LittleEndian.Uint16(record[versionOffset:])
 	header.TransactionCount = binary.LittleEndian.Uint16(record[transactionCountOffset:])
@@ -85,19 +88,19 @@ func (record PackedHeader) Unpack(header *Header) error {
 
 	err := blockdigest.DigestFromBytes(&header.PreviousBlock, record[previousBlockOffset:merkleRootOffset])
 	if nil != err {
-		return err
+		return nil, err
 	}
 
 	err = merkle.DigestFromBytes(&header.MerkleRoot, record[merkleRootOffset:timestampOffset])
 	if nil != err {
-		return err
+		return nil, err
 	}
 
 	header.Timestamp = binary.LittleEndian.Uint64(record[timestampOffset:difficultyOffset])
 	header.Difficulty.SetBytes(record[difficultyOffset:nonceOffset])
 	header.Nonce = NonceType(binary.LittleEndian.Uint64(record[nonceOffset:]))
 
-	return nil
+	return header, nil
 }
 
 // digest for a packed

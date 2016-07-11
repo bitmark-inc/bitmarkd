@@ -10,6 +10,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"sync"
@@ -98,32 +99,29 @@ func matchToJobQueue(received *SubmittedItem) bool {
 		packedBlock = append(packedBlock, entry.item.Base...)
 		packedBlock = append(packedBlock, entry.transactions...)
 
-		// ***** FIX THIS: broadcast this packedBlock
-		// ***** FIX THIS: ==========================
-
-		blockNumber := make([]byte, 8)
-		binary.BigEndian.PutUint64(blockNumber, entry.item.Header.Number)
+		// broadcast this packedBlock to peers
+		messagebus.Send("block", packedBlock)
 
 		// store the entrire block
-		storage.Pool.Blocks.Put(blockNumber, packedBlock)
+		block.Store(&entry.item.Header, digest, packedBlock)
 
-		// update global block data
-		block.Set(&entry.item.Header)
-
-		for _, txId := range entry.item.TxIds {
-			key := txId[:]
-			data := storage.Pool.VerifiedTransactions.Get(key)
-			if nil != data {
-				storage.Pool.Transactions.Put(key, data)
-				storage.Pool.VerifiedTransactions.Delete(key)
-			}
-		}
+		// confirm assets
 		for _, assetId := range entry.item.AssetIds {
 			key := assetId[:]
 			data := storage.Pool.VerifiedAssets.Get(key)
 			if nil != data {
 				storage.Pool.Assets.Put(key, data)
 				storage.Pool.VerifiedAssets.Delete(key)
+			}
+		}
+
+		// confirm transactions
+		for _, txId := range entry.item.TxIds {
+			key := txId[:]
+			data := storage.Pool.VerifiedTransactions.Get(key)
+			if nil != data {
+				storage.Pool.Transactions.Put(key, data)
+				storage.Pool.VerifiedTransactions.Delete(key)
 			}
 		}
 	}

@@ -7,6 +7,8 @@ package rpc
 import (
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/messagebus"
+	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
 )
@@ -40,6 +42,12 @@ func (assets *Assets) Register(arguments *[]transactionrecord.AssetData, reply *
 
 	if count > maximumAssets {
 		return fault.ErrTooManyItemsToProcess
+	} else if 0 == count {
+		return fault.ErrMissingParameters
+	}
+
+	if !mode.Is(mode.Normal) {
+		return fault.ErrNotAvailableDuringSynchronise
 	}
 
 	log.Infof("Assets.Register: %v", arguments)
@@ -65,11 +73,13 @@ func (assets *Assets) Register(arguments *[]transactionrecord.AssetData, reply *
 		}
 	}
 
-	// ***** FIX THIS: restore broadcasting
+	// fail if no data sent
+	if 0 == len(packed) {
+		return fault.ErrMissingParameters
+	}
+
 	// announce transaction block to other peers
-	// if len(packed) > 0 {
-	// 	messagebus.Send("", packed)
-	// }
+	messagebus.Send("assets", packed)
 
 	*reply = result
 	return nil

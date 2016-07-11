@@ -53,8 +53,7 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 
 	log.Info("initialising…")
 
-	var c currency.Currency
-	_, err := fmt.Sscan(configuration.Currency, &c)
+	_, err := fmt.Sscan(configuration.Currency, &pub.paymentCurrency)
 	if nil != err {
 		log.Errorf("currency: %q  error: %v", configuration.Currency, err)
 		return err
@@ -296,6 +295,7 @@ func (pub *publisher) process() {
 
 	pub.log.Infof("json to send: %s", data)
 
+	// ***** FIX THIS: is the DONTWAIT flag needed or not?
 	_, err = pub.socket.SendBytes(data, 0|zmq.DONTWAIT)
 	fault.PanicIfError("publisher", err)
 	time.Sleep(10 * time.Second)

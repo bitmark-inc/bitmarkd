@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/configuration"
+	peer "github.com/bitmark-inc/bitmarkd/p2p"
 	"github.com/bitmark-inc/bitmarkd/payment/bitcoin"
 	"github.com/bitmark-inc/bitmarkd/proof"
 	"github.com/bitmark-inc/bitmarkd/util"
@@ -65,21 +66,6 @@ type RPCType struct {
 	Announce           []string `libucl:"announce"`
 }
 
-type Connection struct {
-	PublicKey string `libucl:"public_key"`
-	Address   string `libucl:"address"`
-}
-
-// server identification in Z85 (ZeroMQ Base-85 Encoding) see: http://rfc.zeromq.org/spec:32
-type PeerType struct {
-	MaximumConnections int          `libucl:"maximum_connections"`
-	Listen             []string     `libucl:"listen"`
-	Connect            []Connection `libucl:"connect"`
-	PrivateKey         string       `libucl:"private_key"`
-	PublicKey          string       `libucl:"public_key"`
-	Announce           []string     `libucl:"announce"`
-}
-
 type LoggerType struct {
 	Directory string            `libucl:"directory"`
 	File      string            `libucl:"file"`
@@ -100,7 +86,7 @@ type Configuration struct {
 	Database      DatabaseType `libucl:"database"`
 
 	ClientRPC RPCType               `libucl:"client_rpc"`
-	Peering   PeerType              `libucl:"peering"`
+	Peering   peer.Configuration    `libucl:"peering"`
 	Proofing  proof.Configuration   `libucl:"proofing"`
 	Bitcoin   bitcoin.Configuration `libucl:"bitcoin"`
 	Logging   LoggerType            `libucl:"logging"`
@@ -134,10 +120,10 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 			PrivateKey:         defaultKeyFile,
 		},
 
-		Peering: PeerType{
-			MaximumConnections: defaultPeers,
-			PublicKey:          defaultPeerPublicKeyFile,
-			PrivateKey:         defaultPeerPrivateKeyFile,
+		Peering: peer.Configuration{
+			//MaximumConnections: defaultPeers,
+			PublicKey:  defaultPeerPublicKeyFile,
+			PrivateKey: defaultPeerPrivateKeyFile,
 		},
 
 		Proofing: proof.Configuration{
