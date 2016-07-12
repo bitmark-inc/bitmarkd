@@ -7,7 +7,7 @@ package main
 import (
 	"crypto/tls"
 	"fmt"
-	//"github.com/bitmark-inc/bitmarkd/announce"
+	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -17,10 +17,8 @@ import (
 	"github.com/bitmark-inc/bitmarkd/proof"
 	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/storage"
-	"github.com/bitmark-inc/bitmarkd/zmqutil"
-	//"github.com/bitmark-inc/bitmarkd/transaction"
-	//"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/version"
+	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/bitmark-inc/getoptions"
 	"github.com/bitmark-inc/listener"
@@ -176,20 +174,19 @@ func main() {
 	}
 	defer block.Finalise()
 
-	// // transaction data storage - depends on pool
-	// log.Info("initialise transaction")
-	// transaction.Initialise()
-	// defer transaction.Finalise()
-
 	// these commands are allowed to access the internal database
 	if len(arguments) > 0 && processDataCommand(log, arguments, masterConfiguration) {
 		return
 	}
 
-	// // network announcements - depends on pool
-	// log.Info("initialise announce")
-	// announce.Initialise()
-	// defer announce.Finalise()
+	// network announcements - depends on pool
+	log.Info("initialise announce")
+	err = announce.Initialise()
+	if nil != err {
+		log.Criticalf("announce initialise error: %v", err)
+		exitwithstatus.Message("announce initialise error: %v", err)
+	}
+	defer announce.Finalise()
 
 	// various logs
 	rpcLog := logger.New("rpc-server")
@@ -211,9 +208,6 @@ func main() {
 			},
 		},
 	}
-
-	// // capture a set of this nodes certificate fingerprints  (obsolete?)
-	// myFingerprints := make(map[CertificateFingerprint]bool)
 
 	// validate server parameters
 	for name, server := range servers {
@@ -238,24 +232,14 @@ func main() {
 		log.Infof("%s: SHA3-256 fingerprint: %x", name, fingerprint)
 
 		// store certificate
-		//announce.AddCertificate(fingerprint, keyPair.Certificate[0]) // ***** FIX THIS: restore when ready
+		announce.AddCertificate(fingerprint, certificate)
 
-		//myFingerprints[fingerprint] = true
-
-		// peerData := announce.PeerData{
-		// 	// Type:        announce.TypeNone,
-		// 	// State:       announce.StateAllowed,
-		// 	Fingerprint: fingerprint,
-		// }
-		// switch name {
-		// case "rpc":
-		// 	for _, address := range masterConfiguration.ClientRPC.Announce {
-		// 		announce.AddPeer(address, announce.TypeRPC, &peerData)
-		// 	}
-		// case "peer":
-		// 	for _, address := range masterConfiguration.Peering.Announce {
-		// 		announce.AddPeer(address, announce.TypePeer, &peerData)
-		// 	}
+		switch name {
+		case "rpc":
+			for _, address := range masterConfiguration.ClientRPC.Announce {
+				announce.AddRPC(address, fingerprint)
+			}
+		}
 	}
 
 	// start payment services
@@ -306,17 +290,6 @@ func main() {
 		log.Critical("no RPC servers started")
 		exitwithstatus.Message("no RPC servers started")
 	}
-
-	// // start up p2p clients
-	// for i, remote := range masterConfiguration.Peering.Connect {
-	// 	//err := p2p.Add(address)
-	// 	err := peer.ConnectTo(remote.PublicKey, remote.Address)
-	// 	if nil != err {
-	// 		log.Warnf("client: %d failed to connect to: %s error: %v", i, remote.Address, err)
-	// 		continue
-	// 	}
-	// 	log.Infof("client: %d connected to %s", i, remote.Address)
-	// }
 
 	// start proof background processes
 	err = proof.Initialise(&masterConfiguration.Proofing)

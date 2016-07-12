@@ -27,6 +27,14 @@ func Send(kind string, data []byte) {
 	}
 }
 
+// data to queue
+func SendString(kind string, data string) {
+	queue <- Message{
+		Kind: kind,
+		Data: []byte(data),
+	}
+}
+
 // channel to read from
 func Chan() <-chan Message {
 	return queue

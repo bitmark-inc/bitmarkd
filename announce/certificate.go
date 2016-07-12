@@ -4,21 +4,19 @@
 
 package announce
 
-import (
-	"github.com/bitmark-inc/bitmarkd/util"
-)
+import ()
 
 // add a certificate
-func AddCertificate(fingerprint *util.FingerprintBytes, certificate []byte) {
-	announce.certificatePool.Add(fingerprint[:], certificate)
+func AddCertificate(fingerprint [32]byte, certificate []byte) {
+	//announce.certificatePool.Add(fingerprint[:], certificate)
 }
 
-// fetch a certificate
-func GetCertificate(fingerprint *util.FingerprintBytes) []byte {
-	return announce.certificatePool.Get(fingerprint[:])
-}
+// // fetch a certificate
+// func GetCertificate(fingerprint *util.FingerprintBytes) []byte {
+// 	return announce.certificatePool.Get(fingerprint[:])
+// }
 
-// certificate already stored
-func HasCertificate(fingerprint *util.FingerprintBytes) bool {
-	return announce.certificatePool.Has(fingerprint[:])
-}
+// // certificate already stored
+// func HasCertificate(fingerprint *util.FingerprintBytes) bool {
+// 	return announce.certificatePool.Has(fingerprint[:])
+// }
