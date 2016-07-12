@@ -6,6 +6,7 @@ package storage
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
@@ -52,12 +53,12 @@ var poolData struct {
 // open up the database connection
 //
 // this must be called before any pool.New() is created
-func Initialise(database string) {
+func Initialise(database string) error {
 	poolData.Lock()
 	defer poolData.Unlock()
 
 	if nil != poolData.database {
-		fault.Panic("pool.Initialise - already done")
+		return fault.ErrAlreadyInitialised
 	}
 
 	db, err := leveldb.RecoverFile(database, nil)
@@ -70,12 +71,11 @@ func Initialise(database string) {
 	// ensure that the database is compatible
 	versionValue, err := poolData.database.Get(versionKey, nil)
 	if leveldb.ErrNotFound == err {
-		err := poolData.database.Put(versionKey, currentVersion, nil)
-		fault.PanicIfError("pool.Initialise set version", err)
+		return poolData.database.Put(versionKey, currentVersion, nil)
 	} else if nil != err {
-		fault.PanicWithError("pool.Initialise get version", err)
+		return err
 	} else if !bytes.Equal(versionValue, currentVersion) {
-		fault.Panicf("incompatible database version: expected: %x  actual: %x", currentVersion, versionValue)
+		return fmt.Errorf("incompatible database version: expected: 0x%x  actual: 0x%x", currentVersion, versionValue)
 	}
 
 	// this will be a struct type
@@ -108,6 +108,7 @@ func Initialise(database string) {
 
 		poolValue.Field(i).Set(newPool)
 	}
+	return nil
 }
 
 // close the database connection

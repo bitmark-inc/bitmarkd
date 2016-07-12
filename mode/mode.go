@@ -31,7 +31,7 @@ var globals struct {
 }
 
 // set up the mode system
-func Initialise(chainName string) {
+func Initialise(chainName string) error {
 
 	// ensure start up in resynchronise mode
 	globals.Lock()
@@ -56,8 +56,9 @@ func Initialise(chainName string) {
 		globals.mode = Normal
 	default:
 		globals.log.Criticalf("mode cannot handle chain: '%s'", chainName)
-		fault.Panicf("mode cannot handle chain: '%s'", chainName)
+		return fault.ErrInvalidChain
 	}
+	return nil
 }
 
 // shutdown mode handling

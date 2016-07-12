@@ -96,8 +96,12 @@ func main() {
 	log.Info("starting…")
 	log.Debugf("masterConfiguration: %v", masterConfiguration)
 
-	// set up the fault panic log (now that logging is available
-	fault.Initialise()
+	// set up the fault panic log (now that logging is available)
+	err = fault.Initialise()
+	if nil != err {
+		log.Criticalf("fault initialise error: %v", err)
+		exitwithstatus.Message("fault initialise error: %v", err)
+	}
 	defer fault.Finalise()
 
 	// ------------------
@@ -138,7 +142,11 @@ func main() {
 	// }
 
 	// set the initial system mode - before any background tasks are started
-	mode.Initialise(masterConfiguration.Chain)
+	err = mode.Initialise(masterConfiguration.Chain)
+	if nil != err {
+		log.Criticalf("mode initialise error: %v", err)
+		exitwithstatus.Message("mode initialise error: %v", err)
+	}
 	defer mode.Finalise()
 
 	// general info
@@ -152,12 +160,20 @@ func main() {
 
 	// start the data storage
 	log.Info("start storage")
-	storage.Initialise(masterConfiguration.Database.Name)
+	err = storage.Initialise(masterConfiguration.Database.Name)
+	if nil != err {
+		log.Criticalf("block initialise error: %v", err)
+		exitwithstatus.Message("block initialise error: %v", err)
+	}
 	defer storage.Finalise()
 
 	// block data storage - depends on storage ande mode
 	log.Info("initialise block")
-	block.Initialise()
+	err = block.Initialise()
+	if nil != err {
+		log.Criticalf("block initialise error: %v", err)
+		exitwithstatus.Message("block initialise error: %v", err)
+	}
 	defer block.Finalise()
 
 	// // transaction data storage - depends on pool
@@ -179,7 +195,7 @@ func main() {
 	rpcLog := logger.New("rpc-server")
 	if nil == rpcLog {
 		log.Critical("failed to create rpcLog")
-		exitwithstatus.Exit(1)
+		exitwithstatus.Message("failed to create rpcLog")
 	}
 
 	servers := map[string]*serverChannel{
@@ -205,7 +221,7 @@ func main() {
 		certificate, ok := verifyListen(log, name, server)
 		if !ok {
 			log.Criticalf("invalid %s parameters", name)
-			exitwithstatus.Exit(1)
+			exitwithstatus.Message("invalid %s parameters", name)
 		}
 		if 0 == server.limit {
 			continue
@@ -214,7 +230,7 @@ func main() {
 		ml, err := listener.NewMultiListener(name, server.addresses, server.tlsConfiguration, server.limiter, server.callback)
 		if nil != err {
 			log.Criticalf("invalid %s listen addresses", name)
-			exitwithstatus.Exit(1)
+			exitwithstatus.Message("invalid %s listen addresses", name)
 		}
 		server.listener = ml
 
@@ -248,16 +264,16 @@ func main() {
 	}
 	err = payment.Initialise(paymentConfiguration)
 	if nil != err {
-		log.Criticalf("failed to initialise payment  error: %v", err)
-		exitwithstatus.Exit(1)
+		log.Criticalf("payment initialise  error: %v", err)
+		exitwithstatus.Message("payment initialise error: %v", err)
 	}
 	defer payment.Finalise()
 
 	// start asset cache
 	err = asset.Initialise()
 	if nil != err {
-		log.Criticalf("failed to initialise asset cache  error: %v", err)
-		exitwithstatus.Exit(1)
+		log.Criticalf("asset initialise error: %v", err)
+		exitwithstatus.Message("asset initialise error: %v", err)
 	}
 	defer asset.Finalise()
 
@@ -265,14 +281,14 @@ func main() {
 	err = zmqutil.StartAuthentication()
 	if nil != err {
 		log.Criticalf("zmq.AuthStart: error: %v", err)
-		exitwithstatus.Exit(1)
+		exitwithstatus.Message("zmq.AuthStart: error: %v", err)
 	}
 
 	// start up the peering background processes
 	err = peer.Initialise(&masterConfiguration.Peering)
 	if nil != err {
-		log.Criticalf("failed to initialise peer  error: %v", err)
-		exitwithstatus.Exit(1)
+		log.Criticalf("peer initialise error: %v", err)
+		exitwithstatus.Message("peer initialise error: %v", err)
 	}
 	defer peer.Finalise()
 
@@ -287,8 +303,8 @@ func main() {
 		}
 	}
 	if 0 == serversStarted {
-		log.Critical("no servers started")
-		exitwithstatus.Exit(1)
+		log.Critical("no RPC servers started")
+		exitwithstatus.Message("no RPC servers started")
 	}
 
 	// // start up p2p clients
@@ -305,8 +321,8 @@ func main() {
 	// start proof background processes
 	err = proof.Initialise(&masterConfiguration.Proofing)
 	if nil != err {
-		log.Criticalf("failed to initialise proof  error: %v", err)
-		exitwithstatus.Exit(1)
+		log.Criticalf("proof initialise error: %v", err)
+		exitwithstatus.Message("proof initialise error: %v", err)
 	}
 	defer proof.Finalise()
 

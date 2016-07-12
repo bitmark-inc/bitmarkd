@@ -40,7 +40,7 @@ var (
 	ErrInvalidBitmarkDataSize         = InvalidError("bitmark data size")
 	ErrInvalidBlock                   = InvalidError("invalid block")
 	ErrInvalidBlockHeader             = InvalidError("invalid block header")
-	ErrInvalidCoinbase                = InvalidError("invalid coinbase")
+	ErrInvalidChain                   = InvalidError("invalid chain")
 	ErrInvalidCount                   = InvalidError("invalid count")
 	ErrInvalidCurrency                = InvalidError("invalid currency")
 	ErrInvalidCursor                  = InvalidError("invalid cursor")

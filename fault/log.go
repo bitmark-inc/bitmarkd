@@ -15,14 +15,15 @@ import (
 var log *logger.L
 
 // setup a log channel for last attempt to log something
-func Initialise() {
+func Initialise() error {
 	if nil != log {
-		panic("do not initialise fault twice")
+		return ErrAlreadyInitialised
 	}
 	log = logger.New("PANIC")
 	if nil == log {
-		panic("failed to get a logger channel")
+		return ErrInvalidLoggerChannel
 	}
+	return nil
 }
 
 // flush any data
