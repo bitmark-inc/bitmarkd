@@ -179,7 +179,7 @@ func main() {
 		return
 	}
 
-	// network announcements - depends on pool
+	// network announcements need to be before peer and rpc initiialisation
 	log.Info("initialise announce")
 	err = announce.Initialise()
 	if nil != err {

@@ -10,8 +10,8 @@ const (
 )
 
 type Message struct {
-	Kind string // type of packed data
-	Data []byte // data bytes
+	Command    string   // type of packed data
+	Parameters [][]byte // array of parameters
 }
 
 var (
@@ -20,18 +20,10 @@ var (
 )
 
 // data to queue
-func Send(kind string, data []byte) {
+func Send(command string, parameters ...[]byte) {
 	queue <- Message{
-		Kind: kind,
-		Data: data,
-	}
-}
-
-// data to queue
-func SendString(kind string, data string) {
-	queue <- Message{
-		Kind: kind,
-		Data: []byte(data),
+		Command:    command,
+		Parameters: parameters,
 	}
 }
 

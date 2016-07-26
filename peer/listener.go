@@ -11,7 +11,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/storage"
-	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/version"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
@@ -24,10 +23,11 @@ const (
 )
 
 type listener struct {
-	log    *logger.L
-	push   *zmq.Socket
-	pull   *zmq.Socket
-	socket *zmq.Socket
+	log     *logger.L
+	push    *zmq.Socket // signal send
+	pull    *zmq.Socket // signal receive
+	socket4 *zmq.Socket // IPv4 traffic
+	socket6 *zmq.Socket // IPv6 traffic
 }
 
 // type to hold server info
@@ -35,6 +35,7 @@ type serverInfo struct {
 	Version string `json:"version"`
 	Chain   string `json:"chain"`
 	Normal  bool   `json:"normal"`
+	Height  uint64 `json:"height"`
 }
 
 // initialise the listener
@@ -49,92 +50,30 @@ func (listen *listener) initialise(configuration *Configuration) error {
 	log.Info("initialising…")
 
 	// read the keys
-	privateKey, err := zmqutil.ReadKeyFile(configuration.PrivateKey)
+	privateKey, err := zmqutil.ReadPrivateKeyFile(configuration.PrivateKey)
 	if nil != err {
 		return err
 	}
-	publicKey, err := zmqutil.ReadKeyFile(configuration.PublicKey)
+	publicKey, err := zmqutil.ReadPublicKeyFile(configuration.PublicKey)
 	if nil != err {
 		return err
 	}
+	log.Tracef("server public:  %x", publicKey)
+	log.Tracef("server private: %x", privateKey)
 
-	// send half signalling channel
-	push, err := zmq.NewSocket(zmq.PUSH)
-	if nil != err {
-		return err
-	}
-	push.SetLinger(0)
-	err = push.Bind(listenerSignal)
-	if nil != err {
-		return err
-	}
-
-	listen.push = push
-
-	// receive half of signalling channel
-	pull, err := zmq.NewSocket(zmq.PULL)
-	if nil != err {
-		return err
-	}
-	pull.SetLinger(0)
-	err = pull.Connect(listenerSignal)
+	// signalling channel
+	listen.push, listen.pull, err = zmqutil.NewSignalPair(listenerSignal)
 	if nil != err {
 		return err
 	}
 
-	listen.pull = pull
-
-	socket, err := zmq.NewSocket(zmq.REP)
+	// allocate IPv4 and IPv6 sockets
+	listen.socket4, listen.socket6, err = zmqutil.NewBind(log, zmq.REP, listenerZapDomain, privateKey, publicKey, configuration.Listen)
 	if nil != err {
+		log.Errorf("bind error: %v", err)
 		return err
 	}
-	listen.socket = socket
 
-	// ***** FIX THIS ****
-	// this allows any client to connect
-	zmq.AuthAllow(listenerZapDomain, "127.0.0.1/8")
-	zmq.AuthCurveAdd(listenerZapDomain, zmq.CURVE_ALLOW_ANY)
-
-	// domain is servers public key
-	socket.SetCurveServer(1)
-	//socket.SetCurvePublickey(publicKey)
-	socket.SetCurveSecretkey(privateKey)
-	log.Tracef("server public:  %q", publicKey)
-	log.Tracef("server private: %q", privateKey)
-
-	socket.SetZapDomain(listenerZapDomain)
-
-	socket.SetIdentity(publicKey) // just use public key for identity
-
-	// ***** FIX THIS ****
-	// maybe need to change above line to specific keys later
-	//   e.g. zmq.AuthCurveAdd(serverPublicKey, client1PublicKey)
-	//        zmq.AuthCurveAdd(serverPublicKey, client2PublicKey)
-	// perhaps as part of ConnectTo
-
-	// // basic socket options
-	// socket.SetIpv6(true) // ***** FIX THIS find fix for FreeBSD libzmq4 ****
-	// socket.SetSndtimeo(SEND_TIMEOUT)
-	// socket.SetLinger(LINGER_TIME)
-	// socket.SetRouterMandatory(0)   // discard unroutable packets
-	// socket.SetRouterHandover(true) // allow quick reconnect for a given public key
-	// socket.SetImmediate(false)     // queue messages sent to disconnected peer
-	for i, address := range configuration.Listen {
-		bindTo, err := util.CanonicalIPandPort("tcp://", address)
-		if nil != err {
-			log.Errorf("listener[%d]=%q  error: %v", i, address, err)
-			socket.Close()
-			return err
-		}
-
-		err = socket.Bind(bindTo)
-		if nil != err {
-			log.Errorf("submit[%d]=%q  error: %v", i, address, err)
-			socket.Close()
-			return err
-		}
-		log.Infof("listen on: %q", address)
-	}
 	return nil
 }
 
@@ -147,15 +86,22 @@ func (listen *listener) Run(args interface{}, shutdown <-chan struct{}) {
 
 	go func() {
 		poller := zmq.NewPoller()
-		poller.Add(listen.socket, zmq.POLLIN)
+		if nil != listen.socket4 {
+			poller.Add(listen.socket4, zmq.POLLIN)
+		}
+		if nil != listen.socket6 {
+			poller.Add(listen.socket6, zmq.POLLIN)
+		}
 		poller.Add(listen.pull, zmq.POLLIN)
 	loop:
 		for {
 			sockets, _ := poller.Poll(-1)
 			for _, socket := range sockets {
 				switch s := socket.Socket; s {
-				case listen.socket:
-					listen.process()
+				case listen.socket4:
+					listen.process(listen.socket4)
+				case listen.socket6:
+					listen.process(listen.socket6)
 				case listen.pull:
 					s.Recv(0)
 					break loop
@@ -163,7 +109,12 @@ func (listen *listener) Run(args interface{}, shutdown <-chan struct{}) {
 			}
 		}
 		listen.pull.Close()
-		listen.socket.Close()
+		if nil != listen.socket4 {
+			listen.socket4.Close()
+		}
+		if nil != listen.socket6 {
+			listen.socket6.Close()
+		}
 	}()
 
 	// wait for shutdown
@@ -174,13 +125,13 @@ func (listen *listener) Run(args interface{}, shutdown <-chan struct{}) {
 }
 
 // process the listen and return response to client
-func (listen *listener) process() {
+func (listen *listener) process(socket *zmq.Socket) {
 
 	log := listen.log
 
 	log.Info("process starting…")
 
-	data, err := listen.socket.RecvMessage(0)
+	data, err := socket.RecvMessage(0)
 	if nil != err {
 		log.Errorf("receive error: %v", err)
 		return
@@ -204,31 +155,40 @@ func (listen *listener) process() {
 			err = fault.ErrBlockNotFound
 		}
 
-	case "I":
+	case "I": // server information
 		info := serverInfo{
 			Version: version.Version,
 			Chain:   mode.ChainName(),
 			Normal:  mode.Is(mode.Normal),
+			Height:  block.GetHeight(),
 		}
 		result, err = json.Marshal(info)
 		fault.PanicIfError("JSON encode error: %v", err)
 
-	case "H": // get block height
-		number := block.GetHeight()
-		result = make([]byte, 8)
-		binary.BigEndian.PutUint64(result, number)
+	case "H": // get block hash
+		if 8 == len(parameter) {
+			number := binary.BigEndian.Uint64(parameter)
+			d, e := block.DigestForBlock(number)
+			if nil == e {
+				result = d[:]
+			} else {
+				err = e
+			}
+		} else {
+			err = fault.ErrBlockNotFound
+		}
 	}
 
 	if nil == err {
-		_, err := listen.socket.Send(fn, zmq.SNDMORE|zmq.DONTWAIT)
+		_, err := socket.Send(fn, zmq.SNDMORE|zmq.DONTWAIT)
 		fault.PanicIfError("Listener", err)
-		_, err = listen.socket.SendBytes(result, 0|zmq.DONTWAIT)
+		_, err = socket.SendBytes(result, 0|zmq.DONTWAIT)
 		fault.PanicIfError("Listener", err)
 	} else {
 		errorMessage := err.Error()
-		_, err := listen.socket.Send("E", zmq.SNDMORE|zmq.DONTWAIT)
+		_, err := socket.Send("E", zmq.SNDMORE|zmq.DONTWAIT)
 		fault.PanicIfError("Listener", err)
-		_, err = listen.socket.Send(errorMessage, 0|zmq.DONTWAIT)
+		_, err = socket.Send(errorMessage, 0|zmq.DONTWAIT)
 		fault.PanicIfError("Listener", err)
 	}
 }

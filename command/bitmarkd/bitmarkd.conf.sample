@@ -63,10 +63,10 @@ peering {
   private_key = peer.private
 
   # dedicated connections
-  subscribe = {public_key = "hR}n^Uv:4b3!zI<jfgg6Wrhhy.ssgk2S/s+t%rQE", address = "127.0.0.1:3135"}
-  #subscribe = {public_key = "hR}n^Uv:4b3!zI<jfgg6Wrhhy.ssgk2S/s+t%rQE", address = "[::1]:3135"}
-  connect = {public_key = "hR}n^Uv:4b3!zI<jfgg6Wrhhy.ssgk2S/s+t%rQE", address = "127.0.0.1:3136"}
-  #connect = {public_key = "hR}n^Uv:4b3!zI<jfgg6Wrhhy.ssgk2S/s+t%rQE", address = "[::1]:3136"}
+  subscribe = {public_key = "781d78a9eb338a511ae88a9be5383095ede46445596506e29ad8f022a3f8596e", address = "127.0.0.1:3135"}
+  #subscribe = {public_key = "781d78a9eb338a511ae88a9be5383095ede46445596506e29ad8f022a3f8596e", address = "[::1]:3135"}
+  connect = {public_key = "781d78a9eb338a511ae88a9be5383095ede46445596506e29ad8f022a3f8596e", address = "127.0.0.1:3136"}
+  #connect = {public_key = "781d78a9eb338a511ae88a9be5383095ede46445596506e29ad8f022a3f8596e", address = "[::1]:3136"}
 
 }
 

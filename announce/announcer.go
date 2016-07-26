@@ -65,12 +65,12 @@ func (ann *announcer) process() {
 
 	// announce this nodes IP and ports to other peers
 	for _, rpc := range globalData.rpcs {
-		messagebus.SendString("rpc", rpc)
+		messagebus.Send("rpc", rpc.address, rpc.fingerprint[:])
 	}
-	for _, broadcast := range globalData.broadcasts {
-		messagebus.SendString("broadcast", broadcast)
-	}
-	for _, listener := range globalData.listeners {
-		messagebus.SendString("listener", listener)
-	}
+	// for _, broadcast := range globalData.broadcasts {
+	// 	messagebus.SendString("broadcast", broadcast)
+	// }
+	// for _, listener := range globalData.listeners {
+	// 	messagebus.SendString("listener", listener)
+	// }
 }

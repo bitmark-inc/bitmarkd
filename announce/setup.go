@@ -7,8 +7,9 @@ package announce
 import (
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	//"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/logger"
+	"net"
+	"strings"
 	"sync"
 )
 
@@ -26,9 +27,9 @@ type announcerData struct {
 	log *logger.L
 
 	// this node's annoucements
-	rpcs       []string
-	broadcasts []string
-	listeners  []string
+	rpcs       []*rpcEntry
+	broadcasts []*broadcastEntry
+	listeners  []*listenEntry
 
 	ann announcer
 
@@ -58,6 +59,24 @@ func Initialise() error {
 		return fault.ErrInvalidLoggerChannel
 	}
 	globalData.log.Info("starting…")
+
+	texts, err := net.LookupTXT("nodes.test.bitmark.com")
+	if nil != err {
+		return err
+	}
+
+	// process DNS entries
+	for i, t := range texts {
+		t = strings.TrimSpace(t)
+		tags, err := parseTag(t)
+		if nil != err {
+			globalData.log.Infof("ignore TXT[%d]: %q  error: %v", i, t, err)
+		} else {
+			globalData.log.Infof("process TXT[%d]: %q", i, t)
+			globalData.log.Infof("result[%d]: %#v", i, tags)
+		}
+
+	}
 
 	if err := globalData.ann.initialise(); nil != err {
 		return err

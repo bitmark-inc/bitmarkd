@@ -21,7 +21,7 @@ type PublishedItem struct {
 }
 
 // subscriber thread
-func Subscribe(i int, connectTo string, serverPublicKey string, publicKey string, privateKey string, log *logger.L) error {
+func Subscribe(i int, connectTo string, v6 bool, serverPublicKey []byte, publicKey []byte, privateKey []byte, log *logger.L) error {
 
 	log.Info("starting…")
 
@@ -33,11 +33,11 @@ func Subscribe(i int, connectTo string, serverPublicKey string, publicKey string
 	log.Infof("connect to: %q", connectTo)
 
 	socket.SetCurveServer(0)
-	socket.SetCurvePublickey(publicKey)
-	socket.SetCurveSecretkey(privateKey)
-	socket.SetCurveServerkey(serverPublicKey)
+	socket.SetCurvePublickey(string(publicKey))
+	socket.SetCurveSecretkey(string(privateKey))
+	socket.SetCurveServerkey(string(serverPublicKey))
 
-	socket.SetIdentity(publicKey) // just use public key for identity
+	socket.SetIdentity(string(publicKey)) // just use public key for identity
 
 	// // basic socket options
 	// //socket.SetIpv6(true)  // ***** FIX THIS find fix for FreeBSD libzmq4 ****

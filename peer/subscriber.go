@@ -5,8 +5,8 @@
 package peer
 
 import (
+	"encoding/hex"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
@@ -17,10 +17,11 @@ const (
 )
 
 type subscriber struct {
-	log    *logger.L
-	push   *zmq.Socket
-	pull   *zmq.Socket
-	socket *zmq.Socket
+	log     *logger.L
+	push    *zmq.Socket
+	pull    *zmq.Socket
+	clients []*zmqutil.Client
+	static  bool
 }
 
 // initialise the subscriber
@@ -35,94 +36,79 @@ func (subscribe *subscriber) initialise(configuration *Configuration) error {
 	log.Info("initialising…")
 
 	// read the keys
-	privateKey, err := zmqutil.ReadKeyFile(configuration.PrivateKey)
+	privateKey, err := zmqutil.ReadPrivateKeyFile(configuration.PrivateKey)
 	if nil != err {
 		return err
 	}
-	publicKey, err := zmqutil.ReadKeyFile(configuration.PublicKey)
+	publicKey, err := zmqutil.ReadPublicKeyFile(configuration.PublicKey)
 	if nil != err {
 		return err
 	}
-
-	// send half signalling channel
-	push, err := zmq.NewSocket(zmq.PUSH)
-	if nil != err {
-		return err
-	}
-	push.SetLinger(0)
-	err = push.Bind(subscriberSignal)
-	if nil != err {
-		return err
-	}
-
-	subscribe.push = push
-
-	// receive half of signalling channel
-	pull, err := zmq.NewSocket(zmq.PULL)
-	if nil != err {
-		return err
-	}
-	pull.SetLinger(0)
-	err = pull.Connect(subscriberSignal)
-	if nil != err {
-		return err
-	}
-
-	subscribe.pull = pull
-
-	socket, err := zmq.NewSocket(zmq.SUB)
-	if nil != err {
-		return err
-	}
-	subscribe.socket = socket
-
-	// setup as client
-	socket.SetCurveServer(0)
-	socket.SetCurvePublickey(publicKey)
-	socket.SetCurveSecretkey(privateKey)
 	log.Tracef("server public:  %q", publicKey)
 	log.Tracef("server private: %q", privateKey)
 
-	socket.SetIdentity(publicKey) // just use public key for identity
+	// signalling channel
+	subscribe.push, subscribe.pull, err = zmqutil.NewSignalPair(subscriberSignal)
+	if nil != err {
+		return err
+	}
 
-	// set subscription prefix - empty => receive everything
-	socket.SetSubscribe("")
+	errX := error(nil)
 
-	// ***** FIX THIS ****
-	// maybe need to change above line to specific keys later
-	//   e.g. zmq.AuthCurveAdd(serverPublicKey, client1PublicKey)
-	//        zmq.AuthCurveAdd(serverPublicKey, client2PublicKey)
-	// perhaps as part of ConnectTo
+	staticClients := len(configuration.Connect)
+	if 0 == staticClients {
+		subscribe.clients = make([]*zmqutil.Client, dynamicClients)
+		subscribe.static = false
+		for i := 0; i < dynamicClients; i += 1 {
+			client, err := zmqutil.NewClient(zmq.REQ, privateKey, publicKey, reqTimeout)
+			if nil != err {
+				log.Errorf("client[%d]  error: %v", i, err)
+				errX = err
+				goto fail
+			}
 
-	// // basic socket options
-	// socket.SetIpv6(true) // ***** FIX THIS find fix for FreeBSD libzmq4 ****
-	// socket.SetSndtimeo(SEND_TIMEOUT)
-	// socket.SetLinger(LINGER_TIME)
-	// socket.SetRouterMandatory(0)   // discard unroutable packets
-	// socket.SetRouterHandover(true) // allow quick reconnect for a given public key
-	// socket.SetImmediate(false)     // queue messages sent to disconnected peer
+			subscribe.clients[i] = client
+		}
+		return nil
+	} else {
+		subscribe.clients = make([]*zmqutil.Client, staticClients)
+		subscribe.static = true
+	}
+
+	// initially connect all static sockets
 	for i, c := range configuration.Subscribe {
 		address := c.Address
-		serverPublicKey := c.PublicKey
-		socket.SetCurveServerkey(serverPublicKey)
-		log.Tracef("server public: %q", serverPublicKey)
-
-		connectTo, err := util.CanonicalIPandPort("tcp://", address)
+		serverPublicKey, err := hex.DecodeString(c.PublicKey)
 		if nil != err {
-			log.Errorf("subscriber[%d]=%q  error: %v", i, address, err)
-			socket.Close()
-			return err
+			log.Errorf("client[%d]=public: %q  error: %v", i, c.PublicKey, err)
+			errX = err
+			goto fail
 		}
 
-		err = socket.Connect(connectTo)
+		client, err := zmqutil.NewClient(zmq.SUB, privateKey, publicKey, reqTimeout)
 		if nil != err {
-			log.Errorf("subscribe[%d]=%q  error: %v", i, address, err)
-			socket.Close()
-			return err
+			log.Errorf("client[%d]=%q  error: %v", i, address, err)
+			errX = err
+			goto fail
 		}
-		log.Infof("subscribe to: %q", address)
+
+		subscribe.clients[i] = client
+
+		err = client.Connect(address, serverPublicKey)
+		if nil != err {
+			log.Errorf("connect[%d]=%q  error: %v", i, address, err)
+			errX = err
+			goto fail
+		}
+		log.Infof("public key: %x  at: %q", serverPublicKey, address)
 	}
+
 	return nil
+
+	// error handling
+fail:
+	zmqutil.CloseClients(subscribe.clients)
+	return errX
 }
 
 // wait for new blocks or new payment items
@@ -135,7 +121,12 @@ func (subscribe *subscriber) Run(args interface{}, shutdown <-chan struct{}) {
 
 	go func() {
 		poller := zmq.NewPoller()
-		poller.Add(subscribe.socket, zmq.POLLIN)
+		for _, c := range subscribe.clients {
+			if nil != c {
+				c.Add(poller, zmq.POLLIN)
+				// poller.Add(c.Socket(), zmq.POLLIN) // ***** FIX THIS: socket?
+			}
+		}
 		poller.Add(subscribe.pull, zmq.POLLIN)
 	loop:
 		for {
@@ -143,16 +134,23 @@ func (subscribe *subscriber) Run(args interface{}, shutdown <-chan struct{}) {
 			sockets, _ := poller.Poll(-1)
 			for _, socket := range sockets {
 				switch s := socket.Socket; s {
-				case subscribe.socket:
-					subscribe.process()
 				case subscribe.pull:
 					s.Recv(0)
 					break loop
+				default:
+
+					data, err := s.RecvMessageBytes(0)
+					if nil != err {
+						log.Errorf("receive error: %v", err)
+
+					} else {
+						subscribe.process(data)
+					}
 				}
 			}
 		}
 		subscribe.pull.Close()
-		subscribe.socket.Close()
+		zmqutil.CloseClients(subscribe.clients)
 	}()
 
 	// wait for shutdown
@@ -162,17 +160,29 @@ func (subscribe *subscriber) Run(args interface{}, shutdown <-chan struct{}) {
 }
 
 // process the received subscription
-func (subscribe *subscriber) process() {
+func (subscribe *subscriber) process(data [][]byte) {
 
 	log := subscribe.log
 	log.Info("incoming message")
 
-	data, err := subscribe.socket.RecvMessageBytes(0)
-	if nil != err {
-		log.Errorf("receive error: %v", err)
-		return
+	switch string(data[0]) {
+	case "block":
+		log.Infof("received block: %x", data[1])
+	case "assets":
+		log.Infof("received assets: %x", data[1])
+	case "issues":
+		log.Infof("received issues: %x", data[1])
+	case "proof":
+		log.Infof("received proof: %x", data[1])
+	case "rpc":
+		log.Infof("received rpc: %q fingerprint:%x", data[1], data[2])
+	case "broadcast":
+		log.Infof("received broadcast: %q", data[1])
+	case "listener":
+		log.Infof("received listener: %q", data[1])
+
+	default:
+		log.Warnf("received unhandled: %x", data)
+
 	}
-
-	log.Infof("received message: %x", data)
-
 }

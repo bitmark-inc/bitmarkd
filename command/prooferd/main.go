@@ -17,8 +17,8 @@ import (
 	"os"
 	"os/signal"
 	//"runtime/pprof"
+	"encoding/hex"
 	"syscall"
-	//"time"
 )
 
 // bitmark minerd main program
@@ -121,12 +121,12 @@ func main() {
 	if "" == masterConfiguration.Peering.PublicKey || "" == masterConfiguration.Peering.PrivateKey {
 		exitwithstatus.Message("%s: both peering Public and Private keys must be specified", program)
 	}
-	publicKey, err := zmqutil.ReadKeyFile(masterConfiguration.Peering.PublicKey)
+	publicKey, err := zmqutil.ReadPublicKeyFile(masterConfiguration.Peering.PublicKey)
 	if nil != err {
 		log.Criticalf("read error on: %s  error: %v", masterConfiguration.Peering.PublicKey, err)
 		exitwithstatus.Message("%s: failed reading Public Key: %q  error: %v", program, masterConfiguration.Peering.PublicKey, err)
 	}
-	privateKey, err := zmqutil.ReadKeyFile(masterConfiguration.Peering.PrivateKey)
+	privateKey, err := zmqutil.ReadPrivateKeyFile(masterConfiguration.Peering.PrivateKey)
 	if nil != err {
 		log.Criticalf("read error on: %s  error: %v", masterConfiguration.Peering.PrivateKey, err)
 		exitwithstatus.Message("%s: failed reading Private Key: %q  error: %v", program, masterConfiguration.Peering.PrivateKey, err)
@@ -136,8 +136,8 @@ func main() {
 	log.Infof("test mode: %v", mode.IsTesting())
 
 	// keys
-	log.Debugf("public key:  %q", publicKey)
-	log.Debugf("private key: %q", privateKey)
+	log.Tracef("public key:  %x", publicKey)
+	log.Tracef("private key: %x", privateKey)
 
 	// connection info
 	log.Debugf("%s = %#v", "Peering", masterConfiguration.Peering)
@@ -172,13 +172,20 @@ func main() {
 	// start up bitmarkd clients these subscribe to bitmarkd
 	// blocks publisher to obtain blocks for mining
 	for i, remote := range masterConfiguration.Peering.Connect {
-		blocksAddress, err := util.CanonicalIPandPort("tcp://", remote.Blocks)
+
+		serverPublicKey, err := hex.DecodeString(remote.PublicKey)
+		if nil != err {
+			log.Warnf("client: %d invalid server publickey: %q error: %v", i, remote.PublicKey, err)
+			continue
+		}
+
+		blocksAddress, blocksv6, err := util.CanonicalIPandPort("tcp://", remote.Blocks)
 		if nil != err {
 			log.Warnf("client: %d invalid blocks publisher: %q error: %v", i, remote.Blocks, err)
 			continue
 		}
 
-		submitAddress, err := util.CanonicalIPandPort("tcp://", remote.Submit)
+		submitAddress, submitv6, err := util.CanonicalIPandPort("tcp://", remote.Submit)
 		if nil != err {
 			log.Warnf("client: %d invalid submit address: %q error: %v", i, remote.Submit, err)
 			continue
@@ -187,14 +194,14 @@ func main() {
 		log.Infof("client: %d subscribe: %q  submit: %q", i, remote.Blocks, remote.Submit)
 
 		mlog := logger.New(fmt.Sprintf("submitter-%d", i))
-		err = Submitter(i, submitAddress, remote.PublicKey, publicKey, privateKey, mlog)
+		err = Submitter(i, submitAddress, submitv6, serverPublicKey, publicKey, privateKey, mlog)
 		if nil != err {
 			log.Warnf("submitter: %d failed error: %v", i, err)
 			continue
 		}
 
 		slog := logger.New(fmt.Sprintf("subscriber-%d", i))
-		err = Subscribe(i, blocksAddress, remote.PublicKey, publicKey, privateKey, slog)
+		err = Subscribe(i, blocksAddress, blocksv6, serverPublicKey, publicKey, privateKey, slog)
 		if nil != err {
 			log.Warnf("subscribe: %d failed error: %v", i, err)
 			continue
@@ -203,7 +210,7 @@ func main() {
 	}
 
 	// erase the private key from memory
-	privateKey = ""
+	privateKey = []byte{}
 
 	// abort if no clients were connected
 

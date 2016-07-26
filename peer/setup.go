@@ -5,8 +5,11 @@
 package peer
 
 import (
+	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/util"
+	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
 	"sync"
 )
@@ -29,14 +32,14 @@ type Announce struct {
 // a block of configuration data
 // this is read from a libucl configuration file
 type Configuration struct {
-	//MaximumConnections int          `libucl:"maximum_connections"`
-	Broadcast  []string     `libucl:"broadcast"`
-	Listen     []string     `libucl:"listen"`
-	Announce   Announce     `libucl:"announce"`
-	PrivateKey string       `libucl:"private_key"`
-	PublicKey  string       `libucl:"public_key"`
-	Subscribe  []Connection `libucl:"subscribe"`
-	Connect    []Connection `libucl:"connect"`
+	DynamicConnections int          `libucl:"dynamic_connections"`
+	Broadcast          []string     `libucl:"broadcast"`
+	Listen             []string     `libucl:"listen"`
+	Announce           Announce     `libucl:"announce"`
+	PrivateKey         string       `libucl:"private_key"`
+	PublicKey          string       `libucl:"public_key"`
+	Subscribe          []Connection `libucl:"subscribe"`
+	Connect            []Connection `libucl:"connect"`
 }
 
 // globals for background proccess
@@ -105,6 +108,30 @@ func Initialise(configuration *Configuration) error {
 	}
 
 	globalData.background = background.Start(processes, globalData.log)
+
+	publicKey, err := zmqutil.ReadPublicKeyFile(configuration.PublicKey)
+	if nil != err {
+		globalData.log.Errorf("read public key file: %q  error: %v", configuration.PublicKey, err)
+		return err
+	}
+
+	for i, address := range configuration.Announce.Broadcast {
+		a, _, err := util.CanonicalIPandPort("", address)
+		if nil != err {
+			globalData.log.Errorf("broadcast[%d]=%q  error: %v", i, address, err)
+			return err
+		}
+		announce.AddBroadcast(a, publicKey)
+	}
+
+	for i, address := range configuration.Announce.Listen {
+		a, _, err := util.CanonicalIPandPort("", address)
+		if nil != err {
+			globalData.log.Errorf("listen[%d]=%q  error: %v", i, address, err)
+			return err
+		}
+		announce.AddListen(a, publicKey)
+	}
 
 	return nil
 }

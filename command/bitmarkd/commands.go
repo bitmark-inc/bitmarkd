@@ -28,7 +28,7 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 	}
 
 	switch command {
-	case "generate-peer-identity", "peer":
+	case "gen-peer-identity", "peer":
 		publicKeyFilename := options.Peering.PublicKey
 		privateKeyFilename := options.Peering.PrivateKey
 
@@ -47,7 +47,7 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 		fmt.Printf("generated private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
 		log.Infof("generated private key: %q and public key: %q", privateKeyFilename, publicKeyFilename)
 
-	case "generate-rpc-cert", "rpc":
+	case "gen-rpc-cert", "rpc":
 		certificateFilename := options.ClientRPC.Certificate
 		privateKeyFilename := options.ClientRPC.PrivateKey
 		addresses := []string{}
@@ -73,7 +73,7 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 		fmt.Printf("generated RPC key: %q and certificate: %q\n", privateKeyFilename, certificateFilename)
 		log.Infof("generated RPC key: %q and certificate: %q", privateKeyFilename, certificateFilename)
 
-	case "generate-proof-identity", "proof":
+	case "gen-proof-identity", "proof":
 		publicKeyFilename := options.Proofing.PublicKey
 		privateKeyFilename := options.Proofing.PrivateKey
 		signingKeyFilename := options.Proofing.SigningKey

@@ -19,7 +19,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
-	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
@@ -35,7 +34,8 @@ const (
 
 type publisher struct {
 	log             *logger.L
-	socket          *zmq.Socket
+	socket4         *zmq.Socket
+	socket6         *zmq.Socket
 	paymentCurrency currency.Currency
 	paymentAddress  string
 	owner           *account.Account
@@ -79,67 +79,26 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 	}
 
 	// read the keys
-	privateKey, err := zmqutil.ReadKeyFile(configuration.PrivateKey)
+	privateKey, err := zmqutil.ReadPrivateKeyFile(configuration.PrivateKey)
 	if nil != err {
 		log.Errorf("read private key file: %q  error: %v", configuration.PrivateKey, err)
 		return err
 	}
-	publicKey, err := zmqutil.ReadKeyFile(configuration.PublicKey)
+	publicKey, err := zmqutil.ReadPublicKeyFile(configuration.PublicKey)
 	if nil != err {
 		log.Errorf("read public key file: %q  error: %v", configuration.PublicKey, err)
 		return err
 	}
+	log.Tracef("server public:  %x", publicKey)
+	log.Tracef("server private: %x", privateKey)
 
-	socket, err := zmq.NewSocket(zmq.PUB)
+	// allocate IPv4 and IPv6 sockets
+	pub.socket4, pub.socket6, err = zmqutil.NewBind(log, zmq.PUB, publisherZapDomain, privateKey, publicKey, configuration.Publish)
 	if nil != err {
+		log.Errorf("bind error: %v", err)
 		return err
 	}
-	pub.socket = socket
 
-	// ***** FIX THIS ****
-	// this allows any client to connect
-	zmq.AuthAllow(publisherZapDomain, "127.0.0.1/8")
-	zmq.AuthCurveAdd(publisherZapDomain, zmq.CURVE_ALLOW_ANY)
-
-	// domain is servers public key
-	socket.SetCurveServer(1)
-	//socket.SetCurvePublickey(publicKey)
-	socket.SetCurveSecretkey(privateKey)
-	log.Tracef("server public:  %q", publicKey)
-	log.Tracef("server private: %q", privateKey)
-
-	socket.SetZapDomain(publisherZapDomain)
-
-	socket.SetIdentity(publicKey) // just use public key for identity
-
-	// ***** FIX THIS ****
-	// maybe need to change above line to specific keys later
-	//   e.g. zmq.AuthCurveAdd(serverPublicKey, client1PublicKey)
-	//        zmq.AuthCurveAdd(serverPublicKey, client2PublicKey)
-	// perhaps as part of ConnectTo
-
-	// // basic socket options
-	// socket.SetIpv6(true) // ***** FIX THIS find fix for FreeBSD libzmq4 ****
-	// socket.SetSndtimeo(SEND_TIMEOUT)
-	// socket.SetLinger(LINGER_TIME)
-	// socket.SetRouterMandatory(0)   // discard unroutable packets
-	// socket.SetRouterHandover(true) // allow quick reconnect for a given public key
-	// socket.SetImmediate(false)     // queue messages sent to disconnected peer
-	for i, address := range configuration.Publish {
-		bindTo, err := util.CanonicalIPandPort("tcp://", address)
-		if nil != err {
-			log.Errorf("publisher[%d]=%q  error: %v", i, address, err)
-			return err
-		}
-
-		err = socket.Bind(bindTo)
-		if nil != err {
-			log.Errorf("publish[%d]=%q  error: %v", i, address, err)
-			socket.Close()
-			return err
-		}
-		log.Infof("publish on: %q", address)
-	}
 	return nil
 }
 
@@ -161,7 +120,12 @@ loop:
 			pub.process()
 		}
 	}
-	pub.socket.Close()
+	if nil != pub.socket4 {
+		pub.socket4.Close()
+	}
+	if nil != pub.socket6 {
+		pub.socket6.Close()
+	}
 }
 
 // process some items into a block and publish it
@@ -296,7 +260,14 @@ func (pub *publisher) process() {
 	pub.log.Infof("json to send: %s", data)
 
 	// ***** FIX THIS: is the DONTWAIT flag needed or not?
-	_, err = pub.socket.SendBytes(data, 0|zmq.DONTWAIT)
-	fault.PanicIfError("publisher", err)
+	if nil != pub.socket4 {
+		_, err = pub.socket4.SendBytes(data, 0|zmq.DONTWAIT)
+		fault.PanicIfError("publisher 4", err)
+	}
+	if nil != pub.socket6 {
+		_, err = pub.socket6.SendBytes(data, 0|zmq.DONTWAIT)
+		fault.PanicIfError("publisher 6", err)
+	}
+
 	time.Sleep(10 * time.Second)
 }

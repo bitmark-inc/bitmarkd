@@ -7,7 +7,6 @@ package proof
 import (
 	"encoding/json"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
@@ -19,10 +18,11 @@ const (
 )
 
 type submission struct {
-	log    *logger.L
-	push   *zmq.Socket
-	pull   *zmq.Socket
-	socket *zmq.Socket
+	log     *logger.L
+	push    *zmq.Socket
+	pull    *zmq.Socket
+	socket4 *zmq.Socket
+	socket6 *zmq.Socket
 }
 
 // initialise the submission
@@ -37,91 +37,30 @@ func (sub *submission) initialise(configuration *Configuration) error {
 	log.Info("initialising…")
 
 	// read the keys
-	privateKey, err := zmqutil.ReadKeyFile(configuration.PrivateKey)
+	privateKey, err := zmqutil.ReadPrivateKeyFile(configuration.PrivateKey)
 	if nil != err {
 		return err
 	}
-	publicKey, err := zmqutil.ReadKeyFile(configuration.PublicKey)
+	publicKey, err := zmqutil.ReadPublicKeyFile(configuration.PublicKey)
 	if nil != err {
 		return err
 	}
+	log.Tracef("server public:  %x", publicKey)
+	log.Tracef("server private: %x", privateKey)
 
-	// send half signalling channel
-	push, err := zmq.NewSocket(zmq.PUSH)
-	if nil != err {
-		return err
-	}
-	push.SetLinger(0)
-	err = push.Bind(submissionSignal)
-	if nil != err {
-		return err
-	}
-
-	sub.push = push
-
-	// receive half of signalling channel
-	pull, err := zmq.NewSocket(zmq.PULL)
-	if nil != err {
-		return err
-	}
-	pull.SetLinger(0)
-	err = pull.Connect(submissionSignal)
+	// signalling channel
+	sub.push, sub.pull, err = zmqutil.NewSignalPair(submissionSignal)
 	if nil != err {
 		return err
 	}
 
-	sub.pull = pull
-
-	socket, err := zmq.NewSocket(zmq.REP)
+	// allocate IPv4 and IPv6 sockets
+	sub.socket4, sub.socket6, err = zmqutil.NewBind(log, zmq.REP, submissionZapDomain, privateKey, publicKey, configuration.Submit)
 	if nil != err {
+		log.Errorf("bind error: %v", err)
 		return err
 	}
-	sub.socket = socket
 
-	// ***** FIX THIS ****
-	// this allows any client to connect
-	zmq.AuthAllow(submissionZapDomain, "127.0.0.1/8")
-	zmq.AuthCurveAdd(submissionZapDomain, zmq.CURVE_ALLOW_ANY)
-
-	// domain is servers public key
-	socket.SetCurveServer(1)
-	//socket.SetCurvePublickey(publicKey)
-	socket.SetCurveSecretkey(privateKey)
-	log.Tracef("server public:  %q", publicKey)
-	log.Tracef("server private: %q", privateKey)
-
-	socket.SetZapDomain(submissionZapDomain)
-
-	socket.SetIdentity(publicKey) // just use public key for identity
-
-	// ***** FIX THIS ****
-	// maybe need to change above line to specific keys later
-	//   e.g. zmq.AuthCurveAdd(serverPublicKey, client1PublicKey)
-	//        zmq.AuthCurveAdd(serverPublicKey, client2PublicKey)
-	// perhaps as part of ConnectTo
-
-	// // basic socket options
-	// socket.SetIpv6(true) // ***** FIX THIS find fix for FreeBSD libzmq4 ****
-	// socket.SetSndtimeo(SEND_TIMEOUT)
-	// socket.SetLinger(LINGER_TIME)
-	// socket.SetRouterMandatory(0)   // discard unroutable packets
-	// socket.SetRouterHandover(true) // allow quick reconnect for a given public key
-	// socket.SetImmediate(false)     // queue messages sent to disconnected peer
-	for i, address := range configuration.Submit {
-		bindTo, err := util.CanonicalIPandPort("tcp://", address)
-		if nil != err {
-			log.Errorf("submission[%d]=%q  error: %v", i, address, err)
-			return err
-		}
-
-		err = socket.Bind(bindTo)
-		if nil != err {
-			log.Errorf("submit[%d]=%q  error: %v", i, address, err)
-			socket.Close()
-			return err
-		}
-		log.Infof("submit on: %q", address)
-	}
 	return nil
 }
 
@@ -135,7 +74,12 @@ func (sub *submission) Run(args interface{}, shutdown <-chan struct{}) {
 
 	go func() {
 		poller := zmq.NewPoller()
-		poller.Add(sub.socket, zmq.POLLIN)
+		if nil != sub.socket4 {
+			poller.Add(sub.socket4, zmq.POLLIN)
+		}
+		if nil != sub.socket6 {
+			poller.Add(sub.socket6, zmq.POLLIN)
+		}
 		poller.Add(sub.pull, zmq.POLLIN)
 	loop:
 		for {
@@ -143,16 +87,21 @@ func (sub *submission) Run(args interface{}, shutdown <-chan struct{}) {
 			sockets, _ := poller.Poll(-1)
 			for _, socket := range sockets {
 				switch s := socket.Socket; s {
-				case sub.socket:
-					sub.process()
 				case sub.pull:
 					s.Recv(0)
 					break loop
+				default:
+					sub.process(s)
 				}
 			}
 		}
 		sub.pull.Close()
-		sub.socket.Close()
+		if nil != sub.socket4 {
+			sub.socket4.Close()
+		}
+		if nil != sub.socket6 {
+			sub.socket6.Close()
+		}
 	}()
 
 	// wait for shutdown
@@ -162,11 +111,11 @@ func (sub *submission) Run(args interface{}, shutdown <-chan struct{}) {
 }
 
 // process the request and return response to prooferd
-func (sub *submission) process() {
+func (sub *submission) process(socket *zmq.Socket) {
 
 	log := sub.log
 
-	data, err := sub.socket.RecvMessage(0)
+	data, err := socket.RecvMessage(0)
 	if nil != err {
 		log.Errorf("JSON encode error: %v", err)
 		return
@@ -207,6 +156,6 @@ func (sub *submission) process() {
 	// if _, err := socket.Send(command, zmq.SNDMORE|zmq.DONTWAIT); nil != err {
 	// 	return err
 	// }
-	_, err = sub.socket.SendBytes(result, 0|zmq.DONTWAIT)
+	_, err = socket.SendBytes(result, 0|zmq.DONTWAIT)
 	fault.PanicIfError("Submission", err)
 }

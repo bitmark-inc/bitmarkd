@@ -25,6 +25,7 @@ const (
 
 // type to hold a block's digest and its crc64 check code
 type ringBuffer struct {
+	number uint64             // block number
 	crc    uint64             // CRC64_ECMA(block_number, complete_block_bytes)
 	digest blockdigest.Digest // header digest
 }
@@ -77,6 +78,7 @@ func Initialise() error {
 	globalData.ringIndex = 0
 	crc := CRC(globalData.height, block)
 	for i := 0; i < len(globalData.ring); i += 1 {
+		globalData.ring[i].number = globalData.height
 		globalData.ring[i].digest = globalData.previousBlock
 		globalData.ring[i].crc = crc
 	}
@@ -126,6 +128,7 @@ func Initialise() error {
 			}
 			n += 1
 
+			globalData.ring[i].number = header.Number
 			globalData.ring[i].digest = digest
 			globalData.ring[i].crc = CRC(header.Number, item.Value)
 
@@ -175,7 +178,7 @@ func Initialise() error {
 		if i == globalData.ringIndex {
 			p = "->"
 		}
-		globalData.log.Infof("%sring[%02d]: crc: 0x%015x  digest: %v", p, i, globalData.ring[i].crc, globalData.ring[i].digest)
+		globalData.log.Infof("%sring[%02d]: number: %d crc: 0x%015x  digest: %v", p, i, globalData.ring[i].number, globalData.ring[i].crc, globalData.ring[i].digest)
 	}
 
 	// all data initialised
@@ -219,6 +222,43 @@ func GetHeight() uint64 {
 	return height
 }
 
+func DigestForBlock(number uint64) (blockdigest.Digest, error) {
+	globalData.Lock()
+	defer globalData.Unlock()
+
+	// valid block number
+	if number <= genesis.BlockNumber {
+		if mode.IsTesting() {
+			return genesis.TestGenesisDigest, nil
+		}
+		return genesis.LiveGenesisDigest, nil
+	}
+
+	// check if in the cache
+	if number > genesis.BlockNumber && number <= globalData.height {
+		i := globalData.height - number
+		if i < ringSize {
+			j := globalData.ringIndex - 1 - int(i)
+			if j < 0 {
+				j = ringSize - 1
+			}
+			if number != globalData.ring[j].number {
+				fault.Panicf("block.DigestForBlock: ring buffer corrupted block number, actual: %d  expected: %d", globalData.ring[j].number, number)
+			}
+			return globalData.ring[j].digest, nil
+		}
+	}
+
+	// no cache, fetch block and compute digest
+	n := make([]byte, 8)
+	binary.BigEndian.PutUint64(n, number)
+	packed := storage.Pool.Blocks.Get(n) // ***** FIX THIS: possible optimisation is to store the block hashes in a separate index
+	if nil == packed {
+		return blockdigest.Digest{}, fault.ErrBlockNotFound
+	}
+	return blockrecord.PackedHeader(packed).Digest(), nil
+}
+
 // store the block and update block data
 func Store(header *blockrecord.Header, digest blockdigest.Digest, packedBlock []byte) {
 	globalData.Lock()
@@ -233,6 +273,7 @@ func Store(header *blockrecord.Header, digest blockdigest.Digest, packedBlock []
 	globalData.height = header.Number
 
 	i := globalData.ringIndex
+	globalData.ring[i].number = header.Number
 	globalData.ring[i].digest = digest
 	globalData.ring[i].crc = CRC(header.Number, packedBlock)
 	i = i + 1

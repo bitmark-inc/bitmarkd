@@ -60,7 +60,7 @@ func submitForwarder() error {
 }
 
 // submitter thread
-func Submitter(i int, connectTo string, serverPublicKey string, publicKey string, privateKey string, log *logger.L) error {
+func Submitter(i int, connectTo string, v6 bool, serverPublicKey []byte, publicKey []byte, privateKey []byte, log *logger.L) error {
 
 	log.Info("starting…")
 
@@ -90,18 +90,18 @@ func Submitter(i int, connectTo string, serverPublicKey string, publicKey string
 
 	// set encryption
 	rpc.SetCurveServer(0)
-	rpc.SetCurvePublickey(publicKey)
-	rpc.SetCurveSecretkey(privateKey)
-	rpc.SetCurveServerkey(serverPublicKey)
-	log.Infof("*client public:  %q", publicKey)
-	log.Infof("*client private: %q", privateKey)
-	log.Infof("*server public:  %q", serverPublicKey)
+	rpc.SetCurvePublickey(string(publicKey))
+	rpc.SetCurveSecretkey(string(privateKey))
+	rpc.SetCurveServerkey(string(serverPublicKey))
+	log.Infof("*client public:  %x", publicKey)
+	log.Tracef("*client private: %x", privateKey)
+	log.Infof("*server public:  %x", serverPublicKey)
 
 	// just use public key for identity
-	rpc.SetIdentity(publicKey)
+	rpc.SetIdentity(string(publicKey))
 
 	// // basic socket options
-	// //socket.SetIpv6(true)  // ***** FIX THIS find fix for FreeBSD libzmq4 ****
+	rpc.SetIpv6(v6)
 	// socket.SetSndtimeo(SEND_TIMEOUT)
 	// socket.SetLinger(LINGER_TIME)
 	// socket.SetRouterMandatory(0)   // discard unroutable packets

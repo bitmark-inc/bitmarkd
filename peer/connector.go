@@ -6,9 +6,10 @@ package peer
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
+	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
@@ -16,12 +17,15 @@ import (
 )
 
 const (
-	sendInterval = 30 * time.Second
+	sendInterval   = 10 * time.Second
+	reqTimeout     = 100 * time.Millisecond
+	dynamicClients = 9 // maximum dynamic clients to connect to
 )
 
 type connector struct {
-	log    *logger.L
-	socket *zmq.Socket
+	log     *logger.L
+	static  bool
+	clients []*zmqutil.Client
 }
 
 // initialise the connector
@@ -36,69 +40,80 @@ func (conn *connector) initialise(configuration *Configuration) error {
 	log.Info("initialising…")
 
 	// read the keys
-	privateKey, err := zmqutil.ReadKeyFile(configuration.PrivateKey)
+	privateKey, err := zmqutil.ReadPrivateKeyFile(configuration.PrivateKey)
 	if nil != err {
 		return err
 	}
-	publicKey, err := zmqutil.ReadKeyFile(configuration.PublicKey)
+	publicKey, err := zmqutil.ReadPublicKeyFile(configuration.PublicKey)
 	if nil != err {
 		return err
 	}
+	log.Tracef("client public:  %x", publicKey)
+	log.Tracef("client private: %x", privateKey)
 
-	socket, err := zmq.NewSocket(zmq.REQ)
-	if nil != err {
-		return err
+	errX := error(nil)
+
+	staticClients := len(configuration.Connect)
+	if 0 == staticClients {
+		conn.clients = make([]*zmqutil.Client, dynamicClients)
+		conn.static = false
+		for i := 0; i < dynamicClients; i += 1 {
+			client, err := zmqutil.NewClient(zmq.REQ, privateKey, publicKey, reqTimeout)
+			if nil != err {
+				log.Errorf("client[%d]  error: %v", i, err)
+				errX = err
+				goto fail
+			}
+
+			conn.clients[i] = client
+		}
+		return nil
+	} else {
+		conn.clients = make([]*zmqutil.Client, staticClients)
+		conn.static = true
 	}
-	conn.socket = socket
 
-	// set up as client
-	socket.SetCurveServer(0)
-	socket.SetCurvePublickey(publicKey)
-	socket.SetCurveSecretkey(privateKey)
-	log.Tracef("client public:  %q", publicKey)
-	log.Tracef("client private: %q", privateKey)
-
-	socket.SetIdentity(publicKey) // just use public key for identity
-
-	// ***** FIX THIS ****
-	// maybe need to change above line to specific keys later
-	//   e.g. zmq.AuthCurveAdd(serverPublicKey, client1PublicKey)
-	//        zmq.AuthCurveAdd(serverPublicKey, client2PublicKey)
-	// perhaps as part of ConnectTo
-
-	// // basic socket options
-	// socket.SetIpv6(true) // ***** FIX THIS find fix for FreeBSD libzmq4 ****
-	// socket.SetSndtimeo(SEND_TIMEOUT)
-	// socket.SetLinger(LINGER_TIME)
-	// socket.SetRouterMandatory(0)   // discard unroutable packets
-	// socket.SetRouterHandover(true) // allow quick reconnect for a given public key
-	// socket.SetImmediate(false)     // queue messages sent to disconnected peer
-
-	// ***** FIX THIS: may not be right
-	// ***** FIX THIS: maybe need seaparate socket for each connection
-
+	// initially connect all static sockets
 	for i, c := range configuration.Connect {
 		address := c.Address
-		serverPublicKey := c.PublicKey
-		socket.SetCurveServerkey(serverPublicKey)
-		log.Tracef("server public: %q", serverPublicKey)
-
-		connectTo, err := util.CanonicalIPandPort("tcp://", address)
+		serverPublicKey, err := hex.DecodeString(c.PublicKey)
 		if nil != err {
-			log.Errorf("connector[%d]=%q  error: %v", i, address, err)
-			socket.Close()
-			return err
+			log.Errorf("client[%d]=public: %q  error: %v", i, c.PublicKey, err)
+			errX = err
+			goto fail
 		}
 
-		err = socket.Connect(connectTo)
+		client, err := zmqutil.NewClient(zmq.REQ, privateKey, publicKey, reqTimeout)
+		if nil != err {
+			log.Errorf("client[%d]=%q  error: %v", i, address, err)
+			errX = err
+			goto fail
+		}
+
+		conn.clients[i] = client
+
+		err = client.Connect(address, serverPublicKey)
 		if nil != err {
 			log.Errorf("connect[%d]=%q  error: %v", i, address, err)
-			socket.Close()
-			return err
+			errX = err
+			goto fail
 		}
-		log.Infof("connect to: %q", address)
+		log.Infof("public key: %x  at: %q", serverPublicKey, address)
 	}
+
 	return nil
+
+	// error handling
+fail:
+	zmqutil.CloseClients(conn.clients)
+	return errX
+}
+
+// request a new connection
+//
+// the oldest connection will be disconnected and replaced by this new
+// connection
+func (conn *connector) Connect(to string) {
 }
 
 // various RPC calls to upstream connections
@@ -108,6 +123,8 @@ func (conn *connector) Run(args interface{}, shutdown <-chan struct{}) {
 
 	log.Info("starting…")
 
+	v4 := true
+	n := 0
 loop:
 	for {
 		// wait for shutdown
@@ -117,46 +134,64 @@ loop:
 		case <-shutdown:
 			break loop
 		case <-time.After(sendInterval):
-			conn.process()
+			if v4 {
+				conn.process(conn.clients[0])
+			} else {
+				conn.process(conn.clients[1])
+			}
+
+			n += 1
+			if n >= 4 {
+				n = 0
+				v4 = !v4
+			}
 		}
 	}
-	conn.socket.Close()
+	zmqutil.CloseClients(conn.clients)
 }
 
 var n uint64 = 0
 
-// process the connect and return response to prooferd
-func (conn *connector) process() {
+// process the connect and return response
+func (conn *connector) process(client *zmqutil.Client) {
 	log := conn.log
 
-	fn := "H"
+	fn := "I"
 	parameter := []byte{}
 
 	n += 1
 	switch n {
-	case 1, 2, 3:
-		log.Info("send block request")
+	case 1, 2, 3, 4, 5:
+		log.Infof("send block request: %d", n)
 		parameter = make([]byte, 8)
 		binary.BigEndian.PutUint64(parameter, n)
 		fn = "B"
-	case 4:
-		log.Info("info request")
-		fn = "I"
+	case 6, 7, 8, 9, 10, 11:
+		m := n - 5 // make as 1...
+		log.Infof("send block hash request: %d", m)
+		parameter = make([]byte, 8)
+		binary.BigEndian.PutUint64(parameter, m)
+		fn = "H"
 	default:
 		n = 0
-		log.Info("send blockHeight")
+		log.Info("info request")
+		fn = "I"
 	}
 
-	_, err := conn.socket.Send(fn, zmq.SNDMORE)
-	fault.PanicIfError("Connector", err)
-	_, err = conn.socket.SendBytes(parameter, 0)
-	fault.PanicIfError("Connector", err)
+	err := client.Send(fn, parameter)
+	//fault.PanicIfError("Connector", err)
+	if nil != err {
+		log.Errorf("send error: %v", err)
+		client.Reconnect()
+		return
+	}
 
 	log.Info("wait response")
 
-	data, err := conn.socket.RecvMessageBytes(0)
+	data, err := client.Receive(0)
 	if nil != err {
 		log.Errorf("receive error: %v", err)
+		client.Reconnect()
 		return
 	}
 
@@ -164,13 +199,18 @@ func (conn *connector) process() {
 	case "B":
 		log.Infof("received block: %x", data[1])
 	case "E":
-		log.Infof("received error: %q", data[1])
+		log.Errorf("received error: %q", data[1])
 	case "H":
-		height := uint64(0)
-		if 8 == len(data[1]) {
-			height = binary.BigEndian.Uint64(data[1])
+		d := blockdigest.Digest{}
+		if blockdigest.Length == len(data[1]) {
+			err := blockdigest.DigestFromBytes(&d, data[1])
+			if nil != err {
+				log.Errorf("digest decode error: %v", err)
+			} else {
+				log.Infof("received block digest: %v", d)
+			}
 		}
-		log.Infof("received block height: %x", height)
+
 	case "I":
 		var info serverInfo
 		err = json.Unmarshal(data[1], &info)
