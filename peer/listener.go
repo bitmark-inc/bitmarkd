@@ -11,6 +11,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/storage"
+	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/version"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
@@ -39,36 +40,30 @@ type serverInfo struct {
 }
 
 // initialise the listener
-func (listen *listener) initialise(configuration *Configuration) error {
+func (lstn *listener) initialise(privateKey []byte, publicKey []byte, listen []string) error {
 
 	log := logger.New("listener")
 	if nil == log {
 		return fault.ErrInvalidLoggerChannel
 	}
-	listen.log = log
+	lstn.log = log
 
 	log.Info("initialising…")
 
-	// read the keys
-	privateKey, err := zmqutil.ReadPrivateKeyFile(configuration.PrivateKey)
+	c, err := util.NewConnections(listen)
 	if nil != err {
+		log.Errorf("ip and port error: %v", err)
 		return err
 	}
-	publicKey, err := zmqutil.ReadPublicKeyFile(configuration.PublicKey)
-	if nil != err {
-		return err
-	}
-	log.Tracef("server public:  %x", publicKey)
-	log.Tracef("server private: %x", privateKey)
 
 	// signalling channel
-	listen.push, listen.pull, err = zmqutil.NewSignalPair(listenerSignal)
+	lstn.push, lstn.pull, err = zmqutil.NewSignalPair(listenerSignal)
 	if nil != err {
 		return err
 	}
 
 	// allocate IPv4 and IPv6 sockets
-	listen.socket4, listen.socket6, err = zmqutil.NewBind(log, zmq.REP, listenerZapDomain, privateKey, publicKey, configuration.Listen)
+	lstn.socket4, lstn.socket6, err = zmqutil.NewBind(log, zmq.REP, listenerZapDomain, privateKey, publicKey, c)
 	if nil != err {
 		log.Errorf("bind error: %v", err)
 		return err
@@ -78,56 +73,56 @@ func (listen *listener) initialise(configuration *Configuration) error {
 }
 
 // wait for incoming requests, process them and reply
-func (listen *listener) Run(args interface{}, shutdown <-chan struct{}) {
+func (lstn *listener) Run(args interface{}, shutdown <-chan struct{}) {
 
-	log := listen.log
+	log := lstn.log
 
 	log.Info("starting…")
 
 	go func() {
 		poller := zmq.NewPoller()
-		if nil != listen.socket4 {
-			poller.Add(listen.socket4, zmq.POLLIN)
+		if nil != lstn.socket4 {
+			poller.Add(lstn.socket4, zmq.POLLIN)
 		}
-		if nil != listen.socket6 {
-			poller.Add(listen.socket6, zmq.POLLIN)
+		if nil != lstn.socket6 {
+			poller.Add(lstn.socket6, zmq.POLLIN)
 		}
-		poller.Add(listen.pull, zmq.POLLIN)
+		poller.Add(lstn.pull, zmq.POLLIN)
 	loop:
 		for {
 			sockets, _ := poller.Poll(-1)
 			for _, socket := range sockets {
 				switch s := socket.Socket; s {
-				case listen.socket4:
-					listen.process(listen.socket4)
-				case listen.socket6:
-					listen.process(listen.socket6)
-				case listen.pull:
+				case lstn.socket4:
+					lstn.process(lstn.socket4)
+				case lstn.socket6:
+					lstn.process(lstn.socket6)
+				case lstn.pull:
 					s.Recv(0)
 					break loop
 				}
 			}
 		}
-		listen.pull.Close()
-		if nil != listen.socket4 {
-			listen.socket4.Close()
+		lstn.pull.Close()
+		if nil != lstn.socket4 {
+			lstn.socket4.Close()
 		}
-		if nil != listen.socket6 {
-			listen.socket6.Close()
+		if nil != lstn.socket6 {
+			lstn.socket6.Close()
 		}
 	}()
 
 	// wait for shutdown
 	log.Info("waiting…")
 	<-shutdown
-	listen.push.SendMessage("stop")
-	listen.push.Close()
+	lstn.push.SendMessage("stop")
+	lstn.push.Close()
 }
 
 // process the listen and return response to client
-func (listen *listener) process(socket *zmq.Socket) {
+func (lstn *listener) process(socket *zmq.Socket) {
 
-	log := listen.log
+	log := lstn.log
 
 	log.Info("process starting…")
 

@@ -19,6 +19,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
+	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
@@ -92,8 +93,11 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 	log.Tracef("server public:  %x", publicKey)
 	log.Tracef("server private: %x", privateKey)
 
+	// create connections
+	c, err := util.NewConnections(configuration.Publish)
+
 	// allocate IPv4 and IPv6 sockets
-	pub.socket4, pub.socket6, err = zmqutil.NewBind(log, zmq.PUB, publisherZapDomain, privateKey, publicKey, configuration.Publish)
+	pub.socket4, pub.socket6, err = zmqutil.NewBind(log, zmq.PUB, publisherZapDomain, privateKey, publicKey, c)
 	if nil != err {
 		log.Errorf("bind error: %v", err)
 		return err

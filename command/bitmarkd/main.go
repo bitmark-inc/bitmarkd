@@ -17,6 +17,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/proof"
 	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/storage"
+	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/version"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/exitwithstatus"
@@ -236,9 +237,16 @@ func main() {
 
 		switch name {
 		case "rpc":
+			rpcs := []byte{}
 			for _, address := range masterConfiguration.ClientRPC.Announce {
-				announce.AddRPC(address, fingerprint)
+				c, err := util.NewConnection(address)
+				if nil != err {
+					log.Criticalf("invalid %s listen announce: %q  error: %v", name, address, err)
+					exitwithstatus.Message("invalid %s listen announce: %q  error: %v", name, address, err)
+				}
+				rpcs = append(rpcs, c.Pack()...)
 			}
+			announce.SetRPC(fingerprint, rpcs)
 		}
 	}
 

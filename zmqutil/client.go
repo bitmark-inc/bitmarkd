@@ -51,18 +51,15 @@ func NewClient(socketType zmq.Type, privateKey []byte, publicKey []byte, timeout
 }
 
 // disconnect old address and connect to new
-func (client *Client) Connect(address string, serverPublicKey []byte) error {
+func (client *Client) Connect(conn *util.Connection, serverPublicKey []byte) error {
 
 	client.socket.SetCurveServerkey(string(serverPublicKey))
 
-	connectTo, v6, err := util.CanonicalIPandPort("tcp://", address)
-	if nil != err {
-		return err
-	}
+	connectTo, v6 := conn.CanonicalIPandPort("tcp://")
 
 	// if already connected, disconnect first
 	if "" != client.address {
-		err = client.socket.Disconnect(client.address)
+		err := client.socket.Disconnect(client.address)
 		if nil != err {
 			return err
 		}
@@ -70,7 +67,7 @@ func (client *Client) Connect(address string, serverPublicKey []byte) error {
 	client.address = ""
 
 	// set IPv6 state before connect
-	err = client.socket.SetIpv6(v6)
+	err := client.socket.SetIpv6(v6)
 	if nil != err {
 		return err
 	}

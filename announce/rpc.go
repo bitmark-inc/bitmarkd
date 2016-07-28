@@ -4,17 +4,14 @@
 
 package announce
 
-import ()
-
-type connection struct {
-	ip   net.IP
-	port int
-}
+import (
+	"github.com/bitmark-inc/bitmarkd/fault"
+)
 
 type fingerprint [32]byte
 
 type rpcEntry struct {
-	address     []connection
+	address     []byte
 	fingerprint fingerprint
 }
 
@@ -30,13 +27,28 @@ var rpcQueue [rpcQueueSize]*rpcEntry
 // how to have timestamp order?
 // linear search?
 
-// add an RPC listener
-func AddRPC(address string, fingerprint [32]byte) {
+// set this node's rpc announcement data
+func SetRPC(fingerprint [32]byte, rpcs []byte) error {
 	globalData.Lock()
-	e := &rpcEntry{
-		address:     []byte(address),
-		fingerprint: fingerprint,
+	defer globalData.Unlock()
+
+	if globalData.rpcsSet {
+		return fault.ErrAlreadyInitialised
 	}
-	globalData.rpcs = append(globalData.rpcs, e)
+	globalData.fingerprint = fingerprint
+	globalData.rpcs = rpcs
+	globalData.rpcsSet = true
+
+	return nil
+}
+
+// add an RPC listener
+func AddRPC(fingerprint [32]byte, rpcs []byte) {
+	globalData.Lock()
+	// e := &rpcEntry{
+	// 	//address:     address, // ***** FIX THIS: ?
+	// 	fingerprint: fingerprint,
+	// }
+	// //globalData.rpcs = append(globalData.rpcs, e) // ***** FIX THIS: ?
 	globalData.Unlock()
 }

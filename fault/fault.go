@@ -21,8 +21,7 @@ type RecordError GenericError
 // common errors - keep in alphabetic order
 var (
 	ErrAlreadyInitialised = ExistsError("already initialised")
-
-	ErrAssetNotFound = NotFoundError("asset not found")
+	ErrAssetNotFound      = NotFoundError("asset not found")
 	//ErrBlockHashDoesNotMeetDifficulty = InvalidError("block hash does not meet difficulty")
 	ErrBlockNotFound                = NotFoundError("block not found")
 	ErrCannotDecodeAccount          = RecordError("cannot decode account")
@@ -52,8 +51,8 @@ var (
 	ErrInvalidPublicKey      = InvalidError("invalid public key")
 	ErrInvalidKeyLength      = InvalidError("invalid key length")
 	ErrInvalidKeyType        = InvalidError("invalid key type")
-	//ErrInvalidLength                  = InvalidError("invalid length")
-	ErrInvalidLoggerChannel = InvalidError("invalid logger channel")
+	ErrInvalidLength         = InvalidError("invalid length")
+	ErrInvalidLoggerChannel  = InvalidError("invalid logger channel")
 
 	ErrInvalidPortNumber    = InvalidError("invalid port number")
 	ErrInvalidNonce         = InvalidError("invalid nonce")

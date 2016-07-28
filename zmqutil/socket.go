@@ -45,21 +45,16 @@ func NewSignalPair(signal string) (*zmq.Socket, *zmq.Socket, error) {
 
 // bind a list of addresses
 // creates up to 2 sockets for separate IPv4 and IPv6 traffic
-func NewBind(log *logger.L, socketType zmq.Type, zapDomain string, privateKey []byte, publicKey []byte, listen []string) (*zmq.Socket, *zmq.Socket, error) {
+func NewBind(log *logger.L, socketType zmq.Type, zapDomain string, privateKey []byte, publicKey []byte, listen []*util.Connection) (*zmq.Socket, *zmq.Socket, error) {
 
 	socket4 := (*zmq.Socket)(nil) // IPv4 traffic
 	socket6 := (*zmq.Socket)(nil) // IPv6 traffic
 
-	errX := error(nil)
+	err := error(nil)
 
 	// allocate IPv4 and IPv6 sockets
 	for i, address := range listen {
-		bindTo, v6, err := util.CanonicalIPandPort("tcp://", address)
-		if nil != err {
-			log.Errorf("invalid address[%d]: %q  error: %v", i, address, err)
-			errX = err
-			goto fail
-		}
+		bindTo, v6 := address.CanonicalIPandPort("tcp://")
 		if v6 {
 			if nil == socket6 {
 				socket6, err = NewServerSocket(socketType, zapDomain, privateKey, publicKey, v6)
@@ -70,7 +65,6 @@ func NewBind(log *logger.L, socketType zmq.Type, zapDomain string, privateKey []
 			}
 		}
 		if nil != err {
-			errX = err
 			goto fail
 		}
 
@@ -81,7 +75,6 @@ func NewBind(log *logger.L, socketType zmq.Type, zapDomain string, privateKey []
 		}
 		if nil != err {
 			log.Errorf("cannot bind[%d]: %q  error: %v", i, bindTo, err)
-			errX = err
 			goto fail
 		}
 		log.Infof("bind[%d]: %q  IPv6: %v", i, address, v6)
@@ -97,7 +90,7 @@ fail:
 	if nil != socket6 {
 		socket6.Close()
 	}
-	return nil, nil, errX
+	return nil, nil, err
 }
 
 // create a socket suitable for a server side connection

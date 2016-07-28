@@ -5,49 +5,27 @@
 package announce
 
 import (
-	"net"
+	"github.com/bitmark-inc/bitmarkd/fault"
 )
 
-type connection struct {
-	ip   net.IP
-	port uint16
-}
+// type peerEntry struct {
+// 	publicKey  []byte
+// 	broadcasts []byte
+// 	listen     []byte
+// }
 
-type peerEntry struct {
-	subscribe []connection
-	connect   []connection
-}
-
-type peers map[publicKey]peerEntry
-
-type broadcastEntry struct {
-	address   []byte //[]connection
-	publicKey []byte
-}
-
-// add an broadcaster
-func AddBroadcast(address string, publicKey []byte) {
+// set this node's peer announcement data
+func SetPeer(publicKey []byte, broadcasts []byte, listeners []byte) error {
 	globalData.Lock()
-	e := &broadcastEntry{
-		address:   []byte(address),
-		publicKey: publicKey,
-	}
-	globalData.broadcasts = append(globalData.broadcasts, e)
-	globalData.Unlock()
-}
+	defer globalData.Unlock()
 
-type listenEntry struct {
-	address   []byte
-	publicKey []byte
-}
-
-// add an listener
-func AddListen(address string, publicKey []byte) {
-	globalData.Lock()
-	e := &listenEntry{
-		address:   []byte(address),
-		publicKey: publicKey,
+	if globalData.peerSet {
+		return fault.ErrAlreadyInitialised
 	}
-	globalData.listeners = append(globalData.listeners, e)
-	globalData.Unlock()
+	globalData.publicKey = publicKey
+	globalData.broadcasts = broadcasts
+	globalData.listeners = listeners
+	globalData.peerSet = true
+
+	return nil
 }

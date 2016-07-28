@@ -26,10 +26,14 @@ type announcerData struct {
 	// logger
 	log *logger.L
 
-	// this node's annoucements
-	rpcs       []*rpcEntry
-	broadcasts []*broadcastEntry
-	listeners  []*listenEntry
+	// this node's packed annoucements
+	publicKey   []byte
+	broadcasts  []byte
+	listeners   []byte
+	fingerprint [32]byte
+	rpcs        []byte
+	peerSet     bool
+	rpcsSet     bool
 
 	ann announcer
 
@@ -60,7 +64,10 @@ func Initialise() error {
 	}
 	globalData.log.Info("starting…")
 
-	texts, err := net.LookupTXT("nodes.test.bitmark.com")
+	globalData.peerSet = false
+	globalData.rpcsSet = false
+
+	texts, err := net.LookupTXT("node.test.bitmark.com")
 	if nil != err {
 		return err
 	}

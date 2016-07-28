@@ -15,7 +15,6 @@ import (
 )
 
 // hardwired connections
-// public key in Z85 (ZeroMQ Base-85 Encoding) see: http://rfc.zeromq.org/spec:32//
 // this is read from a libucl configuration file
 type Connection struct {
 	PublicKey string `libucl:"public_key"`
@@ -28,7 +27,6 @@ type Announce struct {
 	Listen    []string `libucl:"listen"`
 }
 
-// server identification in Z85 (ZeroMQ Base-85 Encoding) see: http://rfc.zeromq.org/spec:32
 // a block of configuration data
 // this is read from a libucl configuration file
 type Configuration struct {
@@ -49,10 +47,10 @@ type proofData struct {
 	// logger
 	log *logger.L
 
-	brd    broadcaster // for broadcasting blocks, transactions etc.
-	listen listener    // for RPC responses
-	conn   connector   // for RPC requests
-	subs   subscriber  // for subscriptions
+	brdc broadcaster // for broadcasting blocks, transactions etc.
+	lstn listener    // for RPC responses
+	conn connector   // for RPC requests
+	sbsc subscriber  // for subscriptions
 
 	// for background
 	background *background.T
@@ -81,16 +79,30 @@ func Initialise(configuration *Configuration) error {
 	}
 	globalData.log.Info("starting…")
 
-	if err := globalData.brd.initialise(configuration); nil != err {
+	// read the keys
+	privateKey, err := zmqutil.ReadPrivateKeyFile(configuration.PrivateKey)
+	if nil != err {
+		globalData.log.Errorf("read private key file: %q  error: %v", configuration.PrivateKey, err)
 		return err
 	}
-	if err := globalData.listen.initialise(configuration); nil != err {
+	publicKey, err := zmqutil.ReadPublicKeyFile(configuration.PublicKey)
+	if nil != err {
+		globalData.log.Errorf("read public key file: %q  error: %v", configuration.PublicKey, err)
 		return err
 	}
-	if err := globalData.conn.initialise(configuration); nil != err {
+	globalData.log.Tracef("peer private key: %q", privateKey)
+	globalData.log.Tracef("peer public key:  %q", publicKey)
+
+	if err := globalData.brdc.initialise(privateKey, publicKey, configuration.Broadcast); nil != err {
 		return err
 	}
-	if err := globalData.subs.initialise(configuration); nil != err {
+	if err := globalData.lstn.initialise(privateKey, publicKey, configuration.Listen); nil != err {
+		return err
+	}
+	if err := globalData.conn.initialise(privateKey, publicKey, configuration.Connect); nil != err {
+		return err
+	}
+	if err := globalData.sbsc.initialise(privateKey, publicKey, configuration.Subscribe); nil != err {
 		return err
 	}
 
@@ -101,36 +113,36 @@ func Initialise(configuration *Configuration) error {
 	globalData.log.Info("start background…")
 
 	var processes = background.Processes{
-		&globalData.brd,
-		&globalData.listen,
+		&globalData.brdc,
+		&globalData.lstn,
 		&globalData.conn,
-		&globalData.subs,
+		&globalData.sbsc,
 	}
 
 	globalData.background = background.Start(processes, globalData.log)
 
-	publicKey, err := zmqutil.ReadPublicKeyFile(configuration.PublicKey)
-	if nil != err {
-		globalData.log.Errorf("read public key file: %q  error: %v", configuration.PublicKey, err)
-		return err
-	}
+	b := make([]byte, 100)
+	l := make([]byte, 100)
 
 	for i, address := range configuration.Announce.Broadcast {
-		a, _, err := util.CanonicalIPandPort("", address)
+		c, err := util.NewConnection(address)
 		if nil != err {
-			globalData.log.Errorf("broadcast[%d]=%q  error: %v", i, address, err)
+			globalData.log.Errorf("announce.broadcast[%d]=%q  error: %v", i, address, err)
 			return err
 		}
-		announce.AddBroadcast(a, publicKey)
+		b = append(b, c.Pack()...)
 	}
 
 	for i, address := range configuration.Announce.Listen {
-		a, _, err := util.CanonicalIPandPort("", address)
+		c, err := util.NewConnection(address)
 		if nil != err {
-			globalData.log.Errorf("listen[%d]=%q  error: %v", i, address, err)
+			globalData.log.Errorf("announce.listen[%d]=%q  error: %v", i, address, err)
 			return err
 		}
-		announce.AddListen(a, publicKey)
+		l = append(l, c.Pack()...)
+	}
+	if err := announce.SetPeer(publicKey, b, l); nil != err {
+		return err
 	}
 
 	return nil

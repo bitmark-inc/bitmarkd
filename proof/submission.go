@@ -7,6 +7,7 @@ package proof
 import (
 	"encoding/json"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
@@ -54,8 +55,11 @@ func (sub *submission) initialise(configuration *Configuration) error {
 		return err
 	}
 
+	// create connections
+	c, err := util.NewConnections(configuration.Submit)
+
 	// allocate IPv4 and IPv6 sockets
-	sub.socket4, sub.socket6, err = zmqutil.NewBind(log, zmq.REP, submissionZapDomain, privateKey, publicKey, configuration.Submit)
+	sub.socket4, sub.socket6, err = zmqutil.NewBind(log, zmq.REP, submissionZapDomain, privateKey, publicKey, c)
 	if nil != err {
 		log.Errorf("bind error: %v", err)
 		return err

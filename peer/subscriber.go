@@ -7,6 +7,7 @@ package peer
 import (
 	"encoding/hex"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
@@ -25,40 +26,29 @@ type subscriber struct {
 }
 
 // initialise the subscriber
-func (subscribe *subscriber) initialise(configuration *Configuration) error {
+func (sbsc *subscriber) initialise(privateKey []byte, publicKey []byte, subscribe []Connection) error {
 
 	log := logger.New("subscriber")
 	if nil == log {
 		return fault.ErrInvalidLoggerChannel
 	}
-	subscribe.log = log
+	sbsc.log = log
 
 	log.Info("initialising…")
-
-	// read the keys
-	privateKey, err := zmqutil.ReadPrivateKeyFile(configuration.PrivateKey)
-	if nil != err {
-		return err
-	}
-	publicKey, err := zmqutil.ReadPublicKeyFile(configuration.PublicKey)
-	if nil != err {
-		return err
-	}
-	log.Tracef("server public:  %q", publicKey)
-	log.Tracef("server private: %q", privateKey)
+	err := error(nil)
 
 	// signalling channel
-	subscribe.push, subscribe.pull, err = zmqutil.NewSignalPair(subscriberSignal)
+	sbsc.push, sbsc.pull, err = zmqutil.NewSignalPair(subscriberSignal)
 	if nil != err {
 		return err
 	}
 
 	errX := error(nil)
 
-	staticClients := len(configuration.Connect)
+	staticClients := len(subscribe)
 	if 0 == staticClients {
-		subscribe.clients = make([]*zmqutil.Client, dynamicClients)
-		subscribe.static = false
+		sbsc.clients = make([]*zmqutil.Client, dynamicClients)
+		sbsc.static = false
 		for i := 0; i < dynamicClients; i += 1 {
 			client, err := zmqutil.NewClient(zmq.REQ, privateKey, publicKey, reqTimeout)
 			if nil != err {
@@ -67,17 +57,22 @@ func (subscribe *subscriber) initialise(configuration *Configuration) error {
 				goto fail
 			}
 
-			subscribe.clients[i] = client
+			sbsc.clients[i] = client
 		}
 		return nil
 	} else {
-		subscribe.clients = make([]*zmqutil.Client, staticClients)
-		subscribe.static = true
+		sbsc.clients = make([]*zmqutil.Client, staticClients)
+		sbsc.static = true
 	}
 
 	// initially connect all static sockets
-	for i, c := range configuration.Subscribe {
-		address := c.Address
+	for i, c := range subscribe {
+		address, err := util.NewConnection(c.Address)
+		if nil != err {
+			log.Errorf("client[%d]=address: %q  error: %v", i, c.Address, err)
+			errX = err
+			goto fail
+		}
 		serverPublicKey, err := hex.DecodeString(c.PublicKey)
 		if nil != err {
 			log.Errorf("client[%d]=public: %q  error: %v", i, c.PublicKey, err)
@@ -92,7 +87,7 @@ func (subscribe *subscriber) initialise(configuration *Configuration) error {
 			goto fail
 		}
 
-		subscribe.clients[i] = client
+		sbsc.clients[i] = client
 
 		err = client.Connect(address, serverPublicKey)
 		if nil != err {
@@ -107,34 +102,34 @@ func (subscribe *subscriber) initialise(configuration *Configuration) error {
 
 	// error handling
 fail:
-	zmqutil.CloseClients(subscribe.clients)
+	zmqutil.CloseClients(sbsc.clients)
 	return errX
 }
 
 // wait for new blocks or new payment items
 // to ensure the queue integrity as heap is not thread-safe
-func (subscribe *subscriber) Run(args interface{}, shutdown <-chan struct{}) {
+func (sbsc *subscriber) Run(args interface{}, shutdown <-chan struct{}) {
 
-	log := subscribe.log
+	log := sbsc.log
 
 	log.Info("starting…")
 
 	go func() {
 		poller := zmq.NewPoller()
-		for _, c := range subscribe.clients {
+		for _, c := range sbsc.clients {
 			if nil != c {
 				c.Add(poller, zmq.POLLIN)
 				// poller.Add(c.Socket(), zmq.POLLIN) // ***** FIX THIS: socket?
 			}
 		}
-		poller.Add(subscribe.pull, zmq.POLLIN)
+		poller.Add(sbsc.pull, zmq.POLLIN)
 	loop:
 		for {
 			log.Info("waiting…")
 			sockets, _ := poller.Poll(-1)
 			for _, socket := range sockets {
 				switch s := socket.Socket; s {
-				case subscribe.pull:
+				case sbsc.pull:
 					s.Recv(0)
 					break loop
 				default:
@@ -144,25 +139,25 @@ func (subscribe *subscriber) Run(args interface{}, shutdown <-chan struct{}) {
 						log.Errorf("receive error: %v", err)
 
 					} else {
-						subscribe.process(data)
+						sbsc.process(data)
 					}
 				}
 			}
 		}
-		subscribe.pull.Close()
-		zmqutil.CloseClients(subscribe.clients)
+		sbsc.pull.Close()
+		zmqutil.CloseClients(sbsc.clients)
 	}()
 
 	// wait for shutdown
 	<-shutdown
-	subscribe.push.SendMessage("stop")
-	subscribe.push.Close()
+	sbsc.push.SendMessage("stop")
+	sbsc.push.Close()
 }
 
 // process the received subscription
-func (subscribe *subscriber) process(data [][]byte) {
+func (sbsc *subscriber) process(data [][]byte) {
 
-	log := subscribe.log
+	log := sbsc.log
 	log.Info("incoming message")
 
 	switch string(data[0]) {

@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
@@ -29,7 +30,7 @@ type connector struct {
 }
 
 // initialise the connector
-func (conn *connector) initialise(configuration *Configuration) error {
+func (conn *connector) initialise(privateKey []byte, publicKey []byte, connect []Connection) error {
 
 	log := logger.New("connector")
 	if nil == log {
@@ -39,21 +40,9 @@ func (conn *connector) initialise(configuration *Configuration) error {
 
 	log.Info("initialising…")
 
-	// read the keys
-	privateKey, err := zmqutil.ReadPrivateKeyFile(configuration.PrivateKey)
-	if nil != err {
-		return err
-	}
-	publicKey, err := zmqutil.ReadPublicKeyFile(configuration.PublicKey)
-	if nil != err {
-		return err
-	}
-	log.Tracef("client public:  %x", publicKey)
-	log.Tracef("client private: %x", privateKey)
-
 	errX := error(nil)
 
-	staticClients := len(configuration.Connect)
+	staticClients := len(connect)
 	if 0 == staticClients {
 		conn.clients = make([]*zmqutil.Client, dynamicClients)
 		conn.static = false
@@ -74,8 +63,13 @@ func (conn *connector) initialise(configuration *Configuration) error {
 	}
 
 	// initially connect all static sockets
-	for i, c := range configuration.Connect {
-		address := c.Address
+	for i, c := range connect {
+		address, err := util.NewConnection(c.Address)
+		if nil != err {
+			log.Errorf("client[%d]=address: %q  error: %v", i, c.Address, err)
+			errX = err
+			goto fail
+		}
 		serverPublicKey, err := hex.DecodeString(c.PublicKey)
 		if nil != err {
 			log.Errorf("client[%d]=public: %q  error: %v", i, c.PublicKey, err)

@@ -6,7 +6,7 @@ package announce
 
 import (
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/messagebus"
+	//"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/logger"
 	"time"
 )
@@ -64,9 +64,9 @@ func (ann *announcer) process() {
 	log.Info("process starting…")
 
 	// announce this nodes IP and ports to other peers
-	for _, rpc := range globalData.rpcs {
-		messagebus.Send("rpc", rpc.address, rpc.fingerprint[:])
-	}
+	// for _, rpc := range globalData.rpcs {
+	// 	messagebus.Send("rpc", rpc.fingerprint[:], rpc.address.Pack())
+	// }
 	// for _, broadcast := range globalData.broadcasts {
 	// 	messagebus.SendString("broadcast", broadcast)
 	// }

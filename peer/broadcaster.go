@@ -7,6 +7,7 @@ package peer
 import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
+	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
@@ -23,32 +24,24 @@ type broadcaster struct {
 }
 
 // initialise the broadcaster
-func (brd *broadcaster) initialise(configuration *Configuration) error {
+func (brdc *broadcaster) initialise(privateKey []byte, publicKey []byte, broadcast []string) error {
 
 	log := logger.New("broadcaster")
 	if nil == log {
 		return fault.ErrInvalidLoggerChannel
 	}
-	brd.log = log
+	brdc.log = log
 
 	log.Info("initialising…")
 
-	// read the keys
-	privateKey, err := zmqutil.ReadPrivateKeyFile(configuration.PrivateKey)
+	c, err := util.NewConnections(broadcast)
 	if nil != err {
-		log.Errorf("read private key file: %q  error: %v", configuration.PrivateKey, err)
+		log.Errorf("ip and port error: %v", err)
 		return err
 	}
-	publicKey, err := zmqutil.ReadPublicKeyFile(configuration.PublicKey)
-	if nil != err {
-		log.Errorf("read public key file: %q  error: %v", configuration.PublicKey, err)
-		return err
-	}
-	log.Tracef("server public:  %q", publicKey)
-	log.Tracef("server private: %q", privateKey)
 
 	// allocate IPv4 and IPv6 sockets
-	brd.socket4, brd.socket6, err = zmqutil.NewBind(log, zmq.PUB, broadcasterZapDomain, privateKey, publicKey, configuration.Broadcast)
+	brdc.socket4, brdc.socket6, err = zmqutil.NewBind(log, zmq.PUB, broadcasterZapDomain, privateKey, publicKey, c)
 	if nil != err {
 		log.Errorf("bind error: %v", err)
 		return err
@@ -59,9 +52,9 @@ func (brd *broadcaster) initialise(configuration *Configuration) error {
 
 // wait for new blocks or new payment items
 // to ensure the queue integrity as heap is not thread-safe
-func (brd *broadcaster) Run(args interface{}, shutdown <-chan struct{}) {
+func (brdc *broadcaster) Run(args interface{}, shutdown <-chan struct{}) {
 
-	log := brd.log
+	log := brdc.log
 
 	log.Info("starting…")
 
@@ -74,21 +67,21 @@ loop:
 		case <-shutdown:
 			break loop
 		case item := <-queue:
-			brd.log.Infof("sending: %s  data: %x", item.Command, item.Parameters)
-			brd.process(brd.socket4, &item)
-			brd.process(brd.socket6, &item)
+			brdc.log.Infof("sending: %s  data: %x", item.Command, item.Parameters)
+			brdc.process(brdc.socket4, &item)
+			brdc.process(brdc.socket6, &item)
 		}
 	}
-	if nil != brd.socket4 {
-		brd.socket4.Close()
+	if nil != brdc.socket4 {
+		brdc.socket4.Close()
 	}
-	if nil != brd.socket6 {
-		brd.socket6.Close()
+	if nil != brdc.socket6 {
+		brdc.socket6.Close()
 	}
 }
 
 // process some items into a block and publish it
-func (brd *broadcaster) process(socket *zmq.Socket, item *messagebus.Message) {
+func (brdc *broadcaster) process(socket *zmq.Socket, item *messagebus.Message) {
 	if nil == socket {
 		return
 	}

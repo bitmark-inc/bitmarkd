@@ -179,17 +179,19 @@ func main() {
 			continue
 		}
 
-		blocksAddress, blocksv6, err := util.CanonicalIPandPort("tcp://", remote.Blocks)
+		bc, err := util.NewConnection(remote.Blocks)
 		if nil != err {
 			log.Warnf("client: %d invalid blocks publisher: %q error: %v", i, remote.Blocks, err)
 			continue
 		}
+		blocksAddress, blocksv6 := bc.CanonicalIPandPort("tcp://")
 
-		submitAddress, submitv6, err := util.CanonicalIPandPort("tcp://", remote.Submit)
+		sc, err := util.NewConnection(remote.Submit)
 		if nil != err {
 			log.Warnf("client: %d invalid submit address: %q error: %v", i, remote.Submit, err)
 			continue
 		}
+		submitAddress, submitv6 := sc.CanonicalIPandPort("tcp://")
 
 		log.Infof("client: %d subscribe: %q  submit: %q", i, remote.Blocks, remote.Submit)
 
