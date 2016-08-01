@@ -5,8 +5,10 @@
 package announce
 
 import (
+	"github.com/bitmark-inc/bitmarkd/avl"
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 	"net"
 	"strings"
@@ -34,6 +36,8 @@ type announcerData struct {
 	rpcs        []byte
 	peerSet     bool
 	rpcsSet     bool
+
+	peerTree *avl.Tree
 
 	ann announcer
 
@@ -64,6 +68,8 @@ func Initialise() error {
 	}
 	globalData.log.Info("starting…")
 
+	globalData.peerTree = avl.New()
+
 	globalData.peerSet = false
 	globalData.rpcsSet = false
 
@@ -75,14 +81,25 @@ func Initialise() error {
 	// process DNS entries
 	for i, t := range texts {
 		t = strings.TrimSpace(t)
-		tags, err := parseTag(t)
+		tag, err := parseTag(t)
 		if nil != err {
 			globalData.log.Infof("ignore TXT[%d]: %q  error: %v", i, t, err)
 		} else {
 			globalData.log.Infof("process TXT[%d]: %q", i, t)
-			globalData.log.Infof("result[%d]: %#v", i, tags)
-		}
+			globalData.log.Infof("result[%d]: IPv4: %q  IPv6: %q  rpc: %d  connect: %d  subscribe: %d", i, tag.ipv4, tag.ipv6, tag.rpcPort, tag.connectPort, tag.subscribePort)
+			globalData.log.Infof("result[%d]: peer public key: %x", i, tag.publicKey)
+			globalData.log.Infof("result[%d]: rpc fingerprint: %x", i, tag.certificateFingerprint)
 
+			s1 := util.ConnectionFromIPandPort(tag.ipv4, tag.subscribePort)
+			s2 := util.ConnectionFromIPandPort(tag.ipv6, tag.subscribePort)
+			c1 := util.ConnectionFromIPandPort(tag.ipv4, tag.connectPort)
+			c2 := util.ConnectionFromIPandPort(tag.ipv6, tag.connectPort)
+
+			broadcasts := append(s1.Pack(), s2.Pack()...)
+			listeners := append(c1.Pack(), c2.Pack()...)
+			globalData.log.Infof("result[%d]: broadcasts: %x  listeners: %x", i, broadcasts, listeners)
+			addPeer(tag.publicKey, broadcasts, listeners)
+		}
 	}
 
 	if err := globalData.ann.initialise(); nil != err {

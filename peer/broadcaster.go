@@ -83,6 +83,7 @@ loop:
 // process some items into a block and publish it
 func (brdc *broadcaster) process(socket *zmq.Socket, item *messagebus.Message) {
 	if nil == socket {
+		brdc.log.Warn("no socket")
 		return
 	}
 

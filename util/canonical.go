@@ -59,6 +59,14 @@ func NewConnections(hostPort []string) ([]*Connection, error) {
 	return c, nil
 }
 
+// convert an IP and port to a connection
+func ConnectionFromIPandPort(ip net.IP, port uint16) *Connection {
+	return &Connection{
+		ip:   ip,
+		port: port,
+	}
+}
+
 // make the IP:Port into canonical string
 //
 // examples:

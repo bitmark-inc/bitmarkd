@@ -18,9 +18,9 @@ const (
 type tagline struct {
 	ipv4                   net.IP
 	ipv6                   net.IP
-	rpcPort                int
-	subscribePort          int
-	connectPort            int
+	rpcPort                uint16
+	subscribePort          uint16
+	connectPort            uint16
 	certificateFingerprint []byte
 	publicKey              []byte
 }
@@ -111,7 +111,7 @@ words:
 	return t, nil
 }
 
-func getPort(s string) (int, error) {
+func getPort(s string) (uint16, error) {
 
 	port, err := strconv.Atoi(s)
 	if nil != err {
@@ -120,5 +120,5 @@ func getPort(s string) (int, error) {
 	if port < 1 || port > 65535 {
 		return 0, fault.ErrInvalidPortNumber
 	}
-	return port, nil
+	return uint16(port), nil
 }

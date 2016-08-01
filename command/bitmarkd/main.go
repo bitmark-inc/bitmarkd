@@ -237,7 +237,7 @@ func main() {
 
 		switch name {
 		case "rpc":
-			rpcs := []byte{}
+			rpcs := make([]byte, 0, 100) // ***** FIX THIS: need a better default size
 			for _, address := range masterConfiguration.ClientRPC.Announce {
 				c, err := util.NewConnection(address)
 				if nil != err {
@@ -246,7 +246,11 @@ func main() {
 				}
 				rpcs = append(rpcs, c.Pack()...)
 			}
-			announce.SetRPC(fingerprint, rpcs)
+			err := announce.SetRPC(fingerprint, rpcs)
+			if nil != err {
+				log.Criticalf("announce.SetRPC error: %v", err)
+				exitwithstatus.Message("announce.SetRPC error: %v", err)
+			}
 		}
 	}
 

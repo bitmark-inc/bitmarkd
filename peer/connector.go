@@ -88,11 +88,11 @@ func (conn *connector) initialise(privateKey []byte, publicKey []byte, connect [
 
 		err = client.Connect(address, serverPublicKey)
 		if nil != err {
-			log.Errorf("connect[%d]=%q  error: %v", i, address, err)
+			log.Errorf("connect[%d]=%q  error: %v", i, c.Address, err)
 			errX = err
 			goto fail
 		}
-		log.Infof("public key: %x  at: %q", serverPublicKey, address)
+		log.Infof("public key: %x  at: %q", serverPublicKey, c.Address)
 	}
 
 	return nil

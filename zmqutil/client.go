@@ -43,6 +43,11 @@ func NewClient(socketType zmq.Type, privateKey []byte, publicKey []byte, timeout
 	socket.SetRcvtimeo(timeout)
 	socket.SetLinger(0)
 
+	// set subscription prefix - empty => receive everything
+	if zmq.SUB == socketType {
+		socket.SetSubscribe("")
+	}
+
 	client := &Client{
 		address: "",
 		socket:  socket,

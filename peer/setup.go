@@ -121,13 +121,13 @@ func Initialise(configuration *Configuration) error {
 
 	globalData.background = background.Start(processes, globalData.log)
 
-	b := make([]byte, 100)
-	l := make([]byte, 100)
+	b := make([]byte, 0, 100) // ***** FIX THIS: need a better default size
+	l := make([]byte, 0, 100) // ***** FIX THIS: need a better default size
 
 	for i, address := range configuration.Announce.Broadcast {
 		c, err := util.NewConnection(address)
 		if nil != err {
-			globalData.log.Errorf("announce.broadcast[%d]=%q  error: %v", i, address, err)
+			globalData.log.Errorf("announce broadcast[%d]=%q  error: %v", i, address, err)
 			return err
 		}
 		b = append(b, c.Pack()...)
@@ -136,12 +136,13 @@ func Initialise(configuration *Configuration) error {
 	for i, address := range configuration.Announce.Listen {
 		c, err := util.NewConnection(address)
 		if nil != err {
-			globalData.log.Errorf("announce.listen[%d]=%q  error: %v", i, address, err)
+			globalData.log.Errorf("announce listen[%d]=%q  error: %v", i, address, err)
 			return err
 		}
 		l = append(l, c.Pack()...)
 	}
 	if err := announce.SetPeer(publicKey, b, l); nil != err {
+		globalData.log.Errorf("announce.SetPeer error: %v", err)
 		return err
 	}
 

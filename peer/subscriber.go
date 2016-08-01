@@ -6,6 +6,7 @@ package peer
 
 import (
 	"encoding/hex"
+	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
@@ -50,7 +51,7 @@ func (sbsc *subscriber) initialise(privateKey []byte, publicKey []byte, subscrib
 		sbsc.clients = make([]*zmqutil.Client, dynamicClients)
 		sbsc.static = false
 		for i := 0; i < dynamicClients; i += 1 {
-			client, err := zmqutil.NewClient(zmq.REQ, privateKey, publicKey, reqTimeout)
+			client, err := zmqutil.NewClient(zmq.SUB, privateKey, publicKey, reqTimeout)
 			if nil != err {
 				log.Errorf("client[%d]  error: %v", i, err)
 				errX = err
@@ -82,7 +83,7 @@ func (sbsc *subscriber) initialise(privateKey []byte, publicKey []byte, subscrib
 
 		client, err := zmqutil.NewClient(zmq.SUB, privateKey, publicKey, reqTimeout)
 		if nil != err {
-			log.Errorf("client[%d]=%q  error: %v", i, address, err)
+			log.Errorf("client[%d]=%q  error: %v", i, c.Address, err)
 			errX = err
 			goto fail
 		}
@@ -91,11 +92,11 @@ func (sbsc *subscriber) initialise(privateKey []byte, publicKey []byte, subscrib
 
 		err = client.Connect(address, serverPublicKey)
 		if nil != err {
-			log.Errorf("connect[%d]=%q  error: %v", i, address, err)
+			log.Errorf("connect[%d]=%q  error: %v", i, c.Address, err)
 			errX = err
 			goto fail
 		}
-		log.Infof("public key: %x  at: %q", serverPublicKey, address)
+		log.Infof("public key: %x  at: %q", serverPublicKey, c.Address)
 	}
 
 	return nil
@@ -118,8 +119,8 @@ func (sbsc *subscriber) Run(args interface{}, shutdown <-chan struct{}) {
 		poller := zmq.NewPoller()
 		for _, c := range sbsc.clients {
 			if nil != c {
-				c.Add(poller, zmq.POLLIN)
-				// poller.Add(c.Socket(), zmq.POLLIN) // ***** FIX THIS: socket?
+				rc := c.Add(poller, zmq.POLLIN)
+				log.Infof("***** add to poller: %d", rc) // ***** FIX THIS: maybe need to adjust poller dynamically
 			}
 		}
 		poller.Add(sbsc.pull, zmq.POLLIN)
@@ -133,7 +134,6 @@ func (sbsc *subscriber) Run(args interface{}, shutdown <-chan struct{}) {
 					s.Recv(0)
 					break loop
 				default:
-
 					data, err := s.RecvMessageBytes(0)
 					if nil != err {
 						log.Errorf("receive error: %v", err)
@@ -170,12 +170,10 @@ func (sbsc *subscriber) process(data [][]byte) {
 	case "proof":
 		log.Infof("received proof: %x", data[1])
 	case "rpc":
-		log.Infof("received rpc: %q fingerprint:%x", data[1], data[2])
-	case "broadcast":
-		log.Infof("received broadcast: %q", data[1])
-	case "listener":
-		log.Infof("received listener: %q", data[1])
-
+		log.Infof("received rpc: fingerprint: %x  rpc: %x", data[1], data[2])
+	case "peer":
+		log.Infof("received peer: %x  broadcast: %x  listener: %x", data[1], data[2], data[3])
+		announce.AddPeer(data[1], data[2], data[3])
 	default:
 		log.Warnf("received unhandled: %x", data)
 
