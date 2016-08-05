@@ -79,7 +79,7 @@ func (assets *Assets) Register(arguments *[]transactionrecord.AssetData, reply *
 	}
 
 	// announce transaction block to other peers
-	messagebus.Send("assets", packed)
+	messagebus.Bus.Broadcast.Send("assets", packed)
 
 	*reply = result
 	return nil

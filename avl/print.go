@@ -23,7 +23,7 @@ func (tree *Tree) Print(printData bool) int {
 }
 
 // internal print - returns the maximum depth of the tree
-func printTree(tree *node, prefix string, br branch, printData bool) int {
+func printTree(tree *Node, prefix string, br branch, printData bool) int {
 	if nil == tree {
 		return 0
 	}

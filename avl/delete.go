@@ -7,7 +7,7 @@ package avl
 import ()
 
 // delete: tree balancer
-func balanceLeft(pp **node) bool {
+func balanceLeft(pp **Node) bool {
 	h := true
 	p := *pp
 	// h; left branch has shrunk
@@ -72,7 +72,7 @@ func balanceLeft(pp **node) bool {
 }
 
 // delete: tree balancer
-func balanceRight(pp **node) bool {
+func balanceRight(pp **Node) bool {
 	h := true
 	p := *pp
 	// h; right branch has shrunk
@@ -137,7 +137,7 @@ func balanceRight(pp **node) bool {
 }
 
 // delete: rearrange deleted node
-func del(qq **node, rr **node) bool {
+func del(qq **Node, rr **Node) bool {
 	h := false
 	if nil != (*rr).right {
 		h = del(qq, &(*rr).right)
@@ -184,7 +184,7 @@ func (tree *Tree) Delete(key item) interface{} {
 }
 
 // internal delete routine
-func delete(key item, pp **node) (interface{}, bool, bool) {
+func delete(key item, pp **Node) (interface{}, bool, bool) {
 	h := false
 	if nil == *pp { // key not in tree
 		return nil, false, h

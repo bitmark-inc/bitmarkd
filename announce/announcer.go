@@ -63,13 +63,59 @@ func (ann *announcer) process() {
 
 	log.Info("process starting…")
 
-	// ***** FIX THIS: is it necessary to rlock here?
+	globalData.Lock()
+	defer globalData.Unlock()
 
 	// announce this nodes IP and ports to other peers
 	if globalData.rpcsSet {
-		messagebus.Send("rpc", globalData.fingerprint[:], globalData.rpcs)
+		messagebus.Bus.Broadcast.Send("rpc", globalData.fingerprint[:], globalData.rpcs)
 	}
 	if globalData.peerSet {
-		messagebus.Send("peer", globalData.publicKey, globalData.broadcasts, globalData.listeners)
+		messagebus.Bus.Broadcast.Send("peer", globalData.publicKey, globalData.broadcasts, globalData.listeners)
 	}
+
+	if globalData.change {
+		determineConnections(log)
+		globalData.change = false
+	}
+}
+
+func determineConnections(log *logger.L) {
+	if nil == globalData.thisNode {
+		return // called to early
+	}
+	node := globalData.thisNode.Next()
+	if nil == node {
+		node = globalData.peerTree.First()
+	}
+	if nil == node || node == globalData.thisNode {
+		return // tree still too small
+	}
+	if globalData.n1 != node {
+		peer := node.Value().(*peerEntry)
+		log.Infof("N1: this: %x", globalData.publicKey)
+		log.Infof("N1: peer: %v", peer)
+		messagebus.Bus.Subscriber.Send("N1", peer.publicKey, peer.broadcasts)
+		messagebus.Bus.Connector.Send("N1", peer.publicKey, peer.listeners)
+	}
+
+	node = node.Next()
+	if nil == node {
+		node = globalData.peerTree.First()
+	}
+	if nil == node || node == globalData.thisNode {
+		return // tree still too small
+	}
+	if globalData.n3 != node {
+		peer := node.Value().(*peerEntry)
+		log.Infof("N3: this: %x", globalData.publicKey)
+		log.Infof("N3: peer: %v", peer)
+		messagebus.Bus.Subscriber.Send("N3", peer.publicKey, peer.broadcasts)
+		messagebus.Bus.Connector.Send("N3", peer.publicKey, peer.listeners)
+	}
+
+	// ***** FIX THIS: more code to determine X1 and X2 the cross ⅓ and ⅔ positions
+	// ***** FIX THIS:   possible treat key as a number and compute; assuming uniformly distributed keys
+	// ***** FIX THIS:   but would need the tree search to be able to find the "next highest/lowest key" for this to work
+	// ***** FIX THIS: more code to determine some random positions
 }

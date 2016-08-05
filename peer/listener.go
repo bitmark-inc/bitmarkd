@@ -7,6 +7,7 @@ package peer
 import (
 	"encoding/binary"
 	"encoding/json"
+	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
@@ -126,14 +127,14 @@ func (lstn *listener) process(socket *zmq.Socket) {
 
 	log.Info("process starting…")
 
-	data, err := socket.RecvMessage(0)
+	data, err := socket.RecvMessageBytes(0)
 	if nil != err {
 		log.Errorf("receive error: %v", err)
 		return
 	}
 
-	fn := data[0]
-	parameter := []byte(data[1])
+	fn := string(data[0])
+	parameter := data[1]
 
 	log.Infof("received message: %x", data)
 
@@ -172,6 +173,28 @@ func (lstn *listener) process(socket *zmq.Socket) {
 		} else {
 			err = fault.ErrBlockNotFound
 		}
+
+	case "R": // registration
+		announce.AddPeer(data[1], data[2], data[3]) // publicKey, broadcasts, listeners
+		publicKey, broadcasts, listeners, err := announce.GetNext(data[1])
+		if nil == err {
+			_, err := socket.Send(fn, zmq.SNDMORE|zmq.DONTWAIT)
+			fault.PanicIfError("Listener", err)
+			_, err = socket.SendBytes(publicKey, zmq.SNDMORE|zmq.DONTWAIT)
+			fault.PanicIfError("Listener", err)
+			_, err = socket.SendBytes(broadcasts, zmq.SNDMORE|zmq.DONTWAIT)
+			fault.PanicIfError("Listener", err)
+			_, err = socket.SendBytes(listeners, 0|zmq.DONTWAIT)
+			fault.PanicIfError("Listener", err)
+		} else {
+			errorMessage := err.Error()
+			_, err := socket.Send("E", zmq.SNDMORE|zmq.DONTWAIT)
+			fault.PanicIfError("Listener", err)
+			_, err = socket.Send(errorMessage, 0|zmq.DONTWAIT)
+			fault.PanicIfError("Listener", err)
+		}
+		return
+
 	}
 
 	if nil == err {

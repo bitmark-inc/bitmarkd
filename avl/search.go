@@ -7,11 +7,11 @@ package avl
 import ()
 
 // find a specific item
-func (tree *Tree) Search(key item) *node {
+func (tree *Tree) Search(key item) *Node {
 	return search(key, tree.root)
 }
 
-func search(key item, tree *node) *node {
+func search(key item, tree *Node) *Node {
 	if nil == tree {
 		return nil
 	}

@@ -58,7 +58,7 @@ func (brdc *broadcaster) Run(args interface{}, shutdown <-chan struct{}) {
 
 	log.Info("starting…")
 
-	queue := messagebus.Chan()
+	queue := messagebus.Bus.Broadcast.Chan()
 
 loop:
 	for {

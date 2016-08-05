@@ -40,7 +40,8 @@ client_rpc {
 # peer-to-peer networking configuration
 peering {
 
-  #maximum_connections = 50
+  # set to off to prevent additional connections
+  dynamic_connections = on
 
   # for subscribers to receive various announcements
   broadcast = 0.0.0.0:2135
@@ -55,8 +56,8 @@ peering {
   announce {
     #broadcast = 127.0.0.1:2135
     #broadcast= "[::1]:2135"
-    #listen = 127.0.0.1:2135
-    #listen = "[::1]:2135"
+    #listen = 127.0.0.1:2136
+    #listen = "[::1]:2136"
   }
 
   public_key = peer.public

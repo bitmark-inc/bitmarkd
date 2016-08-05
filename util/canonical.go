@@ -84,6 +84,12 @@ func (conn *Connection) CanonicalIPandPort(prefix string) (string, bool) {
 	return prefix + "[" + conn.ip.String() + "]:" + strconv.Itoa(port), true
 }
 
+// basic string conversion
+func (conn Connection) String(prefix string) string {
+	s, _ := conn.CanonicalIPandPort("")
+	return s
+}
+
 // type for packed byte buffer IP and Port
 type PackedConnection []byte
 

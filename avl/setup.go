@@ -8,7 +8,7 @@ import ()
 
 // type to hold the root node of a tree
 type Tree struct {
-	root  *node
+	root  *Node
 	count int
 }
 
@@ -31,11 +31,11 @@ func (tree *Tree) Count() int {
 }
 
 // read the key from a node
-func (p *node) Key() item {
+func (p *Node) Key() item {
 	return p.key
 }
 
 // read the value from a node
-func (p *node) Value() interface{} {
+func (p *Node) Value() interface{} {
 	return p.value
 }

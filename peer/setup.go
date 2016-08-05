@@ -30,7 +30,7 @@ type Announce struct {
 // a block of configuration data
 // this is read from a libucl configuration file
 type Configuration struct {
-	DynamicConnections int          `libucl:"dynamic_connections"`
+	DynamicConnections bool         `libucl:"dynamic_connections"`
 	Broadcast          []string     `libucl:"broadcast"`
 	Listen             []string     `libucl:"listen"`
 	Announce           Announce     `libucl:"announce"`
@@ -99,10 +99,10 @@ func Initialise(configuration *Configuration) error {
 	if err := globalData.lstn.initialise(privateKey, publicKey, configuration.Listen); nil != err {
 		return err
 	}
-	if err := globalData.conn.initialise(privateKey, publicKey, configuration.Connect); nil != err {
+	if err := globalData.conn.initialise(privateKey, publicKey, configuration.Connect, configuration.DynamicConnections); nil != err {
 		return err
 	}
-	if err := globalData.sbsc.initialise(privateKey, publicKey, configuration.Subscribe); nil != err {
+	if err := globalData.sbsc.initialise(privateKey, publicKey, configuration.Subscribe, configuration.DynamicConnections); nil != err {
 		return err
 	}
 

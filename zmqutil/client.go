@@ -5,6 +5,7 @@
 package zmqutil
 
 import (
+	"bytes"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	zmq "github.com/pebbe/zmq4"
@@ -13,8 +14,10 @@ import (
 
 // structure to hold a client connection
 type Client struct {
-	address string
-	socket  *zmq.Socket
+	publicKey []byte
+	address   string
+	socket    *zmq.Socket
+	timestamp time.Time
 }
 
 // create a cliet socket ususlly of type zmq.REQ or zmq.SUB
@@ -37,30 +40,37 @@ func NewClient(socketType zmq.Type, privateKey []byte, publicKey []byte, timeout
 	// socket.SetRouterHandover(true) // allow quick reconnect for a given public key
 	// socket.SetImmediate(false)     // queue messages sent to disconnected peer
 
-	socket.SetReqCorrelate(1)
-	socket.SetReqRelaxed(1)
-	socket.SetSndtimeo(timeout)
-	socket.SetRcvtimeo(timeout)
+	// zero => do not set timeout
+	if 0 != timeout {
+		socket.SetSndtimeo(timeout)
+		socket.SetRcvtimeo(timeout)
+	}
 	socket.SetLinger(0)
 
-	// set subscription prefix - empty => receive everything
-	if zmq.SUB == socketType {
+	// stype specific options
+	switch socketType {
+	case zmq.REQ:
+		socket.SetReqCorrelate(1)
+		socket.SetReqRelaxed(1)
+
+	case zmq.SUB:
+		// set subscription prefix - empty => receive everything
 		socket.SetSubscribe("")
+
+	default:
 	}
 
 	client := &Client{
-		address: "",
-		socket:  socket,
+		publicKey: make([]byte, 32),
+		address:   "",
+		socket:    socket,
+		timestamp: time.Now(),
 	}
 	return client, nil
 }
 
 // disconnect old address and connect to new
 func (client *Client) Connect(conn *util.Connection, serverPublicKey []byte) error {
-
-	client.socket.SetCurveServerkey(string(serverPublicKey))
-
-	connectTo, v6 := conn.CanonicalIPandPort("tcp://")
 
 	// if already connected, disconnect first
 	if "" != client.address {
@@ -71,8 +81,15 @@ func (client *Client) Connect(conn *util.Connection, serverPublicKey []byte) err
 	}
 	client.address = ""
 
+	err := client.socket.SetCurveServerkey(string(serverPublicKey))
+	if nil != err {
+		return err
+	}
+
+	connectTo, v6 := conn.CanonicalIPandPort("tcp://")
+
 	// set IPv6 state before connect
-	err := client.socket.SetIpv6(v6)
+	err = client.socket.SetIpv6(v6)
 	if nil != err {
 		return err
 	}
@@ -82,11 +99,36 @@ func (client *Client) Connect(conn *util.Connection, serverPublicKey []byte) err
 	if nil != err {
 		return err
 	}
+
+	// record details
 	client.address = connectTo
+	copy(client.publicKey, serverPublicKey)
+	client.timestamp = time.Now()
 
 	return nil
 }
 
+// check if connected to a node
+func (client *Client) IsConnected() bool {
+	return "" != client.address
+}
+
+// check if connected to a specific node
+func (client *Client) IsConnectedTo(serverPublicKey []byte) bool {
+	return bytes.Equal(client.publicKey, serverPublicKey)
+}
+
+// check if not connected to any node
+func (client *Client) IsDisconnected() bool {
+	return "" == client.address
+}
+
+// get the age of connection
+func (client *Client) Age() time.Duration {
+	return time.Since(client.timestamp)
+}
+
+// close and reopen the connection
 func (client *Client) Reconnect() error {
 	if "" == client.address {
 		return nil

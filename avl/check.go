@@ -14,7 +14,7 @@ func (tree *Tree) CheckUp() bool {
 }
 
 // internal: consistency checker
-func checkup(p *node, up *node) bool {
+func checkup(p *Node, up *Node) bool {
 	if nil == p {
 		return true
 	}

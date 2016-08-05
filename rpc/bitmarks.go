@@ -100,7 +100,7 @@ func (bitmarks *Bitmarks) Issue(arguments *[]transactionrecord.BitmarkIssue, rep
 	result.Difficulty = d.GoString()
 
 	// announce transaction block to other peers
-	messagebus.Send("issues", packed)
+	messagebus.Bus.Broadcast.Send("issues", packed)
 
 	*reply = result
 	return nil
@@ -152,7 +152,7 @@ func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) er
 	packed = append(packed, nonce...)
 
 	log.Infof("broadcast proof: %x", packed)
-	messagebus.Send("proof", packed)
+	messagebus.Bus.Broadcast.Send("proof", packed)
 
 	// check if proof matches
 	reply.Verified = payment.TryProof(arguments.PayId, nonce)

@@ -37,7 +37,13 @@ type announcerData struct {
 	peerSet     bool
 	rpcsSet     bool
 
+	// trre of nodes available
 	peerTree *avl.Tree
+	thisNode *avl.Node // this node's position in the tree
+	change   bool      // tree was changed
+
+	n1 *avl.Node // first neighbour
+	n3 *avl.Node // third neighbour
 
 	ann announcer
 
@@ -69,6 +75,8 @@ func Initialise() error {
 	globalData.log.Info("starting…")
 
 	globalData.peerTree = avl.New()
+	globalData.thisNode = nil
+	globalData.change = false
 
 	globalData.peerSet = false
 	globalData.rpcsSet = false
@@ -98,6 +106,8 @@ func Initialise() error {
 			broadcasts := append(s1.Pack(), s2.Pack()...)
 			listeners := append(c1.Pack(), c2.Pack()...)
 			globalData.log.Infof("result[%d]: broadcasts: %x  listeners: %x", i, broadcasts, listeners)
+
+			// internal add, as lock is already held
 			addPeer(tag.publicKey, broadcasts, listeners)
 		}
 	}

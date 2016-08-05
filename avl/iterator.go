@@ -7,12 +7,12 @@ package avl
 import ()
 
 // return the node with the lowest key value
-func (tree *Tree) First() *node {
+func (tree *Tree) First() *Node {
 	return tree.root.first()
 }
 
 // internal: lowest node in a sub-tree
-func (tree *node) first() *node {
+func (tree *Node) first() *Node {
 	if nil == tree {
 		return nil
 	}
@@ -23,12 +23,12 @@ func (tree *node) first() *node {
 }
 
 // return the node with the highest key value
-func (tree *Tree) Last() *node {
+func (tree *Tree) Last() *Node {
 	return tree.root.last()
 }
 
 // internal: highest node in a sub-tree
-func (tree *node) last() *node {
+func (tree *Node) last() *Node {
 	if nil == tree {
 		return nil
 	}
@@ -40,7 +40,7 @@ func (tree *node) last() *node {
 
 // given a node, return the node with the next highest key value or
 // nil if no more nodes.
-func (tree *node) Next() *node {
+func (tree *Node) Next() *Node {
 	if nil == tree.right {
 		key := tree.key
 		for {
@@ -58,7 +58,7 @@ func (tree *node) Next() *node {
 
 // given a node, return the node with the lowest key value or nil if
 // no more nodes
-func (tree *node) Prev() *node {
+func (tree *Node) Prev() *Node {
 	if nil == tree.left {
 		key := tree.key
 		for {

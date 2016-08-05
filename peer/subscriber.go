@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
@@ -19,15 +20,15 @@ const (
 )
 
 type subscriber struct {
-	log     *logger.L
-	push    *zmq.Socket
-	pull    *zmq.Socket
-	clients []*zmqutil.Client
-	static  bool
+	log          *logger.L
+	push         *zmq.Socket
+	pull         *zmq.Socket
+	clients      []*zmqutil.Client
+	dynamicStart int
 }
 
 // initialise the subscriber
-func (sbsc *subscriber) initialise(privateKey []byte, publicKey []byte, subscribe []Connection) error {
+func (sbsc *subscriber) initialise(privateKey []byte, publicKey []byte, subscribe []Connection, dynamicEnabled bool) error {
 
 	log := logger.New("subscriber")
 	if nil == log {
@@ -36,35 +37,27 @@ func (sbsc *subscriber) initialise(privateKey []byte, publicKey []byte, subscrib
 	sbsc.log = log
 
 	log.Info("initialising…")
-	err := error(nil)
+
+	// validate connection count
+	staticCount := len(subscribe) // can be zero
+	if 0 == staticCount && !dynamicEnabled {
+		log.Error("zero static cliens and dynamic is disabled")
+		return fault.ErrNoConnectionsAvailable
+	}
 
 	// signalling channel
+	err := error(nil)
 	sbsc.push, sbsc.pull, err = zmqutil.NewSignalPair(subscriberSignal)
 	if nil != err {
 		return err
 	}
 
+	// all sockets
+	sbsc.clients = make([]*zmqutil.Client, staticCount+offsetCount)
+	sbsc.dynamicStart = staticCount // index of first dynamic socket
+
+	// error for goto fail
 	errX := error(nil)
-
-	staticClients := len(subscribe)
-	if 0 == staticClients {
-		sbsc.clients = make([]*zmqutil.Client, dynamicClients)
-		sbsc.static = false
-		for i := 0; i < dynamicClients; i += 1 {
-			client, err := zmqutil.NewClient(zmq.SUB, privateKey, publicKey, reqTimeout)
-			if nil != err {
-				log.Errorf("client[%d]  error: %v", i, err)
-				errX = err
-				goto fail
-			}
-
-			sbsc.clients[i] = client
-		}
-		return nil
-	} else {
-		sbsc.clients = make([]*zmqutil.Client, staticClients)
-		sbsc.static = true
-	}
 
 	// initially connect all static sockets
 	for i, c := range subscribe {
@@ -81,7 +74,7 @@ func (sbsc *subscriber) initialise(privateKey []byte, publicKey []byte, subscrib
 			goto fail
 		}
 
-		client, err := zmqutil.NewClient(zmq.SUB, privateKey, publicKey, reqTimeout)
+		client, err := zmqutil.NewClient(zmq.SUB, privateKey, publicKey, 0)
 		if nil != err {
 			log.Errorf("client[%d]=%q  error: %v", i, c.Address, err)
 			errX = err
@@ -97,6 +90,18 @@ func (sbsc *subscriber) initialise(privateKey []byte, publicKey []byte, subscrib
 			goto fail
 		}
 		log.Infof("public key: %x  at: %q", serverPublicKey, c.Address)
+	}
+
+	// just create sockets for dynamic clients
+	for i := sbsc.dynamicStart; i < len(sbsc.clients); i += 1 {
+		client, err := zmqutil.NewClient(zmq.SUB, privateKey, publicKey, 0)
+		if nil != err {
+			log.Errorf("client[%d]  error: %v", i, err)
+			errX = err
+			goto fail
+		}
+
+		sbsc.clients[i] = client
 	}
 
 	return nil
@@ -115,13 +120,12 @@ func (sbsc *subscriber) Run(args interface{}, shutdown <-chan struct{}) {
 
 	log.Info("starting…")
 
+	queue := messagebus.Bus.Subscriber.Chan()
+
 	go func() {
 		poller := zmq.NewPoller()
 		for _, c := range sbsc.clients {
-			if nil != c {
-				rc := c.Add(poller, zmq.POLLIN)
-				log.Infof("***** add to poller: %d", rc) // ***** FIX THIS: maybe need to adjust poller dynamically
-			}
+			c.Add(poller, zmq.POLLIN)
 		}
 		poller.Add(sbsc.pull, zmq.POLLIN)
 	loop:
@@ -131,8 +135,21 @@ func (sbsc *subscriber) Run(args interface{}, shutdown <-chan struct{}) {
 			for _, socket := range sockets {
 				switch s := socket.Socket; s {
 				case sbsc.pull:
-					s.Recv(0)
-					break loop
+					data, err := s.RecvMessageBytes(0)
+					if nil != err {
+						log.Errorf("pull receive error: %v", err)
+						break loop
+					}
+
+					switch string(data[0]) {
+					case "connect":
+						command := string(data[1])
+						publicKey := data[2]
+						broadcasts := data[3]
+						connectTo(sbsc.log, sbsc.clients, sbsc.dynamicStart, command, publicKey, broadcasts)
+					default:
+						break loop
+					}
 				default:
 					data, err := s.RecvMessageBytes(0)
 					if nil != err {
@@ -148,8 +165,21 @@ func (sbsc *subscriber) Run(args interface{}, shutdown <-chan struct{}) {
 		zmqutil.CloseClients(sbsc.clients)
 	}()
 
-	// wait for shutdown
-	<-shutdown
+loop:
+	for {
+		log.Info("select…")
+
+		select {
+		// wait for shutdown
+		case <-shutdown:
+			break loop
+		// wait for message
+		case item := <-queue:
+			sbsc.log.Infof("received: %s  public key: %x  connect: %x", item.Command, item.Parameters[0], item.Parameters[1])
+			sbsc.push.SendMessage("connect", item.Command, item.Parameters[0], item.Parameters[1])
+		}
+	}
+
 	sbsc.push.SendMessage("stop")
 	sbsc.push.Close()
 }

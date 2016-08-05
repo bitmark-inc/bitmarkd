@@ -100,7 +100,7 @@ func matchToJobQueue(received *SubmittedItem) bool {
 		packedBlock = append(packedBlock, entry.transactions...)
 
 		// broadcast this packedBlock to peers
-		messagebus.Send("block", packedBlock)
+		messagebus.Bus.Broadcast.Send("block", packedBlock)
 
 		// store the entrire block
 		block.Store(&entry.item.Header, digest, packedBlock)

@@ -14,10 +14,10 @@ type item interface {
 }
 
 // a node in the tree
-type node struct {
-	left    *node       // left sub-tree
-	right   *node       // right sub-tree
-	up      *node       // points to parent node
+type Node struct {
+	left    *Node       // left sub-tree
+	right   *Node       // right sub-tree
+	up      *Node       // points to parent node
 	key     item        // key part for ordering
 	value   interface{} // value part for data storage
 	balance int         // -1, 0, +1
@@ -25,12 +25,12 @@ type node struct {
 
 // global data for allocator
 var m sync.Mutex   // to keep values in sync
-var pool *node     // linked list of reclaimed nodes
+var pool *Node     // linked list of reclaimed nodes
 var totalNodes int // total nodes created
 var freeNodes int  // number of nodes in the pool
 
 // allocate a new node, reuses reclaimed nodes if any are available
-func newNode(key item, value interface{}) *node {
+func newNode(key item, value interface{}) *Node {
 	m.Lock()
 	if nil == pool {
 		if 0 != freeNodes {
@@ -38,7 +38,7 @@ func newNode(key item, value interface{}) *node {
 		}
 		totalNodes += 1
 		m.Unlock()
-		return &node{
+		return &Node{
 			key:     key,
 			value:   value,
 			balance: 0,
@@ -58,7 +58,7 @@ func newNode(key item, value interface{}) *node {
 }
 
 // reclaim a node and keep it in a pool
-func freeNode(node *node) {
+func freeNode(node *Node) {
 	m.Lock()
 	node.up = pool // use as free list pointer
 

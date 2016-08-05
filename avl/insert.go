@@ -17,7 +17,7 @@ func (tree *Tree) Insert(key item, value interface{}) {
 }
 
 // internal routine for insert
-func insert(key item, value interface{}, p *node) (*node, bool, bool) {
+func insert(key item, value interface{}, p *Node) (*Node, bool, bool) {
 	h := false
 	if nil == p { // insert new node
 		h = true
