@@ -74,6 +74,12 @@ func Initialise() error {
 		block = genesis.TestGenesisBlock
 	}
 
+	// check storage is initialised
+	if nil == storage.Pool.Blocks {
+		globalData.log.Critical("storage pool is not initialise")
+		return fault.ErrNotInitialised
+	}
+
 	// fill ring with default values
 	globalData.ringIndex = 0
 	crc := CRC(globalData.height, block)

@@ -158,11 +158,11 @@ func main() {
 	log.Debugf("%s = %#v", "Proofing", masterConfiguration.Proofing)
 
 	// start the data storage
-	log.Info("start storage")
+	log.Info("initialise storage")
 	err = storage.Initialise(masterConfiguration.Database.Name)
 	if nil != err {
-		log.Criticalf("block initialise error: %v", err)
-		exitwithstatus.Message("block initialise error: %v", err)
+		log.Criticalf("storage initialise error: %v", err)
+		exitwithstatus.Message("storage initialise error: %v", err)
 	}
 	defer storage.Finalise()
 

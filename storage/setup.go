@@ -71,7 +71,10 @@ func Initialise(database string) error {
 	// ensure that the database is compatible
 	versionValue, err := poolData.database.Get(versionKey, nil)
 	if leveldb.ErrNotFound == err {
-		return poolData.database.Put(versionKey, currentVersion, nil)
+		err = poolData.database.Put(versionKey, currentVersion, nil)
+		if nil != err {
+			return err
+		}
 	} else if nil != err {
 		return err
 	} else if !bytes.Equal(versionValue, currentVersion) {
@@ -108,6 +111,7 @@ func Initialise(database string) error {
 
 		poolValue.Field(i).Set(newPool)
 	}
+
 	return nil
 }
 
