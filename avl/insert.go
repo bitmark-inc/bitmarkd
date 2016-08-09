@@ -8,12 +8,13 @@ import ()
 
 // insert a new node into the tree
 // returns the possibly updated root
-func (tree *Tree) Insert(key item, value interface{}) {
+func (tree *Tree) Insert(key item, value interface{}) bool {
 	added := false
 	tree.root, added, _ = insert(key, value, tree.root)
 	if added {
 		tree.count += 1
 	}
+	return added
 }
 
 // internal routine for insert

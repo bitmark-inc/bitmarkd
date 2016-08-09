@@ -85,7 +85,7 @@ func (conn *Connection) CanonicalIPandPort(prefix string) (string, bool) {
 }
 
 // basic string conversion
-func (conn Connection) String(prefix string) string {
+func (conn Connection) String() string {
 	s, _ := conn.CanonicalIPandPort("")
 	return s
 }

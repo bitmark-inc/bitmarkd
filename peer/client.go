@@ -25,9 +25,9 @@ const (
 // or make a new connection if not already connected to that node
 // will recycle the oldest dynamic connection if no free nodes
 // priority is an offset from dynamic start
-func connectTo(log *logger.L, clients []*zmqutil.Client, dynamicStart int, priority string, serverPublicKey []byte, addresses []byte) {
+func connectTo(log *logger.L, clients []*zmqutil.Client, dynamicStart int, priority string, serverPublicKey []byte, addresses []byte) error {
 
-	log.Infof("***** connect: %s to: %x @ %x", priority, serverPublicKey, addresses)
+	log.Infof("connect: %s to: %x @ %x", priority, serverPublicKey, addresses)
 
 	const maximumConnections = 5
 
@@ -42,17 +42,14 @@ func connectTo(log *logger.L, clients []*zmqutil.Client, dynamicStart int, prior
 	// ***** FIX THIS: connection logic
 	// maybe should pick a random one of the connections
 	// maybe check if IPv4 or IPv6 preferred
-
 	address := connect[0]
-	//free := (*zmqutil.Client)(nil)
-	//oldest := (*zmqutil.Client)(nil)
 
 	// if entry matches a static entry, then ignore with warning log
 	if dynamicStart > 0 {
 		for _, client := range clients[:dynamicStart] {
 			if client.IsConnectedTo(serverPublicKey) {
 				log.Warnf("ignore change to: %x @ %s", serverPublicKey, *address)
-				return // no more action is needed
+				return nil // no more action is needed
 			}
 		}
 	}
@@ -93,9 +90,10 @@ dynamicScan:
 	}
 
 	// reconnect the one corresponding to priority
-	log.Infof("***** reconnect: %x @ %s", serverPublicKey, *address)
+	log.Infof("reconnect: %x @ %s", serverPublicKey, *address)
 	err := dynamic[offset].Connect(address, serverPublicKey)
 	if nil != err {
 		log.Errorf("ConnectTo: %x @ %s  error: %v", serverPublicKey, *address, err)
 	}
+	return err
 }

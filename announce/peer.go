@@ -8,7 +8,10 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/messagebus"
+	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
+	"time"
 )
 
 type pubkey []byte
@@ -17,9 +20,11 @@ type peerEntry struct {
 	publicKey  []byte
 	broadcasts []byte
 	listeners  []byte
+	timestamp  time.Time
 }
 
-// set this node's peer announcement data
+// called by the peering initialisation to set up this node's
+// announcement data
 func SetPeer(publicKey []byte, broadcasts []byte, listeners []byte) error {
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -35,6 +40,8 @@ func SetPeer(publicKey []byte, broadcasts []byte, listeners []byte) error {
 	addPeer(publicKey, broadcasts, listeners)
 
 	globalData.thisNode = globalData.peerTree.Search(pubkey(publicKey))
+
+	determineConnections(globalData.log)
 
 	return nil
 }
@@ -52,11 +59,23 @@ func addPeer(publicKey []byte, broadcasts []byte, listeners []byte) {
 		publicKey:  publicKey,
 		broadcasts: broadcasts,
 		listeners:  listeners,
+		timestamp:  time.Now(),
 	}
-	globalData.peerTree.Insert(pubkey(publicKey), peer)
+	ts := time.Now()
+	if node := globalData.peerTree.Search(pubkey(publicKey)); nil != node {
+		peer := node.Value().(*peerEntry)
+		ts = peer.timestamp // preserve previous timestamp
+	}
+	change := globalData.peerTree.Insert(pubkey(publicKey), peer)
 	fmt.Printf("\n\n")               // ***** FIX THIS: debugging
 	globalData.peerTree.Print(false) // ***** FIX THIS: debugging
-	globalData.change = true
+
+	// if new node or a enought time has elapsed to make sure
+	// this is not an endless rebroadcast
+	if change || time.Since(ts) > announceRebroadcast {
+		globalData.change = true
+		messagebus.Bus.Broadcast.Send("peer", publicKey, broadcasts, listeners)
+	}
 }
 
 // fetch the data for the next node in the ring for a given public key
@@ -80,7 +99,8 @@ func GetNext(publicKey []byte) ([]byte, []byte, []byte, error) {
 
 // send a peer registration request to a client channel
 func SendRegistration(client *zmqutil.Client, fn string) error {
-	return client.Send(fn, globalData.publicKey, globalData.broadcasts, globalData.listeners)
+	chain := mode.ChainName()
+	return client.Send(fn, chain, globalData.publicKey, globalData.broadcasts, globalData.listeners)
 }
 
 // public key comparison

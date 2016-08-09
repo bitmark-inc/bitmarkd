@@ -93,6 +93,12 @@ func Initialise(configuration *Configuration) error {
 	globalData.log.Tracef("peer private key: %q", privateKey)
 	globalData.log.Tracef("peer public key:  %q", publicKey)
 
+	// set up announcer before any connections
+	err = setAnnounce(configuration, publicKey)
+	if nil != err {
+		return err
+	}
+
 	if err := globalData.brdc.initialise(privateKey, publicKey, configuration.Broadcast); nil != err {
 		return err
 	}
@@ -121,6 +127,13 @@ func Initialise(configuration *Configuration) error {
 
 	globalData.background = background.Start(processes, globalData.log)
 
+	return nil
+}
+
+// configure announce so that minimum data will be present for
+// connection to neighbours
+func setAnnounce(configuration *Configuration, publicKey []byte) error {
+
 	b := make([]byte, 0, 100) // ***** FIX THIS: need a better default size
 	l := make([]byte, 0, 100) // ***** FIX THIS: need a better default size
 
@@ -132,7 +145,6 @@ func Initialise(configuration *Configuration) error {
 		}
 		b = append(b, c.Pack()...)
 	}
-
 	for i, address := range configuration.Announce.Listen {
 		c, err := util.NewConnection(address)
 		if nil != err {
@@ -145,7 +157,6 @@ func Initialise(configuration *Configuration) error {
 		globalData.log.Errorf("announce.SetPeer error: %v", err)
 		return err
 	}
-
 	return nil
 }
 

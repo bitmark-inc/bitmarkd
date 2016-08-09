@@ -291,11 +291,14 @@ func Store(header *blockrecord.Header, digest blockdigest.Digest, packedBlock []
 	// end of critical section
 	globalData.Unlock()
 
+	StoreBinary(header.Number, packedBlock)
+}
+
+func StoreBinary(number uint64, packedBlock []byte) {
 	blockNumber := make([]byte, 8)
-	binary.BigEndian.PutUint64(blockNumber, header.Number)
+	binary.BigEndian.PutUint64(blockNumber, number)
 
 	storage.Pool.Blocks.Put(blockNumber, packedBlock)
-
 }
 
 // fetch latest crc value

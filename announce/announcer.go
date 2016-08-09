@@ -12,9 +12,10 @@ import (
 )
 
 const (
-	announceInitial  = 2 * time.Minute
-	announceInterval = 10 * time.Minute
-	announceExpiry   = 60 * time.Minute
+	announceInitial     = 2 * time.Minute
+	announceRebroadcast = 8 * time.Minute // to prevent too frequent rebroadcasts
+	announceInterval    = 10 * time.Minute
+	announceExpiry      = 60 * time.Minute
 )
 
 type announcer struct {
@@ -82,16 +83,21 @@ func (ann *announcer) process() {
 
 func determineConnections(log *logger.L) {
 	if nil == globalData.thisNode {
+		log.Errorf("determineConnections called to early")
 		return // called to early
 	}
+
+	// N1
 	node := globalData.thisNode.Next()
 	if nil == node {
 		node = globalData.peerTree.First()
 	}
 	if nil == node || node == globalData.thisNode {
+		log.Errorf("determineConnections tree too small")
 		return // tree still too small
 	}
 	if globalData.n1 != node {
+		globalData.n1 = node
 		peer := node.Value().(*peerEntry)
 		log.Infof("N1: this: %x", globalData.publicKey)
 		log.Infof("N1: peer: %v", peer)
@@ -99,6 +105,16 @@ func determineConnections(log *logger.L) {
 		messagebus.Bus.Connector.Send("N1", peer.publicKey, peer.listeners)
 	}
 
+	// N2
+	node = node.Next()
+	if nil == node {
+		node = globalData.peerTree.First()
+	}
+	if nil == node || node == globalData.thisNode {
+		return // tree still too small
+	}
+
+	// N3
 	node = node.Next()
 	if nil == node {
 		node = globalData.peerTree.First()
@@ -107,6 +123,7 @@ func determineConnections(log *logger.L) {
 		return // tree still too small
 	}
 	if globalData.n3 != node {
+		globalData.n3 = node
 		peer := node.Value().(*peerEntry)
 		log.Infof("N3: this: %x", globalData.publicKey)
 		log.Infof("N3: peer: %v", peer)
@@ -114,7 +131,7 @@ func determineConnections(log *logger.L) {
 		messagebus.Bus.Connector.Send("N3", peer.publicKey, peer.listeners)
 	}
 
-	// ***** FIX THIS: more code to determine X1 and X2 the cross ⅓ and ⅔ positions
+	// ***** FIX THIS: more code to determine X25, X50 and X75 the cross ¼,½ and ¾ positions
 	// ***** FIX THIS:   possible treat key as a number and compute; assuming uniformly distributed keys
 	// ***** FIX THIS:   but would need the tree search to be able to find the "next highest/lowest key" for this to work
 	// ***** FIX THIS: more code to determine some random positions

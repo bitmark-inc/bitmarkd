@@ -133,17 +133,28 @@ func (lstn *listener) process(socket *zmq.Socket) {
 		return
 	}
 
-	fn := string(data[0])
-	parameter := data[1]
+	if len(data) < 1 {
+		return
+	}
 
-	log.Infof("received message: %x", data)
+	fn := string(data[0])
+	parameters := data[1:]
+
+	log.Infof("received message: %q: %x", fn, data)
 
 	result := []byte{}
 
 	switch fn {
+	case "N": // get block number
+		blockNumber := block.GetHeight()
+		result = make([]byte, 8)
+		binary.BigEndian.PutUint64(result, blockNumber)
+
 	case "B": // get packed block
-		if 8 == len(parameter) {
-			result = storage.Pool.Blocks.Get(parameter)
+		if 1 != len(parameters) {
+			err = fault.ErrMissingParameters
+		} else if 8 == len(parameters[0]) {
+			result = storage.Pool.Blocks.Get(parameters[0])
 			if nil == result {
 				err = fault.ErrBlockNotFound
 			}
@@ -162,8 +173,10 @@ func (lstn *listener) process(socket *zmq.Socket) {
 		fault.PanicIfError("JSON encode error: %v", err)
 
 	case "H": // get block hash
-		if 8 == len(parameter) {
-			number := binary.BigEndian.Uint64(parameter)
+		if 1 != len(parameters) {
+			err = fault.ErrMissingParameters
+		} else if 8 == len(parameters[0]) {
+			number := binary.BigEndian.Uint64(parameters[0])
 			d, e := block.DigestForBlock(number)
 			if nil == e {
 				result = d[:]
@@ -174,39 +187,56 @@ func (lstn *listener) process(socket *zmq.Socket) {
 			err = fault.ErrBlockNotFound
 		}
 
-	case "R": // registration
-		announce.AddPeer(data[1], data[2], data[3]) // publicKey, broadcasts, listeners
-		publicKey, broadcasts, listeners, err := announce.GetNext(data[1])
-		if nil == err {
-			_, err := socket.Send(fn, zmq.SNDMORE|zmq.DONTWAIT)
-			fault.PanicIfError("Listener", err)
-			_, err = socket.SendBytes(publicKey, zmq.SNDMORE|zmq.DONTWAIT)
-			fault.PanicIfError("Listener", err)
-			_, err = socket.SendBytes(broadcasts, zmq.SNDMORE|zmq.DONTWAIT)
-			fault.PanicIfError("Listener", err)
-			_, err = socket.SendBytes(listeners, 0|zmq.DONTWAIT)
-			fault.PanicIfError("Listener", err)
-		} else {
-			errorMessage := err.Error()
-			_, err := socket.Send("E", zmq.SNDMORE|zmq.DONTWAIT)
-			fault.PanicIfError("Listener", err)
-			_, err = socket.Send(errorMessage, 0|zmq.DONTWAIT)
-			fault.PanicIfError("Listener", err)
+	case "R": // registration: chain, publicKey, broadcasts, listeners
+		if 4 != len(parameters) {
+			listenerSendError(socket, fault.ErrMissingParameters)
+			return
 		}
+		chain := mode.ChainName()
+		if string(parameters[0]) != chain {
+			listenerSendError(socket, fault.ErrIncorrectChain)
+			return
+		}
+		announce.AddPeer(parameters[1], parameters[2], parameters[3]) // publicKey, broadcasts, listeners
+		publicKey, broadcasts, listeners, err := announce.GetNext(parameters[1])
+		if nil != err {
+			listenerSendError(socket, err)
+			return
+		}
+		_, err = socket.Send(fn, zmq.SNDMORE|zmq.DONTWAIT)
+		fault.PanicIfError("Listener", err)
+		_, err = socket.Send(chain, zmq.SNDMORE|zmq.DONTWAIT)
+		fault.PanicIfError("Listener", err)
+		_, err = socket.SendBytes(publicKey, zmq.SNDMORE|zmq.DONTWAIT)
+		fault.PanicIfError("Listener", err)
+		_, err = socket.SendBytes(broadcasts, zmq.SNDMORE|zmq.DONTWAIT)
+		fault.PanicIfError("Listener", err)
+		_, err = socket.SendBytes(listeners, 0|zmq.DONTWAIT)
+		fault.PanicIfError("Listener", err)
+
 		return
 
 	}
 
-	if nil == err {
-		_, err := socket.Send(fn, zmq.SNDMORE|zmq.DONTWAIT)
-		fault.PanicIfError("Listener", err)
-		_, err = socket.SendBytes(result, 0|zmq.DONTWAIT)
-		fault.PanicIfError("Listener", err)
-	} else {
-		errorMessage := err.Error()
-		_, err := socket.Send("E", zmq.SNDMORE|zmq.DONTWAIT)
-		fault.PanicIfError("Listener", err)
-		_, err = socket.Send(errorMessage, 0|zmq.DONTWAIT)
-		fault.PanicIfError("Listener", err)
+	if nil != err {
+		listenerSendError(socket, err)
+		return
 	}
+
+	// send results
+	_, err = socket.Send(fn, zmq.SNDMORE|zmq.DONTWAIT)
+	fault.PanicIfError("Listener", err)
+	_, err = socket.SendBytes(result, 0|zmq.DONTWAIT)
+	fault.PanicIfError("Listener", err)
+
+	log.Infof("sent: %q  result: %x", fn, result)
+}
+
+// send an error packet
+func listenerSendError(socket *zmq.Socket, err error) {
+	errorMessage := err.Error()
+	_, err = socket.Send("E", zmq.SNDMORE|zmq.DONTWAIT)
+	fault.PanicIfError("Listener", err)
+	_, err = socket.Send(errorMessage, 0|zmq.DONTWAIT)
+	fault.PanicIfError("Listener", err)
 }
