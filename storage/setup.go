@@ -33,7 +33,6 @@ type pools struct {
 	Transactions         *PoolHandle `prefix:"T"`
 	VerifiedAssets       *PoolHandle `prefix:"I"`
 	VerifiedTransactions *PoolHandle `prefix:"V"`
-	Peer                 *PoolHandle `prefix:"P"`
 	TestData             *PoolHandle `prefix:"Z"`
 }
 

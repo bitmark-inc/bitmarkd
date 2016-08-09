@@ -100,7 +100,7 @@ func determineConnections(log *logger.L) {
 		globalData.n1 = node
 		peer := node.Value().(*peerEntry)
 		log.Infof("N1: this: %x", globalData.publicKey)
-		log.Infof("N1: peer: %v", peer)
+		log.Infof("N1: peer: %x", peer)
 		messagebus.Bus.Subscriber.Send("N1", peer.publicKey, peer.broadcasts)
 		messagebus.Bus.Connector.Send("N1", peer.publicKey, peer.listeners)
 	}
@@ -126,7 +126,7 @@ func determineConnections(log *logger.L) {
 		globalData.n3 = node
 		peer := node.Value().(*peerEntry)
 		log.Infof("N3: this: %x", globalData.publicKey)
-		log.Infof("N3: peer: %v", peer)
+		log.Infof("N3: peer: %x", peer)
 		messagebus.Bus.Subscriber.Send("N3", peer.publicKey, peer.broadcasts)
 		messagebus.Bus.Connector.Send("N3", peer.publicKey, peer.listeners)
 	}

@@ -209,7 +209,7 @@ func (pub *publisher) process() {
 		case *transactionrecord.BitmarkTransfer:
 			// ok
 
-		default: // all other types cannot occure here
+		default: // all other types cannot occur here
 			pub.log.Criticalf("unxpected transaction: %v", unpacked)
 			fault.Panicf("publisher unxpected transaction: %v", unpacked)
 		}

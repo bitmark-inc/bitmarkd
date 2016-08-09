@@ -175,7 +175,7 @@ func (conn *connector) process() {
 		if conn.highestBlockNumber > 0 && nil != conn.theClient {
 			conn.state += 1
 		}
-		log.Infof("next state: %s  block number: %d", conn.state, conn.highestBlockNumber)
+		log.Infof("highest block number: %d", conn.highestBlockNumber)
 
 	case cStateForkDetect:
 		digest, h := block.Get()
@@ -209,18 +209,24 @@ func (conn *connector) process() {
 	case cStateFetchBlocks:
 		conn.state += 1 // assume success
 		for n := conn.startBlockNumber; n <= conn.highestBlockNumber; n += 1 {
-			b, err := blockData(conn.theClient, n)
+			packedBlock, err := blockData(conn.theClient, n)
 			if nil != err {
-				log.Infof("fetch block number: %d  error: %v", n, err)
+				log.Errorf("fetch block number: %d  error: %v", n, err)
 				conn.state = cStateHighestBlock // retry
 				break
 			}
 			log.Infof("store block number: %d", n)
-			block.StoreBinary(n, b)
+			err = block.StoreIncoming(packedBlock)
+			if nil != err {
+				log.Errorf("store block number: %d  error: %v", n, err)
+				conn.state = cStateHighestBlock // retry
+				break
+			}
 
 		}
 	case cStateRebuild:
 		conn.state += 1 // assume success
+		log.Warnf("rebuild start from block number: %d", conn.startBlockNumber)
 	case cStateSampling:
 
 	}
