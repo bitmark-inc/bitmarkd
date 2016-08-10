@@ -64,10 +64,10 @@ func Callback(conn io.ReadWriteCloser, argument interface{}) {
 	// 	log: serverArgument.Log,
 	// }
 
-	// node := &Node{
-	// 	log:   serverArgument.Log,
-	// 	start: serverArgument.StartTime,
-	// }
+	node := &Node{
+		log:   serverArgument.Log,
+		start: serverArgument.StartTime,
+	}
 
 	server := rpc.NewServer()
 
@@ -79,7 +79,7 @@ func Callback(conn io.ReadWriteCloser, argument interface{}) {
 	// server.Register(blk)
 	// server.Register(tx)
 	// server.Register(pool)
-	// server.Register(node)
+	server.Register(node)
 
 	connectionCount.Increment()
 	defer connectionCount.Decrement()
