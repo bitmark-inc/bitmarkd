@@ -13,24 +13,21 @@ import (
 
 // limits
 const (
-	AssetIndexSize = 64
+	AssetIndexLength = 64
 )
 
 // the type for an asset index
 // stored as little endian byte array
 // represented as little endian hex text for JSON encoding
-type AssetIndex [AssetIndexSize]byte
+// convert a binary assetIndex to byte slice
+// to get bytes value just use assetIndex[:]
+type AssetIndex [AssetIndexLength]byte
 
 // create an asset index from a byte slice
 //
 // SHA3-512 Hash
 func NewAssetIndex(record []byte) AssetIndex {
 	return AssetIndex(sha3.Sum512(record))
-}
-
-// convert a binary assetIndex to byte slice
-func (assetIndex AssetIndex) Bytes() []byte {
-	return assetIndex[:]
 }
 
 // convert a binary assetIndex to little endian hex string for use by the fmt package (for %s)
@@ -60,7 +57,7 @@ func (assetIndex *AssetIndex) Scan(state fmt.ScanState, verb rune) error {
 	if nil != err {
 		return err
 	}
-	if len(token) != hex.EncodedLen(AssetIndexSize) {
+	if len(token) != hex.EncodedLen(AssetIndexLength) {
 		return fault.ErrNotAssetIndex
 	}
 
@@ -69,7 +66,7 @@ func (assetIndex *AssetIndex) Scan(state fmt.ScanState, verb rune) error {
 		return err
 	}
 
-	if AssetIndexSize != byteCount {
+	if AssetIndexLength != byteCount {
 		return fault.ErrNotAssetIndex
 	}
 	return nil
@@ -92,7 +89,7 @@ func (assetIndex *AssetIndex) UnmarshalText(s []byte) error {
 	if nil != err {
 		return err
 	}
-	if AssetIndexSize != byteCount {
+	if AssetIndexLength != byteCount {
 		return fault.ErrNotAssetIndex
 	}
 	return nil
@@ -100,7 +97,7 @@ func (assetIndex *AssetIndex) UnmarshalText(s []byte) error {
 
 // convert and validate little endian binary byte slice to a assetIndex
 func AssetIndexFromBytes(assetIndex *AssetIndex, buffer []byte) error {
-	if AssetIndexSize != len(buffer) {
+	if AssetIndexLength != len(buffer) {
 		return fault.ErrNotAssetIndex
 	}
 	copy(assetIndex[:], buffer)

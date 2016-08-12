@@ -7,11 +7,10 @@ package proof
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
-	"github.com/bitmark-inc/bitmarkd/storage"
+	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"sync"
 )
@@ -69,7 +68,7 @@ func enqueueToJobQueue(item *PublishedItem, txdata []byte) {
 	jobQueue.Unlock()
 }
 
-func matchToJobQueue(received *SubmittedItem) bool {
+func matchToJobQueue(received *SubmittedItem) (success bool) {
 	jobQueue.Lock()
 	defer jobQueue.Unlock()
 
@@ -77,23 +76,29 @@ func matchToJobQueue(received *SubmittedItem) bool {
 
 	entry, ok := jobQueue.entries[job]
 	if !ok {
-		return false
+		return
 	}
 
-	// get current difficulty
-	difficulty := entry.item.Header.Difficulty.BigInt()
+	// if not normal abandon the queue and the submission
+	if !mode.Is(mode.Normal) {
+		goto cleanup
+	}
 
 	switch received.Request {
 
 	case "block.nonce":
 		if len(received.Packed) != blockrecord.NonceSize {
-			return false
+			return
 		}
 		entry.item.Header.Nonce = blockrecord.NonceType(binary.LittleEndian.Uint64(received.Packed))
 		ph := entry.item.Header.Pack()
 		digest := ph.Digest()
+
+		// get current difficulty
+		difficulty := entry.item.Header.Difficulty.BigInt()
+
 		if digest.Cmp(difficulty) > 0 {
-			return false
+			return
 		}
 		packedBlock := ph //make([]byte,len(ph)+len(entry.item.Base)+len(entry.transactions))
 		packedBlock = append(packedBlock, entry.item.Base...)
@@ -102,33 +107,15 @@ func matchToJobQueue(received *SubmittedItem) bool {
 		// broadcast this packedBlock to peers
 		messagebus.Bus.Broadcast.Send("block", packedBlock)
 
-		// store the entrire block
-		block.Store(&entry.item.Header, digest, packedBlock)
-
-		// confirm assets
-		for _, assetId := range entry.item.AssetIds {
-			key := assetId[:]
-			data := storage.Pool.VerifiedAssets.Get(key)
-			if nil != data {
-				storage.Pool.Assets.Put(key, data)
-				storage.Pool.VerifiedAssets.Delete(key)
-			}
-		}
-
-		// confirm transactions
-		for _, txId := range entry.item.TxIds {
-			key := txId[:]
-			data := storage.Pool.VerifiedTransactions.Get(key)
-			if nil != data {
-				storage.Pool.Transactions.Put(key, data)
-				storage.Pool.VerifiedTransactions.Delete(key)
-			}
-		}
+		// broadcast this packedBlock to local
+		messagebus.Bus.Blockstore.Send("local", packedBlock)
+		success = true
 	}
 
+cleanup:
 	// erase the queue
 	jobQueue.entries = make(map[string]*entryType)
 	jobQueue.clear = true
 
-	return true
+	return
 }

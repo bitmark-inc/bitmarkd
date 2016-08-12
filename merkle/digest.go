@@ -18,6 +18,7 @@ const DigestLength = 32
 // stored as little endian byte array
 // represented as big endian hex value for print
 // represented as little endian hex text for JSON encoding
+// to convert to bytes just use d[:]
 type Digest [DigestLength]byte
 
 // create a digest from a byte slice
@@ -63,6 +64,10 @@ func (digest *Digest) Scan(state fmt.ScanState, verb rune) error {
 	if nil != err {
 		return err
 	}
+	if len(token) != hex.EncodedLen(DigestLength) {
+		return fault.ErrNotLink
+	}
+
 	buffer := make([]byte, hex.DecodedLen(len(token)))
 	byteCount, err := hex.Decode(buffer, token)
 	if nil != err {
@@ -85,6 +90,18 @@ func (digest Digest) MarshalText() ([]byte, error) {
 
 // convert little endian hex text into a digest
 func (digest *Digest) UnmarshalText(s []byte) error {
+	if DigestLength != hex.DecodedLen(len(s)) {
+		return fault.ErrNotLink
+	}
+	// byteCount, err := hex.Decode(digest[:], s)
+	// if nil != err {
+	// 	return err
+	// }
+	// if DigestLength != byteCount {
+	// 	return fault.ErrNotLink
+	// }
+	// return nil
+
 	buffer := make([]byte, hex.DecodedLen(len(s)))
 	byteCount, err := hex.Decode(buffer, s)
 	if nil != err {

@@ -5,8 +5,10 @@
 package transactionrecord
 
 import (
+	"encoding/hex"
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/currency"
+	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/util"
 )
 
@@ -76,12 +78,12 @@ type BitmarkIssue struct {
 type Payment struct {
 	Currency currency.Currency `json:"currency"`      // utf-8 → Enum
 	Address  string            `json:"address"`       // utf-8
-	Amount   uint64            `json:"amount,string"` // number as string, interms of smallest currency unit
+	Amount   uint64            `json:"amount,string"` // number as string, in terms of smallest currency unit
 }
 
 // the unpacked BitmarkTransfer structure
 type BitmarkTransfer struct {
-	Link      Link              `json:"link"`      // previous record
+	Link      merkle.Digest     `json:"link"`      // previous record
 	Payment   *Payment          `json:"payment"`   // optional payment address
 	Owner     *account.Account  `json:"owner"`     // base58: the "destination" owner
 	Signature account.Signature `json:"signature"` // hex: corresponds to owner in linked record
@@ -116,4 +118,17 @@ func RecordName(record interface{}) (string, bool) {
 // compute an asset index
 func (assetData *AssetData) AssetIndex() AssetIndex {
 	return NewAssetIndex([]byte(assetData.Fingerprint))
+}
+
+// Create an link for a packed record
+func (p Packed) MakeLink() merkle.Digest {
+	return merkle.NewDigest(p)
+}
+
+// convert a packed to its hex JSON form
+func (p Packed) MarshalText() ([]byte, error) {
+	size := hex.EncodedLen(len(p))
+	b := make([]byte, size)
+	hex.Encode(b, p)
+	return b, nil
 }

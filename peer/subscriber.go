@@ -112,8 +112,7 @@ fail:
 	return errX
 }
 
-// wait for new blocks or new payment items
-// to ensure the queue integrity as heap is not thread-safe
+// subscriber main loop
 func (sbsc *subscriber) Run(args interface{}, shutdown <-chan struct{}) {
 
 	log := sbsc.log
@@ -197,6 +196,8 @@ func (sbsc *subscriber) process(data [][]byte) {
 		log.Infof("received assets: %x", data[1])
 	case "issues":
 		log.Infof("received issues: %x", data[1])
+	case "transfer":
+		log.Infof("received transfer: %x", data[1])
 	case "proof":
 		log.Infof("received proof: %x", data[1])
 	case "rpc":

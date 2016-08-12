@@ -8,6 +8,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/util"
 )
 
@@ -171,8 +172,8 @@ func (record Packed) Unpack() (Transaction, int, error) {
 		// link
 		linkLength, linkOffset := util.FromVarint64(record[n:])
 		n += linkOffset
-		var link Link
-		err := LinkFromBytes(&link, record[n:n+int(linkLength)])
+		var link merkle.Digest
+		err := merkle.DigestFromBytes(&link, record[n:n+int(linkLength)])
 		if nil != err {
 			return nil, 0, err
 		}
@@ -233,7 +234,7 @@ func (record Packed) Unpack() (Transaction, int, error) {
 		n += int(signatureLength)
 
 		r := &BitmarkTransfer{
-			Link:      Link(link),
+			Link:      link,
 			Payment:   payment,
 			Owner:     owner,
 			Signature: signature,

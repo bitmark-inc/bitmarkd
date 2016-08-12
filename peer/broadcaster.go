@@ -50,8 +50,7 @@ func (brdc *broadcaster) initialise(privateKey []byte, publicKey []byte, broadca
 	return nil
 }
 
-// wait for new blocks or new payment items
-// to ensure the queue integrity as heap is not thread-safe
+// broadcasting main loop
 func (brdc *broadcaster) Run(args interface{}, shutdown <-chan struct{}) {
 
 	log := brdc.log
@@ -67,7 +66,7 @@ loop:
 		case <-shutdown:
 			break loop
 		case item := <-queue:
-			brdc.log.Infof("sending: %s  data: %x", item.Command, item.Parameters)
+			log.Infof("sending: %s  data: %x", item.Command, item.Parameters)
 			brdc.process(brdc.socket4, &item)
 			brdc.process(brdc.socket6, &item)
 		}

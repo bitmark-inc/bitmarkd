@@ -39,9 +39,9 @@ func Callback(conn io.ReadWriteCloser, argument interface{}) {
 		log: serverArgument.Log,
 	}
 
-	// bitmark := &Bitmark{
-	// 	log: serverArgument.Log,
-	// }
+	bitmark := &Bitmark{
+		log: serverArgument.Log,
+	}
 
 	bitmarks := &Bitmarks{
 		log: serverArgument.Log,
@@ -72,7 +72,7 @@ func Callback(conn io.ReadWriteCloser, argument interface{}) {
 	server := rpc.NewServer()
 
 	server.Register(assets)
-	//server.Register(bitmark)
+	server.Register(bitmark)
 	server.Register(bitmarks)
 	// ***** FIX THIS: restore
 	// server.Register(owner)

@@ -5,7 +5,6 @@
 package transactionrecord
 
 import (
-	"encoding/hex"
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
@@ -98,7 +97,7 @@ func (issue *BitmarkIssue) Pack(address *account.Account) (Packed, error) {
 
 	// concatenate bytes
 	message := util.ToVarint64(uint64(BitmarkIssueTag))
-	message = appendBytes(message, issue.AssetIndex.Bytes())
+	message = appendBytes(message, issue.AssetIndex[:])
 	message = appendAccount(message, issue.Owner)
 	message = appendUint64(message, issue.Nonce)
 
@@ -187,12 +186,4 @@ func appendUint64(buffer Packed, value uint64) Packed {
 	valueBytes := util.ToVarint64(value)
 	buffer = append(buffer, valueBytes...)
 	return buffer
-}
-
-// convert a packed to its hex JSON form
-func (p Packed) MarshalText() ([]byte, error) {
-	size := hex.EncodedLen(len(p))
-	b := make([]byte, size)
-	hex.Encode(b, p)
-	return b, nil
 }

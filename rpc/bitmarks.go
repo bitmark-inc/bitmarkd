@@ -10,6 +10,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/currency" // ***** FIX THIS: remove when real currency/address is available
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/payment"
@@ -33,10 +34,10 @@ const (
 // --------------
 
 type BitmarksIssueReply struct {
-	TxIds      []transactionrecord.Link `json:"txIds"`
-	PayId      payment.PayId            `json:"payId"`
-	PayNonce   payment.PayNonce         `json:"payNonce"`
-	Difficulty string                   `json:"difficulty"`
+	TxIds      []merkle.Digest  `json:"txIds"`
+	PayId      payment.PayId    `json:"payId"`
+	PayNonce   payment.PayNonce `json:"payNonce"`
+	Difficulty string           `json:"difficulty"`
 	//PaymentAlternatives []block.MinerAddress `json:"paymentAlternatives"`// ***** FIX THIS: where to get addresses?
 }
 
@@ -58,7 +59,7 @@ func (bitmarks *Bitmarks) Issue(arguments *[]transactionrecord.BitmarkIssue, rep
 	log.Infof("Bitmarks.Issue: %v", arguments)
 
 	result := BitmarksIssueReply{
-		TxIds: make([]transactionrecord.Link, count),
+		TxIds: make([]merkle.Digest, count),
 	}
 
 	// pack each transaction
@@ -156,6 +157,60 @@ func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) er
 
 	// check if proof matches
 	reply.Verified = payment.TryProof(arguments.PayId, nonce)
+
+	return nil
+}
+
+// Bitmarks pay
+// --------------
+
+type PayArguments struct {
+	PayId   payment.PayId `json:"payId"`
+	Receipt string        `json:"receipt"`
+}
+
+type PayReply struct {
+	//Verified bool `json:"verified"`
+}
+
+func (bitmarks *Bitmarks) Pay(arguments *PayArguments, reply *PayReply) error {
+
+	log := bitmarks.log
+
+	if !mode.Is(mode.Normal) {
+		return fault.ErrNotAvailableDuringSynchronise
+	}
+
+	// // arbitrary byte size limit
+	// size := hex.DecodedLen(len(arguments.Receipt))
+	// if size < 1 || size > 64 {
+	// 	return fault.ErrInvalidReceipt
+	// }
+
+	log.Infof("pay for pay id: %v", arguments.PayId)
+	log.Infof("receipt: %q", arguments.Receipt)
+
+	// nonce := make([]byte, size)
+	// byteCount, err := hex.Decode(nonce, []byte(arguments.Nonce))
+	// if nil != err {
+	// 	return err
+	// }
+	// if byteCount != size {
+	// 	return fault.ErrInvalidNonce
+	// }
+
+	// log.Infof("client nonce hex: %x", nonce)
+
+	// // announce pay block to other peers
+	// packed := make([]byte, len(arguments.PayId), len(arguments.PayId)+len(nonce))
+	// copy(packed, arguments.PayId[:])
+	// packed = append(packed, nonce...)
+
+	// log.Infof("broadcast pay: %x", packed)
+	// messagebus.Bus.Broadcast.Send("pay", packed)
+
+	// // check if pay matches
+	// reply.Verified = payment.TryPay(arguments.PayId, nonce)
 
 	return nil
 }

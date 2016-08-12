@@ -17,6 +17,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
@@ -134,6 +135,11 @@ loop:
 
 // process some items into a block and publish it
 func (pub *publisher) process() {
+
+	// only create new blocks if in normal mode
+	if !mode.Is(mode.Normal) {
+		return
+	}
 
 	seenAsset := make(map[transactionrecord.AssetIndex]struct{})
 

@@ -33,6 +33,7 @@ type busses struct {
 	Broadcast  *Queue `size:"1000"` // to broadcast to other nodes
 	Subscriber *Queue `size:"50"`   // to control subscriber
 	Connector  *Queue `size:"50"`   // to control connector
+	Blockstore *Queue `size:"50"`   // to sequentially store blocks
 }
 
 // the instance

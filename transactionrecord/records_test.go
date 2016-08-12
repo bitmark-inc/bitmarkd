@@ -13,6 +13,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
@@ -178,7 +179,7 @@ func TestPackBaseData(t *testing.T) {
 		0xf8, 0xac, 0xd1, 0x91, 0x01,
 	}
 
-	expectedTxId := transactionrecord.Link{
+	expectedTxId := merkle.Digest{
 		0x9e, 0xd1, 0x69, 0x58, 0x1f, 0xf3, 0x45, 0x02,
 		0x46, 0xdc, 0xfe, 0x20, 0xf3, 0x76, 0xd8, 0x5d,
 		0x56, 0xe3, 0x79, 0xc2, 0xe0, 0x97, 0xb9, 0x29,
@@ -218,7 +219,7 @@ func TestPackBaseData(t *testing.T) {
 
 	if txId != expectedTxId {
 		t.Errorf("pack tx id: %#v  expected: %#v", txId, expectedTxId)
-		t.Errorf("*** GENERATED tx id:\n%s", util.FormatBytes("expectedTxId", txId.Bytes()))
+		t.Errorf("*** GENERATED tx id:\n%s", util.FormatBytes("expectedTxId", txId[:]))
 	}
 
 	// =====
@@ -249,7 +250,7 @@ func TestPackBaseData(t *testing.T) {
 
 	// display a JSON version for information
 	item := struct {
-		TxId     transactionrecord.Link
+		TxId     merkle.Digest
 		BaseData *transactionrecord.BaseData
 	}{
 		TxId:     txId,
@@ -297,7 +298,7 @@ func TestPackAssetData(t *testing.T) {
 		0x1b, 0xa3, 0x74, 0x11, 0x01,
 	}
 
-	expectedTxId := transactionrecord.Link{
+	expectedTxId := merkle.Digest{
 		0x1b, 0x01, 0x61, 0xd0, 0x0d, 0x3a, 0xfe, 0x51,
 		0x6f, 0x74, 0x0c, 0x55, 0x1a, 0x72, 0x06, 0x23,
 		0x6d, 0xcf, 0xc9, 0x08, 0x0c, 0x27, 0x36, 0x2d,
@@ -348,7 +349,7 @@ func TestPackAssetData(t *testing.T) {
 
 	if txId != expectedTxId {
 		t.Errorf("pack tx id: %#v  expected: %#v", txId, expectedTxId)
-		t.Errorf("*** GENERATED tx id:\n%s", util.FormatBytes("expectedTxId", txId.Bytes()))
+		t.Errorf("*** GENERATED tx id:\n%s", util.FormatBytes("expectedTxId", txId[:]))
 	}
 
 	// check asset index
@@ -356,7 +357,7 @@ func TestPackAssetData(t *testing.T) {
 
 	if assetIndex != expectedAssetIndex {
 		t.Errorf("pack asset index: %#v  expected: %#v", assetIndex, expectedAssetIndex)
-		t.Errorf("*** GENERATED asset index:\n%s", util.FormatBytes("expectedAssetIndex", assetIndex.Bytes()))
+		t.Errorf("*** GENERATED asset index:\n%s", util.FormatBytes("expectedAssetIndex", assetIndex[:]))
 	}
 
 	// test the unpacker
@@ -375,7 +376,7 @@ func TestPackAssetData(t *testing.T) {
 
 	// display a JSON version for information
 	item := struct {
-		TxId      transactionrecord.Link
+		TxId      merkle.Digest
 		Asset     transactionrecord.AssetIndex
 		AssetData *transactionrecord.AssetData
 	}{
@@ -432,7 +433,7 @@ func TestPackBitmarkIssue(t *testing.T) {
 		0x46, 0x98, 0xbd, 0xc2, 0x63,
 	}
 
-	expectedTxId := transactionrecord.Link{
+	expectedTxId := merkle.Digest{
 		0x79, 0xa6, 0x7b, 0xe2, 0xb3, 0xd3, 0x13, 0xbd,
 		0x49, 0x03, 0x63, 0xfb, 0x0d, 0x27, 0x90, 0x1c,
 		0x46, 0xed, 0x53, 0xd3, 0xf7, 0xb2, 0x1f, 0x60,
@@ -466,7 +467,7 @@ func TestPackBitmarkIssue(t *testing.T) {
 
 	if txId != expectedTxId {
 		t.Errorf("pack tx id: %#v  expected: %x", txId, expectedTxId)
-		t.Errorf("*** GENERATED tx id:\n%s", util.FormatBytes("expectedTxId", txId.Bytes()))
+		t.Errorf("*** GENERATED tx id:\n%s", util.FormatBytes("expectedTxId", txId[:]))
 		t.Fatal("fatal error")
 	}
 
@@ -486,7 +487,7 @@ func TestPackBitmarkIssue(t *testing.T) {
 
 	// display a JSON version for information
 	item := struct {
-		TxId         transactionrecord.Link
+		TxId         merkle.Digest
 		BitmarkIssue *transactionrecord.BitmarkIssue
 	}{
 		txId,
@@ -559,8 +560,9 @@ func TestPackBitmarkTransferOne(t *testing.T) {
 	issuerAccount := makeAccount(issuer.publicKey)
 	ownerOneAccount := makeAccount(ownerOne.publicKey)
 
-	var link transactionrecord.Link
-	_, err := fmt.Sscan("79a67be2b3d313bd490363fb0d27901c46ed53d3f7b21f60d48bc42439b06084", &link)
+	var link merkle.Digest
+	//_, err := fmt.Sscan("79a67be2b3d313bd490363fb0d27901c46ed53d3f7b21f60d48bc42439b06084", &link)
+	_, err := fmt.Sscan("8460b03924c48bd4601fb2f7d353ed461c90270dfb630349bd13d3b3e27ba679", &link)
 	if nil != err {
 		t.Fatalf("hex to link error: %v", err)
 	}
@@ -582,7 +584,7 @@ func TestPackBitmarkTransferOne(t *testing.T) {
 		0xb8, 0x89, 0x44, 0xb0, 0x92,
 	}
 
-	expectedTxId := transactionrecord.Link{
+	expectedTxId := merkle.Digest{
 		0x63, 0x0c, 0x04, 0x1c, 0xd1, 0xf5, 0x86, 0xbc,
 		0xb9, 0x09, 0x7e, 0x81, 0x61, 0x89, 0x18, 0x5c,
 		0x1e, 0x03, 0x79, 0xf6, 0x7b, 0xbf, 0xc2, 0xf0,
@@ -616,7 +618,7 @@ func TestPackBitmarkTransferOne(t *testing.T) {
 
 	if txId != expectedTxId {
 		t.Errorf("pack txId: %#v  expected: %x", txId, expectedTxId)
-		t.Errorf("*** GENERATED txId:\n%s", util.FormatBytes("expectedTxId", txId.Bytes()))
+		t.Errorf("*** GENERATED txId:\n%s", util.FormatBytes("expectedTxId", txId[:]))
 		t.Fatal("fatal error")
 	}
 
@@ -636,7 +638,7 @@ func TestPackBitmarkTransferOne(t *testing.T) {
 
 	// display a JSON version for information
 	item := struct {
-		TxId            transactionrecord.Link
+		TxId            merkle.Digest
 		BitmarkTransfer *transactionrecord.BitmarkTransfer
 	}{
 		txId,
@@ -665,8 +667,9 @@ func TestPackBitmarkTransferTwo(t *testing.T) {
 	ownerOneAccount := makeAccount(ownerOne.publicKey)
 	ownerTwoAccount := makeAccount(ownerTwo.publicKey)
 
-	var link transactionrecord.Link
-	_, err := fmt.Sscan("630c041cd1f586bcb9097e816189185c1e0379f67bbfc2f0626724f542047873", &link)
+	var link merkle.Digest
+	//_, err := fmt.Sscan("630c041cd1f586bcb9097e816189185c1e0379f67bbfc2f0626724f542047873", &link)
+	_, err := fmt.Sscan("73780442f5246762f0c2bf7bf679031e5c188961817e09b9bc86f5d11c040c63", &link)
 	if nil != err {
 		t.Fatalf("hex to link error: %v", err)
 	}
@@ -696,7 +699,7 @@ func TestPackBitmarkTransferTwo(t *testing.T) {
 		0x20, 0x1c, 0x35, 0xf7, 0xb3,
 	}
 
-	expectedTxId := transactionrecord.Link{
+	expectedTxId := merkle.Digest{
 		0x87, 0xef, 0x60, 0x39, 0xaf, 0x2e, 0x61, 0xcf,
 		0xed, 0xf7, 0x65, 0x08, 0xcb, 0x3f, 0x54, 0xc6,
 		0xd0, 0xdd, 0x01, 0xd6, 0xd3, 0xcf, 0x5b, 0x79,
@@ -730,7 +733,7 @@ func TestPackBitmarkTransferTwo(t *testing.T) {
 
 	if txId != expectedTxId {
 		t.Errorf("pack txId: %#v  expected: %x", txId, expectedTxId)
-		t.Errorf("*** GENERATED txId:\n%s", util.FormatBytes("expectedTxId", txId.Bytes()))
+		t.Errorf("*** GENERATED txId:\n%s", util.FormatBytes("expectedTxId", txId[:]))
 		t.Fatal("fatal error")
 	}
 
@@ -750,7 +753,7 @@ func TestPackBitmarkTransferTwo(t *testing.T) {
 
 	// display a JSON version for information
 	item := struct {
-		TxId            transactionrecord.Link
+		TxId            merkle.Digest
 		BitmarkTransfer *transactionrecord.BitmarkTransfer
 	}{
 		txId,

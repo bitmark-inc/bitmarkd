@@ -8,41 +8,50 @@
 // maintain separate pools of a number of elements in key->value form
 //
 // This maintains a LevelDB database split into a series of tables.
-// Each table is defined by a prefix byte that is obtainen from the
+// Each table is defined by a prefix byte that is obtained from the
 // prefix tag in the struct defining the avaiable tables.
 //
 //
 // Notes:
 // 1. each separate pool has a single byte prefix (to spread the keys in LevelDB)
-// 2. digest = SHA3-256(data)
+// 2. ++           = concatenation of byte data
+// 3. block number = big endian uint64 (8 bytes)
+// 4. txid         = transaction digest as 32 byte SHA3-256(data)
+// 5. asset index  = fingerprint digest as 64 byte SHA3-512(data)
+// 6. count        = successive index value as big endian uint64 (8 bytes)
+// 7. owner        = bitmark account (32 byte public key)
+// 8. *others*     = byte values of various length
 //
 // Blocks:
 //
-//   B<block-number>                - block store (already mined blocks)
-//                                    data: header ++ count ++ merkle tree of transaction digests
-//                                    the transactions must be in the mined transactions table
-//   F<block-number>                - current block owner
-//                                    data: account ++ currency ++ address
+//   B ++ block number          - block store
+//                                data: header ++ base transaction ++ (concat transactions)
+//   F ++ block number          - current block owner
+//                                data: owner ++ currency ++ currency address
 //
 // Transactions:
 //
-//   T<tx-digest>                   - mined transactions: packed transaction data
-//   V<tx-digest>                   - verified transactions: packed transaction data
+//   T ++ txid                  - confirmed transactions
+//                                data: packed transaction data
+//   V ++ txid                  - verified transactions for assembling new blocks
+//                                data: packed transaction data
 //
 // Assets:
 //
-//   I<assetIndex>                  - transaction-digest (to locate the AssetData transaction)
+//   A ++ asset index           - confirmed asset
+//                                data: packed asset data
+//   I ++ asset index           - verified asset, these are not yet in a block
+//                                data: packed asset data
 //
 // Ownership:
 //
-//   N<owner-pubkey>                - count (for owner indexing)
-//   K<owner-pubkey><count>         - tx-digest ++ issue tx-digest ++ asset-digest
-//   D<owner-pubkey><tx-digest>     - count
+//   N ++ owner                 - next count value to use for appending to owned items
+//                                data: count
+//   K ++ owner ++ count        - list of owned items
+//                                data: txid ++ issue txid ++ asset index ++ issue block number
+//   D ++ owner ++ txid         - position in list of owned items, for delete after transfer
+//                                data: count
 //
-// Networking:
-//
-//   P<IP:port>                     - P2P: ZMQ public-key
-//   R<IP:port>                     - RPC: certificate-fingerprint
-//   C<fingerprint>                 - raw certificate
-//
+// Testing:
+//   Z ++ key                   - testing data
 package storage

@@ -191,6 +191,7 @@ func (conn *connector) process() {
 			for h -= 1; h > genesis.BlockNumber; h -= 1 {
 				d, err := blockDigest(conn.theClient, h)
 				if nil != err {
+					log.Infof("block number: %d  fetch digest error: %v", h, err)
 					conn.state = cStateHighestBlock // retry
 					break
 				} else if d == digest {
@@ -200,6 +201,7 @@ func (conn *connector) process() {
 				}
 				digest, err = block.DigestForBlock(h)
 				if nil != err {
+					log.Infof("block number: %d  local digest error: %v", h, err)
 					conn.state = cStateHighestBlock // retry
 					break
 				}
@@ -208,6 +210,15 @@ func (conn *connector) process() {
 
 	case cStateFetchBlocks:
 		conn.state += 1 // assume success
+
+		// remove old blocks
+		err := block.DeleteDownToBlock(conn.startBlockNumber)
+		if nil != err {
+			log.Errorf("delete down to block number: %d  error: %v", conn.startBlockNumber, err)
+			conn.state = cStateHighestBlock // retry
+			break
+		}
+
 		for n := conn.startBlockNumber; n <= conn.highestBlockNumber; n += 1 {
 			packedBlock, err := blockData(conn.theClient, n)
 			if nil != err {
@@ -225,8 +236,22 @@ func (conn *connector) process() {
 
 		}
 	case cStateRebuild:
+		// ***** FIX THIS: this need to scan verified assets to remove duplicates
+		// ***** FIX THIS: since these have been superseded by other confirmed ones after the fork
+		// ***** FIX THIS:
+		// ***** FIX THIS: scan verified transactions and remove any double-spend transfers
+		// ***** FIX THIS: just check if there is still an owner for the transfers link
+
+		// ***** FIX THIS: just testing begin
+		const n = 3                       // ***** FIX THIS:
+		err := block.DeleteDownToBlock(n) // ***** FIX THIS:
+		if nil != err {                   // ***** FIX THIS:
+			log.Errorf("delete to block number: %d  error: %v", n, err) // ***** FIX THIS:
+		} // ***** FIX THIS:
+		// ***** FIX THIS: just testing end
+
 		conn.state += 1 // assume success
-		log.Warnf("rebuild start from block number: %d", conn.startBlockNumber)
+		log.Warn("rebuild entire database here if necessary")
 	case cStateSampling:
 
 	}

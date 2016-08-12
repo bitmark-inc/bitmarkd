@@ -7,11 +7,11 @@ package block
 import (
 	"encoding/binary"
 	"encoding/json"
+	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/genesis"
-	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
@@ -42,6 +42,11 @@ type blockData struct {
 
 	ring      [ringSize]ringBuffer
 	ringIndex int
+
+	blk blockstore // for sequencing block storage
+
+	// for background
+	background *background.T
 
 	// set once during initialise
 	initialised bool
@@ -188,8 +193,22 @@ func Initialise() error {
 		globalData.log.Infof("%sring[%02d]: number: %d crc: 0x%015x  digest: %v", p, i, globalData.ring[i].number, globalData.ring[i].crc, globalData.ring[i].digest)
 	}
 
+	// initialise background tasks
+	if err := globalData.blk.initialise(); nil != err {
+		return err
+	}
+
 	// all data initialised
 	globalData.initialised = true
+
+	// start background processes
+	globalData.log.Info("start background…")
+
+	var processes = background.Processes{
+		&globalData.blk,
+	}
+
+	globalData.background = background.Start(processes, globalData.log)
 
 	return nil
 }
@@ -210,175 +229,4 @@ func Finalise() error {
 	globalData.initialised = false
 
 	return nil
-}
-
-// get block data for initialising a new block
-// returns: previous block digest and the number for the new block
-func Get() (blockdigest.Digest, uint64) {
-	globalData.Lock()
-	defer globalData.Unlock()
-	nextBlockNumber := globalData.height + 1
-	return globalData.previousBlock, nextBlockNumber
-}
-
-// get the current height
-func GetHeight() uint64 {
-	globalData.Lock()
-	height := globalData.height
-	globalData.Unlock()
-	return height
-}
-
-func DigestForBlock(number uint64) (blockdigest.Digest, error) {
-	globalData.Lock()
-	defer globalData.Unlock()
-
-	// valid block number
-	if number <= genesis.BlockNumber {
-		if mode.IsTesting() {
-			return genesis.TestGenesisDigest, nil
-		}
-		return genesis.LiveGenesisDigest, nil
-	}
-
-	// check if in the cache
-	if number > genesis.BlockNumber && number <= globalData.height {
-		i := globalData.height - number
-		if i < ringSize {
-			j := globalData.ringIndex - 1 - int(i)
-			if j < 0 {
-				j = ringSize - 1
-			}
-			if number != globalData.ring[j].number {
-				fault.Panicf("block.DigestForBlock: ring buffer corrupted block number, actual: %d  expected: %d", globalData.ring[j].number, number)
-			}
-			return globalData.ring[j].digest, nil
-		}
-	}
-
-	// no cache, fetch block and compute digest
-	n := make([]byte, 8)
-	binary.BigEndian.PutUint64(n, number)
-	packed := storage.Pool.Blocks.Get(n) // ***** FIX THIS: possible optimisation is to store the block hashes in a separate index
-	if nil == packed {
-		return blockdigest.Digest{}, fault.ErrBlockNotFound
-	}
-	return blockrecord.PackedHeader(packed).Digest(), nil
-}
-
-// store the block and update block data
-func Store(header *blockrecord.Header, digest blockdigest.Digest, packedBlock []byte) {
-	globalData.Lock()
-	//defer globalData.Unlock()
-
-	expectedBlockNumber := globalData.height + 1
-	if expectedBlockNumber != header.Number {
-		fault.Panicf("block.Store: out of sequence block: actual: %d  expected: %d", header.Number, expectedBlockNumber)
-	}
-
-	globalData.previousBlock = digest
-	globalData.height = header.Number
-
-	i := globalData.ringIndex
-	globalData.ring[i].number = header.Number
-	globalData.ring[i].digest = digest
-	globalData.ring[i].crc = CRC(header.Number, packedBlock)
-	i = i + 1
-	if i >= len(globalData.ring) {
-		i = 0
-	}
-	globalData.ringIndex = i
-
-	// end of critical section
-	globalData.Unlock()
-
-	blockNumber := make([]byte, 8)
-	binary.BigEndian.PutUint64(blockNumber, header.Number)
-
-	storage.Pool.Blocks.Put(blockNumber, packedBlock)
-}
-
-// store an incoming block checking to make sure it is valid first
-func StoreIncoming(packedBlock []byte) error {
-	packedHeader := blockrecord.PackedHeader(packedBlock[:blockrecord.TotalBlockSize])
-	header, err := packedHeader.Unpack()
-	if nil != err {
-		return err
-	}
-
-	if globalData.previousBlock != header.PreviousBlock {
-		return fault.ErrPreviousBlockDigestDoesNotMatch
-	}
-
-	data := packedBlock[blockrecord.TotalBlockSize:]
-
-	type txn struct {
-		packed   transactionrecord.Packed
-		unpacked interface{}
-	}
-
-	txs := make([]txn, header.TransactionCount)
-	txIds := make([]merkle.Digest, header.TransactionCount)
-
-	// check all transactions are valid
-	for i := uint16(0); i < header.TransactionCount; i += 1 {
-		transaction, n, err := transactionrecord.Packed(data).Unpack()
-		if nil != err {
-			return err
-		}
-
-		txs[i].packed = transactionrecord.Packed(data[:n])
-		txs[i].unpacked = transaction
-		txIds[i] = merkle.NewDigest(data[:n])
-		data = data[n:]
-	}
-
-	// build the tree of transaction IDs
-	fullMerkleTree := merkle.FullMerkleTree(txIds)
-	merkleRoot := fullMerkleTree[len(fullMerkleTree)-1]
-
-	if merkleRoot != header.MerkleRoot {
-		return fault.ErrMerkleRootDoesNotMatch
-	}
-
-	digest := packedHeader.Digest()
-	Store(header, digest, packedBlock)
-
-	// store transactions
-	for i, txn := range txs {
-		txid := txIds[i]
-		packed := txn.packed
-		transaction := txn.unpacked
-		switch transaction.(type) {
-
-		case *transactionrecord.AssetData:
-			asset := transaction.(*transactionrecord.AssetData)
-			assetIndex := asset.AssetIndex()
-			key := assetIndex[:]
-			storage.Pool.VerifiedAssets.Delete(key)
-			storage.Pool.Assets.Put(key, packed)
-
-		case *transactionrecord.BaseData:
-			// currently not stored separately
-
-		default: // just store the transaction
-			key := txid[:]
-			storage.Pool.VerifiedTransactions.Delete(key)
-			storage.Pool.Transactions.Put(key, packed)
-		}
-	}
-
-	return nil
-}
-
-// fetch latest crc value
-func GetLatestCRC() uint64 {
-	globalData.Lock()
-	i := globalData.ringIndex - 1
-	if i < 0 {
-		i = len(globalData.ring) - 1
-	}
-	crc := globalData.ring[i].crc
-	globalData.Unlock()
-	return crc
 }

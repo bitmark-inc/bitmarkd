@@ -90,7 +90,7 @@ func TestAssetIndex(t *testing.T) {
 
 	if asset != expectedAssetIndex {
 		t.Errorf("asset: %#v  expected: %#v", asset, expectedAssetIndex)
-		t.Errorf("*** GENERATED asset:\n%s", util.FormatBytes("expectedAssetIndex", asset.Bytes()))
+		t.Errorf("*** GENERATED asset:\n%s", util.FormatBytes("expectedAssetIndex", asset[:]))
 	}
 
 	// check JSON conversion

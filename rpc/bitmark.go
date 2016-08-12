@@ -5,10 +5,16 @@
 package rpc
 
 import (
-	//"github.com/bitmark-inc/bitmarkd/block"
-	//"github.com/bitmark-inc/bitmarkd/fault"
-	//"github.com/bitmark-inc/bitmarkd/messagebus"
-	//"github.com/bitmark-inc/bitmarkd/transactionrecord"
+	"encoding/binary"
+	"github.com/bitmark-inc/bitmarkd/account"
+	"github.com/bitmark-inc/bitmarkd/currency"
+	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/bitmark-inc/bitmarkd/messagebus"
+	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/payment"
+	"github.com/bitmark-inc/bitmarkd/storage"
+	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
 )
 
@@ -19,201 +25,224 @@ type Bitmark struct {
 	log *logger.L
 }
 
-// // Bitmark issue
-// // -------------
-
-// type BitmarkIssueReply struct {
-// 	TxId transactionrecord.Link `json:"txid"`
-// 	//PaymentAddress []block.MinerAddress `json:"paymentAddress"`
-// 	Duplicate bool `json:"duplicate"`
-// 	//Err       string `json:"error,omitempty"`
-// }
-
-// func (bitmark *Bitmark) Issue(arguments *transactionrecord.BitmarkIssue, reply *BitmarkIssueReply) error {
-
-// 	log := bitmark.log
-
-// 	log.Infof("Bitmark.Issue: %v", arguments)
-
-// 	packedIssue, err := arguments.Pack(arguments.Owner)
-// 	if nil != err {
-// 		return err
-// 	}
-
-// 	txId := packedIssue.MakeLink()
-
-// 	log.Infof("packed issue: %x", packedIssue) // ***** FIX THIS: debugging
-// 	log.Infof("id: %v", txId)                  // ***** FIX THIS: debugging
-
-// 	// ***** FIX THIS: to get the id
-// 	// check record
-// 	// id, exists := packedIssue.Exists()
-
-// 	// ***** FIX THIS: restore broadcasting
-// 	// announce transaction to system
-// 	// if !exists {
-// 	// 	messagebus.Send("", packedIssue)
-// 	// }
-
-// 	// log.Infof("Bitmark.Issue exists: %v", exists)
-
-// 	// set up reply
-// 	reply.TxId = txId // ***** FIX THIS: get actual id
-// 	//reply.PaymentAddress = payment.PaymentAddresses()
-// 	//reply.Duplicate = exists
-
-// 	return nil
-// }
-
 // Bitmark transfer
 // ----------------
 
-// type BitmarkTransferReply struct {
-// 	TxId transaction.Link `json:"txid"`
-// 	//PaymentAddress []block.MinerAddress `json:"paymentAddress"`
-// 	Duplicate bool   `json:"duplicate"`
-// 	Err       string `json:"error,omitempty"`
-// }
+type BitmarkTransferReply struct {
+	TxId     merkle.Digest `json:"txid"`
+	PayId    payment.PayId `json:"payId"`
+	Payments []*transactionrecord.Payment
+	//PaymentAlternatives []block.MinerAddress `json:"paymentAlternatives"`// ***** FIX THIS: where to get addresses?
+}
 
-// func (bitmark *Bitmark) Transfer(arguments *transaction.BitmarkTransfer, reply *BitmarkTransferReply) error {
+func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransfer, reply *BitmarkTransferReply) error {
 
-// 	log := bitmark.log
+	log := bitmark.log
 
-// 	log.Infof("Bitmark.Transfer: %v", arguments)
+	log.Infof("Bitmark.Transfer: %v", arguments)
 
-// 	state, packedTransaction, found := arguments.Link.Read()
-// 	if !found {
-// 		return fault.ErrLinkNotFound
-// 	}
+	if !mode.Is(mode.Normal) {
+		return fault.ErrNotAvailableDuringSynchronise
+	}
 
-// 	// predecessor must already be confirmed
-// 	if state != transaction.ConfirmedTransaction {
-// 		return fault.ErrLinksToUnconfirmedTransaction
-// 	}
+	// find the current owner via the link
+	previousPacked := storage.Pool.Transactions.Get(arguments.Link[:])
+	if nil == previousPacked {
+		return fault.ErrLinkToInvalidOrUnconfirmedTransaction
+	}
 
-// 	trans, err := packedTransaction.Unpack()
-// 	if nil != err {
-// 		return err
-// 	}
+	previousTransaction, _, err := transactionrecord.Packed(previousPacked).Unpack()
+	if nil != err {
+		return err
+	}
 
-// 	// extract address and exclude impossible chain links
-// 	var address *transaction.Address
-// 	switch trans.(type) {
-// 	case *transaction.BitmarkIssue:
-// 		address = trans.(*transaction.BitmarkIssue).Owner
-// 		// predecessor must be the current issuer
-// 		if !arguments.Link.IsOwner(address) {
-// 			return fault.ErrNotCurrentOwner
-// 		}
+	var currentOwner *account.Account
+	var previousTransfer *transactionrecord.BitmarkTransfer
 
-// 	case *transaction.BitmarkTransfer:
-// 		address = trans.(*transaction.BitmarkTransfer).Owner
-// 		// predecessor must be the current owner
-// 		if !arguments.Link.IsOwner(address) {
-// 			return fault.ErrNotCurrentOwner
-// 		}
-// 	default:
-// 		return fault.ErrInvalidTransactionChain
-// 	}
+	switch previousTransaction.(type) {
+	case *transactionrecord.BitmarkIssue:
+		issue := previousTransaction.(*transactionrecord.BitmarkIssue)
+		currentOwner = issue.Owner
 
-// 	packedTransfer, err := arguments.Pack(address)
-// 	if nil != err {
-// 		return err
-// 	}
+	case *transactionrecord.BitmarkTransfer:
+		transfer := previousTransaction.(*transactionrecord.BitmarkTransfer)
+		currentOwner = transfer.Owner
+		previousTransfer = transfer
 
-// 	// check record
-// 	id, exists := packedTransfer.Exists()
+	default:
+		return fault.ErrLinkToInvalidOrUnconfirmedTransaction
+	}
 
-// 	reply.Duplicate = exists
-// 	reply.TxId = id
-// 	//reply.PaymentAddress = payment.PaymentAddresses()
+	// pack transfer and check signature
+	packedTransfer, err := arguments.Pack(currentOwner)
+	if nil != err {
+		return err
+	}
 
-// 	// announce transaction to system
-// 	if !exists {
-// 		messagebus.Send("", packedTransfer)
-// 	}
+	// transfer identifier and check for duplicate
+	txId := packedTransfer.MakeLink()
+	key := txId[:]
+	if storage.Pool.Transactions.Has(key) || storage.Pool.VerifiedTransactions.Has(key) {
+		return fault.ErrTransactionAlreadyExists
+	}
 
-// 	log.Infof("Bitmark.Transfer exists: %v", exists)
-// 	return nil
-// }
+	log.Infof("packed transfer: %x", packedTransfer)
+	log.Infof("id: %v", txId)
 
-// // Trace the history of a property
-// // -------------------------------
+	// get count for current owner record
+	// to make sure that the record has not already been transferred
+	dKey := append(currentOwner.Bytes(), arguments.Link[:]...)
+	log.Infof("dKey: %x", dKey)
+	dCount := storage.Pool.OwnerDigest.Get(dKey)
+	if nil == dCount {
+		return fault.ErrDoubleTransferAttempt
+	}
+	log.Infof("dCount: %x", dCount)
 
-// type ProvenanceArguments struct {
-// 	TxId  transaction.Link `json:"txid"`
-// 	Count int              `json:"count"`
-// }
+	// get ownership data
+	oKey := append(currentOwner.Bytes(), dCount...)
+	log.Infof("oKey: %x", oKey)
+	ownerData := storage.Pool.Ownership.Get(oKey)
+	if nil == ownerData {
+		return fault.ErrDoubleTransferAttempt
+	}
+	log.Infof("ownerData: %x", ownerData)
 
-// // can be any of the transaction records
-// type ProvenanceRecord struct {
-// 	Record string            `json:"record"`
-// 	TxId   transaction.Link  `json:"txid"`
-// 	State  transaction.State `json:"state"`
-// 	Data   interface{}       `json:"data"`
-// }
+	// get block number of issue
+	bKey := ownerData[2*merkle.DigestLength+transactionrecord.AssetIndexLength:]
+	if 8 != len(bKey) {
+		log.Criticalf("expected 8 byte block number but got: %d bytes", len(bKey))
+		fault.Panicf("expected 8 byte block number but got: %d bytes", len(bKey))
+	}
+	log.Infof("bKey: %x", bKey)
 
-// type ProvenanceReply struct {
-// 	Data []ProvenanceRecord `json:"data"`
-// }
+	blockOwnerData := storage.Pool.BlockOwners.Get(bKey)
+	if nil == blockOwnerData {
+		return fault.ErrDoubleTransferAttempt
+	}
+	log.Infof("blockOwnerData: %x", blockOwnerData)
 
-// func (bitmark *Bitmark) Provenance(arguments *ProvenanceArguments, reply *ProvenanceReply) error {
-// 	log := bitmark.log
+	// block owner (from issue) payment
+	// 0: the issue owner
+	// 1: block miner (TO DO)
+	// 2: transfer payment (optional)
+	payments := make([]*transactionrecord.Payment, 1, 3)
+	c, err := currency.FromUint64(binary.BigEndian.Uint64(blockOwnerData[:8]))
+	if nil != err {
+		log.Criticalf("block currency invalid error: %v", err)
+		fault.Panicf("block currency invalid error: %v", err)
+	}
+	payments[0] = &transactionrecord.Payment{
+		Currency: c,
+		Address:  string(blockOwnerData[8:]),
+		Amount:   5000, // ***** FIX THIS: what is the correct value
+	}
 
-// 	log.Infof("Bitmark.Provenance: %v", arguments)
+	// optional payment record (if previous record was transfer and contains such)
+	if nil != previousTransfer && nil != previousTransfer.Payment {
+		payments = append(payments, previousTransfer.Payment)
+	}
 
-// 	count := arguments.Count
-// 	id := arguments.TxId
+	// get payment info
+	reply.TxId = txId
+	reply.PayId, _, _ = payment.Store(currency.Bitcoin, packedTransfer, 1, false)
+	reply.Payments = payments
 
-// 	provenance := make([]ProvenanceRecord, 0, count)
+	// announce transaction block to other peers
+	messagebus.Bus.Broadcast.Send("transfer", packedTransfer)
 
-// loop:
-// 	for i := 0; i < count; i += 1 {
-// 		state, data, found := id.Read()
-// 		if !found {
-// 			break loop
-// 		}
+	return nil
+}
 
-// 		tx, err := data.Unpack()
-// 		if nil != err {
-// 			break loop
-// 		}
+// Trace the history of a property
+// -------------------------------
 
-// 		link := id // save for later
+type ProvenanceArguments struct {
+	TxId  merkle.Digest `json:"txid"`
+	Count int           `json:"count"`
+}
 
-// 		record, _ := transaction.RecordName(id)
-// 		done := false
+// can be any of the transaction records
+type ProvenanceRecord struct {
+	Record  string      `json:"record"`
+	TxId    interface{} `json:"txid"`
+	AssetId interface{} `json:"assetid"`
+	Data    interface{} `json:"data"`
+}
 
-// 		switch tx.(type) {
-// 		case *transaction.AssetData:
-// 			done = true
+type ProvenanceReply struct {
+	Data []ProvenanceRecord `json:"data"`
+}
 
-// 		case *transaction.BitmarkIssue:
-// 			_, id, found = tx.(*transaction.BitmarkIssue).AssetIndex.Read()
-// 			if !found {
-// 				done = true
-// 			}
-// 			//id = tx.(*transaction.BitmarkIssue).Link
+func (bitmark *Bitmark) Provenance(arguments *ProvenanceArguments, reply *ProvenanceReply) error {
+	log := bitmark.log
 
-// 		case *transaction.BitmarkTransfer:
-// 			id = tx.(*transaction.BitmarkTransfer).Link
+	log.Infof("Bitmark.Provenance: %v", arguments)
 
-// 		default:
-// 			break loop
-// 		}
+	count := arguments.Count
+	id := arguments.TxId
 
-// 		h := ProvenanceRecord{
-// 			Record: record,
-// 			TxId:   link,
-// 			State:  state,
-// 			Data:   tx,
-// 		}
-// 		provenance = append(provenance, h)
-// 		if done {
-// 			break loop
-// 		}
-// 	}
-// 	reply.Data = provenance
+	provenance := make([]ProvenanceRecord, 0, count)
 
-// 	return nil
-// }
+loop:
+	for i := 0; i < count; i += 1 {
+
+		packed := storage.Pool.Transactions.Get(id[:])
+		if nil == packed {
+			break loop
+		}
+
+		tx, _, err := transactionrecord.Packed(packed).Unpack()
+		if nil != err {
+			break loop
+		}
+
+		record, _ := transactionrecord.RecordName(tx)
+		h := ProvenanceRecord{
+			Record:  record,
+			TxId:    id,
+			AssetId: nil,
+			Data:    tx,
+		}
+		provenance = append(provenance, h)
+
+		switch tx.(type) {
+
+		case *transactionrecord.BitmarkIssue:
+			issue := tx.(*transactionrecord.BitmarkIssue)
+			if i >= count {
+				break loop
+			}
+			asset := storage.Pool.Assets.Get(issue.AssetIndex[:])
+			if nil == asset {
+				break loop
+			}
+			tx, _, err := transactionrecord.Packed(asset).Unpack()
+			if nil != err {
+				break loop
+			}
+
+			record, _ := transactionrecord.RecordName(tx)
+			h := ProvenanceRecord{
+				Record:  record,
+				TxId:    nil,
+				AssetId: issue.AssetIndex,
+				Data:    tx,
+			}
+			provenance = append(provenance, h)
+			break loop
+
+			//id = tx.(*transaction.BitmarkIssue).Link
+
+		case *transactionrecord.BitmarkTransfer:
+			id = tx.(*transactionrecord.BitmarkTransfer).Link
+
+		default:
+			break loop
+		}
+	}
+
+	reply.Data = provenance
+
+	return nil
+}
