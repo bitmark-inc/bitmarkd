@@ -441,8 +441,7 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 
 	newPublicKey, err := hex.DecodeString(to)
 	if nil != err {
-		fmt.Printf("Decode to public key error\n")
-		exitwithstatus.Message("Error: %s\n", err)
+		fmt.Printf("Receiver hex decode to  error, use the public key directly\n")
 	}
 
 	newOwnerKeyPair := keyPair{
