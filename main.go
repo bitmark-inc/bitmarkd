@@ -191,7 +191,7 @@ func main() {
 			},
 		},
 		{
-			Name: "keypair",
+			Name:  "keypair",
 			Usage: "get default identity's raw key pair",
 			Action: func(c *cli.Context) error {
 				getDefaultRawKeyPair(c, globals)
@@ -684,7 +684,6 @@ func getDefaultRawKeyPair(c *cli.Context, globals globalFlags) {
 		fmt.Printf("%s\n", b)
 	}
 }
-
 
 func writeIdentityToFile(identity configuration.IdentityType, configFile string) bool {
 
