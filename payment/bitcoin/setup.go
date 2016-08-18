@@ -45,8 +45,8 @@ type bitcoinData struct {
 	password string
 
 	// queueing
-	blockQueue chan uint64
-	itemQueue  chan *priorityItem
+	//blockQueue chan uint64
+	itemQueue chan *priorityItem
 
 	// verification
 	verifier chan<- []byte
@@ -54,11 +54,8 @@ type bitcoinData struct {
 	// identifier for the RPC
 	id uint64
 
-	// // payment info
-	// minerAddress      string
-	// feeSingle         uint64 // value in Satoshis avoid float because of rounding errors
-	// feeMultiple       uint64 // value in Satoshis avoid float because of rounding errors
-	latestBlockNumber uint64 // value from bitcoind
+	// value from bitcoind
+	latestBlockNumber uint64
 
 	// for background
 	background *background.T
@@ -89,11 +86,6 @@ type Configuration struct {
 // Note fee is a string value and is converted to Satoshis to avoid rounding errors
 func Initialise(configuration *Configuration, verifier chan<- []byte) error {
 
-	// // ensure payments are initialised
-	// if err := payment.Initialise(); nil != err {
-	// 	return err
-	// }
-
 	globalData.Lock()
 	defer globalData.Unlock()
 
@@ -101,11 +93,6 @@ func Initialise(configuration *Configuration, verifier chan<- []byte) error {
 	if globalData.initialised {
 		return fault.ErrAlreadyInitialised
 	}
-
-	// // ***** FIX THIS: what about the payment for this miner?
-	// if "" == configuration.Address {
-	// 	return fault.ErrPaymentAddressMissing
-	// }
 
 	globalData.log = logger.New("bitcoin")
 	if nil == globalData.log {
@@ -121,12 +108,8 @@ func Initialise(configuration *Configuration, verifier chan<- []byte) error {
 	globalData.verifier = verifier
 
 	// set up queues
-	globalData.blockQueue = make(chan uint64, 10)
+	//globalData.blockQueue = make(chan uint64, 10)
 	globalData.itemQueue = make(chan *priorityItem, 10)
-
-	// globalData.minerAddress = configuration.Address
-	// globalData.feeSingle = convertToSatoshi([]byte(configuration.Fees.Single))
-	// globalData.feeMultiple = convertToSatoshi([]byte(configuration.Fees.Multiple))
 
 	if "" != configuration.Certificate {
 		keyPair, err := tls.LoadX509KeyPair(configuration.Certificate, configuration.PrivateKey)
@@ -173,7 +156,7 @@ func Initialise(configuration *Configuration, verifier chan<- []byte) error {
 	globalData.log.Debug("getinfo…")
 
 	// query bitcoind for status
-	// only need to have necessary fields as JSON unmarshaller will igtnore excess
+	// only need to have necessary fields as JSON unmarshaller will ignore excess
 	var reply struct {
 		Version uint64 `json:"version"`
 		Blocks  uint64 `json:"blocks"`
@@ -205,10 +188,6 @@ func Initialise(configuration *Configuration, verifier chan<- []byte) error {
 
 	globalData.background = background.Start(processes, globalData.log)
 
-	// payment.Register(bitcoinCurrencyName, &payment.CallType{
-	// 	Miner: getAddress,
-	// })
-
 	return nil
 }
 
@@ -231,19 +210,5 @@ func Finalise() error {
 	// finally...
 	globalData.initialised = false
 
-	// // finalise the main subsystem
-	// return payment.Finalise()
-
 	return nil
 }
-
-// // for mining
-// // ----------
-
-// // to get the current address as string for mining
-// func getAddress() string {
-// 	globalData.RLock()
-// 	defer globalData.RUnlock()
-
-// 	return globalData.minerAddress
-// }

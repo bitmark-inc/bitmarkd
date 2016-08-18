@@ -94,7 +94,7 @@ func StoreIncoming(packedBlock []byte) error {
 
 	// store transactions
 	for i, txn := range txs {
-		txid := txIds[i]
+		txId := txIds[i]
 		packed := txn.packed
 		transaction := txn.unpacked
 		switch transaction.(type) {
@@ -118,14 +118,14 @@ func StoreIncoming(packedBlock []byte) error {
 
 		case *transactionrecord.BitmarkIssue:
 			issue := transaction.(*transactionrecord.BitmarkIssue)
-			key := txid[:]
+			key := txId[:]
 			storage.Pool.VerifiedTransactions.Delete(key)
 			storage.Pool.Transactions.Put(key, packed)
-			CreateOwnership(txid, issue.AssetIndex, header.Number, issue.Owner)
+			CreateOwnership(txId, header.Number, issue.AssetIndex, issue.Owner)
 
 		case *transactionrecord.BitmarkTransfer:
 			transfer := transaction.(*transactionrecord.BitmarkTransfer)
-			key := txid[:]
+			key := txId[:]
 			storage.Pool.VerifiedTransactions.Delete(key)
 			storage.Pool.Transactions.Put(key, packed)
 			linkOwner := OwnerOf(transfer.Link)
@@ -133,7 +133,7 @@ func StoreIncoming(packedBlock []byte) error {
 				fault.Criticalf("missing transaction record for: %v", transfer.Link)
 				fault.Panic("Transactions database is corrupt")
 			}
-			TransferOwnership(txid, linkOwner, transfer.Owner)
+			TransferOwnership(transfer.Link, txId, header.Number, linkOwner, transfer.Owner)
 
 		default:
 			globalData.log.Criticalf("unhandled transaction: %v", transaction)

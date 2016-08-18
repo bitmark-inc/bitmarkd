@@ -93,6 +93,7 @@ var (
 	////ErrPeerAlreadyExists              = ExistsError("peer already exists")
 	////ErrPeerNotFound                   = NotFoundError("peer not found")
 	ErrPreviousBlockDigestDoesNotMatch = InvalidError("previous block digest does not match")
+	ErrReceiptTooLong                  = LengthError("receipt too long")
 	ErrSignatureTooLong                = LengthError("signature too long")
 	ErrTooManyItemsToProcess           = LengthError("too many items to process")
 	////ErrTooManyTransactionsInBlock     = LengthError("too many transactions in block")

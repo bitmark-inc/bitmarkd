@@ -164,9 +164,13 @@ func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) er
 // Bitmarks pay
 // --------------
 
+const maximumReceiptLength = 64 // hex bytes
+
 type PayArguments struct {
-	PayId   payment.PayId `json:"payId"`
-	Receipt string        `json:"receipt"`
+	PayId payment.PayId `json:"payId"` // id from the issue/transfer request
+	// ***** FIX THIS: is currency required?
+	//Currency currency.Currency `json:"currency"` // utf-8 → Enum
+	Receipt string `json:"receipt"` // hex id from payment process
 }
 
 type PayReply struct {
@@ -181,36 +185,25 @@ func (bitmarks *Bitmarks) Pay(arguments *PayArguments, reply *PayReply) error {
 		return fault.ErrNotAvailableDuringSynchronise
 	}
 
-	// // arbitrary byte size limit
-	// size := hex.DecodedLen(len(arguments.Receipt))
-	// if size < 1 || size > 64 {
-	// 	return fault.ErrInvalidReceipt
-	// }
+	// arbitrary byte size limit
+	size := hex.DecodedLen(len(arguments.Receipt))
+	if size < 1 || size > maximumReceiptLength {
+		return fault.ErrReceiptTooLong
+	}
 
 	log.Infof("pay for pay id: %v", arguments.PayId)
+	//log.Infof("currency: %q", arguments.Currency)
 	log.Infof("receipt: %q", arguments.Receipt)
 
-	// nonce := make([]byte, size)
-	// byteCount, err := hex.Decode(nonce, []byte(arguments.Nonce))
-	// if nil != err {
-	// 	return err
-	// }
-	// if byteCount != size {
-	// 	return fault.ErrInvalidNonce
-	// }
+	// announce pay block to other peers
+	packed := make([]byte, len(arguments.PayId))
+	copy(packed, arguments.PayId[:])
+	packed = append(packed, arguments.Receipt...)
 
-	// log.Infof("client nonce hex: %x", nonce)
+	log.Infof("broadcast pay: %x", packed)
+	messagebus.Bus.Broadcast.Send("pay", packed)
 
-	// // announce pay block to other peers
-	// packed := make([]byte, len(arguments.PayId), len(arguments.PayId)+len(nonce))
-	// copy(packed, arguments.PayId[:])
-	// packed = append(packed, nonce...)
-
-	// log.Infof("broadcast pay: %x", packed)
-	// messagebus.Bus.Broadcast.Send("pay", packed)
-
-	// // check if pay matches
-	// reply.Verified = payment.TryPay(arguments.PayId, nonce)
+	payment.TrackPayment(arguments.PayId, arguments.Receipt, 3)
 
 	return nil
 }

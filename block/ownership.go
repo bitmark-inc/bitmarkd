@@ -19,21 +19,21 @@ import (
 //   owner                 - next count value to use for appending to owned items
 //                           data: count
 //   owner ++ count        - list of owned items
-//                           data: txid ++ issue txid ++ asset index
+//                           data: last transfer txid ++ last transfer block number ++ issue txid ++ asset index ++ issue block number
 //   owner ++ txid         - position in list of owned items, for delete after transfer
 //                           data: count
 
 var toLock sync.Mutex
 
 // need to have a lock
-func TransferOwnership(link merkle.Digest, currentOwner *account.Account, newOwner *account.Account) {
+func TransferOwnership(previousTxId merkle.Digest, transferTxId merkle.Digest, transferBlockNumber uint64, currentOwner *account.Account, newOwner *account.Account) {
 
 	// ensure single threaded
 	toLock.Lock()
 	defer toLock.Unlock()
 
 	// get count for current owner record
-	dKey := append(currentOwner.Bytes(), link[:]...)
+	dKey := append(currentOwner.Bytes(), previousTxId[:]...)
 	dCount := storage.Pool.OwnerDigest.Get(dKey)
 	if nil == dCount {
 		fault.Panic("TransferOwnership: OwnerDigest database corrupt")
@@ -41,8 +41,8 @@ func TransferOwnership(link merkle.Digest, currentOwner *account.Account, newOwn
 
 	// delete the current owners records
 	oKey := append(currentOwner.Bytes(), dCount...)
-	previousData := storage.Pool.Ownership.Get(oKey)
-	if nil == previousData {
+	ownerData := storage.Pool.Ownership.Get(oKey)
+	if nil == ownerData {
 		fault.Panic("TransferOwnership: Ownership database corrupt")
 	}
 	storage.Pool.Ownership.Delete(oKey)
@@ -53,13 +53,22 @@ func TransferOwnership(link merkle.Digest, currentOwner *account.Account, newOwn
 		return
 	}
 
-	// create the owner data
-	newData := append(link[:], previousData[merkle.DigestLength:]...)
-	create(link, newData, newOwner)
+	// create the owner data by replacing txId and its block number
+	const (
+		txIdStart                 = 0
+		txIdFinish                = merkle.DigestLength
+		transferBlockNumberStart  = txIdFinish
+		transferBlockNumberFinish = transferBlockNumberStart + 8
+		remainderStart            = transferBlockNumberFinish
+	)
+
+	copy(ownerData[txIdStart:txIdFinish], transferTxId[:])
+	binary.BigEndian.PutUint64(ownerData[transferBlockNumberStart:transferBlockNumberFinish], transferBlockNumber)
+	create(transferTxId, ownerData, newOwner)
 }
 
 // internal creation routine, must be called with lock held
-func create(link merkle.Digest, ownerData []byte, owner *account.Account) {
+func create(txId merkle.Digest, ownerData []byte, owner *account.Account) {
 
 	// increment the count for new owner
 	nKey := owner.Bytes()
@@ -80,33 +89,34 @@ func create(link merkle.Digest, ownerData []byte, owner *account.Account) {
 	storage.Pool.Ownership.Put(oKey, ownerData)
 
 	// write new digest record
-	dKey := append(owner.Bytes(), link[:]...)
+	dKey := append(owner.Bytes(), txId[:]...)
 	storage.Pool.OwnerDigest.Put(dKey, count)
 }
 
-func CreateOwnership(link merkle.Digest, assetIndex transactionrecord.AssetIndex, blockNumber uint64, newOwner *account.Account) {
+func CreateOwnership(issueTxId merkle.Digest, issueBlockNumber uint64, assetIndex transactionrecord.AssetIndex, newOwner *account.Account) {
 	// ensure single threaded
 	toLock.Lock()
 	defer toLock.Unlock()
 
 	// 8 byte block number
 	blk := make([]byte, 8)
-	binary.BigEndian.PutUint64(blk, blockNumber)
+	binary.BigEndian.PutUint64(blk, issueBlockNumber)
 
 	// create a new owner data value
-	newData := append(link[:], link[:]...)
-	newData = append(newData, assetIndex[:]...)
+	newData := append(issueTxId[:], []byte{0, 0, 0, 0, 0, 0, 0, 0}...)
+	newData = append(newData, issueTxId[:]...)
 	newData = append(newData, blk...)
+	newData = append(newData, assetIndex[:]...)
 
 	// store to database
-	create(link, newData, newOwner)
+	create(issueTxId, newData, newOwner)
 }
 
 // find the owner of a specific transaction
 // (only issue or transfer is allowed)
-func OwnerOf(link merkle.Digest) *account.Account {
+func OwnerOf(txId merkle.Digest) *account.Account {
 
-	key := link[:]
+	key := txId[:]
 	packed := storage.Pool.Transactions.Get(key)
 	if nil == packed {
 		return nil

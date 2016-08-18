@@ -49,11 +49,8 @@ func Initialise(chainName string) error {
 	switch chainName {
 	case chain.Bitmark:
 		// no change
-	case chain.Testing:
+	case chain.Testing, chain.Local:
 		globals.testing = true
-	case chain.Local:
-		globals.testing = true
-		globals.mode = Normal
 	default:
 		globals.log.Criticalf("mode cannot handle chain: '%s'", chainName)
 		return fault.ErrInvalidChain

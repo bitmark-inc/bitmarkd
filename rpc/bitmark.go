@@ -5,8 +5,8 @@
 package rpc
 
 import (
-	"encoding/binary"
 	"github.com/bitmark-inc/bitmarkd/account"
+	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
@@ -108,34 +108,33 @@ func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransfer, r
 	}
 	log.Infof("ownerData: %x", ownerData)
 
-	// get block number of issue
-	bKey := ownerData[2*merkle.DigestLength+transactionrecord.AssetIndexLength:]
-	if 8 != len(bKey) {
-		log.Criticalf("expected 8 byte block number but got: %d bytes", len(bKey))
-		fault.Panicf("expected 8 byte block number but got: %d bytes", len(bKey))
-	}
-	log.Infof("bKey: %x", bKey)
+	// get block number of transfer and issue; see: storage/doc.go to determine offsets
+	const transferBlockNumberOffset = merkle.DigestLength
+	const issueBlockNumberOffset = 8 + 2*merkle.DigestLength
 
-	blockOwnerData := storage.Pool.BlockOwners.Get(bKey)
-	if nil == blockOwnerData {
-		return fault.ErrDoubleTransferAttempt
-	}
-	log.Infof("blockOwnerData: %x", blockOwnerData)
+	tKey := ownerData[transferBlockNumberOffset : transferBlockNumberOffset+8]
+	iKey := ownerData[issueBlockNumberOffset : issueBlockNumberOffset+8]
+
+	log.Infof("iKey: %x  tKey: %x", iKey, tKey)
 
 	// block owner (from issue) payment
 	// 0: the issue owner
 	// 1: block miner (TO DO)
 	// 2: transfer payment (optional)
 	payments := make([]*transactionrecord.Payment, 1, 3)
-	c, err := currency.FromUint64(binary.BigEndian.Uint64(blockOwnerData[:8]))
-	if nil != err {
-		log.Criticalf("block currency invalid error: %v", err)
-		fault.Panicf("block currency invalid error: %v", err)
-	}
-	payments[0] = &transactionrecord.Payment{
-		Currency: c,
-		Address:  string(blockOwnerData[8:]),
-		Amount:   5000, // ***** FIX THIS: what is the correct value
+	payments[0] = block.GetPayment(iKey)
+
+	// last transfer payment if there is one
+	for _, x := range tKey {
+		if 0 != x {
+			p := block.GetPayment(tKey)
+			if p.Currency == payments[0].Currency && p.Address == payments[0].Address {
+				payments[0].Amount += p.Amount
+			} else {
+				payments = append(payments, p)
+			}
+			break
+		}
 	}
 
 	// optional payment record (if previous record was transfer and contains such)
@@ -165,8 +164,9 @@ type ProvenanceArguments struct {
 // can be any of the transaction records
 type ProvenanceRecord struct {
 	Record  string      `json:"record"`
-	TxId    interface{} `json:"txid"`
-	AssetId interface{} `json:"assetid"`
+	IsOwner bool        `json:"isOwner"`
+	TxId    interface{} `json:"txid,omitempty"`
+	AssetId interface{} `json:"assetid,omitempty"`
 	Data    interface{} `json:"data"`
 }
 
@@ -200,19 +200,26 @@ loop:
 		record, _ := transactionrecord.RecordName(tx)
 		h := ProvenanceRecord{
 			Record:  record,
+			IsOwner: false,
 			TxId:    id,
 			AssetId: nil,
 			Data:    tx,
 		}
-		provenance = append(provenance, h)
 
 		switch tx.(type) {
 
 		case *transactionrecord.BitmarkIssue:
 			issue := tx.(*transactionrecord.BitmarkIssue)
-			if i >= count {
-				break loop
+
+			if 0 == i {
+				dKey := append(issue.Owner.Bytes(), id[:]...)
+				if nil != storage.Pool.OwnerDigest.Get(dKey) {
+					h.IsOwner = true
+				}
 			}
+
+			provenance = append(provenance, h)
+
 			asset := storage.Pool.Assets.Get(issue.AssetIndex[:])
 			if nil == asset {
 				break loop
@@ -225,6 +232,7 @@ loop:
 			record, _ := transactionrecord.RecordName(tx)
 			h := ProvenanceRecord{
 				Record:  record,
+				IsOwner: false,
 				TxId:    nil,
 				AssetId: issue.AssetIndex,
 				Data:    tx,
@@ -232,10 +240,18 @@ loop:
 			provenance = append(provenance, h)
 			break loop
 
-			//id = tx.(*transaction.BitmarkIssue).Link
-
 		case *transactionrecord.BitmarkTransfer:
-			id = tx.(*transactionrecord.BitmarkTransfer).Link
+			transfer := tx.(*transactionrecord.BitmarkTransfer)
+
+			if 0 == i {
+				dKey := append(transfer.Owner.Bytes(), id[:]...)
+				if nil != storage.Pool.OwnerDigest.Get(dKey) {
+					h.IsOwner = true
+				}
+			}
+
+			provenance = append(provenance, h)
+			id = transfer.Link
 
 		default:
 			break loop

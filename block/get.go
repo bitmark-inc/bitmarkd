@@ -8,10 +8,12 @@ import (
 	"encoding/binary"
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
+	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/genesis"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/storage"
+	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 
 // get block data for initialising a new block
@@ -78,4 +80,58 @@ func GetLatestCRC() uint64 {
 	crc := globalData.ring[i].crc
 	globalData.Unlock()
 	return crc
+}
+
+// // number of blocks to consider for
+// const topN = 50
+
+// // get a payment record from a random block
+// func GetRandomPayment() *transactionrecord.Payment {
+// 	high := GetHeight()
+// 	low := 2
+// 	if high < low {
+// 		return
+// 	}
+// 	if high > topN+1 {
+// 		low = high - topN
+// 	}
+// 	// note: low >= 2
+// 	if high == low {
+// 		return GetPayment(h)
+// 	}
+//	const denominator = 256 // 65536 // depends on random bytes
+// 	random=[0..denominator-1] // or need bigger range
+// 	n:= random *(high - low)/denominator + low // uniform [low..high)
+// 	return GetPayment(n)
+// }
+
+// // get a payment record from a specific block
+// func GetPaymentNumbered(blockNumber uint64) *transactionrecord.Payment {
+// 	// get block number of issue
+// 	bKey := make([]byte, 8)
+// 	binary.BigEndian.PutUint64(bKey, blockNumber)
+// 	return GetPayment(bKey)
+// }
+
+// get a payment record from a specific block given the blocks 8 byte big endian key
+func GetPayment(blockNumberKey []byte) *transactionrecord.Payment {
+
+	if 8 != len(blockNumberKey) {
+		fault.Panicf("block.GetPayment: block number need 8 bytes: %8", blockNumberKey)
+	}
+
+	blockOwnerData := storage.Pool.BlockOwners.Get(blockNumberKey)
+	if nil == blockOwnerData {
+		fault.Panicf("block.GetPayment: no block owner data for block number: %x", blockNumberKey)
+	}
+
+	c, err := currency.FromUint64(binary.BigEndian.Uint64(blockOwnerData[:8]))
+	if nil != err {
+		fault.Panicf("block.GetPayment: block currency invalid error: %v", err)
+	}
+	return &transactionrecord.Payment{
+		Currency: c,
+		Address:  string(blockOwnerData[8:]),
+		Amount:   5000, // ***** FIX THIS: what is the correct value for issuer?
+	}
 }

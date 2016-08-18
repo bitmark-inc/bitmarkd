@@ -10,10 +10,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 )
 
-const (
-	OP_RETURN = "6a"
-)
-
 type bitcoinScriptPubKey struct {
 	Hex       string   `json:"hex"`
 	Addresses []string `json:"addresses"`

@@ -167,6 +167,7 @@ func (conn *connector) process() {
 
 	switch conn.state {
 	case cStateConnecting:
+		mode.Set(mode.Resynchronise)
 		if register(log, conn.clients) {
 			conn.state += 1
 		}
@@ -250,9 +251,14 @@ func (conn *connector) process() {
 		} // ***** FIX THIS:
 		// ***** FIX THIS: just testing end
 
-		conn.state += 1 // assume success
-		log.Warn("rebuild entire database here if necessary")
+		//log.Warn("rebuild entire database here if necessary")
+
+		// return to normal operations
+		conn.state += 1 // next state
+		mode.Set(mode.Normal)
+
 	case cStateSampling:
+		// ***** FIX THIS: add code to periodically check for out-of-sync
 
 	}
 	log.Infof("next state: %s", conn.state)
@@ -402,9 +408,7 @@ func blockDigest(client *zmqutil.Client, blockNumber uint64) (blockdigest.Digest
 		d := blockdigest.Digest{}
 		if blockdigest.Length == len(data[1]) {
 			err := blockdigest.DigestFromBytes(&d, data[1])
-			if nil != err {
-				return d, err
-			}
+			return d, err
 		}
 	default:
 	}

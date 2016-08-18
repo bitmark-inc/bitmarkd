@@ -39,6 +39,7 @@ func DeleteDownToBlock(finalBlockNumber uint64) error {
 		// finished
 		if header.Number < finalBlockNumber {
 			log.Infof("finish: _NOT_ Deleting: %d", header.Number)
+			clearRingBuffer(log)
 			return nil
 		}
 
@@ -72,7 +73,7 @@ func DeleteDownToBlock(finalBlockNumber uint64) error {
 				key := txId[:]
 				storage.Pool.Transactions.Delete(key)
 				storage.Pool.VerifiedTransactions.Put(key, packedTransaction)
-				TransferOwnership(txId, issue.Owner, nil)
+				TransferOwnership(txId, txId, 0, issue.Owner, nil)
 
 			case *transactionrecord.BitmarkTransfer:
 				transfer := transaction.(*transactionrecord.BitmarkTransfer)
@@ -85,7 +86,9 @@ func DeleteDownToBlock(finalBlockNumber uint64) error {
 					log.Criticalf("missing transaction record for: %v", transfer.Link)
 					fault.Panic("Transactions database is corrupt")
 				}
-				TransferOwnership(transfer.Link, transfer.Owner, linkOwner)
+				// just use zero here, as the fork restore should overwrite with new chain, incluing updated block number
+				// ***** FIX THIS: is the above statement sufficient
+				TransferOwnership(txId, transfer.Link, 0, transfer.Owner, linkOwner)
 
 			default:
 				fault.Panicf("unexpected transaction: %v", transaction)
