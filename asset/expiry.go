@@ -58,13 +58,19 @@ loop:
 				globalData.Lock()
 				cache, ok := globalData.cache[item.assetIndex]
 				if ok {
-					if cache.flag {
-						cache.flag = false
+					switch cache.state {
+					case pendingState:
+						cache.state = expiringState
 						item.expires = time.Now().Add(timeout)
 						l.PushBack(item)
-					} else {
+					case expiringState:
 						log.Infof("expired: asset index: %s", item.assetIndex)
 						delete(globalData.cache, item.assetIndex)
+					case verifiedState:
+						// the item just dropped from expiry queue
+						// but still exists in the map
+					default:
+						log.Criticalf("expired: invalid cache state: %d for: %s", cache.state, item.assetIndex)
 					}
 				}
 				globalData.Unlock()

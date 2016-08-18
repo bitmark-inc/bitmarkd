@@ -6,7 +6,6 @@ package bitcoin
 
 import (
 	"container/heap"
-	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/logger"
 	"time"
 )
@@ -18,7 +17,7 @@ func QueueItem(payId string, txId string, confirmations uint64, transactions []b
 		txId:          txId,
 		confirmations: confirmations,
 		//blockNumber:   globalData.latestBlockNumber + confirmations,
-		blockNumber:  110,
+		blockNumber:  110, // ***** FIX THIS: temporary for debugging
 		transactions: transactions,
 	}
 }
@@ -84,8 +83,9 @@ loop:
 		// fetch transaction and decode
 		err := bitcoinGetRawTransaction(item.txId, &reply)
 		if nil != err {
-			////////now what // ***** FIX THIS: how?
-			fault.PanicWithError("bitcoin background", err)
+			item.blockNumber = blockNumber + item.confirmations
+			heap.Push(pq, item) // retry at a later time
+			continue loop       // ***** FIX THIS: need to limit the number of retries
 		}
 
 		ok := false

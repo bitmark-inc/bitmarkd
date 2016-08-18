@@ -19,7 +19,7 @@ import (
 // e.g.
 //   registration, ok := result.(*transaction.Registration)
 // or:
-//   switch result.(type) {
+//   switch tx := result.(type) {
 //   case *transaction.Registration:
 func (record Packed) Unpack() (Transaction, int, error) {
 

@@ -13,6 +13,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/payment"
+	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
@@ -59,15 +60,13 @@ func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransfer, r
 	var currentOwner *account.Account
 	var previousTransfer *transactionrecord.BitmarkTransfer
 
-	switch previousTransaction.(type) {
+	switch tx := previousTransaction.(type) {
 	case *transactionrecord.BitmarkIssue:
-		issue := previousTransaction.(*transactionrecord.BitmarkIssue)
-		currentOwner = issue.Owner
+		currentOwner = tx.Owner
 
 	case *transactionrecord.BitmarkTransfer:
-		transfer := previousTransaction.(*transactionrecord.BitmarkTransfer)
-		currentOwner = transfer.Owner
-		previousTransfer = transfer
+		currentOwner = tx.Owner
+		previousTransfer = tx
 
 	default:
 		return fault.ErrLinkToInvalidOrUnconfirmedTransaction
@@ -82,7 +81,7 @@ func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransfer, r
 	// transfer identifier and check for duplicate
 	txId := packedTransfer.MakeLink()
 	key := txId[:]
-	if storage.Pool.Transactions.Has(key) || storage.Pool.VerifiedTransactions.Has(key) {
+	if storage.Pool.Transactions.Has(key) || reservoir.Has(txId) {
 		return fault.ErrTransactionAlreadyExists
 	}
 
@@ -192,27 +191,26 @@ loop:
 			break loop
 		}
 
-		tx, _, err := transactionrecord.Packed(packed).Unpack()
+		transaction, _, err := transactionrecord.Packed(packed).Unpack()
 		if nil != err {
 			break loop
 		}
 
-		record, _ := transactionrecord.RecordName(tx)
+		record, _ := transactionrecord.RecordName(transaction)
 		h := ProvenanceRecord{
 			Record:  record,
 			IsOwner: false,
 			TxId:    id,
 			AssetId: nil,
-			Data:    tx,
+			Data:    transaction,
 		}
 
-		switch tx.(type) {
+		switch tx := transaction.(type) {
 
 		case *transactionrecord.BitmarkIssue:
-			issue := tx.(*transactionrecord.BitmarkIssue)
 
 			if 0 == i {
-				dKey := append(issue.Owner.Bytes(), id[:]...)
+				dKey := append(tx.Owner.Bytes(), id[:]...)
 				if nil != storage.Pool.OwnerDigest.Get(dKey) {
 					h.IsOwner = true
 				}
@@ -220,38 +218,37 @@ loop:
 
 			provenance = append(provenance, h)
 
-			asset := storage.Pool.Assets.Get(issue.AssetIndex[:])
-			if nil == asset {
+			packedAsset := storage.Pool.Assets.Get(tx.AssetIndex[:])
+			if nil == packedAsset {
 				break loop
 			}
-			tx, _, err := transactionrecord.Packed(asset).Unpack()
+			assetTx, _, err := transactionrecord.Packed(packedAsset).Unpack()
 			if nil != err {
 				break loop
 			}
 
-			record, _ := transactionrecord.RecordName(tx)
+			record, _ := transactionrecord.RecordName(assetTx)
 			h := ProvenanceRecord{
 				Record:  record,
 				IsOwner: false,
 				TxId:    nil,
-				AssetId: issue.AssetIndex,
-				Data:    tx,
+				AssetId: tx.AssetIndex,
+				Data:    assetTx,
 			}
 			provenance = append(provenance, h)
 			break loop
 
 		case *transactionrecord.BitmarkTransfer:
-			transfer := tx.(*transactionrecord.BitmarkTransfer)
 
 			if 0 == i {
-				dKey := append(transfer.Owner.Bytes(), id[:]...)
+				dKey := append(tx.Owner.Bytes(), id[:]...)
 				if nil != storage.Pool.OwnerDigest.Get(dKey) {
 					h.IsOwner = true
 				}
 			}
 
 			provenance = append(provenance, h)
-			id = transfer.Link
+			id = tx.Link
 
 		default:
 			break loop

@@ -6,10 +6,12 @@ package block
 
 import (
 	"encoding/binary"
+	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
@@ -93,51 +95,46 @@ func StoreIncoming(packedBlock []byte) error {
 	store(header, digest, packedBlock)
 
 	// store transactions
-	for i, txn := range txs {
+	for i, item := range txs {
 		txId := txIds[i]
-		packed := txn.packed
-		transaction := txn.unpacked
-		switch transaction.(type) {
+		packed := item.packed
+		switch tx := item.unpacked.(type) {
 
 		case *transactionrecord.BaseData:
-			base := transaction.(*transactionrecord.BaseData)
 			blockNumber := make([]byte, 8)
 			binary.BigEndian.PutUint64(blockNumber, header.Number)
-			data := make([]byte, 8, 8+len(base.PaymentAddress))
-			binary.BigEndian.PutUint64(data[:8], base.Currency.Uint64())
-			data = append(data, base.PaymentAddress...)
+			data := make([]byte, 8, 8+len(tx.PaymentAddress))
+			binary.BigEndian.PutUint64(data[:8], tx.Currency.Uint64())
+			data = append(data, tx.PaymentAddress...)
 			storage.Pool.BlockOwners.Put(blockNumber, data)
 			// currently not stored separately
 
 		case *transactionrecord.AssetData:
-			asset := transaction.(*transactionrecord.AssetData)
-			assetIndex := asset.AssetIndex()
+			assetIndex := tx.AssetIndex()
 			key := assetIndex[:]
-			storage.Pool.VerifiedAssets.Delete(key)
+			asset.Delete(assetIndex)
 			storage.Pool.Assets.Put(key, packed)
 
 		case *transactionrecord.BitmarkIssue:
-			issue := transaction.(*transactionrecord.BitmarkIssue)
 			key := txId[:]
-			storage.Pool.VerifiedTransactions.Delete(key)
+			reservoir.Delete(txId)
 			storage.Pool.Transactions.Put(key, packed)
-			CreateOwnership(txId, header.Number, issue.AssetIndex, issue.Owner)
+			CreateOwnership(txId, header.Number, tx.AssetIndex, tx.Owner)
 
 		case *transactionrecord.BitmarkTransfer:
-			transfer := transaction.(*transactionrecord.BitmarkTransfer)
 			key := txId[:]
-			storage.Pool.VerifiedTransactions.Delete(key)
+			reservoir.Delete(txId)
 			storage.Pool.Transactions.Put(key, packed)
-			linkOwner := OwnerOf(transfer.Link)
+			linkOwner := OwnerOf(tx.Link)
 			if nil == linkOwner {
-				fault.Criticalf("missing transaction record for: %v", transfer.Link)
+				fault.Criticalf("missing transaction record for: %v", tx.Link)
 				fault.Panic("Transactions database is corrupt")
 			}
-			TransferOwnership(transfer.Link, txId, header.Number, linkOwner, transfer.Owner)
+			TransferOwnership(tx.Link, txId, header.Number, linkOwner, tx.Owner)
 
 		default:
-			globalData.log.Criticalf("unhandled transaction: %v", transaction)
-			fault.Panicf("unhandled transaction: %v", transaction)
+			globalData.log.Criticalf("unhandled transaction: %v", tx)
+			fault.Panicf("unhandled transaction: %v", tx)
 		}
 	}
 

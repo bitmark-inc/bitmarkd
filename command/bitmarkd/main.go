@@ -15,6 +15,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/peer"
 	"github.com/bitmark-inc/bitmarkd/proof"
+	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/util"
@@ -166,7 +167,24 @@ func main() {
 	}
 	defer storage.Finalise()
 
-	// block data storage - depends on storage ande mode
+	// start the reservoir (verified transaction data cache)
+	log.Info("initialise reservoir")
+	err = reservoir.Initialise()
+	if nil != err {
+		log.Criticalf("reservoir initialise error: %v", err)
+		exitwithstatus.Message("reservoir initialise error: %v", err)
+	}
+	defer storage.Finalise()
+
+	// start asset cache
+	err = asset.Initialise()
+	if nil != err {
+		log.Criticalf("asset initialise error: %v", err)
+		exitwithstatus.Message("asset initialise error: %v", err)
+	}
+	defer asset.Finalise()
+
+	// block data storage - depends on storage and mode
 	log.Info("initialise block")
 	err = block.Initialise()
 	if nil != err {
@@ -264,14 +282,6 @@ func main() {
 		exitwithstatus.Message("payment initialise error: %v", err)
 	}
 	defer payment.Finalise()
-
-	// start asset cache
-	err = asset.Initialise()
-	if nil != err {
-		log.Criticalf("asset initialise error: %v", err)
-		exitwithstatus.Message("asset initialise error: %v", err)
-	}
-	defer asset.Finalise()
 
 	// initialise encryption
 	err = zmqutil.StartAuthentication()

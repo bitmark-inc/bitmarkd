@@ -181,14 +181,14 @@ func (client *Client) Send(items ...interface{}) error {
 		if i == last {
 			flag = 0
 		}
-		switch item.(type) {
+		switch it := item.(type) {
 		case string:
-			_, err := client.socket.Send(item.(string), flag)
+			_, err := client.socket.Send(it, flag)
 			if nil != err {
 				return err
 			}
 		case []byte:
-			_, err := client.socket.SendBytes(item.([]byte), flag)
+			_, err := client.socket.SendBytes(it, flag)
 			if nil != err {
 				return err
 			}

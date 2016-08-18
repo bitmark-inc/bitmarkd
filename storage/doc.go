@@ -33,14 +33,10 @@
 //
 //   T ++ txid                  - confirmed transactions
 //                                data: packed transaction data
-//   V ++ txid                  - verified transactions for assembling new blocks
-//                                data: packed transaction data
 //
 // Assets:
 //
 //   A ++ asset index           - confirmed asset
-//                                data: packed asset data
-//   I ++ asset index           - verified asset, these are not yet in a block
 //                                data: packed asset data
 //
 // Ownership:

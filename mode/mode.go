@@ -16,10 +16,10 @@ type Mode int
 
 // all possible modes
 const (
-	Stopped       = Mode(iota)
-	Resynchronise = Mode(iota)
-	Normal        = Mode(iota)
-	maximum       = Mode(iota)
+	Stopped Mode = iota
+	Resynchronise
+	Normal
+	maximum
 )
 
 var globals struct {
@@ -72,7 +72,7 @@ func Set(mode Mode) {
 		globals.mode = mode
 		globals.Unlock()
 
-		globals.log.Infof("set: %d", mode)
+		globals.log.Infof("set: %s", mode)
 	} else {
 		globals.log.Errorf("ignore invalid set: %d", mode)
 	}
@@ -106,11 +106,16 @@ func ChainName() string {
 	return globals.chain
 }
 
-// current mode rep[resented as a string
+// current mode represented as a string
 func String() string {
 	globals.RLock()
 	defer globals.RUnlock()
-	switch globals.mode {
+	return globals.mode.String()
+}
+
+// current mode rep[resented as a string
+func (m Mode) String() string {
+	switch m {
 	case Stopped:
 		return "Stopped"
 	case Resynchronise:

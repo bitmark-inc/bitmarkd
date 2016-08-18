@@ -6,8 +6,10 @@ package block
 
 import (
 	"encoding/binary"
+	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
@@ -56,39 +58,37 @@ func DeleteDownToBlock(finalBlockNumber uint64) error {
 			}
 
 			packedTransaction := transactionrecord.Packed(data[:n])
-			switch transaction.(type) {
+			switch tx := transaction.(type) {
 			case *transactionrecord.BaseData:
 				// currently not stored separately
 
 			case *transactionrecord.AssetData:
-				asset := transaction.(*transactionrecord.AssetData)
-				assetIndex := asset.AssetIndex()
+				assetIndex := tx.AssetIndex()
 				key := assetIndex[:]
 				storage.Pool.Assets.Delete(key)
-				storage.Pool.VerifiedAssets.Put(key, packedTransaction)
+				asset.Delete(assetIndex)
 
 			case *transactionrecord.BitmarkIssue:
-				issue := transaction.(*transactionrecord.BitmarkIssue)
 				txId := packedTransaction.MakeLink()
 				key := txId[:]
 				storage.Pool.Transactions.Delete(key)
-				storage.Pool.VerifiedTransactions.Put(key, packedTransaction)
-				TransferOwnership(txId, txId, 0, issue.Owner, nil)
+				reservoir.Delete(txId)
+				TransferOwnership(txId, txId, 0, tx.Owner, nil)
 
 			case *transactionrecord.BitmarkTransfer:
-				transfer := transaction.(*transactionrecord.BitmarkTransfer)
 				txId := packedTransaction.MakeLink()
 				key := txId[:]
 				storage.Pool.Transactions.Delete(key)
-				storage.Pool.VerifiedTransactions.Put(key, packedTransaction)
-				linkOwner := OwnerOf(transfer.Link)
+				reservoir.Delete(txId)
+
+				linkOwner := OwnerOf(tx.Link)
 				if nil == linkOwner {
-					log.Criticalf("missing transaction record for: %v", transfer.Link)
+					log.Criticalf("missing transaction record for: %v", tx.Link)
 					fault.Panic("Transactions database is corrupt")
 				}
 				// just use zero here, as the fork restore should overwrite with new chain, incluing updated block number
 				// ***** FIX THIS: is the above statement sufficient
-				TransferOwnership(txId, transfer.Link, 0, transfer.Owner, linkOwner)
+				TransferOwnership(txId, tx.Link, 0, tx.Owner, linkOwner)
 
 			default:
 				fault.Panicf("unexpected transaction: %v", transaction)

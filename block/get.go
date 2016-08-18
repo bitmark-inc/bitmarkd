@@ -117,7 +117,7 @@ func GetLatestCRC() uint64 {
 func GetPayment(blockNumberKey []byte) *transactionrecord.Payment {
 
 	if 8 != len(blockNumberKey) {
-		fault.Panicf("block.GetPayment: block number need 8 bytes: %8", blockNumberKey)
+		fault.Panicf("block.GetPayment: block number need 8 bytes: %x", blockNumberKey)
 	}
 
 	blockOwnerData := storage.Pool.BlockOwners.Get(blockNumberKey)

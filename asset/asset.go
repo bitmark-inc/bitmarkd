@@ -13,10 +13,20 @@ import (
 	"sync"
 )
 
+// condition of asset in the state buffer
+type assetState int
+
+// possible states
+const (
+	pendingState assetState = iota
+	expiringState
+	verifiedState
+)
+
 // the cached data
 type cacheData struct {
 	packed transactionrecord.Packed // data
-	flag   bool                     // used to detect expired items
+	state  assetState               // used to detect expired/verified items
 }
 
 // expiry background
@@ -79,22 +89,15 @@ func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIndex, t
 	}
 	assetIndex := asset.AssetIndex()
 
-	//***** FIX THIS: is this wanted or not
-	// txId := packedAsset.MakeLink()
-	// txIdBytes := txId[:]
-
-	// already confirmed or verified
+	// already confirmed
 	if storage.Pool.Assets.Has(assetIndex[:]) {
-		return &assetIndex, nil, nil
-	}
-	if storage.Pool.VerifiedAssets.Has(assetIndex[:]) {
 		return &assetIndex, nil, nil
 	}
 
 	// create a cache entry
 	d := &cacheData{
 		packed: packedAsset,
-		flag:   true,
+		state:  pendingState,
 	}
 
 	// cache the record, will update partially expired item with new flag
@@ -103,8 +106,8 @@ func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIndex, t
 	if r, ok := globalData.cache[assetIndex]; !ok {
 		globalData.cache[assetIndex] = d
 	} else {
-		r.flag = true     // extend timeout
-		packedAsset = nil // already seen
+		r.state = pendingState // extend timeout
+		packedAsset = nil      // already seen
 	}
 	globalData.Unlock()
 
@@ -118,11 +121,8 @@ func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIndex, t
 // check if an asset exists
 func Exists(assetIndex transactionrecord.AssetIndex) bool {
 
-	// already confirmed or verified
+	// already confirmed
 	if storage.Pool.Assets.Has(assetIndex[:]) {
-		return true
-	}
-	if storage.Pool.VerifiedAssets.Has(assetIndex[:]) {
 		return true
 	}
 
@@ -132,27 +132,42 @@ func Exists(assetIndex transactionrecord.AssetIndex) bool {
 	return ok
 }
 
-// transfer a cached asset to permanent storage
+// get packed asset data from cache (nil if not present)
+func Get(assetIndex transactionrecord.AssetIndex) transactionrecord.Packed {
+
+	globalData.RLock()
+	item := globalData.cache[assetIndex]
+	globalData.RUnlock()
+	return item.packed
+}
+
+// remove an asset from the cache
+func Delete(assetIndex transactionrecord.AssetIndex) {
+
+	globalData.Lock()
+	delete(globalData.cache, assetIndex)
+	globalData.Unlock()
+}
+
+// mark a cached asset being verified
 func SetVerified(assetIndex transactionrecord.AssetIndex) {
 
-	// already confirmed or verified
+	// already confirmed
 	if storage.Pool.Assets.Has(assetIndex[:]) {
-		return
-	}
-	if storage.Pool.VerifiedAssets.Has(assetIndex[:]) {
 		return
 	}
 
 	// fetch the buffered data
 	globalData.RLock()
 	data, ok := globalData.cache[assetIndex]
+	if ok {
+		// flag as verified
+		data.state = verifiedState
+	}
 	globalData.RUnlock()
 
 	// fatal error if cache is missing
 	if !ok {
 		fault.Panicf("asset: Store: no cache for asset id: %v", assetIndex)
 	}
-
-	// save to permanent storage
-	storage.Pool.VerifiedAssets.Put(assetIndex[:], data.packed)
 }

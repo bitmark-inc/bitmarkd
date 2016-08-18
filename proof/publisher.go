@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/account"
+	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/currency"
@@ -18,6 +19,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
@@ -143,23 +145,24 @@ func (pub *publisher) process() {
 
 	seenAsset := make(map[transactionrecord.AssetIndex]struct{})
 
-	cursor := storage.Pool.VerifiedTransactions.NewFetchCursor()
-	transactions, err := cursor.Fetch(blockrecord.MaximumTransactions)
+	txIds, transactions, totalByteCount, err := reservoir.Fetch(blockrecord.MaximumTransactions)
 	if nil != err {
 		pub.log.Errorf("Error on Fetch: %v", err)
 		return
 	}
 
-	if 0 == len(transactions) {
+	txCount := len(txIds)
+
+	if 0 == txCount {
 		pub.log.Info("verified pool is empty")
 		return
 	}
 
-	txIds := make([]merkle.Digest, 1, len(transactions))
-	txData := make([]byte, 0, 256*len(transactions))
+	// buffer to concatenate all transaction data
+	txData := make([]byte, 0, totalByteCount)
 
 	// to accumulate new assets
-	assetIds := make([]transactionrecord.AssetIndex, 0, len(transactions))
+	assetIds := make([]transactionrecord.AssetIndex, 0, txCount)
 
 	base := &transactionrecord.BaseData{
 		Currency:       pub.paymentCurrency,
@@ -181,35 +184,34 @@ func (pub *publisher) process() {
 	}
 
 	// first txid is the base
-	txIds[0] = merkle.NewDigest(packedBase)
+	txIds = append([]merkle.Digest{merkle.NewDigest(packedBase)}, txIds...)
 
 	for _, item := range transactions {
-		unpacked, _, err := transactionrecord.Packed(item.Value).Unpack()
+		unpacked, _, err := transactionrecord.Packed(item).Unpack()
 		if nil != err {
 			pub.log.Criticalf("unpack error: %v", err)
 			fault.PanicWithError("publisher extraction transactions", err)
 		}
 
 		// only issues and transfers are allowed here
-		switch unpacked.(type) {
+		switch tx := unpacked.(type) {
 		case *transactionrecord.BitmarkIssue:
-			issue := unpacked.(*transactionrecord.BitmarkIssue)
 
-			if _, ok := seenAsset[issue.AssetIndex]; !ok {
-				if !storage.Pool.Assets.Has(issue.AssetIndex[:]) {
+			if _, ok := seenAsset[tx.AssetIndex]; !ok {
+				if !storage.Pool.Assets.Has(tx.AssetIndex[:]) {
 
-					asset := storage.Pool.VerifiedAssets.Get(issue.AssetIndex[:])
-					if nil == asset {
-						pub.log.Criticalf("missing asset: %v", issue.AssetIndex)
-						fault.Panicf("publisher missing asset: %v", issue.AssetIndex)
+					packedAsset := asset.Get(tx.AssetIndex)
+					if nil == packedAsset {
+						pub.log.Criticalf("missing asset: %v", tx.AssetIndex)
+						fault.Panicf("publisher missing asset: %v", tx.AssetIndex)
 					}
 					// add asset's transaction id to list
-					txId := merkle.NewDigest(asset)
+					txId := merkle.NewDigest(packedAsset)
 					txIds = append(txIds, txId)
-					assetIds = append(assetIds, issue.AssetIndex)
-					txData = append(txData, asset...)
+					assetIds = append(assetIds, tx.AssetIndex)
+					txData = append(txData, packedAsset...)
 				}
-				seenAsset[issue.AssetIndex] = struct{}{}
+				seenAsset[tx.AssetIndex] = struct{}{}
 			}
 
 		case *transactionrecord.BitmarkTransfer:
@@ -220,10 +222,7 @@ func (pub *publisher) process() {
 			fault.Panicf("publisher unxpected transaction: %v", unpacked)
 		}
 
-		var digest merkle.Digest
-		copy(digest[:], item.Key)
-		txIds = append(txIds, digest)
-		txData = append(txData, item.Value...)
+		txData = append(txData, item...)
 	}
 
 	// build the tree of transaction IDs

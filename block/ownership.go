@@ -125,14 +125,12 @@ func OwnerOf(txId merkle.Digest) *account.Account {
 	transaction, _, err := transactionrecord.Packed(packed).Unpack()
 	fault.PanicIfError("block.OwnerOf", err)
 
-	switch transaction.(type) {
+	switch tx := transaction.(type) {
 	case *transactionrecord.BitmarkIssue:
-		issue := transaction.(*transactionrecord.BitmarkIssue)
-		return issue.Owner
+		return tx.Owner
 
 	case *transactionrecord.BitmarkTransfer:
-		transfer := transaction.(*transactionrecord.BitmarkTransfer)
-		return transfer.Owner
+		return tx.Owner
 
 	default:
 		fault.Panicf("block.OwnerOf: incorrect transaction: %v", transaction)

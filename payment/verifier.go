@@ -7,7 +7,7 @@ package payment
 import (
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/storage"
+	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 
@@ -46,17 +46,16 @@ func (state *verifierData) setVerified(transactions []byte) {
 
 		state.log.Infof("unpacked: %v", transaction)
 		state.log.Infof("packed txid: %v data: %x", txId, packed)
-		switch transaction.(type) {
+		switch tx := transaction.(type) {
 		case *transactionrecord.BitmarkIssue:
-			issue := transaction.(*transactionrecord.BitmarkIssue)
-			assetIndex := issue.AssetIndex
+			assetIndex := tx.AssetIndex
 			state.log.Infof("issue: asset id: %v", assetIndex)
 			asset.SetVerified(assetIndex)
 
 		default:
 		}
 
-		storage.Pool.VerifiedTransactions.Put(txId[:], packed)
+		reservoir.Store(txId, packed)
 
 		// remaining items
 		records = records[length:]

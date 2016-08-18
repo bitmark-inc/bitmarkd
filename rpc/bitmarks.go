@@ -14,6 +14,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/payment"
+	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
@@ -75,17 +76,17 @@ func (bitmarks *Bitmarks) Issue(arguments *[]transactionrecord.BitmarkIssue, rep
 			return fault.ErrAssetNotFound
 		}
 
-		link := packedIssue.MakeLink()
-		result.TxIds[i] = link
-		key := link[:]
+		txId := packedIssue.MakeLink()
+		result.TxIds[i] = txId
+		key := txId[:]
 
 		// even a single verified/confirmed issue fails the whole block
-		if storage.Pool.Transactions.Has(key) || storage.Pool.VerifiedTransactions.Has(key) {
+		if storage.Pool.Transactions.Has(key) || reservoir.Has(txId) {
 			return fault.ErrTransactionAlreadyExists
 		}
 
 		log.Tracef("packed issue[%d]: %x", i, packedIssue)
-		log.Debugf("id[%d]: %v", i, link)
+		log.Debugf("id[%d]: %v", i, txId)
 
 		packed = append(packed, packedIssue...)
 	}
