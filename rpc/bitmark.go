@@ -30,7 +30,7 @@ type Bitmark struct {
 // ----------------
 
 type BitmarkTransferReply struct {
-	TxId     merkle.Digest `json:"txid"`
+	TxId     merkle.Digest `json:"txId"`
 	PayId    payment.PayId `json:"payId"`
 	Payments []*transactionrecord.Payment
 	//PaymentAlternatives []block.MinerAddress `json:"paymentAlternatives"`// ***** FIX THIS: where to get addresses?
@@ -156,17 +156,17 @@ func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransfer, r
 // -------------------------------
 
 type ProvenanceArguments struct {
-	TxId  merkle.Digest `json:"txid"`
+	TxId  merkle.Digest `json:"txId"`
 	Count int           `json:"count"`
 }
 
 // can be any of the transaction records
 type ProvenanceRecord struct {
-	Record  string      `json:"record"`
-	IsOwner bool        `json:"isOwner"`
-	TxId    interface{} `json:"txid,omitempty"`
-	AssetId interface{} `json:"assetid,omitempty"`
-	Data    interface{} `json:"data"`
+	Record     string      `json:"record"`
+	IsOwner    bool        `json:"isOwner"`
+	TxId       interface{} `json:"txId,omitempty"`
+	AssetIndex interface{} `json:"index,omitempty"`
+	Data       interface{} `json:"data"`
 }
 
 type ProvenanceReply struct {
@@ -198,11 +198,11 @@ loop:
 
 		record, _ := transactionrecord.RecordName(transaction)
 		h := ProvenanceRecord{
-			Record:  record,
-			IsOwner: false,
-			TxId:    id,
-			AssetId: nil,
-			Data:    transaction,
+			Record:     record,
+			IsOwner:    false,
+			TxId:       id,
+			AssetIndex: nil,
+			Data:       transaction,
 		}
 
 		switch tx := transaction.(type) {
@@ -229,11 +229,11 @@ loop:
 
 			record, _ := transactionrecord.RecordName(assetTx)
 			h := ProvenanceRecord{
-				Record:  record,
-				IsOwner: false,
-				TxId:    nil,
-				AssetId: tx.AssetIndex,
-				Data:    assetTx,
+				Record:     record,
+				IsOwner:    false,
+				TxId:       nil,
+				AssetIndex: tx.AssetIndex,
+				Data:       assetTx,
 			}
 			provenance = append(provenance, h)
 			break loop

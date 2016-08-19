@@ -35,7 +35,7 @@ package rpc
 // // can be any of the transaction records
 // type BitmarksRecord struct {
 // 	Record string            `json:"record"`
-// 	TxId   transaction.Link  `json:"txid"`
+// 	TxId   transaction.Link  `json:"txId"`
 // 	State  transaction.State `json:"state"`
 // 	Data   interface{}       `json:"data"`
 // }

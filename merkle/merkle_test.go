@@ -28,7 +28,7 @@ func hexToLink(t *testing.T, s string) *merkle.Digest {
 
 // merkle hashing
 // sample hash list from: http://blockexplorer.com/rawblock/0000000000001e1917c4c6dfc89d9d6b9fdd195dba25b2d6b2d955c9a698641a
-// (note: tree hashes are SHA3 so only txids are the same)
+// (note: tree hashes are SHA3 so only txIds are the same)
 func TestMerkle(t *testing.T) {
 
 	// uncommented items are minimum to build merkle root from base

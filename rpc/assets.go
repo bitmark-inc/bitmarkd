@@ -107,9 +107,9 @@ func (assets *Assets) Register(arguments *[]transactionrecord.AssetData, reply *
 // 	txIds := make([]transaction.Link, size)
 // 	for i, fingerprint := range arguments.Fingerprints[:size] {
 // 		assetIndex := transaction.NewAssetIndex([]byte(fingerprint))
-// 		_, txid, found := assetIndex.Read()
+// 		_, txId, found := assetIndex.Read()
 // 		if found {
-// 			txIds[i] = txid
+// 			txIds[i] = txId
 // 		}
 // 	}
 
@@ -139,9 +139,9 @@ func (assets *Assets) Register(arguments *[]transactionrecord.AssetData, reply *
 
 // 	txIds := make([]transaction.Link, size)
 // 	for i, assetIndex := range arguments.Indexes[:size] {
-// 		_, txid, found := assetIndex.Read()
+// 		_, txId, found := assetIndex.Read()
 // 		if found {
-// 			txIds[i] = txid
+// 			txIds[i] = txId
 // 		}
 // 	}
 

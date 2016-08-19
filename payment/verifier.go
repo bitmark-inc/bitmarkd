@@ -45,7 +45,7 @@ func (state *verifierData) setVerified(transactions []byte) {
 		txId := packed.MakeLink()
 
 		state.log.Infof("unpacked: %v", transaction)
-		state.log.Infof("packed txid: %v data: %x", txId, packed)
+		state.log.Infof("packed txId: %v data: %x", txId, packed)
 		switch tx := transaction.(type) {
 		case *transactionrecord.BitmarkIssue:
 			assetIndex := tx.AssetIndex

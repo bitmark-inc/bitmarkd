@@ -16,7 +16,7 @@
 // 1. each separate pool has a single byte prefix (to spread the keys in LevelDB)
 // 2. ++           = concatenation of byte data
 // 3. block number = big endian uint64 (8 bytes)
-// 4. txid         = transaction digest as 32 byte SHA3-256(data)
+// 4. txId         = transaction digest as 32 byte SHA3-256(data)
 // 5. asset index  = fingerprint digest as 64 byte SHA3-512(data)
 // 6. count        = successive index value as big endian uint64 (8 bytes)
 // 7. owner        = bitmark account (32 byte public key)
@@ -31,7 +31,7 @@
 //
 // Transactions:
 //
-//   T ++ txid                  - confirmed transactions
+//   T ++ txId                  - confirmed transactions
 //                                data: packed transaction data
 //
 // Assets:
@@ -44,8 +44,8 @@
 //   N ++ owner                 - next count value to use for appending to owned items
 //                                data: count
 //   K ++ owner ++ count        - list of owned items
-//                                data: last transfer txid ++ last transfer block number ++ issue txid ++ asset index ++ issue block number
-//   D ++ owner ++ txid         - position in list of owned items, for delete after transfer
+//                                data: last transfer txId ++ last transfer block number ++ issue txId ++ asset index ++ issue block number
+//   D ++ owner ++ txId         - position in list of owned items, for delete after transfer
 //                                data: count
 //
 // Testing:

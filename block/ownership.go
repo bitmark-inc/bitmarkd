@@ -19,8 +19,8 @@ import (
 //   owner                 - next count value to use for appending to owned items
 //                           data: count
 //   owner ++ count        - list of owned items
-//                           data: last transfer txid ++ last transfer block number ++ issue txid ++ asset index ++ issue block number
-//   owner ++ txid         - position in list of owned items, for delete after transfer
+//                           data: last transfer txId ++ last transfer block number ++ issue txId ++ asset index ++ issue block number
+//   owner ++ txId         - position in list of owned items, for delete after transfer
 //                           data: count
 
 var toLock sync.Mutex
@@ -85,7 +85,7 @@ func create(txId merkle.Digest, ownerData []byte, owner *account.Account) {
 	// write the new owner
 	oKey := append(owner.Bytes(), count...)
 
-	// txid++ issue id + asset index
+	// txId ++ issue id + asset index
 	storage.Pool.Ownership.Put(oKey, ownerData)
 
 	// write new digest record

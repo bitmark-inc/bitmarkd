@@ -52,18 +52,6 @@ func Callback(conn io.ReadWriteCloser, argument interface{}) {
 	// 	log: serverArgument.Log,
 	// }
 
-	// blk := &Block{
-	// 	log: serverArgument.Log,
-	// }
-
-	// tx := &Transaction{
-	// 	log: serverArgument.Log,
-	// }
-
-	// pool := &Pool{
-	// 	log: serverArgument.Log,
-	// }
-
 	node := &Node{
 		log:   serverArgument.Log,
 		start: serverArgument.StartTime,
@@ -76,9 +64,6 @@ func Callback(conn io.ReadWriteCloser, argument interface{}) {
 	server.Register(bitmarks)
 	// ***** FIX THIS: restore
 	// server.Register(owner)
-	// server.Register(blk)
-	// server.Register(tx)
-	// server.Register(pool)
 	server.Register(node)
 
 	connectionCount.Increment()

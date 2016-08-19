@@ -183,7 +183,7 @@ func (pub *publisher) process() {
 		fault.PanicWithError("publisher packe base", err)
 	}
 
-	// first txid is the base
+	// first txId is the base
 	txIds = append([]merkle.Digest{merkle.NewDigest(packedBase)}, txIds...)
 
 	for _, item := range transactions {
