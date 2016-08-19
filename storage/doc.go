@@ -44,7 +44,7 @@
 //   N ++ owner                 - next count value to use for appending to owned items
 //                                data: count
 //   K ++ owner ++ count        - list of owned items
-//                                data: last transfer txId ++ last transfer block number ++ issue txId ++ asset index ++ issue block number
+//                                data: last transfer txId ++ last transfer block number ++ issue txId ++ issue block number ++ asset index
 //   D ++ owner ++ txId         - position in list of owned items, for delete after transfer
 //                                data: count
 //

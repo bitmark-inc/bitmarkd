@@ -181,6 +181,10 @@ func (bitmark *Bitmark) Provenance(arguments *ProvenanceArguments, reply *Proven
 	count := arguments.Count
 	id := arguments.TxId
 
+	if count <= 0 {
+		return fault.ErrInvalidCount
+	}
+
 	provenance := make([]ProvenanceRecord, 0, count)
 
 loop:

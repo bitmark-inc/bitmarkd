@@ -47,10 +47,9 @@ func Callback(conn io.ReadWriteCloser, argument interface{}) {
 		log: serverArgument.Log,
 	}
 
-	// ***** FIX THIS: restore
-	// owner := &Owner{
-	// 	log: serverArgument.Log,
-	// }
+	owner := &Owner{
+		log: serverArgument.Log,
+	}
 
 	node := &Node{
 		log:   serverArgument.Log,
@@ -62,8 +61,7 @@ func Callback(conn io.ReadWriteCloser, argument interface{}) {
 	server.Register(assets)
 	server.Register(bitmark)
 	server.Register(bitmarks)
-	// ***** FIX THIS: restore
-	// server.Register(owner)
+	server.Register(owner)
 	server.Register(node)
 
 	connectionCount.Increment()

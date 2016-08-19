@@ -4,101 +4,141 @@
 
 package rpc
 
-// import (
-// 	"github.com/bitmark-inc/bitmarkd/fault"
-// 	"github.com/bitmark-inc/bitmarkd/transaction"
-// 	"github.com/bitmark-inc/logger"
-// )
+import (
+	"github.com/bitmark-inc/bitmarkd/account"
+	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/bitmark-inc/bitmarkd/storage"
+	"github.com/bitmark-inc/bitmarkd/transactionrecord"
+	"github.com/bitmark-inc/logger"
+)
 
-// // Owner
-// // -------
+// Owner
+// -------
 
-// type Owner struct {
-// 	log *logger.L
-// }
+type Owner struct {
+	log *logger.L
+}
 
-// // Owner bitmarks
-// // --------------
+// Owner bitmarks
+// --------------
 
-// type OwnerBitmarksArguments struct {
-// 	Owner *transaction.Address `json:"owner"`        // base58
-// 	Start uint64               `json:"start,string"` // first record number
-// 	Count int                  `json:"count"`        // number of records
-// }
+type OwnerBitmarksArguments struct {
+	Owner *account.Account `json:"owner"`        // base58
+	Start uint64           `json:"start,string"` // first record number
+	Count int              `json:"count"`        // number of records
+}
 
-// type OwnerBitmarksReply struct {
-// 	Next uint64                    `json:"next,string"` // start value for the next call
-// 	Data []transaction.Ownership   `json:"data"`        // list of bitmarks either issue or transfer
-// 	Tx   map[string]BitmarksRecord `json:"tx"`          // table of tx records
-// }
+type OwnerBitmarksReply struct {
+	Next uint64                    `json:"next,string"` // start value for the next call
+	Data []block.Ownership         `json:"data"`        // list of bitmarks either issue or transfer
+	Tx   map[string]BitmarksRecord `json:"tx"`          // table of tx records
+}
 
-// // can be any of the transaction records
-// type BitmarksRecord struct {
-// 	Record string            `json:"record"`
-// 	TxId   transaction.Link  `json:"txId"`
-// 	State  transaction.State `json:"state"`
-// 	Data   interface{}       `json:"data"`
-// }
+// can be any of the transaction records
+type BitmarksRecord struct {
+	Record     string      `json:"record"`
+	TxId       interface{} `json:"txId,omitempty"`
+	AssetIndex interface{} `json:"index,omitempty"`
+	Data       interface{} `json:"data"`
+}
 
-// func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitmarksReply) error {
-// 	log := owner.log
-// 	log.Debugf("Owner.Bitmarks: %v", arguments)
+func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitmarksReply) error {
+	log := owner.log
+	log.Infof("Owner.Bitmarks: %v", arguments)
 
-// 	ownership, err := transaction.FetchOwnership(arguments.Owner, arguments.Start, arguments.Count)
-// 	if nil != err {
-// 		return err
-// 	}
+	ownership, err := block.ListBitmarksFor(arguments.Owner, arguments.Start, arguments.Count)
+	if nil != err {
+		return err
+	}
 
-// 	// extract unique TxIds
-// 	//   issues TxId == IssueTxId
-// 	//   assets could be duplicates
-// 	ids := make(map[transaction.Link]struct{})
-// 	current := uint64(0)
-// 	for _, r := range ownership {
-// 		ids[r.TxId] = struct{}{}
-// 		ids[r.IssueTxId] = struct{}{}
-// 		ids[r.AssetTxId] = struct{}{}
-// 		current = r.N
-// 	}
+	log.Infof("ownership: %v", ownership)
 
-// 	records := make(map[string]BitmarksRecord)
+	// extract unique TxIds
+	//   issues TxId == IssueTxId
+	//   assets could be duplicates
+	txIds := make(map[merkle.Digest]struct{})
+	assetIndexes := make(map[transactionrecord.AssetIndex]struct{})
+	current := uint64(0)
+	for _, r := range ownership {
+		txIds[r.TxId] = struct{}{}
+		txIds[r.IssueTxId] = struct{}{}
+		assetIndexes[r.AssetIndex] = struct{}{}
+		current = r.N
+	}
 
-// 	for id := range ids {
-// 		state, data, found := id.Read()
-// 		if !found {
-// 			return fault.ErrLinkNotFound
-// 		}
+	records := make(map[string]BitmarksRecord)
 
-// 		tx, err := data.Unpack()
-// 		if nil != err {
-// 			return err
-// 		}
+	for txId := range txIds {
 
-// 		record, ok := transaction.RecordName(tx)
-// 		if !ok {
-// 			return fault.ErrInvalidType
-// 		}
-// 		txId, err := id.MarshalText()
-// 		if nil != err {
-// 			return err
-// 		}
+		log.Infof("txId: %v", txId)
 
-// 		records[string(txId)] = BitmarksRecord{
-// 			Record: record,
-// 			TxId:   id,
-// 			State:  state,
-// 			Data:   tx,
-// 		}
-// 	}
-// 	reply.Data = ownership
-// 	reply.Tx = records
+		transaction := storage.Pool.Transactions.Get(txId[:])
+		if nil == transaction {
+			return fault.ErrLinkToInvalidOrUnconfirmedTransaction
+		}
 
-// 	// if no record were found the just return Next as zero
-// 	// otherwise the next possible number
-// 	if 0 == current {
-// 		reply.Next = 0
-// 	} else {
-// 		reply.Next = current + 1
-// 	}
-// 	return nil
-// }
+		tx, _, err := transactionrecord.Packed(transaction).Unpack()
+		if nil != err {
+			return err
+		}
+
+		record, ok := transactionrecord.RecordName(tx)
+		if !ok {
+			return fault.ErrLinkToInvalidOrUnconfirmedTransaction
+		}
+		textTxId, err := txId.MarshalText()
+		if nil != err {
+			return err
+		}
+
+		records[string(textTxId)] = BitmarksRecord{
+			Record: record,
+			TxId:   txId,
+			Data:   tx,
+		}
+	}
+
+	for assetIndex := range assetIndexes {
+
+		log.Infof("assetIndex: %v", assetIndex)
+
+		transaction := storage.Pool.Assets.Get(assetIndex[:])
+		if nil == transaction {
+			return fault.ErrAssetNotFound
+		}
+
+		tx, _, err := transactionrecord.Packed(transaction).Unpack()
+		if nil != err {
+			return err
+		}
+
+		record, ok := transactionrecord.RecordName(tx)
+		if !ok {
+			return fault.ErrAssetNotFound
+		}
+		textAssetIndex, err := assetIndex.MarshalText()
+		if nil != err {
+			return err
+		}
+
+		records[string(textAssetIndex)] = BitmarksRecord{
+			Record:     record,
+			AssetIndex: assetIndex,
+			Data:       tx,
+		}
+	}
+
+	reply.Data = ownership
+	reply.Tx = records
+
+	// if no record were found the just return Next as zero
+	// otherwise the next possible number
+	if 0 == current {
+		reply.Next = 0
+	} else {
+		reply.Next = current + 1
+	}
+	return nil
+}
