@@ -439,13 +439,18 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 		privateKey: privateKey,
 	}
 
+	newOwnerKeyPair := keyPair{}
+
 	newPublicKey, err := hex.DecodeString(to)
 	if nil != err {
-		fmt.Printf("Receiver hex decode to  error, use the public key directly\n")
-	}
-
-	newOwnerKeyPair := keyPair{
-		publicKey: newPublicKey,
+		fmt.Printf("Receiver hex decode error, use the public key directly\n")
+		newOwnerKeyPair = keyPair{
+			publicKey: []byte(to),
+		}
+	} else {
+		newOwnerKeyPair = keyPair{
+			publicKey: newPublicKey,
+		}
 	}
 
 	// TODO: deal with IPv6?
