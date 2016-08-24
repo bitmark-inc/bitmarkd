@@ -130,7 +130,7 @@ func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) er
 
 	// arbitrary byte size limit
 	size := hex.DecodedLen(len(arguments.Nonce))
-	if size < 1 || size > 16 {
+	if size < 1 || size > payment.NonceLength {
 		return fault.ErrInvalidNonce
 	}
 
@@ -165,8 +165,6 @@ func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) er
 // Bitmarks pay
 // --------------
 
-const maximumReceiptLength = 64 // hex bytes
-
 type PayArguments struct {
 	PayId payment.PayId `json:"payId"` // id from the issue/transfer request
 	// ***** FIX THIS: is currency required?
@@ -188,7 +186,7 @@ func (bitmarks *Bitmarks) Pay(arguments *PayArguments, reply *PayReply) error {
 
 	// arbitrary byte size limit
 	size := hex.DecodedLen(len(arguments.Receipt))
-	if size < 1 || size > maximumReceiptLength {
+	if size < 1 || size > payment.ReceiptLength {
 		return fault.ErrReceiptTooLong
 	}
 
@@ -204,7 +202,7 @@ func (bitmarks *Bitmarks) Pay(arguments *PayArguments, reply *PayReply) error {
 	log.Infof("broadcast pay: %x", packed)
 	messagebus.Bus.Broadcast.Send("pay", packed)
 
-	payment.TrackPayment(arguments.PayId, arguments.Receipt, 3)
+	payment.TrackPayment(arguments.PayId, arguments.Receipt, payment.RequiredConfirmations)
 
 	return nil
 }

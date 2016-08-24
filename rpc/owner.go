@@ -48,6 +48,10 @@ func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitm
 	log := owner.log
 	log.Infof("Owner.Bitmarks: %v", arguments)
 
+	if arguments.Count <= 0 || arguments.Count > 100 {
+		return fault.ErrInvalidCount
+	}
+
 	ownership, err := block.ListBitmarksFor(arguments.Owner, arguments.Start, arguments.Count)
 	if nil != err {
 		return err
