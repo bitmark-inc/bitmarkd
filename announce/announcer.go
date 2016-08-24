@@ -12,10 +12,10 @@ import (
 )
 
 const (
-	announceInitial     = 2 * time.Minute
-	announceRebroadcast = 8 * time.Minute // to prevent too frequent rebroadcasts
-	announceInterval    = 10 * time.Minute
-	announceExpiry      = 60 * time.Minute
+	announceInitial     = 2 * time.Minute  // startup delay be for first send
+	announceRebroadcast = 7 * time.Minute  // to prevent too frequent rebroadcasts
+	announceInterval    = 11 * time.Minute // regular polling time
+	announceExpiry      = 70 * time.Minute // if no responses received within this time, delete the entry
 )
 
 type announcer struct {
@@ -79,6 +79,7 @@ func (ann *announcer) process() {
 		determineConnections(log)
 		globalData.change = false
 	}
+	expireRPC()
 }
 
 func determineConnections(log *logger.L) {

@@ -90,6 +90,12 @@ func (conn Connection) String() string {
 	return s
 }
 
+// convert to text for JSON
+func (conn Connection) MarshalText() ([]byte, error) {
+	s, _ := conn.CanonicalIPandPort("")
+	return []byte(s), nil
+}
+
 // type for packed byte buffer IP and Port
 type PackedConnection []byte
 

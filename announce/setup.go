@@ -5,6 +5,7 @@
 package announce
 
 import (
+	"encoding/hex"
 	"github.com/bitmark-inc/bitmarkd/avl"
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -13,6 +14,7 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"time"
 )
 
 // type of listener
@@ -20,6 +22,17 @@ const (
 	TypeRPC  = iota
 	TypePeer = iota
 )
+
+//tpe for SHA3 fingerprints
+type fingerprintType [32]byte
+
+// RPC entries
+type rpcEntry struct {
+	address     util.PackedConnection // packed addresses
+	fingerprint fingerprintType       // SHA3-256(certificate)
+	timestamp   time.Time             // creation time
+	local       bool                  // true => never expires
+}
 
 // globals for background proccess
 type announcerData struct {
@@ -32,12 +45,12 @@ type announcerData struct {
 	publicKey   []byte
 	broadcasts  []byte
 	listeners   []byte
-	fingerprint [32]byte
+	fingerprint fingerprintType
 	rpcs        []byte
 	peerSet     bool
 	rpcsSet     bool
 
-	// trre of nodes available
+	// tree of nodes available
 	peerTree *avl.Tree
 	thisNode *avl.Node // this node's position in the tree
 	change   bool      // tree was changed
@@ -45,6 +58,11 @@ type announcerData struct {
 	n1 *avl.Node // first neighbour
 	n3 *avl.Node // third neighbour
 
+	// database of all RPCs
+	rpcIndex map[fingerprintType]int // index to find rpc entry
+	rpcList  []*rpcEntry             // array of RPCs
+
+	// data for thread
 	ann announcer
 
 	// for background
@@ -77,6 +95,9 @@ func Initialise() error {
 	globalData.peerTree = avl.New()
 	globalData.thisNode = nil
 	globalData.change = false
+
+	globalData.rpcIndex = make(map[fingerprintType]int, 1000)
+	globalData.rpcList = make([]*rpcEntry, 0, 1000)
 
 	globalData.peerSet = false
 	globalData.rpcsSet = false
@@ -150,4 +171,12 @@ func Finalise() error {
 	globalData.initialised = false
 
 	return nil
+}
+
+// convert fingerprint to little endian hex text
+func (fingerprint fingerprintType) MarshalText() ([]byte, error) {
+	size := hex.EncodedLen(len(fingerprint))
+	buffer := make([]byte, size)
+	hex.Encode(buffer, fingerprint[:])
+	return buffer, nil
 }

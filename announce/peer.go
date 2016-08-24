@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"time"
@@ -47,14 +46,18 @@ func SetPeer(publicKey []byte, broadcasts []byte, listeners []byte) error {
 }
 
 // add a peer announcement to the in-memory tree
-func AddPeer(publicKey []byte, broadcasts []byte, listeners []byte) {
+// returns:
+//   true  if this was a new/updated entry
+//   false if the update was within the limits (to prevent continuous relaying)
+func AddPeer(publicKey []byte, broadcasts []byte, listeners []byte) bool {
 	globalData.Lock()
-	addPeer(publicKey, broadcasts, listeners)
+	rc := addPeer(publicKey, broadcasts, listeners)
 	globalData.Unlock()
+	return rc
 }
 
 // internal add a peer announcement, hold lock before calling
-func addPeer(publicKey []byte, broadcasts []byte, listeners []byte) {
+func addPeer(publicKey []byte, broadcasts []byte, listeners []byte) bool {
 	peer := &peerEntry{
 		publicKey:  publicKey,
 		broadcasts: broadcasts,
@@ -67,15 +70,14 @@ func addPeer(publicKey []byte, broadcasts []byte, listeners []byte) {
 		ts = peer.timestamp // preserve previous timestamp
 	}
 	change := globalData.peerTree.Insert(pubkey(publicKey), peer)
-	fmt.Printf("\n\n")               // ***** FIX THIS: debugging
-	globalData.peerTree.Print(false) // ***** FIX THIS: debugging
 
-	// if new node or a enought time has elapsed to make sure
+	// if new node or a enough time has elapsed to make sure
 	// this is not an endless rebroadcast
 	if change || time.Since(ts) > announceRebroadcast {
 		globalData.change = true
-		messagebus.Bus.Broadcast.Send("peer", publicKey, broadcasts, listeners)
+		return true
 	}
+	return false
 }
 
 // fetch the data for the next node in the ring for a given public key
@@ -103,10 +105,12 @@ func SendRegistration(client *zmqutil.Client, fn string) error {
 	return client.Send(fn, chain, globalData.publicKey, globalData.broadcasts, globalData.listeners)
 }
 
-// public key comparison
+// public key comparison for AVL interface
 func (p pubkey) Compare(q interface{}) int {
 	return bytes.Compare(p, q.(pubkey))
 }
+
+// public key string convert for AVL interface
 func (p pubkey) String() string {
 	return fmt.Sprintf("%x", []byte(p))
 }
