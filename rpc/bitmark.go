@@ -5,7 +5,6 @@
 package rpc
 
 import (
-	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -13,7 +12,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/payment"
-	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
@@ -46,65 +44,13 @@ func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransfer, r
 		return fault.ErrNotAvailableDuringSynchronise
 	}
 
-	// find the current owner via the link
-	previousPacked := storage.Pool.Transactions.Get(arguments.Link[:])
-	if nil == previousPacked {
-		return fault.ErrLinkToInvalidOrUnconfirmedTransaction
-	}
-
-	previousTransaction, _, err := transactionrecord.Packed(previousPacked).Unpack()
+	txId, packedTransfer, previousTransfer, ownerData, err := block.VerifyTransfer(arguments)
 	if nil != err {
 		return err
-	}
-
-	var currentOwner *account.Account
-	var previousTransfer *transactionrecord.BitmarkTransfer
-
-	switch tx := previousTransaction.(type) {
-	case *transactionrecord.BitmarkIssue:
-		currentOwner = tx.Owner
-
-	case *transactionrecord.BitmarkTransfer:
-		currentOwner = tx.Owner
-		previousTransfer = tx
-
-	default:
-		return fault.ErrLinkToInvalidOrUnconfirmedTransaction
-	}
-
-	// pack transfer and check signature
-	packedTransfer, err := arguments.Pack(currentOwner)
-	if nil != err {
-		return err
-	}
-
-	// transfer identifier and check for duplicate
-	txId := packedTransfer.MakeLink()
-	key := txId[:]
-	if storage.Pool.Transactions.Has(key) || reservoir.Has(txId) {
-		return fault.ErrTransactionAlreadyExists
 	}
 
 	log.Infof("packed transfer: %x", packedTransfer)
 	log.Infof("id: %v", txId)
-
-	// get count for current owner record
-	// to make sure that the record has not already been transferred
-	dKey := append(currentOwner.Bytes(), arguments.Link[:]...)
-	log.Infof("dKey: %x", dKey)
-	dCount := storage.Pool.OwnerDigest.Get(dKey)
-	if nil == dCount {
-		return fault.ErrDoubleTransferAttempt
-	}
-	log.Infof("dCount: %x", dCount)
-
-	// get ownership data
-	oKey := append(currentOwner.Bytes(), dCount...)
-	log.Infof("oKey: %x", oKey)
-	ownerData := storage.Pool.Ownership.Get(oKey)
-	if nil == ownerData {
-		return fault.ErrDoubleTransferAttempt
-	}
 	log.Infof("ownerData: %x", ownerData)
 
 	// get block number of transfer and issue; see: storage/doc.go to determine offsets

@@ -17,6 +17,13 @@ import (
 	"math/big"
 )
 
+// maximum values
+const (
+	ReceiptLength         = 64 // hex bytes
+	NonceLength           = 64 // hex bytes
+	RequiredConfirmations = 3
+)
+
 // configuration for each sub-module
 type Configuration struct {
 	Bitcoin *bitcoin.Configuration
@@ -139,8 +146,8 @@ func Store(currencyName currency.Currency, transactions []byte, count int, canPr
 
 }
 
-// start payment tracking on an id
-func TrackPayment(payId PayId, txId string, confirmations uint64) {
+// start payment tracking on an receipt
+func TrackPayment(payId PayId, receipt string, confirmations uint64) {
 
 	r, ok := get(payId)
 	if !ok {
@@ -152,7 +159,7 @@ func TrackPayment(payId PayId, txId string, confirmations uint64) {
 
 	switch r.currencyName {
 	case currency.Bitcoin:
-		bitcoin.QueueItem(hexPayId, txId, confirmations, r.transactions)
+		bitcoin.QueueItem(hexPayId, receipt, confirmations, r.transactions)
 
 	default: // only fails if new module not correctly installed
 		fault.Panicf("not payment handler for Currency: %s", r.currencyName.String())

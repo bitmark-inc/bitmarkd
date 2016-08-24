@@ -9,6 +9,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"sync"
@@ -182,4 +183,69 @@ func ListBitmarksFor(owner *account.Account, start uint64, count int) ([]Ownersh
 	}
 
 	return records, nil
+}
+
+// verify that a transfer is ok
+func VerifyTransfer(arguments *transactionrecord.BitmarkTransfer) (merkle.Digest, []byte, *transactionrecord.BitmarkTransfer, []byte, error) {
+	// find the current owner via the link
+	previousPacked := storage.Pool.Transactions.Get(arguments.Link[:])
+	if nil == previousPacked {
+		return merkle.Digest{}, nil, nil, nil, fault.ErrLinkToInvalidOrUnconfirmedTransaction
+	}
+
+	previousTransaction, _, err := transactionrecord.Packed(previousPacked).Unpack()
+	if nil != err {
+		return merkle.Digest{}, nil, nil, nil, err
+	}
+
+	var currentOwner *account.Account
+	var previousTransfer *transactionrecord.BitmarkTransfer
+
+	switch tx := previousTransaction.(type) {
+	case *transactionrecord.BitmarkIssue:
+		currentOwner = tx.Owner
+
+	case *transactionrecord.BitmarkTransfer:
+		currentOwner = tx.Owner
+		previousTransfer = tx
+
+	default:
+		return merkle.Digest{}, nil, nil, nil, fault.ErrLinkToInvalidOrUnconfirmedTransaction
+	}
+
+	// pack transfer and check signature
+	packedTransfer, err := arguments.Pack(currentOwner)
+	if nil != err {
+		return merkle.Digest{}, nil, nil, nil, err
+	}
+
+	// transfer identifier and check for duplicate
+	txId := packedTransfer.MakeLink()
+	key := txId[:]
+	if storage.Pool.Transactions.Has(key) || reservoir.Has(txId) {
+		return merkle.Digest{}, nil, nil, nil, fault.ErrTransactionAlreadyExists
+	}
+
+	// log.Infof("packed transfer: %x", packedTransfer)
+	// log.Infof("id: %v", txId)
+
+	// get count for current owner record
+	// to make sure that the record has not already been transferred
+	dKey := append(currentOwner.Bytes(), arguments.Link[:]...)
+	// log.Infof("dKey: %x", dKey)
+	dCount := storage.Pool.OwnerDigest.Get(dKey)
+	if nil == dCount {
+		return merkle.Digest{}, nil, nil, nil, fault.ErrDoubleTransferAttempt
+	}
+
+	// get ownership data
+	oKey := append(currentOwner.Bytes(), dCount...)
+	// log.Infof("oKey: %x", oKey)
+	ownerData := storage.Pool.Ownership.Get(oKey)
+	if nil == ownerData {
+		return merkle.Digest{}, nil, nil, nil, fault.ErrDoubleTransferAttempt
+	}
+	// log.Infof("ownerData: %x", ownerData)
+
+	return txId, packedTransfer, previousTransfer, ownerData, nil
 }

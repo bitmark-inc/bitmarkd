@@ -75,6 +75,7 @@ var (
 	ErrMissingParameters      = LengthError("missing parameters")
 	ErrNameTooLong            = LengthError("name too long")
 	ErrNoConnectionsAvailable = InvalidError("no connections available")
+	ErrNoNewTransactions      = InvalidError("no new transactions")
 	//ErrNoPaymentToMiner               = InvalidError("no payment to miner")
 	//ErrNotABitmarkPayment             = InvalidError("not a bitmark payment")
 	ErrNotAvailableDuringSynchronise = InvalidError("not available during synchronise")
@@ -97,8 +98,11 @@ var (
 	ErrSignatureTooLong                = LengthError("signature too long")
 	ErrTooManyItemsToProcess           = LengthError("too many items to process")
 	////ErrTooManyTransactionsInBlock     = LengthError("too many transactions in block")
-	ErrTransactionAlreadyExists = ExistsError("transaction already exists")
-	ErrWrongNetworkForPublicKey = InvalidError("wrong network for public key")
+	ErrTransactionAlreadyExists  = ExistsError("transaction already exists")
+	ErrTransactionIsNotAnAsset   = InvalidError("transaction is not an asset")
+	ErrTransactionIsNotAnIssue   = InvalidError("transaction is not an issue")
+	ErrTransactionIsNotATransfer = InvalidError("transaction is not a transfer")
+	ErrWrongNetworkForPublicKey  = InvalidError("wrong network for public key")
 )
 
 // the error interface base method
