@@ -23,10 +23,10 @@ import (
 
 // various timeouts
 const (
-	sendInterval     = 10 * time.Second
-	connectorTimeout = 500 * time.Millisecond
-
-	samplelingLimit = 10
+	cycleInterval       = 10 * time.Second       // pause to limit bandwidth
+	connectorTimeout    = 500 * time.Millisecond // time out for connections
+	samplelingLimit     = 10                     // number of cycles to be 1 block out of sync before resync
+	fetchBlocksPerCycle = 50                     // number of blocks to fetch in one set
 )
 
 // a state type for the thread
@@ -154,7 +154,7 @@ loop:
 			conn.log.Infof("received: %s  public key: %x  connect: %x", item.Command, item.Parameters[0], item.Parameters[1])
 			connectTo(conn.log, conn.clients, conn.dynamicStart, item.Command, item.Parameters[0], item.Parameters[1])
 
-		case <-time.After(sendInterval):
+		case <-time.After(cycleInterval):
 			conn.process()
 		}
 	}
@@ -200,6 +200,13 @@ func (conn *connector) process() {
 				} else if d == digest {
 					conn.startBlockNumber = h + 1
 					log.Infof("fork from block number: %d", conn.startBlockNumber)
+
+					// remove old blocks
+					err := block.DeleteDownToBlock(conn.startBlockNumber)
+					if nil != err {
+						log.Errorf("delete down to block number: %d  error: %v", conn.startBlockNumber, err)
+						conn.state = cStateHighestBlock // retry
+					}
 					break
 				}
 				digest, err = block.DigestForBlock(h)
@@ -212,32 +219,33 @@ func (conn *connector) process() {
 		}
 
 	case cStateFetchBlocks:
-		conn.state += 1 // assume success
+		for n := 0; n < fetchBlocksPerCycle; n += 1 {
 
-		// remove old blocks
-		err := block.DeleteDownToBlock(conn.startBlockNumber)
-		if nil != err {
-			log.Errorf("delete down to block number: %d  error: %v", conn.startBlockNumber, err)
-			conn.state = cStateHighestBlock // retry
-			break
-		}
+			if conn.startBlockNumber > conn.highestBlockNumber {
+				conn.state += 1 // assume success
+				break
+			}
 
-		for n := conn.startBlockNumber; n <= conn.highestBlockNumber; n += 1 {
-			packedBlock, err := blockData(conn.theClient, n)
+			log.Infof("fetch block number: %d", conn.startBlockNumber)
+			packedBlock, err := blockData(conn.theClient, conn.startBlockNumber)
 			if nil != err {
-				log.Errorf("fetch block number: %d  error: %v", n, err)
+				log.Errorf("fetch block number: %d  error: %v", conn.startBlockNumber, err)
 				conn.state = cStateHighestBlock // retry
 				break
 			}
-			log.Infof("store block number: %d", n)
+			log.Infof("store block number: %d", conn.startBlockNumber)
 			err = block.StoreIncoming(packedBlock)
 			if nil != err {
-				log.Errorf("store block number: %d  error: %v", n, err)
+				log.Errorf("store block number: %d  error: %v", conn.startBlockNumber, err)
 				conn.state = cStateHighestBlock // retry
 				break
 			}
 
+			// next block
+			conn.startBlockNumber += 1
+
 		}
+
 	case cStateRebuild:
 		// return to normal operations
 		conn.state += 1  // next state
@@ -263,6 +271,7 @@ func (conn *connector) process() {
 	log.Infof("next state: %s", conn.state)
 }
 
+// ***** FIX THIS: is this needed
 // func CheckServer(client *zmqutil.Client) error {
 
 // 	err := client.Send("I")
