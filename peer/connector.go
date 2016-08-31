@@ -7,7 +7,6 @@ package peer
 import (
 	"encoding/binary"
 	"encoding/hex"
-	//"encoding/json"
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
@@ -26,6 +25,8 @@ import (
 const (
 	sendInterval     = 10 * time.Second
 	connectorTimeout = 500 * time.Millisecond
+
+	samplelingLimit = 10
 )
 
 // a state type for the thread
@@ -50,6 +51,7 @@ type connector struct {
 	theClient          *zmqutil.Client // client to fetch blocak data from
 	startBlockNumber   uint64          // block number wher local chain forks
 	highestBlockNumber uint64          // block number on best node
+	samples            int             // counter to detect missed block broadcast
 }
 
 // initialise the connector
@@ -237,28 +239,25 @@ func (conn *connector) process() {
 
 		}
 	case cStateRebuild:
-		// ***** FIX THIS: this need to scan verified assets to remove duplicates
-		// ***** FIX THIS: since these have been superseded by other confirmed ones after the fork
-		// ***** FIX THIS:
-		// ***** FIX THIS: scan verified transactions and remove any double-spend transfers
-		// ***** FIX THIS: just check if there is still an owner for the transfers link
-
-		// ***** FIX THIS: just testing begin
-		const n = 3                       // ***** FIX THIS:
-		err := block.DeleteDownToBlock(n) // ***** FIX THIS:
-		if nil != err {                   // ***** FIX THIS:
-			log.Errorf("delete to block number: %d  error: %v", n, err) // ***** FIX THIS:
-		} // ***** FIX THIS:
-		// ***** FIX THIS: just testing end
-
-		//log.Warn("rebuild entire database here if necessary")
-
 		// return to normal operations
-		conn.state += 1 // next state
+		conn.state += 1  // next state
+		conn.samples = 0 // zero out the counter
 		mode.Set(mode.Normal)
 
 	case cStateSampling:
-		// ***** FIX THIS: add code to periodically check for out-of-sync
+		// check peers
+		conn.highestBlockNumber, conn.theClient = highestBlock(conn.clients)
+		height := block.GetHeight()
+		if conn.highestBlockNumber > height {
+			if conn.highestBlockNumber-height >= 2 {
+				conn.state = cStateForkDetect
+			} else {
+				conn.samples += 1
+				if conn.samples > samplelingLimit {
+					conn.state = cStateForkDetect
+				}
+			}
+		}
 
 	}
 	log.Infof("next state: %s", conn.state)
