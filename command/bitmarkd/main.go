@@ -10,6 +10,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/payment"
@@ -198,9 +199,33 @@ func main() {
 		return
 	}
 
-	// network announcements need to be before peer and rpc initiialisation
+	// network announcements need to be before peer and rpc initialisation
 	log.Info("initialise announce")
-	err = announce.Initialise()
+	nodesDomain := "" // initially none
+	switch masterConfiguration.Nodes {
+	case "":
+		log.Critical("nodes cannot be blank choose from: none, chain or sub.domain.tld")
+		exitwithstatus.Message("nodes cannot be blank choose from: none, chain or sub.domain.tld")
+	case "none":
+		nodesDomain = "" // nodes disabled
+	case "chain":
+		switch cn := mode.ChainName(); cn { // ***** FIX THIS: is there a better way?
+		case chain.Local:
+			nodesDomain = "node.test.bitmark.com"
+		case chain.Testing:
+			nodesDomain = "nodes.test.bitmark.com"
+		case chain.Bitmark:
+			nodesDomain = "nodes.live.bitmark.com"
+		default:
+			log.Criticalf("unexpected chain name: %q", cn)
+			exitwithstatus.Message("unexpected chain name: %q", cn)
+		}
+	default:
+		// domain names are complex to validate so just rely on
+		// trying to fetch the TXT records for validation
+		nodesDomain = masterConfiguration.Nodes // just assume it is a domain name
+	}
+	err = announce.Initialise(nodesDomain)
 	if nil != err {
 		log.Criticalf("announce initialise error: %v", err)
 		exitwithstatus.Message("announce initialise error: %v", err)

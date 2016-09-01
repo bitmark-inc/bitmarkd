@@ -17,6 +17,10 @@ data_directory = "/var/lib/bitmarkd"
 #chain = testing
 chain = local
 
+# select the default node configuration
+# choose from: none, chain OR sub.domain.tld
+nodes = chain
+
 
 # Bitmark Vault clients connect using JSON RPC to these listening ports
 client_rpc {

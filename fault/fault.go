@@ -29,7 +29,7 @@ var (
 	//ErrCertificateNotFound            = NotFoundError("certificate not found")
 	ErrChecksumMismatch = ProcessError("checksum mismatch")
 	//ErrCountMismatch                  = ProcessError("count mismatch")
-	//ErrConnectingToSelfForbidden      = ProcessError("connecting to self forbidden")
+	ErrConnectingToSelfForbidden = ProcessError("connecting to self forbidden")
 	//ErrCurrencyTooLong                = LengthError("currency too long")
 	ErrDescriptionTooLong    = LengthError("description too long")
 	ErrDoubleTransferAttempt = InvalidError("double transfer attempt")

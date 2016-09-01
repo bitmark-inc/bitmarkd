@@ -5,6 +5,7 @@
 package peer
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"github.com/bitmark-inc/bitmarkd/announce"
@@ -89,6 +90,13 @@ func (conn *connector) initialise(privateKey []byte, publicKey []byte, connect [
 		if nil != err {
 			log.Errorf("client[%d]=public: %q  error: %v", i, c.PublicKey, err)
 			errX = err
+			goto fail
+		}
+
+		// prevent connection to self
+		if bytes.Equal(publicKey, serverPublicKey) {
+			errX = fault.ErrConnectingToSelfForbidden
+			log.Errorf("client[%d]=public: %q  error: %v", i, c.PublicKey, errX)
 			goto fail
 		}
 

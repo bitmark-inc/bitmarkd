@@ -76,7 +76,9 @@ type announcerData struct {
 var globalData announcerData
 
 // initialise the announcement system
-func Initialise() error {
+// pass a fuklly qualified domain for root node list
+// or empty string for no root nodes
+func Initialise(nodesDomain string) error {
 
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -102,37 +104,38 @@ func Initialise() error {
 	globalData.peerSet = false
 	globalData.rpcsSet = false
 
-	texts, err := net.LookupTXT("node.test.bitmark.com")
-	if nil != err {
-		return err
-	}
-
-	// process DNS entries
-	for i, t := range texts {
-		t = strings.TrimSpace(t)
-		tag, err := parseTag(t)
+	if "" != nodesDomain {
+		texts, err := net.LookupTXT(nodesDomain)
 		if nil != err {
-			globalData.log.Infof("ignore TXT[%d]: %q  error: %v", i, t, err)
-		} else {
-			globalData.log.Infof("process TXT[%d]: %q", i, t)
-			globalData.log.Infof("result[%d]: IPv4: %q  IPv6: %q  rpc: %d  connect: %d  subscribe: %d", i, tag.ipv4, tag.ipv6, tag.rpcPort, tag.connectPort, tag.subscribePort)
-			globalData.log.Infof("result[%d]: peer public key: %x", i, tag.publicKey)
-			globalData.log.Infof("result[%d]: rpc fingerprint: %x", i, tag.certificateFingerprint)
+			return err
+		}
 
-			s1 := util.ConnectionFromIPandPort(tag.ipv4, tag.subscribePort)
-			s2 := util.ConnectionFromIPandPort(tag.ipv6, tag.subscribePort)
-			c1 := util.ConnectionFromIPandPort(tag.ipv4, tag.connectPort)
-			c2 := util.ConnectionFromIPandPort(tag.ipv6, tag.connectPort)
+		// process DNS entries
+		for i, t := range texts {
+			t = strings.TrimSpace(t)
+			tag, err := parseTag(t)
+			if nil != err {
+				globalData.log.Infof("ignore TXT[%d]: %q  error: %v", i, t, err)
+			} else {
+				globalData.log.Infof("process TXT[%d]: %q", i, t)
+				globalData.log.Infof("result[%d]: IPv4: %q  IPv6: %q  rpc: %d  connect: %d  subscribe: %d", i, tag.ipv4, tag.ipv6, tag.rpcPort, tag.connectPort, tag.subscribePort)
+				globalData.log.Infof("result[%d]: peer public key: %x", i, tag.publicKey)
+				globalData.log.Infof("result[%d]: rpc fingerprint: %x", i, tag.certificateFingerprint)
 
-			broadcasts := append(s1.Pack(), s2.Pack()...)
-			listeners := append(c1.Pack(), c2.Pack()...)
-			globalData.log.Infof("result[%d]: broadcasts: %x  listeners: %x", i, broadcasts, listeners)
+				s1 := util.ConnectionFromIPandPort(tag.ipv4, tag.subscribePort)
+				s2 := util.ConnectionFromIPandPort(tag.ipv6, tag.subscribePort)
+				c1 := util.ConnectionFromIPandPort(tag.ipv4, tag.connectPort)
+				c2 := util.ConnectionFromIPandPort(tag.ipv6, tag.connectPort)
 
-			// internal add, as lock is already held
-			addPeer(tag.publicKey, broadcasts, listeners)
+				broadcasts := append(s1.Pack(), s2.Pack()...)
+				listeners := append(c1.Pack(), c2.Pack()...)
+				globalData.log.Infof("result[%d]: broadcasts: %x  listeners: %x", i, broadcasts, listeners)
+
+				// internal add, as lock is already held
+				addPeer(tag.publicKey, broadcasts, listeners)
+			}
 		}
 	}
-
 	if err := globalData.ann.initialise(); nil != err {
 		return err
 	}

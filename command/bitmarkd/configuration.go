@@ -83,6 +83,7 @@ type Configuration struct {
 	DataDirectory string       `libucl:"data_directory"`
 	PidFile       string       `libucl:"pidfile"`
 	Chain         string       `libucl:"chain"`
+	Nodes         string       `libucl:"nodes"`
 	Database      DatabaseType `libucl:"database"`
 
 	ClientRPC RPCType               `libucl:"client_rpc"`
