@@ -50,6 +50,10 @@ func Start(processes Processes, args interface{}) *T {
 // stop a set of background processes
 func (t *T) Stop() {
 
+	if nil == t {
+		return
+	}
+
 	// shutdown all background tasks
 	for _, shutdown := range t.s {
 		close(shutdown.shutdown)
