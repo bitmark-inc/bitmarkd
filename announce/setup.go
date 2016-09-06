@@ -122,17 +122,30 @@ func Initialise(nodesDomain string) error {
 				globalData.log.Infof("result[%d]: peer public key: %x", i, tag.publicKey)
 				globalData.log.Infof("result[%d]: rpc fingerprint: %x", i, tag.certificateFingerprint)
 
-				s1 := util.ConnectionFromIPandPort(tag.ipv4, tag.subscribePort)
-				s2 := util.ConnectionFromIPandPort(tag.ipv6, tag.subscribePort)
-				c1 := util.ConnectionFromIPandPort(tag.ipv4, tag.connectPort)
-				c2 := util.ConnectionFromIPandPort(tag.ipv6, tag.connectPort)
+				broadcasts := []byte{}
+				listeners := []byte{}
 
-				broadcasts := append(s1.Pack(), s2.Pack()...)
-				listeners := append(c1.Pack(), c2.Pack()...)
-				globalData.log.Infof("result[%d]: broadcasts: %x  listeners: %x", i, broadcasts, listeners)
+				if nil != tag.ipv4 {
+					s1 := util.ConnectionFromIPandPort(tag.ipv4, tag.subscribePort)
+					c1 := util.ConnectionFromIPandPort(tag.ipv4, tag.connectPort)
+					broadcasts = append(broadcasts, s1.Pack()...)
+					listeners = append(listeners, c1.Pack()...)
+				}
+				if nil != tag.ipv6 {
+					s2 := util.ConnectionFromIPandPort(tag.ipv6, tag.subscribePort)
+					c2 := util.ConnectionFromIPandPort(tag.ipv6, tag.connectPort)
+					broadcasts = append(broadcasts, s2.Pack()...)
+					listeners = append(listeners, c2.Pack()...)
+				}
 
-				// internal add, as lock is already held
-				addPeer(tag.publicKey, broadcasts, listeners)
+				if nil == tag.ipv4 && nil == tag.ipv6 {
+					globalData.log.Infof("result[%d]: ignoring invalid record", i)
+				} else {
+					globalData.log.Infof("result[%d]: broadcasts: %x  listeners: %x", i, broadcasts, listeners)
+
+					// internal add, as lock is already held
+					addPeer(tag.publicKey, broadcasts, listeners)
+				}
 			}
 		}
 	}
