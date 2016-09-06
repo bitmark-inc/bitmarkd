@@ -27,14 +27,13 @@ client_rpc {
 
   maximum_connections = 50
 
-  listen = 127.0.0.1:2130
-  listen = 127.0.0.1:2131
-  listen = "[::1]:2132"
+  listen = 0.0.0.0:2130
+  listen = "[::]:2130"
 
   # announce certain public IP:ports to network
   # if using firewall port forwarding use the firewall external IP:port
-  # announce = 127.0.0.1:2131
-  # announce = "[::1]:2132"
+  # announce = 127.0.0.1:2130
+  # announce = "[::1]:2130"
 
   certificate = rpc.crt
   private_key = rpc.key
@@ -86,9 +85,9 @@ proofing {
   currency = bitcoin
   address = "msxN7C7cRNgbgyUzt3EcvrpmWXc59sZVN4"
 
-  publish =  "127.0.0.1:2140"
+  publish =  "0.0.0.0:2140"
   publish = "[::]:2140"
-  submit =  "127.0.0.1:2141"
+  submit =  "0.0.0.0:2141"
   submit = "[::]:2141"
 
 }
@@ -110,12 +109,12 @@ bitcoin {
   # private_key = client.key
   # url = https://127.0.0.1:18555/rpc-call
 
+  #** not used proof currently has this data
   # fee is a string to prevent rounding to float
-  fee = "0.0002"
-
+  #fee = "0.0002"
   # address to receive mining payments
   # and for security the bitcoind above should not have its private key
-  address = "some-test-net-address"
+  #address = "msxN7C7cRNgbgyUzt3EcvrpmWXc59sZVN4"
 
 }
 
