@@ -147,11 +147,11 @@ func Store(currencyName currency.Currency, transactions []byte, count int, canPr
 }
 
 // start payment tracking on an receipt
-func TrackPayment(payId PayId, receipt string, confirmations uint64) {
+func TrackPayment(payId PayId, receipt string, confirmations uint64) bool {
 
 	r, ok := get(payId)
 	if !ok {
-		return
+		return false
 	}
 
 	hexPayId := payId.String()
@@ -164,7 +164,7 @@ func TrackPayment(payId PayId, receipt string, confirmations uint64) {
 	default: // only fails if new module not correctly installed
 		fault.Panicf("not payment handler for Currency: %s", r.currencyName.String())
 	}
-	//return nil
+	return true
 }
 
 // instead of paying, try a proof from the client nonce

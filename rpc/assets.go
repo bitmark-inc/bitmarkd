@@ -75,7 +75,7 @@ func (assets *Assets) Register(arguments *[]transactionrecord.AssetData, reply *
 
 	// fail if no data sent
 	if 0 == len(packed) {
-		return fault.ErrMissingParameters
+		return fault.ErrAssetsAlreadyRegistered
 	}
 
 	// announce transaction block to other peers

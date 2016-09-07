@@ -20,8 +20,9 @@ type RecordError GenericError
 
 // common errors - keep in alphabetic order
 var (
-	ErrAlreadyInitialised = ExistsError("already initialised")
-	ErrAssetNotFound      = NotFoundError("asset not found")
+	ErrAlreadyInitialised      = ExistsError("already initialised")
+	ErrAssetsAlreadyRegistered = InvalidError("assets already registered")
+	ErrAssetNotFound           = NotFoundError("asset not found")
 	//ErrBlockHashDoesNotMeetDifficulty = InvalidError("block hash does not meet difficulty")
 	ErrBlockNotFound                = NotFoundError("block not found")
 	ErrCannotDecodeAccount          = RecordError("cannot decode account")
@@ -90,6 +91,7 @@ var (
 	//ErrNotTransactionType             = RecordError("not transaction type")
 	ErrNotTransactionPack = RecordError("not transaction pack")
 	//ErrPaymentAddressMissing          = NotFoundError("payment address missing")
+	ErrPayIdAlreadyUsed      = InvalidError("payId alread used")
 	ErrPaymentAddressTooLong = LengthError("payment address too long")
 	////ErrPeerAlreadyExists              = ExistsError("peer already exists")
 	////ErrPeerNotFound                   = NotFoundError("peer not found")
