@@ -145,13 +145,13 @@ func (pub *publisher) process() {
 
 	seenAsset := make(map[transactionrecord.AssetIndex]struct{})
 
-	txIds, transactions, totalByteCount, err := reservoir.Fetch(blockrecord.MaximumTransactions)
+	pooledTxIds, transactions, totalByteCount, err := reservoir.Fetch(blockrecord.MaximumTransactions)
 	if nil != err {
 		pub.log.Errorf("Error on Fetch: %v", err)
 		return
 	}
 
-	txCount := len(txIds)
+	txCount := len(pooledTxIds)
 
 	if 0 == txCount {
 		pub.log.Info("verified pool is empty")
@@ -184,8 +184,10 @@ func (pub *publisher) process() {
 	}
 
 	// first txId is the base
-	txIds = append([]merkle.Digest{merkle.NewDigest(packedBase)}, txIds...)
+	txIds := make([]merkle.Digest, 1, len(pooledTxIds)*2) // allow room for inserted assets & allocate base
+	txIds[0] = merkle.NewDigest(packedBase)               // base is first
 
+	n := 0 // index for txIds
 	for _, item := range transactions {
 		unpacked, _, err := transactionrecord.Packed(item).Unpack()
 		if nil != err {
@@ -222,7 +224,10 @@ func (pub *publisher) process() {
 			fault.Panicf("publisher unxpected transaction: %v", unpacked)
 		}
 
+		// concatenate items
+		txIds = append(txIds, pooledTxIds[n])
 		txData = append(txData, item...)
+		n += 1
 	}
 
 	// build the tree of transaction IDs
@@ -232,7 +237,7 @@ func (pub *publisher) process() {
 	transactionCount := len(txIds)
 	if transactionCount > blockrecord.MaximumTransactions {
 		pub.log.Criticalf("too many transactions in block: %d", transactionCount)
-		fault.Panicf("too many transactions in blok: %d", transactionCount)
+		fault.Panicf("too many transactions in block: %d", transactionCount)
 	}
 
 	// 64 bit nonce (8 bytes)
@@ -258,6 +263,9 @@ func (pub *publisher) process() {
 		TxIds:    txIds,
 		AssetIds: assetIds,
 	}
+
+	pub.log.Tracef("message: %v", message)
+
 	message.Header.PreviousBlock, message.Header.Number = block.Get()
 
 	// add job to the queue
