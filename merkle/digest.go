@@ -15,10 +15,11 @@ import (
 const DigestLength = 32
 
 // type for a digest
-// stored as little endian byte array
-// represented as big endian hex value for print
-// represented as little endian hex text for JSON encoding
-// to convert to bytes just use d[:]
+//
+// * stored as Little Endian byte array
+// * represented as Big Endian hex value for printf and scanf
+// * represented as Little Endian hex text for JSON encoding
+// * to convert to bytes just use d[:]
 type Digest [DigestLength]byte
 
 // create a digest from a byte slice
@@ -35,19 +36,17 @@ func reversed(d Digest) []byte {
 	return result
 }
 
-// convert a binary digest to hex string for use by the fmt package (for %s)
-//
-// the stored version is in little endian, but the output string is big endian
+// convert a binary digest to Big Endian hex string for use by the fmt package (for %s)
 func (digest Digest) String() string {
 	return hex.EncodeToString(reversed(digest))
 }
 
-// convert a binary digest to big endian hex string for use by the fmt package (for %#v)
+// convert a binary digest to Big Endian hex string for use by the fmt package (for %#v)
 func (digest Digest) GoString() string {
-	return "<SHA3-256:" + hex.EncodeToString(reversed(digest)) + ">"
+	return "<SHA3-256-BE:" + hex.EncodeToString(reversed(digest)) + ">"
 }
 
-// convert a big endian hex representation to a digest for use by the format package scan routines
+// convert a Big Endian hex representation to a digest for use by the format package scan routines
 func (digest *Digest) Scan(state fmt.ScanState, verb rune) error {
 	token, err := state.Token(true, func(c rune) bool {
 		if c >= '0' && c <= '9' {
@@ -80,7 +79,7 @@ func (digest *Digest) Scan(state fmt.ScanState, verb rune) error {
 	return nil
 }
 
-// convert digest to little endian hex text
+// convert digest to Little Endian hex text
 func (digest Digest) MarshalText() ([]byte, error) {
 	size := hex.EncodedLen(len(digest))
 	buffer := make([]byte, size)
@@ -88,7 +87,7 @@ func (digest Digest) MarshalText() ([]byte, error) {
 	return buffer, nil
 }
 
-// convert little endian hex text into a digest
+// convert Little Endian hex text into a digest
 func (digest *Digest) UnmarshalText(s []byte) error {
 	if DigestLength != hex.DecodedLen(len(s)) {
 		return fault.ErrNotLink
@@ -113,7 +112,8 @@ func (digest *Digest) UnmarshalText(s []byte) error {
 	return nil
 }
 
-// convert and validate little endian binary byte slice to a digest
+// convert and validate Little Endian binary byte slice to a digest
+// the input bytes are Little Endian
 func DigestFromBytes(digest *Digest, buffer []byte) error {
 	if DigestLength != len(buffer) {
 		return fault.ErrNotLink

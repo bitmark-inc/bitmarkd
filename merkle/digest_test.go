@@ -52,7 +52,7 @@ func TestScanFmt(t *testing.T) {
 	}
 
 	s = fmt.Sprintf("%#v", d)
-	if s != "<SHA3-256:"+stringDigest+">" {
+	if s != "<SHA3-256-BE:"+stringDigest+">" {
 		t.Errorf("hash-v: digest = %s expected %s", s, stringDigest)
 	}
 }
@@ -134,7 +134,7 @@ func TestLink(t *testing.T) {
 		t.Errorf("link(%%v): %v  expected: %s", expectedLink, textLink)
 	}
 
-	if fmt.Sprintf("%#v", expectedLink) != "<SHA3-256:"+textLink+">" {
+	if fmt.Sprintf("%#v", expectedLink) != "<SHA3-256-BE:"+textLink+">" {
 		t.Errorf("link(%%#v): %#v  expected: %#v", expectedLink, expectedLink)
 	}
 
