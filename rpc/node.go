@@ -10,6 +10,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/version"
 	"github.com/bitmark-inc/logger"
 	"time"
@@ -51,15 +52,16 @@ func (node *Node) List(arguments *NodeArguments, reply *NodeReply) error {
 type InfoArguments struct{}
 
 type InfoReply struct {
-	Chain  string `json:"chain"`
-	Mode   string `json:"mode"`
-	Blocks uint64 `json:"blocks"`
-	// Peers    int     `json:"peers"`
-	RPCs uint64 `json:"rpcs"`
-	// Miners   uint64  `json:"miners"`
+	Chain      string  `json:"chain"`
+	Mode       string  `json:"mode"`
+	Blocks     uint64  `json:"blocks"`
+	RPCs       uint64  `json:"rpcs"`
+	Pending    int     `json:"pending"`
 	Difficulty float64 `json:"difficulty"`
 	Version    string  `json:"version"`
 	Uptime     string  `json:"uptime"`
+	// Peers    int     `json:"peers"`
+	// Miners   uint64  `json:"miners"`
 }
 
 func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
@@ -67,9 +69,10 @@ func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 	reply.Chain = mode.ChainName()
 	reply.Mode = mode.String()
 	reply.Blocks = block.GetHeight()
-	// reply.Peers = peer.ConnectionCount()
 	reply.RPCs = connectionCount.Uint64()
+	// reply.Peers = peer.ConnectionCount()
 	// reply.Miners = mine.ConnectionCount()
+	reply.Pending = reservoir.Count()
 	reply.Difficulty = difficulty.Current.Reciprocal()
 	reply.Version = version.Version
 	reply.Uptime = time.Since(node.start).String()

@@ -79,6 +79,14 @@ func Has(txId merkle.Digest) bool {
 	return ok
 }
 
+// the number of cached items
+func Count() int {
+	globalData.Lock()
+	n := len(globalData.cache)
+	globalData.Unlock()
+	return n
+}
+
 // store a record
 func Store(txId merkle.Digest, data transactionrecord.Packed) {
 	globalData.Lock()
