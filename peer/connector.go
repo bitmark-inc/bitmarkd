@@ -69,7 +69,7 @@ func (conn *connector) initialise(privateKey []byte, publicKey []byte, connect [
 	// allocate all sockets
 	staticCount := len(connect) // can be zero
 	if 0 == staticCount && !dynamicEnabled {
-		log.Error("zero static cliens and dynamic is disabled")
+		log.Error("zero static connections and dynamic is disabled")
 		return fault.ErrNoConnectionsAvailable
 	}
 	conn.clients = make([]*zmqutil.Client, staticCount+offsetCount)
@@ -189,7 +189,7 @@ func (conn *connector) process() {
 		log.Infof("highest block number: %d", conn.highestBlockNumber)
 
 	case cStateForkDetect:
-		digest, h := block.Get()
+		h := block.GetHeight()
 		if conn.highestBlockNumber < h {
 			conn.state = cStateRebuild
 		} else {
@@ -199,7 +199,13 @@ func (conn *connector) process() {
 			log.Infof("block number: %d", h)
 
 			// check digests of descending blocks (to detect a fork)
-			for h -= 1; h > genesis.BlockNumber; h -= 1 {
+			for ; h > genesis.BlockNumber; h -= 1 {
+				digest, err := block.DigestForBlock(h)
+				if nil != err {
+					log.Infof("block number: %d  local digest error: %v", h, err)
+					conn.state = cStateHighestBlock // retry
+					break
+				}
 				d, err := blockDigest(conn.theClient, h)
 				if nil != err {
 					log.Infof("block number: %d  fetch digest error: %v", h, err)
@@ -217,12 +223,7 @@ func (conn *connector) process() {
 					}
 					break
 				}
-				digest, err = block.DigestForBlock(h)
-				if nil != err {
-					log.Infof("block number: %d  local digest error: %v", h, err)
-					conn.state = cStateHighestBlock // retry
-					break
-				}
+
 			}
 		}
 

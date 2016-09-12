@@ -50,7 +50,7 @@ func (sbsc *subscriber) initialise(privateKey []byte, publicKey []byte, subscrib
 	// validate connection count
 	staticCount := len(subscribe) // can be zero
 	if 0 == staticCount && !dynamicEnabled {
-		log.Error("zero static cliens and dynamic is disabled")
+		log.Error("zero static connections and dynamic is disabled")
 		return fault.ErrNoConnectionsAvailable
 	}
 
