@@ -53,6 +53,9 @@ func addRPC(fingerprint fingerprintType, rpcs []byte, local bool) bool {
 
 	// if new item
 	if !ok {
+
+		// ***** FIX THIS: add more validation here
+
 		e := &rpcEntry{
 			address:     rpcs,
 			fingerprint: fingerprint,

@@ -58,6 +58,9 @@ func AddPeer(publicKey []byte, broadcasts []byte, listeners []byte) bool {
 
 // internal add a peer announcement, hold lock before calling
 func addPeer(publicKey []byte, broadcasts []byte, listeners []byte) bool {
+
+	// ***** FIX THIS: add more validation here
+
 	peer := &peerEntry{
 		publicKey:  publicKey,
 		broadcasts: broadcasts,
