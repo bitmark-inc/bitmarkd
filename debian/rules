@@ -49,8 +49,20 @@ override_dh_auto_build:
 	cd "${GO_LIBUCL_SRC}" && \
 	  printf 'package libucl\n// #cgo CFLAGS: -I${LIBUCL_SRC}/include\n// #cgo LDFLAGS: ${LIBUCL_SRC}/src/.libs/libucl.a\nimport "C"\n' > libucl.go
 
+
+	# extract libargon2 to its own work dir
+	mkdir -p "${LIBARGON2_SRC}"
+	tar xf "${LIBARGON2}" -C "${LIBARGON2_SRC}" --transform 's@^[^/]*/@@' ; \
+
+	# build the libargon2.a library first; for http support: ./configure --prefix=/usr --enable-urls --enable-signatures
+	cd "${LIBARGON2_SRC}" && make all
+
+	# patch the go source
+	cd "${GO_LIBARGON2_SRC}" && \
+	  printf 'package argon2\n// #cgo CFLAGS: -I${LIBARGON2_SRC}/include\n// #cgo LDFLAGS: ${LIBARGON2_SRC}/libargon2.a\nimport "C"\n' > libargon2.go
+
 	# compile the go programs
-	cd "${SRC_DIR}" && go install -buildmode=exe -v . ; \
+	cd "${SRC_DIR}" && go install -buildmode=exe -v "./command/${APP_NAME}"
 
 
 override_dh_auto_install:
@@ -80,7 +92,7 @@ override_dh_auto_clean:
 	dh_auto_clean
 
 	# GOPATH/LIBUCL_SRC are created by this file - need to remove it
-	rm -rf "${GOPATH}" "${LIBUCL_SRC}"
+	rm -rf "${GOPATH}" "${LIBUCL_SRC}" "${LIBARGON2_SRC}"
 
 # default rules
 %:
