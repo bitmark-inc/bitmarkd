@@ -31,7 +31,7 @@ override_dh_auto_build:
 	  if [ ! -d "$${dir}" ] ; \
 	  then \
 	    dist="$${account}-$${repo}-$${hash}_GH0.tar.gz" ; \
-	    echo untar: $${dist} ; \
+	    printf '==> untar: %s  into %s\\n' "$${dist}" "$${dir}" ; \
 	    mkdir -p "$${dir}" ; \
 	    tar xf "$${dist}" -C "$${dir}" --transform 's@^[^/]*/@@' ; \
             rmdir "$${dir}/$${repo}-$${hash}" ; \
@@ -40,7 +40,7 @@ override_dh_auto_build:
 
 	# extract libucl to its own work dir
 	mkdir -p "${LIBUCL_SRC}"
-	tar xf "${LIBUCL}" -C "${LIBUCL_SRC}" --transform 's@^[^/]*/@@' ; \
+	tar xf "${LIBUCL}" -C "${LIBUCL_SRC}" --transform 's@^[^/]*/@@'
 
 	# build the libucl.a library first; for http support: ./configure --prefix=/usr --enable-urls --enable-signatures
 	cd "${LIBUCL_SRC}" && \
@@ -57,7 +57,7 @@ override_dh_auto_build:
 	mkdir -p "${LIBARGON2_SRC}"
 	tar xf "${LIBARGON2}" -C "${LIBARGON2_SRC}" --transform 's@^[^/]*/@@' ; \
 
-	# build the libargon2.a library first; for http support: ./configure --prefix=/usr --enable-urls --enable-signatures
+	# build the libargon2.a
 	cd "${LIBARGON2_SRC}" && make all
 
 	# patch the go source
