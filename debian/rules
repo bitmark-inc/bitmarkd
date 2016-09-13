@@ -13,7 +13,7 @@ GO_LIBUCL_SRC = ${GOPATH}/src/github.com/bitmark-inc/go-libucl
 LIBARGON2_SRC = ${CURDIR}/phc-winner-argon2
 GO_LIBARGON2_SRC = ${GOPATH}/src/github.com/bitmark-inc/go-argon2
 
-SRC_DIR = ${GOPATH}/src/github.com/bitmark-inc/${APP_NAME}
+SRC_DIR = ${GOPATH}/src/github.com/bitmark-inc/${SRC_NAME}
 BIN_DIR = ${GOPATH}/bin
 
 versions.mk:
@@ -31,7 +31,7 @@ override_dh_auto_build:
 	  if [ ! -d "$${dir}" ] ; \
 	  then \
 	    dist="$${account}-$${repo}-$${hash}_GH0.tar.gz" ; \
-	    printf '==> untar: %s  into %s\\n' "$${dist}" "$${dir}" ; \
+	    printf '==> untar: %s  into %s\n' "$${dist}" "$${dir}" ; \
 	    mkdir -p "$${dir}" ; \
 	    tar xf "$${dist}" -C "$${dir}" --transform 's@^[^/]*/@@' ; \
             rmdir "$${dir}/$${repo}-$${hash}" ; \
@@ -66,7 +66,11 @@ override_dh_auto_build:
 	  sed -i.orig 's/#cgo/#cgo freebsd/g' argon2.go
 
 	# compile the go programs
-	cd "${SRC_DIR}" && go install -buildmode=exe -v "./command/${APP_NAME}"
+	cd "${SRC_DIR}" && \
+	for app in ${APPS} ; \
+	do \
+	  go install -buildmode=exe -v "./command/$${app}" ; \
+	done
 
 
 override_dh_auto_install:
@@ -74,11 +78,15 @@ override_dh_auto_install:
 	etc_dir="debian/tmp/etc" ; \
 	bin_dir="debian/tmp/bin" ; \
 	mkdir -p "$${etc_dir}" "$${bin_dir}" ; \
-	conf="${SRC_DIR}/${APP_NAME}.conf.sample" ; \
-	[ -f "$${conf}" ] && cp -p "$${conf}" "$${etc_dir}/${APP_NAME}.conf" ; \
-	exe="${BIN_DIR}/${APP_NAME}" ; \
-	[ -x "$${exe}" ] && cp -p "$${exe}" "$${bin_dir}" ; \
+	for app in ${APPS} ; \
+	do \
+	  conf="${SRC_DIR}/$${app}/$${app}.conf.sample" ; \
+	  [ -f "$${conf}" ] && cp -p "$${conf}" "$${etc_dir}/$${app}.conf" ; \
+	  exe="${BIN_DIR}/$${app}" ; \
+	  [ -x "$${exe}" ] && cp -p "$${exe}" "$${bin_dir}" ; \
 	done
+
+
 
 
 override_dh_strip:

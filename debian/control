@@ -22,3 +22,21 @@ Description: Bitmark Blockchain Daemon
  This is the main program for the Bitmark P2P network.
  .
  This runs the Bitmark distributed ownership blockchain.
+
+Package: prooferd
+Architecture: linux-any
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Recommends:
+Description: Bitmark Blockchain Proofing Daemon
+ This is the proofing program for the Bitmark P2P network.
+ .
+ This finds Argon2 hashes for blocks.
+
+Package: dumpdb
+Architecture: linux-any
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Recommends:
+Description: Bitmark Blockchain database dump program
+ This is a debugging  program for the Bitmark P2P network.
+ .
+ This dumps specific tables from the Bitmark Blockchain LevelDB database.
