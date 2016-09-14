@@ -65,11 +65,11 @@ override_dh_auto_build:
 	  printf 'package argon2\n// #cgo CFLAGS: -I${LIBARGON2_SRC}/include\n// #cgo LDFLAGS: ${LIBARGON2_SRC}/libargon2.a\nimport "C"\n' > libargon2.go && \
 	  sed -i.orig 's/#cgo/#cgo freebsd/g' argon2.go
 
-	# compile the go programs
+	# compile the go programs - note APPS = command/app1 command/app2
 	cd "${SRC_DIR}" && \
 	for app in ${APPS} ; \
 	do \
-	  go install -buildmode=exe -v "./command/$${app}" ; \
+	  go install -buildmode=exe -v "$${app}" ; \
 	done
 
 
@@ -81,9 +81,9 @@ override_dh_auto_install:
 	mkdir -p "$${etc_dir}" "$${bin_dir}" "$${share_dir}" ; \
 	for app in ${APPS} ; \
 	do \
-	  conf="${SRC_DIR}/command/$${app}/$${app}.conf.sample" ; \
+	  conf="${SRC_DIR}/$${app}/$${app}.conf.sample" ; \
 	  [ -f "$${conf}" ] && cp -p "$${conf}" "$${etc_dir}/$${app}.conf" ; \
-	  share="${SRC_DIR}/command/$${app}/share" ; \
+	  share="${SRC_DIR}/$${app}/share" ; \
 	  [ -d "$${share}" ] && cp -p "$${share}"/* "$${share_dir}/" ; \
 	  exe="${BIN_DIR}/$${app}" ; \
 	  [ -x "$${exe}" ] && cp -p "$${exe}" "$${bin_dir}/" ; \
