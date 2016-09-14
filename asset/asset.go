@@ -100,16 +100,40 @@ func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIndex, t
 		state:  pendingState,
 	}
 
+	// flag to indicate asset dat would be changed
+	dataWouldChange := false
+
 	// cache the record, will update partially expired item with new flag
 	// causing the expiry routine to allow an extra timeout period
 	globalData.Lock()
 	if r, ok := globalData.cache[assetIndex]; !ok {
 		globalData.cache[assetIndex] = d
 	} else {
-		r.state = pendingState // extend timeout
-		packedAsset = nil      // already seen
+		transaction, _, err := transactionrecord.Packed(r.packed).Unpack()
+		fault.PanicIfError("asset: bad packed record", err)
+
+		switch tx := transaction.(type) {
+		case (*transactionrecord.AssetData):
+			if tx.Description == asset.Description &&
+				tx.Name == asset.Name &&
+				tx.Fingerprint == asset.Fingerprint &&
+				tx.Registrant.String() == asset.Registrant.String() {
+
+				r.state = pendingState // extend timeout
+				packedAsset = nil      // already seen
+			} else {
+				dataWouldChange = true
+			}
+		default:
+			fault.Panicf("asset: non asset record in cache: %v", tx)
+		}
 	}
 	globalData.Unlock()
+
+	// report invalid asset changes
+	if dataWouldChange {
+		return nil, nil, fault.ErrAssetsAlreadyRegistered
+	}
 
 	// queue for expiry
 	globalData.expiry.queue <- assetIndex
@@ -138,6 +162,9 @@ func Get(assetIndex transactionrecord.AssetIndex) transactionrecord.Packed {
 	globalData.RLock()
 	item := globalData.cache[assetIndex]
 	globalData.RUnlock()
+	if nil == item {
+		return nil
+	}
 	return item.packed
 }
 

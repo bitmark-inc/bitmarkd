@@ -9,6 +9,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
 )
@@ -28,7 +29,7 @@ const (
 // -------------------
 type AssetStatus struct {
 	AssetIndex *transactionrecord.AssetIndex `json:"index"`
-	Duplicate  bool                          `json:"duplicate"` // ***** FIX THIS: is this necessary?
+	Duplicate  bool                          `json:"duplicate"`
 }
 
 type AssetsRegisterReply struct {
@@ -73,13 +74,11 @@ func (assets *Assets) Register(arguments *[]transactionrecord.AssetData, reply *
 		}
 	}
 
-	// fail if no data sent
-	if 0 == len(packed) {
-		return fault.ErrAssetsAlreadyRegistered
+	// if data to send
+	if 0 != len(packed) {
+		// announce transaction block to other peers
+		messagebus.Bus.Broadcast.Send("assets", packed)
 	}
-
-	// announce transaction block to other peers
-	messagebus.Bus.Broadcast.Send("assets", packed)
 
 	*reply = result
 	return nil
@@ -88,35 +87,73 @@ func (assets *Assets) Register(arguments *[]transactionrecord.AssetData, reply *
 // Asset get
 // ---------
 
-// type AssetGetArguments struct {
-// 	Fingerprints []string `json:"fingerprints"`
-// }
+type AssetGetArguments struct {
+	Fingerprints []string `json:"fingerprints"`
+}
 
-// type AssetGetReply struct {
-// 	Assets []transaction.Decoded `json:"assets"`
-// }
+type AssetGetReply struct {
+	Assets []AssetRecord `json:"assets"`
+}
 
-// func (assets *Assets) Get(arguments *AssetGetArguments, reply *AssetGetReply) error {
+type AssetRecord struct {
+	Record     string      `json:"record"`
+	Confirmed  bool        `json:"confirmed"`
+	AssetIndex interface{} `json:"index,omitempty"`
+	Data       interface{} `json:"data"`
+}
 
-// 	// restrict arguments size to reasonable value
-// 	size := len(arguments.Fingerprints)
-// 	if size > MaximumGetSize {
-// 		size = MaximumGetSize
-// 	}
+func (assets *Assets) Get(arguments *AssetGetArguments, reply *AssetGetReply) error {
 
-// 	txIds := make([]transaction.Link, size)
-// 	for i, fingerprint := range arguments.Fingerprints[:size] {
-// 		assetIndex := transaction.NewAssetIndex([]byte(fingerprint))
-// 		_, txId, found := assetIndex.Read()
-// 		if found {
-// 			txIds[i] = txId
-// 		}
-// 	}
+	log := assets.log
+	count := len(arguments.Fingerprints)
 
-// 	reply.Assets = transaction.Decode(txIds)
+	if count > maximumAssets {
+		return fault.ErrTooManyItemsToProcess
+	} else if 0 == count {
+		return fault.ErrMissingParameters
+	}
 
-// 	return nil
-// }
+	if !mode.Is(mode.Normal) {
+		return fault.ErrNotAvailableDuringSynchronise
+	}
+
+	log.Infof("Assets.Get: %v", arguments)
+
+	a := make([]AssetRecord, count)
+loop:
+	for i, fingerprint := range arguments.Fingerprints {
+
+		assetIndex := transactionrecord.NewAssetIndex([]byte(fingerprint))
+
+		confirmed := true
+		packedAsset := storage.Pool.Assets.Get(assetIndex[:])
+		if nil == packedAsset {
+
+			confirmed = false
+			packedAsset = asset.Get(assetIndex)
+			if nil == packedAsset {
+				continue loop
+			}
+		}
+
+		assetTx, _, err := transactionrecord.Packed(packedAsset).Unpack()
+		if nil != err {
+			continue loop
+		}
+
+		record, _ := transactionrecord.RecordName(assetTx)
+		a[i] = AssetRecord{
+			Record:     record,
+			Confirmed:  confirmed,
+			AssetIndex: assetIndex,
+			Data:       assetTx,
+		}
+	}
+
+	reply.Assets = a
+
+	return nil
+}
 
 // // Asset index
 // // -----------
