@@ -7,6 +7,6 @@ package version
 // ensure that git has a tag: "vX.Y" corresponding to major and minor
 const (
 	Major   = "2"
-	Minor   = "0"
+	Minor   = "4"
 	Version = Major + "." + Minor
 )
