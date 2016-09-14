@@ -80,12 +80,12 @@ override_dh_auto_install:
 	mkdir -p "$${etc_dir}" "$${bin_dir}" "$${share_dir}" ; \
 	for app in ${APPS} ; \
 	do \
-	  base_app=$$(basename "$${app}") ; \
-	  conf="${SRC_DIR}/$${app}/$${base_app}.conf.sample" ; \
-	  [ -f "$${conf}" ] && cp -p "$${conf}" "$${etc_dir}/$${app}.conf" || true ; \
+	  app_base=$$(basename "$${app}") ; \
+	  conf="${SRC_DIR}/$${app}/$${app_base}.conf.sample" ; \
+	  [ -f "$${conf}" ] && cp -p "$${conf}" "$${etc_dir}/$${app_base}.conf" || true ; \
 	  share="${SRC_DIR}/$${app}/share" ; \
 	  [ -d "$${share}" ] && cp -p "$${share}"/* "$${share_dir}/" || true ; \
-	  exe="${BIN_DIR}/$${base_app}" ; \
+	  exe="${BIN_DIR}/$${app_base}" ; \
 	  [ -x "$${exe}" ] && cp -p "$${exe}" "$${bin_dir}/" ; \
 	done
 
