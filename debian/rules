@@ -77,13 +77,16 @@ override_dh_auto_install:
 	# install app binary and configuration files
 	etc_dir="debian/tmp/etc" ; \
 	bin_dir="debian/tmp/bin" ; \
-	mkdir -p "$${etc_dir}" "$${bin_dir}" ; \
+	share_dir="debian/tmp/share" ; \
+	mkdir -p "$${etc_dir}" "$${bin_dir}" "$${share_dir}" ; \
 	for app in ${APPS} ; \
 	do \
-	  conf="${SRC_DIR}/$${app}/$${app}.conf.sample" ; \
+	  conf="${SRC_DIR}/command/$${app}/$${app}.conf.sample" ; \
 	  [ -f "$${conf}" ] && cp -p "$${conf}" "$${etc_dir}/$${app}.conf" ; \
+	  share="${SRC_DIR}/command/$${app}/share" ; \
+	  [ -d "$${share}" ] && cp -p "$${share}"/* "$${share_dir}/" ; \
 	  exe="${BIN_DIR}/$${app}" ; \
-	  [ -x "$${exe}" ] && cp -p "$${exe}" "$${bin_dir}" ; \
+	  [ -x "$${exe}" ] && cp -p "$${exe}" "$${bin_dir}/" ; \
 	done
 
 
