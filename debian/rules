@@ -66,10 +66,9 @@ override_dh_auto_build:
 	  sed -i.orig 's/#cgo/#cgo freebsd/g' argon2.go
 
 	# compile the go programs - note APPS = command/app1 command/app2
-	cd "${SRC_DIR}" && \
 	for app in ${APPS} ; \
 	do \
-	  go install -buildmode=exe -v "$${app}" ; \
+	  cd "${SRC_DIR}/$${app}" && go install -buildmode=exe -v . ; \
 	done
 
 

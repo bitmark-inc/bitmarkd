@@ -1,0 +1,31 @@
+#!/bin/sh
+# summary of how this script can be called:
+#        * <new-preinst> `install'
+#        * <new-preinst> `install' <old-version>
+#        * <new-preinst> `upgrade' <old-version>
+#        * <old-preinst> `abort-upgrade' <new-version>
+# for details, see http://www.debian.org/doc/debian-policy/ or
+# the debian-policy package
+
+set -e
+
+case "$1" in
+  (install)
+    # fresh install - remove any old logs
+    rm -f /vali/lib/prooferd/log/*
+    ;;
+
+  (upgrade)
+    # stop?  systemctl stop prooferd
+    ;;
+
+  (abort-upgrade)
+    ;;
+
+  *)
+    echo "preinst called with unknown argument \`$1'" >&2
+    exit 1
+    ;;
+esac
+
+exit 0

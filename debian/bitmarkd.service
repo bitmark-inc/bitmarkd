@@ -14,7 +14,7 @@ PIDFile=/run/bitmarkd.pid
 StandardOutput=journal
 StandardError=journal
 
-WorkingDirectory=/var/lib/bitmark
+WorkingDirectory=/var/lib/bitmarkd
 ExecStart=/usr/sbin/bitmarkd --quiet --config-file=/etc/bitmarkd.conf
 
 [Install]

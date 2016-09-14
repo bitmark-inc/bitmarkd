@@ -1,0 +1,52 @@
+#!/bin/sh
+# summary of how this script can be called:
+#        * <old-postrm> postrm remove
+#        * <old-postrm> postrm purge
+#        * <old-postrm> upgrade new-version
+#        * <disappearer's-postrm> disappear overwriter overwriter-version
+#        * <new-postrm> failed-upgrade old-version
+#        * <new-postrm> abort-install
+#        * <new-postrm> abort-install old-version
+#        * <new-postrm> abort-upgrade old-version
+# for details, see http://www.debian.org/doc/debian-policy/ or
+# the debian-policy package
+
+set -e
+
+# systemd: reload the daemon
+[ -x /bin/systemctl ] && systemctl daemon-reload >/dev/null 2>&1 || true
+
+case "$1" in
+  (upgrade)
+    # systemd: start the new version of nginx
+    [ -d /run/systemd/system ] && systemctl --system daemon-reload >/dev/null || true
+    [ -x /bin/systemctl ] && systemctl restart prooferd.service
+    ;;
+
+  (purge)
+    [ -x /bin/systemctl ] && systemctl stop prooferd.service >/dev/null 2>&1 || true
+    # By debian Policy §6.5, we may only rely on essential packages and
+    # must fail gracefully if they are unavailable.
+    # Use userdel/groupdel from passwd instead of deluser/delgroup from
+    # the adduser package. This is because adduser depends on passwd,
+    # but is of lesser priority.
+    # Note that at the time of this writing, neither passwd nor adduser
+    # are essential packages.
+    userdel prooferd >/dev/null 2>&1 || true
+    groupdel prooferd >/dev/null 2>&1 || true
+    rm -rf /var/lib/prooferd /etc/prooferd.conf
+    ;;
+
+  (remove|failed-upgrade|abort-install|abort-upgrade|disappear)
+    [ -x /bin/systemctl ] && systemctl stop prooferd.service >/dev/null 2>&1 || true
+    ;;
+
+  (*)
+    echo "postrm called with unknown argument \`$1'" >&2
+    exit 1
+    ;;
+esac
+
+[ -d /run/systemd/system ] && systemctl --system daemon-reload >/dev/null || true
+
+exit 0
