@@ -23,6 +23,10 @@ func (baseData *BaseData) Pack(address *account.Account) (Packed, error) {
 		return nil, fault.ErrSignatureTooLong
 	}
 
+	if nil == baseData.Owner || nil == address {
+		return nil, fault.ErrInvalidOwnerOrRegistrant
+	}
+
 	if utf8.RuneCountInString(baseData.PaymentAddress) > maxPaymentAddressLength {
 		return nil, fault.ErrPaymentAddressTooLong
 	}
@@ -53,6 +57,9 @@ func (baseData *BaseData) Pack(address *account.Account) (Packed, error) {
 func (assetData *AssetData) Pack(address *account.Account) (Packed, error) {
 	if len(assetData.Signature) > maxSignatureLength {
 		return nil, fault.ErrSignatureTooLong
+	}
+	if nil == assetData.Registrant || nil == address {
+		return nil, fault.ErrInvalidOwnerOrRegistrant
 	}
 
 	if utf8.RuneCountInString(assetData.Description) > maxDescriptionLength {
@@ -95,6 +102,10 @@ func (issue *BitmarkIssue) Pack(address *account.Account) (Packed, error) {
 		return nil, fault.ErrSignatureTooLong
 	}
 
+	if nil == issue.Owner || nil == address {
+		return nil, fault.ErrInvalidOwnerOrRegistrant
+	}
+
 	// concatenate bytes
 	message := util.ToVarint64(uint64(BitmarkIssueTag))
 	message = appendBytes(message, issue.AssetIndex[:])
@@ -121,6 +132,10 @@ func (issue *BitmarkIssue) Pack(address *account.Account) (Packed, error) {
 func (transfer *BitmarkTransfer) Pack(address *account.Account) (Packed, error) {
 	if len(transfer.Signature) > maxSignatureLength {
 		return nil, fault.ErrSignatureTooLong
+	}
+
+	if nil == transfer.Owner || nil == address {
+		return nil, fault.ErrInvalidOwnerOrRegistrant
 	}
 
 	// concatenate bytes
