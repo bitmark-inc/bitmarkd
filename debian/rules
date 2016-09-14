@@ -81,7 +81,7 @@ override_dh_auto_install:
 	for app in ${APPS} ; \
 	do \
 	  conf="${SRC_DIR}/$${app}/$${app}.conf.sample" ; \
-	  [ -f "$${conf}" ] && cp -p "$${conf}" "$${etc_dir}/$${app}.conf" ;|| true \
+	  [ -f "$${conf}" ] && cp -p "$${conf}" "$${etc_dir}/$${app}.conf" || true ; \
 	  share="${SRC_DIR}/$${app}/share" ; \
 	  [ -d "$${share}" ] && cp -p "$${share}"/* "$${share_dir}/" || true ; \
 	  exe="${BIN_DIR}/$$(basename "$${app}")" ; \
