@@ -34,8 +34,12 @@ const (
 // Bitmarks issue
 // --------------
 
+type IssueStatus struct {
+	TxId merkle.Digest `json:"txId"`
+}
+
 type BitmarksIssueReply struct {
-	TxIds      []merkle.Digest  `json:"txIds"`
+	Issues     []IssueStatus    `json:"issues"`
 	PayId      payment.PayId    `json:"payId"`
 	PayNonce   payment.PayNonce `json:"payNonce"`
 	Difficulty string           `json:"difficulty"`
@@ -60,7 +64,7 @@ func (bitmarks *Bitmarks) Issue(arguments *[]transactionrecord.BitmarkIssue, rep
 	log.Infof("Bitmarks.Issue: %v", arguments)
 
 	result := BitmarksIssueReply{
-		TxIds: make([]merkle.Digest, count),
+		Issues: make([]IssueStatus, count),
 	}
 
 	// pack each transaction
@@ -77,7 +81,7 @@ func (bitmarks *Bitmarks) Issue(arguments *[]transactionrecord.BitmarkIssue, rep
 		}
 
 		txId := packedIssue.MakeLink()
-		result.TxIds[i] = txId
+		result.Issues[i].TxId = txId
 		key := txId[:]
 
 		// even a single verified/confirmed issue fails the whole block
