@@ -25,8 +25,8 @@ case "$1" in
               --ingroup bitmarkd bitmarkd
 
     conf="/etc/bitmarkd.conf"
-    chown bitmarkd:bitmarkd "${conf}"
-    chmod 600 "${conf}"
+    chown root:bitmarkd "${conf}"
+    chmod 640 "${conf}"
     # enable the unit, but don't start it
     [ -x /bin/systemctl ] && systemctl enable bitmarkd.service >/dev/null 2>&1 || true
     ;;

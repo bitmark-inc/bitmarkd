@@ -25,8 +25,8 @@ case "$1" in
               --ingroup prooferd prooferd
 
     conf="/etc/prooferd.conf"
-    chown prooferd:prooferd "${conf}"
-    chmod 600 "${conf}"
+    chown root:prooferd "${conf}"
+    chmod 640 "${conf}"
     # enable the unit, but don't start it
     [ -x /bin/systemctl ] && systemctl enable prooferd.service >/dev/null 2>&1 || true
     ;;
