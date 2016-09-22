@@ -89,11 +89,14 @@ func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransfer, r
 
 	// get payment info
 	reply.TxId = txId
-	reply.PayId, _, _ = payment.Store(currency.Bitcoin, packedTransfer, 1, false)
+	newItem := false
+	reply.PayId, _, _, newItem = payment.Store(currency.Bitcoin, packedTransfer, 1, false)
 	reply.Payments = payments
 
 	// announce transaction block to other peers
-	messagebus.Bus.Broadcast.Send("transfer", packedTransfer)
+	if newItem {
+		messagebus.Bus.Broadcast.Send("transfer", packedTransfer)
+	}
 
 	return nil
 }

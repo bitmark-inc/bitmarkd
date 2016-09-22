@@ -374,7 +374,10 @@ func processTransfer(packed []byte) error {
 		if nil != err {
 			return err
 		}
-		payment.Store(currency.Bitcoin, packedTransfer, 1, false)
+		_, _, _, newItem := payment.Store(currency.Bitcoin, packedTransfer, 1, false)
+		if !newItem {
+			return fault.ErrTransactionAlreadyExists
+		}
 
 	default:
 		return fault.ErrTransactionIsNotATransfer

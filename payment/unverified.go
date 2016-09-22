@@ -46,15 +46,19 @@ func init() {
 }
 
 // store the payRecord in the cache
-func put(payId PayId, r *unverified) {
+//
+// returns true if newly cached item
+func put(payId PayId, r *unverified) bool {
 	// select the table
 	n := payId[0] & mask
 
 	// need a full lock as this is a write
 	// (no defer as overhead is too high for such a short routine)
 	cache[n].Lock()
+	_, ok := cache[n].table[payId]
 	cache[n].table[payId] = r
 	cache[n].Unlock()
+	return !ok
 }
 
 // read the payRecord from the cache

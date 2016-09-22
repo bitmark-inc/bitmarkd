@@ -79,11 +79,14 @@ func (bitmarks *Bitmarks) Issue(arguments *[]transactionrecord.BitmarkIssue, rep
 
 	// get here if all issues are new
 	var d *difficulty.Difficulty
-	result.PayId, result.PayNonce, d = payment.Store(currency.Bitcoin, packed, count, true)
+	newItem := false
+	result.PayId, result.PayNonce, d, newItem = payment.Store(currency.Bitcoin, packed, count, true)
 	result.Difficulty = d.GoString()
 
 	// announce transaction block to other peers
-	messagebus.Bus.Broadcast.Send("issues", packed)
+	if newItem {
+		messagebus.Bus.Broadcast.Send("issues", packed)
+	}
 
 	*reply = result
 	return nil
@@ -187,11 +190,14 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 
 		// get here if all issues are new
 		var d *difficulty.Difficulty
-		result.PayId, result.PayNonce, d = payment.Store(currency.Bitcoin, packedIssues, issueCount, true)
+		newItem := false
+		result.PayId, result.PayNonce, d, newItem = payment.Store(currency.Bitcoin, packedIssues, issueCount, true)
 		result.Difficulty = d.GoString()
 
 		// announce transaction block to other peers
-		messagebus.Bus.Broadcast.Send("issues", packedIssues)
+		if newItem {
+			messagebus.Bus.Broadcast.Send("issues", packedIssues)
+		}
 	}
 
 	*reply = result

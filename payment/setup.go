@@ -116,7 +116,7 @@ func Finalise() {
 }
 
 // store an incoming record for payment
-func Store(currencyName currency.Currency, transactions []byte, count int, canProof bool) (PayId, PayNonce, *difficulty.Difficulty) {
+func Store(currencyName currency.Currency, transactions []byte, count int, canProof bool) (PayId, PayNonce, *difficulty.Difficulty, bool) {
 	payId := NewPayId(transactions)
 	payNonce := NewPayNonce()
 
@@ -137,12 +137,12 @@ func Store(currencyName currency.Currency, transactions []byte, count int, canPr
 	}
 
 	// cache the record
-	put(payId, u)
+	newItem := put(payId, u)
 
 	// add an expire
 	globalData.expiry.queue <- payId
 
-	return payId, payNonce, u.difficulty
+	return payId, payNonce, u.difficulty, newItem
 
 }
 
