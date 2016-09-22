@@ -63,36 +63,13 @@ func (bitmarks *Bitmarks) Issue(arguments *[]transactionrecord.BitmarkIssue, rep
 
 	log.Infof("Bitmarks.Issue: %v", arguments)
 
-	result := BitmarksIssueReply{
-		Issues: make([]IssueStatus, count),
+	issueStatus, packed, err := bitmarksIssue(*arguments)
+	if nil != err {
+		return err
 	}
 
-	// pack each transaction
-	packed := []byte{}
-	for i, argument := range *arguments {
-
-		packedIssue, err := argument.Pack(argument.Owner)
-		if nil != err {
-			return err
-		}
-
-		if !asset.Exists(argument.AssetIndex) {
-			return fault.ErrAssetNotFound
-		}
-
-		txId := packedIssue.MakeLink()
-		result.Issues[i].TxId = txId
-		key := txId[:]
-
-		// even a single verified/confirmed issue fails the whole block
-		if storage.Pool.Transactions.Has(key) || reservoir.Has(txId) {
-			return fault.ErrTransactionAlreadyExists
-		}
-
-		log.Tracef("packed issue[%d]: %x", i, packedIssue)
-		log.Debugf("id[%d]: %v", i, txId)
-
-		packed = append(packed, packedIssue...)
+	result := BitmarksIssueReply{
+		Issues: issueStatus,
 	}
 
 	// fail if no data sent
@@ -109,6 +86,116 @@ func (bitmarks *Bitmarks) Issue(arguments *[]transactionrecord.BitmarkIssue, rep
 	messagebus.Bus.Broadcast.Send("issues", packed)
 
 	*reply = result
+	return nil
+}
+
+// internal function to issue some bitmarks
+func bitmarksIssue(issues []transactionrecord.BitmarkIssue) ([]IssueStatus, []byte, error) {
+
+	issueStatus := make([]IssueStatus, len(issues))
+
+	// pack each transaction
+	packed := []byte{}
+	for i, argument := range issues {
+
+		packedIssue, err := argument.Pack(argument.Owner)
+		if nil != err {
+			return nil, nil, err
+		}
+
+		if !asset.Exists(argument.AssetIndex) {
+			return nil, nil, fault.ErrAssetNotFound
+		}
+
+		txId := packedIssue.MakeLink()
+		issueStatus[i].TxId = txId
+		key := txId[:]
+
+		// even a single verified/confirmed issue fails the whole block
+		if storage.Pool.Transactions.Has(key) || reservoir.Has(txId) {
+			return nil, nil, fault.ErrTransactionAlreadyExists
+		}
+
+		packed = append(packed, packedIssue...)
+	}
+
+	return issueStatus, packed, nil
+}
+
+// Bitmarks create
+// --------------
+
+type CreateArguments struct {
+	Assets []transactionrecord.AssetData    `json:"assets"`
+	Issues []transactionrecord.BitmarkIssue `json:"issues"`
+}
+
+type CreateReply struct {
+	Assets     []AssetStatus    `json:"assets"`
+	Issues     []IssueStatus    `json:"issues"`
+	PayId      payment.PayId    `json:"payId"`
+	PayNonce   payment.PayNonce `json:"payNonce"`
+	Difficulty string           `json:"difficulty"`
+	//PaymentAlternatives []block.MinerAddress `json:"paymentAlternatives"`// ***** FIX THIS: where to get addresses?
+
+}
+
+func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply) error {
+
+	log := bitmarks.log
+	assetCount := len(arguments.Assets)
+	issueCount := len(arguments.Issues)
+
+	if assetCount > maximumIssues || issueCount > maximumIssues {
+		return fault.ErrTooManyItemsToProcess
+	} else if 0 == assetCount && 0 == issueCount {
+		return fault.ErrMissingParameters
+	}
+
+	if !mode.Is(mode.Normal) {
+		return fault.ErrNotAvailableDuringSynchronise
+	}
+
+	log.Infof("Bitmarks.Create: %v", arguments)
+
+	assetStatus, packedAssets, err := assetRegister(arguments.Assets)
+	if nil != err {
+		return err
+	}
+
+	issueStatus, packedIssues, err := bitmarksIssue(arguments.Issues)
+	if nil != err {
+		return err
+	}
+
+	result := CreateReply{
+		Assets: assetStatus,
+		Issues: issueStatus,
+	}
+
+	// fail if no data sent
+	if 0 == len(packedAssets) || 0 == len(packedIssues) {
+		return fault.ErrMissingParameters
+	}
+	// if data to send
+	if 0 != len(packedAssets) {
+		// announce transaction block to other peers
+		messagebus.Bus.Broadcast.Send("assets", packedAssets)
+	}
+
+	if 0 != len(packedIssues) {
+
+		// get here if all issues are new
+		var d *difficulty.Difficulty
+		result.PayId, result.PayNonce, d = payment.Store(currency.Bitcoin, packedIssues, issueCount, true)
+		result.Difficulty = d.GoString()
+
+		// announce transaction block to other peers
+		messagebus.Bus.Broadcast.Send("issues", packedIssues)
+	}
+
+	*reply = result
+	return nil
 	return nil
 }
 

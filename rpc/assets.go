@@ -53,25 +53,13 @@ func (assets *Assets) Register(arguments *[]transactionrecord.AssetData, reply *
 
 	log.Infof("Assets.Register: %v", arguments)
 
-	result := AssetsRegisterReply{
-		Assets: make([]AssetStatus, count),
+	assetStatus, packed, err := assetRegister(*arguments)
+	if nil != err {
+		return err
+
 	}
-
-	// pack each transaction
-	packed := []byte{}
-	for i, argument := range *arguments {
-
-		index, packedAsset, err := asset.Cache(&argument)
-		if nil != err {
-			return err
-		}
-
-		result.Assets[i].AssetIndex = index
-		if nil == packedAsset {
-			result.Assets[i].Duplicate = true
-		} else {
-			packed = append(packed, packedAsset...)
-		}
+	result := &AssetsRegisterReply{
+		Assets: assetStatus,
 	}
 
 	// if data to send
@@ -80,8 +68,33 @@ func (assets *Assets) Register(arguments *[]transactionrecord.AssetData, reply *
 		messagebus.Bus.Broadcast.Send("assets", packed)
 	}
 
-	*reply = result
+	*reply = *result
 	return nil
+}
+
+// internal function to register some assets
+func assetRegister(assets []transactionrecord.AssetData) ([]AssetStatus, []byte, error) {
+
+	assetStatus := make([]AssetStatus, len(assets))
+
+	// pack each transaction
+	packed := []byte{}
+	for i, argument := range assets {
+
+		index, packedAsset, err := asset.Cache(&argument)
+		if nil != err {
+			return nil, nil, err
+		}
+
+		assetStatus[i].AssetIndex = index
+		if nil == packedAsset {
+			assetStatus[i].Duplicate = true
+		} else {
+			packed = append(packed, packedAsset...)
+		}
+	}
+
+	return assetStatus, packed, nil
 }
 
 // Asset get
