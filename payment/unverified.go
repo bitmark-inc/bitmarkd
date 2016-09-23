@@ -13,7 +13,7 @@ import (
 // a set of transactions awaiting payment
 type unverified struct {
 	currencyName currency.Currency      // currency identifier
-	tracking     bool                   // payment tracking requested
+	done         bool                   // record was already processed
 	difficulty   *difficulty.Difficulty // for proof request
 	transactions []byte                 // all the transactions in this payment set
 }
@@ -70,6 +70,9 @@ func get(payId PayId) (*unverified, bool) {
 	// (no defer as overhead is too high for such a short routine)
 	cache[n].RLock()
 	r, ok := cache[n].table[payId]
+	if ok {
+		r.done = true
+	}
 	cache[n].RUnlock()
 	return r, ok
 }

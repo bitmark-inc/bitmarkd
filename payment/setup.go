@@ -126,7 +126,7 @@ func Store(currencyName currency.Currency, transactions []byte, count int, canPr
 	u := &unverified{
 		currencyName: currencyName,
 		difficulty:   nil,
-		tracking:     false,
+		done:         false,
 		transactions: t,
 	}
 
@@ -147,15 +147,17 @@ func Store(currencyName currency.Currency, transactions []byte, count int, canPr
 }
 
 // start payment tracking on an receipt
-func TrackPayment(payId PayId, receipt string, confirmations uint64) bool {
+func TrackPayment(payId PayId, receipt string, confirmations uint64) TrackingStatus {
 
 	r, ok := get(payId)
 	if !ok {
-		return false
+		return TrackingNotFound
+	}
+	if r.done {
+		return TrackingProcessed
 	}
 
 	hexPayId := payId.String()
-	remove(payId)
 
 	switch r.currencyName {
 	case currency.Bitcoin:
@@ -164,23 +166,25 @@ func TrackPayment(payId PayId, receipt string, confirmations uint64) bool {
 	default: // only fails if new module not correctly installed
 		fault.Panicf("not payment handler for Currency: %s", r.currencyName.String())
 	}
-	return true
+	return TrackingAccepted
 }
 
 // instead of paying, try a proof from the client nonce
-func TryProof(payId PayId, clientNonce []byte) bool {
+func TryProof(payId PayId, clientNonce []byte) TrackingStatus {
+
 	r, ok := get(payId)
 	if !ok {
-		return false // already paid/proven
+		return TrackingNotFound
+	}
+	if r.done {
+		return TrackingAccepted
+	}
+	if nil == r.difficulty { // only payment tracking; proof not allowed
+		return TrackingInvalid
 	}
 
-	if r.tracking || nil == r.difficulty { // payment tracking or proof not allowed
-		return false
-	}
-
-	// save difficulty
+	// convert difficulty
 	bigDifficulty := r.difficulty.BigInt()
-	remove(payId) // remove record once done
 
 	globalData.log.Infof("TryProof: difficulty: 0x%64x", bigDifficulty)
 
@@ -212,8 +216,8 @@ func TryProof(payId PayId, clientNonce []byte) bool {
 		// check difficulty and verify if ok
 		if bigDigest.Cmp(bigDifficulty) <= 0 {
 			globalData.verifier.queue <- r.transactions
-			return true
+			return TrackingAccepted
 		}
 	}
-	return false // difficulty not reached
+	return TrackingInvalid
 }

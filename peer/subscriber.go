@@ -399,9 +399,8 @@ func processProof(packed []byte) error {
 
 	copy(payId[:], packed[:len(payId)])
 	nonce := packed[len(payId):]
-	flag := payment.TryProof(payId, nonce)
-
-	if !flag {
+	status := payment.TryProof(payId, nonce)
+	if payment.TrackingAccepted != status {
 		// pay id already processed or was invalid
 		return fault.ErrPayIdAlreadyUsed
 	}
@@ -424,8 +423,8 @@ func processPay(packed []byte) error {
 	copy(payId[:], packed[:len(payId)])
 	receipt := string(packed[len(payId):])
 
-	flag := payment.TrackPayment(payId, receipt, payment.RequiredConfirmations)
-	if !flag {
+	status := payment.TrackPayment(payId, receipt, payment.RequiredConfirmations)
+	if payment.TrackingAccepted != status {
 		// pay id already processed or was invalid
 		return fault.ErrPayIdAlreadyUsed
 	}

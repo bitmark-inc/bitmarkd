@@ -53,14 +53,8 @@ loop:
 					delay = time.After(-d)
 					break
 				}
-				// only remove untracked items
-				// tracked items should be removed by appropriate sub-module
-				// after payment has been confirmed
-				u, ok := get(item.payId)
-				if ok && !u.tracking {
-					log.Infof("expired: pay id: %s", item.payId)
-					remove(item.payId)
-				}
+				log.Infof("expired: pay id: %s", item.payId)
+				remove(item.payId)
 				l.Remove(e)
 			}
 		}

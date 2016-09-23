@@ -202,7 +202,6 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 
 	*reply = result
 	return nil
-	return nil
 }
 
 // Bitmarks proof
@@ -214,7 +213,7 @@ type ProofArguments struct {
 }
 
 type ProofReply struct {
-	Verified bool `json:"verified"`
+	Status payment.TrackingStatus `json:"status"`
 }
 
 func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) error {
@@ -254,7 +253,7 @@ func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) er
 	messagebus.Bus.Broadcast.Send("proof", packed)
 
 	// check if proof matches
-	reply.Verified = payment.TryProof(arguments.PayId, nonce)
+	reply.Status = payment.TryProof(arguments.PayId, nonce)
 
 	return nil
 }
@@ -270,7 +269,7 @@ type PayArguments struct {
 }
 
 type PayReply struct {
-	//Verified bool `json:"verified"`
+	Status payment.TrackingStatus `json:"status"`
 }
 
 func (bitmarks *Bitmarks) Pay(arguments *PayArguments, reply *PayReply) error {
@@ -299,7 +298,7 @@ func (bitmarks *Bitmarks) Pay(arguments *PayArguments, reply *PayReply) error {
 	log.Infof("broadcast pay: %x", packed)
 	messagebus.Bus.Broadcast.Send("pay", packed)
 
-	payment.TrackPayment(arguments.PayId, arguments.Receipt, payment.RequiredConfirmations)
+	reply.Status = payment.TrackPayment(arguments.PayId, arguments.Receipt, payment.RequiredConfirmations)
 
 	return nil
 }
