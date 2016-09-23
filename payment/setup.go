@@ -149,11 +149,11 @@ func Store(currencyName currency.Currency, transactions []byte, count int, canPr
 // start payment tracking on an receipt
 func TrackPayment(payId PayId, receipt string, confirmations uint64) TrackingStatus {
 
-	r, ok := get(payId)
+	r, done, ok := get(payId)
 	if !ok {
 		return TrackingNotFound
 	}
-	if r.done {
+	if done {
 		return TrackingProcessed
 	}
 
@@ -172,12 +172,12 @@ func TrackPayment(payId PayId, receipt string, confirmations uint64) TrackingSta
 // instead of paying, try a proof from the client nonce
 func TryProof(payId PayId, clientNonce []byte) TrackingStatus {
 
-	r, ok := get(payId)
+	r, done, ok := get(payId)
 	if !ok {
 		return TrackingNotFound
 	}
-	if r.done {
-		return TrackingAccepted
+	if done {
+		return TrackingProcessed
 	}
 	if nil == r.difficulty { // only payment tracking; proof not allowed
 		return TrackingInvalid

@@ -62,7 +62,10 @@ func put(payId PayId, r *unverified) bool {
 }
 
 // read the payRecord from the cache
-func get(payId PayId) (*unverified, bool) {
+func get(payId PayId) (*unverified, bool, bool) {
+
+	done := false
+
 	// select the table
 	n := payId[0] & mask
 
@@ -71,10 +74,11 @@ func get(payId PayId) (*unverified, bool) {
 	cache[n].RLock()
 	r, ok := cache[n].table[payId]
 	if ok {
+		done = r.done // previous state
 		r.done = true
 	}
 	cache[n].RUnlock()
-	return r, ok
+	return r, done, ok
 }
 
 // remove the payRecord from the cache
