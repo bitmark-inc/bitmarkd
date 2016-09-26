@@ -286,7 +286,7 @@ func processAssets(packed []byte) error {
 	}
 
 	ok := false
-	for {
+	for 0 != len(packed) {
 		transaction, n, err := transactionrecord.Packed(packed).Unpack()
 		if nil != err {
 			return err
@@ -321,7 +321,7 @@ func processIssues(packed []byte) error {
 		return fault.ErrNotAvailableDuringSynchronise
 	}
 
-	for {
+	for 0 != len(packed) {
 		transaction, n, err := transactionrecord.Packed(packed).Unpack()
 		if nil != err {
 			return err

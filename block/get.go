@@ -51,7 +51,7 @@ func DigestForBlock(number uint64) (blockdigest.Digest, error) {
 		if i < ringSize {
 			j := globalData.ringIndex - 1 - int(i)
 			if j < 0 {
-				j = ringSize - 1
+				j += ringSize
 			}
 			if number != globalData.ring[j].number {
 				fault.Panicf("block.DigestForBlock: ring buffer corrupted block number, actual: %d  expected: %d", globalData.ring[j].number, number)
