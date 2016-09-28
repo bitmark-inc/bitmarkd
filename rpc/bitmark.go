@@ -28,9 +28,9 @@ type Bitmark struct {
 // ----------------
 
 type BitmarkTransferReply struct {
-	TxId     merkle.Digest `json:"txId"`
-	PayId    payment.PayId `json:"payId"`
-	Payments []*transactionrecord.Payment
+	TxId     merkle.Digest                `json:"txId"`
+	PayId    payment.PayId                `json:"payId"`
+	Payments []*transactionrecord.Payment `json:"payments"`
 	//PaymentAlternatives []block.MinerAddress `json:"paymentAlternatives"`// ***** FIX THIS: where to get addresses?
 }
 

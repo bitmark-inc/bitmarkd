@@ -172,7 +172,7 @@ func clearRingBuffer(log *logger.L) error {
 		// determine the start point for fetching last few blocks
 		n := genesis.BlockNumber + 1 // first real block (genesis block is not in db)
 		if globalData.height > ringSize+1 {
-			n = globalData.height - ringSize
+			n = globalData.height - ringSize + 1
 		}
 		if n <= genesis.BlockNumber { // check just in case above calculation is wrong
 			log.Criticalf("value of n < 2: %d", n)
