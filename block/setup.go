@@ -7,6 +7,7 @@ package block
 import (
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
@@ -167,7 +168,7 @@ func clearRingBuffer(log *logger.L) error {
 		globalData.previousBlock = packedHeader.Digest()
 		globalData.height = header.Number // highest block number in database
 
-		log.Criticalf("highest block from storage: %d", globalData.height)
+		log.Infof("highest block from storage: %d", globalData.height)
 
 		// determine the start point for fetching last few blocks
 		n := genesis.BlockNumber + 1 // first real block (genesis block is not in db)
@@ -190,7 +191,7 @@ func clearRingBuffer(log *logger.L) error {
 		}
 
 		log.Infof("populate ring buffer staring from block: %d", n)
-		log.Infof("items: %x", items)
+		log.Tracef("items: %x", items)
 
 		for i, item := range items {
 
@@ -214,38 +215,42 @@ func clearRingBuffer(log *logger.L) error {
 			globalData.ring[i].digest = digest
 			globalData.ring[i].crc = CRC(header.Number, item.Value)
 
-			// ***** FIX THIS: debugging
-			//log.Infof("header: %#v", header)
+			log.Tracec(func() string {
+				// + begin debugging
+				//log.Infof("header: %#v", header)
 
-			data := item.Value[blockrecord.TotalBlockSize:]
-			txs := make([]interface{}, header.TransactionCount)
-		loop:
-			for i := 1; true; i += 1 { // ***** FIX THIS: debugging
-				transaction, n, err := transactionrecord.Packed(data).Unpack()
+				data := item.Value[blockrecord.TotalBlockSize:]
+				txs := make([]interface{}, header.TransactionCount)
+			loop:
+				for i := 1; true; i += 1 {
+					transaction, n, err := transactionrecord.Packed(data).Unpack()
+					if nil != err {
+						//log.Errorf("tx[%d]: error: %v", i, err)
+						//return err
+						return fmt.Sprintf("tx[%d]: error: %v", i, err)
+					}
+					txs[i-1] = transaction
+					data = data[n:]
+					if 0 == len(data) {
+						break loop
+					}
+				}
+				s := struct {
+					Header       *blockrecord.Header
+					Transactions []interface{}
+				}{
+					Header:       header,
+					Transactions: txs,
+				}
+				jsonData, err := json.MarshalIndent(s, "", "  ")
 				if nil != err {
-					log.Errorf("tx[%d]: error: %v", i, err)
-					return err
+					//return err
+					return fmt.Sprintf("JSON marshal error: %v", err)
 				}
-				txs[i-1] = transaction
-				data = data[n:]
-				if 0 == len(data) {
-					break loop
-				}
-			}
-			s := struct {
-				Header       *blockrecord.Header
-				Transactions []interface{}
-			}{
-				Header:       header,
-				Transactions: txs,
-			}
-			jsonData, err := json.MarshalIndent(s, "", "  ")
-			if nil != err {
-				return err
-			}
-			log.Infof("block: %s", jsonData) // ***** FIX THIS: debugging
-			// ***** FIX THIS: end debugging
-
+				//log.Infof("block: %s", jsonData)
+				return fmt.Sprintf("block: %s", jsonData)
+				// - end debugging
+			})
 		}
 		globalData.ringIndex += len(items)
 		if globalData.ringIndex >= len(globalData.ring) {
