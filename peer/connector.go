@@ -182,7 +182,7 @@ func (conn *connector) process() {
 			conn.state += 1
 		}
 	case cStateHighestBlock:
-		conn.highestBlockNumber, conn.theClient = highestBlock(conn.clients)
+		conn.highestBlockNumber, conn.theClient = highestBlock(log, conn.clients)
 		if conn.highestBlockNumber > 0 && nil != conn.theClient {
 			conn.state += 1
 		}
@@ -263,7 +263,7 @@ func (conn *connector) process() {
 
 	case cStateSampling:
 		// check peers
-		conn.highestBlockNumber, conn.theClient = highestBlock(conn.clients)
+		conn.highestBlockNumber, conn.theClient = highestBlock(log, conn.clients)
 		height := block.GetHeight()
 		if conn.highestBlockNumber > height {
 			if conn.highestBlockNumber-height >= 2 {
@@ -361,7 +361,7 @@ func register(log *logger.L, clients []*zmqutil.Client) bool {
 }
 
 // determine client with highest block
-func highestBlock(clients []*zmqutil.Client) (uint64, *zmqutil.Client) {
+func highestBlock(log *logger.L, clients []*zmqutil.Client) (uint64, *zmqutil.Client) {
 
 	h := uint64(0)
 	c := (*zmqutil.Client)(nil)
@@ -373,18 +373,24 @@ func highestBlock(clients []*zmqutil.Client) (uint64, *zmqutil.Client) {
 
 		err := client.Send("N")
 		if nil != err {
+			log.Errorf("highestBlock: send error: %v", err)
+			client.Reconnect()
 			continue
 		}
 
 		data, err := client.Receive(0)
 		if nil != err {
+			log.Errorf("highestBlock: receive error: %v", err)
+			client.Reconnect()
 			continue
 		}
 		if 2 != len(data) {
+			log.Errorf("highestBlock: received: %d  expected: 2", len(data))
 			continue
 		}
 		switch string(data[0]) {
 		case "E":
+			log.Errorf("highestBlock: rpc rrroe response: %q", data[1])
 			continue
 		case "N":
 			if 8 != len(data[1]) {
