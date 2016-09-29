@@ -265,6 +265,10 @@ func (conn *connector) process() {
 		// check peers
 		conn.highestBlockNumber, conn.theClient = highestBlock(log, conn.clients)
 		height := block.GetHeight()
+
+		log.Infof("remote height: %d", conn.highestBlockNumber)
+		log.Infof("local height: %d", height)
+
 		if conn.highestBlockNumber > height {
 			if conn.highestBlockNumber-height >= 2 {
 				conn.state = cStateForkDetect
