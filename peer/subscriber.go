@@ -281,6 +281,10 @@ func (sbsc *subscriber) process(data [][]byte) {
 // un pack each asset and cache them
 func processAssets(packed []byte) error {
 
+	if 0 == len(packed) {
+		return fault.ErrMissingParameters
+	}
+
 	if !mode.Is(mode.Normal) {
 		return fault.ErrNotAvailableDuringSynchronise
 	}
@@ -317,12 +321,18 @@ func processAssets(packed []byte) error {
 // un pack each issue and cache them
 func processIssues(packed []byte) error {
 
+	if 0 == len(packed) {
+		return fault.ErrMissingParameters
+	}
+
 	if !mode.Is(mode.Normal) {
 		return fault.ErrNotAvailableDuringSynchronise
 	}
 
-	for 0 != len(packed) {
-		transaction, n, err := transactionrecord.Packed(packed).Unpack()
+	packedIssues := transactionrecord.Packed(packed)
+	count := 0 // for payment difficulty
+	for 0 != len(packedIssues) {
+		transaction, n, err := packedIssues.Unpack()
 		if nil != err {
 			return err
 		}
@@ -330,6 +340,7 @@ func processIssues(packed []byte) error {
 		switch tx := transaction.(type) {
 		case *transactionrecord.BitmarkIssue:
 
+			// validate issue record
 			packedIssue, err := tx.Pack(tx.Owner)
 			if nil != err {
 				return err
@@ -350,13 +361,25 @@ func processIssues(packed []byte) error {
 		default:
 			return fault.ErrTransactionIsNotAnIssue
 		}
-		packed = packed[n:]
+		packedIssues = packedIssues[n:]
+		count += 1
 	}
+
+	// get here if all issues are new
+	_, _, _, newItem := payment.Store(currency.Bitcoin, packed, count, true)
+	if !newItem {
+		return fault.ErrTransactionAlreadyExists
+	}
+
 	return nil
 }
 
 // un pack transfer and process it
 func processTransfer(packed []byte) error {
+
+	if 0 == len(packed) {
+		return fault.ErrMissingParameters
+	}
 
 	if !mode.Is(mode.Normal) {
 		return fault.ErrNotAvailableDuringSynchronise
@@ -388,6 +411,10 @@ func processTransfer(packed []byte) error {
 // process proof block
 func processProof(packed []byte) error {
 
+	if 0 == len(packed) {
+		return fault.ErrMissingParameters
+	}
+
 	if !mode.Is(mode.Normal) {
 		return fault.ErrNotAvailableDuringSynchronise
 	}
@@ -410,6 +437,10 @@ func processProof(packed []byte) error {
 
 // process pay block
 func processPay(packed []byte) error {
+
+	if 0 == len(packed) {
+		return fault.ErrMissingParameters
+	}
 
 	if !mode.Is(mode.Normal) {
 		return fault.ErrNotAvailableDuringSynchronise
