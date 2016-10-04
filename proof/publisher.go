@@ -32,8 +32,9 @@ import (
 )
 
 const (
-	publishInterval    = 60 * time.Second
-	publisherZapDomain = "publisher"
+	publishBitmarkInterval = 60 * time.Second
+	publishTestingInterval = 15 * time.Second
+	publisherZapDomain     = "publisher"
 )
 
 type publisher struct {
@@ -116,6 +117,11 @@ func (pub *publisher) Run(args interface{}, shutdown <-chan struct{}) {
 	log := pub.log
 
 	log.Info("starting…")
+
+	publishInterval := publishBitmarkInterval
+	if mode.IsTesting() {
+		publishInterval = publishTestingInterval
+	}
 
 loop:
 	for {

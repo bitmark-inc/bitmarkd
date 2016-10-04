@@ -6,6 +6,7 @@ package payment
 
 import (
 	"github.com/bitmark-inc/bitmarkd/difficulty"
+	"github.com/bitmark-inc/bitmarkd/mode"
 )
 
 // initial difficulty discount scale
@@ -22,8 +23,10 @@ const (
 const (
 	//initialDifficulty = 1.0 // 8 leading zero bits
 	//initialDifficulty = 256.0 // 16 leading zero bits
-	initialDifficulty = 65536.0 // 24 leading zero bits
+	//initialDifficulty = 65536.0 // 24 leading zero bits
 	//initialDifficulty = 16777216.0 // 32 leading zero bits
+	initialBitmarkDifficulty = 65536.0 // 24 leading zero bits
+	initialTestingDifficulty = 256.0   // 16 leading zero bits
 )
 
 // produce a scaled difficulty based on the number of items
@@ -42,6 +45,10 @@ func ScaledDifficulty(count int) *difficulty.Difficulty {
 		factor = fiftyf
 	default:
 		factor = otherf
+	}
+	initialDifficulty := initialBitmarkDifficulty
+	if mode.IsTesting() {
+		initialDifficulty = initialTestingDifficulty
 	}
 	d.SetReciprocal(float64(count) * initialDifficulty * factor)
 	return d
