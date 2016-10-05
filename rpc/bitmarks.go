@@ -177,7 +177,7 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 	}
 
 	// fail if no data sent
-	if 0 == len(packedAssets) || 0 == len(packedIssues) {
+	if 0 == len(packedAssets) && 0 == len(packedIssues) {
 		return fault.ErrMissingParameters
 	}
 	// if data to send
