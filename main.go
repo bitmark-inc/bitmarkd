@@ -123,8 +123,8 @@ func main() {
 			},
 		},
 		{
-			Name:      "issue",
-			Usage:     "create and issue bitmark",
+			Name:      "create",
+			Usage:     "create a new bitmark",
 			ArgsUsage: "\n   (* = required)",
 			Flags: []cli.Flag{
 				cli.StringFlag{
@@ -145,11 +145,11 @@ func main() {
 				cli.StringFlag{
 					Name:  "quantity, q",
 					Value: "",
-					Usage: " quantity to issue [1]",
+					Usage: " quantity to create [1]",
 				},
 			},
 			Action: func(c *cli.Context) error {
-				runIssue(c, globals)
+				runCreate(c, globals)
 				return nil
 			},
 		},
@@ -166,7 +166,7 @@ func main() {
 				cli.StringFlag{
 					Name:  "receiver, r",
 					Value: "",
-					Usage: "*identity public key to receive the transactoin",
+					Usage: "*identity name to receive the bitmark",
 				},
 			},
 			Action: func(c *cli.Context) error {
@@ -175,6 +175,45 @@ func main() {
 			},
 		},
 		{
+			Name:      "receipt",
+			Usage:     "receipt payment transaction id",
+			ArgsUsage: "\n   (* = required)",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "payid, p",
+					Value: "",
+					Usage: "*payment id from a transfer",
+				},
+				cli.StringFlag{
+					Name:  "receipt, r",
+					Value: "",
+					Usage: "*hexadecimal transaction id from currency transfer",
+				},
+			},
+			Action: func(c *cli.Context) {
+				runReceipt(c, globals)
+			},
+		},
+		{
+			Name:      "provenance",
+			Usage:     "provenance bitmark",
+			ArgsUsage: "\n   (* = required)",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "txid, t",
+					Value: "",
+					Usage: "*transaction id to list provenance",
+				},
+				cli.StringFlag{
+					Name:  "count, c",
+					Value: "",
+					Usage: " maximum records to output [20]",
+				},
+			},
+			Action: func(c *cli.Context) {
+				runProvenance(c, globals)
+			},
+		}, {
 			Name:  "info",
 			Usage: "display bitmark-cli status",
 			Action: func(c *cli.Context) error {
@@ -308,7 +347,7 @@ func runAdd(c *cli.Context, globals globalFlags) {
 	cleanPasswordMemory(&globals.password)
 }
 
-func runIssue(c *cli.Context, globals globalFlags) {
+func runCreate(c *cli.Context, globals globalFlags) {
 
 	configuration, err := checkAndGetConfig(globals.config)
 	if nil != err {
@@ -371,8 +410,8 @@ func runIssue(c *cli.Context, globals globalFlags) {
 	}
 
 	registrant := keyPair{
-		publicKey:  publicKey,
-		privateKey: privateKey,
+		publicKey:  publicKey[:],
+		privateKey: *privateKey,
 	}
 
 	assetConfig := assetData{
@@ -435,8 +474,8 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 	}
 
 	ownerKeyPair := keyPair{
-		publicKey:  publicKey,
-		privateKey: privateKey,
+		publicKey:  publicKey[:],
+		privateKey: *privateKey,
 	}
 
 	newOwnerKeyPair := keyPair{}
@@ -451,6 +490,10 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 		newOwnerKeyPair = keyPair{
 			publicKey: newPublicKey,
 		}
+	}
+
+	newOwnerKeyPair := keyPair{
+		publicKey: tmpPublicKey,
 	}
 
 	// TODO: deal with IPv6?
@@ -470,6 +513,90 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 	}
 
 	cleanPasswordMemory(&globals.password)
+}
+
+func runReceipt(c *cli.Context, globals globalFlags) {
+
+	configuration, err := checkAndGetConfig(globals.config)
+	if nil != err {
+		exitwithstatus.Message("Error: Get configuration failed: %v\n", err)
+	}
+
+	payId, err := checkPayId(c.String("payid"))
+	if nil != err {
+		exitwithstatus.Message("Error: %s\n", err)
+	}
+
+	receiptId, err := checkReceipt(c.String("receipt"))
+	if nil != err {
+		exitwithstatus.Message("Error: %s\n", err)
+	}
+
+	verbose := globals.verbose
+	if verbose {
+		fmt.Printf("payid: %s\n", payId)
+		fmt.Printf("receipt: %s\n", receiptId)
+	}
+
+	// TODO: deal with IPv6?
+	bitmarkRpcConfig := bitmarkRPC{
+		hostPort: configuration.Connect,
+		testNet:  true,
+	}
+	if configuration.Network != "testing" {
+		bitmarkRpcConfig.testNet = false
+	}
+
+	receiptConfig := receiptData{
+		payId:   payId,
+		receipt: receiptId,
+	}
+
+	if !receipt(bitmarkRpcConfig, receiptConfig, verbose) {
+		exitwithstatus.Message("Error: Receipt failed\n")
+	}
+}
+
+func runProvenance(c *cli.Context, globals globalFlags) {
+
+	configuration, err := checkAndGetConfig(globals.config)
+	if nil != err {
+		exitwithstatus.Message("Error: Get configuration failed: %v\n", err)
+	}
+
+	txId, err := checkTransferTxId(c.String("txid"))
+	if nil != err {
+		exitwithstatus.Message("Error: %s\n", err)
+	}
+
+	count, err := checkRecordCount(c.String("count"))
+	if nil != err {
+		exitwithstatus.Message("Error: %s\n", err)
+	}
+
+	verbose := globals.verbose
+	if verbose {
+		fmt.Printf("txid: %s\n", txId)
+		fmt.Printf("count: %d\n", count)
+	}
+
+	// TODO: deal with IPv6?
+	bitmarkRpcConfig := bitmarkRPC{
+		hostPort: configuration.Connect,
+		testNet:  true,
+	}
+	if configuration.Network != "testing" {
+		bitmarkRpcConfig.testNet = false
+	}
+
+	provenanceConfig := provenanceData{
+		txId:  txId,
+		count: count,
+	}
+
+	if !provenance(bitmarkRpcConfig, provenanceConfig, verbose) {
+		exitwithstatus.Message("Error: Provenance failed\n")
+	}
 }
 
 func runInfo(c *cli.Context, globals globalFlags) {
@@ -633,7 +760,49 @@ func transfer(rpcConfig bitmarkRPC, transferConfig transferData, verbose bool) b
 	return true
 }
 
-func bitmarkInfo(hostPort string, verbose bool) bool {
+func receipt(rpcConfig bitmarkRPC, receiptConfig receiptData, verbose bool) bool {
+
+	conn, err := connect(rpcConfig.hostPort)
+	if nil != err {
+		fmt.Printf("Error: %v\n", err)
+		return false
+	}
+	defer conn.Close()
+
+	// create a client
+	client := jsonrpc.NewClient(conn)
+	defer client.Close()
+
+	err = doReceipt(client, rpcConfig.testNet, receiptConfig, verbose)
+	if nil != err {
+		fmt.Printf("Error: %v\n", err)
+		return false
+	}
+	return true
+}
+
+func provenance(rpcConfig bitmarkRPC, provenanceConfig provenanceData, verbose bool) bool {
+
+	conn, err := connect(rpcConfig.hostPort)
+	if nil != err {
+		fmt.Printf("Error: %v\n", err)
+		return false
+	}
+	defer conn.Close()
+
+	// create a client
+	client := jsonrpc.NewClient(conn)
+	defer client.Close()
+
+	err = doProvenance(client, rpcConfig.testNet, provenanceConfig, verbose)
+	if nil != err {
+		fmt.Printf("Error: %v\n", err)
+		return false
+	}
+	return true
+}
+
+func info(hostPort string, verbose bool) bool {
 	conn, err := connect(hostPort)
 	if nil != err {
 		fmt.Printf("Error: %v\n", err)

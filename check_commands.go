@@ -101,13 +101,21 @@ func checkAssetQuantity(quantity string) (int, error) {
 	return i, err
 }
 
-// transfer tx_id is required field
+// transfer txid is required field
 func checkTransferTxId(txId string) (string, error) {
 	if "" == txId {
 		return "", fault.ErrRequiredTransferTxId
 	}
 
 	return txId, nil
+}
+
+func checkTransferFrom(from string, config *configuration.Configuration) (*configuration.IdentityType, error) {
+	if "" == from {
+		from = config.Default_identity
+	}
+
+	return getIdentity(from, config.Identities)
 }
 
 // transfer to is required field
@@ -118,12 +126,31 @@ func checkTransferTo(to string) (string, error) {
 	return to, nil
 }
 
-func checkTransferFrom(from string, config *configuration.Configuration) (*configuration.IdentityType, error) {
-	if "" == from {
-		from = config.Default_identity
+// pay id is required field
+func checkPayId(payId string) (string, error) {
+	if "" == payId {
+		return "", fault.ErrRequiredPayId
 	}
 
-	return getIdentity(from, config.Identities)
+	return payId, nil
+}
+
+// receipt is required field
+func checkReceipt(receipt string) (string, error) {
+	if "" == receipt {
+		return "", fault.ErrRequiredReceipt
+	}
+
+	return receipt, nil
+}
+
+func checkRecordCount(count string) (int, error) {
+	if "" == count {
+		return 20, nil
+	}
+
+	i, err := strconv.Atoi(count)
+	return i, err
 }
 
 func checkAndGetConfig(path string) (*configuration.Configuration, error) {
