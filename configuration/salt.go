@@ -27,12 +27,12 @@ func MakeSalt() (*Salt, error) {
 }
 
 // convert a binary salt to byte slice
-func (salt *Salt) Bytes() []byte {
+func (salt Salt) Bytes() []byte {
 	return salt[:]
 }
 
 // convert a binary salt to little endian hex string for use by the fmt package (for %s)
-func (salt *Salt) String() string {
+func (salt Salt) String() string {
 	return hex.EncodeToString(salt.Bytes())
 }
 

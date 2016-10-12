@@ -29,15 +29,15 @@ func MakeIter() (*Iter, error) {
 }
 
 // convert a binary iter to byte slice
-func (iter *Iter) Bytes() []byte {
+func (iter Iter) Bytes() []byte {
 	return iter[:]
 }
 
-func (iter *Iter) String() string {
+func (iter Iter) String() string {
 	return string(iter.Bytes())
 }
 
-func (iter *Iter) Integer() int {
+func (iter Iter) Integer() int {
 	return int(binary.LittleEndian.Uint16(iter.Bytes()))
 }
 

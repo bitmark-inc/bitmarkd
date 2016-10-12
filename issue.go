@@ -22,17 +22,11 @@ import (
 	"time"
 )
 
-// to hold a keypair for testing
-type keyPair struct {
-	publicKey  []byte
-	privateKey [64]byte
-}
-
 type assetData struct {
 	name        string
-	description string
+	metadata    string
 	quantity    int
-	registrant  keyPair
+	registrant  *KeyPair
 	fingerprint string
 }
 
@@ -42,14 +36,14 @@ type bitmarkRPC struct {
 }
 
 type issueData struct {
-	issuer     keyPair
+	issuer     *KeyPair
 	assetIndex *transactionrecord.AssetIndex
 	quantity   int
 }
 
 type transferData struct {
-	owner    keyPair
-	newOwner keyPair
+	owner    *KeyPair
+	newOwner *KeyPair
 	txId     string
 }
 
@@ -67,17 +61,23 @@ type provenanceData struct {
 var dummySignature account.Signature
 
 // helper to make an address
-func makeAddress(publicKey []byte, testNet bool) *account.Account {
+func makeAddress(keyPair *KeyPair, network string) *account.Account {
+
+	testNet := true
+	if network == "bitmark" {
+		testNet = false
+	}
+
 	return &account.Account{
 		AccountInterface: &account.ED25519Account{
 			Test:      testNet,
-			PublicKey: &tmpPublicKey,
+			PublicKey: keyPair.PublicKey[:],
 		},
 	}
 }
 
 // build a properly signed asset
-func makeAsset(client *netrpc.Client, testNet bool, assetConfig assetData, verbose bool) (*transactionrecord.AssetIndex, error) {
+func makeAsset(client *netrpc.Client, network string, assetConfig assetData, verbose bool) (*transactionrecord.AssetIndex, error) {
 
 	assetIndex := (*transactionrecord.AssetIndex)(nil)
 
@@ -110,8 +110,8 @@ func makeAsset(client *netrpc.Client, testNet bool, assetConfig assetData, verbo
 			return nil, fault.ErrAssetRequestFail
 		}
 
-		if ar["description"] != assetConfig.description {
-			fmt.Printf("Asset description mismatch: actual: %q  expected: %q:\n", ar["description"], assetConfig.description)
+		if ar["metadata"] != assetConfig.metadata {
+			fmt.Printf("Asset metadata mismatch: actual: %q  expected: %q:\n", ar["metadata"], assetConfig.metadata)
 			return nil, fault.ErrAssetRequestFail
 		}
 		if ar["name"] != assetConfig.name {
@@ -149,12 +149,12 @@ func makeAsset(client *netrpc.Client, testNet bool, assetConfig assetData, verbo
 		return assetIndex, nil
 	}
 
-	registrantAddress := makeAddress(assetConfig.registrant.publicKey, testNet)
+	registrantAddress := makeAddress(assetConfig.registrant, network)
 
 	r := transactionrecord.AssetData{
-		Description: assetConfig.description,
 		Name:        assetConfig.name,
 		Fingerprint: assetConfig.fingerprint,
+		Metadata:    assetConfig.metadata,
 		Registrant:  registrantAddress,
 		Signature:   dummySignature,
 	}
@@ -166,7 +166,7 @@ func makeAsset(client *netrpc.Client, testNet bool, assetConfig assetData, verbo
 	}
 
 	// manually sign the record and attach signature
-	signature := ed25519.Sign(assetConfig.registrant.privateKey, packed)
+	signature := ed25519.Sign(&assetConfig.registrant.PrivateKey, packed)
 	r.Signature = signature[:]
 
 	// re-pack with correct signature
@@ -203,9 +203,9 @@ func makeAsset(client *netrpc.Client, testNet bool, assetConfig assetData, verbo
 }
 
 // build a properly signed issues
-func makeIssue(testNet bool, issueConfig issueData, nonce uint64) *transactionrecord.BitmarkIssue {
+func makeIssue(network string, issueConfig issueData, nonce uint64) *transactionrecord.BitmarkIssue {
 
-	issuerAddress := makeAddress(issueConfig.issuer.publicKey, testNet)
+	issuerAddress := makeAddress(issueConfig.issuer, network)
 
 	r := transactionrecord.BitmarkIssue{
 		AssetIndex: *issueConfig.assetIndex,
@@ -221,7 +221,7 @@ func makeIssue(testNet bool, issueConfig issueData, nonce uint64) *transactionre
 	}
 
 	// manually sign the record and attach signature
-	signature := ed25519.Sign(issueConfig.issuer.privateKey, packed)
+	signature := ed25519.Sign(&issueConfig.issuer.PrivateKey, packed)
 	r.Signature = signature[:]
 
 	// re-pack with correct signature
@@ -248,7 +248,7 @@ func doIssues(client *netrpc.Client, network string, issueConfig issueData, verb
 	nonce := time.Now().UTC().Unix() * 1000
 	issues := make([]transactionrecord.BitmarkIssue, issueConfig.quantity)
 	for i := 0; i < len(issues); i += 1 {
-		issue := makeIssue(testNet, issueConfig, uint64(nonce)+uint64(i))
+		issue := makeIssue(network, issueConfig, uint64(nonce)+uint64(i))
 		if nil == issue {
 			return fault.ErrMakeIssueFail
 		}
@@ -326,14 +326,14 @@ func doIssues(client *netrpc.Client, network string, issueConfig issueData, verb
 	return nil
 }
 
-func makeTransfer(testNet bool, txId string, owner keyPair, newOwner keyPair) *transactionrecord.BitmarkTransfer {
+func makeTransfer(network string, txId string, owner *KeyPair, newOwner *KeyPair) *transactionrecord.BitmarkTransfer {
 	var link merkle.Digest
 	if err := link.UnmarshalText([]byte(txId)); nil != err {
 		fmt.Printf("make txId to link fail: %s\n", err)
 		return nil
 	}
 
-	newOwnerAddress := makeAddress(newOwner.publicKey, testNet)
+	newOwnerAddress := makeAddress(newOwner, network)
 	r := transactionrecord.BitmarkTransfer{
 		Link:      link,
 		Owner:     newOwnerAddress,
@@ -346,8 +346,8 @@ func makeTransfer(testNet bool, txId string, owner keyPair, newOwner keyPair) *t
 		return nil
 	}
 
-	signature := ed25519.Sign(&owner.privateKey, packed)
-	ownerAddress := makeAddress(owner.publicKey, testNet)
+	signature := ed25519.Sign(&owner.PrivateKey, packed)
+	ownerAddress := makeAddress(owner, network)
 	r.Signature = signature[:]
 
 	// re-pack with correct signature
@@ -426,7 +426,7 @@ type receiptReply struct {
 	Status payment.TrackingStatus `json:"status"`
 }
 
-func doReceipt(client *netrpc.Client, testNet bool, receiptConfig receiptData, verbose bool) error {
+func doReceipt(client *netrpc.Client, network string, receiptConfig receiptData, verbose bool) error {
 
 	payArgs := rpc.PayArguments{
 		Receipt: receiptConfig.receipt,
@@ -467,7 +467,7 @@ func doReceipt(client *netrpc.Client, testNet bool, receiptConfig receiptData, v
 	return nil
 }
 
-func doProvenance(client *netrpc.Client, testNet bool, provenanceConfig provenanceData, verbose bool) error {
+func doProvenance(client *netrpc.Client, network string, provenanceConfig provenanceData, verbose bool) error {
 
 	var txId merkle.Digest
 	if err := txId.UnmarshalText([]byte(provenanceConfig.txId)); nil != err {
@@ -498,7 +498,7 @@ func doProvenance(client *netrpc.Client, testNet bool, provenanceConfig provenan
 	return nil
 }
 
-func getInfo(client *netrpc.Client, verbose bool) error {
+func getBitmarkInfo(client *netrpc.Client, verbose bool) error {
 	var reply rpc.InfoReply
 	if err := client.Call("Node.Info", rpc.InfoArguments{}, &reply); err != nil {
 		fmt.Printf("Node.Info error: %v\n", err)

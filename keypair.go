@@ -29,6 +29,11 @@ const (
 
 var passwordConsole *terminal.Terminal
 
+type KeyPair struct {
+	PublicKey  [publicKeySize]byte
+	PrivateKey [privateKeySize]byte
+}
+
 type RawKeyPair struct {
 	PublicKey  string `json:"public_key"`
 	PrivateKey string `json:"private_key"`
@@ -77,8 +82,7 @@ func makeKeyPair(privateKeyStr string, password string) (string, string, *config
 		copy(publicKey, privateKey[32:])
 	}
 
-	// encrypt password to get key
-	iter, salt, key, err := encryptPassword(password)
+	iter, salt, key, err := hashPassword(password)
 	if nil != err {
 		return "", "", nil, err
 	}
@@ -99,8 +103,7 @@ func makeKeyPair(privateKeyStr string, password string) (string, string, *config
 	return publicStr, privateStr, privateKeyConfig, nil
 }
 
-// Encrypt password by pbkdf2
-func encryptPassword(password string) (*configuration.Iter, *configuration.Salt, []byte, error) {
+func hashPassword(password string) (*configuration.Iter, *configuration.Salt, []byte, error) {
 	salt, err := configuration.MakeSalt()
 	if nil != err {
 		return nil, nil, nil, err
@@ -116,7 +119,7 @@ func encryptPassword(password string) (*configuration.Iter, *configuration.Salt,
 }
 
 func generateKey(password string, iter *configuration.Iter, salt *configuration.Salt) []byte {
-	saltBytes := salt.MarshalText()
+	saltBytes := salt.Bytes()
 	iterInt := iter.Integer()
 	return pbkdf2.Key([]byte(password), saltBytes, iterInt, 32, sha512.New)
 }
@@ -163,8 +166,12 @@ func decryptPrivateKey(ciphertext []byte, key []byte) ([]byte, error) {
 	return ciphertext, nil
 }
 
-func checkSignature(password string, publicKey []byte, privateKey []byte) bool {
-	message := "Bitmark Command Line Interface"
+func checkSignature(publicKey []byte, privateKey []byte) bool {
+	salt, err := configuration.MakeSalt()
+	if nil != err {
+		return false
+	}
+	message := salt.String() + "Bitmark Command Line Interface"
 	signature := ed25519.Sign(privateKey, []byte(message))
 	return ed25519.Verify(publicKey, []byte(message), signature)
 }
@@ -230,52 +237,68 @@ func promptCheckPasswordReader() (string, error) {
 	return password, nil
 }
 
-func promptAndCheckPassword(issuer *configuration.IdentityType) ([]byte, []byte, error) {
+func promptAndCheckPassword(issuer *configuration.IdentityType) (*KeyPair, error) {
 	password, err := promptCheckPasswordReader()
 	if nil != err {
-		cleanPasswordMemory(&password)
-		return nil, nil, err
+		return nil, err
 	}
 
-	publicKey, privateKey, err := verifyPassword(password, issuer)
+	keyPair, err := verifyPassword(password, issuer)
 	if nil != err {
-		cleanPasswordMemory(&password)
-		return nil, nil, err
+		return nil, err
 	}
-	cleanPasswordMemory(&password)
-
-	return publicKey, privateKey, nil
+	return keyPair, nil
 }
 
-func verifyPassword(password string, identity *configuration.IdentityType) ([]byte, []byte, error) {
+func verifyPassword(password string, identity *configuration.IdentityType) (*KeyPair, error) {
 	iter := new(configuration.Iter)
 	salt := new(configuration.Salt)
 	iter.ConvertIntegerToIter(identity.Private_key_config.Iter)
 	salt.UnmarshalText([]byte(identity.Private_key_config.Salt))
 
 	key := generateKey(password, iter, salt)
+
 	ciphertext, err := hex.DecodeString(identity.Private_key)
 	if nil != err {
-		return nil, nil, err
+		return nil, err
 	}
 
 	privateKey, err := decryptPrivateKey(ciphertext, key)
 	if nil != err {
-		return nil, nil, err
+		return nil, err
 	}
 
 	publicKey, err := hex.DecodeString(identity.Public_key)
 	if nil != err {
-		return nil, nil, err
+		return nil, err
 	}
 
-	if !checkSignature(password, publicKey, privateKey) {
-		return nil, nil, fault.ErrWrongPassword
+	if !checkSignature(publicKey, privateKey) {
+		return nil, fault.ErrWrongPassword
 	}
+	keyPair := KeyPair{}
 
-	return publicKey, privateKey, err
+	copy(keyPair.PublicKey[:], publicKey)
+	copy(keyPair.PrivateKey[:], privateKey)
+
+	return &keyPair, err
 }
 
-func cleanPasswordMemory(p *string) {
-	*p = "0000000000000000"
+func publicKeyFromIdentity(name string, identities []configuration.IdentityType) (*KeyPair, error) {
+
+	keyPair := KeyPair{}
+
+	for _, identity := range identities {
+		if name != identity.Name {
+			continue
+		}
+		publicKey, err := hex.DecodeString(identity.Public_key)
+		if nil != err {
+			return nil, err
+		}
+
+		copy(keyPair.PublicKey[:], publicKey)
+		return &keyPair, nil
+	}
+	return nil, fault.ErrNotFoundIdentity
 }

@@ -48,7 +48,7 @@ func main() {
 		cli.StringFlag{
 			Name:        "config, c",
 			Value:       "",
-			Usage:       "bitmark-cli config file",
+			Usage:       "bitmark-cli configuration dir",
 			Destination: &globals.config,
 		},
 		cli.StringFlag{
@@ -70,9 +70,8 @@ func main() {
 			Usage:     "generate key pair, will not store in config file",
 			ArgsUsage: "\n   (* = required)",
 			Flags:     []cli.Flag{},
-			Action: func(c *cli.Context) error {
+			Action: func(c *cli.Context) {
 				runGenerate(c, globals)
-				return nil
 			},
 		},
 		{
@@ -98,12 +97,11 @@ func main() {
 				cli.StringFlag{
 					Name:  "privateKey, k",
 					Value: "",
-					Usage: "using existed privateKey",
+					Usage: "using existing privateKey",
 				},
 			},
-			Action: func(c *cli.Context) error {
+			Action: func(c *cli.Context) {
 				runSetup(c, globals)
-				return nil
 			},
 		},
 		{
@@ -117,9 +115,8 @@ func main() {
 					Usage: "*identity descriptiont",
 				},
 			},
-			Action: func(c *cli.Context) error {
+			Action: func(c *cli.Context) {
 				runAdd(c, globals)
-				return nil
 			},
 		},
 		{
@@ -133,9 +130,9 @@ func main() {
 					Usage: "*asset name",
 				},
 				cli.StringFlag{
-					Name:  "description, d",
+					Name:  "metadata, m",
 					Value: "",
-					Usage: "*asset description",
+					Usage: "*asset metadata",
 				},
 				cli.StringFlag{
 					Name:  "fingerprint, f",
@@ -148,9 +145,8 @@ func main() {
 					Usage: " quantity to create [1]",
 				},
 			},
-			Action: func(c *cli.Context) error {
+			Action: func(c *cli.Context) {
 				runCreate(c, globals)
-				return nil
 			},
 		},
 		{
@@ -169,9 +165,8 @@ func main() {
 					Usage: "*identity name to receive the bitmark",
 				},
 			},
-			Action: func(c *cli.Context) error {
+			Action: func(c *cli.Context) {
 				runTransfer(c, globals)
-				return nil
 			},
 		},
 		{
@@ -216,33 +211,29 @@ func main() {
 		}, {
 			Name:  "info",
 			Usage: "display bitmark-cli status",
-			Action: func(c *cli.Context) error {
+			Action: func(c *cli.Context) {
 				runInfo(c, globals)
-				return nil
 			},
 		},
 		{
 			Name:  "bitmarkInfo",
 			Usage: "display bitmarkd status",
-			Action: func(c *cli.Context) error {
+			Action: func(c *cli.Context) {
 				runBitmarkInfo(c, globals)
-				return nil
 			},
 		},
 		{
 			Name:  "keypair",
 			Usage: "get default identity's raw key pair",
-			Action: func(c *cli.Context) error {
+			Action: func(c *cli.Context) {
 				getDefaultRawKeyPair(c, globals)
-				return nil
 			},
 		},
 		{
 			Name:  "version",
 			Usage: "display bitmark-cli version",
-			Action: func(c *cli.Context) error {
+			Action: func(c *cli.Context) {
 				fmt.Println(Version())
-				return nil
 			},
 		},
 	}
@@ -291,7 +282,7 @@ func runSetup(c *cli.Context, globals globalFlags) {
 		fmt.Println()
 	}
 
-	// Create the folder if not existed
+	// Create the folder if not existing
 	folderIndex := strings.LastIndex(configFile, "/")
 	configDir := configFile[:folderIndex]
 	if !ensureFileExists(configDir) {
@@ -311,8 +302,6 @@ func runSetup(c *cli.Context, globals globalFlags) {
 		generateIdentity(configFile, name, description, privateKey, globals.password)) {
 		exitwithstatus.Message("Error: Setup failed\n")
 	}
-
-	cleanPasswordMemory(&globals.password)
 }
 
 func runAdd(c *cli.Context, globals globalFlags) {
@@ -343,8 +332,6 @@ func runAdd(c *cli.Context, globals globalFlags) {
 	if !generateIdentity(configFile, name, description, "", globals.password) {
 		exitwithstatus.Message("Error: add failed\n")
 	}
-
-	cleanPasswordMemory(&globals.password)
 }
 
 func runCreate(c *cli.Context, globals globalFlags) {
@@ -364,12 +351,12 @@ func runCreate(c *cli.Context, globals globalFlags) {
 		exitwithstatus.Message("Error: %s\n", err)
 	}
 
-	description, err := checkAssetDescription(c.String("description"))
+	fingerprint, err := checkAssetFingerprint(c.String("fingerprint"))
 	if nil != err {
 		exitwithstatus.Message("Error: %s\n", err)
 	}
 
-	fingerprint, err := checkAssetFingerprint(c.String("fingerprint"))
+	metadata, err := checkAssetMetadata(c.String("metadata"))
 	if nil != err {
 		exitwithstatus.Message("Error: %s\n", err)
 	}
@@ -381,26 +368,34 @@ func runCreate(c *cli.Context, globals globalFlags) {
 
 	verbose := globals.verbose
 	if verbose {
-		fmt.Printf("issuer: %v\n", issuer.Name)
-		fmt.Printf("assetName: %v\n", assetName)
-		fmt.Printf("description: %v\n", description)
-		fmt.Printf("fingerprint: %v\n", fingerprint)
+		fmt.Printf("issuer: %s\n", issuer.Name)
+		fmt.Printf("assetName: %q\n", assetName)
+		fmt.Printf("fingerprint: %q\n", fingerprint)
+		fmt.Printf("metadata:\n")
+		m := strings.Split(metadata, "\u0000")
+		for i := 0; i < len(m); i += 2 {
+			fmt.Printf("  %q: %q\n", m[i], m[i+1])
+		}
 		fmt.Printf("quantity: %d\n", quantity)
 	}
 
-	publicKey := []byte{}
-	privateKey := []byte{}
+	var registrant *KeyPair
+
 	// check password
 	if "" == globals.password {
-		publicKey, privateKey, err = promptAndCheckPassword(issuer)
+		registrant, err = promptAndCheckPassword(issuer)
 		if nil != err {
 			exitwithstatus.Message("Error: %s\n", err)
 		}
 	} else {
-		publicKey, privateKey, err = verifyPassword(globals.password, issuer)
+		registrant, err = verifyPassword(globals.password, issuer)
 		if nil != err {
 			exitwithstatus.Message("Error: %s\n", err)
 		}
+	}
+	// just in case some internal breakage
+	if nil == registrant {
+		exitwithstatus.Message("internal error: nil keypair returned")
 	}
 
 	// TODO: deal with IPv6?
@@ -409,14 +404,9 @@ func runCreate(c *cli.Context, globals globalFlags) {
 		network:  configuration.Network,
 	}
 
-	registrant := keyPair{
-		publicKey:  publicKey[:],
-		privateKey: *privateKey,
-	}
-
 	assetConfig := assetData{
 		name:        assetName,
-		description: description,
+		metadata:    metadata,
 		quantity:    quantity,
 		fingerprint: fingerprint,
 		registrant:  registrant,
@@ -425,8 +415,6 @@ func runCreate(c *cli.Context, globals globalFlags) {
 	if !issue(bitmarkRpcConfig, assetConfig, verbose) {
 		exitwithstatus.Message("Error: issue failed\n")
 	}
-
-	cleanPasswordMemory(&globals.password)
 }
 
 func runTransfer(c *cli.Context, globals globalFlags) {
@@ -458,42 +446,44 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 		fmt.Printf("sender: %s\n", from.Name)
 	}
 
-	publicKey := []byte{}
-	privateKey := []byte{}
+	var ownerKeyPair *KeyPair
 	// check owner password
 	if "" == globals.password {
-		publicKey, privateKey, err = promptAndCheckPassword(from)
+		ownerKeyPair, err = promptAndCheckPassword(from)
 		if nil != err {
 			exitwithstatus.Message("Error: %s\n", err)
 		}
 	} else {
-		publicKey, privateKey, err = verifyPassword(globals.password, from)
+		ownerKeyPair, err = verifyPassword(globals.password, from)
 		if nil != err {
 			exitwithstatus.Message("Error: %s\n", err)
 		}
 	}
-
-	ownerKeyPair := keyPair{
-		publicKey:  publicKey[:],
-		privateKey: *privateKey,
+	// just in case some internal breakage
+	if nil == ownerKeyPair {
+		exitwithstatus.Message("internal error: nil keypair returned")
 	}
 
-	newOwnerKeyPair := keyPair{}
+	var newOwnerKeyPair *KeyPair
 
+	// ***** FIX THIS: possibly add base58 keys @@@@@
 	newPublicKey, err := hex.DecodeString(to)
 	if nil != err {
-		fmt.Printf("Receiver hex decode error, use the public key directly\n")
-		newOwnerKeyPair = keyPair{
-			publicKey: []byte(to),
+
+		newOwnerKeyPair, err = publicKeyFromIdentity(to, configuration.Identities)
+		if nil != err {
+			exitwithstatus.Message("receiver identity error: %s\n", err)
 		}
 	} else {
-		newOwnerKeyPair = keyPair{
-			publicKey: newPublicKey,
+		newOwnerKeyPair = &KeyPair{}
+		if len(newPublicKey) != len(newOwnerKeyPair.PublicKey) {
+			exitwithstatus.Message("hex public key must be 32 bytes")
 		}
+		copy(newOwnerKeyPair.PublicKey[:], newPublicKey)
 	}
-
-	newOwnerKeyPair := keyPair{
-		publicKey: tmpPublicKey,
+	// just in case some internal breakage
+	if nil == newOwnerKeyPair {
+		exitwithstatus.Message("internal error: nil keypair returned")
 	}
 
 	// TODO: deal with IPv6?
@@ -511,8 +501,6 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 	if !transfer(bitmarkRpcConfig, transferConfig, verbose) {
 		exitwithstatus.Message("Error: Transfer failed\n")
 	}
-
-	cleanPasswordMemory(&globals.password)
 }
 
 func runReceipt(c *cli.Context, globals globalFlags) {
@@ -541,10 +529,7 @@ func runReceipt(c *cli.Context, globals globalFlags) {
 	// TODO: deal with IPv6?
 	bitmarkRpcConfig := bitmarkRPC{
 		hostPort: configuration.Connect,
-		testNet:  true,
-	}
-	if configuration.Network != "testing" {
-		bitmarkRpcConfig.testNet = false
+		network:  configuration.Network,
 	}
 
 	receiptConfig := receiptData{
@@ -583,10 +568,7 @@ func runProvenance(c *cli.Context, globals globalFlags) {
 	// TODO: deal with IPv6?
 	bitmarkRpcConfig := bitmarkRPC{
 		hostPort: configuration.Connect,
-		testNet:  true,
-	}
-	if configuration.Network != "testing" {
-		bitmarkRpcConfig.testNet = false
+		network:  configuration.Network,
 	}
 
 	provenanceConfig := provenanceData{
@@ -606,7 +588,7 @@ func runInfo(c *cli.Context, globals globalFlags) {
 		exitwithstatus.Message("Error: Get configuration failed: %v\n", err)
 	}
 
-	output, err := json.Marshal(infoConfig)
+	output, err := json.MarshalIndent(infoConfig, "", "  ")
 	if nil != err {
 		exitwithstatus.Message("Error: Marshal config failed: %v\n", err)
 	}
@@ -622,7 +604,14 @@ func runBitmarkInfo(c *cli.Context, globals globalFlags) {
 	}
 
 	verbose := globals.verbose
-	if !bitmarkInfo(configuration.Connect, verbose) {
+
+	// TODO: deal with IPv6?
+	bitmarkRpcConfig := bitmarkRPC{
+		hostPort: configuration.Connect,
+		network:  configuration.Network,
+	}
+
+	if !bitmarkInfo(bitmarkRpcConfig, verbose) {
 		exitwithstatus.Message("Error: Get info failed\n")
 	}
 }
@@ -681,13 +670,9 @@ func generateIdentity(configFile string, name string, description string, privat
 
 	publicKey, encryptPrivateKey, privateKeyConfig, err := makeKeyPair(privateKeyStr, password)
 	if nil != err {
-		cleanPasswordMemory(&password)
 		fmt.Printf("error generating server key pair: %v\n", err)
 		return false
 	}
-
-	// rewrite password memory
-	cleanPasswordMemory(&password)
 
 	identity := configuration.IdentityType{
 		Name:               name,
@@ -773,7 +758,7 @@ func receipt(rpcConfig bitmarkRPC, receiptConfig receiptData, verbose bool) bool
 	client := jsonrpc.NewClient(conn)
 	defer client.Close()
 
-	err = doReceipt(client, rpcConfig.testNet, receiptConfig, verbose)
+	err = doReceipt(client, rpcConfig.network, receiptConfig, verbose)
 	if nil != err {
 		fmt.Printf("Error: %v\n", err)
 		return false
@@ -794,7 +779,7 @@ func provenance(rpcConfig bitmarkRPC, provenanceConfig provenanceData, verbose b
 	client := jsonrpc.NewClient(conn)
 	defer client.Close()
 
-	err = doProvenance(client, rpcConfig.testNet, provenanceConfig, verbose)
+	err = doProvenance(client, rpcConfig.network, provenanceConfig, verbose)
 	if nil != err {
 		fmt.Printf("Error: %v\n", err)
 		return false
@@ -802,8 +787,8 @@ func provenance(rpcConfig bitmarkRPC, provenanceConfig provenanceData, verbose b
 	return true
 }
 
-func info(hostPort string, verbose bool) bool {
-	conn, err := connect(hostPort)
+func bitmarkInfo(rpcConfig bitmarkRPC, verbose bool) bool {
+	conn, err := connect(rpcConfig.hostPort)
 	if nil != err {
 		fmt.Printf("Error: %v\n", err)
 		return false
@@ -833,24 +818,28 @@ func getDefaultRawKeyPair(c *cli.Context, globals globalFlags) {
 		exitwithstatus.Message("Error: %s\n", err)
 	}
 
-	publicKey := []byte{}
-	privateKey := []byte{}
+	var keyPair *KeyPair
+
 	// check owner password
 	if "" == globals.password {
-		publicKey, privateKey, err = promptAndCheckPassword(identity)
+		keyPair, err = promptAndCheckPassword(identity)
 		if nil != err {
 			exitwithstatus.Message("Error: %s\n", err)
 		}
 	} else {
-		publicKey, privateKey, err = verifyPassword(globals.password, identity)
+		keyPair, err = verifyPassword(globals.password, identity)
 		if nil != err {
 			exitwithstatus.Message("Error: %s\n", err)
 		}
 	}
+	//just in case some internal breakage
+	if nil == keyPair {
+		exitwithstatus.Message("internal error: nil keypair returned")
+	}
 
 	rawKeyPair := RawKeyPair{
-		PublicKey:  hex.EncodeToString(publicKey),
-		PrivateKey: hex.EncodeToString(privateKey),
+		PublicKey:  hex.EncodeToString(keyPair.PublicKey[:]),
+		PrivateKey: hex.EncodeToString(keyPair.PrivateKey[:]),
 	}
 	if b, err := json.MarshalIndent(rawKeyPair, "", "  "); nil != err {
 		exitwithstatus.Message("Error: %s\n", err)

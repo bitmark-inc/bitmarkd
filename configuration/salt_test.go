@@ -9,14 +9,18 @@ import (
 	"testing"
 )
 
-// test Marshal and unMarshal
-func Test(t *testing.T) {
+// test Marshal and Unmarshal
+func TestSalt(t *testing.T) {
 	salt, err := configuration.MakeSalt()
 	if nil != err {
 		t.Errorf("makeSalt fail: %s", err)
 	}
 
+	t.Logf("salt: %v\n", salt)
+
 	marshalSalt := salt.MarshalText()
+
+	t.Logf("salt: %q\n", marshalSalt)
 
 	salt2 := new(configuration.Salt)
 	salt2.UnmarshalText(marshalSalt)

@@ -10,12 +10,13 @@ import (
 	"github.com/bitmark-inc/exitwithstatus"
 	"os"
 	"strconv"
+	"strings"
 )
 
 // config is required
 func checkConfigFile(file string) (string, error) {
 	if "" == file {
-		return "", fault.ErrRequiredConfig
+		return "", fault.ErrRequiredConfigFile
 	}
 
 	file = os.ExpandEnv(file)
@@ -76,20 +77,27 @@ func checkAssetName(name string) (string, error) {
 	return name, nil
 }
 
-// asset description is required field
-func checkAssetDescription(desc string) (string, error) {
-	if "" == desc {
-		return "", fault.ErrRequiredAssetDescription
-	}
-	return desc, nil
-}
-
 // asset fingerprint is required field
 func checkAssetFingerprint(fingerprint string) (string, error) {
 	if "" == fingerprint {
 		return "", fault.ErrRequiredAssetFingerprint
 	}
 	return fingerprint, nil
+}
+
+// asset metadata is required field
+func checkAssetMetadata(meta string) (string, error) {
+	if "" == meta {
+		return "", fault.ErrRequiredAssetMetadata
+	}
+	meta, err := strconv.Unquote(`"` + meta + `"`)
+	if nil != err {
+		return "", err
+	}
+	if 1 == len(strings.Split(meta, "\u0000"))%2 {
+		return "", fault.ErrAssetMetadataMustBeMap
+	}
+	return meta, nil
 }
 
 func checkAssetQuantity(quantity string) (int, error) {

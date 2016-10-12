@@ -6,7 +6,7 @@ package main
 
 // the version
 var (
-	version string = "1"
+	version string = "3"
 )
 
 // Return string representation of version
