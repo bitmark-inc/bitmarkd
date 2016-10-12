@@ -79,13 +79,6 @@ func (record Packed) Unpack() (Transaction, int, error) {
 
 	case AssetDataTag:
 
-		// description
-		descriptionLength, descriptionOffset := util.FromVarint64(record[n:])
-		description := make([]byte, descriptionLength)
-		n += descriptionOffset
-		copy(description, record[n:])
-		n += int(descriptionLength)
-
 		// name
 		nameLength, nameOffset := util.FromVarint64(record[n:])
 		name := make([]byte, nameLength)
@@ -99,6 +92,13 @@ func (record Packed) Unpack() (Transaction, int, error) {
 		n += fingerprintOffset
 		copy(fingerprint, record[n:])
 		n += int(fingerprintLength)
+
+		// metadata
+		metadataLength, metadataOffset := util.FromVarint64(record[n:])
+		metadata := make([]byte, metadataLength)
+		n += metadataOffset
+		copy(metadata, record[n:])
+		n += int(metadataLength)
 
 		// registrant public key
 		registrantLength, registrantOffset := util.FromVarint64(record[n:])
@@ -117,9 +117,9 @@ func (record Packed) Unpack() (Transaction, int, error) {
 		n += int(signatureLength)
 
 		r := &AssetData{
-			Description: string(description),
 			Name:        string(name),
 			Fingerprint: string(fingerprint),
+			Metadata:    string(metadata),
 			Registrant:  registrant,
 			Signature:   signature,
 		}

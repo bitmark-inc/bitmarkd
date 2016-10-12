@@ -38,3 +38,20 @@ func (ts TrackingStatus) MarshalText() ([]byte, error) {
 	buffer := []byte(ts.String())
 	return buffer, nil
 }
+
+// convert the tracking value from JSON to enumeration
+func (ts *TrackingStatus) UnmarshalText(s []byte) error {
+	switch string(s) {
+	case "NotFound":
+		*ts = TrackingNotFound
+	case "Accepted":
+		*ts = TrackingAccepted
+	case "Processed":
+		*ts = TrackingProcessed
+	case "Invalid":
+		*ts = TrackingInvalid
+	default:
+		*ts = TrackingInvalid
+	}
+	return nil
+}

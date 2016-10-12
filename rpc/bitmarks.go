@@ -46,52 +46,6 @@ type BitmarksIssueReply struct {
 	//PaymentAlternatives []block.MinerAddress `json:"paymentAlternatives"`// ***** FIX THIS: where to get addresses?
 }
 
-func (bitmarks *Bitmarks) Issue(arguments *[]transactionrecord.BitmarkIssue, reply *BitmarksIssueReply) error {
-
-	log := bitmarks.log
-	count := len(*arguments)
-
-	if count > maximumIssues {
-		return fault.ErrTooManyItemsToProcess
-	} else if 0 == count {
-		return fault.ErrMissingParameters
-	}
-
-	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
-	}
-
-	log.Infof("Bitmarks.Issue: %v", arguments)
-
-	issueStatus, packed, err := bitmarksIssue(*arguments)
-	if nil != err {
-		return err
-	}
-
-	result := BitmarksIssueReply{
-		Issues: issueStatus,
-	}
-
-	// fail if no data sent
-	if 0 == len(packed) {
-		return fault.ErrMissingParameters
-	}
-
-	// get here if all issues are new
-	var d *difficulty.Difficulty
-	newItem := false
-	result.PayId, result.PayNonce, d, newItem = payment.Store(currency.Bitcoin, packed, count, true)
-	result.Difficulty = d.GoString()
-
-	// announce transaction block to other peers
-	if newItem {
-		messagebus.Bus.Broadcast.Send("issues", packed)
-	}
-
-	*reply = result
-	return nil
-}
-
 // internal function to issue some bitmarks
 func bitmarksIssue(issues []transactionrecord.BitmarkIssue) ([]IssueStatus, []byte, error) {
 

@@ -242,7 +242,7 @@ func (conn *connector) process() {
 				conn.state = cStateHighestBlock // retry
 				break
 			}
-			log.Infof("store block number: %d", conn.startBlockNumber)
+			log.Debugf("store block number: %d", conn.startBlockNumber)
 			err = block.StoreIncoming(packedBlock)
 			if nil != err {
 				log.Errorf("store block number: %d  error: %v", conn.startBlockNumber, err)
@@ -394,7 +394,7 @@ func highestBlock(log *logger.L, clients []*zmqutil.Client) (uint64, *zmqutil.Cl
 		}
 		switch string(data[0]) {
 		case "E":
-			log.Errorf("highestBlock: rpc rrroe response: %q", data[1])
+			log.Errorf("highestBlock: rpc error response: %q", data[1])
 			continue
 		case "N":
 			if 8 != len(data[1]) {
@@ -418,11 +418,13 @@ func blockDigest(client *zmqutil.Client, blockNumber uint64) (blockdigest.Digest
 	binary.BigEndian.PutUint64(parameter, blockNumber)
 	err := client.Send("H", parameter)
 	if nil != err {
+		client.Reconnect()
 		return blockdigest.Digest{}, err
 	}
 
 	data, err := client.Receive(0)
 	if nil != err {
+		client.Reconnect()
 		return blockdigest.Digest{}, err
 	}
 
@@ -450,11 +452,13 @@ func blockData(client *zmqutil.Client, blockNumber uint64) ([]byte, error) {
 	binary.BigEndian.PutUint64(parameter, blockNumber)
 	err := client.Send("B", parameter)
 	if nil != err {
+		client.Reconnect()
 		return nil, err
 	}
 
 	data, err := client.Receive(0)
 	if nil != err {
+		client.Reconnect()
 		return nil, err
 	}
 

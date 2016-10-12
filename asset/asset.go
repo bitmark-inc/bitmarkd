@@ -100,7 +100,7 @@ func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIndex, t
 		state:  pendingState,
 	}
 
-	// flag to indicate asset dat would be changed
+	// flag to indicate asset data would be changed
 	dataWouldChange := false
 
 	// cache the record, will update partially expired item with new flag
@@ -114,9 +114,9 @@ func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIndex, t
 
 		switch tx := transaction.(type) {
 		case (*transactionrecord.AssetData):
-			if tx.Description == asset.Description &&
-				tx.Name == asset.Name &&
+			if tx.Name == asset.Name &&
 				tx.Fingerprint == asset.Fingerprint &&
+				tx.Metadata == asset.Metadata &&
 				tx.Registrant.String() == asset.Registrant.String() {
 
 				r.state = pendingState // extend timeout

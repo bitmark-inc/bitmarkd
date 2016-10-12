@@ -40,8 +40,8 @@ type Transaction interface {
 
 // byte sizes for various fields
 const (
-	maxDescriptionLength    = 256
 	maxNameLength           = 64
+	maxMetadataLength       = 2048
 	maxFingerprintLength    = 1024
 	maxSignatureLength      = 1024
 	maxTimestampLength      = len("2014-06-21T14:32:16Z")
@@ -59,9 +59,9 @@ type BaseData struct {
 
 // the unpacked Asset Data structure
 type AssetData struct {
-	Description string            `json:"description"` // utf-8
 	Name        string            `json:"name"`        // utf-8
 	Fingerprint string            `json:"fingerprint"` // utf-8
+	Metadata    string            `json:"metadata"`    // utf-8
 	Registrant  *account.Account  `json:"registrant"`  // base58
 	Signature   account.Signature `json:"signature"`   // hex
 }

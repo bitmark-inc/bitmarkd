@@ -224,9 +224,9 @@ func (lstn *listener) process(socket *zmq.Socket) {
 	}
 
 	// send results
-	_, err = socket.Send(fn, zmq.SNDMORE|zmq.DONTWAIT)
+	_, err = socket.Send(fn, zmq.SNDMORE)
 	fault.PanicIfError("Listener", err)
-	_, err = socket.SendBytes(result, 0|zmq.DONTWAIT)
+	_, err = socket.SendBytes(result, 0)
 	fault.PanicIfError("Listener", err)
 
 	log.Infof("sent: %q  result: %x", fn, result)
@@ -235,8 +235,8 @@ func (lstn *listener) process(socket *zmq.Socket) {
 // send an error packet
 func listenerSendError(socket *zmq.Socket, err error) {
 	errorMessage := err.Error()
-	_, err = socket.Send("E", zmq.SNDMORE|zmq.DONTWAIT)
+	_, err = socket.Send("E", zmq.SNDMORE)
 	fault.PanicIfError("Listener", err)
-	_, err = socket.Send(errorMessage, 0|zmq.DONTWAIT)
+	_, err = socket.Send(errorMessage, 0)
 	fault.PanicIfError("Listener", err)
 }

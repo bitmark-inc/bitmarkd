@@ -8,6 +8,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
+	"strings"
 	"unicode/utf8"
 )
 
@@ -50,7 +51,10 @@ func (baseData *BaseData) Pack(address *account.Account) (Packed, error) {
 // pack AssetData
 //
 // Pack Varint64(tag) followed by fields in order as struct above with
-// signature last
+// signature last.
+//
+// Note: the metadata field consists of key value pairs each preceded
+//       by its count (
 //
 // NOTE: returns the "unsigned" message on signature failure - for
 //       debugging/testing
@@ -62,10 +66,6 @@ func (assetData *AssetData) Pack(address *account.Account) (Packed, error) {
 		return nil, fault.ErrInvalidOwnerOrRegistrant
 	}
 
-	if utf8.RuneCountInString(assetData.Description) > maxDescriptionLength {
-		return nil, fault.ErrDescriptionTooLong
-	}
-
 	if utf8.RuneCountInString(assetData.Name) > maxNameLength {
 		return nil, fault.ErrNameTooLong
 	}
@@ -74,11 +74,29 @@ func (assetData *AssetData) Pack(address *account.Account) (Packed, error) {
 		return nil, fault.ErrFingerprintTooLong
 	}
 
+	if utf8.RuneCountInString(assetData.Metadata) > maxMetadataLength {
+		return nil, fault.ErrMetadataTooLong
+	}
+
+	// check that metadata contains a vailid map:
+	// i.e.  key1 <NUL> value1 <NUL> key2 <NUL> value2 <NUL> … keyN <NUL> valueN
+	// Notes: 1: no NUL after last value
+	//        2: no empty key or value is allowed
+	splitMetadata := strings.Split(assetData.Metadata, "\u0000")
+	if 1 == len(splitMetadata)%2 {
+		return nil, fault.ErrMetadataIsNotMap
+	}
+	for _, v := range splitMetadata {
+		if 0 == len(v) {
+			return nil, fault.ErrMetadataIsNotMap
+		}
+	}
+
 	// concatenate bytes
 	message := util.ToVarint64(uint64(AssetDataTag))
-	message = appendString(message, assetData.Description)
 	message = appendString(message, assetData.Name)
 	message = appendString(message, assetData.Fingerprint)
+	message = appendString(message, assetData.Metadata)
 	message = appendAccount(message, assetData.Registrant)
 
 	// signature

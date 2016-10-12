@@ -27,11 +27,11 @@ func main() {
 	defer exitwithstatus.Handler()
 
 	flags := []getoptions.Option{
-		{"help", getoptions.NO_ARGUMENT, 'h'},
-		{"verbose", getoptions.NO_ARGUMENT, 'v'},
-		{"quiet", getoptions.NO_ARGUMENT, 'q'},
-		{"version", getoptions.NO_ARGUMENT, 'V'},
-		{"config-file", getoptions.REQUIRED_ARGUMENT, 'c'},
+		{Long: "help", HasArg: getoptions.NO_ARGUMENT, Short: 'h'},
+		{Long: "verbose", HasArg: getoptions.NO_ARGUMENT, Short: 'v'},
+		{Long: "quiet", HasArg: getoptions.NO_ARGUMENT, Short: 'q'},
+		{Long: "version", HasArg: getoptions.NO_ARGUMENT, Short: 'V'},
+		{Long: "config-file", HasArg: getoptions.REQUIRED_ARGUMENT, Short: 'c'},
 	}
 
 	program, options, arguments, err := getoptions.GetOS(flags)

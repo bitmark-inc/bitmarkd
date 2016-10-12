@@ -7,7 +7,6 @@ package rpc
 import (
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
@@ -34,42 +33,6 @@ type AssetStatus struct {
 
 type AssetsRegisterReply struct {
 	Assets []AssetStatus `json:"assets"`
-}
-
-func (assets *Assets) Register(arguments *[]transactionrecord.AssetData, reply *AssetsRegisterReply) error {
-
-	log := assets.log
-	count := len(*arguments)
-
-	if count > maximumAssets {
-		return fault.ErrTooManyItemsToProcess
-	} else if 0 == count {
-		return fault.ErrMissingParameters
-	}
-
-	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
-	}
-
-	log.Infof("Assets.Register: %v", arguments)
-
-	assetStatus, packed, err := assetRegister(*arguments)
-	if nil != err {
-		return err
-
-	}
-	result := &AssetsRegisterReply{
-		Assets: assetStatus,
-	}
-
-	// if data to send
-	if 0 != len(packed) {
-		// announce transaction block to other peers
-		messagebus.Bus.Broadcast.Send("assets", packed)
-	}
-
-	*reply = *result
-	return nil
 }
 
 // internal function to register some assets
