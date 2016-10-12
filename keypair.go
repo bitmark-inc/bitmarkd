@@ -30,8 +30,8 @@ const (
 var passwordConsole *terminal.Terminal
 
 type KeyPair struct {
-	PublicKey  [publicKeySize]byte
-	PrivateKey [privateKeySize]byte
+	PublicKey  []byte
+	PrivateKey []byte
 }
 
 type RawKeyPair struct {
@@ -276,17 +276,16 @@ func verifyPassword(password string, identity *configuration.IdentityType) (*Key
 	if !checkSignature(publicKey, privateKey) {
 		return nil, fault.ErrWrongPassword
 	}
-	keyPair := KeyPair{}
 
-	copy(keyPair.PublicKey[:], publicKey)
-	copy(keyPair.PrivateKey[:], privateKey)
+	keyPair := KeyPair{
+		PublicKey:  publicKey,
+		PrivateKey: privateKey,
+	}
 
-	return &keyPair, err
+	return &keyPair, nil
 }
 
 func publicKeyFromIdentity(name string, identities []configuration.IdentityType) (*KeyPair, error) {
-
-	keyPair := KeyPair{}
 
 	for _, identity := range identities {
 		if name != identity.Name {
@@ -297,7 +296,9 @@ func publicKeyFromIdentity(name string, identities []configuration.IdentityType)
 			return nil, err
 		}
 
-		copy(keyPair.PublicKey[:], publicKey)
+		keyPair := KeyPair{
+			PublicKey: publicKey,
+		}
 		return &keyPair, nil
 	}
 	return nil, fault.ErrNotFoundIdentity

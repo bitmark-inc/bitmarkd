@@ -8,7 +8,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/agl/ed25519"
 	"github.com/bitmark-inc/bitmark-cli/fault"
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/currency"
@@ -17,6 +16,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
+	"golang.org/x/crypto/ed25519"
 	"net"
 	netrpc "net/rpc"
 	"time"
@@ -166,7 +166,7 @@ func makeAsset(client *netrpc.Client, network string, assetConfig assetData, ver
 	}
 
 	// manually sign the record and attach signature
-	signature := ed25519.Sign(&assetConfig.registrant.PrivateKey, packed)
+	signature := ed25519.Sign(assetConfig.registrant.PrivateKey, packed)
 	r.Signature = signature[:]
 
 	// re-pack with correct signature
@@ -221,7 +221,7 @@ func makeIssue(network string, issueConfig issueData, nonce uint64) *transaction
 	}
 
 	// manually sign the record and attach signature
-	signature := ed25519.Sign(&issueConfig.issuer.PrivateKey, packed)
+	signature := ed25519.Sign(issueConfig.issuer.PrivateKey, packed)
 	r.Signature = signature[:]
 
 	// re-pack with correct signature
@@ -346,7 +346,7 @@ func makeTransfer(network string, txId string, owner *KeyPair, newOwner *KeyPair
 		return nil
 	}
 
-	signature := ed25519.Sign(&owner.PrivateKey, packed)
+	signature := ed25519.Sign(owner.PrivateKey, packed)
 	ownerAddress := makeAddress(owner, network)
 	r.Signature = signature[:]
 
