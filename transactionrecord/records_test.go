@@ -194,7 +194,7 @@ func TestPackBaseData(t *testing.T) {
 	}
 
 	// manually sign the record and attach signature to "expected"
-	signature := ed25519.Sign(proofedby.privateKey[:], expected)
+	signature := ed25519.Sign(proofedby.privateKey, expected)
 	r.Signature = signature[:]
 	//t.Logf("signature: %#v", r.Signature)
 	l := util.ToVarint64(uint64(len(signature)))
@@ -326,7 +326,7 @@ func TestPackAssetData(t *testing.T) {
 	}
 
 	// manually sign the record and attach signature to "expected"
-	signature := ed25519.Sign(registrant.privateKey[:], expected)
+	signature := ed25519.Sign(registrant.privateKey, expected)
 	r.Signature = signature[:]
 	//t.Logf("signature: %#v", r.Signature)
 	l := util.ToVarint64(uint64(len(signature)))
@@ -450,7 +450,7 @@ func TestPackBitmarkIssue(t *testing.T) {
 	}
 
 	// manually sign the record and attach signature to "expected"
-	signature := ed25519.Sign(issuer.privateKey[:], expected)
+	signature := ed25519.Sign(issuer.privateKey, expected)
 	r.Signature = signature[:]
 	l := util.ToVarint64(uint64(len(signature)))
 	expected = append(expected, l...)
@@ -543,7 +543,7 @@ func TestPackTenBitmarkIssues(t *testing.T) {
 		if fault.ErrInvalidSignature != err {
 			t.Fatalf("pack error: %v", err)
 		}
-		signature := ed25519.Sign(issuer.privateKey[:], partial)
+		signature := ed25519.Sign(issuer.privateKey, partial)
 		r.Signature = signature[:]
 
 		_, err = r.Pack(issuerAccount)
@@ -600,7 +600,7 @@ func TestPackBitmarkTransferOne(t *testing.T) {
 	}
 
 	// manually sign the record and attach signature to "expected"
-	signature := ed25519.Sign(issuer.privateKey[:], expected)
+	signature := ed25519.Sign(issuer.privateKey, expected)
 	r.Signature = signature[:]
 	l := util.ToVarint64(uint64(len(signature)))
 	expected = append(expected, l...)
@@ -716,7 +716,7 @@ func TestPackBitmarkTransferTwo(t *testing.T) {
 	}
 
 	// manually sign the record and attach signature to "expected"
-	signature := ed25519.Sign(ownerOne.privateKey[:], expected)
+	signature := ed25519.Sign(ownerOne.privateKey, expected)
 	r.Signature = signature[:]
 	l := util.ToVarint64(uint64(len(signature)))
 	expected = append(expected, l...)
@@ -823,7 +823,7 @@ func TestPackBitmarkTransferThree(t *testing.T) {
 	}
 
 	// manually sign the record and attach signature to "expected"
-	signature := ed25519.Sign(ownerTwo.privateKey[:], expected)
+	signature := ed25519.Sign(ownerTwo.privateKey, expected)
 	r.Signature = signature[:]
 	l := util.ToVarint64(uint64(len(signature)))
 	expected = append(expected, l...)
