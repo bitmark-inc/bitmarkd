@@ -10,7 +10,10 @@ GOPATH_PACKAGED = /usr/share/gocode
 LIBUCL_SRC = ${CURDIR}/libucl
 GO_LIBUCL_SRC = ${GOPATH}/src/github.com/bitmark-inc/go-libucl
 
-SRC_DIR = ${GOPATH}/src/github.com/bitmark-inc/${APP_NAME}
+LIBARGON2_SRC = ${CURDIR}/phc-winner-argon2
+GO_LIBARGON2_SRC = ${GOPATH}/src/github.com/bitmark-inc/go-argon2
+
+SRC_DIR = ${GOPATH}/src/github.com/bitmark-inc/${SRC_NAME}
 BIN_DIR = ${GOPATH}/bin
 
 versions.mk:
@@ -28,7 +31,7 @@ override_dh_auto_build:
 	  if [ ! -d "$${dir}" ] ; \
 	  then \
 	    dist="$${account}-$${repo}-$${hash}_GH0.tar.gz" ; \
-	    echo untar: $${dist} ; \
+	    printf '==> untar: %s  into %s\n' "$${dist}" "$${dir}" ; \
 	    mkdir -p "$${dir}" ; \
 	    tar xf "$${dist}" -C "$${dir}" --transform 's@^[^/]*/@@' ; \
             rmdir "$${dir}/$${repo}-$${hash}" ; \
@@ -37,7 +40,7 @@ override_dh_auto_build:
 
 	# extract libucl to its own work dir
 	mkdir -p "${LIBUCL_SRC}"
-	tar xf "${LIBUCL}" -C "${LIBUCL_SRC}" --transform 's@^[^/]*/@@' ; \
+	tar xf "${LIBUCL}" -C "${LIBUCL_SRC}" --transform 's@^[^/]*/@@'
 
 	# build the libucl.a library first; for http support: ./configure --prefix=/usr --enable-urls --enable-signatures
 	cd "${LIBUCL_SRC}" && \
@@ -45,22 +48,37 @@ override_dh_auto_build:
 	  ./configure --prefix=/usr && \
 	  make
 
-	# patch the go source
+	# patch the go-libucl source
 	cd "${GO_LIBUCL_SRC}" && \
 	  printf 'package libucl\n// #cgo CFLAGS: -I${LIBUCL_SRC}/include\n// #cgo LDFLAGS: ${LIBUCL_SRC}/src/.libs/libucl.a\nimport "C"\n' > libucl.go
 
+	# extract libargon2 to its own work dir
+	mkdir -p "${LIBARGON2_SRC}"
+	tar xf "${LIBARGON2}" -C "${LIBARGON2_SRC}" --transform 's@^[^/]*/@@' ; \
+
+	# build the libargon2.a
+	cd "${LIBARGON2_SRC}" && make all
+
+	# patch the go-libargon2 source
+	cd "${GO_LIBARGON2_SRC}" && \
+	  printf 'package argon2\n// #cgo CFLAGS: -I${LIBARGON2_SRC}/include\n// #cgo LDFLAGS: ${LIBARGON2_SRC}/libargon2.a\nimport "C"\n' > libargon2.go && \
+	  sed -i.orig 's/#cgo/#cgo freebsd/g' argon2.go
+
 	# compile the go programs
-	cd "${SRC_DIR}" && go install -buildmode=exe -v . ; \
+	cd "${SRC_DIR}" && go install -buildmode=exe -v .
 
 
 override_dh_auto_install:
 	# install app binary and configuration files
 	etc_dir="debian/tmp/etc" ; \
 	bin_dir="debian/tmp/bin" ; \
-	mkdir -p "$${etc_dir}" "$${bin_dir}" ; \
-	conf="${SRC_DIR}/${APP_NAME}.conf.sample" ; \
+	share_dir="debian/tmp/share" ; \
+	mkdir -p "$${etc_dir}" "$${bin_dir}" "$${share_dir}" ; \
+	conf="${SRC_DIR}/${SRC_NAME}.conf.sample" ; \
 	[ -f "$${conf}" ] && cp -p "$${conf}" "$${etc_dir}/${APP_NAME}.conf" ; \
-	exe="${BIN_DIR}/${APP_NAME}" ; \
+	share="${SRC_DIR}/${SRC_NAME}/share" ; \
+	[ -d "$${share}" ] && cp -p "$${share}"/* "$${share_dir}/" || true ; \
+	exe="${BIN_DIR}/${SRC_NAME}" ; \
 	[ -x "$${exe}" ] && cp -p "$${exe}" "$${bin_dir}" ; \
 	done
 
