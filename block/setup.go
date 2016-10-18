@@ -11,6 +11,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
+	"github.com/bitmark-inc/bitmarkd/blockring"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/genesis"
 	"github.com/bitmark-inc/bitmarkd/mode"
@@ -20,18 +21,6 @@ import (
 	"sync"
 )
 
-// internal constants
-const (
-	ringSize = 20 // size of ring buffer
-)
-
-// type to hold a block's digest and its crc64 check code
-type ringBuffer struct {
-	number uint64             // block number
-	crc    uint64             // CRC64_ECMA(block_number, complete_block_bytes)
-	digest blockdigest.Digest // header digest
-}
-
 // globals for background proccess
 type blockData struct {
 	sync.RWMutex // to allow locking
@@ -40,9 +29,6 @@ type blockData struct {
 
 	height        uint64             // this is the current block Height
 	previousBlock blockdigest.Digest // and its digest
-
-	ring      [ringSize]ringBuffer
-	ringIndex int
 
 	blk blockstore // for sequencing block storage
 
@@ -79,19 +65,19 @@ func Initialise() error {
 		return fault.ErrNotInitialised
 	}
 
-	// initialise block height and fill ring with default values
-	if err := clearRingBuffer(log); nil != err {
-		return err
+	// initialise block height and initial previous block digest
+	globalData.height = genesis.BlockNumber
+	globalData.previousBlock = genesis.LiveGenesisDigest
+	if mode.IsTesting() {
+		globalData.previousBlock = genesis.TestGenesisDigest
 	}
 
 	log.Infof("block height: %d", globalData.height)
 	log.Infof("previous block: %v", globalData.previousBlock)
-	for i := range globalData.ring {
-		p := "  "
-		if i == globalData.ringIndex {
-			p = "->"
-		}
-		log.Infof("%sring[%02d]: number: %d crc: 0x%015x  digest: %v", p, i, globalData.ring[i].number, globalData.ring[i].crc, globalData.ring[i].digest)
+
+	// fill ring with default values
+	if err := fillRingBuffer(log); nil != err {
+		return err
 	}
 
 	// initialise background tasks
@@ -133,27 +119,7 @@ func Finalise() error {
 }
 
 // must hold lock to call this
-func clearRingBuffer(log *logger.L) error {
-
-	// set initial crc depending on mode
-	globalData.height = genesis.BlockNumber
-	globalData.previousBlock = genesis.LiveGenesisDigest
-	block := genesis.LiveGenesisBlock
-	if mode.IsTesting() {
-		globalData.previousBlock = genesis.TestGenesisDigest
-		block = genesis.TestGenesisBlock
-	}
-
-	// default CRC of appropeiate genesis block
-	crc := CRC(globalData.height, block)
-
-	// fill ring with default values
-	globalData.ringIndex = 0
-	for i := 0; i < len(globalData.ring); i += 1 {
-		globalData.ring[i].number = globalData.height
-		globalData.ring[i].digest = globalData.previousBlock
-		globalData.ring[i].crc = crc
-	}
+func fillRingBuffer(log *logger.L) error {
 
 	// detect if any blocks on file
 	if last, ok := storage.Pool.Blocks.LastElement(); ok {
@@ -172,8 +138,8 @@ func clearRingBuffer(log *logger.L) error {
 
 		// determine the start point for fetching last few blocks
 		n := genesis.BlockNumber + 1 // first real block (genesis block is not in db)
-		if globalData.height > ringSize+1 {
-			n = globalData.height - ringSize + 1
+		if globalData.height > blockring.Size+1 {
+			n = globalData.height - blockring.Size + 1
 		}
 		if n <= genesis.BlockNumber { // check just in case above calculation is wrong
 			log.Criticalf("value of n < 2: %d", n)
@@ -185,7 +151,7 @@ func clearRingBuffer(log *logger.L) error {
 		c := storage.Pool.Blocks.NewFetchCursor()
 		c.Seek(key)
 
-		items, err := c.Fetch(len(globalData.ring))
+		items, err := c.Fetch(blockring.Size)
 		if nil != err {
 			return err
 		}
@@ -211,9 +177,7 @@ func clearRingBuffer(log *logger.L) error {
 			}
 			n += 1
 
-			globalData.ring[i].number = header.Number
-			globalData.ring[i].digest = digest
-			globalData.ring[i].crc = CRC(header.Number, item.Value)
+			blockring.Put(header.Number, digest, item.Value)
 
 			log.Tracec(func() string {
 				// + begin debugging
@@ -251,10 +215,6 @@ func clearRingBuffer(log *logger.L) error {
 				return fmt.Sprintf("block: %s", jsonData)
 				// - end debugging
 			})
-		}
-		globalData.ringIndex += len(items)
-		if globalData.ringIndex >= len(globalData.ring) {
-			globalData.ringIndex = 0
 		}
 	}
 	return nil

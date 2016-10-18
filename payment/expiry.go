@@ -25,6 +25,7 @@ type expiry struct {
 func (state *expiryData) Run(args interface{}, shutdown <-chan struct{}) {
 
 	log := state.log
+	globalData.log.Info("starting…")
 
 	l := list.New()
 	delay := time.After(time.Minute)

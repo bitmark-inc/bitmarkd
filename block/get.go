@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
+	"github.com/bitmark-inc/bitmarkd/blockring"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/genesis"
@@ -47,16 +48,9 @@ func DigestForBlock(number uint64) (blockdigest.Digest, error) {
 
 	// check if in the cache
 	if number > genesis.BlockNumber && number <= globalData.height {
-		i := globalData.height - number
-		if i < ringSize {
-			j := globalData.ringIndex - 1 - int(i)
-			if j < 0 {
-				j += ringSize
-			}
-			if number != globalData.ring[j].number {
-				fault.Panicf("block.DigestForBlock: ring buffer corrupted block number, actual: %d  expected: %d", globalData.ring[j].number, number)
-			}
-			return globalData.ring[j].digest, nil
+		d := blockring.DigestForBlock(number)
+		if nil != d {
+			return *d, nil
 		}
 	}
 
@@ -68,18 +62,6 @@ func DigestForBlock(number uint64) (blockdigest.Digest, error) {
 		return blockdigest.Digest{}, fault.ErrBlockNotFound
 	}
 	return blockrecord.PackedHeader(packed).Digest(), nil
-}
-
-// fetch latest crc value
-func GetLatestCRC() uint64 {
-	globalData.Lock()
-	i := globalData.ringIndex - 1
-	if i < 0 {
-		i = len(globalData.ring) - 1
-	}
-	crc := globalData.ring[i].crc
-	globalData.Unlock()
-	return crc
 }
 
 // // number of blocks to consider for

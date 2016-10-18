@@ -15,6 +15,7 @@ import (
 func (state *verifierData) Run(args interface{}, shutdown <-chan struct{}) {
 
 	log := state.log
+	globalData.log.Info("starting…")
 
 loop:
 	for {

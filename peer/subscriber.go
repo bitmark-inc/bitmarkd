@@ -374,7 +374,7 @@ func processIssues(packed []byte) error {
 	return nil
 }
 
-// un pack transfer and process it
+// unpack transfer and process it
 func processTransfer(packed []byte) error {
 
 	if 0 == len(packed) {

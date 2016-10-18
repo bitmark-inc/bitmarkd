@@ -41,7 +41,7 @@ func DeleteDownToBlock(finalBlockNumber uint64) error {
 		// finished
 		if header.Number < finalBlockNumber {
 			log.Infof("finish: _NOT_ Deleting: %d", header.Number)
-			clearRingBuffer(log)
+			fillRingBuffer(log)
 			return nil
 		}
 

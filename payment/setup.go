@@ -7,10 +7,11 @@ package payment
 import (
 	"encoding/binary"
 	"github.com/bitmark-inc/bitmarkd/background"
-	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/blockring"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/payment/bitcoin"
 	"github.com/bitmark-inc/logger"
 	"golang.org/x/crypto/sha3"
@@ -117,6 +118,7 @@ func Finalise() {
 
 // store an incoming record for payment
 func Store(currencyName currency.Currency, transactions []byte, count int, canProof bool) (PayId, PayNonce, *difficulty.Difficulty, bool) {
+
 	payId := NewPayId(transactions)
 	payNonce := NewPayNonce()
 
@@ -144,6 +146,12 @@ func Store(currencyName currency.Currency, transactions []byte, count int, canPr
 
 	return payId, payNonce, u.difficulty, newItem
 
+}
+
+// see if a particular transaction ID had a pending transfer
+func HasLink(txId merkle.Digest) bool {
+
+	return true
 }
 
 // start payment tracking on an receipt
@@ -191,13 +199,13 @@ func TryProof(payId PayId, clientNonce []byte) TrackingStatus {
 	// compute hash with all possible payNonces
 	h := sha3.New256()
 	payNonce := make([]byte, 8)
-	iterator := block.NewRingReader()
+	iterator := blockring.NewRingReader()
 	i := 0 // ***** FIX THIS: debug
 	for crc, ok := iterator.Get(); ok; crc, ok = iterator.Get() {
 
 		binary.BigEndian.PutUint64(payNonce[:], crc)
 		i += 1 // ***** FIX THIS: debug
-		globalData.log.Infof("TryProof: payNonce[%d]: %x", i, payNonce)
+		globalData.log.Debugf("TryProof: payNonce[%d]: %x", i, payNonce)
 
 		h.Reset()
 		h.Write(payId[:])
@@ -206,12 +214,12 @@ func TryProof(payId PayId, clientNonce []byte) TrackingStatus {
 		var digest [32]byte
 		h.Sum(digest[:0])
 
-		//globalData.log.Infof("TryProof: digest: %x", digest)
+		//globalData.log.Debugf("TryProof: digest: %x", digest)
 
 		// convert to big integer from BE byte slice
 		bigDigest := new(big.Int).SetBytes(digest[:])
 
-		globalData.log.Infof("TryProof: digest: 0x%64x", bigDigest)
+		globalData.log.Debugf("TryProof: digest: 0x%64x", bigDigest)
 
 		// check difficulty and verify if ok
 		if bigDigest.Cmp(bigDifficulty) <= 0 {

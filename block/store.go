@@ -9,8 +9,10 @@ import (
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
+	"github.com/bitmark-inc/bitmarkd/blockring"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/bitmark-inc/bitmarkd/pending"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
@@ -29,15 +31,7 @@ func store(header *blockrecord.Header, digest blockdigest.Digest, packedBlock []
 	globalData.previousBlock = digest
 	globalData.height = header.Number
 
-	i := globalData.ringIndex
-	globalData.ring[i].number = header.Number
-	globalData.ring[i].digest = digest
-	globalData.ring[i].crc = CRC(header.Number, packedBlock)
-	i = i + 1
-	if i >= len(globalData.ring) {
-		i = 0
-	}
-	globalData.ringIndex = i
+	blockring.Put(header.Number, digest, packedBlock)
 
 	// end of critical section
 	globalData.Unlock()
@@ -124,6 +118,7 @@ func StoreIncoming(packedBlock []byte) error {
 		case *transactionrecord.BitmarkTransfer:
 			key := txId[:]
 			reservoir.Delete(txId)
+			pending.Remove(tx.Link)
 			storage.Pool.Transactions.Put(key, packed)
 			linkOwner := OwnerOf(tx.Link)
 			if nil == linkOwner {

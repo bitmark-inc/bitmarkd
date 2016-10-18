@@ -7,7 +7,7 @@ package payment
 import (
 	"encoding/binary"
 	"encoding/hex"
-	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/blockring"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"hash/crc64"
 )
@@ -21,7 +21,7 @@ var table = crc64.MakeTable(crc64.ECMA)
 // create a random pay nonce
 func NewPayNonce() PayNonce {
 
-	crc := block.GetLatestCRC()
+	crc := blockring.GetLatestCRC()
 
 	nonce := PayNonce{}
 	binary.BigEndian.PutUint64(nonce[:], crc)

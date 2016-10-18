@@ -10,11 +10,13 @@ import (
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/blockring"
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/peer"
+	"github.com/bitmark-inc/bitmarkd/pending"
 	"github.com/bitmark-inc/bitmarkd/proof"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/rpc"
@@ -168,6 +170,15 @@ func main() {
 	}
 	defer storage.Finalise()
 
+	// start pending registry
+	log.Info("initialise pending")
+	err = pending.Initialise()
+	if nil != err {
+		log.Criticalf("pending initialise error: %v", err)
+		exitwithstatus.Message("pending initialise error: %v", err)
+	}
+	defer pending.Finalise()
+
 	// start the reservoir (verified transaction data cache)
 	log.Info("initialise reservoir")
 	err = reservoir.Initialise()
@@ -175,7 +186,7 @@ func main() {
 		log.Criticalf("reservoir initialise error: %v", err)
 		exitwithstatus.Message("reservoir initialise error: %v", err)
 	}
-	defer storage.Finalise()
+	defer reservoir.Finalise()
 
 	// start asset cache
 	err = asset.Initialise()
@@ -184,6 +195,15 @@ func main() {
 		exitwithstatus.Message("asset initialise error: %v", err)
 	}
 	defer asset.Finalise()
+
+	// block hash ring buffer
+	log.Info("initialise blockring")
+	err = blockring.Initialise()
+	if nil != err {
+		log.Criticalf("blockring initialise error: %v", err)
+		exitwithstatus.Message("blockring initialise error: %v", err)
+	}
+	defer blockring.Finalise()
 
 	// block data storage - depends on storage and mode
 	log.Info("initialise block")

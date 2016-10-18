@@ -6,12 +6,8 @@ package genesis_test
 
 import (
 	"bytes"
-	//"encoding/binary"
-	//"encoding/hex"
-	//"encoding/json"
-	//"fmt"
+	"fmt"
 	"github.com/bitmark-inc/bitmarkd/account"
-	//"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/chain"
@@ -22,9 +18,9 @@ import (
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
-	//"strings"
 	"testing"
 	"time"
+	"unicode"
 )
 
 // some constants embedded into the genesis block
@@ -219,6 +215,31 @@ func checkAssembly(t *testing.T, title string, source SourceData, gDigest blockd
 	}
 
 	t.Logf("packed block: %x", blk)
+
+	for i := 0; i < len(blk); i += 16 {
+		line := ""
+		line += fmt.Sprintf("%08x ", i)
+		text := ""
+		for j := 0; j < 16; j += 1 {
+			if 8 == j {
+				line += " "
+			}
+			if i+j >= len(blk) {
+				line += "   "
+			} else {
+				b := blk[i+j]
+				line += fmt.Sprintf(" %02x", b)
+				r := rune(b)
+				if unicode.IsPrint(r) {
+					text += string(r)
+				} else {
+					text += "."
+				}
+			}
+		}
+
+		t.Log(line + "  |" + text + "|")
+	}
 
 	// // unpack the block
 	// unpacked, err := blk.Unpack()

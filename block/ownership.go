@@ -9,6 +9,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/bitmark-inc/bitmarkd/pending"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
@@ -24,6 +25,7 @@ import (
 //   owner ++ txId         - position in list of owned items, for delete after transfer
 //                           data: count
 
+// to ensure synchronised ownership updates
 var toLock sync.Mutex
 
 // structure of the ownership record
@@ -57,6 +59,20 @@ func TransferOwnership(previousTxId merkle.Digest, transferTxId merkle.Digest, t
 	dKey := append(currentOwner.Bytes(), previousTxId[:]...)
 	dCount := storage.Pool.OwnerDigest.Get(dKey)
 	if nil == dCount {
+		fault.Criticalf("TransferOwnership: dKey: %x", dKey)
+		fault.Criticalf("TransferOwnership: block number: %d", transferBlockNumber)
+		fault.Criticalf("TransferOwnership: previous tx id: %#v", previousTxId)
+		fault.Criticalf("TransferOwnership: transfer tx id: %#v", transferTxId)
+		fault.Criticalf("TransferOwnership: current owner: %x  %v", currentOwner.Bytes(), currentOwner)
+		fault.Criticalf("TransferOwnership: new     owner: %x  %v", newOwner.Bytes(), newOwner)
+
+		// ow, err := ListBitmarksFor(currentOwner, 0, 999)
+		// if nil != err {
+		// 	fault.Criticalf("lbf: error: %v", err)
+		// } else {
+		// 	fault.Criticalf("lbf: %#v", ow)
+		// }
+
 		fault.Panic("TransferOwnership: OwnerDigest database corrupt")
 	}
 
@@ -97,7 +113,7 @@ func create(txId merkle.Digest, ownerData []byte, owner *account.Account) {
 	// write the new owner
 	oKey := append(owner.Bytes(), count...)
 
-	// txId ++ issue id + asset index
+	// txId ++ last transfer block number ++ issue txId ++ issue block number ++ asset index
 	storage.Pool.Ownership.Put(oKey, ownerData)
 
 	// write new digest record
@@ -185,8 +201,14 @@ func ListBitmarksFor(owner *account.Account, start uint64, count int) ([]Ownersh
 	return records, nil
 }
 
+var verifyLock sync.Mutex
+
 // verify that a transfer is ok
 func VerifyTransfer(arguments *transactionrecord.BitmarkTransfer) (merkle.Digest, []byte, *transactionrecord.BitmarkTransfer, []byte, error) {
+
+	verifyLock.Lock()
+	defer verifyLock.Unlock()
+
 	// find the current owner via the link
 	previousPacked := storage.Pool.Transactions.Get(arguments.Link[:])
 	if nil == previousPacked {
@@ -246,6 +268,12 @@ func VerifyTransfer(arguments *transactionrecord.BitmarkTransfer) (merkle.Digest
 		return merkle.Digest{}, nil, nil, nil, fault.ErrDoubleTransferAttempt
 	}
 	// log.Infof("ownerData: %x", ownerData)
+
+	// add transfer to pending
+	err = pending.Add(arguments.Link, txId)
+	if nil != err {
+		return merkle.Digest{}, nil, nil, nil, err
+	}
 
 	return txId, packedTransfer, previousTransfer, ownerData, nil
 }
