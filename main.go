@@ -230,6 +230,13 @@ func main() {
 			},
 		},
 		{
+			Name:  "password",
+			Usage: "change default identity's passwordr",
+			Action: func(c *cli.Context) {
+				changePassword(c, globals)
+			},
+		},
+		{
 			Name:  "version",
 			Usage: "display bitmark-cli version",
 			Action: func(c *cli.Context) {
@@ -243,31 +250,31 @@ func main() {
 
 func runGenerate(c *cli.Context, globals globalFlags) {
 	if err := makeRawKeyPair(); nil != err {
-		exitwithstatus.Message("Error: %s\n", err)
+		exitwithstatus.Message("Error: %s", err)
 	}
 }
 
 func runSetup(c *cli.Context, globals globalFlags) {
 	configFile, err := checkConfigFile(globals.config)
 	if nil != err {
-		exitwithstatus.Message("Error: %s\n", err)
+		exitwithstatus.Message("Error: %s", err)
 	}
 
 	name, err := checkName(globals.identity)
 	if nil != err {
-		exitwithstatus.Message("Error: %s\n", err)
+		exitwithstatus.Message("Error: %s", err)
 	}
 
 	network := checkNetwork(c.String("network"))
 
 	connect, err := checkConnect(c.String("connect"))
 	if nil != err {
-		exitwithstatus.Message("Error: %s\n", err)
+		exitwithstatus.Message("Error: %s", err)
 	}
 
 	description, err := checkDescription(c.String("description"))
 	if nil != err {
-		exitwithstatus.Message("Error: %s\n", err)
+		exitwithstatus.Message("Error: %s", err)
 	}
 
 	privateKey := c.String("privateKey")
@@ -287,7 +294,7 @@ func runSetup(c *cli.Context, globals globalFlags) {
 	configDir := configFile[:folderIndex]
 	if !ensureFileExists(configDir) {
 		if err := os.MkdirAll(configDir, 0755); nil != err {
-			exitwithstatus.Message("Error: %v\n", err)
+			exitwithstatus.Message("Error: %s", err)
 		}
 	}
 
@@ -300,7 +307,7 @@ func runSetup(c *cli.Context, globals globalFlags) {
 
 	if !(generateConfiguration(configFile, configData) &&
 		generateIdentity(configFile, name, description, privateKey, globals.password)) {
-		exitwithstatus.Message("Error: Setup failed\n")
+		exitwithstatus.Message("Error: Setup failed")
 	}
 }
 
@@ -308,17 +315,17 @@ func runAdd(c *cli.Context, globals globalFlags) {
 
 	configFile, err := checkConfigFile(globals.config)
 	if nil != err {
-		exitwithstatus.Message("Error: %s\n", err)
+		exitwithstatus.Message("Error: %s", err)
 	}
 
 	name, err := checkName(globals.identity)
 	if nil != err {
-		exitwithstatus.Message("Error: %s\n", err)
+		exitwithstatus.Message("Error: %s", err)
 	}
 
 	description, err := checkDescription(c.String("description"))
 	if nil != err {
-		exitwithstatus.Message("Error: %s\n", err)
+		exitwithstatus.Message("Error: %s", err)
 	}
 
 	verbose := globals.verbose
@@ -330,7 +337,7 @@ func runAdd(c *cli.Context, globals globalFlags) {
 	}
 
 	if !generateIdentity(configFile, name, description, "", globals.password) {
-		exitwithstatus.Message("Error: add failed\n")
+		exitwithstatus.Message("Error: add failed")
 	}
 }
 
@@ -338,32 +345,32 @@ func runCreate(c *cli.Context, globals globalFlags) {
 
 	configuration, err := checkAndGetConfig(globals.config)
 	if nil != err {
-		exitwithstatus.Message("Error: Get configuration failed: %v\n", err)
+		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
 
 	issuer, err := checkIdentity(globals.identity, configuration)
 	if nil != err {
-		exitwithstatus.Message("Error: %s\n", err)
+		exitwithstatus.Message("Error: %s", err)
 	}
 
 	assetName, err := checkAssetName(c.String("asset"))
 	if nil != err {
-		exitwithstatus.Message("Error: %s\n", err)
+		exitwithstatus.Message("Error: %s", err)
 	}
 
 	fingerprint, err := checkAssetFingerprint(c.String("fingerprint"))
 	if nil != err {
-		exitwithstatus.Message("Error: %s\n", err)
+		exitwithstatus.Message("Error: %s", err)
 	}
 
 	metadata, err := checkAssetMetadata(c.String("metadata"))
 	if nil != err {
-		exitwithstatus.Message("Error: %s\n", err)
+		exitwithstatus.Message("Error: %s", err)
 	}
 
 	quantity, err := checkAssetQuantity(c.String("quantity"))
 	if nil != err {
-		exitwithstatus.Message("Error: %s\n", err)
+		exitwithstatus.Message("Error: %s", err)
 	}
 
 	verbose := globals.verbose
@@ -385,12 +392,12 @@ func runCreate(c *cli.Context, globals globalFlags) {
 	if "" == globals.password {
 		registrant, err = promptAndCheckPassword(issuer)
 		if nil != err {
-			exitwithstatus.Message("Error: %s\n", err)
+			exitwithstatus.Message("Error: %s", err)
 		}
 	} else {
 		registrant, err = verifyPassword(globals.password, issuer)
 		if nil != err {
-			exitwithstatus.Message("Error: %s\n", err)
+			exitwithstatus.Message("Error: %s", err)
 		}
 	}
 	// just in case some internal breakage
@@ -412,8 +419,9 @@ func runCreate(c *cli.Context, globals globalFlags) {
 		registrant:  registrant,
 	}
 
-	if !issue(bitmarkRpcConfig, assetConfig, verbose) {
-		exitwithstatus.Message("Error: issue failed\n")
+	err = issue(bitmarkRpcConfig, assetConfig, verbose)
+	if nil != err {
+		exitwithstatus.Message("Issue error: %s", err)
 	}
 }
 
@@ -421,22 +429,22 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 
 	configuration, err := checkAndGetConfig(globals.config)
 	if nil != err {
-		exitwithstatus.Message("Error: Get configuration failed: %v\n", err)
+		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
 
 	txId, err := checkTransferTxId(c.String("txid"))
 	if nil != err {
-		exitwithstatus.Message("Error: %s\n", err)
+		exitwithstatus.Message("Error: %s", err)
 	}
 
 	to, err := checkTransferTo(c.String("receiver"))
 	if nil != err {
-		exitwithstatus.Message("Error: %s\n", err)
+		exitwithstatus.Message("Error: %s", err)
 	}
 
 	from, err := checkTransferFrom(globals.identity, configuration)
 	if nil != err {
-		exitwithstatus.Message("Error: %s\n", err)
+		exitwithstatus.Message("Error: %s", err)
 	}
 
 	verbose := globals.verbose
@@ -451,12 +459,12 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 	if "" == globals.password {
 		ownerKeyPair, err = promptAndCheckPassword(from)
 		if nil != err {
-			exitwithstatus.Message("Error: %s\n", err)
+			exitwithstatus.Message("Error: %s", err)
 		}
 	} else {
 		ownerKeyPair, err = verifyPassword(globals.password, from)
 		if nil != err {
-			exitwithstatus.Message("Error: %s\n", err)
+			exitwithstatus.Message("Error: %s", err)
 		}
 	}
 	// just in case some internal breakage
@@ -472,7 +480,7 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 
 		newOwnerKeyPair, err = publicKeyFromIdentity(to, configuration.Identities)
 		if nil != err {
-			exitwithstatus.Message("receiver identity error: %s\n", err)
+			exitwithstatus.Message("receiver identity error: %s", err)
 		}
 	} else {
 		newOwnerKeyPair = &KeyPair{}
@@ -498,8 +506,9 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 		txId:     txId,
 	}
 
-	if !transfer(bitmarkRpcConfig, transferConfig, verbose) {
-		exitwithstatus.Message("Error: Transfer failed\n")
+	err = transfer(bitmarkRpcConfig, transferConfig, verbose)
+	if nil != err {
+		exitwithstatus.Message("Transfer error: %s", err)
 	}
 }
 
@@ -507,17 +516,17 @@ func runReceipt(c *cli.Context, globals globalFlags) {
 
 	configuration, err := checkAndGetConfig(globals.config)
 	if nil != err {
-		exitwithstatus.Message("Error: Get configuration failed: %v\n", err)
+		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
 
 	payId, err := checkPayId(c.String("payid"))
 	if nil != err {
-		exitwithstatus.Message("Error: %s\n", err)
+		exitwithstatus.Message("Error: %s", err)
 	}
 
 	receiptId, err := checkReceipt(c.String("receipt"))
 	if nil != err {
-		exitwithstatus.Message("Error: %s\n", err)
+		exitwithstatus.Message("Error: %s", err)
 	}
 
 	verbose := globals.verbose
@@ -537,8 +546,9 @@ func runReceipt(c *cli.Context, globals globalFlags) {
 		receipt: receiptId,
 	}
 
-	if !receipt(bitmarkRpcConfig, receiptConfig, verbose) {
-		exitwithstatus.Message("Error: Receipt failed\n")
+	err = receipt(bitmarkRpcConfig, receiptConfig, verbose)
+	if nil != err {
+		exitwithstatus.Message("Receipt error: %s", err)
 	}
 }
 
@@ -546,17 +556,17 @@ func runProvenance(c *cli.Context, globals globalFlags) {
 
 	configuration, err := checkAndGetConfig(globals.config)
 	if nil != err {
-		exitwithstatus.Message("Error: Get configuration failed: %v\n", err)
+		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
 
 	txId, err := checkTransferTxId(c.String("txid"))
 	if nil != err {
-		exitwithstatus.Message("Error: %s\n", err)
+		exitwithstatus.Message("Error: %s", err)
 	}
 
 	count, err := checkRecordCount(c.String("count"))
 	if nil != err {
-		exitwithstatus.Message("Error: %s\n", err)
+		exitwithstatus.Message("Error: %s", err)
 	}
 
 	verbose := globals.verbose
@@ -576,8 +586,9 @@ func runProvenance(c *cli.Context, globals globalFlags) {
 		count: count,
 	}
 
-	if !provenance(bitmarkRpcConfig, provenanceConfig, verbose) {
-		exitwithstatus.Message("Error: Provenance failed\n")
+	err = provenance(bitmarkRpcConfig, provenanceConfig, verbose)
+	if nil != err {
+		exitwithstatus.Message("Provenance error: %s", err)
 	}
 }
 
@@ -585,12 +596,12 @@ func runInfo(c *cli.Context, globals globalFlags) {
 
 	infoConfig, err := configuration.GetInfoConfiguration(globals.config)
 	if nil != err {
-		exitwithstatus.Message("Error: Get configuration failed: %v\n", err)
+		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
 
 	output, err := json.MarshalIndent(infoConfig, "", "  ")
 	if nil != err {
-		exitwithstatus.Message("Error: Marshal config failed: %v\n", err)
+		exitwithstatus.Message("Error: Marshal config failed: %s", err)
 	}
 
 	fmt.Println(string(output))
@@ -600,7 +611,7 @@ func runBitmarkInfo(c *cli.Context, globals globalFlags) {
 
 	configuration, err := checkAndGetConfig(globals.config)
 	if nil != err {
-		exitwithstatus.Message("Error: Get configuration failed: %v\n", err)
+		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
 
 	verbose := globals.verbose
@@ -612,7 +623,7 @@ func runBitmarkInfo(c *cli.Context, globals globalFlags) {
 	}
 
 	if !bitmarkInfo(bitmarkRpcConfig, verbose) {
-		exitwithstatus.Message("Error: Get info failed\n")
+		exitwithstatus.Message("Error: Get info failed")
 	}
 }
 
@@ -642,7 +653,7 @@ func generateConfiguration(configFile string, configData configuration.Configura
 func generateIdentity(configFile string, name string, description string, privateKeyStr string, password string) bool {
 
 	if !ensureFileExists(configFile) {
-		fmt.Printf("Error: %v: %s\n", fault.ErrNotFoundConfigFile, configFile)
+		fmt.Printf("Error: %s: %s\n", fault.ErrNotFoundConfigFile, configFile)
 		return false
 	}
 
@@ -670,11 +681,11 @@ func generateIdentity(configFile string, name string, description string, privat
 
 	publicKey, encryptPrivateKey, privateKeyConfig, err := makeKeyPair(privateKeyStr, password)
 	if nil != err {
-		fmt.Printf("error generating server key pair: %v\n", err)
+		fmt.Printf("error generating server key pair: %s\n", err)
 		return false
 	}
 
-	identity := configuration.IdentityType{
+	identity := &configuration.IdentityType{
 		Name:               name,
 		Description:        description,
 		Public_key:         publicKey,
@@ -689,12 +700,11 @@ func generateIdentity(configFile string, name string, description string, privat
 	return true
 }
 
-func issue(rpcConfig bitmarkRPC, assetConfig assetData, verbose bool) bool {
+func issue(rpcConfig bitmarkRPC, assetConfig assetData, verbose bool) error {
 
 	conn, err := connect(rpcConfig.hostPort)
 	if nil != err {
-		fmt.Printf("Error: %v\n", err)
-		return false
+		return err
 	}
 	defer conn.Close()
 
@@ -705,8 +715,7 @@ func issue(rpcConfig bitmarkRPC, assetConfig assetData, verbose bool) bool {
 	// make asset
 	assetIndex, err := makeAsset(client, rpcConfig.network, assetConfig, verbose)
 	if nil != err {
-		fmt.Printf("Error: %v\n", err)
-		return false
+		return err
 	}
 
 	// make Issues
@@ -717,19 +726,17 @@ func issue(rpcConfig bitmarkRPC, assetConfig assetData, verbose bool) bool {
 	}
 	err = doIssues(client, rpcConfig.network, issueConfig, verbose)
 	if nil != err {
-		fmt.Printf("Error: %v\n", err)
-		return false
+		return err
 	}
 
-	return true
+	return nil
 }
 
-func transfer(rpcConfig bitmarkRPC, transferConfig transferData, verbose bool) bool {
+func transfer(rpcConfig bitmarkRPC, transferConfig transferData, verbose bool) error {
 
 	conn, err := connect(rpcConfig.hostPort)
 	if nil != err {
-		fmt.Printf("Error: %v\n", err)
-		return false
+		return err
 	}
 	defer conn.Close()
 
@@ -739,18 +746,16 @@ func transfer(rpcConfig bitmarkRPC, transferConfig transferData, verbose bool) b
 
 	err = doTransfer(client, rpcConfig.network, transferConfig, verbose)
 	if nil != err {
-		fmt.Printf("Error: %v\n", err)
-		return false
+		return err
 	}
-	return true
+	return nil
 }
 
-func receipt(rpcConfig bitmarkRPC, receiptConfig receiptData, verbose bool) bool {
+func receipt(rpcConfig bitmarkRPC, receiptConfig receiptData, verbose bool) error {
 
 	conn, err := connect(rpcConfig.hostPort)
 	if nil != err {
-		fmt.Printf("Error: %v\n", err)
-		return false
+		return err
 	}
 	defer conn.Close()
 
@@ -760,18 +765,16 @@ func receipt(rpcConfig bitmarkRPC, receiptConfig receiptData, verbose bool) bool
 
 	err = doReceipt(client, rpcConfig.network, receiptConfig, verbose)
 	if nil != err {
-		fmt.Printf("Error: %v\n", err)
-		return false
+		return err
 	}
-	return true
+	return nil
 }
 
-func provenance(rpcConfig bitmarkRPC, provenanceConfig provenanceData, verbose bool) bool {
+func provenance(rpcConfig bitmarkRPC, provenanceConfig provenanceData, verbose bool) error {
 
 	conn, err := connect(rpcConfig.hostPort)
 	if nil != err {
-		fmt.Printf("Error: %v\n", err)
-		return false
+		return err
 	}
 	defer conn.Close()
 
@@ -781,16 +784,15 @@ func provenance(rpcConfig bitmarkRPC, provenanceConfig provenanceData, verbose b
 
 	err = doProvenance(client, rpcConfig.network, provenanceConfig, verbose)
 	if nil != err {
-		fmt.Printf("Error: %v\n", err)
-		return false
+		return err
 	}
-	return true
+	return nil
 }
 
 func bitmarkInfo(rpcConfig bitmarkRPC, verbose bool) bool {
 	conn, err := connect(rpcConfig.hostPort)
 	if nil != err {
-		fmt.Printf("Error: %v\n", err)
+		fmt.Printf("Error: %s\n", err)
 		return false
 	}
 	defer conn.Close()
@@ -801,7 +803,7 @@ func bitmarkInfo(rpcConfig bitmarkRPC, verbose bool) bool {
 
 	err = getBitmarkInfo(client, verbose)
 	if nil != err {
-		fmt.Printf("Error: %v\n", err)
+		fmt.Printf("Error: %s\n", err)
 		return false
 	}
 	return true
@@ -810,12 +812,12 @@ func bitmarkInfo(rpcConfig bitmarkRPC, verbose bool) bool {
 func getDefaultRawKeyPair(c *cli.Context, globals globalFlags) {
 	configuration, err := checkAndGetConfig(globals.config)
 	if nil != err {
-		exitwithstatus.Message("Error: Get configuration failed: %v\n", err)
+		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
 
 	identity, err := checkTransferFrom(globals.identity, configuration)
 	if nil != err {
-		exitwithstatus.Message("Error: %s\n", err)
+		exitwithstatus.Message("Error: %s", err)
 	}
 
 	var keyPair *KeyPair
@@ -824,12 +826,12 @@ func getDefaultRawKeyPair(c *cli.Context, globals globalFlags) {
 	if "" == globals.password {
 		keyPair, err = promptAndCheckPassword(identity)
 		if nil != err {
-			exitwithstatus.Message("Error: %s\n", err)
+			exitwithstatus.Message("Error: %s", err)
 		}
 	} else {
 		keyPair, err = verifyPassword(globals.password, identity)
 		if nil != err {
-			exitwithstatus.Message("Error: %s\n", err)
+			exitwithstatus.Message("Error: %s", err)
 		}
 	}
 	//just in case some internal breakage
@@ -842,13 +844,71 @@ func getDefaultRawKeyPair(c *cli.Context, globals globalFlags) {
 		PrivateKey: hex.EncodeToString(keyPair.PrivateKey[:]),
 	}
 	if b, err := json.MarshalIndent(rawKeyPair, "", "  "); nil != err {
-		exitwithstatus.Message("Error: %s\n", err)
+		exitwithstatus.Message("Error: %s", err)
 	} else {
 		fmt.Printf("%s\n", b)
 	}
 }
 
-func writeIdentityToFile(identity configuration.IdentityType, configFile string) bool {
+func changePassword(c *cli.Context, globals globalFlags) {
+	configFile, err := checkConfigFile(globals.config)
+	if nil != err {
+		exitwithstatus.Message("Error: %s", err)
+	}
+
+	configuration, err := checkAndGetConfig(globals.config)
+	if nil != err {
+		exitwithstatus.Message("Error: Get configuration failed: %s", err)
+	}
+
+	identity, err := checkTransferFrom(globals.identity, configuration)
+	if nil != err {
+		exitwithstatus.Message("Error: %s", err)
+	}
+
+	var keyPair *KeyPair
+
+	// check owner password
+	if "" == globals.password {
+		keyPair, err = promptAndCheckPassword(identity)
+		if nil != err {
+			exitwithstatus.Message("Error: %s", err)
+		}
+	} else {
+		keyPair, err = verifyPassword(globals.password, identity)
+		if nil != err {
+			exitwithstatus.Message("Error: %s", err)
+		}
+	}
+	//just in case some internal breakage
+	if nil == keyPair {
+		exitwithstatus.Message("internal error: nil keypair returned")
+	}
+
+	// prompt new password and pwd confirm for private key encryption
+	newPassword, err := promptPasswordReader()
+	if nil != err {
+		exitwithstatus.Message("input password fail: %s", err)
+	}
+
+	publicKey, encryptPrivateKey, privateKeyConfig, err := makeKeyPair(hex.EncodeToString(keyPair.PrivateKey[:]), newPassword)
+	if nil != err {
+		exitwithstatus.Message("make key pair error: %s", err)
+	}
+	if publicKey != identity.Public_key {
+		exitwithstatus.Message("public key was modified", err)
+	}
+	identity.Private_key = encryptPrivateKey
+	identity.Private_key_config = *privateKeyConfig
+
+	if !writeIdentityToFile(identity, configFile) {
+		exitwithstatus.Message("Write identity to file failed: %s", identity)
+	}
+}
+
+// ***** FIX THIS: make this overwrite changes to same entry rather than creating a copy
+// ***** FIX THIS: at the top of the list
+func writeIdentityToFile(identity *configuration.IdentityType, configFile string) bool {
 
 	identityTemp := template.Must(template.New("identity").Parse(templates.IdentityTemplate))
 	identityBuffer := new(bytes.Buffer)
@@ -858,7 +918,7 @@ func writeIdentityToFile(identity configuration.IdentityType, configFile string)
 		return false
 	}
 
-	// write identity under config identites
+	// write identity under config identities
 	input, error := ioutil.ReadFile(configFile)
 	if nil != error {
 		fmt.Printf("Read config file fail: %s\n", error)

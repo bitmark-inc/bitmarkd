@@ -50,8 +50,7 @@ func makeRawKeyPair() error {
 		PrivateKey: hex.EncodeToString(privateKey),
 	}
 	if b, err := json.MarshalIndent(rawKeyPair, "", "  "); nil != err {
-		fmt.Printf("json error: %v\n", err)
-		return fault.ErrJsonParseFail
+		return err
 	} else {
 		fmt.Printf("%s\n", b)
 	}
@@ -132,7 +131,6 @@ func encryptPrivateKey(plaintext []byte, key []byte) ([]byte, error) {
 	}
 
 	if len(plaintext) != privateKeySize {
-		fmt.Printf("expect key length:%d, get: %d", privateKeySize, len(plaintext))
 		return nil, fault.ErrKeyLength
 	}
 
@@ -154,7 +152,6 @@ func decryptPrivateKey(ciphertext []byte, key []byte) ([]byte, error) {
 	}
 
 	if len(ciphertext) != aes.BlockSize+privateKeySize {
-		fmt.Printf("expect key length:%d, get: %d", aes.BlockSize+privateKeySize, len(ciphertext))
 		return nil, fault.ErrKeyLength
 	}
 

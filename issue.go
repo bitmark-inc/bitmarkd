@@ -22,6 +22,12 @@ import (
 	"time"
 )
 
+// prefix for the payment command
+// assumed format is: paymentCommand 'PaymentId' 'BTCaddress₁' 'SatoshiAmount₁' … 'BTCaddressN' 'SatoshiAmountN'
+const (
+	paymentCommand = "bitmark-pay --network=testing --json"
+)
+
 type assetData struct {
 	name        string
 	metadata    string
@@ -85,7 +91,6 @@ func makeAsset(client *netrpc.Client, network string, assetConfig assetData, ver
 		Fingerprints: []string{assetConfig.fingerprint},
 	}
 	if verbose {
-		fmt.Println("**** Get Asset ****")
 		if err := printJson("Asset Get Request", getArgs); nil != err {
 			return nil, err
 		}
@@ -93,12 +98,10 @@ func makeAsset(client *netrpc.Client, network string, assetConfig assetData, ver
 
 	var getReply rpc.AssetGetReply
 	if err := client.Call("Assets.Get", &getArgs, &getReply); nil != err {
-		fmt.Printf("Asset get error: %v\n", err)
-		return nil, fault.ErrAssetRequestFail
+		return nil, err
 	}
 
 	if 1 != len(getReply.Assets) {
-		fmt.Printf("Asset get returned incorrect data\n")
 		return nil, fault.ErrAssetRequestFail
 	}
 
@@ -106,35 +109,29 @@ func makeAsset(client *netrpc.Client, network string, assetConfig assetData, ver
 	case "AssetData":
 		ar, ok := getReply.Assets[0].Data.(map[string]interface{})
 		if !ok {
-			fmt.Printf("Asset get returned no data\n")
 			return nil, fault.ErrAssetRequestFail
 		}
 
 		if ar["metadata"] != assetConfig.metadata {
-			fmt.Printf("Asset metadata mismatch: actual: %q  expected: %q:\n", ar["metadata"], assetConfig.metadata)
 			return nil, fault.ErrAssetRequestFail
 		}
 		if ar["name"] != assetConfig.name {
-			fmt.Printf("Asset name mismatch: actual: %q  expected: %q:\n", ar["name"], assetConfig.name)
 			return nil, fault.ErrAssetRequestFail
 		}
 
 		buffer, ok := getReply.Assets[0].AssetIndex.(string)
 		if !ok {
-			fmt.Printf("Asset get returned no asset index\n")
 			return nil, fault.ErrAssetRequestFail
 		}
 		var ai transactionrecord.AssetIndex
 		err := ai.UnmarshalText([]byte(buffer))
 		if nil != err {
-			fmt.Printf("Asset Index conversion error: %v\n", err)
 			return nil, err
 		}
 		assetIndex = &ai
 
 	default:
 		if nil != getReply.Assets[0].Data {
-			fmt.Printf("Asset get returned non asset: %q\n", getReply.Assets[0].Record)
 			return nil, fault.ErrAssetRequestFail
 		}
 	}
@@ -161,8 +158,7 @@ func makeAsset(client *netrpc.Client, network string, assetConfig assetData, ver
 
 	packed, err := r.Pack(registrantAddress)
 	if bFault.ErrInvalidSignature != err {
-		fmt.Printf("pack error: %v\n", err)
-		return nil, fault.ErrMakeAssetFail
+		return nil, err
 	}
 
 	// manually sign the record and attach signature
@@ -171,12 +167,10 @@ func makeAsset(client *netrpc.Client, network string, assetConfig assetData, ver
 
 	// re-pack with correct signature
 	if _, err = r.Pack(registrantAddress); nil != err {
-		fmt.Printf("pack error: %v\n", err)
-		return nil, fault.ErrMakeAssetFail
+		return nil, err
 	}
 
 	if verbose {
-		fmt.Println("**** Create Asset ****")
 		if err := printJson("Asset Request", r); nil != err {
 			return nil, err
 		}
@@ -189,8 +183,7 @@ func makeAsset(client *netrpc.Client, network string, assetConfig assetData, ver
 
 	var reply rpc.CreateReply
 	if err := client.Call("Bitmarks.Create", &args, &reply); nil != err {
-		fmt.Printf("Asset registration error: %v\n", err)
-		return nil, fault.ErrAssetRequestFail
+		return nil, err
 	}
 
 	if verbose {
@@ -203,7 +196,7 @@ func makeAsset(client *netrpc.Client, network string, assetConfig assetData, ver
 }
 
 // build a properly signed issues
-func makeIssue(network string, issueConfig issueData, nonce uint64) *transactionrecord.BitmarkIssue {
+func makeIssue(network string, issueConfig issueData, nonce uint64) (*transactionrecord.BitmarkIssue, error) {
 
 	issuerAddress := makeAddress(issueConfig.issuer, network)
 
@@ -216,8 +209,7 @@ func makeIssue(network string, issueConfig issueData, nonce uint64) *transaction
 
 	packed, err := r.Pack(issuerAddress)
 	if bFault.ErrInvalidSignature != err {
-		fmt.Printf("pack error: %v\n", err)
-		return nil
+		return nil, err
 	}
 
 	// manually sign the record and attach signature
@@ -226,10 +218,9 @@ func makeIssue(network string, issueConfig issueData, nonce uint64) *transaction
 
 	// re-pack with correct signature
 	if _, err = r.Pack(issuerAddress); nil != err {
-		fmt.Printf("pack error: %v\n", err)
-		return nil
+		return nil, err
 	}
-	return &r
+	return &r, nil
 }
 
 // JSON data to output after asset/issue/proof completes
@@ -248,7 +239,10 @@ func doIssues(client *netrpc.Client, network string, issueConfig issueData, verb
 	nonce := time.Now().UTC().Unix() * 1000
 	issues := make([]transactionrecord.BitmarkIssue, issueConfig.quantity)
 	for i := 0; i < len(issues); i += 1 {
-		issue := makeIssue(network, issueConfig, uint64(nonce)+uint64(i))
+		issue, err := makeIssue(network, issueConfig, uint64(nonce)+uint64(i))
+		if nil != err {
+			return err
+		}
 		if nil == issue {
 			return fault.ErrMakeIssueFail
 		}
@@ -256,7 +250,6 @@ func doIssues(client *netrpc.Client, network string, issueConfig issueData, verb
 	}
 
 	if verbose {
-		fmt.Println("**** Create Issue ****")
 		if err := printJson("Issue Request", issues); nil != err {
 			return err
 		}
@@ -269,8 +262,7 @@ func doIssues(client *netrpc.Client, network string, issueConfig issueData, verb
 
 	var issuesReply rpc.CreateReply
 	if err := client.Call("Bitmarks.Create", issuesArgs, &issuesReply); err != nil {
-		fmt.Printf("Bitmark.Create Issue error: %v\n", err)
-		return fault.ErrIssueRequestFail
+		return err
 	}
 
 	if verbose {
@@ -287,7 +279,6 @@ func doIssues(client *netrpc.Client, network string, issueConfig issueData, verb
 	}
 
 	if verbose {
-		fmt.Println("**** Send Proof ****")
 		if err := printJson("Proof Request", proofArgs); nil != err {
 			return err
 		}
@@ -295,8 +286,7 @@ func doIssues(client *netrpc.Client, network string, issueConfig issueData, verb
 
 	var proofReply rpc.ProofReply
 	if err := client.Call("Bitmarks.Proof", &proofArgs, &proofReply); err != nil {
-		fmt.Printf("Bitmarks.Proof error: %v\n", err)
-		return fault.ErrIssueRequestFail
+		return err
 	}
 
 	if verbose {
@@ -318,7 +308,7 @@ func doIssues(client *netrpc.Client, network string, issueConfig issueData, verb
 			response.IssueIds[i] = issuesReply.Issues[i].TxId
 		}
 
-		if err := printJson("Issue Response", response); nil != err {
+		if err := printJson("", response); nil != err {
 			return err
 		}
 	}
@@ -326,11 +316,10 @@ func doIssues(client *netrpc.Client, network string, issueConfig issueData, verb
 	return nil
 }
 
-func makeTransfer(network string, txId string, owner *KeyPair, newOwner *KeyPair) *transactionrecord.BitmarkTransfer {
+func makeTransfer(network string, txId string, owner *KeyPair, newOwner *KeyPair) (*transactionrecord.BitmarkTransfer, error) {
 	var link merkle.Digest
 	if err := link.UnmarshalText([]byte(txId)); nil != err {
-		fmt.Printf("make txId to link fail: %s\n", err)
-		return nil
+		return nil, err
 	}
 
 	newOwnerAddress := makeAddress(newOwner, network)
@@ -342,8 +331,7 @@ func makeTransfer(network string, txId string, owner *KeyPair, newOwner *KeyPair
 
 	packed, err := r.Pack(newOwnerAddress)
 	if bFault.ErrInvalidSignature != err {
-		fmt.Printf("pack error: %v\n", err)
-		return nil
+		return nil, err
 	}
 
 	signature := ed25519.Sign(owner.PrivateKey, packed)
@@ -352,10 +340,9 @@ func makeTransfer(network string, txId string, owner *KeyPair, newOwner *KeyPair
 
 	// re-pack with correct signature
 	if _, err = r.Pack(ownerAddress); nil != err {
-		fmt.Printf("pack error: %v\n", err)
-		return nil
+		return nil, err
 	}
-	return &r
+	return &r, nil
 }
 
 // JSON data to output after transfer completes
@@ -367,13 +354,15 @@ type transferReply struct {
 }
 
 func doTransfer(client *netrpc.Client, network string, transferConfig transferData, verbose bool) error {
-	transfer := makeTransfer(network, transferConfig.txId, transferConfig.owner, transferConfig.newOwner)
+	transfer, err := makeTransfer(network, transferConfig.txId, transferConfig.owner, transferConfig.newOwner)
+	if nil != err {
+		return err
+	}
 	if nil == transfer {
 		return fault.ErrMakeTransferFail
 	}
 
 	if verbose {
-		fmt.Println("**** Create Transfer ****")
 		if err := printJson("Transfer Request", transfer); nil != err {
 			return err
 		}
@@ -381,17 +370,15 @@ func doTransfer(client *netrpc.Client, network string, transferConfig transferDa
 
 	var reply rpc.BitmarkTransferReply
 	if err := client.Call("Bitmark.Transfer", transfer, &reply); err != nil {
-		fmt.Printf("Bitmark.Transfer error: %v\n", err)
-		return fault.ErrTransferRequestFail
+		return err
 	}
 
 	tpid, err := reply.PayId.MarshalText()
 	if nil != err {
-		fmt.Printf("returned pay id error: %v\n", err)
-		return fault.ErrTransferRequestFail
+		return err
 	}
 
-	command := "make-payment --json '" + string(tpid) + "'"
+	command := paymentCommand + " '" + string(tpid) + "'"
 	for _, p := range reply.Payments {
 
 		switch p.Currency {
@@ -433,12 +420,10 @@ func doReceipt(client *netrpc.Client, network string, receiptConfig receiptData,
 	}
 
 	if err := payArgs.PayId.UnmarshalText([]byte(receiptConfig.payId)); nil != err {
-		fmt.Printf("unmarshal pay id error: %v\n", err)
-		return fault.ErrReceiptRequestFail
+		return err
 	}
 
 	if verbose {
-		fmt.Println("**** Create Receipt ****")
 		if err := printJson("Receipt Request", payArgs); nil != err {
 			return err
 		}
@@ -446,8 +431,7 @@ func doReceipt(client *netrpc.Client, network string, receiptConfig receiptData,
 
 	var reply rpc.PayReply
 	if err := client.Call("Bitmarks.Pay", payArgs, &reply); err != nil {
-		fmt.Printf("Bitmarks.Pay error: %v\n", err)
-		return fault.ErrReceiptRequestFail
+		return err
 	}
 
 	if verbose {
@@ -471,8 +455,7 @@ func doProvenance(client *netrpc.Client, network string, provenanceConfig proven
 
 	var txId merkle.Digest
 	if err := txId.UnmarshalText([]byte(provenanceConfig.txId)); nil != err {
-		fmt.Printf("make txId to link fail: %s\n", err)
-		return fault.ErrProvenanceRequestFail
+		return err
 	}
 
 	provenanceArgs := rpc.ProvenanceArguments{
@@ -482,8 +465,7 @@ func doProvenance(client *netrpc.Client, network string, provenanceConfig proven
 
 	var reply rpc.ProvenanceReply
 	if err := client.Call("Bitmark.Provenance", provenanceArgs, &reply); err != nil {
-		fmt.Printf("Bitmark.Provenance error: %v\n", err)
-		return fault.ErrProvenanceRequestFail
+		return err
 	}
 
 	if verbose {
@@ -501,8 +483,7 @@ func doProvenance(client *netrpc.Client, network string, provenanceConfig proven
 func getBitmarkInfo(client *netrpc.Client, verbose bool) error {
 	var reply rpc.InfoReply
 	if err := client.Call("Node.Info", rpc.InfoArguments{}, &reply); err != nil {
-		fmt.Printf("Node.Info error: %v\n", err)
-		return fault.ErrNodeInfoRequestFail
+		return err
 	}
 
 	if verbose {
@@ -534,8 +515,7 @@ func connect(connect string) (net.Conn, error) {
 
 func printJson(title string, message interface{}) error {
 	if b, err := json.MarshalIndent(message, "", "  "); nil != err {
-		fmt.Printf("json error: %v\n", err)
-		return fault.ErrJsonParseFail
+		return err
 	} else {
 		if "" == title {
 			fmt.Printf("%s\n", b)
