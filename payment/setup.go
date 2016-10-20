@@ -11,7 +11,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/payment/bitcoin"
 	"github.com/bitmark-inc/logger"
 	"golang.org/x/crypto/sha3"
@@ -81,7 +80,7 @@ func Initialise(configuration *Configuration) error {
 		case currency.Bitcoin:
 			bitcoin.Initialise(configuration.Bitcoin, globalData.verifier.queue)
 		default: // only fails if new module not correctly installed
-			fault.Panicf("not payment initialiser for Currency: %s", c.String())
+			fault.Panicf("missing payment initialiser for Currency: %s", c.String())
 		}
 	}
 
@@ -111,7 +110,7 @@ func Finalise() {
 		case currency.Bitcoin:
 			bitcoin.Finalise()
 		default: // only fails if new module not correctly installed
-			fault.Panicf("not payment finaliser for Currency: %s", c.String())
+			fault.Panicf("missing payment finaliser for Currency: %s", c.String())
 		}
 	}
 }
@@ -146,12 +145,6 @@ func Store(currencyName currency.Currency, transactions []byte, count int, canPr
 
 	return payId, payNonce, u.difficulty, newItem
 
-}
-
-// see if a particular transaction ID had a pending transfer
-func HasLink(txId merkle.Digest) bool {
-
-	return true
 }
 
 // start payment tracking on an receipt

@@ -60,7 +60,7 @@ func Initialise() error {
 	globalData.log = log
 	log.Info("starting…")
 
-	// initialise block height and fill ring with default values
+	// zero height and fill ring with default values
 	if err := clearRingBuffer(log); nil != err {
 		return err
 	}
@@ -126,10 +126,11 @@ func Put(number uint64, digest blockdigest.Digest, packedBlock []byte) {
 
 	// start of critical section
 	globalData.Lock()
+	defer globalData.Unlock()
 
 	globalData.log.Infof("put block number: %d", number)
 
-	if globalData.height+1 != number {
+	if 0 != globalData.height && globalData.height+1 != number {
 		fault.Panicf("block number: actual: %d  expected: %d", number, globalData.height+1)
 	}
 
@@ -144,16 +145,19 @@ func Put(number uint64, digest blockdigest.Digest, packedBlock []byte) {
 	globalData.ringIndex = i
 
 	globalData.height = number
+}
 
-	// end of critical section
-	globalData.Unlock()
+func Clear(log *logger.L) error {
+	globalData.Lock()
+	defer globalData.Unlock()
+	return clearRingBuffer(log)
 }
 
 // must hold lock to call this
 func clearRingBuffer(log *logger.L) error {
 
 	// set initial crc depending on mode
-	globalData.height = genesis.BlockNumber
+	number := genesis.BlockNumber
 	digest := genesis.LiveGenesisDigest
 	block := genesis.LiveGenesisBlock
 	if mode.IsTesting() {
@@ -161,16 +165,19 @@ func clearRingBuffer(log *logger.L) error {
 		block = genesis.TestGenesisBlock
 	}
 
-	// default CRC of appropeiate genesis block
-	crc := CRC(globalData.height, block)
+	// default CRC of appropriate genesis block
+	crc := CRC(number, block)
 
 	// fill ring with default values
 	globalData.ringIndex = 0
 	for i := 0; i < len(globalData.ring); i += 1 {
-		globalData.ring[i].number = globalData.height
+		globalData.ring[i].number = number
 		globalData.ring[i].digest = digest
 		globalData.ring[i].crc = crc
 	}
+
+	//zero the height so next put will succeed
+	globalData.height = 0
 
 	return nil
 }

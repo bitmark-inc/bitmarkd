@@ -112,13 +112,24 @@ func StoreIncoming(packedBlock []byte) error {
 		case *transactionrecord.BitmarkIssue:
 			key := txId[:]
 			reservoir.Delete(txId)
+			// ***** FIX THIS: payment.Remove(txId) BUT, payment uses PayId type
 			storage.Pool.Transactions.Put(key, packed)
 			CreateOwnership(txId, header.Number, tx.AssetIndex, tx.Owner)
 
 		case *transactionrecord.BitmarkTransfer:
 			key := txId[:]
 			reservoir.Delete(txId)
-			pending.Remove(tx.Link)
+			// ***** FIX THIS: payment.Remove(txId) BUT, payment uses PayId type
+
+			// when deleting a pending it is possible that the tx id
+			// it was holding was different to this tx id
+			// i.e. it is a duplicate so it also must be removed
+			// to prevent the possibility of a double-spend
+			if otherTxId, valid := pending.Remove(tx.Link); valid && otherTxId != txId {
+				reservoir.Delete(otherTxId)
+				// ***** FIX THIS: payment.Remove(otherTxId) BUT, payment uses PayId type
+			}
+
 			storage.Pool.Transactions.Put(key, packed)
 			linkOwner := OwnerOf(tx.Link)
 			if nil == linkOwner {

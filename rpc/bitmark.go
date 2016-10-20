@@ -49,9 +49,9 @@ func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransfer, r
 		return err
 	}
 
-	log.Infof("packed transfer: %x", packedTransfer)
 	log.Infof("id: %v", txId)
-	log.Infof("ownerData: %x", ownerData)
+	log.Debugf("packed transfer: %x", packedTransfer)
+	log.Debugf("ownerData: %x", ownerData)
 
 	// get block number of transfer and issue; see: storage/doc.go to determine offsets
 	const transferBlockNumberOffset = merkle.DigestLength
@@ -60,7 +60,7 @@ func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransfer, r
 	tKey := ownerData[transferBlockNumberOffset : transferBlockNumberOffset+8]
 	iKey := ownerData[issueBlockNumberOffset : issueBlockNumberOffset+8]
 
-	log.Infof("iKey: %x  tKey: %x", iKey, tKey)
+	log.Debugf("iKey: %x  tKey: %x", iKey, tKey)
 
 	// block owner (from issue) payment
 	// 0: the issue owner

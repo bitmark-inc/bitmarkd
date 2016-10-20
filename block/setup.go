@@ -121,6 +121,9 @@ func Finalise() error {
 // must hold lock to call this
 func fillRingBuffer(log *logger.L) error {
 
+	// reset ring to default
+	blockring.Clear(log)
+
 	// detect if any blocks on file
 	if last, ok := storage.Pool.Blocks.LastElement(); ok {
 

@@ -125,7 +125,7 @@ func Add(link merkle.Digest, txId merkle.Digest) error {
 }
 
 // remove a record
-func Remove(link merkle.Digest) {
+func Remove(link merkle.Digest) (merkle.Digest, bool) {
 
 	// select the table
 	n := link[0] & mask
@@ -133,6 +133,8 @@ func Remove(link merkle.Digest) {
 	// need a full lock as this is a write
 	// (no defer as overhead is too high for such a short routine)
 	globalData.cache[n].Lock()
+	record, ok := globalData.cache[n].table[link]
 	delete(globalData.cache[n].table, link)
 	globalData.cache[n].Unlock()
+	return record.txId, ok
 }
