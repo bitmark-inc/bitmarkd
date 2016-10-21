@@ -24,10 +24,10 @@ import (
 
 // various timeouts
 const (
-	cycleInterval       = 10 * time.Second       // pause to limit bandwidth
-	connectorTimeout    = 500 * time.Millisecond // time out for connections
-	samplelingLimit     = 10                     // number of cycles to be 1 block out of sync before resync
-	fetchBlocksPerCycle = 50                     // number of blocks to fetch in one set
+	cycleInterval       = 10 * time.Second // pause to limit bandwidth
+	connectorTimeout    = 30 * time.Second // time out for connections
+	samplelingLimit     = 10               // number of cycles to be 1 block out of sync before resync
+	fetchBlocksPerCycle = 50               // number of blocks to fetch in one set
 )
 
 // a state type for the thread
@@ -190,7 +190,7 @@ func (conn *connector) process() {
 
 	case cStateForkDetect:
 		h := block.GetHeight()
-		if conn.highestBlockNumber < h {
+		if conn.highestBlockNumber <= h {
 			conn.state = cStateRebuild
 		} else {
 			// first block number
@@ -231,7 +231,7 @@ func (conn *connector) process() {
 		for n := 0; n < fetchBlocksPerCycle; n += 1 {
 
 			if conn.startBlockNumber > conn.highestBlockNumber {
-				conn.state += 1 // assume success
+				conn.state = cStateHighestBlock // just in case block height has changed
 				break
 			}
 

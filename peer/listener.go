@@ -203,15 +203,15 @@ func (lstn *listener) process(socket *zmq.Socket) {
 			listenerSendError(socket, err)
 			return
 		}
-		_, err = socket.Send(fn, zmq.SNDMORE|zmq.DONTWAIT)
+		_, err = socket.Send(fn, zmq.SNDMORE)
 		fault.PanicIfError("Listener", err)
-		_, err = socket.Send(chain, zmq.SNDMORE|zmq.DONTWAIT)
+		_, err = socket.Send(chain, zmq.SNDMORE)
 		fault.PanicIfError("Listener", err)
-		_, err = socket.SendBytes(publicKey, zmq.SNDMORE|zmq.DONTWAIT)
+		_, err = socket.SendBytes(publicKey, zmq.SNDMORE)
 		fault.PanicIfError("Listener", err)
-		_, err = socket.SendBytes(broadcasts, zmq.SNDMORE|zmq.DONTWAIT)
+		_, err = socket.SendBytes(broadcasts, zmq.SNDMORE)
 		fault.PanicIfError("Listener", err)
-		_, err = socket.SendBytes(listeners, 0|zmq.DONTWAIT)
+		_, err = socket.SendBytes(listeners, 0)
 		fault.PanicIfError("Listener", err)
 
 		return
