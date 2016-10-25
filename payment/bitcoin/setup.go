@@ -111,27 +111,40 @@ func Initialise(configuration *Configuration, verifier chan<- []byte) error {
 	//globalData.blockQueue = make(chan uint64, 10)
 	globalData.itemQueue = make(chan *priorityItem, 10)
 
+	useTLS := false
+	clientCertificates := []tls.Certificate(nil)
+
 	if "" != configuration.Certificate {
 		keyPair, err := tls.LoadX509KeyPair(configuration.Certificate, configuration.PrivateKey)
 		if nil != err {
+			globalData.log.Criticalf("parse certificate: %q  private key: %q  error: %v", configuration.Certificate, configuration.PrivateKey, err)
 			return err
 		}
+		clientCertificates = []tls.Certificate{keyPair}
+		useTLS = true
+	}
 
-		certificatePool := x509.NewCertPool()
-
+	certificatePool := x509.NewCertPool()
+	if "" != configuration.CACertificate {
 		data, err := ioutil.ReadFile(configuration.CACertificate)
 		if err != nil {
-			globalData.log.Criticalf("failed to parse certificate from: %q", configuration.CACertificate)
+			globalData.log.Criticalf("parse CA certificate from: %q  error: %v", configuration.CACertificate, err)
 			return err
 		}
 
 		if !certificatePool.AppendCertsFromPEM(data) {
-			globalData.log.Criticalf("failed to parse certificate from: %q", configuration.CACertificate)
+			globalData.log.Criticalf("pool certificate from: %q  error: %v", configuration.CACertificate, err)
 			return err
 		}
+		useTLS = true
+	}
 
+	if useTLS {
+		// use TLS in one of two cases:
+		// a) only CA certificate is provideded
+		// b) all three: cliets certificate and private key, plus CA certificate
 		tlsConfiguration := &tls.Config{
-			Certificates:             []tls.Certificate{keyPair},
+			Certificates:             clientCertificates,
 			RootCAs:                  certificatePool,
 			InsecureSkipVerify:       false,
 			CipherSuites:             nil,
@@ -147,6 +160,7 @@ func Initialise(configuration *Configuration, verifier chan<- []byte) error {
 			},
 		}
 	} else {
+		// plain http
 		globalData.client = &http.Client{}
 	}
 

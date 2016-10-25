@@ -78,7 +78,10 @@ func Initialise(configuration *Configuration) error {
 	for c := currency.First; c <= currency.Last; c += 1 {
 		switch c {
 		case currency.Bitcoin:
-			bitcoin.Initialise(configuration.Bitcoin, globalData.verifier.queue)
+			err := bitcoin.Initialise(configuration.Bitcoin, globalData.verifier.queue)
+			if nil != err {
+				return err
+			}
 		default: // only fails if new module not correctly installed
 			fault.Panicf("missing payment initialiser for Currency: %s", c.String())
 		}

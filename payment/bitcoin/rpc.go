@@ -29,6 +29,7 @@ func bitcoinCall(method string, params []interface{}, reply interface{}) error {
 	response := bitcoinReply{
 		Result: reply,
 	}
+	globalData.log.Debugf("rpc call with: %v", arguments)
 	err := bitcoinRPC(&arguments, &response)
 	if nil != err {
 		globalData.log.Tracef("rpc returned error: %v", err)
