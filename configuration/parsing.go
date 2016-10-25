@@ -13,9 +13,10 @@ const (
 )
 
 type PrivateKeyConfig struct {
-	Iter int    `libucl:"iter"`
 	Salt string `libucl:"salt"`
 }
+
+// full access to data (includes private data)
 
 type IdentityType struct {
 	Name               string           `libucl:"name"`
@@ -29,8 +30,32 @@ type Configuration struct {
 	Default_identity string         `libucl:"default_identity"`
 	Network          string         `libucl:"network"`
 	Connect          string         `libucl:"connect"`
-	Identities       []IdentityType `libucl:"identities"`
+	Identity         []IdentityType `libucl:"identity"`
 }
+
+// form of configuration in the config file
+// used by write.go
+const configurationTemplate = `# bitmark-cli.conf -*- mode: libucl -*-
+
+default_identity = "{{.Default_identity}}"
+
+network = "{{.Network}}"
+connect = "{{.Connect}}"
+
+{{range .Identity}}
+identity {
+  name = "{{.Name}}"
+  description = "{{.Description}}"
+  public_key = "{{.Public_key}}"
+  private_key = "{{.Private_key}}"
+  private_key_config {
+    salt = "{{.Private_key_config.Salt}}"
+  }
+}
+{{end}}
+`
+
+// restricted access to data (excludes private items)
 
 type InfoIdentityType struct {
 	Name        string `libucl:"name"`
@@ -42,9 +67,10 @@ type InfoConfiguration struct {
 	Default_identity string             `libucl:"default_identity"`
 	Network          string             `libucl:"network"`
 	Connect          string             `libucl:"connect"`
-	Identities       []InfoIdentityType `libucl:"identities"`
+	Identity         []InfoIdentityType `libucl:"identity"`
 }
 
+// full access to data (includes private data)
 func GetConfiguration(configurationFileName string) (*Configuration, error) {
 
 	configurationFileName, err := filepath.Abs(filepath.Clean(configurationFileName))
@@ -60,6 +86,7 @@ func GetConfiguration(configurationFileName string) (*Configuration, error) {
 	return options, nil
 }
 
+// restricted access to data (excludes private items)
 func GetInfoConfiguration(configurationFileName string) (*InfoConfiguration, error) {
 	configurationFileName, err := filepath.Abs(filepath.Clean(configurationFileName))
 	if nil != err {

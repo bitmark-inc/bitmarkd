@@ -33,12 +33,19 @@ func checkName(name string) (string, error) {
 }
 
 func checkNetwork(network string) string {
-	if "" == network {
+	switch network {
+	case "":
 		network = configuration.DefaultNetwork
-	} else {
-		if "testing" != network && "bitmark" != network && "local" != network {
-			exitwithstatus.Message("Error: Wrong Network value [bitmark | testing]: %s", network)
-		}
+	case "bitmark", "live", "production":
+		return "bitmark"
+	case "testing", "test":
+		return "testing"
+	case "dev", "development", "devel":
+		return "development"
+	case "local":
+		return "local"
+	default:
+		exitwithstatus.Message("Error: Wrong Network expected: [bitmark | testing | development | local]  actual: %s", network)
 	}
 	return network
 }
@@ -66,7 +73,7 @@ func checkIdentity(name string, config *configuration.Configuration) (*configura
 		return nil, fault.ErrRequiredIdentity
 	}
 
-	return getIdentity(name, config.Identities)
+	return getIdentity(name, config)
 }
 
 // asset name is required field
@@ -123,7 +130,7 @@ func checkTransferFrom(from string, config *configuration.Configuration) (*confi
 		from = config.Default_identity
 	}
 
-	return getIdentity(from, config.Identities)
+	return getIdentity(from, config)
 }
 
 // transfer to is required field
@@ -176,10 +183,12 @@ func checkAndGetConfig(path string) (*configuration.Configuration, error) {
 
 }
 
-func getIdentity(name string, identities []configuration.IdentityType) (*configuration.IdentityType, error) {
-	for _, identity := range identities {
+// note: this returns apointer to tha actial config.Identity[i]
+//       so permanent modifications can be made to the identity
+func getIdentity(name string, config *configuration.Configuration) (*configuration.IdentityType, error) {
+	for i, identity := range config.Identity {
 		if name == identity.Name {
-			return &identity, nil
+			return &config.Identity[i], nil
 		}
 	}
 

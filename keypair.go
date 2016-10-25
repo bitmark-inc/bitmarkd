@@ -8,21 +8,19 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/bitmark-inc/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmark-cli/fault"
+	"github.com/bitmark-inc/go-argon2"
 	"golang.org/x/crypto/ed25519"
-	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/ssh/terminal"
 	"io"
 	"os"
 )
 
 const (
-	iterBaseRange  = 5000
 	publicKeySize  = ed25519.PublicKeySize
 	privateKeySize = ed25519.PrivateKeySize
 )
@@ -81,7 +79,7 @@ func makeKeyPair(privateKeyStr string, password string) (string, string, *config
 		copy(publicKey, privateKey[32:])
 	}
 
-	iter, salt, key, err := hashPassword(password)
+	salt, key, err := hashPassword(password)
 	if nil != err {
 		return "", "", nil, err
 	}
@@ -95,32 +93,41 @@ func makeKeyPair(privateKeyStr string, password string) (string, string, *config
 	publicStr := hex.EncodeToString(publicKey)
 	privateStr := hex.EncodeToString(encryptedPrivateKey)
 	privateKeyConfig := &configuration.PrivateKeyConfig{
-		Iter: iter.Integer(),
 		Salt: salt.String(),
 	}
 
 	return publicStr, privateStr, privateKeyConfig, nil
 }
 
-func hashPassword(password string) (*configuration.Iter, *configuration.Salt, []byte, error) {
+func hashPassword(password string) (*configuration.Salt, []byte, error) {
 	salt, err := configuration.MakeSalt()
 	if nil != err {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
-	iter, err := configuration.MakeIter()
+
+	cipher, err := generateKey(password, salt)
 	if nil != err {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
-	cipher := generateKey(password, iter, salt)
-
-	return iter, salt, cipher, nil
+	return salt, cipher, nil
 }
 
-func generateKey(password string, iter *configuration.Iter, salt *configuration.Salt) []byte {
+func generateKey(password string, salt *configuration.Salt) ([]byte, error) {
+
 	saltBytes := salt.Bytes()
-	iterInt := iter.Integer()
-	return pbkdf2.Key([]byte(password), saltBytes, iterInt, 32, sha512.New)
+
+	ctx := &argon2.Context{
+		Iterations:  5,
+		Memory:      1 << 16,
+		Parallelism: 4,
+		HashLen:     32,
+		Mode:        argon2.ModeArgon2i,
+		Version:     argon2.Version13,
+	}
+
+	hash, err := argon2.Hash(ctx, []byte(password), saltBytes)
+	return hash, err
 }
 
 // Encrypt private key
@@ -195,7 +202,7 @@ func getTerminal() (*terminal.Terminal, int, *terminal.State) {
 
 func promptPasswordReader() (string, error) {
 	console, fd, state := getTerminal()
-	password, err := console.ReadPassword("Set identity password( >= 8): ")
+	password, err := console.ReadPassword("Set identity password(length >= 8): ")
 	if nil != err {
 		fmt.Printf("Get password fail: %s\n", err)
 		return "", err
@@ -248,12 +255,13 @@ func promptAndCheckPassword(issuer *configuration.IdentityType) (*KeyPair, error
 }
 
 func verifyPassword(password string, identity *configuration.IdentityType) (*KeyPair, error) {
-	iter := new(configuration.Iter)
 	salt := new(configuration.Salt)
-	iter.ConvertIntegerToIter(identity.Private_key_config.Iter)
 	salt.UnmarshalText([]byte(identity.Private_key_config.Salt))
 
-	key := generateKey(password, iter, salt)
+	key, err := generateKey(password, salt)
+	if nil != err {
+		return nil, err
+	}
 
 	ciphertext, err := hex.DecodeString(identity.Private_key)
 	if nil != err {

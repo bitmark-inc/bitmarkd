@@ -5,20 +5,15 @@
 package main
 
 import (
-	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/bitmark-inc/bitmark-cli/configuration"
-	"github.com/bitmark-inc/bitmark-cli/fault"
-	"github.com/bitmark-inc/bitmark-cli/templates"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/codegangsta/cli"
-	"io/ioutil"
 	"net/rpc/jsonrpc"
 	"os"
 	"strings"
-	"text/template"
 )
 
 type globalFlags struct {
@@ -260,6 +255,11 @@ func runSetup(c *cli.Context, globals globalFlags) {
 		exitwithstatus.Message("Error: %s", err)
 	}
 
+	// do not run setup if there is an existing configuration
+	if ensureFileExists(configFile) {
+		exitwithstatus.Message("Error: not overwriting existing configuration: %q", configFile)
+	}
+
 	name, err := checkName(globals.identity)
 	if nil != err {
 		exitwithstatus.Message("Error: %s", err)
@@ -289,25 +289,29 @@ func runSetup(c *cli.Context, globals globalFlags) {
 		fmt.Println()
 	}
 
-	// Create the folder if not existing
+	// Create the folder hierarchy for configuration if not existing
 	folderIndex := strings.LastIndex(configFile, "/")
-	configDir := configFile[:folderIndex]
-	if !ensureFileExists(configDir) {
-		if err := os.MkdirAll(configDir, 0755); nil != err {
-			exitwithstatus.Message("Error: %s", err)
+	if folderIndex >= 0 {
+		configDir := configFile[:folderIndex]
+		if !ensureFileExists(configDir) {
+			if err := os.MkdirAll(configDir, 0755); nil != err {
+				exitwithstatus.Message("Error: %s", err)
+			}
 		}
 	}
-
-	configData := configuration.Configuration{
+	configData := &configuration.Configuration{
 		Default_identity: name,
 		Network:          network,
 		Connect:          connect,
-		Identities:       make([]configuration.IdentityType, 0),
+		Identity:         make([]configuration.IdentityType, 0),
 	}
 
-	if !(generateConfiguration(configFile, configData) &&
-		generateIdentity(configFile, name, description, privateKey, globals.password)) {
+	if !addIdentity(configData, name, description, privateKey, globals.password) {
 		exitwithstatus.Message("Error: Setup failed")
+	}
+	err = configuration.Save(configFile, configData)
+	if nil != err {
+		exitwithstatus.Message("Error: %s", err)
 	}
 }
 
@@ -316,6 +320,11 @@ func runAdd(c *cli.Context, globals globalFlags) {
 	configFile, err := checkConfigFile(globals.config)
 	if nil != err {
 		exitwithstatus.Message("Error: %s", err)
+	}
+
+	configData, err := checkAndGetConfig(globals.config)
+	if nil != err {
+		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
 
 	name, err := checkName(globals.identity)
@@ -336,19 +345,23 @@ func runAdd(c *cli.Context, globals globalFlags) {
 		fmt.Println()
 	}
 
-	if !generateIdentity(configFile, name, description, "", globals.password) {
+	if !addIdentity(configData, name, description, "", globals.password) {
 		exitwithstatus.Message("Error: add failed")
+	}
+	err = configuration.Save(configFile, configData)
+	if nil != err {
+		exitwithstatus.Message("Error: %s", err)
 	}
 }
 
 func runCreate(c *cli.Context, globals globalFlags) {
 
-	configuration, err := checkAndGetConfig(globals.config)
+	configData, err := checkAndGetConfig(globals.config)
 	if nil != err {
 		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
 
-	issuer, err := checkIdentity(globals.identity, configuration)
+	issuer, err := checkIdentity(globals.identity, configData)
 	if nil != err {
 		exitwithstatus.Message("Error: %s", err)
 	}
@@ -407,8 +420,8 @@ func runCreate(c *cli.Context, globals globalFlags) {
 
 	// TODO: deal with IPv6?
 	bitmarkRpcConfig := bitmarkRPC{
-		hostPort: configuration.Connect,
-		network:  configuration.Network,
+		hostPort: configData.Connect,
+		network:  configData.Network,
 	}
 
 	assetConfig := assetData{
@@ -427,7 +440,7 @@ func runCreate(c *cli.Context, globals globalFlags) {
 
 func runTransfer(c *cli.Context, globals globalFlags) {
 
-	configuration, err := checkAndGetConfig(globals.config)
+	configData, err := checkAndGetConfig(globals.config)
 	if nil != err {
 		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
@@ -442,7 +455,7 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 		exitwithstatus.Message("Error: %s", err)
 	}
 
-	from, err := checkTransferFrom(globals.identity, configuration)
+	from, err := checkTransferFrom(globals.identity, configData)
 	if nil != err {
 		exitwithstatus.Message("Error: %s", err)
 	}
@@ -478,7 +491,7 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 	newPublicKey, err := hex.DecodeString(to)
 	if nil != err {
 
-		newOwnerKeyPair, err = publicKeyFromIdentity(to, configuration.Identities)
+		newOwnerKeyPair, err = publicKeyFromIdentity(to, configData.Identity)
 		if nil != err {
 			exitwithstatus.Message("receiver identity error: %s", err)
 		}
@@ -496,8 +509,8 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 
 	// TODO: deal with IPv6?
 	bitmarkRpcConfig := bitmarkRPC{
-		hostPort: configuration.Connect,
-		network:  configuration.Network,
+		hostPort: configData.Connect,
+		network:  configData.Network,
 	}
 
 	transferConfig := transferData{
@@ -514,7 +527,7 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 
 func runReceipt(c *cli.Context, globals globalFlags) {
 
-	configuration, err := checkAndGetConfig(globals.config)
+	configData, err := checkAndGetConfig(globals.config)
 	if nil != err {
 		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
@@ -537,8 +550,8 @@ func runReceipt(c *cli.Context, globals globalFlags) {
 
 	// TODO: deal with IPv6?
 	bitmarkRpcConfig := bitmarkRPC{
-		hostPort: configuration.Connect,
-		network:  configuration.Network,
+		hostPort: configData.Connect,
+		network:  configData.Network,
 	}
 
 	receiptConfig := receiptData{
@@ -554,7 +567,7 @@ func runReceipt(c *cli.Context, globals globalFlags) {
 
 func runProvenance(c *cli.Context, globals globalFlags) {
 
-	configuration, err := checkAndGetConfig(globals.config)
+	configData, err := checkAndGetConfig(globals.config)
 	if nil != err {
 		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
@@ -577,8 +590,8 @@ func runProvenance(c *cli.Context, globals globalFlags) {
 
 	// TODO: deal with IPv6?
 	bitmarkRpcConfig := bitmarkRPC{
-		hostPort: configuration.Connect,
-		network:  configuration.Network,
+		hostPort: configData.Connect,
+		network:  configData.Network,
 	}
 
 	provenanceConfig := provenanceData{
@@ -609,7 +622,7 @@ func runInfo(c *cli.Context, globals globalFlags) {
 
 func runBitmarkInfo(c *cli.Context, globals globalFlags) {
 
-	configuration, err := checkAndGetConfig(globals.config)
+	configData, err := checkAndGetConfig(globals.config)
 	if nil != err {
 		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
@@ -618,8 +631,8 @@ func runBitmarkInfo(c *cli.Context, globals globalFlags) {
 
 	// TODO: deal with IPv6?
 	bitmarkRpcConfig := bitmarkRPC{
-		hostPort: configuration.Connect,
-		network:  configuration.Network,
+		hostPort: configData.Connect,
+		network:  configData.Network,
 	}
 
 	if !bitmarkInfo(bitmarkRpcConfig, verbose) {
@@ -627,50 +640,17 @@ func runBitmarkInfo(c *cli.Context, globals globalFlags) {
 	}
 }
 
-func generateConfiguration(configFile string, configData configuration.Configuration) bool {
+func addIdentity(configs *configuration.Configuration, name string, description string, privateKeyStr string, password string) bool {
 
-	// Check if file exist
-	if !ensureFileExists(configFile) {
-		file, error := os.Create(configFile)
-		if nil != error {
-			fmt.Printf("Create file fail: %s\n", error)
-			return false
-		}
-
-		confTemp := template.Must(template.New("config").Parse(templates.ConfigurationTemplate))
-		error = confTemp.Execute(file, configData)
-		if nil != error {
-			fmt.Printf("Init Config file fail: %s\n", error)
-		}
-	} else {
-		fmt.Printf("%s exists\n", configFile)
-		return false
-	}
-
-	return true
-}
-
-func generateIdentity(configFile string, name string, description string, privateKeyStr string, password string) bool {
-
-	if !ensureFileExists(configFile) {
-		fmt.Printf("Error: %s: %s\n", fault.ErrNotFoundConfigFile, configFile)
-		return false
-	}
-
-	configs, err := configuration.GetConfiguration(configFile)
-	if nil != err {
-		fmt.Printf("configuration fail: %s\n", err)
-		return false
-	}
-
-	for _, identity := range configs.Identities {
+	for _, identity := range configs.Identity {
 		if name == identity.Name {
-			fmt.Printf("identity exists. Name: %s\n", name)
+			fmt.Printf("identity: %q already exists\n", name)
 			return false
 		}
 	}
 
 	if "" == password {
+		var err error
 		// prompt password and pwd confirm for private key encryption
 		password, err = promptPasswordReader()
 		if nil != err {
@@ -685,17 +665,14 @@ func generateIdentity(configFile string, name string, description string, privat
 		return false
 	}
 
-	identity := &configuration.IdentityType{
+	identity := configuration.IdentityType{
 		Name:               name,
 		Description:        description,
 		Public_key:         publicKey,
 		Private_key:        encryptPrivateKey,
 		Private_key_config: *privateKeyConfig,
 	}
-	if !writeIdentityToFile(identity, configFile) {
-		fmt.Printf("Write identity to file failed\n: %v", identity)
-		return false
-	}
+	configs.Identity = append(configs.Identity, identity)
 
 	return true
 }
@@ -810,12 +787,12 @@ func bitmarkInfo(rpcConfig bitmarkRPC, verbose bool) bool {
 }
 
 func getDefaultRawKeyPair(c *cli.Context, globals globalFlags) {
-	configuration, err := checkAndGetConfig(globals.config)
+	configData, err := checkAndGetConfig(globals.config)
 	if nil != err {
 		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
 
-	identity, err := checkTransferFrom(globals.identity, configuration)
+	identity, err := checkTransferFrom(globals.identity, configData)
 	if nil != err {
 		exitwithstatus.Message("Error: %s", err)
 	}
@@ -856,12 +833,12 @@ func changePassword(c *cli.Context, globals globalFlags) {
 		exitwithstatus.Message("Error: %s", err)
 	}
 
-	configuration, err := checkAndGetConfig(globals.config)
+	configData, err := checkAndGetConfig(globals.config)
 	if nil != err {
 		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
 
-	identity, err := checkTransferFrom(globals.identity, configuration)
+	identity, err := checkTransferFrom(globals.identity, configData)
 	if nil != err {
 		exitwithstatus.Message("Error: %s", err)
 	}
@@ -901,46 +878,8 @@ func changePassword(c *cli.Context, globals globalFlags) {
 	identity.Private_key = encryptPrivateKey
 	identity.Private_key_config = *privateKeyConfig
 
-	if !writeIdentityToFile(identity, configFile) {
-		exitwithstatus.Message("Write identity to file failed: %s", identity)
+	err = configuration.Save(configFile, configData)
+	if nil != err {
+		exitwithstatus.Message("Error: %s", err)
 	}
-}
-
-// ***** FIX THIS: make this overwrite changes to same entry rather than creating a copy
-// ***** FIX THIS: at the top of the list
-func writeIdentityToFile(identity *configuration.IdentityType, configFile string) bool {
-
-	identityTemp := template.Must(template.New("identity").Parse(templates.IdentityTemplate))
-	identityBuffer := new(bytes.Buffer)
-	error := identityTemp.Execute(identityBuffer, identity)
-	if nil != error {
-		fmt.Printf("Generate identity file fail: %s\n", error)
-		return false
-	}
-
-	// write identity under config identities
-	input, error := ioutil.ReadFile(configFile)
-	if nil != error {
-		fmt.Printf("Read config file fail: %s\n", error)
-		return false
-	}
-
-	lines := strings.Split(string(input), "\n")
-	for i, line := range lines {
-		if strings.Contains(line, "identities = [") {
-			addIdentity := "identities = [" + identityBuffer.String()
-			if strings.Contains(line, "]") { // empty identities
-				addIdentity = addIdentity + "]"
-			}
-			lines[i] = addIdentity
-		}
-	}
-	output := strings.Join(lines, "\n")
-	error = ioutil.WriteFile(configFile, []byte(output), 0644)
-	if nil != error {
-		fmt.Printf("Write config file fail: %s\n", error)
-		return false
-	}
-
-	return true
 }
