@@ -37,7 +37,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "bitmark-cli"
 	// app.Usage = ""
-	app.Version = Version()
+	app.Version = Version
 	app.HideVersion = true
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{
@@ -240,7 +240,7 @@ func main() {
 			Name:  "version",
 			Usage: "display bitmark-cli version",
 			Action: func(c *cli.Context) {
-				fmt.Println(Version())
+				fmt.Println(Version)
 			},
 		},
 	}

@@ -4,12 +4,9 @@
 
 package main
 
-// the version
-var (
-	version string = "3"
+// ensure that git has a tag: "vX.Y" corresponding to major and minor
+const (
+	Major   = "3"
+	Minor   = "2"
+	Version = Major + "." + Minor
 )
-
-// Return string representation of version
-func Version() string {
-	return version
-}
