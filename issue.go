@@ -23,9 +23,10 @@ import (
 )
 
 // prefix for the payment command
-// assumed format is: paymentCommand 'PaymentId' 'BTCaddress₁' 'SatoshiAmount₁' … 'BTCaddressN' 'SatoshiAmountN'
+// assumed format is: paymentCommand paymentNetwork='network' 'PaymentId' 'BTCaddress₁' 'SatoshiAmount₁' … 'BTCaddressN' 'SatoshiAmountN'
 const (
-	paymentCommand = "bitmark-pay --network=testing --json"
+	paymentCommand = "bitmark-pay --json"
+	paymentNetwork = "--network="
 )
 
 type assetData struct {
@@ -378,7 +379,9 @@ func doTransfer(client *netrpc.Client, network string, transferConfig transferDa
 		return err
 	}
 
-	command := paymentCommand + " '" + string(tpid) + "'"
+	command := paymentCommand +
+		" " + paymentNetwork + "'" + network +
+		"' '" + string(tpid) + "'"
 	for _, p := range reply.Payments {
 
 		switch p.Currency {
