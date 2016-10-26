@@ -15,26 +15,30 @@ import (
 func TestPrivateKeyEncryptDecrypt(t *testing.T) {
 	privateKey1, err := hex.DecodeString("7bc0decf85c70f9612e26682866022243a0a27786a037f762c55e92441bd337568bc0675932a5a83857a71c3670cc2be49c1a7a05408a8dcbb1765728bf69c36")
 	if nil != err {
-		t.Errorf("decode hex private key failed: %v", err)
+		t.Fatalf("decode hex private key failed: %v", err)
 	}
 
 	passwords := []string{"test", "123", "444"}
 
 	for _, password := range passwords {
-		iter, salt, key, err := hashPassword(password)
+		salt, key, err := hashPassword(password)
 		if nil != err {
-			t.Errorf("encryptPassword failed: %v", err)
+			t.Fatalf("encryptPassword failed: %v", err)
 		}
 
 		encryptPri, err := encryptPrivateKey(privateKey1, key)
 		if nil != err {
-			t.Errorf("encryptPrivateKey failed: %v", err)
+			t.Fatalf("encryptPrivateKey failed: %v", err)
 		}
 
-		key2 := generateKey(password, iter, salt)
+		key2, err := generateKey(password, salt)
+		if nil != err {
+			t.Fatalf("generateKey failed: %v", err)
+		}
+
 		decryptPri, err := decryptPrivateKey(encryptPri, key2)
 		if nil != err {
-			t.Errorf("decryptPrivateKey failed: %v", err)
+			t.Fatalf("decryptPrivateKey failed: %v", err)
 		}
 
 		if !bytes.Equal(decryptPri, privateKey1) {
@@ -46,29 +50,33 @@ func TestPrivateKeyEncryptDecrypt(t *testing.T) {
 func TestPasswordToKey(t *testing.T) {
 	publicKey, err := hex.DecodeString("68bc0675932a5a83857a71c3670cc2be49c1a7a05408a8dcbb1765728bf69c36")
 	if nil != err {
-		t.Errorf("decode hex public key failed: %v", err)
+		t.Fatalf("decode hex public key failed: %v", err)
 	}
 	privateKey, err := hex.DecodeString("7bc0decf85c70f9612e26682866022243a0a27786a037f762c55e92441bd337568bc0675932a5a83857a71c3670cc2be49c1a7a05408a8dcbb1765728bf69c36")
 	if nil != err {
-		t.Errorf("decode hex private key failed: %v", err)
+		t.Fatalf("decode hex private key failed: %v", err)
 	}
 
 	passwords := []string{"test", "123", "444"}
 
 	for _, password := range passwords {
-		iter, salt, key, err := hashPassword(password)
+		salt, key, err := hashPassword(password)
 		if nil != err {
-			t.Errorf("encryptPassword failed: %v", err)
+			t.Fatalf("encryptPassword failed: %v", err)
 		}
 		encryptPri, err := encryptPrivateKey(privateKey, key)
 		if nil != err {
-			t.Errorf("encryptPrivateKey failed: %v", err)
+			t.Fatalf("encryptPrivateKey failed: %v", err)
 		}
 
-		key2 := generateKey(password, iter, salt)
+		key2, err := generateKey(password, salt)
+		if nil != err {
+			t.Fatalf("generateKey failed: %v", err)
+		}
+
 		decryptPri, err := decryptPrivateKey(encryptPri, key2)
 		if nil != err {
-			t.Errorf("decryptPrivateKey failed: %v", err)
+			t.Fatalf("decryptPrivateKey failed: %v", err)
 		}
 
 		var privateKey2 [64]byte
@@ -84,67 +92,70 @@ func TestPasswordToKey(t *testing.T) {
 func TestDecryptionToPrivateKey(t *testing.T) {
 	publicKey, err := hex.DecodeString("68bc0675932a5a83857a71c3670cc2be49c1a7a05408a8dcbb1765728bf69c36")
 	if nil != err {
-		t.Errorf("decode hex public key failed: %v", err)
+		t.Fatalf("decode hex public key failed: %v", err)
 	}
 	privateKey, err := hex.DecodeString("7bc0decf85c70f9612e26682866022243a0a27786a037f762c55e92441bd337568bc0675932a5a83857a71c3670cc2be49c1a7a05408a8dcbb1765728bf69c36")
 	if nil != err {
-		t.Errorf("decode hex private key failed: %v", err)
+		t.Fatalf("decode hex private key failed: %v", err)
 	}
 
 	control := []struct {
 		password   string
-		iter       int
 		salt       string
 		ciphertext string
 	}{
 		{
 			password:   "abcdefghijklmnopqrstuvwxyz",
-			iter:       1234,
 			salt:       "0477ddc464595a04778be799df57207d",
-			ciphertext: "f7e97756207aa7875a8ee1a0a226a24dc1adc8dcd85b8d9645c14d48dc172d82a7e12c2b41c1748fbc1a7ea7dece5818bf2600b6c0a0f72276068bfe302de537d85e189d0d3caf21a3a7aeef397ac1b5",
+			ciphertext: "28418cda1e279e79d33f8166078357d840e76e97b2e26f4c1b340d1dcb98a0cf7bd3a4205032ff4f54490fb9cbed756214e14de5a135087b0adb77b502120ed446108603cc0d28dcafea86f6089acf1a",
 		},
 		{
 			password:   "1234567890",
-			iter:       5678,
 			salt:       "8fc700477e5f4fca3229b12eea9392dd",
-			ciphertext: "d5a99d0bd51d31b3978bb8dbffe947880df94c2b337a11f03af2576ae33c13d52dcd3975704e93af79451a67946186950b9f554a29ad61e11eac5c4454241cf31e3bac795f9acc6867f28888092179dd",
+			ciphertext: "a8e80fcac3cfd04246baddf9efbd577de0cc732fa56d414c268cdc39e4e364f06e4d2853847e45b44b26b65a38044f8b7a440e37502a26efe0e439230476cbea0ed567baa80a4a6b7a12f392b04b0e84",
 		},
 		{
 			password:   "ephohjie9eewaiRuisiQueeNg9loh0Dee0oorahx7fo2ush7ituaYee2Chu6boeY",
-			iter:       9876,
 			salt:       "289ff10921138406c0e044460026236a",
-			ciphertext: "3ee336d1c4d1d643b676e084b0173eb0aa94dd71a97b4bbc1738da4b855b2536ca5db68e28551737cf37e1bcdfa2bfb1ef3d3d4862c9607f59f7f3a9d1b28a9d45b53e3c17b5745d902acb962ac5ce14",
+			ciphertext: "f1c55988e12a8d26503095f084db15d538046e497e2f019767e8a5ae0a94b114295a3bc0c1dc3151cdcc35819ca28fdc1f40c9aac47e265c57fa9fc46ac48226b08b6a9e4f46ef238531d49c05cf0fb8",
 		},
 	}
 
 	for i, item := range control {
 
-		var iter configuration.Iter
-		iter.ConvertIntegerToIter(item.iter)
-
 		var salt configuration.Salt
 		err := salt.UnmarshalText([]byte(item.salt))
 		if nil != err {
-			t.Errorf("%d: unmarshal salt failed: %v", i, err)
+			t.Fatalf("%d: unmarshal salt failed: %v", i, err)
 		}
 
 		ciphertext, err := hex.DecodeString(item.ciphertext)
 		if nil != err {
-			t.Errorf("%d: decode hex ciphertext failed: %v", i, err)
+			t.Fatalf("%d: decode hex ciphertext failed: %v", i, err)
 		}
 
-		key := generateKey(item.password, &iter, &salt)
+		key, err := generateKey(item.password, &salt)
+		if nil != err {
+			t.Errorf("generateKey failed: %v", err)
+		}
 
-		// // this will get a different ivec each time - so just used once to get data above
-		// encrypted, err := encryptPrivateKey(privateKey, key)
-		// if nil != err {
-		// 	t.Errorf("%d: encryptPrivateKey failed: %v", i, err)
-		// }
-		// t.Logf("%d: ciphertext: %x", i, encrypted)
+		// this will get a different ivec each time no will never be the same
+		newEncrypted, err := encryptPrivateKey(privateKey, key)
+		if nil != err {
+			t.Fatalf("%d: encryptPrivateKey failed: %v", i, err)
+		}
+		// t.Logf("%d: ciphertext: %x", i, newEncrypted) // enable this when creating new items for test
+
+		// make sure encryption does not produce identical results, if it does ivec generation is broken
+		if bytes.Equal(ciphertext, newEncrypted) {
+			t.Errorf("%d: encryption produced duplicate result - must never happen", i)
+			t.Errorf("%d: new ciphertext:    %x", i, newEncrypted)
+			t.Errorf("%d: stored ciphertext: %x", i, ciphertext)
+		}
 
 		decrypted, err := decryptPrivateKey(ciphertext, key)
 		if nil != err {
-			t.Errorf("%d: decryptPrivateKey failed: %v", i, err)
+			t.Fatalf("%d: decryptPrivateKey failed: %v", i, err)
 		}
 
 		if !bytes.Equal(decrypted, privateKey) {
