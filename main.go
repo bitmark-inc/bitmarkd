@@ -92,7 +92,7 @@ func main() {
 				cli.StringFlag{
 					Name:  "privateKey, k",
 					Value: "",
-					Usage: "using existing privateKey",
+					Usage: " using existing privateKey",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -108,6 +108,11 @@ func main() {
 					Name:  "description, d",
 					Value: "",
 					Usage: "*identity descriptiont",
+				},
+				cli.StringFlag{
+					Name:  "privateKey, k",
+					Value: "",
+					Usage: " using existing privateKey",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -277,7 +282,11 @@ func runSetup(c *cli.Context, globals globalFlags) {
 		exitwithstatus.Message("Error: %s", err)
 	}
 
-	privateKey := c.String("privateKey")
+	// optional existing hex key value
+	privateKey, err := checkOptionalKey(c.String("privateKey"))
+	if nil != err {
+		exitwithstatus.Message("Error: %s", err)
+	}
 
 	verbose := globals.verbose
 	if verbose {
@@ -337,6 +346,12 @@ func runAdd(c *cli.Context, globals globalFlags) {
 		exitwithstatus.Message("Error: %s", err)
 	}
 
+	// optional existing hex key value
+	privateKey, err := checkOptionalKey(c.String("privateKey"))
+	if nil != err {
+		exitwithstatus.Message("Error: %s", err)
+	}
+
 	verbose := globals.verbose
 	if verbose {
 		fmt.Printf("config: %s\n", configFile)
@@ -345,7 +360,7 @@ func runAdd(c *cli.Context, globals globalFlags) {
 		fmt.Println()
 	}
 
-	if !addIdentity(configData, name, description, "", globals.password) {
+	if !addIdentity(configData, name, description, privateKey, globals.password) {
 		exitwithstatus.Message("Error: add failed")
 	}
 	err = configuration.Save(configFile, configData)

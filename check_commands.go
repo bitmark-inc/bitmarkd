@@ -5,6 +5,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"github.com/bitmark-inc/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmark-cli/fault"
 	"github.com/bitmark-inc/exitwithstatus"
@@ -66,6 +67,21 @@ func checkDescription(description string) (string, error) {
 	}
 
 	return description, nil
+}
+
+// private key is optional, need either empty or 128 hex chars
+func checkOptionalKey(key string) (string, error) {
+	if "" == key {
+		return "", nil
+	}
+	k, err := hex.DecodeString(key)
+	if nil != err {
+		return "", err
+	}
+	if 64 != len(k) {
+		return "", fault.ErrKeyLength
+	}
+	return key, nil
 }
 
 func checkIdentity(name string, config *configuration.Configuration) (*configuration.IdentityType, error) {
