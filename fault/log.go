@@ -71,11 +71,8 @@ func Panicf(format string, arguments ...interface{}) {
 
 // final panic
 func Panic(message string) {
-	fmt.Printf("here 1\n")
 	internalCriticalf("%s", message)
-	fmt.Printf("here 2\n")
 	time.Sleep(100 * time.Millisecond) // to allow logging output
-	fmt.Printf("here 3\n")
 	panic(message)
 }
 

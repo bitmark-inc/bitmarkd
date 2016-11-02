@@ -6,8 +6,6 @@ package rpc
 
 import (
 	"encoding/hex"
-	"github.com/bitmark-inc/bitmarkd/asset"
-	"github.com/bitmark-inc/bitmarkd/currency" // ***** FIX THIS: remove when real currency/address is available
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
@@ -15,7 +13,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
-	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
 )
@@ -40,57 +37,24 @@ type IssueStatus struct {
 
 type BitmarksIssueReply struct {
 	Issues     []IssueStatus    `json:"issues"`
-	PayId      payment.PayId    `json:"payId"`
+	PayId      reservoir.PayId  `json:"payId"`
 	PayNonce   payment.PayNonce `json:"payNonce"`
 	Difficulty string           `json:"difficulty"`
 	//PaymentAlternatives []block.MinerAddress `json:"paymentAlternatives"`// ***** FIX THIS: where to get addresses?
-}
-
-// internal function to issue some bitmarks
-func bitmarksIssue(issues []transactionrecord.BitmarkIssue) ([]IssueStatus, []byte, error) {
-
-	issueStatus := make([]IssueStatus, len(issues))
-
-	// pack each transaction
-	packed := []byte{}
-	for i, argument := range issues {
-
-		packedIssue, err := argument.Pack(argument.Owner)
-		if nil != err {
-			return nil, nil, err
-		}
-
-		if !asset.Exists(argument.AssetIndex) {
-			return nil, nil, fault.ErrAssetNotFound
-		}
-
-		txId := packedIssue.MakeLink()
-		issueStatus[i].TxId = txId
-		key := txId[:]
-
-		// even a single verified/confirmed issue fails the whole block
-		if storage.Pool.Transactions.Has(key) || reservoir.Has(txId) {
-			return nil, nil, fault.ErrTransactionAlreadyExists
-		}
-
-		packed = append(packed, packedIssue...)
-	}
-
-	return issueStatus, packed, nil
 }
 
 // Bitmarks create
 // --------------
 
 type CreateArguments struct {
-	Assets []transactionrecord.AssetData    `json:"assets"`
-	Issues []transactionrecord.BitmarkIssue `json:"issues"`
+	Assets []*transactionrecord.AssetData    `json:"assets"`
+	Issues []*transactionrecord.BitmarkIssue `json:"issues"`
 }
 
 type CreateReply struct {
 	Assets     []AssetStatus    `json:"assets"`
 	Issues     []IssueStatus    `json:"issues"`
-	PayId      payment.PayId    `json:"payId"`
+	PayId      reservoir.PayId  `json:"payId"`
 	PayNonce   payment.PayNonce `json:"payNonce"`
 	Difficulty string           `json:"difficulty"`
 	//PaymentAlternatives []block.MinerAddress `json:"paymentAlternatives"`// ***** FIX THIS: where to get addresses?
@@ -120,9 +84,14 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 		return err
 	}
 
-	issueStatus, packedIssues, err := bitmarksIssue(arguments.Issues)
+	stored, duplicate, err := reservoir.StoreIssues(arguments.Issues)
 	if nil != err {
 		return err
+	}
+	packedIssues := stored.Packed
+	issueStatus := make([]IssueStatus, len(stored.TxIds))
+	for i, txId := range stored.TxIds {
+		issueStatus[i].TxId = txId
 	}
 
 	result := CreateReply{
@@ -131,7 +100,7 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 	}
 
 	// fail if no data sent
-	if 0 == len(packedAssets) && 0 == len(packedIssues) {
+	if 0 == len(assetStatus) && 0 == len(packedIssues) {
 		return fault.ErrMissingParameters
 	}
 	// if data to send
@@ -142,14 +111,16 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 
 	if 0 != len(packedIssues) {
 
+		payId := stored.Id
+
 		// get here if all issues are new
 		var d *difficulty.Difficulty
-		newItem := false
-		result.PayId, result.PayNonce, d, newItem = payment.Store(currency.Bitcoin, packedIssues, issueCount, true)
+		result.PayNonce, d, err = payment.Store(nil, payId, issueCount, true)
+		result.PayId = payId
 		result.Difficulty = d.GoString()
 
 		// announce transaction block to other peers
-		if newItem {
+		if !duplicate {
 			messagebus.Bus.Broadcast.Send("issues", packedIssues)
 		}
 	}
@@ -162,8 +133,8 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 // --------------
 
 type ProofArguments struct {
-	PayId payment.PayId `json:"payId"`
-	Nonce string        `json:"nonce"`
+	PayId reservoir.PayId `json:"payId"`
+	Nonce string          `json:"nonce"`
 }
 
 type ProofReply struct {
@@ -216,10 +187,8 @@ func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) er
 // --------------
 
 type PayArguments struct {
-	PayId payment.PayId `json:"payId"` // id from the issue/transfer request
-	// ***** FIX THIS: is currency required?
-	//Currency currency.Currency `json:"currency"` // utf-8 → Enum
-	Receipt string `json:"receipt"` // hex id from payment process
+	PayId   reservoir.PayId `json:"payId"`   // id from the issue/transfer request
+	Receipt string          `json:"receipt"` // hex id from payment process
 }
 
 type PayReply struct {

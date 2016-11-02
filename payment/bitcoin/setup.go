@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/logger"
 	"io/ioutil"
 	"net/http"
@@ -49,7 +50,7 @@ type bitcoinData struct {
 	itemQueue chan *priorityItem
 
 	// verification
-	verifier chan<- []byte
+	verifier chan<- reservoir.PayId
 
 	// identifier for the RPC
 	id uint64
@@ -76,15 +77,11 @@ type Configuration struct {
 	CACertificate string `libucl:"ca_certificate"`
 	Certificate   string `libucl:"certificate"`
 	PrivateKey    string `libucl:"private_key"`
-	// Address       string `libucl:"address"`
-	// Fee           string `libucl:"fee"`
 }
 
 // initialise for bitcoin payments
 // also calls the internal initialisePayment() and register()
-//
-// Note fee is a string value and is converted to Satoshis to avoid rounding errors
-func Initialise(configuration *Configuration, verifier chan<- []byte) error {
+func Initialise(configuration *Configuration, verifier chan<- reservoir.PayId) error {
 
 	globalData.Lock()
 	defer globalData.Unlock()

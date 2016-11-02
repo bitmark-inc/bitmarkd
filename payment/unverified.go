@@ -5,21 +5,21 @@
 package payment
 
 import (
-	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
+	"github.com/bitmark-inc/bitmarkd/reservoir"
+	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"sync"
 )
 
 // a set of transactions awaiting payment
 type unverified struct {
-	currencyName currency.Currency      // currency identifier
-	done         bool                   // record was already processed
-	difficulty   *difficulty.Difficulty // for proof request
-	transactions []byte                 // all the transactions in this payment set
+	payments   []*transactionrecord.Payment // list of payments
+	done       bool                         // record was already processed
+	difficulty *difficulty.Difficulty       // for proof request
 }
 
 // a set of items awaiting payment
-type waiting map[PayId]*unverified
+type waiting map[reservoir.PayId]*unverified
 
 // lockable map
 type lockable struct {
@@ -48,7 +48,7 @@ func init() {
 // store the payRecord in the cache
 //
 // returns true if newly cached item
-func put(payId PayId, r *unverified) bool {
+func put(payId reservoir.PayId, r *unverified) bool {
 	// select the table
 	n := payId[0] & mask
 
@@ -62,7 +62,7 @@ func put(payId PayId, r *unverified) bool {
 }
 
 // read the payRecord from the cache
-func get(payId PayId) (*unverified, bool, bool) {
+func get(payId reservoir.PayId) (*unverified, bool, bool) {
 
 	done := false
 
@@ -82,7 +82,7 @@ func get(payId PayId) (*unverified, bool, bool) {
 }
 
 // remove the payRecord from the cache
-func remove(payId PayId) {
+func remove(payId reservoir.PayId) {
 	// select the table
 	n := payId[0] & mask
 

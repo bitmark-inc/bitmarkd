@@ -12,6 +12,8 @@ import (
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/payment/bitcoin"
+	"github.com/bitmark-inc/bitmarkd/reservoir"
+	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
 	"golang.org/x/crypto/sha3"
 	"math/big"
@@ -32,13 +34,13 @@ type Configuration struct {
 // expiry background
 type expiryData struct {
 	log   *logger.L
-	queue chan PayId
+	queue chan reservoir.PayId
 }
 
 // verifier background
 type verifierData struct {
 	log   *logger.L
-	queue chan []byte
+	queue chan reservoir.PayId
 }
 
 // globals
@@ -65,14 +67,14 @@ func Initialise(configuration *Configuration) error {
 	if nil == globalData.expiry.log {
 		return fault.ErrInvalidLoggerChannel
 	}
-	globalData.expiry.queue = make(chan PayId, 10)
+	globalData.expiry.queue = make(chan reservoir.PayId, 10)
 
 	// for verifier
 	globalData.verifier.log = logger.New("payment-verifier")
 	if nil == globalData.verifier.log {
 		return fault.ErrInvalidLoggerChannel
 	}
-	globalData.verifier.queue = make(chan []byte, 10)
+	globalData.verifier.queue = make(chan reservoir.PayId, 10)
 
 	// initialise all currency handlers
 	for c := currency.First; c <= currency.Last; c += 1 {
@@ -119,19 +121,26 @@ func Finalise() {
 }
 
 // store an incoming record for payment
-func Store(currencyName currency.Currency, transactions []byte, count int, canProof bool) (PayId, PayNonce, *difficulty.Difficulty, bool) {
+func Store(payments []*transactionrecord.Payment, payId reservoir.PayId, count int, canProof bool) (PayNonce, *difficulty.Difficulty, error) {
 
-	payId := NewPayId(transactions)
 	payNonce := NewPayNonce()
 
-	t := make([]byte, len(transactions))
-	copy(t, transactions) // copy to preserve underlying data
+	if nil == payments || 0 == len(payments) {
+		payments = nil // for consistency
+	} else {
+		// ensure all payments have the same currency
+		first := payments[0].Currency
+		for _, c := range payments[1:] {
+			if first != c.Currency {
+				return payNonce, nil, fault.ErrInvalidMixedCurrencyPayment
+			}
+		}
+	}
 
 	u := &unverified{
-		currencyName: currencyName,
-		difficulty:   nil,
-		done:         false,
-		transactions: t,
+		payments:   payments,
+		difficulty: nil,
+		done:       false,
 	}
 
 	// only create difficulty if proof is allowed
@@ -144,14 +153,16 @@ func Store(currencyName currency.Currency, transactions []byte, count int, canPr
 	newItem := put(payId, u)
 
 	// add an expire
-	globalData.expiry.queue <- payId
+	if newItem {
+		globalData.expiry.queue <- payId
+	}
 
-	return payId, payNonce, u.difficulty, newItem
+	return payNonce, u.difficulty, nil
 
 }
 
 // start payment tracking on an receipt
-func TrackPayment(payId PayId, receipt string, confirmations uint64) TrackingStatus {
+func TrackPayment(payId reservoir.PayId, receipt string, confirmations uint64) TrackingStatus {
 
 	r, done, ok := get(payId)
 	if !ok {
@@ -161,20 +172,28 @@ func TrackPayment(payId PayId, receipt string, confirmations uint64) TrackingSta
 		return TrackingProcessed
 	}
 
-	hexPayId := payId.String()
+	// if no payment required
+	if nil == r.payments {
+		return TrackingInvalid
+	}
 
-	switch r.currencyName {
+	status := TrackingInvalid
+
+	c := r.payments[0].Currency
+	switch c {
 	case currency.Bitcoin:
-		bitcoin.QueueItem(hexPayId, receipt, confirmations, r.transactions)
+		if bitcoin.QueueItem(payId, receipt, confirmations, r.payments) {
+			status = TrackingAccepted
+		}
 
 	default: // only fails if new module not correctly installed
-		fault.Panicf("not payment handler for Currency: %s", r.currencyName.String())
+		fault.Panicf("no payment handler for Currency: %s", c.String())
 	}
-	return TrackingAccepted
+	return status
 }
 
 // instead of paying, try a proof from the client nonce
-func TryProof(payId PayId, clientNonce []byte) TrackingStatus {
+func TryProof(payId reservoir.PayId, clientNonce []byte) TrackingStatus {
 
 	r, done, ok := get(payId)
 	if !ok {
@@ -219,7 +238,7 @@ func TryProof(payId PayId, clientNonce []byte) TrackingStatus {
 
 		// check difficulty and verify if ok
 		if bigDigest.Cmp(bigDifficulty) <= 0 {
-			globalData.verifier.queue <- r.transactions
+			globalData.verifier.queue <- payId
 			return TrackingAccepted
 		}
 	}

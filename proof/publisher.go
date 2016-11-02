@@ -151,7 +151,7 @@ func (pub *publisher) process() {
 
 	seenAsset := make(map[transactionrecord.AssetIndex]struct{})
 
-	pooledTxIds, transactions, totalByteCount, err := reservoir.Fetch(blockrecord.MaximumTransactions)
+	pooledTxIds, transactions, totalByteCount, err := reservoir.FetchVerified(blockrecord.MaximumTransactions)
 	if nil != err {
 		pub.log.Errorf("Error on Fetch: %v", err)
 		return

@@ -16,7 +16,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/peer"
-	"github.com/bitmark-inc/bitmarkd/pending"
 	"github.com/bitmark-inc/bitmarkd/proof"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/rpc"
@@ -169,15 +168,6 @@ func main() {
 		exitwithstatus.Message("storage initialise error: %v", err)
 	}
 	defer storage.Finalise()
-
-	// start pending registry
-	log.Info("initialise pending")
-	err = pending.Initialise()
-	if nil != err {
-		log.Criticalf("pending initialise error: %v", err)
-		exitwithstatus.Message("pending initialise error: %v", err)
-	}
-	defer pending.Finalise()
 
 	// start the reservoir (verified transaction data cache)
 	log.Info("initialise reservoir")

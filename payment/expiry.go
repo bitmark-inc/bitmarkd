@@ -6,6 +6,7 @@ package payment
 
 import (
 	"container/list"
+	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"time"
 )
 
@@ -17,8 +18,8 @@ const (
 
 // to control expiry
 type expiry struct {
-	payId   PayId     // item to remove
-	expires time.Time // remove the record after this time
+	payId   reservoir.PayId // item to remove
+	expires time.Time       // remove the record after this time
 }
 
 // expiry loop

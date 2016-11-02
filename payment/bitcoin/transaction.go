@@ -5,7 +5,6 @@
 package bitcoin
 
 import (
-	//"encoding/hex"
 	"encoding/json"
 	"github.com/bitmark-inc/bitmarkd/fault"
 )

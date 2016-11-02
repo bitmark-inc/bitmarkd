@@ -2,7 +2,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package payment
+package reservoir
 
 import (
 	"encoding/hex"
@@ -16,8 +16,15 @@ import (
 type PayId [48]byte
 
 // create a payment identifier from a set of transactions
-func NewPayId(packed []byte) PayId {
-	return sha3.Sum384(packed)
+func NewPayId(packed [][]byte) PayId {
+	digest := sha3.New384()
+	for _, data := range packed {
+		digest.Write(data)
+	}
+	hash := digest.Sum([]byte{})
+	var payId PayId
+	copy(payId[:], hash)
+	return payId
 }
 
 // convert a binary pay id to big endian hex string for use by the fmt package (for %s)

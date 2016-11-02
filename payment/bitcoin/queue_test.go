@@ -6,44 +6,54 @@ package bitcoin
 
 import (
 	"container/heap"
+	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"testing"
 )
+
+func stringToPayId(t *testing.T, s string) (payId reservoir.PayId) {
+	s = s + "dd4b3c88a71bf2c7c29df2e39b5ad48e6af09e5075295dba73838a2ee28dcbfd" + s
+	err := payId.UnmarshalText([]byte(s))
+	if nil != err {
+		t.Fatalf("converting: %q to pay id error: %s", s, err)
+	}
+	return
+}
 
 func TestQueue(t *testing.T) {
 
 	items := []*priorityItem{
 		&priorityItem{
-			payId:         "1234ac76f0",
+			payId:         stringToPayId(t, "12345567edac76f0"),
 			txId:          "123456",
 			confirmations: 14,
 			blockNumber:   7,
 		},
 		&priorityItem{
-			payId:         "1234ac76fb",
+			payId:         stringToPayId(t, "12345567edac76fb"),
 			txId:          "12342e3",
 			confirmations: 24,
 			blockNumber:   6,
 		},
 		&priorityItem{
-			payId:         "1234ac76f9",
+			payId:         stringToPayId(t, "12345567edac76f9"),
 			txId:          "1234454",
 			confirmations: 1,
 			blockNumber:   67,
 		},
 		&priorityItem{
-			payId:         "1234ac76fe",
+			payId:         stringToPayId(t, "12345567edac76fe"),
 			txId:          "1234u88765",
 			confirmations: 3,
 			blockNumber:   12,
 		},
 		&priorityItem{
-			payId:         "1234ac76f1",
+			payId:         stringToPayId(t, "12345567edac76f1"),
 			txId:          "1234999",
 			confirmations: 8,
 			blockNumber:   146,
 		},
 		&priorityItem{
-			payId:         "1234ac76f5",
+			payId:         stringToPayId(t, "12345567edac76f5"),
 			txId:          "1234777",
 			confirmations: 1,
 			blockNumber:   46,
@@ -62,7 +72,7 @@ func TestQueue(t *testing.T) {
 	actual := []uint64{}
 	for pq.Len() > 0 {
 		item := heap.Pop(pq).(*priorityItem)
-		t.Logf("item: %v", item)
+		t.Logf("item: %#v", item)
 		actual = append(actual, item.blockNumber)
 	}
 

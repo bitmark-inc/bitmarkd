@@ -36,7 +36,7 @@ type AssetsRegisterReply struct {
 }
 
 // internal function to register some assets
-func assetRegister(assets []transactionrecord.AssetData) ([]AssetStatus, []byte, error) {
+func assetRegister(assets []*transactionrecord.AssetData) ([]AssetStatus, []byte, error) {
 
 	assetStatus := make([]AssetStatus, len(assets))
 
@@ -44,7 +44,7 @@ func assetRegister(assets []transactionrecord.AssetData) ([]AssetStatus, []byte,
 	packed := []byte{}
 	for i, argument := range assets {
 
-		index, packedAsset, err := asset.Cache(&argument)
+		index, packedAsset, err := asset.Cache(argument)
 		if nil != err {
 			return nil, nil, err
 		}

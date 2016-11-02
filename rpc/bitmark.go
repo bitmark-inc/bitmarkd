@@ -5,13 +5,12 @@
 package rpc
 
 import (
-	"github.com/bitmark-inc/bitmarkd/block"
-	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/payment"
+	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
@@ -29,7 +28,7 @@ type Bitmark struct {
 
 type BitmarkTransferReply struct {
 	TxId     merkle.Digest                `json:"txId"`
-	PayId    payment.PayId                `json:"payId"`
+	PayId    reservoir.PayId              `json:"payId"`
 	Payments []*transactionrecord.Payment `json:"payments"`
 	//PaymentAlternatives []block.MinerAddress `json:"paymentAlternatives"`// ***** FIX THIS: where to get addresses?
 }
@@ -44,58 +43,37 @@ func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransfer, r
 		return fault.ErrNotAvailableDuringSynchronise
 	}
 
-	txId, packedTransfer, previousTransfer, ownerData, err := block.VerifyTransfer(arguments)
+	stored, duplicate, err := reservoir.StoreTransfer(arguments)
+	//txId, packedTransfer, previousTransfer, ownerData, err := block.VerifyTransfer(arguments)
 	if nil != err {
 		return err
 	}
+
+	// only first result needs to be considered
+	payId := stored.Id
+	txId := stored.TxId
+	packedTransfer := stored.Packed
+	previousTransfer := stored.PreviousTransfer
+	ownerData := stored.OwnerData
 
 	log.Infof("id: %v", txId)
 	log.Debugf("packed transfer: %x", packedTransfer)
 	log.Debugf("ownerData: %x", ownerData)
 
-	// get block number of transfer and issue; see: storage/doc.go to determine offsets
-	const transferBlockNumberOffset = merkle.DigestLength
-	const issueBlockNumberOffset = 8 + 2*merkle.DigestLength
-
-	tKey := ownerData[transferBlockNumberOffset : transferBlockNumberOffset+8]
-	iKey := ownerData[issueBlockNumberOffset : issueBlockNumberOffset+8]
-
-	log.Debugf("iKey: %x  tKey: %x", iKey, tKey)
-
-	// block owner (from issue) payment
-	// 0: the issue owner
-	// 1: block miner (TO DO)
-	// 2: transfer payment (optional)
-	payments := make([]*transactionrecord.Payment, 1, 3)
-	payments[0] = block.GetPayment(iKey)
-
-	// last transfer payment if there is one
-	for _, x := range tKey {
-		if 0 != x {
-			p := block.GetPayment(tKey)
-			if p.Currency == payments[0].Currency && p.Address == payments[0].Address {
-				payments[0].Amount += p.Amount
-			} else {
-				payments = append(payments, p)
-			}
-			break
-		}
-	}
-
-	// optional payment record (if previous record was transfer and contains such)
-	if nil != previousTransfer && nil != previousTransfer.Payment {
-		payments = append(payments, previousTransfer.Payment)
-	}
+	payments := payment.GetPayments(ownerData, previousTransfer)
 
 	// get payment info
 	reply.TxId = txId
-	newItem := false
+	_, _, err = payment.Store(payments, payId, 1, false)
+	if nil != err {
+		return err
+	}
 
-	reply.PayId, _, _, newItem = payment.Store(currency.Bitcoin, packedTransfer, 1, false)
+	reply.PayId = payId
 	reply.Payments = payments
 
 	// announce transaction block to other peers
-	if newItem {
+	if !duplicate {
 		messagebus.Bus.Broadcast.Send("transfer", packedTransfer)
 	}
 

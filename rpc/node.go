@@ -52,16 +52,21 @@ func (node *Node) List(arguments *NodeArguments, reply *NodeReply) error {
 type InfoArguments struct{}
 
 type InfoReply struct {
-	Chain      string  `json:"chain"`
-	Mode       string  `json:"mode"`
-	Blocks     uint64  `json:"blocks"`
-	RPCs       uint64  `json:"rpcs"`
-	Pending    int     `json:"pending"`
-	Difficulty float64 `json:"difficulty"`
-	Version    string  `json:"version"`
-	Uptime     string  `json:"uptime"`
+	Chain               string   `json:"chain"`
+	Mode                string   `json:"mode"`
+	Blocks              uint64   `json:"blocks"`
+	RPCs                uint64   `json:"rpcs"`
+	TransactionCounters Counters `json:"transactionCounters"`
+	Difficulty          float64  `json:"difficulty"`
+	Version             string   `json:"version"`
+	Uptime              string   `json:"uptime"`
 	// Peers    int     `json:"peers"`
 	// Miners   uint64  `json:"miners"`
+}
+
+type Counters struct {
+	Pending  int `json:"pending"`
+	Verified int `json:"pending"`
 }
 
 func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
@@ -72,7 +77,7 @@ func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 	reply.RPCs = connectionCount.Uint64()
 	// reply.Peers = peer.ConnectionCount()
 	// reply.Miners = mine.ConnectionCount()
-	reply.Pending = reservoir.Count()
+	reply.TransactionCounters.Pending, reply.TransactionCounters.Verified = reservoir.ReadCounters()
 	reply.Difficulty = difficulty.Current.Reciprocal()
 	reply.Version = version.Version
 	reply.Uptime = time.Since(node.start).String()

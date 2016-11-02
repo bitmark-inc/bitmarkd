@@ -2,20 +2,23 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package payment_test
+package reservoir_test
 
 import (
 	"encoding/json"
-	"github.com/bitmark-inc/bitmarkd/payment"
+	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"testing"
 )
 
 func TestPayId(t *testing.T) {
 
-	somedata := []byte("abcdefghijklmnopqrstuvwxyz")
+	somedata := [][]byte{
+		[]byte("abcdefghijklm"),
+		[]byte("nopqrstuvwxyz"),
+	}
 	expected := `"fed399d2217aaf4c717ad0c5102c15589e1c990cc2b9a5029056a7f7485888d6ab65db2370077a5cadb53fc9280d278f"`
 
-	payId := payment.NewPayId(somedata)
+	payId := reservoir.NewPayId(somedata)
 	t.Logf("pay id: %#v", payId)
 
 	buffer, err := json.Marshal(payId)
@@ -30,7 +33,7 @@ func TestPayId(t *testing.T) {
 		t.Fatalf("pay id expected: %#v  actual: %#v", expected, actual)
 	}
 
-	var payId2 payment.PayId
+	var payId2 reservoir.PayId
 	err = json.Unmarshal(buffer, &payId2)
 	if nil != err {
 		t.Fatalf("unmarshal JSON error: %v", err)

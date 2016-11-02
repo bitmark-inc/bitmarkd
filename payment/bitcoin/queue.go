@@ -4,14 +4,19 @@
 
 package bitcoin
 
+import (
+	"github.com/bitmark-inc/bitmarkd/reservoir"
+	"github.com/bitmark-inc/bitmarkd/transactionrecord"
+)
+
 // An item managed in a priority queue.
 type priorityItem struct {
-	payId         string // indicates block of transactions
-	txId          string // the currency transaction to monitor
-	confirmations uint64 // required number of confirmations
-	blockNumber   uint64 // the expected block number
-	transactions  []byte // bitmark transactions waiting for verification
-	index         int    // index needed for container/heap
+	payId         reservoir.PayId              // indicates block of transactions
+	txId          string                       // the currency transaction to monitor
+	confirmations uint64                       // required number of confirmations
+	blockNumber   uint64                       // the expected block number
+	payments      []*transactionrecord.Payment // list of payments to fulfill
+	index         int                          // index needed for container/heap
 }
 
 // A priority queue implements heap.Interface and holds Items.

@@ -5,10 +5,7 @@
 package payment
 
 import (
-	"github.com/bitmark-inc/bitmarkd/asset"
-	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
-	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 
 // verifier loop
@@ -23,42 +20,9 @@ loop:
 		select {
 		case <-shutdown:
 			break loop
-		case transactions := <-state.queue:
-			log.Infof("received: transactions: %x", transactions)
-			state.setVerified(transactions)
+		case payId := <-state.queue:
+			log.Infof("received: pay id: %s", payId)
+			reservoir.SetVerified(payId)
 		}
-	}
-}
-
-// store all transactions in disk storage to await confirmation
-func (state *verifierData) setVerified(transactions []byte) {
-
-	// split transactions
-	records := transactionrecord.Packed(transactions)
-	for len(records) > 0 {
-
-		// consistency check
-		transaction, length, err := records.Unpack()
-		fault.PanicIfError("setVerified", err) // memory buffer was corrupted, hardware problem or invalid write?
-
-		// first item
-		packed := records[:length]
-		txId := packed.MakeLink()
-
-		state.log.Infof("unpacked: %v", transaction)
-		state.log.Infof("packed txId: %v data: %x", txId, packed)
-		switch tx := transaction.(type) {
-		case *transactionrecord.BitmarkIssue:
-			assetIndex := tx.AssetIndex
-			state.log.Infof("issue: asset id: %v", assetIndex)
-			asset.SetVerified(assetIndex)
-
-		default:
-		}
-
-		reservoir.Store(txId, packed)
-
-		// remaining items
-		records = records[length:]
 	}
 }

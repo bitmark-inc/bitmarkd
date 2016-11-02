@@ -28,6 +28,9 @@ func DeleteDownToBlock(finalBlockNumber uint64) error {
 		return nil // block store is already empty
 	}
 
+	reservoir.Lock()
+	defer reservoir.Unlock()
+
 	packedBlock := last.Value
 
 	for {
@@ -72,14 +75,14 @@ func DeleteDownToBlock(finalBlockNumber uint64) error {
 				txId := packedTransaction.MakeLink()
 				key := txId[:]
 				storage.Pool.Transactions.Delete(key)
-				reservoir.Delete(txId)
+				reservoir.DeleteByTxId(txId)
 				TransferOwnership(txId, txId, 0, tx.Owner, nil)
 
 			case *transactionrecord.BitmarkTransfer:
 				txId := packedTransaction.MakeLink()
 				key := txId[:]
 				storage.Pool.Transactions.Delete(key)
-				reservoir.Delete(txId)
+				reservoir.DeleteByTxId(txId)
 
 				linkOwner := OwnerOf(tx.Link)
 				if nil == linkOwner {

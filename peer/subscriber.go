@@ -9,14 +9,11 @@ import (
 	"encoding/hex"
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/asset"
-	"github.com/bitmark-inc/bitmarkd/block"
-	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
-	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
@@ -330,7 +327,9 @@ func processIssues(packed []byte) error {
 	}
 
 	packedIssues := transactionrecord.Packed(packed)
-	count := 0 // for payment difficulty
+	issueCount := 0 // for payment difficulty
+
+	issues := make([]*transactionrecord.BitmarkIssue, 0, 100)
 	for 0 != len(packedIssues) {
 		transaction, n, err := packedIssues.Unpack()
 		if nil != err {
@@ -339,35 +338,30 @@ func processIssues(packed []byte) error {
 
 		switch tx := transaction.(type) {
 		case *transactionrecord.BitmarkIssue:
-
-			// validate issue record
-			packedIssue, err := tx.Pack(tx.Owner)
-			if nil != err {
-				return err
-			}
-
-			if !asset.Exists(tx.AssetIndex) {
-				return fault.ErrAssetNotFound
-			}
-
-			txId := packedIssue.MakeLink()
-			key := txId[:]
-
-			// even a single verified/confirmed issue fails the whole block
-			if storage.Pool.Transactions.Has(key) || reservoir.Has(txId) {
-				return fault.ErrTransactionAlreadyExists
-			}
-
+			issues = append(issues, tx)
+			issueCount += 1
 		default:
 			return fault.ErrTransactionIsNotAnIssue
 		}
 		packedIssues = packedIssues[n:]
-		count += 1
+	}
+	if 0 == len(issues) {
+		return fault.ErrMissingParameters
 	}
 
+	stored, duplicate, err := reservoir.StoreIssues(issues)
+	if nil != err {
+		return err
+	}
+
+	payId := stored.Id
+
 	// get here if all issues are new
-	_, _, _, newItem := payment.Store(currency.Bitcoin, packed, count, true)
-	if !newItem {
+	_, _, err = payment.Store(nil, payId, issueCount, true)
+	if nil != err {
+		return err
+	}
+	if duplicate {
 		return fault.ErrTransactionAlreadyExists
 	}
 
@@ -393,12 +387,24 @@ func processTransfer(packed []byte) error {
 	switch tx := transaction.(type) {
 	case *transactionrecord.BitmarkTransfer:
 
-		_, packedTransfer, _, _, err := block.VerifyTransfer(tx)
+		stored, duplicate, err := reservoir.StoreTransfer(tx)
 		if nil != err {
 			return err
 		}
-		_, _, _, newItem := payment.Store(currency.Bitcoin, packedTransfer, 1, false)
-		if !newItem {
+
+		// only first result needs to be considered
+		payId := stored.Id
+		previousTransfer := stored.PreviousTransfer
+		ownerData := stored.OwnerData
+
+		payments := payment.GetPayments(ownerData, previousTransfer)
+
+		// get here if all issues are new
+		_, _, err = payment.Store(payments, payId, 1, false)
+		if nil != err {
+			return err
+		}
+		if duplicate {
 			return fault.ErrTransactionAlreadyExists
 		}
 
@@ -419,7 +425,7 @@ func processProof(packed []byte) error {
 		return fault.ErrNotAvailableDuringSynchronise
 	}
 
-	var payId payment.PayId
+	var payId reservoir.PayId
 	if len(packed) > payment.NonceLength+len(payId) {
 		return fault.ErrInvalidNonce
 	}
@@ -446,7 +452,7 @@ func processPay(packed []byte) error {
 		return fault.ErrNotAvailableDuringSynchronise
 	}
 
-	var payId payment.PayId
+	var payId reservoir.PayId
 	if len(packed) > payment.ReceiptLength+len(payId) {
 		return fault.ErrInvalidNonce
 	}

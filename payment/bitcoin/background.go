@@ -6,20 +6,26 @@ package bitcoin
 
 import (
 	"container/heap"
+	"github.com/bitmark-inc/bitmarkd/reservoir"
+	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
 	"time"
 )
 
 // accept a new payment to monitor
-func QueueItem(payId string, txId string, confirmations uint64, transactions []byte) {
+func QueueItem(payId reservoir.PayId, txId string, confirmations uint64, payments []*transactionrecord.Payment) bool {
 	globalData.itemQueue <- &priorityItem{
 		payId:         payId,
 		txId:          txId,
 		confirmations: confirmations,
 		//blockNumber:   globalData.latestBlockNumber + confirmations,
-		blockNumber:  110, // ***** FIX THIS: temporary for debugging
-		transactions: transactions,
+		blockNumber: 110, // ***** FIX THIS: temporary for debugging
+		payments:    payments,
 	}
+
+	// ***** FIX THIS: to return a proper status
+	// ***** FIX THIS: need to validate the transaction initially
+	return true // ***** FIX THIS: assume success
 }
 
 // wait for new blocks or new payment items
@@ -59,7 +65,7 @@ loop:
 }
 
 // process all items <= block number
-func process(log *logger.L, pq *priorityQueue, blockNumber uint64, verifier chan<- []byte) {
+func process(log *logger.L, pq *priorityQueue, blockNumber uint64, verifier chan<- reservoir.PayId) {
 
 	const (
 		OP_RETURN       = "6a"   // plain op code
@@ -88,28 +94,45 @@ loop:
 			continue loop       // ***** FIX THIS: need to limit the number of retries
 		}
 
+		payIdString := item.payId.String()
+		amounts := make(map[string]uint64)
 		ok := false
 		for i, vout := range reply.Vout {
 			log.Infof("vout[%d]: %v ", i, vout)
-			if OP_RETURN == vout.ScriptPubKey.Hex[0:2] && vout.ScriptPubKey.Hex[2:] == item.payId {
+			if OP_RETURN == vout.ScriptPubKey.Hex[0:2] && vout.ScriptPubKey.Hex[2:] == payIdString {
 				ok = true
-				break
+				continue
 			}
-			if OP_RETURN_COUNT == vout.ScriptPubKey.Hex[0:4] && vout.ScriptPubKey.Hex[4:] == item.payId {
+			if OP_RETURN_COUNT == vout.ScriptPubKey.Hex[0:4] && vout.ScriptPubKey.Hex[4:] == payIdString {
 				ok = true
-				break
+				continue
+			}
+			if 1 == len(vout.ScriptPubKey.Addresses) {
+				amounts[vout.ScriptPubKey.Addresses[0]] += convertToSatoshi(vout.Value)
 			}
 		}
 		if !ok {
 			log.Errorf("no payId: %s in tx: %s", item.payId, item.txId)
-			////////now what // ***** FIX THIS: or just drop the item
+			continue loop // item is dropped from the heap
+		}
+		for _, item := range item.payments {
+			v := amounts[item.Address]
+			if v >= item.Amount {
+				amounts[item.Address] -= item.Amount
+			} else {
+				log.Errorf("insufficient payment t: %s  need: %d  have: %d", item.Address, item.Amount, v)
+				ok = false
+				break
+			}
+		}
+		if !ok {
 			continue loop // item is dropped from the heap
 		}
 
 		if reply.Confirmations >= item.confirmations {
 			log.Infof("confirming payId: %s in tx: %s", item.payId, item.txId)
 			// send the transaction block to verifier
-			verifier <- item.transactions
+			verifier <- item.payId
 		} else {
 			log.Infof("insufficient confirmations for payId: %s in tx: %s", item.payId, item.txId)
 			// if not yet at required confirmations, requeue at next possible block
