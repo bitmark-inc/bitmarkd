@@ -32,23 +32,21 @@ loop:
 			globalData.Lock()
 
 			for payId, item := range globalData.unverified.entries {
-
 				if time.Since(item.expires) > 0 {
 					log.Infof("expired: %#v", payId)
-					for _, txId := range item.txIds {
 
+					for _, txId := range item.txIds {
 						delete(globalData.unverified.index, txId)
 					}
-					for _, link := range item.links {
 
+					for _, link := range item.links {
 						delete(globalData.pending, link)
 					}
+
 					delete(globalData.unverified.entries, payId)
 				}
-
-				globalData.Unlock()
-
 			}
+			globalData.Unlock()
 		}
 	}
 }

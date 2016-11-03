@@ -29,18 +29,25 @@ func GetPayments(ownerData []byte, previousTransfer *transactionrecord.BitmarkTr
 	// 1: last transfer block owner (could be merged to 1 if same address)
 	// 2: transfer payment (optional)
 	payments := make([]*transactionrecord.Payment, 1, 3)
-	payments[0] = GetPayment(iKey) // should never be nil
+	payments[0] = getPayment(iKey) // should never be nil
 
 	// last transfer payment if there is one otherwise add it issuer
-	p := GetPayment(tKey)
-	if nil == p || (p.Currency == payments[0].Currency && p.Address == payments[0].Address) {
+	p := getPayment(tKey)
+	if nil == p {
+		// no transfer payment so issuer get double
+		payments[0].Amount *= 2
+	} else if p.Currency == payments[0].Currency && p.Address == payments[0].Address {
+		// transfer and issuer are the same so accumulate amount
 		payments[0].Amount += p.Amount
 	} else {
+		// separate transfer payment
 		payments = append(payments, p)
 	}
 
 	// optional payment record (if previous record was transfer and contains such)
 	if nil != previousTransfer && nil != previousTransfer.Payment {
+		// always keep this as a separate amount even if address is the same
+		// so it shows up separately in currency transaction
 		payments = append(payments, previousTransfer.Payment)
 	}
 
@@ -48,28 +55,30 @@ func GetPayments(ownerData []byte, previousTransfer *transactionrecord.BitmarkTr
 }
 
 // get a payment record from a specific block given the blocks 8 byte big endian key
-func GetPayment(blockNumberKey []byte) *transactionrecord.Payment {
+func getPayment(blockNumberKey []byte) *transactionrecord.Payment {
 
 	if 8 != len(blockNumberKey) {
-		fault.Panicf("payment.GetPayment: block number need 8 bytes: %x", blockNumberKey)
+		fault.Panicf("payment.getPayment: block number need 8 bytes: %x", blockNumberKey)
 	}
-	if bytes.Equal([]byte{0, 0, 0, 0, 0, 0, 0}, blockNumberKey) {
+
+	// if all 8 bytes are zero then no transfer payment as this is an issue
+	if bytes.Equal([]byte{0, 0, 0, 0, 0, 0, 0, 0}, blockNumberKey) {
 		return nil
 	}
 
 	blockOwnerData := storage.Pool.BlockOwners.Get(blockNumberKey)
 	if nil == blockOwnerData {
-		fault.Panicf("payment.GetPayment: no block owner data for block number: %x", blockNumberKey)
+		fault.Panicf("payment.getPayment: no block owner data for block number: %x", blockNumberKey)
 	}
 
 	c, err := currency.FromUint64(binary.BigEndian.Uint64(blockOwnerData[:8]))
 	if nil != err {
-		fault.Panicf("payment.GetPayment: block currency invalid error: %v", err)
+		fault.Panicf("payment.getPayment: block currency invalid error: %v", err)
 	}
 
 	fee, err := c.GetFee()
 	if nil != err {
-		fault.Panicf("payment.GetPayment: get fee returned error: %v", err)
+		fault.Panicf("payment.getPayment: get fee returned error: %v", err)
 	}
 
 	return &transactionrecord.Payment{

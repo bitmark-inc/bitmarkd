@@ -79,6 +79,8 @@ func Initialise() error {
 	globalData.verified = make(map[merkle.Digest][]byte)
 	globalData.pending = make(map[merkle.Digest]merkle.Digest)
 
+	globalData.enabled = true
+
 	globalData.expiry.log = logger.New("reservoir-expiry")
 	if nil == globalData.expiry.log {
 		return fault.ErrInvalidLoggerChannel
@@ -195,14 +197,18 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, er
 
 	// if already seen just return pay id
 	if _, ok := globalData.unverified.entries[payId]; ok {
+		globalData.log.Debugf("duplicate pay id: %s", payId)
 		return result, false, nil
 	}
 
 	// if duplicates were detected, but duplicates were present
 	// then it is an error
 	if duplicate {
+		globalData.log.Debugf("overlapping pay id: %s", payId)
 		return nil, false, fault.ErrTransactionAlreadyExists
 	}
+
+	globalData.log.Infof("creating pay id: %s", payId)
 
 	globalData.count.pending += len(issues)
 

@@ -209,7 +209,7 @@ func TryProof(payId reservoir.PayId, clientNonce []byte) TrackingStatus {
 	// convert difficulty
 	bigDifficulty := r.difficulty.BigInt()
 
-	globalData.log.Infof("TryProof: difficulty: 0x%64x", bigDifficulty)
+	globalData.log.Infof("TryProof: difficulty: 0x%064x", bigDifficulty)
 
 	// compute hash with all possible payNonces
 	h := sha3.New256()
@@ -234,10 +234,11 @@ func TryProof(payId reservoir.PayId, clientNonce []byte) TrackingStatus {
 		// convert to big integer from BE byte slice
 		bigDigest := new(big.Int).SetBytes(digest[:])
 
-		globalData.log.Debugf("TryProof: digest: 0x%64x", bigDigest)
+		globalData.log.Debugf("TryProof: digest: 0x%064x", bigDigest)
 
 		// check difficulty and verify if ok
 		if bigDigest.Cmp(bigDifficulty) <= 0 {
+			globalData.log.Debugf("TryProof: success: pay id: %s", payId)
 			globalData.verifier.queue <- payId
 			return TrackingAccepted
 		}

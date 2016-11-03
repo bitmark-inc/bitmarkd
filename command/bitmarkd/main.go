@@ -221,7 +221,7 @@ func main() {
 	case "chain":
 		switch cn := mode.ChainName(); cn { // ***** FIX THIS: is there a better way?
 		case chain.Local:
-			nodesDomain = "node.test.bitmark.com"
+			nodesDomain = "nodes.localdomain"
 		case chain.Testing:
 			nodesDomain = "nodes.test.bitmark.com"
 		case chain.Bitmark:

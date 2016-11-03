@@ -43,6 +43,10 @@ func store(header *blockrecord.Header, digest blockdigest.Digest, packedBlock []
 
 // store an incoming block checking to make sure it is valid first
 func StoreIncoming(packedBlock []byte) error {
+
+	reservoir.Lock()
+	defer reservoir.Unlock()
+
 	packedHeader := blockrecord.PackedHeader(packedBlock[:blockrecord.TotalBlockSize])
 	header, err := packedHeader.Unpack()
 	if nil != err {

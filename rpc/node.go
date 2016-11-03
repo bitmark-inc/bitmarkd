@@ -66,7 +66,7 @@ type InfoReply struct {
 
 type Counters struct {
 	Pending  int `json:"pending"`
-	Verified int `json:"pending"`
+	Verified int `json:"verified"`
 }
 
 func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
