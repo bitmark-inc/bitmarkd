@@ -5,15 +5,18 @@
 package main
 
 import (
-	"fmt"
-	//"github.com/bitmark-inc/bitmarkd/block"
 	"crypto/rand"
+	"crypto/tls"
+	"fmt"
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/bitmark-inc/logger"
 	"io/ioutil"
+	"net"
 	"os"
 	"strconv"
+	"strings"
 )
 
 // setup command handler
@@ -110,6 +113,9 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 		fmt.Printf("generated signing key: %q\n", signingKeyFilename)
 		log.Infof("generated signing key: %q", signingKeyFilename)
 
+	case "dns-txt", "txt":
+		dnsTXT(log, options)
+
 	case "block-times":
 		return false // defer processing until database is loaded
 
@@ -142,7 +148,10 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 		fmt.Printf("                                     and signing key in:    %q\n", options.Proofing.SigningKey)
 		fmt.Printf("\n")
 
-		fmt.Printf("  block-times FILE BEGIN END       - write time and difficulty to text file for a range of blocks\n")
+		fmt.Printf("  dns-txt                (txt)     - display the data to put in a dbs TXT record\n")
+		fmt.Printf("\n")
+
+		//fmt.Printf("  block-times FILE BEGIN END       - write time and difficulty to text file for a range of blocks\n")
 		exitwithstatus.Exit(1)
 	}
 
@@ -209,4 +218,126 @@ func processDataCommand(log *logger.L, arguments []string, options *Configuratio
 
 	// indicate processing complete and prefor normal exit from main
 	return true
+}
+
+// print out the DNS TXT record
+func dnsTXT(log *logger.L, options *Configuration) {
+	//   <TAG> a=<IPv4;IPv6> c=<PORT> s=<PORT> r=<PORT> f=<SHA3-256(cert)> p=<PUBLIC-KEY>
+	const txtRecord = "TXT \"bitmark=v2 a=%s c=%d s=%d r=%d f=%x p=%x\"\n"
+
+	rpc := options.ClientRPC
+
+	keypair, err := tls.LoadX509KeyPair(rpc.Certificate, rpc.PrivateKey)
+	if nil != err {
+		fmt.Printf("error: cannot certificate: %q  error: %s\n", rpc.Certificate, err)
+		exitwithstatus.Exit(1)
+	}
+
+	fingerprint := CertificateFingerprint(keypair.Certificate[0])
+
+	rpcIP4, rpcIP6, rpcPort := getFirstConnections(rpc.Announce)
+	if 0 == rpcPort {
+		fmt.Printf("error: cannot determine rpc port\n")
+		exitwithstatus.Exit(1)
+	}
+
+	peering := options.Peering
+
+	publicKey, err := zmqutil.ReadPublicKeyFile(peering.PublicKey)
+	if nil != err {
+		fmt.Printf("error: cannot read public key: %q  error: %s\n", peering.PublicKey, err)
+		exitwithstatus.Exit(1)
+	}
+
+	peeringAnnounce := options.Peering.Announce
+
+	broadcastIP4, broadcastIP6, broadcastPort := getFirstConnections(peeringAnnounce.Broadcast)
+	if 0 == broadcastPort {
+		fmt.Printf("error: cannot determine broadcast port\n")
+		exitwithstatus.Exit(1)
+	}
+
+	listenIP4, listenIP6, listenPort := getFirstConnections(peeringAnnounce.Listen)
+	if 0 == listenPort {
+		fmt.Printf("error: cannot determine listen port\n")
+		exitwithstatus.Exit(1)
+	}
+
+	IPs := ""
+	if "" != rpcIP4 && rpcIP4 == broadcastIP4 && rpcIP4 == listenIP4 {
+		IPs = rpcIP4
+	}
+	if "" != rpcIP6 && rpcIP6 == broadcastIP6 && rpcIP6 == listenIP6 {
+		if "" == IPs {
+			IPs = rpcIP6
+		} else {
+			IPs += ";" + rpcIP6
+		}
+	}
+
+	fmt.Printf("rpc fingerprint: %x\n", fingerprint)
+	fmt.Printf("rpc port:        %d\n", rpcPort)
+	fmt.Printf("public key:      %x\n", publicKey)
+	fmt.Printf("subscribe port:  %d\n", broadcastPort)
+	fmt.Printf("connect port:    %d\n", listenPort)
+	fmt.Printf("IP4 IP6:         %s\n", IPs)
+
+	fmt.Printf(txtRecord, IPs, listenPort, broadcastPort, rpcPort, fingerprint, publicKey)
+}
+
+// extract first IP4 and/or IP6 connection
+func getFirstConnections(connections []string) (string, string, int) {
+	initialPort := 0
+	IP4 := ""
+	IP6 := ""
+	for i, c := range connections {
+		v6, IP, port, err := splitConnection(c)
+		if nil != err {
+			fmt.Printf("error: cannot decode[i]: %q  error: %s\n", i, c, err)
+			exitwithstatus.Exit(1)
+		}
+		if v6 {
+			if "" == IP6 {
+				IP6 = IP
+				if 0 == initialPort || port == initialPort {
+					initialPort = port
+				}
+			}
+		} else {
+			if "" == IP4 {
+				IP4 = IP
+				if 0 == initialPort || port == initialPort {
+					initialPort = port
+				}
+			}
+		}
+		// fmt.Printf("scan[%d]: %v  %d\n", i, IP, port)
+	}
+	return IP4, IP6, initialPort
+}
+
+// split connection into ip and port
+func splitConnection(hostPort string) (bool, string, int, error) {
+	host, port, err := net.SplitHostPort(hostPort)
+	if nil != err {
+		return false, "", 0, fault.ErrInvalidIPAddress
+	}
+
+	IP := net.ParseIP(strings.Trim(host, " "))
+	if nil == IP {
+		return false, "", 0, fault.ErrInvalidIPAddress
+	}
+
+	numericPort, err := strconv.Atoi(strings.Trim(port, " "))
+	if nil != err {
+		return false, "", 0, err
+	}
+	if numericPort < 1 || numericPort > 65535 {
+		return false, "", 0, fault.ErrInvalidPortNumber
+	}
+
+	if nil != IP.To4() {
+		return false, IP.String(), numericPort, nil
+	}
+	return true, "[" + IP.String() + "]", numericPort, nil
 }
