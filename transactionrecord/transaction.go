@@ -40,8 +40,10 @@ type Transaction interface {
 
 // byte sizes for various fields
 const (
+	minNameLength           = 1
 	maxNameLength           = 64
 	maxMetadataLength       = 2048
+	minFingerprintLength    = 1
 	maxFingerprintLength    = 1024
 	maxSignatureLength      = 1024
 	maxTimestampLength      = len("2014-06-21T14:32:16Z")

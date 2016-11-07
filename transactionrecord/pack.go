@@ -66,10 +66,16 @@ func (assetData *AssetData) Pack(address *account.Account) (Packed, error) {
 		return nil, fault.ErrInvalidOwnerOrRegistrant
 	}
 
+	if utf8.RuneCountInString(assetData.Name) < minNameLength {
+		return nil, fault.ErrNameTooShort
+	}
 	if utf8.RuneCountInString(assetData.Name) > maxNameLength {
 		return nil, fault.ErrNameTooLong
 	}
 
+	if utf8.RuneCountInString(assetData.Fingerprint) < minFingerprintLength {
+		return nil, fault.ErrFingerprintTooShort
+	}
 	if utf8.RuneCountInString(assetData.Fingerprint) > maxFingerprintLength {
 		return nil, fault.ErrFingerprintTooLong
 	}
@@ -82,13 +88,15 @@ func (assetData *AssetData) Pack(address *account.Account) (Packed, error) {
 	// i.e.  key1 <NUL> value1 <NUL> key2 <NUL> value2 <NUL> … keyN <NUL> valueN
 	// Notes: 1: no NUL after last value
 	//        2: no empty key or value is allowed
-	splitMetadata := strings.Split(assetData.Metadata, "\u0000")
-	if 1 == len(splitMetadata)%2 {
-		return nil, fault.ErrMetadataIsNotMap
-	}
-	for _, v := range splitMetadata {
-		if 0 == len(v) {
+	if 0 != len(assetData.Metadata) {
+		splitMetadata := strings.Split(assetData.Metadata, "\u0000")
+		if 1 == len(splitMetadata)%2 {
 			return nil, fault.ErrMetadataIsNotMap
+		}
+		for _, v := range splitMetadata {
+			if 0 == len(v) {
+				return nil, fault.ErrMetadataIsNotMap
+			}
 		}
 	}
 
