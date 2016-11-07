@@ -4,8 +4,6 @@
 
 package avl
 
-import ()
-
 // return the node with the lowest key value
 func (tree *Tree) First() *Node {
 	return tree.root.first()

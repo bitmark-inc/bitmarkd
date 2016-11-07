@@ -6,7 +6,6 @@ package genesis
 
 import (
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
-	//"github.com/bitmark-inc/bitmarkd/blockrecord"
 )
 
 // the starting block number

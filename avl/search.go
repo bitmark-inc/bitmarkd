@@ -4,8 +4,6 @@
 
 package avl
 
-import ()
-
 // find a specific item
 func (tree *Tree) Search(key item) *Node {
 	return search(key, tree.root)

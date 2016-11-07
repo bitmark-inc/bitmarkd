@@ -4,8 +4,6 @@
 
 package payment
 
-import ()
-
 // result of track payment/try proof
 type TrackingStatus int
 

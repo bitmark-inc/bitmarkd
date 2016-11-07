@@ -141,8 +141,8 @@ func (difficulty *Difficulty) SetBits(u uint64) *Difficulty {
 		return difficulty.internalReset()
 	}
 
-	exponent := (uint(u>>56) & 0xff)
-	mantissa := (u & 0x00ffffffffffffff) | 0x0100000000000000 // include hidden bit
+	exponent := uint(u>>56) & 0xff
+	mantissa := u&0x00ffffffffffffff | 0x0100000000000000 // include hidden bit
 
 	// check for exponent overflow
 	if exponent >= 0xc0 {
@@ -247,7 +247,7 @@ func (difficulty *Difficulty) internalSetReciprocal(f float64) float64 {
 				u += 1
 			}
 			// hide 56th bit and incorporate exponent
-			u = u&0x00ffffffffffffff | (e << 56)
+			u = u&0x00ffffffffffffff | e<<56
 			//fmt.Printf("bits: %016x\n", u)
 
 			difficulty.bits = u
@@ -307,7 +307,7 @@ func (difficulty *Difficulty) Decay() float64 {
 	difficulty.m.Lock()
 	defer difficulty.m.Unlock()
 
-	newReciprocal := difficulty.reciprocal - decayLambda*(difficulty.reciprocal)
+	newReciprocal := difficulty.reciprocal - decayLambda*difficulty.reciprocal
 
 	// adjust difficulty
 	return difficulty.internalSetReciprocal(newReciprocal)

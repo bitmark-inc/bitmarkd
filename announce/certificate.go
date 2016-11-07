@@ -4,8 +4,6 @@
 
 package announce
 
-import ()
-
 // add a certificate
 func AddCertificate(fingerprint [32]byte, certificate []byte) {
 	//announce.certificatePool.Add(fingerprint[:], certificate)

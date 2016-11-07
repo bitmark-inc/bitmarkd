@@ -113,7 +113,7 @@ func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIndex, t
 		fault.PanicIfError("asset: bad packed record", err)
 
 		switch tx := transaction.(type) {
-		case (*transactionrecord.AssetData):
+		case *transactionrecord.AssetData:
 			if tx.Name == asset.Name &&
 				tx.Fingerprint == asset.Fingerprint &&
 				tx.Metadata == asset.Metadata &&

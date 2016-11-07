@@ -4,8 +4,6 @@
 
 package blockring
 
-import ()
-
 // to iterate though the ring
 type RingReader struct {
 	stop    int

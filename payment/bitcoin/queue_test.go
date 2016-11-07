@@ -22,37 +22,37 @@ func stringToPayId(t *testing.T, s string) (payId reservoir.PayId) {
 func TestQueue(t *testing.T) {
 
 	items := []*priorityItem{
-		&priorityItem{
+		{
 			payId:         stringToPayId(t, "12345567edac76f0"),
 			txId:          "123456",
 			confirmations: 14,
 			blockNumber:   7,
 		},
-		&priorityItem{
+		{
 			payId:         stringToPayId(t, "12345567edac76fb"),
 			txId:          "12342e3",
 			confirmations: 24,
 			blockNumber:   6,
 		},
-		&priorityItem{
+		{
 			payId:         stringToPayId(t, "12345567edac76f9"),
 			txId:          "1234454",
 			confirmations: 1,
 			blockNumber:   67,
 		},
-		&priorityItem{
+		{
 			payId:         stringToPayId(t, "12345567edac76fe"),
 			txId:          "1234u88765",
 			confirmations: 3,
 			blockNumber:   12,
 		},
-		&priorityItem{
+		{
 			payId:         stringToPayId(t, "12345567edac76f1"),
 			txId:          "1234999",
 			confirmations: 8,
 			blockNumber:   146,
 		},
-		&priorityItem{
+		{
 			payId:         stringToPayId(t, "12345567edac76f5"),
 			txId:          "1234777",
 			confirmations: 1,

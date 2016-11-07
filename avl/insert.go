@@ -4,8 +4,6 @@
 
 package avl
 
-import ()
-
 // insert a new node into the tree
 // returns the possibly updated root
 func (tree *Tree) Insert(key item, value interface{}) bool {

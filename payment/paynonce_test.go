@@ -18,7 +18,7 @@ func TestPayNonce(t *testing.T) {
 	nonce := payment.PayNonce{
 		0x2b, 0xa1, 0x54, 0x14, 0x46, 0x74, 0x29, 0x1d,
 	}
-	expected := `"000000000000000a2ba154144674291d"`
+	expected := `"2ba154144674291d"`
 
 	t.Logf("pay nonce: %#v", nonce)
 
@@ -48,9 +48,10 @@ func TestPayNonce(t *testing.T) {
 func TestNewPayNonceBitmark(t *testing.T) {
 
 	// dependant on the genesis digest for bitmark
-	expected := `"0000000000000001e2d8cfa135540469"`
+	expected := `"445f81247a6fdecc"`
 
-	block.Initialise()
+	setup(t)
+	defer teardown(t)
 
 	d, n := block.Get()
 	t.Logf("block: %d  %#v", n, d)
@@ -74,12 +75,11 @@ func TestNewPayNonceBitmark(t *testing.T) {
 func TestNewPayNonceTesting(t *testing.T) {
 
 	// dependant on the genesis digest for testing
-	expected := `"0000000000000001e9cffd126b8be29c"`
+	expected := `"d1cc53a056227402"`
 
-	// hack to switch to test mode
-	block.Finalise()
 	mode.Initialise(chain.Testing)
-	block.Initialise()
+	setup(t)
+	defer teardown(t)
 
 	d, n := block.Get()
 	t.Logf("block: %d  %#v", n, d)

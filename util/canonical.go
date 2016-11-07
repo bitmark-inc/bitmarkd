@@ -136,7 +136,7 @@ func (packed PackedConnection) Unpack() (*Connection, int) {
 	copy(ip, packed[3:n])
 	c := &Connection{
 		ip:   ip,
-		port: (uint16(packed[1]) << 8) + uint16(packed[2]),
+		port: uint16(packed[1])<<8 + uint16(packed[2]),
 	}
 	return c, int(n)
 }

@@ -4,8 +4,6 @@
 
 package avl
 
-import ()
-
 // type to hold the root node of a tree
 type Tree struct {
 	root  *Node

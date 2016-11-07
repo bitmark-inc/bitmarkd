@@ -5,7 +5,7 @@
 package blockring_test
 
 import (
-	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/blockring"
 	"github.com/bitmark-inc/bitmarkd/genesis"
 	"testing"
 )
@@ -13,9 +13,9 @@ import (
 func TestBitmarkCRC(t *testing.T) {
 
 	// dependant on the genesis digest for bitmark
-	expected := uint64(0xd73c9f4000217194)
+	expected := uint64(0x445f81247a6fdecc)
 
-	actual := block.CRC(genesis.BlockNumber, genesis.LiveGenesisBlock)
+	actual := blockring.CRC(genesis.BlockNumber, genesis.LiveGenesisBlock)
 	if expected != actual {
 		t.Fatalf("crc expected: 0x%016x  actual: 0x%016x", expected, actual)
 	}
@@ -26,7 +26,7 @@ func TestTestingCRC(t *testing.T) {
 	// dependant on the genesis digest for testing
 	expected := uint64(0xd1cc53a056227402)
 
-	actual := block.CRC(genesis.BlockNumber, genesis.TestGenesisBlock)
+	actual := blockring.CRC(genesis.BlockNumber, genesis.TestGenesisBlock)
 	if expected != actual {
 		t.Fatalf("crc expected: 0x%016x  actual: 0x%016x", expected, actual)
 	}

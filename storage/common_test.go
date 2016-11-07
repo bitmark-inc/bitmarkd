@@ -25,7 +25,10 @@ func removeFiles() {
 // configure for testing
 func setup(t *testing.T) {
 	removeFiles()
-	storage.Initialise(databaseFileName)
+	err := storage.Initialise(databaseFileName)
+	if nil != err {
+		t.Fatalf("storage initialise error: %s", err)
+	}
 }
 
 // post test cleanup

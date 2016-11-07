@@ -169,7 +169,7 @@ func doTraverse(t *testing.T, addList []stringItem) {
 	}
 
 	expected := make([]string, 0, len(unique))
-	for key, _ := range unique {
+	for key := range unique {
 		expected = append(expected, key)
 	}
 	sort.Strings(expected)

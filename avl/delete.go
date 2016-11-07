@@ -4,8 +4,6 @@
 
 package avl
 
-import ()
-
 // delete: tree balancer
 func balanceLeft(pp **Node) bool {
 	h := true
