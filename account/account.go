@@ -246,11 +246,7 @@ func (account *ED25519Account) CheckSignature(message []byte, signature Signatur
 		return fault.ErrInvalidSignature
 	}
 
-	// ***** FIX THIS: any way to avoid these exta copies *****
-	s := [ed25519.SignatureSize]byte{}
-	copy(s[:], signature[:])
-
-	if !ed25519.Verify(account.PublicKey[:], message, s[:]) {
+	if !ed25519.Verify(account.PublicKey[:], message, signature) {
 		return fault.ErrInvalidSignature
 	}
 	return nil

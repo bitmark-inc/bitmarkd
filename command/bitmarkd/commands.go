@@ -189,8 +189,6 @@ func processDataCommand(log *logger.L, arguments []string, options *Configuratio
 			exitwithstatus.Exit(1)
 		}
 
-		fmt.Printf("*********** ERROR: %d %d\n", begin, end) // ***** FIX THIS: remove later
-
 		switch filename := arguments[0]; filename {
 		case "": // use stdout
 			fallthrough
