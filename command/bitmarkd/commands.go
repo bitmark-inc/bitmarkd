@@ -293,7 +293,7 @@ func getFirstConnections(connections []string) (string, string, int) {
 	for i, c := range connections {
 		v6, IP, port, err := splitConnection(c)
 		if nil != err {
-			fmt.Printf("error: cannot decode[i]: %q  error: %s\n", i, c, err)
+			fmt.Printf("error: cannot decode[%d]: %q  error: %s\n", i, c, err)
 			exitwithstatus.Exit(1)
 		}
 		if v6 {

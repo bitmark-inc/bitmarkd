@@ -209,36 +209,3 @@ func TestBlockDigestFromBlock(t *testing.T) {
 		t.Fatalf("JSON mismatch: actual: %v  expected: %v", uHeader, h)
 	}
 }
-
-// // data taken from recent (at the time of writing) block
-// // ***** FIX THIS: this need new values
-// func TestRawBlock328656(t *testing.T) {
-
-// 	// block data
-// 	expectedHash := "0000000000000000001436c6d5f9118a6a2f00087629dbf6fac3e5cd9672f0b6"
-// 	prevBlock := "0000000000000000009cc28fdf5919a73d4e04e6048d1063ef7cdd24dfab49d3"
-// 	merkleRoot := "2b44fc83c84e21817b0da633af7733a4872c2415a21bf9f6b4883a5751c3e020"
-
-// 	difficultyBits := difficulty.New()
-// 	difficultyBits.SetBits(404472624)
-// 	h := block.Header{
-// 		Version:       2,
-// 		PreviousBlock: hexEndianDigest(prevBlock),
-// 		MerkleRoot:    hexEndianDigest(merkleRoot),
-// 		Time:          1415178957,
-// 		DifficultyBits:          *difficultyBits,
-// 		Nonce:         698985022,
-// 	}
-
-// 	// pack the block
-// 	p := h.Pack()
-
-// 	// get digest and check
-// 	dp := p.Digest()
-// 	expected := hexEndianDigest(expectedHash)
-
-// 	if dp != expected {
-// 		t.Logf("packed: %x", p)
-// 		t.Errorf("digest = %#v expected %#v", dp, expected)
-// 	}
-// }

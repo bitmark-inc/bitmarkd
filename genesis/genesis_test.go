@@ -54,7 +54,7 @@ var LiveNet = SourceData{
 	// 2015-12-28T02:13:11Z
 	Timestamp: TS{0x56809ab7, "2015-12-28T02:13:11Z"},
 
-	Nonce: 0x4fa9713e80a6d2ed,
+	Nonce: 0xe19f903abf385a11,
 
 	Nonce2: 0x4c6976652a4e6574,
 
@@ -103,16 +103,16 @@ var TestNet = SourceData{
 	},
 }
 
-// create the live genesis block
+// test the live genesis block
 //
 // must be first
 func TestLiveGenesisAssembly(t *testing.T) {
 	checkAssembly(t, "Live", LiveNet, genesis.LiveGenesisDigest, genesis.LiveGenesisBlock)
 }
 
-// create the test genesis block
+// test the test genesis block
 //
-// must be after the live test
+// must be after the live test (since setting mode to test is permanent)
 func TestTestGenesisAssembly(t *testing.T) {
 
 	mode.Initialise(chain.Testing) // enter test mode - ONLY ALLOWED ONCE (or panic will occur
@@ -241,91 +241,15 @@ func checkAssembly(t *testing.T, title string, source SourceData, gDigest blockd
 		t.Log(line + "  |" + text + "|")
 	}
 
-	// // unpack the block
-	// unpacked, err := blk.Unpack()
-	// if nil != err {
-	// 	t.Fatalf("unpack block failed: error: %v", err)
-	// }
+	// unpack the block header
+	unpackedHeader, err := blockrecord.PackedHeader(blk[:blockrecord.TotalBlockSize]).Unpack()
+	if nil != err {
+		t.Fatalf("unpack block header failed: error: %v", err)
+	}
 
-	// if unpacked.Header.Timestamp != h.Timestamp {
-	// 	t.Fatalf("block ntime mismatch: actual 0x%08x  expected 0x%08x", unpacked.Header.Timestamp, h.Timestamp)
-	// }
+	if unpackedHeader.Timestamp != h.Timestamp {
+		t.Fatalf("block ntime mismatch: actual 0x%08x  expected 0x%08x", unpackedHeader.Timestamp, h.Timestamp)
+	}
 
-	// // 	if unpacked.Timestamp != timestamp {
-	// // 		t.Fatalf("block timestamp mismatch: actual %v  expected %v", unpacked.Timestamp, timestamp)
-	// // 	}
-
-	// t.Logf("unpacked block: %#v", unpacked)
-
-	// ***** FIX THIS: is block.Pack() really necessary, need to determinal all the previous owners
-	// ***** FIX THIS: suggest not; just keep tx in packed form
-	//      // re-pack
-	// 	reDigest, rePacked, ok := block.Pack(unpacked.Number, timestamp, &unpacked.Header.Bits, unpacked.Header.Time, unpacked.Header.Nonce, append(extraNonce1, extraNonce2...), unpacked.Addresses, unpacked.TxIds)
-
-	// 	if !ok {
-	// 		t.Fatal("block.Pack failed")
-	// 	}
-
-	// 	if reDigest != gDigest {
-	// 		t.Fatalf("re-digest mismatch actual: %#v  expected: %#v", reDigest, gDigest)
-	// 	}
-
-	// 	if !bytes.Equal(rePacked, blk) {
-	// 		t.Fatalf("re-packed mismatch actual: %x  expected: %x", rePacked, blk)
-	// 	}
-
-	// 	// log the final result
-	// 	t.Logf("Genesis digest: %#v", reDigest)
-	// 	t.Logf("Genesis block:  %x", rePacked)
-
-	// 	// hex dumps for genesis.go
-	// 	t.Log(util.FormatBytes(title+"GenesisBlock", rePacked))
-	// 	t.Log(util.FormatBytes(title+"GenesisDigest", reDigest[:]))
-
-	// 	// check that these match the current genesis block/digest
-	// 	if reDigest != gDigest {
-	// 		t.Fatalf("re-digest/Genesis mismatch actual: %#v  expected: %#v", reDigest, gDigest)
-	// 	}
-
-	// 	if !bytes.Equal(rePacked, gBlock) {
-	// 		t.Fatalf("re-packed/Genesis mismatch actual: %x  expected: %x", rePacked, gBlock)
-	// 	}
-	// }
-
-	// // test the real genesis block
-	// func TestGenesisBlock(t *testing.T) {
-	// 	doReal(t, "Live", block.LiveGenesisDigest, block.LiveGenesisBlock)
-	// 	doReal(t, "Test", block.TestGenesisDigest, block.TestGenesisBlock)
-	// }
-
-	// func doReal(t *testing.T, title string, gDigest blockdigest.Digest, gBlock blockrecord.PackedHeader) {
-
-	// 	// unpack the block
-	// 	var unpacked block.Block
-	// 	err := block.LiveGenesisBlock.Unpack(&unpacked)
-	// 	if nil != err {
-	// 		t.Fatalf("unpack block failed: error: %v", err)
-	// 	}
-
-	// 	if verboseTesting { // turn on in all_test.go
-	// 		t.Logf("unpacked block: %v", unpacked)
-	// 	}
-
-	// 	// check current genesis digest matches
-	// 	if unpacked.Digest != block.LiveGenesisDigest {
-	// 		t.Fatalf("digest/Genesis mismatch actual: %#v  expected: %#v", unpacked.Digest, block.LiveGenesisDigest)
-	// 	}
-
-	// 	// check block number
-	// 	if unpacked.Number != genesisBlockNumber {
-	// 		t.Fatalf("block number: %d  expected %d", unpacked.Number, genesisBlockNumber)
-	// 	}
-
-	// 	// check the address matches
-	// 	if 1 != len(unpacked.Addresses) {
-	// 		t.Fatalf("Addresses: found: %d  expected: %d", len(unpacked.Addresses), 1)
-	// 	}
-	// 	if unpacked.Addresses[0].String() != genesisLiveRawAddress {
-	// 		t.Fatalf("RawAddress: %q  expected: %q", unpacked.Addresses[0].String(), genesisLiveRawAddress)
-	// 	}
+	t.Logf("unpacked block header: %#v", unpackedHeader)
 }
