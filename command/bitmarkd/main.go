@@ -94,7 +94,7 @@ func main() {
 
 	// create a logger channel for the main program
 	log := logger.New("main")
-	defer log.Info("shutting down…")
+	defer log.Info("finished")
 	log.Info("starting…")
 	log.Debugf("masterConfiguration: %v", masterConfiguration)
 
@@ -368,6 +368,7 @@ func main() {
 	log.Infof("received signal: %v", sig)
 	if 0 == len(options["quiet"]) {
 		fmt.Printf("\nreceived signal: %v\n", sig)
-		fmt.Printf("\nshutting down...\n")
+		fmt.Printf("\nshutting down…\n")
 	}
+	log.Info("shutting down…")
 }

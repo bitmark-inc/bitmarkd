@@ -106,6 +106,9 @@ func Initialise(configuration *Configuration) error {
 // stop all payment handlers
 func Finalise() {
 
+	globalData.log.Info("shutting down…")
+	globalData.log.Flush()
+
 	// stop background
 	globalData.background.Stop()
 
@@ -118,6 +121,9 @@ func Finalise() {
 			fault.Panicf("missing payment finaliser for Currency: %s", c.String())
 		}
 	}
+
+	globalData.log.Info("finished")
+	globalData.log.Flush()
 }
 
 // store an incoming record for payment

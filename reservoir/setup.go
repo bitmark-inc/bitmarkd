@@ -101,8 +101,17 @@ func Initialise() error {
 
 // stop all
 func Finalise() {
+
+	globalData.log.Info("shutting down…")
+	globalData.log.Flush()
+
+	globalData.enabled = false
+
 	// stop background
 	globalData.background.Stop()
+
+	globalData.log.Info("finished")
+	globalData.log.Flush()
 }
 
 // read counter

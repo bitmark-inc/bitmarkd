@@ -178,5 +178,8 @@ func Finalise() error {
 	// finally...
 	globalData.initialised = false
 
+	globalData.log.Info("finished")
+	globalData.log.Flush()
+
 	return nil
 }
