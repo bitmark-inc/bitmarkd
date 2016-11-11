@@ -205,6 +205,7 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 	// optional absolute paths i.e. blank or an absolute path
 	optionalAbsolute := []*string{
 		&options.PidFile,
+		&options.Bitcoin.CACertificate,
 	}
 	for _, f := range optionalAbsolute {
 		if "" != *f {
