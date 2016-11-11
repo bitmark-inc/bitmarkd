@@ -116,6 +116,9 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 	case "dns-txt", "txt":
 		dnsTXT(log, options)
 
+	case "start", "run":
+		return false // continue processing
+
 	case "block-times":
 		return false // defer processing until database is loaded
 
@@ -151,6 +154,10 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 		fmt.Printf("  dns-txt                (txt)     - display the data to put in a dbs TXT record\n")
 		fmt.Printf("\n")
 
+		fmt.Printf("  start                  (run)     - just run the program, same as no arguments\n")
+		fmt.Printf("                                     for convienience when passing script arguments\n")
+		fmt.Printf("\n")
+
 		//fmt.Printf("  block-times FILE BEGIN END       - write time and difficulty to text file for a range of blocks\n")
 		exitwithstatus.Exit(1)
 	}
@@ -171,6 +178,9 @@ func processDataCommand(log *logger.L, arguments []string, options *Configuratio
 	}
 
 	switch command {
+
+	case "start", "run":
+		return false // continue processing
 
 	case "block-times":
 		if len(arguments) < 3 {
@@ -216,7 +226,7 @@ func processDataCommand(log *logger.L, arguments []string, options *Configuratio
 
 	}
 
-	// indicate processing complete and prefor normal exit from main
+	// indicate processing complete and perform normal exit from main
 	return true
 }
 
