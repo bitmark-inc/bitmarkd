@@ -66,8 +66,9 @@ func Initialise(database string) error {
 
 	db, err := leveldb.RecoverFile(database, nil)
 	// db, err := leveldb.OpenFile(database, nil)
-
-	fault.PanicIfError("pool.Initialise", err)
+	if nil != err {
+		return err
+	}
 
 	poolData.database = db
 
@@ -97,7 +98,7 @@ func Initialise(database string) error {
 
 		prefixTag := fieldInfo.Tag.Get("prefix")
 		if 1 != len(prefixTag) {
-			fault.Panicf("pool: %v	has invalid prefix: %q", fieldInfo, prefixTag)
+			return fmt.Errorf("pool: %v  has invalid prefix: %q", fieldInfo, prefixTag)
 		}
 
 		prefix := prefixTag[0]
@@ -143,13 +144,13 @@ func (p *PoolHandle) prefixKey(key []byte) []byte {
 // store a key/value bytes pair to the database
 func (p *PoolHandle) Put(key []byte, value []byte) {
 	err := poolData.database.Put(p.prefixKey(key), value, nil)
-	fault.PanicIfError("pool.Add", err)
+	fault.PanicIfError("pool.Put", err)
 }
 
 // remove a key from the database
 func (p *PoolHandle) Delete(key []byte) {
 	err := poolData.database.Delete(p.prefixKey(key), nil)
-	fault.PanicIfError("pool.Remove", err)
+	fault.PanicIfError("pool.Delete", err)
 }
 
 // read a value for a given key

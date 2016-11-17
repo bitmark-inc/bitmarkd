@@ -133,7 +133,6 @@ type IssueInfo struct {
 // for duplicate to be true all transactions must all match exactly to a
 // previous set - this is to allow for multiple submission from client
 // without receiving a duplicate transaction error
-//func Store(transactions []transactionrecord.Transaction) (*StoreInfo, bool, error) {
 func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, error) {
 
 	count := len(issues)
@@ -207,7 +206,7 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, er
 	// if already seen just return pay id
 	if _, ok := globalData.unverified.entries[payId]; ok {
 		globalData.log.Debugf("duplicate pay id: %s", payId)
-		return result, false, nil
+		return result, true, nil
 	}
 
 	// if duplicates were detected, but duplicates were present
@@ -240,7 +239,7 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, er
 
 	globalData.unverified.entries[payId] = entry
 
-	return result, true, nil
+	return result, false, nil
 }
 
 // result returned by store transfer
@@ -281,13 +280,13 @@ func StoreTransfer(transfer *transactionrecord.BitmarkTransfer) (*TransferInfo, 
 
 	// if already seen just return pay id
 	if _, ok := globalData.unverified.entries[payId]; ok {
-		return result, false, nil
+		return result, true, nil
 	}
 
 	// if duplicates were detected, but different duplicates were present
 	// then it is an error
 	if duplicate {
-		return nil, false, fault.ErrTransactionAlreadyExists
+		return nil, true, fault.ErrTransactionAlreadyExists
 	}
 
 	// one new item
@@ -311,7 +310,7 @@ func StoreTransfer(transfer *transactionrecord.BitmarkTransfer) (*TransferInfo, 
 
 	globalData.unverified.entries[payId] = entry
 
-	return result, true, nil
+	return result, false, nil
 }
 
 // returned data from veriftyTransfer

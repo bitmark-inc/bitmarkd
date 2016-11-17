@@ -84,19 +84,24 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 		return err
 	}
 
-	stored, duplicate, err := reservoir.StoreIssues(arguments.Issues)
-	if nil != err {
-		return err
-	}
-	packedIssues := stored.Packed
-	issueStatus := make([]IssueStatus, len(stored.TxIds))
-	for i, txId := range stored.TxIds {
-		issueStatus[i].TxId = txId
-	}
-
 	result := CreateReply{
 		Assets: assetStatus,
-		Issues: issueStatus,
+	}
+
+	packedIssues := []byte{}
+	var stored *reservoir.IssueInfo
+	duplicate := false
+	if issueCount > 0 {
+		stored, duplicate, err = reservoir.StoreIssues(arguments.Issues)
+		if nil != err {
+			return err
+		}
+		packedIssues = stored.Packed
+		issueStatus := make([]IssueStatus, len(stored.TxIds))
+		for i, txId := range stored.TxIds {
+			issueStatus[i].TxId = txId
+		}
+		result.Issues = issueStatus
 	}
 
 	// fail if no data sent

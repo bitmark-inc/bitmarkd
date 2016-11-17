@@ -76,7 +76,7 @@ var (
 	ErrNotLink                               = RecordError("not link")
 	ErrNotPublicKey                          = RecordError("not public key")
 	ErrNotTransactionPack                    = RecordError("not transaction pack")
-	ErrPayIdAlreadyUsed                      = InvalidError("payId alread used")
+	ErrPayIdAlreadyUsed                      = InvalidError("payId already used")
 	ErrPaymentAddressTooLong                 = LengthError("payment address too long")
 	ErrPreviousBlockDigestDoesNotMatch       = InvalidError("previous block digest does not match")
 	ErrReceiptTooLong                        = LengthError("receipt too long")
