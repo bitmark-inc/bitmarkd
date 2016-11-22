@@ -14,6 +14,7 @@ import (
 	bFault "github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/payment"
+	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"golang.org/x/crypto/ed25519"
@@ -178,7 +179,7 @@ func makeAsset(client *netrpc.Client, network string, assetConfig assetData, ver
 	}
 
 	args := rpc.CreateArguments{
-		Assets: []transactionrecord.AssetData{r},
+		Assets: []*transactionrecord.AssetData{&r},
 		Issues: nil,
 	}
 
@@ -228,7 +229,7 @@ func makeIssue(network string, issueConfig issueData, nonce uint64) (*transactio
 type issueReply struct {
 	AssetId        transactionrecord.AssetIndex `json:"assetId"`
 	IssueIds       []merkle.Digest              `json:"issueIds"`
-	PayId          payment.PayId                `json:"payId"`
+	PayId          reservoir.PayId              `json:"payId"`
 	PayNonce       payment.PayNonce             `json:"payNonce"`
 	Difficulty     string                       `json:"difficulty"`
 	SubmittedNonce string                       `json:"submittedNonce"`
@@ -238,7 +239,7 @@ type issueReply struct {
 func doIssues(client *netrpc.Client, network string, issueConfig issueData, verbose bool) error {
 
 	nonce := time.Now().UTC().Unix() * 1000
-	issues := make([]transactionrecord.BitmarkIssue, issueConfig.quantity)
+	issues := make([]*transactionrecord.BitmarkIssue, issueConfig.quantity)
 	for i := 0; i < len(issues); i += 1 {
 		issue, err := makeIssue(network, issueConfig, uint64(nonce)+uint64(i))
 		if nil != err {
@@ -247,7 +248,7 @@ func doIssues(client *netrpc.Client, network string, issueConfig issueData, verb
 		if nil == issue {
 			return fault.ErrMakeIssueFail
 		}
-		issues[i] = *issue
+		issues[i] = issue
 	}
 
 	if verbose {
@@ -349,7 +350,7 @@ func makeTransfer(network string, txId string, owner *KeyPair, newOwner *KeyPair
 // JSON data to output after transfer completes
 type transferReply struct {
 	TransferId merkle.Digest                `json:"transferId"`
-	PayId      payment.PayId                `json:"payId"`
+	PayId      reservoir.PayId              `json:"payId"`
 	Payments   []*transactionrecord.Payment `json:"payments"`
 	Command    string                       `json:"command,omitempty"`
 }

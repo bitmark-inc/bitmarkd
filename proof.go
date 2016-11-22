@@ -9,12 +9,13 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/payment"
+	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"golang.org/x/crypto/sha3"
 	"time"
 )
 
 // determine the nonce as a hex string
-func makeProof(payId payment.PayId, payNonce payment.PayNonce, difficulty string, verbose bool) string {
+func makeProof(payId reservoir.PayId, payNonce payment.PayNonce, difficulty string, verbose bool) string {
 
 	nonce := uint64(12345)
 	nonceBuffer := make([]byte, 8)
