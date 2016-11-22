@@ -34,7 +34,7 @@ func makeProof(payId payment.PayId, payNonce payment.PayNonce, difficulty string
 		h.Write(nonceBuffer)
 		var digest [32]byte
 		h.Sum(digest[:0])
-		if 0 == (digest[0] | digest[1]) {
+		if 0 == digest[0]|digest[1] {
 			if verbose {
 				hps := float64(hashCount) / time.Now().Sub(start).Seconds() / 1.0e6
 				fmt.Printf("%f MH/s: possible nonce: %x  with digest: %x\n", hps, nonceBuffer, digest)

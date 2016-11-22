@@ -79,8 +79,7 @@ override_dh_auto_install:
 	share="${SRC_DIR}/${SRC_NAME}/share" ; \
 	[ -d "$${share}" ] && cp -p "$${share}"/* "$${share_dir}/" || true ; \
 	exe="${BIN_DIR}/${SRC_NAME}" ; \
-	[ -x "$${exe}" ] && cp -p "$${exe}" "$${bin_dir}" ; \
-	done
+	[ -x "$${exe}" ] && cp -p "$${exe}" "$${bin_dir}"
 
 
 override_dh_strip:
