@@ -73,7 +73,7 @@ func TestValidBase58(t *testing.T) {
 			t.Errorf("%d: from base58 pubkey: %x  expected %x", index, acc.PublicKeyBytes(), test.publicKey)
 		}
 		if acc.String() != test.base58Account {
-			t.Errorf("%d: to base58: %d got: %s  expected %s", index, acc, test.base58Account)
+			t.Errorf("%d: to base58: got: %s  expected %s", index, acc, test.base58Account)
 		}
 
 		// test unmarshal JSON
