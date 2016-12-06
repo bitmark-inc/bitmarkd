@@ -12,7 +12,7 @@ set -e
 case "$1" in
   (install)
     # fresh install - remove any old logs
-    rm -f /vali/lib/bitmarkd/log/*
+    rm -f /var/lib/bitmarkd/log/*
     ;;
 
   (upgrade)
