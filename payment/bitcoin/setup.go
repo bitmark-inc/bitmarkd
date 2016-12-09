@@ -74,6 +74,7 @@ type Configuration struct {
 	Username      string `libucl:"username"`
 	Password      string `libucl:"password"`
 	URL           string `libucl:"url"`
+	ServerName    string `libucl:"server_name"`
 	CACertificate string `libucl:"ca_certificate"`
 	Certificate   string `libucl:"certificate"`
 	PrivateKey    string `libucl:"private_key"`
@@ -138,11 +139,14 @@ func Initialise(configuration *Configuration, verifier chan<- reservoir.PayId) e
 
 	if useTLS {
 		// use TLS in one of two cases:
-		// a) only CA certificate is provideded
-		// b) all three: cliets certificate and private key, plus CA certificate
+		// a) only CA certificate is provided
+		// b) all three: clients certificate and private key, plus CA certificate
+		// server name is the name embedded in the certificate
 		tlsConfiguration := &tls.Config{
 			Certificates:             clientCertificates,
 			RootCAs:                  certificatePool,
+			NextProtos:               nil,
+			ServerName:               configuration.ServerName, // the server name in the certificate
 			InsecureSkipVerify:       false,
 			CipherSuites:             nil,
 			PreferServerCipherSuites: true,
