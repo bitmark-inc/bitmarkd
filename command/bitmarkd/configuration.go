@@ -206,6 +206,8 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 	optionalAbsolute := []*string{
 		&options.PidFile,
 		&options.Bitcoin.CACertificate,
+		&options.Bitcoin.Certificate,
+		&options.Bitcoin.PrivateKey,
 	}
 	for _, f := range optionalAbsolute {
 		if "" != *f {
