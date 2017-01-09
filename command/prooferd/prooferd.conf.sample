@@ -26,17 +26,17 @@ chain = local
 peering {
 
   # the miners keys
-  public_key = minerd-local.public
-  private_key = minerd-local.private
+  public_key = prooferd.public
+  private_key = prooferd.private
 
   # connections to bitmarkd nodes
   connect {
-    public_key = "hR}n^Uv:4b3!zI<jfgg6Wrhhy.ssgk2S/s+t%rQE"
+    public_key = "9d505875ffb4101955486cfde65ea5b5a0fb2482c94ddef69cfffd774d98fa20"
     blocks = "127.0.0.1:2140"
     submit = "127.0.0.1:2141"
   }
   # connect {
-  #   public_key = "WssDb0.mqFph#y7fUxS6}9ht}zcs!%C[pxAi{t]K"
+  #   public_key = "9d505875ffb4101955486cfde65ea5b5a0fb2482c94ddef69cfffd774d98fa20"
   #   blocks = "[::1]:3140"
   #   submit = "[::1]:3141"
   # }

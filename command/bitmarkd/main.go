@@ -370,5 +370,7 @@ func main() {
 		fmt.Printf("\nreceived signal: %v\n", sig)
 		fmt.Printf("\nshutting down…\n")
 	}
+
 	log.Info("shutting down…")
+	mode.Set(mode.Stopped)
 }

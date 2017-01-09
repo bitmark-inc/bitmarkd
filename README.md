@@ -6,7 +6,7 @@ Prerequisites
 
 * Install the go language package for your system
 * Configure environment variables for go system
-* install the ZMQ4 library
+* install the ZMQ4, UCL, Argon2 libraries
 
 For shell add the following to the shell's profile
 (remark the `export CC=clang` if you wish to use gcc)
@@ -29,7 +29,7 @@ unset gobin
 OnFreeBSD/PC-BSD
 
 ~~~~~
-pkg install libzmq4
+pkg install libzmq4 libargon2 libucl
 ~~~~~
 
 On a Debian like system
@@ -37,6 +37,7 @@ On a Debian like system
 
 ~~~~~
 apt-get install libzmq4-dev
+# lib ucl and argon2 need to be manually installed
 ~~~~~
 
 To compile simply:
@@ -53,20 +54,28 @@ set up IPs, ports and local bitcoin testnet connection.
 
 ~~~~~
 mkdir -p ~/.config/bitmarkd
-cp bitmarkd.conf-sample  ~/.config/bitmarkd/bitmarkd.conf
-${EDITDOR}   ~/.config/bitmarkd/bitmarkd.conf
+cp bitmarkd.conf.sample  ~/.config/bitmarkd/bitmarkd.conf
+${EDITOR}   ~/.config/bitmarkd/bitmarkd.conf
+~~~~~
+
+To see the bitmarkd sub-commands:
+
+~~~~~
+bitmarkd --config-file="${HOME}/.config/bitmarkd/bitmarkd.conf" help
 ~~~~~
 
 Generate key files and certificates.
 
 ~~~~~
-bitmarkd generate-identity
-bitmarkd generate-rpc-cert
-bitmarkd generate-mine-cert
+bitmarkd --config-file="${HOME}/.config/bitmarkd/bitmarkd.conf" gen-peer-identity
+bitmarkd --config-file="${HOME}/.config/bitmarkd/bitmarkd.conf" gen-rpc-cert
+bitmarkd --config-file="${HOME}/.config/bitmarkd/bitmarkd.conf" gen-proof-identity
 ~~~~~
 
 Start the program.
 
 ~~~~~
-bitmarkd
+bitmarkd --config-file="${HOME}/.config/bitmarkd/bitmarkd.conf" start
 ~~~~~
+
+Note that a similar process is needed for the prooferd (mining subsystem)
