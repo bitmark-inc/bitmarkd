@@ -32,7 +32,6 @@ type globalDataType struct {
 	verified   map[merkle.Digest][]byte        // key: tx id
 	pending    map[merkle.Digest]merkle.Digest // key: link tx id
 
-	count      counters
 	expiry     expiryData
 	background *background.T
 }
@@ -47,11 +46,6 @@ type unverifiedItem struct {
 	links        []merkle.Digest
 	transactions [][]byte
 	expires      time.Time
-}
-
-type counters struct {
-	pending  int
-	verified int
 }
 
 // expiry background
@@ -116,7 +110,7 @@ func Finalise() {
 
 // read counter
 func ReadCounters() (int, int) {
-	return globalData.count.pending, globalData.count.verified
+	return len(globalData.unverified.index), len(globalData.verified)
 }
 
 // result returned by store issues
@@ -218,8 +212,6 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, er
 
 	globalData.log.Infof("creating pay id: %s", payId)
 
-	globalData.count.pending += len(issues)
-
 	expiresAt := time.Now().Add(expiryTime)
 
 	// create index entries
@@ -288,9 +280,6 @@ func StoreTransfer(transfer *transactionrecord.BitmarkTransfer) (*TransferInfo, 
 	if duplicate {
 		return nil, true, fault.ErrTransactionAlreadyExists
 	}
-
-	// one new item
-	globalData.count.pending += 1
 
 	expiresAt := time.Now().Add(expiryTime)
 
@@ -422,8 +411,6 @@ func SetVerified(payId PayId) {
 			delete(globalData.unverified.index, txId)
 		}
 		delete(globalData.unverified.entries, payId)
-		globalData.count.pending -= len(entry.txIds)
-		globalData.count.verified += len(entry.txIds)
 	}
 	globalData.Unlock()
 }
@@ -480,7 +467,6 @@ func DeleteByTxId(txId merkle.Digest) {
 	}
 	if _, ok := globalData.verified[txId]; ok {
 		delete(globalData.verified, txId)
-		globalData.count.verified -= 1
 	}
 	globalData.Unlock()
 }
@@ -497,7 +483,6 @@ func DeleteByLink(link merkle.Digest) {
 		}
 		if _, ok := globalData.verified[txId]; ok {
 			delete(globalData.verified, txId)
-			globalData.count.verified -= 1
 		}
 	}
 	globalData.Unlock()
