@@ -29,8 +29,12 @@ type globalDataType struct {
 	log        *logger.L
 	enabled    bool
 	unverified unverifiedEntry
-	verified   map[merkle.Digest][]byte        // key: tx id
-	pending    map[merkle.Digest]merkle.Digest // key: link tx id
+	verified   map[merkle.Digest]*verifiedItem
+
+	// indexed by link so that duplicate transfers can be detected
+	// data is the tx id so that the same transfer repeated can be distinguished
+	// from an invalid duplicate transfer
+	pendingTransfer map[merkle.Digest]merkle.Digest
 
 	expiry     expiryData
 	background *background.T
@@ -46,6 +50,11 @@ type unverifiedItem struct {
 	links        []merkle.Digest
 	transactions [][]byte
 	expires      time.Time
+}
+
+type verifiedItem struct {
+	link        merkle.Digest
+	transaction []byte
 }
 
 // expiry background
@@ -70,8 +79,8 @@ func Initialise() error {
 
 	globalData.unverified.entries = make(map[PayId]*unverifiedItem)
 	globalData.unverified.index = make(map[merkle.Digest]PayId)
-	globalData.verified = make(map[merkle.Digest][]byte)
-	globalData.pending = make(map[merkle.Digest]merkle.Digest)
+	globalData.verified = make(map[merkle.Digest]*verifiedItem)
+	globalData.pendingTransfer = make(map[merkle.Digest]merkle.Digest)
 
 	globalData.enabled = true
 
@@ -109,8 +118,12 @@ func Finalise() {
 }
 
 // read counter
-func ReadCounters() (int, int) {
-	return len(globalData.unverified.index), len(globalData.verified)
+func ReadCounters() (int, int, []int) {
+	n := []int{
+		len(globalData.pendingTransfer),
+		len(globalData.unverified.entries),
+	}
+	return len(globalData.unverified.index), len(globalData.verified), n
 }
 
 // result returned by store issues
@@ -261,6 +274,11 @@ func StoreTransfer(transfer *transactionrecord.BitmarkTransfer) (*TransferInfo, 
 
 	txId := verifyResult.txId
 	link := transfer.Link
+	if txId == link {
+		// reject any transaction that links to itself
+		// this should never occur, but protect agains this situuation
+		return nil, false, fault.ErrTransactionLinksToSelf
+	}
 
 	result := &TransferInfo{
 		Id:               payId,
@@ -285,9 +303,7 @@ func StoreTransfer(transfer *transactionrecord.BitmarkTransfer) (*TransferInfo, 
 
 	// create index and pending entries
 	globalData.unverified.index[txId] = payId
-	if link != txId {
-		globalData.pending[link] = txId
-	}
+	globalData.pendingTransfer[link] = txId
 
 	// save transactions
 	entry := &unverifiedItem{
@@ -349,7 +365,7 @@ func verifyTransfer(arguments *transactionrecord.BitmarkTransfer) (*verifiedInfo
 	txId := packedTransfer.MakeLink()
 
 	// check if this transfer was already received
-	_, okP := globalData.pending[arguments.Link]
+	_, okP := globalData.pendingTransfer[arguments.Link]
 	_, okU := globalData.unverified.index[txId]
 	duplicate := false
 	if okU && okP {
@@ -407,7 +423,13 @@ func SetVerified(payId PayId) {
 	if ok {
 		// move the record
 		for i, txId := range entry.txIds {
-			globalData.verified[txId] = entry.transactions[i]
+			v := &verifiedItem{
+				transaction: entry.transactions[i],
+			}
+			if nil != entry.links {
+				v.link = entry.links[i]
+			}
+			globalData.verified[txId] = v
 			delete(globalData.unverified.index, txId)
 		}
 		delete(globalData.unverified.entries, payId)
@@ -430,8 +452,8 @@ func FetchVerified(count int) ([]merkle.Digest, []transactionrecord.Packed, int,
 	if globalData.enabled {
 		for txId, data := range globalData.verified {
 			txIds = append(txIds, txId)
-			txData = append(txData, data)
-			totalBytes += len(data)
+			txData = append(txData, data.transaction)
+			totalBytes += len(data.transaction)
 			n += 1
 			if n >= count {
 				break
@@ -465,8 +487,10 @@ func DeleteByTxId(txId merkle.Digest) {
 	if payId, ok := globalData.unverified.index[txId]; ok {
 		internalDelete(payId)
 	}
-	if _, ok := globalData.verified[txId]; ok {
+	if v, ok := globalData.verified[txId]; ok {
+		link := v.link
 		delete(globalData.verified, txId)
+		delete(globalData.pendingTransfer, link)
 	}
 	globalData.Unlock()
 }
@@ -477,12 +501,14 @@ func DeleteByLink(link merkle.Digest) {
 	if globalData.enabled {
 		fault.Panic("reservoir delete link when not locked")
 	}
-	if txId, ok := globalData.pending[link]; ok {
+	if txId, ok := globalData.pendingTransfer[link]; ok {
 		if payId, ok := globalData.unverified.index[txId]; ok {
 			internalDelete(payId)
 		}
-		if _, ok := globalData.verified[txId]; ok {
+		if v, ok := globalData.verified[txId]; ok {
+			link := v.link
 			delete(globalData.verified, txId)
+			delete(globalData.pendingTransfer, link)
 		}
 	}
 	globalData.Unlock()
@@ -497,9 +523,7 @@ func internalDelete(payId PayId) {
 			delete(globalData.unverified.index, txId)
 			delete(globalData.verified, txId)
 			link := entry.links[i]
-			if link != txId {
-				delete(globalData.pending, link)
-			}
+			delete(globalData.pendingTransfer, link)
 		}
 		delete(globalData.unverified.entries, payId)
 	}

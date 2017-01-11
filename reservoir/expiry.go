@@ -40,7 +40,7 @@ loop:
 					}
 
 					for _, link := range item.links {
-						delete(globalData.pending, link)
+						delete(globalData.pendingTransfer, link)
 					}
 
 					delete(globalData.unverified.entries, payId)

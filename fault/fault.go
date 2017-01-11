@@ -87,6 +87,7 @@ var (
 	ErrTransactionIsNotAnAsset               = InvalidError("transaction is not an asset")
 	ErrTransactionIsNotAnIssue               = InvalidError("transaction is not an issue")
 	ErrTransactionIsNotAnIssueOrATransfer    = InvalidError("transaction is not an issue or a transfer")
+	ErrTransactionLinksToSelf                = RecordError("transaction links to self")
 	ErrWrongNetworkForPublicKey              = InvalidError("wrong network for public key")
 )
 

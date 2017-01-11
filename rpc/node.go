@@ -65,8 +65,9 @@ type InfoReply struct {
 }
 
 type Counters struct {
-	Pending  int `json:"pending"`
-	Verified int `json:"verified"`
+	Pending  int   `json:"pending"`
+	Verified int   `json:"verified"`
+	Others   []int `json:"others"`
 }
 
 func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
@@ -77,7 +78,7 @@ func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 	reply.RPCs = connectionCount.Uint64()
 	// reply.Peers = peer.ConnectionCount()
 	// reply.Miners = mine.ConnectionCount()
-	reply.TransactionCounters.Pending, reply.TransactionCounters.Verified = reservoir.ReadCounters()
+	reply.TransactionCounters.Pending, reply.TransactionCounters.Verified, reply.TransactionCounters.Others = reservoir.ReadCounters()
 	reply.Difficulty = difficulty.Current.Reciprocal()
 	reply.Version = version.Version
 	reply.Uptime = time.Since(node.start).String()
