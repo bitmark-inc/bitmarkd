@@ -60,6 +60,11 @@ func NewClient(socketType zmq.Type, privateKey []byte, publicKey []byte, timeout
 	default:
 	}
 
+	// heartbeat (constants from socket.go)
+	socket.SetHeartbeatIvl(heartbeatInterval)
+	socket.SetHeartbeatTimeout(heartbeatTimeout)
+	socket.SetHeartbeatTtl(heartbeatTTL)
+
 	client := &Client{
 		publicKey: make([]byte, 32),
 		address:   "",

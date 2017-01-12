@@ -8,6 +8,13 @@ import (
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
+	"time"
+)
+
+const (
+	heartbeatInterval = 15 * time.Second
+	heartbeatTimeout  = 60 * time.Second
+	heartbeatTTL      = 120 * time.Second
 )
 
 // return a pair of connected push/pull sockets
@@ -122,6 +129,11 @@ func NewServerSocket(socketType zmq.Type, zapDomain string, privateKey []byte, p
 	// socket.SetRouterMandatory(0)   // discard unroutable packets
 	// socket.SetRouterHandover(true) // allow quick reconnect for a given public key
 	// socket.SetImmediate(false)     // queue messages sent to disconnected peer
+
+	// heartbeat
+	socket.SetHeartbeatIvl(heartbeatInterval)
+	socket.SetHeartbeatTimeout(heartbeatTimeout)
+	socket.SetHeartbeatTtl(heartbeatTTL)
 
 	return socket, nil
 }
