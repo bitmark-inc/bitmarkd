@@ -67,8 +67,17 @@ loop:
 			break loop
 		case item := <-queue:
 			log.Infof("sending: %s  data: %x", item.Command, item.Parameters)
-			brdc.process(brdc.socket4, &item)
-			brdc.process(brdc.socket6, &item)
+			if nil == brdc.socket4 && nil == brdc.socket6 {
+				log.Error("no IPv4 or IPv6 socket")
+			}
+			if err := brdc.process(brdc.socket4, &item); nil != err {
+				log.Criticalf("IPv4 error: %s", err)
+				fault.Panicf("broadcaster: IPv4 error: %s", err)
+			}
+			if err := brdc.process(brdc.socket6, &item); nil != err {
+				log.Criticalf("IPv6 error: %s", err)
+				fault.Panicf("broadcaster: IPv6 error: %s", err)
+			}
 		}
 	}
 	if nil != brdc.socket4 {
@@ -80,14 +89,16 @@ loop:
 }
 
 // process some items into a block and publish it
-func (brdc *broadcaster) process(socket *zmq.Socket, item *messagebus.Message) {
+func (brdc *broadcaster) process(socket *zmq.Socket, item *messagebus.Message) error {
 	if nil == socket {
-		brdc.log.Warn("no socket")
-		return
+		return nil
 	}
 
 	_, err := socket.Send(item.Command, zmq.SNDMORE|zmq.DONTWAIT)
-	fault.PanicIfError("broadcaster", err)
+	if nil != err {
+		return err
+	}
+
 	last := len(item.Parameters) - 1
 	for i, p := range item.Parameters {
 		if i == last {
@@ -95,6 +106,9 @@ func (brdc *broadcaster) process(socket *zmq.Socket, item *messagebus.Message) {
 		} else {
 			_, err = socket.SendBytes(p, zmq.SNDMORE|zmq.DONTWAIT)
 		}
-		fault.PanicIfError("broadcaster", err)
+		if nil != err {
+			return err
+		}
 	}
+	return nil
 }
