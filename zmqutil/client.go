@@ -212,6 +212,11 @@ func (client *Client) Receive(flags zmq.Flag) ([][]byte, error) {
 }
 
 // add to a poller
-func (client *Client) Add(poller *zmq.Poller, state zmq.State) int {
-	return poller.Add(client.socket, state)
+func (client *Client) Add(poller *zmq.Poller, state zmq.State) (*zmq.Socket, int) {
+	return client.socket, poller.Add(client.socket, state)
+}
+
+// to string
+func (client Client) String() string {
+	return client.address
 }

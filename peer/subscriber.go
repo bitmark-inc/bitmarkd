@@ -19,6 +19,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
+	"time"
 )
 
 const (
@@ -135,15 +136,52 @@ func (sbsc *subscriber) Run(args interface{}, shutdown <-chan struct{}) {
 	queue := messagebus.Bus.Subscriber.Chan()
 
 	go func() {
+
+		type register struct {
+			client  *zmqutil.Client
+			expires time.Time
+		}
+
+		clientRegister := make(map[*zmq.Socket]*register)
+		checkAt := time.Now().Add(heartbeatTimeout)
 		poller := zmq.NewPoller()
-		for _, c := range sbsc.clients {
-			c.Add(poller, zmq.POLLIN)
+
+		for _, client := range sbsc.clients {
+			socket, _ := client.Add(poller, zmq.POLLIN)
+			clientRegister[socket] = &register{
+				client:  client,
+				expires: checkAt,
+			}
 		}
 		poller.Add(sbsc.pull, zmq.POLLIN)
+
 	loop:
 		for {
 			log.Info("waiting…")
-			sockets, _ := poller.Poll(-1)
+
+			//sockets, _ := poller.Poll(-1)
+			sockets, _ := poller.Poll(heartbeatTimeout)
+
+			now := time.Now()
+			expiresAt := now.Add(heartbeatTimeout)
+			if now.After(checkAt) {
+				checkAt = expiresAt
+				for _, r := range clientRegister {
+					if now.After(r.expires) {
+						if r.client.IsConnected() { // skip empty slot
+							log.Warnf("reconnecting to: %q", r.client)
+							err := r.client.Reconnect()
+							if nil != err {
+								log.Errorf("reconnect error: %s", err)
+							}
+						}
+						r.expires = expiresAt
+					} else if r.expires.Before(checkAt) {
+						checkAt = r.expires
+					}
+				}
+			}
+
 			for _, socket := range sockets {
 				switch s := socket.Socket; s {
 				case sbsc.pull:
@@ -166,10 +204,10 @@ func (sbsc *subscriber) Run(args interface{}, shutdown <-chan struct{}) {
 					data, err := s.RecvMessageBytes(0)
 					if nil != err {
 						log.Errorf("receive error: %v", err)
-
 					} else {
 						sbsc.process(data)
 					}
+					clientRegister[s].expires = expiresAt
 				}
 			}
 		}
@@ -202,6 +240,8 @@ func (sbsc *subscriber) process(data [][]byte) {
 	log := sbsc.log
 	log.Info("incoming message")
 
+	// ***** FIX THIS: check len(data) is sufficient
+	// ***** FIX THIS: maybe need check length of individual data items
 	switch string(data[0]) {
 	case "block":
 		log.Infof("received block: %x", data[1])
@@ -268,6 +308,10 @@ func (sbsc *subscriber) process(data [][]byte) {
 		if announce.AddPeer(data[1], data[2], data[3]) {
 			messagebus.Bus.Broadcast.Send("peer", data[1], data[2], data[3])
 		}
+
+	case "heart":
+		log.Infof("received heart: %x", data[1])
+		// nothing to forward, this is just to keep communication alive
 
 	default:
 		log.Warnf("received unhandled: %x", data)

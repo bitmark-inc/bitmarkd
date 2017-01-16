@@ -11,10 +11,13 @@ import (
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
+	"time"
 )
 
 const (
 	broadcasterZapDomain = "broadcaster"
+	heartbeatInterval    = 60 * time.Second
+	heartbeatTimeout     = 2 * heartbeatInterval
 )
 
 type broadcaster struct {
@@ -68,13 +71,33 @@ loop:
 		case item := <-queue:
 			log.Infof("sending: %s  data: %x", item.Command, item.Parameters)
 			if nil == brdc.socket4 && nil == brdc.socket6 {
-				log.Error("no IPv4 or IPv6 socket")
+				log.Error("no IPv4 or IPv6 socket for broadcast")
 			}
 			if err := brdc.process(brdc.socket4, &item); nil != err {
 				log.Criticalf("IPv4 error: %s", err)
 				fault.Panicf("broadcaster: IPv4 error: %s", err)
 			}
 			if err := brdc.process(brdc.socket6, &item); nil != err {
+				log.Criticalf("IPv6 error: %s", err)
+				fault.Panicf("broadcaster: IPv6 error: %s", err)
+			}
+
+		case <-time.After(heartbeatInterval):
+			// this will only occur if so data was sent during the interval
+			beat := &messagebus.Message{
+				Command:    "heart",
+				Parameters: [][]byte{[]byte("beat")},
+			}
+			log.Info("send heartbeat")
+
+			if nil == brdc.socket4 && nil == brdc.socket6 {
+				log.Error("no IPv4 or IPv6 socket for heartbeat")
+			}
+			if err := brdc.process(brdc.socket4, beat); nil != err {
+				log.Criticalf("IPv4 error: %s", err)
+				fault.Panicf("broadcaster: IPv4 error: %s", err)
+			}
+			if err := brdc.process(brdc.socket6, beat); nil != err {
 				log.Criticalf("IPv6 error: %s", err)
 				fault.Panicf("broadcaster: IPv6 error: %s", err)
 			}
