@@ -131,7 +131,7 @@ func StoreIncoming(packedBlock []byte) error {
 			storage.Pool.Transactions.Put(key, packed)
 			linkOwner := OwnerOf(tx.Link)
 			if nil == linkOwner {
-				fault.Criticalf("missing transaction record for: %v", tx.Link)
+				fault.Criticalf("missing transaction record for link: %v refererenced by tx id: %v", tx.Link, txId)
 				fault.Panic("Transactions database is corrupt")
 			}
 			TransferOwnership(tx.Link, txId, header.Number, linkOwner, tx.Owner)
