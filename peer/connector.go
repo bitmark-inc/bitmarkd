@@ -328,13 +328,19 @@ func register(log *logger.L, clients []*zmqutil.Client) bool {
 		err := announce.SendRegistration(client, "R")
 		if nil != err {
 			log.Errorf("send registration error: %v", err)
-			client.Reconnect()
+			err := client.Reconnect()
+			if nil != err {
+				log.Errorf("reconnect error: %v", err)
+			}
 			continue
 		}
 		data, err := client.Receive(0)
 		if nil != err {
 			log.Errorf("send registration receive error: %v", err)
 			client.Reconnect()
+			if nil != err {
+				log.Errorf("reconnect error: %v", err)
+			}
 			continue
 		}
 		switch string(data[0]) {
@@ -379,13 +385,25 @@ func highestBlock(log *logger.L, clients []*zmqutil.Client) (uint64, *zmqutil.Cl
 		if nil != err {
 			log.Errorf("highestBlock: send error: %v", err)
 			client.Reconnect()
+			if nil != err {
+				log.Errorf("reconnect error: %v", err)
+			}
 			continue
 		}
 
 		data, err := client.Receive(0)
 		if nil != err {
 			log.Errorf("highestBlock: receive error: %v", err)
-			client.Reconnect()
+			log.Error("highestBlock: reconnecting…")
+			err := client.Reconnect()
+			if nil != err {
+				log.Errorf("highestBlock: reconnect error: %v", err)
+				time.Sleep(500 * time.Millisecond)
+				err := client.Reconnect()
+				if nil != err {
+					log.Errorf("highestBlock: retry reconnect error: %v", err)
+				}
+			}
 			continue
 		}
 		if 2 != len(data) {
