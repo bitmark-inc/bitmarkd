@@ -376,47 +376,63 @@ func highestBlock(log *logger.L, clients []*zmqutil.Client) (uint64, *zmqutil.Cl
 	h := uint64(0)
 	c := (*zmqutil.Client)(nil)
 
+client_loop:
 	for _, client := range clients {
 		if !client.IsConnected() {
-			continue
+			continue client_loop
 		}
 
-		err := client.Send("N")
-		if nil != err {
-			log.Errorf("highestBlock: send error: %v", err)
-			client.Reconnect()
+		ok := false
+		data := [][]byte{}
+
+	retrying:
+		for retries := 0; retries < 3; retries += 1 {
+
+			err := client.Send("N")
 			if nil != err {
-				log.Errorf("reconnect error: %v", err)
+				log.Errorf("highestBlock: send error: %v", err)
+				client.Reconnect()
+				if nil != err {
+					log.Errorf("reconnect error: %v", err)
+				}
+				time.Sleep(100 * time.Millisecond)
+				continue retrying
 			}
-			continue
-		}
 
-		data, err := client.Receive(0)
-		if nil != err {
-			log.Errorf("highestBlock: receive error: %v", err)
-			log.Error("highestBlock: reconnecting…")
-			err := client.Reconnect()
+			data, err = client.Receive(0)
 			if nil != err {
-				log.Errorf("highestBlock: reconnect error: %v", err)
-				time.Sleep(500 * time.Millisecond)
+				log.Errorf("highestBlock: receive error: %v", err)
+				log.Error("highestBlock: reconnecting…")
 				err := client.Reconnect()
 				if nil != err {
-					log.Errorf("highestBlock: retry reconnect error: %v", err)
+					log.Errorf("highestBlock: reconnect error: %v", err)
+					time.Sleep(500 * time.Millisecond)
+					err := client.Reconnect()
+					if nil != err {
+						log.Errorf("highestBlock: retry reconnect error: %v", err)
+					}
 				}
+				time.Sleep(100 * time.Millisecond)
+				continue retrying
 			}
-			continue
+			if 2 != len(data) {
+				log.Errorf("highestBlock: received: %d  expected: 2", len(data))
+				continue retrying
+			}
+			ok = true
 		}
-		if 2 != len(data) {
-			log.Errorf("highestBlock: received: %d  expected: 2", len(data))
-			continue
+		if !ok {
+			log.Error("highestBlock: all retries failed")
+			continue client_loop
 		}
+
 		switch string(data[0]) {
 		case "E":
 			log.Errorf("highestBlock: rpc error response: %q", data[1])
-			continue
+			continue client_loop
 		case "N":
 			if 8 != len(data[1]) {
-				continue
+				continue client_loop
 			}
 			n := binary.BigEndian.Uint64(data[1])
 
