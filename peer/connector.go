@@ -382,11 +382,14 @@ client_loop:
 			continue client_loop
 		}
 
+		log.Infof("highestBlock: fetch from: %s", client)
+
 		ok := false
 		data := [][]byte{}
 
 	retrying:
-		for retries := 0; retries < 3; retries += 1 {
+		for retry := 1; retry <= 3; retry += 1 {
+			log.Infof("highestBlock: retry: %d", retry)
 
 			err := client.Send("N")
 			if nil != err {
