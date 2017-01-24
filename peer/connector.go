@@ -423,6 +423,7 @@ client_loop:
 				continue retrying
 			}
 			ok = true
+			break retrying // success
 		}
 		if !ok {
 			log.Error("highestBlock: all retries failed")
