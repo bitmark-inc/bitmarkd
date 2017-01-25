@@ -76,7 +76,7 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 		}
 		pub.owner = &account.Account{
 			AccountInterface: &account.ED25519Account{
-				Test:      true,
+				Test:      mode.IsTesting(),
 				PublicKey: publicKey,
 			},
 		}
