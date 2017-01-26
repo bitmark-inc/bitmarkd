@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2016 Bitmark Inc.
+// Copyright (c) 2014-2017 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -17,10 +17,12 @@ import (
 )
 
 type globalFlags struct {
-	verbose  bool
-	config   string
-	identity string
-	password string
+	verbose    bool
+	config     string
+	identity   string
+	password   string
+	agent      string
+	clearCache bool
 }
 
 func main() {
@@ -43,7 +45,7 @@ func main() {
 		cli.StringFlag{
 			Name:        "config, c",
 			Value:       "",
-			Usage:       "bitmark-cli configuration dir",
+			Usage:       "bitmark-cli configuration directory",
 			Destination: &globals.config,
 		},
 		cli.StringFlag{
@@ -57,6 +59,17 @@ func main() {
 			Value:       "",
 			Usage:       " identity password",
 			Destination: &globals.password,
+		},
+		cli.StringFlag{
+			Name:        "use-agent, u",
+			Value:       "",
+			Usage:       " executable program that returns the password",
+			Destination: &globals.agent,
+		},
+		cli.BoolFlag{
+			Name:        "zero-agent-cache, z",
+			Usage:       " force re-entry of agent password",
+			Destination: &globals.clearCache,
 		},
 	}
 	app.Commands = []cli.Command{
@@ -417,13 +430,22 @@ func runCreate(c *cli.Context, globals globalFlags) {
 	var registrant *KeyPair
 
 	// check password
-	if "" == globals.password {
-		registrant, err = promptAndCheckPassword(issuer)
+	if "" != globals.agent {
+		password, err := passwordFromAgent(issuer.Name, "Create Bitmark", globals.agent, globals.clearCache)
+		if nil != err {
+			exitwithstatus.Message("Error: %s", err)
+		}
+		registrant, err = verifyPassword(password, issuer)
+		if nil != err {
+			exitwithstatus.Message("Error: %s", err)
+		}
+	} else if "" != globals.password {
+		registrant, err = verifyPassword(globals.password, issuer)
 		if nil != err {
 			exitwithstatus.Message("Error: %s", err)
 		}
 	} else {
-		registrant, err = verifyPassword(globals.password, issuer)
+		registrant, err = promptAndCheckPassword(issuer)
 		if nil != err {
 			exitwithstatus.Message("Error: %s", err)
 		}
@@ -484,16 +506,26 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 
 	var ownerKeyPair *KeyPair
 	// check owner password
-	if "" == globals.password {
-		ownerKeyPair, err = promptAndCheckPassword(from)
+	if "" != globals.agent {
+		password, err := passwordFromAgent(from.Name, "Transfer Bitmark", globals.agent, globals.clearCache)
 		if nil != err {
 			exitwithstatus.Message("Error: %s", err)
 		}
-	} else {
+		ownerKeyPair, err = verifyPassword(password, from)
+		if nil != err {
+			exitwithstatus.Message("Error: %s", err)
+		}
+	} else if "" != globals.password {
 		ownerKeyPair, err = verifyPassword(globals.password, from)
 		if nil != err {
 			exitwithstatus.Message("Error: %s", err)
 		}
+	} else {
+		ownerKeyPair, err = promptAndCheckPassword(from)
+		if nil != err {
+			exitwithstatus.Message("Error: %s", err)
+		}
+
 	}
 	// just in case some internal breakage
 	if nil == ownerKeyPair {
@@ -513,7 +545,7 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 	} else {
 		newOwnerKeyPair = &KeyPair{}
 		if len(newPublicKey) != len(newOwnerKeyPair.PublicKey) {
-			exitwithstatus.Message("hex public key must be 32 bytes")
+			exitwithstatus.Message("hex public key must be %d bytes", publicKeySize)
 		}
 		copy(newOwnerKeyPair.PublicKey[:], newPublicKey)
 	}

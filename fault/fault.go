@@ -40,6 +40,7 @@ var (
 	ErrRequiredReceipt          = InvalidError("receipt id is required")
 	ErrRequiredTransferTo       = InvalidError("transfer to is required")
 	ErrRequiredTransferTxId     = InvalidError("transaction id is required")
+	ErrUnableToRegenerateKeys   = InvalidError("unable to regenerate keys")
 	ErrUnmarshalTextFail        = ProcessError("unmarshal text failed")
 	ErrVerifiedPassword         = InvalidError("verified password is different")
 	ErrWrongPassword            = InvalidError("wrong password")

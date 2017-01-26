@@ -69,7 +69,7 @@ func checkDescription(description string) (string, error) {
 	return description, nil
 }
 
-// private key is optional, need either empty or 128 hex chars
+// private key is optional, if present must be either 64 or 128 hex chars
 func checkOptionalKey(key string) (string, error) {
 	if "" == key {
 		return "", nil
@@ -78,7 +78,10 @@ func checkOptionalKey(key string) (string, error) {
 	if nil != err {
 		return "", err
 	}
-	if 64 != len(k) {
+	switch len(k) {
+	case privateKeySize: // have the full key (private + public)
+	case publicKeyOffset: // just have the private part
+	default:
 		return "", fault.ErrKeyLength
 	}
 	return key, nil

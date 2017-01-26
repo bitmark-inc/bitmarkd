@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -21,8 +22,9 @@ import (
 )
 
 const (
-	publicKeySize  = ed25519.PublicKeySize
-	privateKeySize = ed25519.PrivateKeySize
+	publicKeySize   = ed25519.PublicKeySize
+	privateKeySize  = ed25519.PrivateKeySize
+	publicKeyOffset = privateKeySize - publicKeySize
 )
 
 var passwordConsole *terminal.Terminal
@@ -56,6 +58,9 @@ func makeRawKeyPair() error {
 }
 
 // create a new public/private keypair
+// note: private key string must be either:
+//       * 64 bytes  =  [32 byte private key][32 byte public key]
+//       * 32 bytes  =  [32 byte private key]
 func makeKeyPair(privateKeyStr string, password string) (string, string, *configuration.PrivateKeyConfig, error) {
 	var publicKey, privateKey []byte
 	var err error
@@ -70,13 +75,39 @@ func makeKeyPair(privateKeyStr string, password string) (string, string, *config
 		if nil != err {
 			return "", "", nil, err
 		}
-		//check privateKey is valid
-		if len(privateKey) != privateKeySize {
+		// check privateKey is valid
+		if len(privateKey) == privateKeySize {
+			publicKey = make([]byte, publicKeySize)
+			copy(publicKey, privateKey[publicKeyOffset:])
+
+			b := bytes.NewBuffer(privateKey)
+			pub, prv, err := ed25519.GenerateKey(b)
+			if nil != err {
+				return "", "", nil, err
+			}
+			if !bytes.Equal(privateKey, prv) {
+				return "", "", nil, fault.ErrUnableToRegenerateKeys
+			}
+			if !bytes.Equal(publicKey, pub) {
+				return "", "", nil, fault.ErrUnableToRegenerateKeys
+			}
+
+		} else if len(privateKey) == publicKeyOffset {
+			// only have the private part, must generate the public part
+			b := bytes.NewBuffer(privateKey)
+			pub, prv, err := ed25519.GenerateKey(b)
+			if nil != err {
+				return "", "", nil, err
+			}
+			if !bytes.Equal(privateKey, prv[:publicKeyOffset]) {
+				return "", "", nil, fault.ErrUnableToRegenerateKeys
+			}
+			privateKey = prv
+			publicKey = pub
+		} else {
 			return "", "", nil, fault.ErrInvalidPrivateKey
 		}
 
-		publicKey = make([]byte, publicKeySize)
-		copy(publicKey, privateKey[32:])
 	}
 
 	salt, key, err := hashPassword(password)
