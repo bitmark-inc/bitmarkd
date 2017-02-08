@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/account"
@@ -28,7 +29,14 @@ import (
 	zmq "github.com/pebbe/zmq4"
 	"golang.org/x/crypto/ed25519"
 	"io/ioutil"
+	"strings"
 	"time"
+)
+
+// tags for the signing key data
+const (
+	taggedSeed    = "SEED:"    // followed by base58 encoded seed as produced by desktop/cli client
+	taggedPrivate = "PRIVATE:" // followed by 64 bytes of hex Ed25519 private key
 )
 
 const (
@@ -68,6 +76,29 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 	if databytes, err := ioutil.ReadFile(configuration.SigningKey); err != nil {
 		return err
 	} else {
+		s := strings.TrimSpace(string(databytes))
+
+		if strings.HasPrefix(s, taggedSeed) {
+			privateKey, err := account.PrivateKeyFromBase58Seed(s[len(taggedSeed):])
+			if nil != err {
+				return err
+			}
+			pub.privateKey = privateKey.PrivateKeyBytes()
+			pub.owner = privateKey.Account()
+		} else if strings.HasPrefix(s, taggedPrivate) {
+			b, err := hex.DecodeString(s[len(taggedPrivate):])
+			if err != nil {
+				return err
+			}
+			privateKey, err := account.PrivateKeyFromBytes(b)
+			if nil != err {
+				return err
+			}
+			pub.privateKey = privateKey.PrivateKeyBytes()
+			pub.owner = privateKey.Account()
+		} else {
+			return fault.ErrInvalidProofSigningKey
+		}
 		rand := bytes.NewBuffer(databytes)
 		publicKey, privateKey, err := ed25519.GenerateKey(rand)
 		if nil != err {

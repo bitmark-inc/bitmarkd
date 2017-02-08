@@ -9,9 +9,12 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/bitmark-inc/logger"
+	"golang.org/x/crypto/sha3"
 	"io/ioutil"
 	"net"
 	"os"
@@ -95,14 +98,23 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 			exitwithstatus.Exit(1)
 		}
 
-		// new random key for signing base record
-		signingKey := make([]byte, 32)
-		if _, err := rand.Read(signingKey); err != nil {
-			fmt.Printf("error generating signing key error: %v\n", err)
-			log.Criticalf("error generating signing key error: %v", err)
+		// new random seed for signing base record
+		seedCore := make([]byte, 32)
+		if _, err := rand.Read(seedCore); err != nil {
+			fmt.Printf("error generating signing core error: %v\n", err)
+			log.Criticalf("error generating signing core error: %v", err)
 			exitwithstatus.Exit(1)
 		}
-		if err = ioutil.WriteFile(signingKeyFilename, signingKey, 0600); err != nil {
+		seed := []byte{0x5a, 0xfe, 0x01, 0x00} // header + network(live)
+		if mode.IsTesting() {
+			seed[3] = 0x01 // change network to testing
+		}
+		seed = append(seed, seedCore...)
+		checksum := sha3.Sum256(seed)
+		seed = append(seed, checksum[:4]...)
+
+		data := "SEED:" + util.ToBase58(seed) + "\n"
+		if err = ioutil.WriteFile(signingKeyFilename, []byte(data), 0600); err != nil {
 			fmt.Printf("error writing signing key file error: %v\n", err)
 			log.Criticalf("error writing signing key file error: %v", err)
 			exitwithstatus.Exit(1)

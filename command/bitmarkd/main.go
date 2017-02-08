@@ -125,6 +125,14 @@ func main() {
 		defer os.Remove(masterConfiguration.PidFile)
 	}
 
+	// set the initial system mode - before any background tasks are started
+	err = mode.Initialise(masterConfiguration.Chain)
+	if nil != err {
+		log.Criticalf("mode initialise error: %v", err)
+		exitwithstatus.Message("mode initialise error: %v", err)
+	}
+	defer mode.Finalise()
+
 	// command processing - need lock so do not affect an already running process
 	// these commands process data needed for initial setup
 	if len(arguments) > 0 && processSetupCommand(log, arguments, masterConfiguration) {
@@ -142,14 +150,6 @@ func main() {
 	// 	pprof.StartCPUProfile(f)
 	// 	defer pprof.StopCPUProfile()
 	// }
-
-	// set the initial system mode - before any background tasks are started
-	err = mode.Initialise(masterConfiguration.Chain)
-	if nil != err {
-		log.Criticalf("mode initialise error: %v", err)
-		exitwithstatus.Message("mode initialise error: %v", err)
-	}
-	defer mode.Finalise()
 
 	// general info
 	log.Infof("test mode: %v", mode.IsTesting())
