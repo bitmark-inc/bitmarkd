@@ -14,8 +14,11 @@ import (
 	"fmt"
 	"github.com/bitmark-inc/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmark-cli/fault"
+	"github.com/bitmark-inc/bitmarkd/account"
+	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/go-argon2"
 	"golang.org/x/crypto/ed25519"
+	"golang.org/x/crypto/sha3"
 	"golang.org/x/crypto/ssh/terminal"
 	"io"
 	"os"
@@ -35,19 +38,41 @@ type KeyPair struct {
 }
 
 type RawKeyPair struct {
+	Seed       string `json:"seed"`
 	PublicKey  string `json:"public_key"`
 	PrivateKey string `json:"private_key"`
 }
 
-func makeRawKeyPair() error {
-	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
+func makeRawKeyPair(test bool) error {
+
+	seedCore := make([]byte, 32)
+	n, err := rand.Read(seedCore)
+	if nil != err {
+		return err
+	}
+	if 32 != n {
+		panic("too few random bytes")
+	}
+	net := 0x00
+	if test {
+		net = 0x01
+	}
+	packedSeed := []byte{0x5a, 0xfe, 0x01, byte(net)}
+	packedSeed = append(packedSeed, seedCore...)
+	checksum := sha3.Sum256(packedSeed)
+	packedSeed = append(packedSeed, checksum[:4]...)
+
+	seed := util.ToBase58(packedSeed)
+
+	privateKey, err := account.PrivateKeyFromBase58Seed(seed)
 	if nil != err {
 		return err
 	}
 
 	rawKeyPair := RawKeyPair{
-		PublicKey:  hex.EncodeToString(publicKey),
-		PrivateKey: hex.EncodeToString(privateKey),
+		Seed:       seed,
+		PublicKey:  hex.EncodeToString(privateKey.Account().PublicKeyBytes()),
+		PrivateKey: hex.EncodeToString(privateKey.PrivateKeyBytes()),
 	}
 	if b, err := json.MarshalIndent(rawKeyPair, "", "  "); nil != err {
 		return err

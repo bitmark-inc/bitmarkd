@@ -84,6 +84,22 @@ func makeAddress(keyPair *KeyPair, network string) *account.Account {
 	}
 }
 
+// helper to make a private key
+func makePrivateKey(keyPair *KeyPair, network string) *account.PrivateKey {
+
+	testNet := true
+	if network == "bitmark" {
+		testNet = false
+	}
+
+	return &account.PrivateKey{
+		PrivateKeyInterface: &account.ED25519PrivateKey{
+			Test:       testNet,
+			PrivateKey: keyPair.PrivateKey[:],
+		},
+	}
+}
+
 // build a properly signed asset
 func makeAsset(client *netrpc.Client, network string, assetConfig assetData, verbose bool) (*transactionrecord.AssetIndex, error) {
 

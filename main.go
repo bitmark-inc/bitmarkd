@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bitmark-inc/bitmark-cli/configuration"
+	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/codegangsta/cli"
 	"net/rpc/jsonrpc"
@@ -262,7 +263,12 @@ func main() {
 }
 
 func runGenerate(c *cli.Context, globals globalFlags) {
-	if err := makeRawKeyPair(); nil != err {
+	configData, err := checkAndGetConfig(globals.config)
+	if nil != err {
+		exitwithstatus.Message("Error: Get configuration failed: %s", err)
+	}
+
+	if err := makeRawKeyPair("bitmark" != configData.Network); nil != err {
 		exitwithstatus.Message("Error: %s", err)
 	}
 }
@@ -863,11 +869,21 @@ func getDefaultRawKeyPair(c *cli.Context, globals globalFlags) {
 		exitwithstatus.Message("internal error: nil keypair returned")
 	}
 
-	rawKeyPair := RawKeyPair{
-		PublicKey:  hex.EncodeToString(keyPair.PublicKey[:]),
-		PrivateKey: hex.EncodeToString(keyPair.PrivateKey[:]),
+	type KeyPairDisplay struct {
+		Account    *account.Account    `json:"account"`
+		PrivateKey *account.PrivateKey `json:"private_key"`
+		KeyPair    RawKeyPair          `json:"raw"`
 	}
-	if b, err := json.MarshalIndent(rawKeyPair, "", "  "); nil != err {
+	output := KeyPairDisplay{
+		Account:    makeAddress(keyPair, configData.Network),
+		PrivateKey: makePrivateKey(keyPair, configData.Network),
+		KeyPair: RawKeyPair{
+			Seed:       "?",
+			PublicKey:  hex.EncodeToString(keyPair.PublicKey[:]),
+			PrivateKey: hex.EncodeToString(keyPair.PrivateKey[:]),
+		},
+	}
+	if b, err := json.MarshalIndent(output, "", "  "); nil != err {
 		exitwithstatus.Message("Error: %s", err)
 	} else {
 		fmt.Printf("%s\n", b)
