@@ -137,20 +137,14 @@ func (sbsc *subscriber) Run(args interface{}, shutdown <-chan struct{}) {
 
 	go func() {
 
-		type register struct {
-			client  *zmqutil.Client
-			expires time.Time
-		}
-
-		clientRegister := make(map[*zmq.Socket]*register)
+		expiryRegister := make(map[*zmq.Socket]time.Time)
 		checkAt := time.Now().Add(heartbeatTimeout)
-		poller := zmq.NewPoller()
+		poller := zmqutil.NewPoller()
 
 		for _, client := range sbsc.clients {
-			socket, _ := client.Add(poller, zmq.POLLIN)
-			clientRegister[socket] = &register{
-				client:  client,
-				expires: checkAt,
+			socket := client.BeginPolling(poller, zmq.POLLIN)
+			if nil != socket {
+				expiryRegister[socket] = checkAt
 			}
 		}
 		poller.Add(sbsc.pull, zmq.POLLIN)
@@ -159,31 +153,38 @@ func (sbsc *subscriber) Run(args interface{}, shutdown <-chan struct{}) {
 		for {
 			log.Info("waiting…")
 
-			//sockets, _ := poller.Poll(-1)
-			sockets, _ := poller.Poll(heartbeatTimeout)
+			//polled, _ := poller.Poll(-1)
+			polled, _ := poller.Poll(heartbeatTimeout)
 
 			now := time.Now()
 			expiresAt := now.Add(heartbeatTimeout)
 			if now.After(checkAt) {
 				checkAt = expiresAt
-				for _, r := range clientRegister {
-					if now.After(r.expires) {
-						if r.client.IsConnected() { // skip empty slot
-							log.Warnf("reconnecting to: %q", r.client)
-							err := r.client.Reconnect()
+				for s, expires := range expiryRegister {
+					if now.After(expires) {
+						client := zmqutil.ClientFromSocket(s)
+						if client.IsConnected() {
+							log.Warnf("reconnecting to: %q", client)
+							skt, err := client.ReconnectReturningSocket()
 							if nil != err {
 								log.Errorf("reconnect error: %s", err)
+							} else {
+								delete(expiryRegister, s)
+								// note this new entry may or may not be rescanned by range in this loop
+								// since it will have future time it will not be immediately deleted
+								expiryRegister[skt] = expiresAt
 							}
+						} else {
+							expiryRegister[s] = expiresAt
 						}
-						r.expires = expiresAt
-					} else if r.expires.Before(checkAt) {
-						checkAt = r.expires
+					} else if expires.Before(checkAt) {
+						checkAt = expires
 					}
 				}
 			}
 
-			for _, socket := range sockets {
-				switch s := socket.Socket; s {
+			for _, p := range polled {
+				switch s := p.Socket; s {
 				case sbsc.pull:
 					data, err := s.RecvMessageBytes(0)
 					if nil != err {
@@ -207,7 +208,7 @@ func (sbsc *subscriber) Run(args interface{}, shutdown <-chan struct{}) {
 					} else {
 						sbsc.process(data)
 					}
-					clientRegister[s].expires = expiresAt
+					expiryRegister[s] = expiresAt
 				}
 			}
 		}

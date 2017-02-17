@@ -52,6 +52,7 @@ var (
 	ErrInvalidOwnerOrRegistrant              = InvalidError("invalid owner or registrant")
 	ErrInvalidPeerResponse                   = InvalidError("invalid peer response")
 	ErrInvalidPortNumber                     = InvalidError("invalid port number")
+	ErrInvalidPrivateKey                     = InvalidError("invalid private key")
 	ErrInvalidPrivateKeyFile                 = InvalidError("invalid private key file")
 	ErrInvalidProofSigningKey                = InvalidError("invalid proof signing key")
 	ErrInvalidPublicKey                      = InvalidError("invalid public key")

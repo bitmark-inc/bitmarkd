@@ -337,7 +337,7 @@ func register(log *logger.L, clients []*zmqutil.Client) bool {
 		data, err := client.Receive(0)
 		if nil != err {
 			log.Errorf("send registration receive error: %v", err)
-			client.Reconnect()
+			err := client.Reconnect()
 			if nil != err {
 				log.Errorf("reconnect error: %v", err)
 			}
