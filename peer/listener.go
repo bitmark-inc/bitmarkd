@@ -99,11 +99,12 @@ func (lstn *listener) Run(args interface{}, shutdown <-chan struct{}) {
 				case lstn.socket6:
 					lstn.process(lstn.socket6)
 				case lstn.pull:
-					s.Recv(0)
+					s.RecvMessageBytes(0)
 					break loop
 				}
 			}
 		}
+		log.Info("shutting down")
 		lstn.pull.Close()
 		if nil != lstn.socket4 {
 			lstn.socket4.Close()
@@ -111,11 +112,13 @@ func (lstn *listener) Run(args interface{}, shutdown <-chan struct{}) {
 		if nil != lstn.socket6 {
 			lstn.socket6.Close()
 		}
+		log.Info("stopped")
 	}()
 
 	// wait for shutdown
 	log.Info("waiting…")
 	<-shutdown
+	log.Info("initiate shutdown")
 	lstn.push.SendMessage("stop")
 	lstn.push.Close()
 }

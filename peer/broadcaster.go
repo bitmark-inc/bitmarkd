@@ -103,12 +103,14 @@ loop:
 			}
 		}
 	}
+	log.Info("shutting down…")
 	if nil != brdc.socket4 {
 		brdc.socket4.Close()
 	}
 	if nil != brdc.socket6 {
 		brdc.socket6.Close()
 	}
+	log.Info("stopped")
 }
 
 // process some items into a block and publish it

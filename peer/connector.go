@@ -166,7 +166,9 @@ loop:
 			conn.process()
 		}
 	}
+	log.Info("shutting down…")
 	zmqutil.CloseClients(conn.clients)
+	log.Info("stopped")
 }
 
 // process the connect and return response

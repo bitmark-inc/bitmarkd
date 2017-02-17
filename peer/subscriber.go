@@ -212,8 +212,10 @@ func (sbsc *subscriber) Run(args interface{}, shutdown <-chan struct{}) {
 				}
 			}
 		}
+		log.Info("shutting down…")
 		sbsc.pull.Close()
 		zmqutil.CloseClients(sbsc.clients)
+		log.Info("stopped")
 	}()
 
 loop:
@@ -231,8 +233,10 @@ loop:
 		}
 	}
 
+	log.Info("initiate shutdown")
 	sbsc.push.SendMessage("stop")
 	sbsc.push.Close()
+	log.Info("finished")
 }
 
 // process the received subscription

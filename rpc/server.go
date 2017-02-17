@@ -35,6 +35,9 @@ func Callback(conn io.ReadWriteCloser, argument interface{}) {
 		panic("rpc: nil serverArgument.Log")
 	}
 
+	log := serverArgument.Log
+	log.Info("starting…")
+
 	assets := &Assets{
 		log: serverArgument.Log,
 	}
@@ -70,4 +73,6 @@ func Callback(conn io.ReadWriteCloser, argument interface{}) {
 	codec := jsonrpc.NewServerCodec(conn)
 	defer codec.Close()
 	server.ServeCodec(codec)
+
+	log.Info("finished")
 }
