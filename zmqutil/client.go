@@ -6,6 +6,7 @@ package zmqutil
 
 import (
 	"bytes"
+	"crypto/rand"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	zmq "github.com/pebbe/zmq4"
@@ -31,6 +32,7 @@ type Client struct {
 const (
 	publicKeySize  = 32
 	privateKeySize = 32
+	identifierSize = 32
 )
 
 type globalClientDataType struct {
@@ -78,6 +80,14 @@ func (client *Client) openSocket() error {
 		return err
 	}
 
+	// create a secure random identifier
+	randomIdBytes := make([]byte, identifierSize)
+	_, err = rand.Read(randomIdBytes)
+	if nil != err {
+		return err
+	}
+	randomIdentifier := string(randomIdBytes)
+
 	// set up as client
 	err = socket.SetCurveServer(0)
 	if nil != err {
@@ -92,13 +102,13 @@ func (client *Client) openSocket() error {
 		goto failure
 	}
 
-	// just use public key for local identity
-	err = socket.SetIdentity(string(client.publicKey))
+	// local identitity is a random value
+	err = socket.SetIdentity(randomIdentifier)
 	if nil != err {
 		goto failure
 	}
 
-	// destination's identity
+	// destination identity is its public key
 	err = socket.SetCurveServerkey(string(client.serverPublicKey))
 	if nil != err {
 		goto failure
@@ -229,6 +239,10 @@ func (client *Client) Connect(conn *util.Connection, serverPublicKey []byte) err
 		return err
 	}
 	client.address = ""
+
+	// small delay to allow any backgroud socket closing
+	// and to restrict rate of reconnection
+	time.Sleep(5 * time.Millisecond)
 
 	copy(client.serverPublicKey, serverPublicKey)
 
