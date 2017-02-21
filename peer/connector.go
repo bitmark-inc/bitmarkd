@@ -24,10 +24,10 @@ import (
 
 // various timeouts
 const (
-	cycleInterval       = 10 * time.Second // pause to limit bandwidth
-	connectorTimeout    = 30 * time.Second // time out for connections
+	cycleInterval       = 20 * time.Second // pause to limit bandwidth
+	connectorTimeout    = 60 * time.Second // time out for connections
 	samplelingLimit     = 10               // number of cycles to be 1 block out of sync before resync
-	fetchBlocksPerCycle = 50               // number of blocks to fetch in one set
+	fetchBlocksPerCycle = 100              // number of blocks to fetch in one set
 )
 
 // a state type for the thread
