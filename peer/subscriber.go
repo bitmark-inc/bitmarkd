@@ -163,7 +163,9 @@ func (sbsc *subscriber) Run(args interface{}, shutdown <-chan struct{}) {
 				for s, expires := range expiryRegister {
 					if now.After(expires) {
 						client := zmqutil.ClientFromSocket(s)
-						if client.IsConnected() {
+						if nil == client { // this socket has been closed
+							delete(expiryRegister, s)
+						} else if client.IsConnected() {
 							log.Warnf("reconnecting to: %q", client)
 							skt, err := client.ReconnectReturningSocket()
 							if nil != err {
