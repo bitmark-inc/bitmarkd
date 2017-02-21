@@ -9,6 +9,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/background"
+	"github.com/bitmark-inc/bitmarkd/constants"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/storage"
@@ -19,7 +20,6 @@ import (
 )
 
 const (
-	expiryTime    = 2 * time.Hour
 	maximumIssues = 100 // allowed issues in a single submission
 )
 
@@ -225,7 +225,7 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, er
 
 	globalData.log.Infof("creating pay id: %s", payId)
 
-	expiresAt := time.Now().Add(expiryTime)
+	expiresAt := time.Now().Add(constants.ReservoirTimeout)
 
 	// create index entries
 	for _, txId := range txIds {
@@ -299,7 +299,7 @@ func StoreTransfer(transfer *transactionrecord.BitmarkTransfer) (*TransferInfo, 
 		return nil, true, fault.ErrTransactionAlreadyExists
 	}
 
-	expiresAt := time.Now().Add(expiryTime)
+	expiresAt := time.Now().Add(constants.ReservoirTimeout)
 
 	// create index and pending entries
 	globalData.unverified.index[txId] = payId

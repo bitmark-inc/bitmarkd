@@ -6,13 +6,9 @@ package asset
 
 import (
 	"container/list"
+	"github.com/bitmark-inc/bitmarkd/constants"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"time"
-)
-
-// the maximum time before unverified asset is expired
-const (
-	timeout = 60 * time.Minute
 )
 
 // to control expiry
@@ -38,7 +34,7 @@ loop:
 			log.Infof("received: asset index: %s", assetIndex)
 			l.PushBack(expiry{
 				assetIndex: assetIndex,
-				expires:    time.Now().Add(timeout),
+				expires:    time.Now().Add(constants.AssetTimeout),
 			})
 		case <-delay:
 			for {
@@ -61,7 +57,7 @@ loop:
 					switch cache.state {
 					case pendingState:
 						cache.state = expiringState
-						item.expires = time.Now().Add(timeout)
+						item.expires = time.Now().Add(constants.AssetTimeout)
 						l.PushBack(item)
 					case expiringState:
 						log.Infof("expired: asset index: %s", item.assetIndex)

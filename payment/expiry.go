@@ -6,14 +6,9 @@ package payment
 
 import (
 	"container/list"
+	"github.com/bitmark-inc/bitmarkd/constants"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"time"
-)
-
-// the maximum time before either a payment track or proof is received
-// if the timeout is reached then the transactions are dropped
-const (
-	timeout = 15 * time.Minute
 )
 
 // to control expiry
@@ -40,7 +35,7 @@ loop:
 			log.Infof("received: pay id: %s", payId)
 			l.PushBack(expiry{
 				payId:   payId,
-				expires: time.Now().Add(timeout),
+				expires: time.Now().Add(constants.PaymentTimeout),
 			})
 		case <-delay:
 			for {
