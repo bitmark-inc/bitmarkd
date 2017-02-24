@@ -25,8 +25,9 @@ const (
 	//initialDifficulty = 256.0 // 16 leading zero bits
 	//initialDifficulty = 65536.0 // 24 leading zero bits
 	//initialDifficulty = 16777216.0 // 32 leading zero bits
-	initialBitmarkDifficulty = 65536.0 // 24 leading zero bits
-	initialTestingDifficulty = 256.0   // 16 leading zero bits
+	//initialBitmarkDifficulty = 65536.0 // 24 leading zero bits
+	initialBitmarkDifficulty = 2048.0 // 19 leading zero bits
+	initialTestingDifficulty = 256.0  // 16 leading zero bits
 )
 
 // produce a scaled difficulty based on the number of items
