@@ -28,8 +28,8 @@ func DeleteDownToBlock(finalBlockNumber uint64) error {
 		return nil // block store is already empty
 	}
 
-	reservoir.Lock()
-	defer reservoir.Unlock()
+	reservoir.Disable()
+	defer reservoir.Enable()
 
 	packedBlock := last.Value
 
@@ -89,7 +89,7 @@ func DeleteDownToBlock(finalBlockNumber uint64) error {
 					log.Criticalf("missing transaction record for: %v", tx.Link)
 					fault.Panic("Transactions database is corrupt")
 				}
-				// just use zero here, as the fork restore should overwrite with new chain, incluing updated block number
+				// just use zero here, as the fork restore should overwrite with new chain, including updated block number
 				// ***** FIX THIS: is the above statement sufficient
 				TransferOwnership(txId, tx.Link, 0, tx.Owner, linkOwner)
 

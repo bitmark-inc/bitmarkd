@@ -17,35 +17,14 @@ import (
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 
-// store the block and update block data
-func store(header *blockrecord.Header, digest blockdigest.Digest, packedBlock []byte) {
-	globalData.Lock()
-	//defer globalData.Unlock()
-
-	expectedBlockNumber := globalData.height + 1
-	if expectedBlockNumber != header.Number {
-		fault.Panicf("block.Store: out of sequence block: actual: %d  expected: %d", header.Number, expectedBlockNumber)
-	}
-
-	globalData.previousBlock = digest
-	globalData.height = header.Number
-
-	blockring.Put(header.Number, digest, packedBlock)
-
-	// end of critical section
-	globalData.Unlock()
-
-	blockNumber := make([]byte, 8)
-	binary.BigEndian.PutUint64(blockNumber, header.Number)
-
-	storage.Pool.Blocks.Put(blockNumber, packedBlock)
-}
-
 // store an incoming block checking to make sure it is valid first
 func StoreIncoming(packedBlock []byte) error {
 
-	reservoir.Lock()
-	defer reservoir.Unlock()
+	globalData.Lock()
+	defer globalData.Unlock()
+
+	reservoir.Disable()
+	defer reservoir.Enable()
 
 	packedHeader := blockrecord.PackedHeader(packedBlock[:blockrecord.TotalBlockSize])
 	header, err := packedHeader.Unpack()
@@ -89,7 +68,7 @@ func StoreIncoming(packedBlock []byte) error {
 	}
 
 	digest := packedHeader.Digest()
-	store(header, digest, packedBlock)
+	storeAndUpdate(header, digest, packedBlock)
 
 	// store transactions
 	for i, item := range txs {
@@ -143,4 +122,24 @@ func StoreIncoming(packedBlock []byte) error {
 	}
 
 	return nil
+}
+
+// store the block and update block data
+// hold lock before calling this
+func storeAndUpdate(header *blockrecord.Header, digest blockdigest.Digest, packedBlock []byte) {
+
+	expectedBlockNumber := globalData.height + 1
+	if expectedBlockNumber != header.Number {
+		fault.Panicf("block.Store: out of sequence block: actual: %d  expected: %d", header.Number, expectedBlockNumber)
+	}
+
+	globalData.previousBlock = digest
+	globalData.height = header.Number
+
+	blockring.Put(header.Number, digest, packedBlock)
+
+	blockNumber := make([]byte, 8)
+	binary.BigEndian.PutUint64(blockNumber, header.Number)
+
+	storage.Pool.Blocks.Put(blockNumber, packedBlock)
 }

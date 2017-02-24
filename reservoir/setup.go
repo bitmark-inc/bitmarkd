@@ -47,8 +47,8 @@ type unverifiedEntry struct {
 
 type unverifiedItem struct {
 	txIds        []merkle.Digest
-	links        []merkle.Digest
-	transactions [][]byte
+	links        []merkle.Digest // links[i] corresponds to txIds[i]
+	transactions [][]byte        // transactions[i] corresponds to txIds[i]
 	expires      time.Time
 }
 
@@ -465,14 +465,14 @@ func FetchVerified(count int) ([]merkle.Digest, []transactionrecord.Packed, int,
 }
 
 // lock down to prevent proofer from getting data
-func Lock() {
+func Disable() {
 	globalData.Lock()
 	globalData.enabled = false
 	globalData.Unlock()
 }
 
 // allow proofer to run again
-func Unlock() {
+func Enable() {
 	globalData.Lock()
 	globalData.enabled = true
 	globalData.Unlock()
@@ -522,8 +522,10 @@ func internalDelete(payId PayId) {
 		for i, txId := range entry.txIds {
 			delete(globalData.unverified.index, txId)
 			delete(globalData.verified, txId)
-			link := entry.links[i]
-			delete(globalData.pendingTransfer, link)
+			if nil != entry.links {
+				link := entry.links[i]
+				delete(globalData.pendingTransfer, link)
+			}
 		}
 		delete(globalData.unverified.entries, payId)
 	}
