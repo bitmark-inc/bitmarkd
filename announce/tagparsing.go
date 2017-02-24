@@ -62,6 +62,12 @@ words:
 		case 'a':
 		addresses:
 			for _, address := range strings.Split(parameter, ";") {
+				if '[' == address[0] {
+					end := len(address) - 1
+					if ']' == address[end] {
+						address = address[1:end]
+					}
+				}
 				IP := net.ParseIP(address)
 				if nil == IP {
 					err = fault.ErrInvalidIPAddress
