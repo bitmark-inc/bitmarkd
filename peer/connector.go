@@ -24,7 +24,7 @@ import (
 
 // various timeouts
 const (
-	cycleInterval       = 20 * time.Second // pause to limit bandwidth
+	cycleInterval       = 15 * time.Second // pause to limit bandwidth
 	connectorTimeout    = 60 * time.Second // time out for connections
 	samplelingLimit     = 10               // number of cycles to be 1 block out of sync before resync
 	fetchBlocksPerCycle = 100              // number of blocks to fetch in one set
@@ -173,9 +173,21 @@ loop:
 
 // process the connect and return response
 func (conn *connector) process() {
+	// run the machine until it pauses
+	for conn.runStateMachine() {
+	}
+}
+
+// run state machine
+// return:
+//   true  if want more cycles
+//   false to pase for I/O
+func (conn *connector) runStateMachine() bool {
 	log := conn.log
 
 	log.Infof("current state: %s", conn.state)
+
+	continueLooping := true
 
 	switch conn.state {
 	case cStateConnecting:
@@ -183,10 +195,14 @@ func (conn *connector) process() {
 		if register(log, conn.clients) {
 			conn.state += 1
 		}
+		continueLooping = false
+
 	case cStateHighestBlock:
 		conn.highestBlockNumber, conn.theClient = highestBlock(log, conn.clients)
 		if conn.highestBlockNumber > 0 && nil != conn.theClient {
 			conn.state += 1
+		} else {
+			continueLooping = false
 		}
 		log.Infof("highest block number: %d", conn.highestBlockNumber)
 
@@ -225,15 +241,18 @@ func (conn *connector) process() {
 					}
 					break
 				}
-
 			}
 		}
 
 	case cStateFetchBlocks:
+
+		continueLooping = false
+
 		for n := 0; n < fetchBlocksPerCycle; n += 1 {
 
 			if conn.startBlockNumber > conn.highestBlockNumber {
 				conn.state = cStateHighestBlock // just in case block height has changed
+				continueLooping = true
 				break
 			}
 
@@ -262,6 +281,7 @@ func (conn *connector) process() {
 		conn.state += 1  // next state
 		conn.samples = 0 // zero out the counter
 		mode.Set(mode.Normal)
+		continueLooping = false
 
 	case cStateSampling:
 		// check peers
@@ -271,19 +291,22 @@ func (conn *connector) process() {
 		log.Infof("remote height: %d", conn.highestBlockNumber)
 		log.Infof("local height: %d", height)
 
+		continueLooping = false
+
 		if conn.highestBlockNumber > height {
 			if conn.highestBlockNumber-height >= 2 {
 				conn.state = cStateForkDetect
+				continueLooping = true
 			} else {
 				conn.samples += 1
 				if conn.samples > samplelingLimit {
 					conn.state = cStateForkDetect
+					continueLooping = true
 				}
 			}
 		}
-
 	}
-	log.Infof("next state: %s", conn.state)
+	return continueLooping
 }
 
 // ***** FIX THIS: is this needed
