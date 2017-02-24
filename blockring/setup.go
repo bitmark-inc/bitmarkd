@@ -179,7 +179,7 @@ func clearRingBuffer(log *logger.L) error {
 		globalData.ring[i].crc = crc
 	}
 
-	//zero the height so next put will succeed
+	// zero the height so next put will succeed
 	globalData.height = 0
 
 	return nil
