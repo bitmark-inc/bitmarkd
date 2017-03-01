@@ -201,7 +201,7 @@ failure:
 	return err
 }
 
-// destroy the socket, bute leav other connection info so can recconect
+// destroy the socket, but leave other connection info so can reconnect
 // to the same endpoint again
 func (client *Client) closeSocket() error {
 
