@@ -1,0 +1,30 @@
+[submodule "vendor/github.com/bitmark-inc/certgen"]
+	path = vendor/github.com/bitmark-inc/certgen
+	url = https://github.com/bitmark-inc/certgen
+[submodule "vendor/github.com/bitmark-inc/exitwithstatus"]
+	path = vendor/github.com/bitmark-inc/exitwithstatus
+	url = https://github.com/bitmark-inc/exitwithstatus
+[submodule "vendor/github.com/bitmark-inc/getoptions"]
+	path = vendor/github.com/bitmark-inc/getoptions
+	url = https://github.com/bitmark-inc/getoptions
+[submodule "vendor/github.com/bitmark-inc/go-argon2"]
+	path = vendor/github.com/bitmark-inc/go-argon2
+	url = https://github.com/bitmark-inc/go-argon2
+[submodule "vendor/github.com/bitmark-inc/go-libucl"]
+	path = vendor/github.com/bitmark-inc/go-libucl
+	url = https://github.com/bitmark-inc/go-libucl
+[submodule "vendor/github.com/bitmark-inc/listener"]
+	path = vendor/github.com/bitmark-inc/listener
+	url = https://github.com/bitmark-inc/listener
+[submodule "vendor/github.com/bitmark-inc/logger"]
+	path = vendor/github.com/bitmark-inc/logger
+	url = https://github.com/bitmark-inc/logger
+[submodule "vendor/github.com/pebbe/zmq4"]
+	path = vendor/github.com/pebbe/zmq4
+	url = https://github.com/pebbe/zmq4
+[submodule "vendor/github.com/syndtr/goleveldb"]
+	path = vendor/github.com/syndtr/goleveldb
+	url = https://github.com/syndtr/goleveldb
+[submodule "vendor/golang.org/x/crypto"]
+	path = vendor/golang.org/x/crypto
+	url = https://go.googlesource.com/crypto
