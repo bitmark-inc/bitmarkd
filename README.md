@@ -40,11 +40,21 @@ apt-get install libzmq4-dev
 # lib ucl and argon2 need to be manually installed
 ~~~~~
 
+On a macosx
+(be sure that homebrew is installed correctly)
+~~~~
+brew install libucl
+brew install argon2
+
+brew tap bitmark-inc/bitmark
+brew install zeromq41
+~~~~
+
 To compile simply:
 
 ~~~~~
 go get github.com/bitmark-inc/bitmarkd
-go install -v github.com/bitmark-inc/bitmarkd
+go install -v github.com/bitmark-inc/bitmarkd/command/bitmarkd
 ~~~~~
 
 # Set up
