@@ -10,6 +10,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/peer"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/version"
 	"github.com/bitmark-inc/logger"
@@ -50,6 +51,8 @@ func (node *Node) List(arguments *NodeArguments, reply *NodeReply) error {
 // return some information about this node
 
 type InfoArguments struct{}
+type ConnectorArguments struct{}
+type SubscriberArguments struct{}
 
 type InfoReply struct {
 	Chain               string   `json:"chain"`
@@ -62,6 +65,14 @@ type InfoReply struct {
 	Uptime              string   `json:"uptime"`
 	// Peers    int     `json:"peers"`
 	// Miners   uint64  `json:"miners"`
+}
+
+type ConnectorReply struct {
+	Clients []string
+}
+
+type SubscriberReply struct {
+	Clients []string
 }
 
 type Counters struct {
@@ -83,5 +94,28 @@ func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 	reply.Version = version.Version
 	reply.Uptime = time.Since(node.start).String()
 
+	return nil
+}
+
+func (node *Node) Connectors(arguments *ConnectorArguments, reply *ConnectorReply) error {
+	clients := peer.FetchConnectors()
+	addrs := make([]string, 0, 10)
+	for _, c := range clients {
+		if addr := c.String(); addr != "" {
+			addrs = append(addrs, addr)
+		}
+	}
+	reply.Clients = addrs
+	return nil
+}
+func (node *Node) Subscribers(arguments *SubscriberArguments, reply *SubscriberReply) error {
+	clients := peer.FetchSubscribers()
+	addrs := make([]string, 0, 10)
+	for _, c := range clients {
+		if addr := c.String(); addr != "" {
+			addrs = append(addrs, addr)
+		}
+	}
+	reply.Clients = addrs
 	return nil
 }

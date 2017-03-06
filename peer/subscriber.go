@@ -62,6 +62,7 @@ func (sbsc *subscriber) initialise(privateKey []byte, publicKey []byte, subscrib
 	// all sockets
 	sbsc.clients = make([]*zmqutil.Client, staticCount+offsetCount)
 	sbsc.dynamicStart = staticCount // index of first dynamic socket
+	globalData.subscriberClients = sbsc.clients
 
 	// error for goto fail
 	errX := error(nil)

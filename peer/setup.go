@@ -53,6 +53,9 @@ type proofData struct {
 	conn connector   // for RPC requests
 	sbsc subscriber  // for subscriptions
 
+	connectorClients  []*zmqutil.Client
+	subscriberClients []*zmqutil.Client
+
 	// for background
 	background *background.T
 
