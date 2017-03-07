@@ -46,6 +46,27 @@ func (r *RPCClient) GetConnectors() (ConnClient, error) {
 	return reply, err
 }
 
+func (r *RPCClient) GetAllInfo() (reply map[string]interface{}, err error) {
+	node, err := r.GetNodeInfo()
+	if err != nil {
+		return
+	}
+	sbsc, err := r.GetSubscribers()
+	if err != nil {
+		return
+	}
+	conn, err := r.GetConnectors()
+	if err != nil {
+		return
+	}
+	reply = map[string]interface{}{
+		"node": node,
+		"sbsc": sbsc,
+		"conn": conn,
+	}
+	return
+}
+
 func main() {
 	defer exitwithstatus.Handler()
 
@@ -64,9 +85,10 @@ func main() {
 	}
 
 	// set the default info type
-	infoType := "node"
+	infoType := []string{"node"}
+
 	if len(options["info-type"]) != 0 {
-		infoType = options["info-type"][0]
+		infoType = options["info-type"]
 	}
 
 	var hostPort string
@@ -85,36 +107,26 @@ func main() {
 	client := jsonrpc.NewClient(conn)
 
 	r := RPCClient{client}
-	var reply interface{}
+	reply := map[string]interface{}{}
 
-	switch infoType {
-	case "all":
-		err = nil
-		node, err := r.GetNodeInfo()
-		if err != nil {
+	for _, t := range infoType {
+		var v interface{}
+		switch t {
+		case "all":
+			reply, err = r.GetAllInfo()
 			break
+		case "node":
+			v, err = r.GetNodeInfo()
+			reply["node"] = v
+		case "sbsc":
+			v, err = r.GetSubscribers()
+			reply["sbsc"] = v
+		case "conn":
+			v, err = r.GetConnectors()
+			reply["conn"] = v
+		default:
+			err = fmt.Errorf("incorrect info type provided: %s", infoType)
 		}
-		sbsc, err := r.GetSubscribers()
-		if err != nil {
-			break
-		}
-		conn, err := r.GetConnectors()
-		if err != nil {
-			break
-		}
-		reply = map[string]interface{}{
-			"node": node,
-			"sbsc": sbsc,
-			"conn": conn,
-		}
-	case "node":
-		reply, err = r.GetNodeInfo()
-	case "sbsc":
-		reply, err = r.GetSubscribers()
-	case "conn":
-		reply, err = r.GetConnectors()
-	default:
-		err = fmt.Errorf("incorrect info type provided: %s", infoType)
 	}
 
 	if err != nil {
