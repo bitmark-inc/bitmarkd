@@ -107,7 +107,10 @@ func main() {
 	client := jsonrpc.NewClient(conn)
 
 	r := RPCClient{client}
-	reply := map[string]interface{}{}
+
+	reply := map[string]interface{}{
+		"host": fmt.Sprintf("tcp://%s", hostPort),
+	}
 
 	for _, t := range infoType {
 		var v interface{}
