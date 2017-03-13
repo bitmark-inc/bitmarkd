@@ -384,3 +384,87 @@ func TestOverwriteAndNodeStability(t *testing.T) {
 		t.Fatalf("inconsistant tree")
 	}
 }
+
+func TestGetDepthInTree(t *testing.T) {
+	addList := []stringItem{
+		{"01"}, {"02"}, {"03"}, {"04"}, {"05"},
+		{"06"}, {"07"},
+	}
+
+	tree := avl.New()
+	for _, key := range addList {
+		tree.Insert(key, "data:"+key.String())
+	}
+
+	if d := tree.First().Next().Depth(); d != 1 {
+		t.Fatalf("incorrect node depth: %d", d)
+	}
+
+	if d := tree.First().Next().Next().Depth(); d != 2 {
+		t.Fatalf("incorrect node depth: %d", d)
+	}
+}
+
+func TestGetChildrenByDepth(t *testing.T) {
+	addList := []stringItem{
+		{"01"}, {"02"}, {"03"}, {"04"}, {"05"},
+		{"06"}, {"07"},
+	}
+
+	tree := avl.New()
+	for _, key := range addList {
+		tree.Insert(key, "data:"+key.String())
+	}
+
+	if len(tree.Root().GetChildrenByDepth(1)) != 2 {
+		t.Fatalf("incorrect children numner in depth 1")
+
+	}
+
+	if len(tree.Root().GetChildrenByDepth(2)) != 4 {
+		t.Fatalf("incorrect children numner in depth 2")
+	}
+}
+
+func TestGetOrderInTree(t *testing.T) {
+	addList := []stringItem{
+		{"01"}, {"02"}, {"03"}, {"04"}, {"05"},
+		{"06"}, {"07"},
+	}
+
+	tree := avl.New()
+	for _, key := range addList {
+		tree.Insert(key, "data:"+key.String())
+	}
+
+	nodeOrder := tree.Root().GetOrder(stringItem{"03"})
+	if nodeOrder != 2 {
+		t.Fatalf("incorrect node order: %d", nodeOrder)
+	}
+	nodeOrder = tree.Root().GetOrder(stringItem{"05"})
+	if nodeOrder != 4 {
+		t.Fatalf("incorrect node order: %d", nodeOrder)
+	}
+}
+
+func TestGetNodeByOrderInTree(t *testing.T) {
+	addList := []stringItem{
+		{"01"}, {"02"}, {"03"}, {"04"}, {"05"},
+		{"06"}, {"07"},
+	}
+
+	tree := avl.New()
+	for _, key := range addList {
+		tree.Insert(key, "data:"+key.String())
+	}
+
+	node := tree.Root().GetNodeByOrder(4)
+	if node.Key().Compare(stringItem{"05"}) != 0 {
+		t.Fatalf("incorrect node get: %+v", node)
+	}
+
+	node = tree.Root().GetNodeByOrder(3)
+	if node.Key().Compare(stringItem{"04"}) != 0 {
+		t.Fatalf("incorrect node get: %+v", node)
+	}
+}
