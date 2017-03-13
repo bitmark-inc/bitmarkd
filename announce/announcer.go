@@ -5,6 +5,10 @@
 package announce
 
 import (
+	"fmt"
+	"math/rand"
+
+	"github.com/bitmark-inc/bitmarkd/avl"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/logger"
@@ -133,6 +137,65 @@ func determineConnections(log *logger.L) {
 	}
 
 	// ***** FIX THIS: more code to determine X25, X50 and X75 the cross ¼,½ and ¾ positions
+	thisNode := globalData.thisNode
+	nodeDepth := thisNode.Depth()
+	treeRoot := globalData.peerTree.Root()
+	lv2NodeChildren := treeRoot.GetChildrenByDepth(2)
+
+	toConnectTree := make([]*avl.Node, 0, 3)
+	toConnectNode := make([]*avl.Node, 0, 3)
+	var connectOrder uint
+
+	if nodeDepth < 2 {
+		if len(lv2NodeChildren) > 3 {
+			switch thisNode.Key().Compare(treeRoot.Key()) {
+			case -1:
+				toConnectTree = lv2NodeChildren[:3]
+			case 1:
+				fallthrough
+			case 0:
+				toConnectTree = lv2NodeChildren[1:]
+			}
+		} else {
+			toConnectTree = lv2NodeChildren
+		}
+		connectOrder = uint(rand.Uint32())
+	} else if nodeDepth >= 2 {
+		depth2Parent := thisNode
+		// find parent node in level 2 by search parent recursively
+		for l := nodeDepth; l > 2; l-- {
+			depth2Parent = depth2Parent.Parent()
+		}
+
+		// try to find rest of nodes which is not an ancestor in level 2
+		for _, n := range lv2NodeChildren {
+			if n.Key().Compare(depth2Parent.Key()) != 0 {
+				toConnectTree = append(toConnectTree, n)
+			}
+		}
+		connectOrder = depth2Parent.GetOrder(thisNode.Key())
+	}
+
+	for _, n := range toConnectTree {
+		toConnectNode = append(toConnectNode, n.GetNodeByOrder(connectOrder))
+	}
+
+	for i, node := range toConnectNode {
+		if node == globalData.thisNode || node == globalData.n1 || node == globalData.n3 {
+			continue
+		}
+		if node == nil {
+			fmt.Printf("No.%d of toConnectNode is nil : %+v. Node level is : %d", i, toConnectNode, nodeDepth)
+			continue
+		}
+
+		peer := node.Value().(*peerEntry)
+		priority := fmt.Sprintf("X%d", (i+1)*25)
+		log.Infof("%s: this: %x", priority, globalData.publicKey)
+		log.Infof("%s: peer: %x", priority, peer)
+		messagebus.Bus.Subscriber.Send(priority, peer.publicKey, peer.broadcasts)
+		messagebus.Bus.Connector.Send(priority, peer.publicKey, peer.listeners)
+	}
 	// ***** FIX THIS:   possible treat key as a number and compute; assuming uniformly distributed keys
 	// ***** FIX THIS:   but would need the tree search to be able to find the "next highest/lowest key" for this to work
 	// ***** FIX THIS: more code to determine some random positions
