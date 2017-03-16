@@ -20,6 +20,8 @@ const (
 	announceRebroadcast = 7 * time.Minute  // to prevent too frequent rebroadcasts
 	announceInterval    = 11 * time.Minute // regular polling time
 	announceExpiry      = 70 * time.Minute // if no responses received within this time, delete the entry
+
+	broadcastCount = 5 // how many peer a node is going to braodcast each time
 )
 
 type announcer struct {
@@ -76,7 +78,23 @@ func (ann *announcer) process() {
 		messagebus.Bus.Broadcast.Send("rpc", globalData.fingerprint[:], globalData.rpcs)
 	}
 	if globalData.peerSet {
-		messagebus.Bus.Broadcast.Send("peer", globalData.publicKey, globalData.broadcasts, globalData.listeners)
+		treeCount := globalData.peerTree.Count()
+		lastPeer := globalData.lastBroadcastPeer
+		var iterNum int
+		for i := 0; i < broadcastCount; i++ {
+			iterNum = (lastPeer + i) % treeCount
+			if iterNum == lastPeer && i != 0 {
+				iterNum -= 1
+				break
+			}
+
+			treeRoot := globalData.peerTree.Root()
+			node := treeRoot.GetNodeByOrder(uint(iterNum))
+			peer := node.Value().(*peerEntry)
+			log.Debugf("Current iter no. is : %d. broadcasting: %x", iterNum, peer.publicKey)
+			messagebus.Bus.Broadcast.Send("peer", peer.publicKey, peer.broadcasts, peer.listeners)
+		}
+		globalData.lastBroadcastPeer = iterNum + 1
 	}
 
 	if globalData.change {

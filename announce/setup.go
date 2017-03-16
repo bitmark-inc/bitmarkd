@@ -67,6 +67,9 @@ type announcerData struct {
 	// data for thread
 	ann announcer
 
+	// the peer in last broadcast
+	lastBroadcastPeer int
+
 	// for background
 	background *background.T
 
