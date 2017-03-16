@@ -58,6 +58,8 @@ type announcerData struct {
 	n1 *avl.Node // first neighbour
 	n3 *avl.Node // third neighbour
 
+	crossNodes map[string]*avl.Node // map of cross nodes
+
 	// database of all RPCs
 	rpcIndex map[fingerprintType]int // index to find rpc entry
 	rpcList  []*rpcEntry             // array of RPCs
@@ -98,6 +100,7 @@ func Initialise(nodesDomain string) error {
 	globalData.thisNode = nil
 	globalData.change = false
 
+	globalData.crossNodes = make(map[string]*avl.Node, 3)
 	globalData.rpcIndex = make(map[fingerprintType]int, 1000)
 	globalData.rpcList = make([]*rpcEntry, 0, 1000)
 
