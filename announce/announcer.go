@@ -181,20 +181,24 @@ func determineConnections(log *logger.L) {
 	}
 
 	for i, node := range toConnectNode {
-		if node == globalData.thisNode || node == globalData.n1 || node == globalData.n3 {
-			continue
-		}
-		if node == nil {
-			fmt.Printf("No.%d of toConnectNode is nil : %+v. Node level is : %d", i, toConnectNode, nodeDepth)
+		nodeLabel := fmt.Sprintf("X%d", (i+1)*25) // it should by X25, X50 and X75
+		if nil == node {
+			log.Warnf("The node of %s is nil. This should not be happended.", nodeLabel)
 			continue
 		}
 
-		peer := node.Value().(*peerEntry)
-		priority := fmt.Sprintf("X%d", (i+1)*25)
-		log.Infof("%s: this: %x", priority, globalData.publicKey)
-		log.Infof("%s: peer: %x", priority, peer)
-		messagebus.Bus.Subscriber.Send(priority, peer.publicKey, peer.broadcasts)
-		messagebus.Bus.Connector.Send(priority, peer.publicKey, peer.listeners)
+		if node == globalData.thisNode || node == globalData.n1 || node == globalData.n3 {
+			continue
+		}
+
+		if n := globalData.crossNodes[nodeLabel]; n != node {
+			globalData.crossNodes[nodeLabel] = node
+			peer := node.Value().(*peerEntry)
+			log.Infof("%s: this: %x", nodeLabel, globalData.publicKey)
+			log.Infof("%s: peer: %x", nodeLabel, peer)
+			messagebus.Bus.Subscriber.Send(nodeLabel, peer.publicKey, peer.broadcasts)
+			messagebus.Bus.Connector.Send(nodeLabel, peer.publicKey, peer.listeners)
+		}
 	}
 	// ***** FIX THIS:   possible treat key as a number and compute; assuming uniformly distributed keys
 	// ***** FIX THIS:   but would need the tree search to be able to find the "next highest/lowest key" for this to work
