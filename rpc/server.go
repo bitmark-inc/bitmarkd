@@ -59,6 +59,11 @@ func Callback(conn io.ReadWriteCloser, argument interface{}) {
 		start: serverArgument.StartTime,
 	}
 
+	transaction := &Transaction{
+		log:   serverArgument.Log,
+		start: serverArgument.StartTime,
+	}
+
 	server := rpc.NewServer()
 
 	server.Register(assets)
@@ -66,6 +71,7 @@ func Callback(conn io.ReadWriteCloser, argument interface{}) {
 	server.Register(bitmarks)
 	server.Register(owner)
 	server.Register(node)
+	server.Register(transaction)
 
 	connectionCount.Increment()
 	defer connectionCount.Decrement()
