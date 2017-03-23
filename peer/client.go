@@ -89,6 +89,12 @@ dynamicScan:
 		dynamic[actual], dynamic[offset] = dynamic[offset], dynamic[actual]
 	}
 
+	// ***** FIX THIS: why can address by nil?
+	if nil == address {
+		log.Errorf("reconnect: %x error: address is nil", serverPublicKey)
+		return fault.ErrUnexpectedNilPointer
+	}
+
 	// reconnect the one corresponding to priority
 	log.Infof("reconnect: %x @ %s", serverPublicKey, *address)
 	err := dynamic[offset].Connect(address, serverPublicKey)

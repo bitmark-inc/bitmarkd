@@ -9,7 +9,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/mode"
-	"github.com/bitmark-inc/bitmarkd/payment"
+	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
@@ -28,7 +28,7 @@ type Bitmark struct {
 
 type BitmarkTransferReply struct {
 	TxId     merkle.Digest                `json:"txId"`
-	PayId    reservoir.PayId              `json:"payId"`
+	PayId    pay.PayId                    `json:"payId"`
 	Payments []*transactionrecord.Payment `json:"payments"`
 	//PaymentAlternatives []block.MinerAddress `json:"paymentAlternatives"`// ***** FIX THIS: where to get addresses?
 }
@@ -53,24 +53,11 @@ func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransfer, r
 	payId := stored.Id
 	txId := stored.TxId
 	packedTransfer := stored.Packed
-	previousTransfer := stored.PreviousTransfer
-	ownerData := stored.OwnerData
 
 	log.Infof("id: %v", txId)
-	log.Debugf("packed transfer: %x", packedTransfer)
-	log.Debugf("ownerData: %x", ownerData)
-
-	payments := payment.GetPayments(ownerData, previousTransfer)
-
-	// get payment info
 	reply.TxId = txId
-	_, _, err = payment.Store(payments, payId, 1, false)
-	if nil != err {
-		return err
-	}
-
 	reply.PayId = payId
-	reply.Payments = payments
+	reply.Payments = stored.Payments
 
 	// announce transaction block to other peers
 	if !duplicate {

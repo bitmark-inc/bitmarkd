@@ -2,7 +2,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package reservoir
+package pay
 
 import (
 	"encoding/hex"
@@ -11,7 +11,6 @@ import (
 )
 
 // type to represent a payment identifier
-// this is considered as a big endian value for difficulty comparison
 // Note: no reversal is required for this
 type PayId [48]byte
 
@@ -27,17 +26,17 @@ func NewPayId(packed [][]byte) PayId {
 	return payId
 }
 
-// convert a binary pay id to big endian hex string for use by the fmt package (for %s)
+// convert a binary pay id to hex string for use by the fmt package (for %s)
 func (payid PayId) String() string {
 	return hex.EncodeToString(payid[:])
 }
 
-// convert a binary pay id to big endian hex string for use by the fmt package (for %#v)
+// convert a binary pay id to hex string for use by the fmt package (for %#v)
 func (payid PayId) GoString() string {
 	return "<payid:" + hex.EncodeToString(payid[:]) + ">"
 }
 
-// convert pay id to big endian hex text
+// convert pay id to hex text
 func (payid PayId) MarshalText() ([]byte, error) {
 	size := hex.EncodedLen(len(payid))
 	buffer := make([]byte, size)
@@ -45,7 +44,7 @@ func (payid PayId) MarshalText() ([]byte, error) {
 	return buffer, nil
 }
 
-// convert little endian hex text into a pay id
+// convert hex text into a pay id
 func (payid *PayId) UnmarshalText(s []byte) error {
 	if len(*payid) != hex.DecodedLen(len(s)) {
 		return fault.ErrNotAPayId

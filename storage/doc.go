@@ -48,6 +48,15 @@
 //   D ++ owner ++ txId         - position in list of owned items, for delete after transfer
 //                                data: count
 //
+// Payment:
+//
+//   C ++ currency(uint64)      - currency processing
+//                                data: latest block number (big endian uint64, 8 bytes)
+//
+//   P ++ payId                 - payment confirmation (array of addresses + values)
+//                                data: currency(varint) ++ txId_bytes(varint) ++ txId ++ [ count(varint) ++ address ++ value(varint) ]
+//
+//
 // Testing:
 //   Z ++ key                   - testing data
 package storage

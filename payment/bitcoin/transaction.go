@@ -20,6 +20,7 @@ type bitcoinVout struct {
 }
 
 type bitcoinTransaction struct {
+	TxId          string        `json:"txid"`
 	Confirmations uint64        `json:"confirmations"`
 	Vout          []bitcoinVout `json:"vout"`
 }

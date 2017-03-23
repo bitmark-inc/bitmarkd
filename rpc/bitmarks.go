@@ -6,11 +6,11 @@ package rpc
 
 import (
 	"encoding/hex"
-	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
@@ -36,10 +36,10 @@ type IssueStatus struct {
 }
 
 type BitmarksIssueReply struct {
-	Issues     []IssueStatus    `json:"issues"`
-	PayId      reservoir.PayId  `json:"payId"`
-	PayNonce   payment.PayNonce `json:"payNonce"`
-	Difficulty string           `json:"difficulty"`
+	Issues     []IssueStatus      `json:"issues"`
+	PayId      pay.PayId          `json:"payId"`
+	PayNonce   reservoir.PayNonce `json:"payNonce"`
+	Difficulty string             `json:"difficulty"`
 	//PaymentAlternatives []block.MinerAddress `json:"paymentAlternatives"`// ***** FIX THIS: where to get addresses?
 }
 
@@ -52,11 +52,11 @@ type CreateArguments struct {
 }
 
 type CreateReply struct {
-	Assets     []AssetStatus    `json:"assets"`
-	Issues     []IssueStatus    `json:"issues"`
-	PayId      reservoir.PayId  `json:"payId"`
-	PayNonce   payment.PayNonce `json:"payNonce"`
-	Difficulty string           `json:"difficulty"`
+	Assets     []AssetStatus      `json:"assets"`
+	Issues     []IssueStatus      `json:"issues"`
+	PayId      pay.PayId          `json:"payId"`
+	PayNonce   reservoir.PayNonce `json:"payNonce"`
+	Difficulty string             `json:"difficulty"`
 	//PaymentAlternatives []block.MinerAddress `json:"paymentAlternatives"`// ***** FIX THIS: where to get addresses?
 
 }
@@ -116,13 +116,9 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 
 	if 0 != len(packedIssues) {
 
-		payId := stored.Id
-
-		// get here if all issues are new
-		var d *difficulty.Difficulty
-		result.PayNonce, d, err = payment.Store(nil, payId, issueCount, true)
-		result.PayId = payId
-		result.Difficulty = d.GoString()
+		result.PayId = stored.Id
+		result.PayNonce = stored.Nonce
+		result.Difficulty = stored.Difficulty.GoString()
 
 		// announce transaction block to other peers
 		if !duplicate {
@@ -138,12 +134,12 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 // --------------
 
 type ProofArguments struct {
-	PayId reservoir.PayId `json:"payId"`
-	Nonce string          `json:"nonce"`
+	PayId pay.PayId `json:"payId"`
+	Nonce string    `json:"nonce"`
 }
 
 type ProofReply struct {
-	Status payment.TrackingStatus `json:"status"`
+	Status reservoir.TrackingStatus `json:"status"`
 }
 
 func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) error {
@@ -183,7 +179,7 @@ func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) er
 	messagebus.Bus.Broadcast.Send("proof", packed)
 
 	// check if proof matches
-	reply.Status = payment.TryProof(arguments.PayId, nonce)
+	reply.Status = reservoir.TryProof(arguments.PayId, nonce)
 
 	return nil
 }
@@ -192,12 +188,12 @@ func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) er
 // --------------
 
 type PayArguments struct {
-	PayId   reservoir.PayId `json:"payId"`   // id from the issue/transfer request
-	Receipt string          `json:"receipt"` // hex id from payment process
+	PayId   pay.PayId `json:"payId"`   // id from the issue/transfer request
+	Receipt string    `json:"receipt"` // hex id from payment process
 }
 
 type PayReply struct {
-	Status payment.TrackingStatus `json:"status"`
+	Status reservoir.TrackingStatus `json:"status"`
 }
 
 func (bitmarks *Bitmarks) Pay(arguments *PayArguments, reply *PayReply) error {
@@ -226,7 +222,7 @@ func (bitmarks *Bitmarks) Pay(arguments *PayArguments, reply *PayReply) error {
 	log.Infof("broadcast pay: %x", packed)
 	messagebus.Bus.Broadcast.Send("pay", packed)
 
-	reply.Status = payment.TrackPayment(arguments.PayId, arguments.Receipt, payment.RequiredConfirmations)
+	reply.Status = reservoir.TrackingAccepted
 
 	return nil
 }

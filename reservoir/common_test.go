@@ -2,7 +2,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package payment_test
+package reservoir_test
 
 import (
 	"github.com/bitmark-inc/bitmarkd/block"

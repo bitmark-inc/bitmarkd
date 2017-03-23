@@ -7,9 +7,11 @@ package bitcoin
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/binary"
 	"github.com/bitmark-inc/bitmarkd/background"
+	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/reservoir"
+	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/logger"
 	"io/ioutil"
 	"net/http"
@@ -18,16 +20,7 @@ import (
 
 // global constants
 const (
-	bitcoinMinimumVersion = 90200 // do not start if bitcoind older than this
-	// bitcoinRateLimit      = 15.0            // blocks/second
-	// bitcoinPollingTime    = 2 * time.Minute // sample bitcoin "blockcount" RPC at this interval
-	// bitcoinMaximumRetries = 10              // panic after this many consecutive errors
-	// bitcoinCurrencyName   = "bitcoin"       // all lowercase currency string
-	// bitcoinBlockRange     = 200             // number of blocks to consider as relevant
-	// bitcoinConfirmations  = 3               // stop processing this many blocks back from most recent block
-	//
-	// // this is how far back in the bitcoin block chain to start when process begins
-	// bitcoinBlockOffset = bitcoinBlockRange + bitcoinConfirmations
+	bitcoinMinimumVersion = 120100 // do not start if bitcoind olde
 )
 
 // globals for background proccess
@@ -45,18 +38,15 @@ type bitcoinData struct {
 	username string
 	password string
 
-	// queueing
-	//blockQueue chan uint64
-	itemQueue chan *priorityItem
-
-	// verification
-	verifier chan<- reservoir.PayId
-
 	// identifier for the RPC
 	id uint64
 
-	// value from bitcoind
+	// values from bitcoind
 	latestBlockNumber uint64
+	latestBlockHash   string
+
+	// to reduce the number of Currency record overwrites
+	saveCount uint64
 
 	// for background
 	background *background.T
@@ -82,7 +72,7 @@ type Configuration struct {
 
 // initialise for bitcoin payments
 // also calls the internal initialisePayment() and register()
-func Initialise(configuration *Configuration, verifier chan<- reservoir.PayId) error {
+func Initialise(configuration *Configuration) error {
 
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -102,12 +92,6 @@ func Initialise(configuration *Configuration, verifier chan<- reservoir.PayId) e
 	globalData.username = configuration.Username
 	globalData.password = configuration.Password
 	globalData.url = configuration.URL
-
-	globalData.verifier = verifier
-
-	// set up queues
-	//globalData.blockQueue = make(chan uint64, 10)
-	globalData.itemQueue = make(chan *priorityItem, 10)
 
 	useTLS := false
 	clientCertificates := []tls.Certificate(nil)
@@ -187,11 +171,21 @@ func Initialise(configuration *Configuration, verifier chan<- reservoir.PayId) e
 		return fault.ErrInvalidVersion
 	} else {
 		globalData.log.Infof("Bitcoin version: %d", reply.Version)
+		globalData.log.Infof("Bitcoin block height: %d", reply.Blocks)
 	}
 
 	// set up current block number
-	globalData.latestBlockNumber = reply.Blocks
-	globalData.log.Debugf("block count: %d", globalData.latestBlockNumber)
+	globalData.latestBlockNumber = 1
+	globalData.latestBlockHash = ""
+	globalData.saveCount = 0
+
+	key := make([]byte, 8)
+	binary.BigEndian.PutUint64(key, currency.Bitcoin.Uint64())
+	record := storage.Pool.Currency.Get(key)
+	if nil != record {
+		globalData.latestBlockNumber = binary.BigEndian.Uint64(record[:8])
+		globalData.latestBlockHash = string(record[8:])
+	}
 
 	// start background processes
 	globalData.log.Info("start background…")

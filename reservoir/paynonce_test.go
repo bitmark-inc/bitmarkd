@@ -2,20 +2,20 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package payment_test
+package reservoir_test
 
 import (
 	"encoding/json"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/mode"
-	"github.com/bitmark-inc/bitmarkd/payment"
+	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"testing"
 )
 
 func TestPayNonce(t *testing.T) {
 
-	nonce := payment.PayNonce{
+	nonce := reservoir.PayNonce{
 		0x2b, 0xa1, 0x54, 0x14, 0x46, 0x74, 0x29, 0x1d,
 	}
 	expected := `"2ba154144674291d"`
@@ -34,7 +34,7 @@ func TestPayNonce(t *testing.T) {
 		t.Fatalf("pay nonce expected: %#v  actual: %#v", expected, actual)
 	}
 
-	var nonce2 payment.PayNonce
+	var nonce2 reservoir.PayNonce
 	err = json.Unmarshal(buffer, &nonce2)
 	if nil != err {
 		t.Fatalf("unmarshal JSON error: %v", err)
@@ -56,7 +56,7 @@ func TestNewPayNonceBitmark(t *testing.T) {
 	d, n := block.Get()
 	t.Logf("block: %d  %#v", n, d)
 
-	nonce := payment.NewPayNonce()
+	nonce := reservoir.NewPayNonce()
 	t.Logf("pay nonce: %#v", nonce)
 
 	buffer, err := json.Marshal(nonce)
@@ -84,7 +84,7 @@ func TestNewPayNonceTesting(t *testing.T) {
 	d, n := block.Get()
 	t.Logf("block: %d  %#v", n, d)
 
-	nonce := payment.NewPayNonce()
+	nonce := reservoir.NewPayNonce()
 	t.Logf("pay nonce: %#v", nonce)
 
 	buffer, err := json.Marshal(nonce)

@@ -5,22 +5,16 @@
 package reservoir
 
 import (
-	"bytes"
-	"github.com/bitmark-inc/bitmarkd/account"
-	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/background"
-	"github.com/bitmark-inc/bitmarkd/constants"
+	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
 	"sync"
 	"time"
-)
-
-const (
-	maximumIssues = 100 // allowed issues in a single submission
 )
 
 // globals
@@ -36,19 +30,22 @@ type globalDataType struct {
 	// from an invalid duplicate transfer
 	pendingTransfer map[merkle.Digest]merkle.Digest
 
-	expiry     expiryData
+	verifier   verifierData
 	background *background.T
 }
 
 type unverifiedEntry struct {
-	entries map[PayId]*unverifiedItem
-	index   map[merkle.Digest]PayId
+	entries map[pay.PayId]*unverifiedItem
+	index   map[merkle.Digest]pay.PayId
 }
 
 type unverifiedItem struct {
 	txIds        []merkle.Digest
-	links        []merkle.Digest // links[i] corresponds to txIds[i]
-	transactions [][]byte        // transactions[i] corresponds to txIds[i]
+	links        []merkle.Digest              // links[i] corresponds to txIds[i]
+	transactions [][]byte                     // transactions[i] corresponds to txIds[i]
+	nonce        PayNonce                     // only for issues
+	difficulty   *difficulty.Difficulty       // only for issues
+	payments     []*transactionrecord.Payment // currently only for transfers
 	expires      time.Time
 }
 
@@ -57,8 +54,8 @@ type verifiedItem struct {
 	transaction []byte
 }
 
-// expiry background
-type expiryData struct {
+// background data
+type verifierData struct {
 	log *logger.L
 }
 
@@ -77,15 +74,15 @@ func Initialise() error {
 	}
 	globalData.log.Info("starting…")
 
-	globalData.unverified.entries = make(map[PayId]*unverifiedItem)
-	globalData.unverified.index = make(map[merkle.Digest]PayId)
+	globalData.unverified.entries = make(map[pay.PayId]*unverifiedItem)
+	globalData.unverified.index = make(map[merkle.Digest]pay.PayId)
 	globalData.verified = make(map[merkle.Digest]*verifiedItem)
 	globalData.pendingTransfer = make(map[merkle.Digest]merkle.Digest)
 
 	globalData.enabled = true
 
-	globalData.expiry.log = logger.New("reservoir-expiry")
-	if nil == globalData.expiry.log {
+	globalData.verifier.log = logger.New("reservoir-verifier")
+	if nil == globalData.verifier.log {
 		return fault.ErrInvalidLoggerChannel
 	}
 
@@ -94,7 +91,7 @@ func Initialise() error {
 
 	// list of background processes to start
 	var processes = background.Processes{
-		&globalData.expiry,
+		&globalData.verifier,
 	}
 
 	globalData.background = background.Start(processes, &globalData)
@@ -126,299 +123,56 @@ func ReadCounters() (int, int, []int) {
 	return len(globalData.unverified.index), len(globalData.verified), n
 }
 
-// result returned by store issues
-type IssueInfo struct {
-	Id     PayId
-	TxIds  []merkle.Digest
-	Packed []byte
-}
+// status
+type TransactionState int
 
-// store packed record(s) in the Unverified table
-//
-// return payment id and a duplicate flag
-//
-// for duplicate to be true all transactions must all match exactly to a
-// previous set - this is to allow for multiple submission from client
-// without receiving a duplicate transaction error
-func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, error) {
+const (
+	StateUnknown   TransactionState = iota
+	StatePending   TransactionState = iota
+	StateVerified  TransactionState = iota
+	StateConfirmed TransactionState = iota
+)
 
-	count := len(issues)
-	if count > maximumIssues {
-		return nil, false, fault.ErrTooManyItemsToProcess
-	} else if 0 == count {
-		return nil, false, fault.ErrMissingParameters
-	}
-
-	// critical code - prevent overlapping blocks of issues
-	globalData.Lock()
-	defer globalData.Unlock()
-
-	// individual packed issues
-	separated := make([][]byte, 100)
-
-	// all the tx id corresponding to separated
-	txIds := make([]merkle.Digest, count)
-
-	// this flags in already stored issues
-	// used to flags an error if pay id is different
-	// as this would be an overlapping block of issues
-	duplicate := false
-
-	// verify each transaction
-	for i, issue := range issues {
-
-		// validate issue record
-		packedIssue, err := issue.Pack(issue.Owner)
-		if nil != err {
-			return nil, false, err
-		}
-
-		if !asset.Exists(issue.AssetIndex) {
-			return nil, false, fault.ErrAssetNotFound
-		}
-
-		txId := packedIssue.MakeLink()
-
-		// an unverified issue tag the block as possible duplicate
-		// (if pay id matched later)
-		if _, ok := globalData.unverified.index[txId]; ok {
-			// if duplicate, activate pay id check
-			duplicate = true
-		}
-
-		// a single verified issue fails the whole block
-		if _, ok := globalData.verified[txId]; ok {
-			return nil, false, fault.ErrTransactionAlreadyExists
-		}
-		// a single confirmed issue fails the whole block
-		if storage.Pool.Transactions.Has(txId[:]) {
-			return nil, false, fault.ErrTransactionAlreadyExists
-		}
-
-		// accumulate the data
-		txIds[i] = txId
-		separated[i] = packedIssue
-
-	}
-
-	// compute pay id
-	payId := NewPayId(separated)
-
-	result := &IssueInfo{
-		Id:     payId,
-		TxIds:  txIds,
-		Packed: bytes.Join(separated, []byte{}),
-	}
-
-	// if already seen just return pay id
-	if _, ok := globalData.unverified.entries[payId]; ok {
-		globalData.log.Debugf("duplicate pay id: %s", payId)
-		return result, true, nil
-	}
-
-	// if duplicates were detected, but duplicates were present
-	// then it is an error
-	if duplicate {
-		globalData.log.Debugf("overlapping pay id: %s", payId)
-		return nil, false, fault.ErrTransactionAlreadyExists
-	}
-
-	globalData.log.Infof("creating pay id: %s", payId)
-
-	expiresAt := time.Now().Add(constants.ReservoirTimeout)
-
-	// create index entries
-	for _, txId := range txIds {
-		globalData.unverified.index[txId] = payId
-	}
-
-	// save transactions
-	entry := &unverifiedItem{
-		txIds:        txIds,
-		links:        nil,
-		transactions: separated,
-		expires:      expiresAt,
-	}
-	//copy(entry.txIds, txIds)
-	//copy(entry.transactions, transactions)
-
-	globalData.unverified.entries[payId] = entry
-
-	return result, false, nil
-}
-
-// result returned by store transfer
-type TransferInfo struct {
-	Id               PayId
-	TxId             merkle.Digest
-	Packed           []byte
-	PreviousTransfer *transactionrecord.BitmarkTransfer
-	OwnerData        []byte
-}
-
-// store a single transfer
-func StoreTransfer(transfer *transactionrecord.BitmarkTransfer) (*TransferInfo, bool, error) {
-
-	// critical code - prevent overlapping blocks of transactions
-	globalData.Lock()
-	defer globalData.Unlock()
-
-	verifyResult, duplicate, err := verifyTransfer(transfer)
-	if nil != err {
-		return nil, false, err
-	}
-
-	// compute pay id
-	packedTransfer := verifyResult.packedTransfer
-	payId := NewPayId([][]byte{packedTransfer})
-
-	txId := verifyResult.txId
-	link := transfer.Link
-	if txId == link {
-		// reject any transaction that links to itself
-		// this should never occur, but protect agains this situuation
-		return nil, false, fault.ErrTransactionLinksToSelf
-	}
-
-	result := &TransferInfo{
-		Id:               payId,
-		TxId:             txId,
-		Packed:           packedTransfer,
-		PreviousTransfer: verifyResult.previousTransfer,
-		OwnerData:        verifyResult.ownerData,
-	}
-
-	// if already seen just return pay id
-	if _, ok := globalData.unverified.entries[payId]; ok {
-		return result, true, nil
-	}
-
-	// if duplicates were detected, but different duplicates were present
-	// then it is an error
-	if duplicate {
-		return nil, true, fault.ErrTransactionAlreadyExists
-	}
-
-	expiresAt := time.Now().Add(constants.ReservoirTimeout)
-
-	// create index and pending entries
-	globalData.unverified.index[txId] = payId
-	globalData.pendingTransfer[link] = txId
-
-	// save transactions
-	entry := &unverifiedItem{
-		txIds:        []merkle.Digest{txId},
-		links:        []merkle.Digest{link},
-		transactions: [][]byte{packedTransfer},
-		expires:      expiresAt,
-	}
-
-	globalData.unverified.entries[payId] = entry
-
-	return result, false, nil
-}
-
-// returned data from veriftyTransfer
-type verifiedInfo struct {
-	txId             merkle.Digest
-	packedTransfer   []byte
-	previousTransfer *transactionrecord.BitmarkTransfer
-	ownerData        []byte
-}
-
-// verify that a transfer is ok
-func verifyTransfer(arguments *transactionrecord.BitmarkTransfer) (*verifiedInfo, bool, error) {
-
-	// find the current owner via the link
-	previousPacked := storage.Pool.Transactions.Get(arguments.Link[:])
-	if nil == previousPacked {
-		return nil, false, fault.ErrLinkToInvalidOrUnconfirmedTransaction
-	}
-
-	previousTransaction, _, err := transactionrecord.Packed(previousPacked).Unpack()
-	if nil != err {
-		return nil, false, err
-	}
-
-	var currentOwner *account.Account
-	var previousTransfer *transactionrecord.BitmarkTransfer
-
-	switch tx := previousTransaction.(type) {
-	case *transactionrecord.BitmarkIssue:
-		currentOwner = tx.Owner
-
-	case *transactionrecord.BitmarkTransfer:
-		currentOwner = tx.Owner
-		previousTransfer = tx
-
+func (state TransactionState) String() string {
+	switch state {
+	case StateUnknown:
+		return "Unknown"
+	case StatePending:
+		return "Pending"
+	case StateVerified:
+		return "Verified"
+	case StateConfirmed:
+		return "Confirmed"
 	default:
-		return nil, false, fault.ErrLinkToInvalidOrUnconfirmedTransaction
+		return "Unknown"
+	}
+}
+
+// get status of a transaction
+func TransactionStatus(txId merkle.Digest) TransactionState {
+	globalData.RLock()
+	defer globalData.RUnlock()
+
+	_, ok := globalData.unverified.index[txId]
+	if ok {
+		return StatePending
 	}
 
-	// pack transfer and check signature
-	packedTransfer, err := arguments.Pack(currentOwner)
-	if nil != err {
-		return nil, false, err
+	_, ok = globalData.verified[txId]
+	if ok {
+		return StateVerified
 	}
 
-	// transfer identifier and check for duplicate
-	txId := packedTransfer.MakeLink()
-
-	// check if this transfer was already received
-	_, okP := globalData.pendingTransfer[arguments.Link]
-	_, okU := globalData.unverified.index[txId]
-	duplicate := false
-	if okU && okP {
-		// if both then it is a possible duplicate
-		// (depends on later pay id check)
-		duplicate = true
-	} else if okU || okP {
-		// not an exact match - must be a double transfer
-		return nil, false, fault.ErrDoubleTransferAttempt
-	}
-
-	// a single verified transfer fails the whole block
-	if _, ok := globalData.verified[txId]; ok {
-		return nil, false, fault.ErrTransactionAlreadyExists
-	}
-	// a single confirmed transfer fails the whole block
 	if storage.Pool.Transactions.Has(txId[:]) {
-		return nil, false, fault.ErrTransactionAlreadyExists
+		return StateConfirmed
 	}
 
-	// log.Infof("packed transfer: %x", packedTransfer)
-	// log.Infof("id: %v", txId)
-
-	// get count for current owner record
-	// to make sure that the record has not already been transferred
-	dKey := append(currentOwner.Bytes(), arguments.Link[:]...)
-	// log.Infof("dKey: %x", dKey)
-	dCount := storage.Pool.OwnerDigest.Get(dKey)
-	if nil == dCount {
-		return nil, false, fault.ErrDoubleTransferAttempt
-	}
-
-	// get ownership data
-	oKey := append(currentOwner.Bytes(), dCount...)
-	// log.Infof("oKey: %x", oKey)
-	ownerData := storage.Pool.Ownership.Get(oKey)
-	if nil == ownerData {
-		return nil, false, fault.ErrDoubleTransferAttempt
-	}
-	// log.Infof("ownerData: %x", ownerData)
-
-	result := &verifiedInfo{
-		txId:             txId,
-		packedTransfer:   packedTransfer,
-		previousTransfer: previousTransfer,
-		ownerData:        ownerData,
-	}
-	return result, duplicate, nil
+	return StateUnknown
 }
 
 // move transaction(s) to verified cache
-func SetVerified(payId PayId) {
-	globalData.Lock()
+// must hold lock before calling this
+func setVerified(payId pay.PayId) {
 	entry, ok := globalData.unverified.entries[payId]
 	if ok {
 		// move the record
@@ -434,7 +188,6 @@ func SetVerified(payId PayId) {
 		}
 		delete(globalData.unverified.entries, payId)
 	}
-	globalData.Unlock()
 }
 
 // fetch a series of verified transactions
@@ -516,7 +269,7 @@ func DeleteByLink(link merkle.Digest) {
 
 // hold lock before calling
 // delete unverified transactions
-func internalDelete(payId PayId) {
+func internalDelete(payId pay.PayId) {
 	entry, ok := globalData.unverified.entries[payId]
 	if ok {
 		for i, txId := range entry.txIds {

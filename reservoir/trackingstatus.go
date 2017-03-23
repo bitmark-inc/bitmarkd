@@ -2,7 +2,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package payment
+package reservoir
 
 // result of track payment/try proof
 type TrackingStatus int
