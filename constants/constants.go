@@ -8,18 +8,12 @@ import (
 	"time"
 )
 
-// the maximum time before either a payment track or proof is received
-// if the timeout is reached then the transactions are dropped
+// the time for a record to expire
 const (
-	PaymentTimeout = 2 * time.Hour
+	ReservoirTimeout = 24 * time.Hour
 )
 
 // the maximum time before unverified asset is expired
 const (
-	AssetTimeout = 2 * time.Hour
-)
-
-// the time for a record to expire
-const (
-	ReservoirTimeout = 2 * time.Hour
+	AssetTimeout = ReservoirTimeout + time.Hour
 )
