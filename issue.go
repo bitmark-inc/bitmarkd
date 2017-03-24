@@ -13,7 +13,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/currency"
 	bFault "github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
-	"github.com/bitmark-inc/bitmarkd/payment"
+	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
@@ -245,11 +245,11 @@ func makeIssue(network string, issueConfig issueData, nonce uint64) (*transactio
 type issueReply struct {
 	AssetId        transactionrecord.AssetIndex `json:"assetId"`
 	IssueIds       []merkle.Digest              `json:"issueIds"`
-	PayId          reservoir.PayId              `json:"payId"`
-	PayNonce       payment.PayNonce             `json:"payNonce"`
+	PayId          pay.PayId                    `json:"payId"`
+	PayNonce       reservoir.PayNonce           `json:"payNonce"`
 	Difficulty     string                       `json:"difficulty"`
 	SubmittedNonce string                       `json:"submittedNonce"`
-	ProofStatus    payment.TrackingStatus       `json:"proofStatus"`
+	ProofStatus    reservoir.TrackingStatus     `json:"proofStatus"`
 }
 
 func doIssues(client *netrpc.Client, network string, issueConfig issueData, verbose bool) error {
@@ -366,7 +366,7 @@ func makeTransfer(network string, txId string, owner *KeyPair, newOwner *KeyPair
 // JSON data to output after transfer completes
 type transferReply struct {
 	TransferId merkle.Digest                `json:"transferId"`
-	PayId      reservoir.PayId              `json:"payId"`
+	PayId      pay.PayId                    `json:"payId"`
 	Payments   []*transactionrecord.Payment `json:"payments"`
 	Command    string                       `json:"command,omitempty"`
 }
@@ -430,7 +430,7 @@ func doTransfer(client *netrpc.Client, network string, transferConfig transferDa
 }
 
 type receiptReply struct {
-	Status payment.TrackingStatus `json:"status"`
+	Status reservoir.TrackingStatus `json:"status"`
 }
 
 func doReceipt(client *netrpc.Client, network string, receiptConfig receiptData, verbose bool) error {
