@@ -297,14 +297,14 @@ func (sbsc *subscriber) process(data [][]byte) {
 			messagebus.Bus.Broadcast.Send("proof", data[1])
 		}
 
-	case "pay":
+	case "pay": // ***** FIX THIS: TO REMOVE
 		log.Infof("received pay: %x", data[1])
-		err := processPay(data[1])
-		if nil != err {
-			log.Warnf("failed pay: error: %v", err)
-		} else {
-			messagebus.Bus.Broadcast.Send("pay", data[1])
-		}
+		// err := processPay(data[1])
+		// if nil != err {
+		// 	log.Warnf("failed pay: error: %v", err)
+		// } else {
+		// 	messagebus.Bus.Broadcast.Send("pay", data[1])
+		// }
 
 	case "rpc":
 		log.Infof("received rpc: fingerprint: %x  rpc: %x", data[1], data[2])
@@ -475,31 +475,32 @@ func processProof(packed []byte) error {
 	return nil
 }
 
-// process pay block
-func processPay(packed []byte) error {
+// ***** FIX THIS: to remove
+// // process pay block
+// func processPay(packed []byte) error {
 
-	if 0 == len(packed) {
-		return fault.ErrMissingParameters
-	}
+// 	if 0 == len(packed) {
+// 		return fault.ErrMissingParameters
+// 	}
 
-	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
-	}
+// 	if !mode.Is(mode.Normal) {
+// 		return fault.ErrNotAvailableDuringSynchronise
+// 	}
 
-	var payId pay.PayId
-	if len(packed) > payment.ReceiptLength+len(payId) {
-		return fault.ErrInvalidNonce
-	}
+// 	var payId pay.PayId
+// 	if len(packed) > payment.ReceiptLength+len(payId) {
+// 		return fault.ErrInvalidNonce
+// 	}
 
-	// ***** FIX THIS: remove...
-	// copy(payId[:], packed[:len(payId)])
-	// receipt := string(packed[len(payId):])
+// 	// ***** FIX THIS: remove...
+// 	// copy(payId[:], packed[:len(payId)])
+// 	// receipt := string(packed[len(payId):])
 
-	// status := payment.TrackPayment(payId, receipt, payment.RequiredConfirmations)
-	// if payment.TrackingAccepted != status {
-	// 	// pay id already processed or was invalid
-	// 	return fault.ErrPayIdAlreadyUsed
-	// }
+// 	// status := payment.TrackPayment(payId, receipt, payment.RequiredConfirmations)
+// 	// if payment.TrackingAccepted != status {
+// 	// 	// pay id already processed or was invalid
+// 	// 	return fault.ErrPayIdAlreadyUsed
+// 	// }
 
-	return nil
-}
+// 	return nil
+// }
