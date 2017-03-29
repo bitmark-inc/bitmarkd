@@ -35,6 +35,7 @@ var (
 	ErrRequiredConfigFile       = InvalidError("config file is required")
 	ErrRequiredConnect          = InvalidError("connect is required")
 	ErrRequiredDescription      = InvalidError("description is required")
+	ErrRequiredFileName         = InvalidError("file name is required")
 	ErrRequiredIdentity         = InvalidError("identity is required")
 	ErrRequiredPayId            = InvalidError("payment id is required")
 	ErrRequiredReceipt          = InvalidError("receipt id is required")

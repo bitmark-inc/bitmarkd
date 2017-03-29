@@ -12,6 +12,8 @@ import (
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/codegangsta/cli"
+	"golang.org/x/crypto/ed25519"
+	"io/ioutil"
 	"net/rpc/jsonrpc"
 	"os"
 	"strings"
@@ -248,6 +250,21 @@ func main() {
 			Usage: "change default identity's passwordr",
 			Action: func(c *cli.Context) {
 				changePassword(c, globals)
+			},
+		},
+		{
+			Name:      "sign",
+			Usage:     "sign file",
+			ArgsUsage: "\n   (* = required)",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "file, f",
+					Value: "",
+					Usage: " file of data to sign",
+				},
+			},
+			Action: func(c *cli.Context) {
+				runSign(c, globals)
 			},
 		},
 		{
@@ -691,6 +708,69 @@ func runBitmarkInfo(c *cli.Context, globals globalFlags) {
 	if !bitmarkInfo(bitmarkRpcConfig, verbose) {
 		exitwithstatus.Message("Error: Get info failed")
 	}
+}
+
+func runSign(c *cli.Context, globals globalFlags) {
+
+	configData, err := checkAndGetConfig(globals.config)
+	if nil != err {
+		exitwithstatus.Message("Error: Get configuration failed: %s", err)
+	}
+
+	fileName, err := checkFileName(c.String("file"))
+	if nil != err {
+		exitwithstatus.Message("Error: %s", err)
+	}
+
+	from, err := checkTransferFrom(globals.identity, configData)
+	if nil != err {
+		exitwithstatus.Message("Error: %s", err)
+	}
+
+	verbose := globals.verbose
+	if verbose {
+		fmt.Printf("file: %s\n", fileName)
+		fmt.Printf("signer: %s\n", from.Name)
+	}
+
+	var ownerKeyPair *KeyPair
+	// check owner password
+	if "" != globals.agent {
+		password, err := passwordFromAgent(from.Name, "Transfer Bitmark", globals.agent, globals.clearCache)
+		if nil != err {
+			exitwithstatus.Message("Error: %s", err)
+		}
+		ownerKeyPair, err = verifyPassword(password, from)
+		if nil != err {
+			exitwithstatus.Message("Error: %s", err)
+		}
+	} else if "" != globals.password {
+		ownerKeyPair, err = verifyPassword(globals.password, from)
+		if nil != err {
+			exitwithstatus.Message("Error: %s", err)
+		}
+	} else {
+		ownerKeyPair, err = promptAndCheckPassword(from)
+		if nil != err {
+			exitwithstatus.Message("Error: %s", err)
+		}
+
+	}
+	// just in case some internal breakage
+	if nil == ownerKeyPair {
+		exitwithstatus.Message("internal error: nil keypair returned")
+	}
+
+	file, err := os.Open(fileName)
+	if nil != err {
+		exitwithstatus.Message("cannot open: %q  error: %s", fileName, err)
+	}
+
+	data, err := ioutil.ReadAll(file)
+
+	signature := ed25519.Sign(ownerKeyPair.PrivateKey, data)
+	s := hex.EncodeToString(signature)
+	fmt.Printf("signature: %q\n", s)
 }
 
 func addIdentity(configs *configuration.Configuration, name string, description string, privateKeyStr string, password string) bool {

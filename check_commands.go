@@ -33,6 +33,15 @@ func checkName(name string) (string, error) {
 	return name, nil
 }
 
+// check for non-blank file name
+func checkFileName(fileName string) (string, error) {
+	if "" == fileName {
+		return "", fault.ErrRequiredFileName
+	}
+
+	return fileName, nil
+}
+
 func checkNetwork(network string) string {
 	switch network {
 	case "":
