@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2016 Bitmark Inc.
+// Copyright (c) 2014-2017 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -12,7 +12,7 @@ import (
 )
 
 func TestConnect(t *testing.T) {
-	conn, err := connect("node-1.test.bitmark.com:3130")
+	conn, err := connect("node-1.test.bitmark.com:2130")
 
 	if nil != err {
 		t.Errorf("Connect failed: %v\n", err)
@@ -28,8 +28,4 @@ func TestConnect(t *testing.T) {
 		t.Errorf("Request info failed: %v\n", err)
 	}
 	fmt.Printf("Info: chain: %s, mode: %s\n", reply.Chain, reply.Mode)
-
-	// make asset
-	// err, assetIndex := makeAsset(client, registrant, rpc.testNet, asset, verbose)
-
 }

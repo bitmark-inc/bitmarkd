@@ -65,6 +65,10 @@ type provenanceData struct {
 	count int
 }
 
+type transactionStatusData struct {
+	txId string
+}
+
 // a dummy signature to begin
 var dummySignature account.Signature
 
@@ -490,6 +494,34 @@ func doProvenance(client *netrpc.Client, network string, provenanceConfig proven
 
 	if verbose {
 		err := printJson("Bitmark Provenance", reply)
+		return err
+	}
+
+	if err := printJson("", reply); nil != err {
+		return err
+	}
+
+	return nil
+}
+
+func doTransferStatus(client *netrpc.Client, network string, statusConfig transactionStatusData, verbose bool) error {
+
+	var txId merkle.Digest
+	if err := txId.UnmarshalText([]byte(statusConfig.txId)); nil != err {
+		return err
+	}
+
+	statusArgs := rpc.TransactionArguments{
+		TxId: txId,
+	}
+
+	var reply rpc.TransactionStatusReply
+	if err := client.Call("Transaction.Status", statusArgs, &reply); err != nil {
+		return err
+	}
+
+	if verbose {
+		err := printJson("Transaction Status", reply)
 		return err
 	}
 
