@@ -19,21 +19,16 @@ type Transaction struct {
 
 // TransactionArguments is the arguments for statuc rpc request
 type TransactionArguments struct {
-	Id string `json:"txId"`
+	TxId merkle.Digest `json:"txId"`
 }
 
 // TransactionStatus is a struct for an rpc reply
-type TransactionStatus struct {
+type TransactionStatusReply struct {
 	Status string `json:"status"`
 }
 
 // Status is an rpc api for query transaction status
-func (t *Transaction) Status(arguments *TransactionArguments, reply *TransactionStatus) error {
-	var txId merkle.Digest
-	err := txId.UnmarshalText([]byte(arguments.Id))
-	if err != nil {
-		return err
-	}
-	reply.Status = reservoir.TransactionStatus(txId).String()
+func (t *Transaction) Status(arguments *TransactionArguments, reply *TransactionStatusReply) error {
+	reply.Status = reservoir.TransactionStatus(arguments.TxId).String()
 	return nil
 }
