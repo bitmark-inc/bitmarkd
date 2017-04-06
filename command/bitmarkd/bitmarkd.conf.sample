@@ -118,11 +118,11 @@ logging {
   count = 10
 
   # set the logging level for various modules
-  # modules not overridden with get the value from "*"
-  # the default value for "*" is "critical"
+  # modules not overridden with get the value from DEFAULT
+  # the default value for DEFAULT is "critical"
   levels {
-    "*" = info
-    # "*" = debug
+    DEFAULT = info
+    # DEFAULT = debug
 
     # client RPC
     rpc = info
