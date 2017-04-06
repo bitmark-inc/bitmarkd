@@ -12,9 +12,15 @@ import (
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/codegangsta/cli"
 	"golang.org/x/crypto/ed25519"
+	"golang.org/x/crypto/sha3"
 	"io/ioutil"
 	"os"
 	"strings"
+)
+
+// version byte prefix for fignerprint file
+const (
+	fingerprintVersion byte = 0x01
 )
 
 func runGenerate(c *cli.Context, globals globalFlags) {
@@ -23,8 +29,15 @@ func runGenerate(c *cli.Context, globals globalFlags) {
 		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
 
-	if err := makeRawKeyPair("bitmark" != configData.Network); nil != err {
+	rawKeyPair, _, err := makeRawKeyPair("bitmark" != configData.Network)
+	if nil != err {
 		exitwithstatus.Message("Error: %s", err)
+	}
+
+	if b, err := json.MarshalIndent(rawKeyPair, "", "  "); nil != err {
+		exitwithstatus.Message("Error: %s", err)
+	} else {
+		fmt.Printf("%s\n", b)
 	}
 }
 
@@ -143,7 +156,7 @@ func runAdd(c *cli.Context, globals globalFlags) {
 	}
 }
 
-func runCreate(c *cli.Context, globals globalFlags) {
+func runCreate(c *cli.Context, globals globalFlags, batchMode bool) {
 
 	configData, err := checkAndGetConfig(globals.config)
 	if nil != err {
@@ -230,9 +243,16 @@ func runCreate(c *cli.Context, globals globalFlags) {
 		registrant:  registrant,
 	}
 
-	err = issue(bitmarkRpcConfig, assetConfig, verbose)
-	if nil != err {
-		exitwithstatus.Message("Issue error: %s", err)
+	if batchMode {
+		err = batch(bitmarkRpcConfig, assetConfig, verbose)
+		if nil != err {
+			exitwithstatus.Message("Issue error: %s", err)
+		}
+	} else {
+		err = issue(bitmarkRpcConfig, assetConfig, verbose)
+		if nil != err {
+			exitwithstatus.Message("Issue error: %s", err)
+		}
 	}
 }
 
@@ -321,10 +341,15 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 		network:  configData.Network,
 	}
 
+	link, err := txIdFromString(txId)
+	if nil != err {
+		exitwithstatus.Message("Transfer TxId error: %s", err)
+	}
+
 	transferConfig := transferData{
 		owner:    ownerKeyPair,
 		newOwner: newOwnerKeyPair,
-		txId:     txId,
+		txId:     link,
 	}
 
 	err = transfer(bitmarkRpcConfig, transferConfig, verbose)
@@ -453,12 +478,7 @@ func runInfo(c *cli.Context, globals globalFlags) {
 		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
 
-	output, err := json.MarshalIndent(infoConfig, "", "  ")
-	if nil != err {
-		exitwithstatus.Message("Error: Marshal config failed: %s", err)
-	}
-
-	fmt.Println(string(output))
+	printJson("", infoConfig)
 }
 
 func runBitmarkInfo(c *cli.Context, globals globalFlags) {
@@ -476,9 +496,33 @@ func runBitmarkInfo(c *cli.Context, globals globalFlags) {
 		network:  configData.Network,
 	}
 
-	if !bitmarkInfo(bitmarkRpcConfig, verbose) {
-		exitwithstatus.Message("Error: Get info failed")
+	if err := bitmarkInfo(bitmarkRpcConfig, verbose); nil != err {
+		exitwithstatus.Message("Error: Get info failed: %s", err)
 	}
+}
+
+func runFingerprint(c *cli.Context, globals globalFlags) {
+
+	fileName, err := checkFileName(c.String("file"))
+	if nil != err {
+		exitwithstatus.Message("Error: %s", err)
+	}
+
+	verbose := globals.verbose
+	if verbose {
+		fmt.Printf("file: %s\n", fileName)
+	}
+
+	file, err := os.Open(fileName)
+	if nil != err {
+		exitwithstatus.Message("cannot open: %q  error: %s", fileName, err)
+	}
+
+	data, err := ioutil.ReadAll(file)
+
+	fingerprint := sha3.Sum512(data)
+
+	fmt.Printf("fingerprint: %02x%x\n", fingerprintVersion, fingerprint)
 }
 
 func runSign(c *cli.Context, globals globalFlags) {

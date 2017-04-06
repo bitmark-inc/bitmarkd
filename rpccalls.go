@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2016 Bitmark Inc.
+// Copyright (c) 2014-2017 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -6,7 +6,6 @@ package main
 
 import (
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
 	"github.com/bitmark-inc/bitmark-cli/fault"
 	"github.com/bitmark-inc/bitmarkd/account"
@@ -52,7 +51,7 @@ type issueData struct {
 type transferData struct {
 	owner    *KeyPair
 	newOwner *KeyPair
-	txId     string
+	txId     merkle.Digest
 }
 
 type receiptData struct {
@@ -112,11 +111,8 @@ func makeAsset(client *netrpc.Client, network string, assetConfig assetData, ver
 	getArgs := rpc.AssetGetArguments{
 		Fingerprints: []string{assetConfig.fingerprint},
 	}
-	if verbose {
-		if err := printJson("Asset Get Request", getArgs); nil != err {
-			return nil, err
-		}
-	}
+
+	printJson("Asset Get Request", getArgs, verbose)
 
 	var getReply rpc.AssetGetReply
 	if err := client.Call("Assets.Get", &getArgs, &getReply); nil != err {
@@ -158,11 +154,7 @@ func makeAsset(client *netrpc.Client, network string, assetConfig assetData, ver
 		}
 	}
 
-	if verbose {
-		if err := printJson("Asset Get Reply", getReply); nil != err {
-			return nil, err
-		}
-	}
+	printJson("Asset Get Reply", getReply, verbose)
 
 	if nil != assetIndex {
 		return assetIndex, nil
@@ -192,11 +184,7 @@ func makeAsset(client *netrpc.Client, network string, assetConfig assetData, ver
 		return nil, err
 	}
 
-	if verbose {
-		if err := printJson("Asset Request", r); nil != err {
-			return nil, err
-		}
-	}
+	printJson("Asset Request", r, verbose)
 
 	args := rpc.CreateArguments{
 		Assets: []*transactionrecord.AssetData{&r},
@@ -208,11 +196,7 @@ func makeAsset(client *netrpc.Client, network string, assetConfig assetData, ver
 		return nil, err
 	}
 
-	if verbose {
-		if err := printJson("Asset Reply", reply); nil != err {
-			return nil, err
-		}
-	}
+	printJson("Asset Reply", reply, verbose)
 
 	return reply.Assets[0].AssetIndex, nil
 }
@@ -256,26 +240,22 @@ type issueReply struct {
 	ProofStatus    reservoir.TrackingStatus     `json:"proofStatus"`
 }
 
-func doIssues(client *netrpc.Client, network string, issueConfig issueData, verbose bool) error {
+func doIssues(client *netrpc.Client, network string, issueConfig issueData, verbose bool) (*issueReply, error) {
 
 	nonce := time.Now().UTC().Unix() * 1000
 	issues := make([]*transactionrecord.BitmarkIssue, issueConfig.quantity)
 	for i := 0; i < len(issues); i += 1 {
 		issue, err := makeIssue(network, issueConfig, uint64(nonce)+uint64(i))
 		if nil != err {
-			return err
+			return nil, err
 		}
 		if nil == issue {
-			return fault.ErrMakeIssueFail
+			return nil, fault.ErrMakeIssueFail
 		}
 		issues[i] = issue
 	}
 
-	if verbose {
-		if err := printJson("Issue Request", issues); nil != err {
-			return err
-		}
-	}
+	printJson("Issue Request", issues, verbose)
 
 	issuesArgs := rpc.CreateArguments{
 		Assets: nil,
@@ -284,14 +264,10 @@ func doIssues(client *netrpc.Client, network string, issueConfig issueData, verb
 
 	var issuesReply rpc.CreateReply
 	if err := client.Call("Bitmarks.Create", issuesArgs, &issuesReply); err != nil {
-		return err
+		return nil, err
 	}
 
-	if verbose {
-		if err := printJson("Issue Reply", issuesReply); nil != err {
-			return err
-		}
-	}
+	printJson("Issue Reply", issuesReply, verbose)
 
 	// run proofer to generate local nonce
 	localNonce := makeProof(issuesReply.PayId, issuesReply.PayNonce, issuesReply.Difficulty, verbose)
@@ -300,49 +276,34 @@ func doIssues(client *netrpc.Client, network string, issueConfig issueData, verb
 		Nonce: localNonce,
 	}
 
-	if verbose {
-		if err := printJson("Proof Request", proofArgs); nil != err {
-			return err
-		}
-	}
+	printJson("Proof Request", proofArgs, verbose)
 
 	var proofReply rpc.ProofReply
 	if err := client.Call("Bitmarks.Proof", &proofArgs, &proofReply); err != nil {
-		return err
-	}
-
-	if verbose {
-		if err := printJson("Proof Reply", proofReply); nil != err {
-			return err
-		}
-	} else { // make response
-		response := issueReply{
-			AssetId:        issues[0].AssetIndex, // Note: all issues are for the same asset
-			IssueIds:       make([]merkle.Digest, len(issues)),
-			PayId:          issuesReply.PayId,
-			PayNonce:       issuesReply.PayNonce,
-			Difficulty:     issuesReply.Difficulty,
-			SubmittedNonce: proofArgs.Nonce,
-			ProofStatus:    proofReply.Status,
-		}
-
-		for i := 0; i < len(issuesReply.Issues); i++ {
-			response.IssueIds[i] = issuesReply.Issues[i].TxId
-		}
-
-		if err := printJson("", response); nil != err {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func makeTransfer(network string, txId string, owner *KeyPair, newOwner *KeyPair) (*transactionrecord.BitmarkTransfer, error) {
-	var link merkle.Digest
-	if err := link.UnmarshalText([]byte(txId)); nil != err {
 		return nil, err
 	}
+
+	printJson("Proof Reply", proofReply, verbose)
+
+	// make response
+	response := issueReply{
+		AssetId:        issues[0].AssetIndex, // Note: all issues are for the same asset
+		IssueIds:       make([]merkle.Digest, len(issues)),
+		PayId:          issuesReply.PayId,
+		PayNonce:       issuesReply.PayNonce,
+		Difficulty:     issuesReply.Difficulty,
+		SubmittedNonce: proofArgs.Nonce,
+		ProofStatus:    proofReply.Status,
+	}
+
+	for i := 0; i < len(issuesReply.Issues); i++ {
+		response.IssueIds[i] = issuesReply.Issues[i].TxId
+	}
+
+	return &response, nil
+}
+
+func makeTransfer(network string, link merkle.Digest, owner *KeyPair, newOwner *KeyPair) (*transactionrecord.BitmarkTransfer, error) {
 
 	newOwnerAddress := makeAddress(newOwner, network)
 	r := transactionrecord.BitmarkTransfer{
@@ -375,29 +336,25 @@ type transferReply struct {
 	Command    string                       `json:"command,omitempty"`
 }
 
-func doTransfer(client *netrpc.Client, network string, transferConfig transferData, verbose bool) error {
+func doTransfer(client *netrpc.Client, network string, transferConfig transferData, verbose bool) (*transferReply, error) {
 	transfer, err := makeTransfer(network, transferConfig.txId, transferConfig.owner, transferConfig.newOwner)
 	if nil != err {
-		return err
+		return nil, err
 	}
 	if nil == transfer {
-		return fault.ErrMakeTransferFail
+		return nil, fault.ErrMakeTransferFail
 	}
 
-	if verbose {
-		if err := printJson("Transfer Request", transfer); nil != err {
-			return err
-		}
-	}
+	printJson("Transfer Request", transfer, verbose)
 
 	var reply rpc.BitmarkTransferReply
 	if err := client.Call("Bitmark.Transfer", transfer, &reply); err != nil {
-		return err
+		return nil, err
 	}
 
 	tpid, err := reply.PayId.MarshalText()
 	if nil != err {
-		return err
+		return nil, err
 	}
 
 	command := paymentCommand +
@@ -413,73 +370,54 @@ func doTransfer(client *netrpc.Client, network string, transferConfig transferDa
 		}
 	}
 
-	if verbose {
-		if err := printJson("Transfer Reply", reply); nil != err {
-			return err
-		}
-	} else { // make response
-		responses := transferReply{
-			TransferId: reply.TxId,
-			PayId:      reply.PayId,
-			Payments:   reply.Payments,
-			Command:    command,
-		}
+	printJson("Transfer Reply", reply, verbose)
 
-		if err := printJson("", responses); nil != err {
-			return err
-		}
+	// make response
+	response := transferReply{
+		TransferId: reply.TxId,
+		PayId:      reply.PayId,
+		Payments:   reply.Payments,
+		Command:    command,
 	}
 
-	return nil
+	return &response, nil
 }
 
 type receiptReply struct {
 	Status reservoir.TrackingStatus `json:"status"`
 }
 
-func doReceipt(client *netrpc.Client, network string, receiptConfig receiptData, verbose bool) error {
+func doReceipt(client *netrpc.Client, network string, receiptConfig receiptData, verbose bool) (*receiptReply, error) {
 
 	payArgs := rpc.PayArguments{
 		Receipt: receiptConfig.receipt,
 	}
 
 	if err := payArgs.PayId.UnmarshalText([]byte(receiptConfig.payId)); nil != err {
-		return err
+		return nil, err
 	}
 
-	if verbose {
-		if err := printJson("Receipt Request", payArgs); nil != err {
-			return err
-		}
-	}
+	printJson("Receipt Request", payArgs, verbose)
 
 	var reply rpc.PayReply
 	if err := client.Call("Bitmarks.Pay", payArgs, &reply); err != nil {
-		return err
+		return nil, err
 	}
 
-	if verbose {
-		if err := printJson("Receipt Reply", reply); nil != err {
-			return err
-		}
-	} else { // make response
-		response := receiptReply{
-			Status: reply.Status,
-		}
+	printJson("Receipt Reply", reply, verbose)
 
-		if err := printJson("", response); nil != err {
-			return err
-		}
+	response := receiptReply{
+		Status: reply.Status,
 	}
 
-	return nil
+	return &response, nil
 }
 
-func doProvenance(client *netrpc.Client, network string, provenanceConfig provenanceData, verbose bool) error {
+func doProvenance(client *netrpc.Client, network string, provenanceConfig provenanceData, verbose bool) (*rpc.ProvenanceReply, error) {
 
 	var txId merkle.Digest
 	if err := txId.UnmarshalText([]byte(provenanceConfig.txId)); nil != err {
-		return err
+		return nil, err
 	}
 
 	provenanceArgs := rpc.ProvenanceArguments{
@@ -487,67 +425,50 @@ func doProvenance(client *netrpc.Client, network string, provenanceConfig proven
 		Count: provenanceConfig.count,
 	}
 
+	printJson("Provenance Request", provenanceArgs, verbose)
+
 	var reply rpc.ProvenanceReply
 	if err := client.Call("Bitmark.Provenance", provenanceArgs, &reply); err != nil {
-		return err
+		return nil, err
 	}
 
-	if verbose {
-		err := printJson("Bitmark Provenance", reply)
-		return err
-	}
+	printJson("Provenance Reply", reply, verbose)
 
-	if err := printJson("", reply); nil != err {
-		return err
-	}
-
-	return nil
+	return &reply, nil
 }
 
-func doTransferStatus(client *netrpc.Client, network string, statusConfig transactionStatusData, verbose bool) error {
+func doTransactionStatus(client *netrpc.Client, network string, statusConfig transactionStatusData, verbose bool) (*rpc.TransactionStatusReply, error) {
 
 	var txId merkle.Digest
 	if err := txId.UnmarshalText([]byte(statusConfig.txId)); nil != err {
-		return err
+		return nil, err
 	}
 
 	statusArgs := rpc.TransactionArguments{
 		TxId: txId,
 	}
 
+	printJson("Status Request", statusArgs, verbose)
+
 	var reply rpc.TransactionStatusReply
 	if err := client.Call("Transaction.Status", statusArgs, &reply); err != nil {
-		return err
+		return nil, err
 	}
 
-	if verbose {
-		err := printJson("Transaction Status", reply)
-		return err
-	}
+	printJson("Status Reply", reply, verbose)
 
-	if err := printJson("", reply); nil != err {
-		return err
-	}
-
-	return nil
+	return &reply, nil
 }
 
-func getBitmarkInfo(client *netrpc.Client, verbose bool) error {
+func getBitmarkInfo(client *netrpc.Client, verbose bool) (*rpc.InfoReply, error) {
 	var reply rpc.InfoReply
 	if err := client.Call("Node.Info", rpc.InfoArguments{}, &reply); err != nil {
-		return err
+		return nil, err
 	}
 
-	if verbose {
-		err := printJson("Bitmarkd Info", reply)
-		return err
-	}
+	printJson("Info Reply", reply, verbose)
 
-	if err := printJson("", reply); nil != err {
-		return err
-	}
-
-	return nil
+	return &reply, nil
 }
 
 // connect to bitmarkd RPC
@@ -565,16 +486,11 @@ func connect(connect string) (net.Conn, error) {
 	return conn, nil
 }
 
-func printJson(title string, message interface{}) error {
-	if b, err := json.MarshalIndent(message, "", "  "); nil != err {
-		return err
-	} else {
-		if "" == title {
-			fmt.Printf("%s\n", b)
-		} else {
-			fmt.Printf("%s:\n%s\n", title, b)
-		}
+// converts atx id string to digest
+func txIdFromString(txId string) (merkle.Digest, error) {
+	var link merkle.Digest
+	if err := link.UnmarshalText([]byte(txId)); nil != err {
+		return merkle.Digest{}, err
 	}
-
-	return nil
+	return link, nil
 }

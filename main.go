@@ -128,6 +128,36 @@ func main() {
 			},
 		},
 		{
+			Name:      "batch",
+			Usage:     "create and transfer bitmarks to new accounts",
+			ArgsUsage: "\n   (* = required)",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "asset, a",
+					Value: "",
+					Usage: "*asset name",
+				},
+				cli.StringFlag{
+					Name:  "metadata, m",
+					Value: "",
+					Usage: "*asset metadata",
+				},
+				cli.StringFlag{
+					Name:  "fingerprint, f",
+					Value: "",
+					Usage: "*asset fingerprint",
+				},
+				cli.StringFlag{
+					Name:  "quantity, q",
+					Value: "",
+					Usage: " quantity to create [1]",
+				},
+			},
+			Action: func(c *cli.Context) {
+				runCreate(c, globals, true)
+			},
+		},
+		{
 			Name:      "create",
 			Usage:     "create one or more new bitmarks",
 			ArgsUsage: "\n   (* = required)",
@@ -154,7 +184,7 @@ func main() {
 				},
 			},
 			Action: func(c *cli.Context) {
-				runCreate(c, globals)
+				runCreate(c, globals, false)
 			},
 		},
 		{
@@ -258,6 +288,21 @@ func main() {
 			Usage: "change default identity's password",
 			Action: func(c *cli.Context) {
 				changePassword(c, globals)
+			},
+		},
+		{
+			Name:      "fingerprint",
+			Usage:     "fingerprint a file (compatible to desktop app)",
+			ArgsUsage: "\n   (* = required)",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "file, f",
+					Value: "",
+					Usage: " file of data to fingerprint",
+				},
+			},
+			Action: func(c *cli.Context) {
+				runFingerprint(c, globals)
 			},
 		},
 		{

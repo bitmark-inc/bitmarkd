@@ -76,10 +76,14 @@ func issue(rpcConfig bitmarkRPC, assetConfig assetData, verbose bool) error {
 		assetIndex: assetIndex,
 		quantity:   assetConfig.quantity,
 	}
-	err = doIssues(client, rpcConfig.network, issueConfig, verbose)
+	response, err := doIssues(client, rpcConfig.network, issueConfig, verbose)
 	if nil != err {
 		return err
 	}
+	if verbose {
+		fmt.Printf("Result:\n")
+	}
+	printJson("", response)
 
 	return nil
 }
@@ -96,10 +100,15 @@ func transfer(rpcConfig bitmarkRPC, transferConfig transferData, verbose bool) e
 	client := jsonrpc.NewClient(conn)
 	defer client.Close()
 
-	err = doTransfer(client, rpcConfig.network, transferConfig, verbose)
+	response, err := doTransfer(client, rpcConfig.network, transferConfig, verbose)
 	if nil != err {
 		return err
 	}
+	if verbose {
+		fmt.Printf("Result:\n")
+	}
+	printJson("", response)
+
 	return nil
 }
 
@@ -115,10 +124,15 @@ func receipt(rpcConfig bitmarkRPC, receiptConfig receiptData, verbose bool) erro
 	client := jsonrpc.NewClient(conn)
 	defer client.Close()
 
-	err = doReceipt(client, rpcConfig.network, receiptConfig, verbose)
+	response, err := doReceipt(client, rpcConfig.network, receiptConfig, verbose)
 	if nil != err {
 		return err
 	}
+	if verbose {
+		fmt.Printf("Result:\n")
+	}
+	printJson("", response)
+
 	return nil
 }
 
@@ -134,10 +148,15 @@ func provenance(rpcConfig bitmarkRPC, provenanceConfig provenanceData, verbose b
 	client := jsonrpc.NewClient(conn)
 	defer client.Close()
 
-	err = doProvenance(client, rpcConfig.network, provenanceConfig, verbose)
+	response, err := doProvenance(client, rpcConfig.network, provenanceConfig, verbose)
 	if nil != err {
 		return err
 	}
+	if verbose {
+		fmt.Printf("Result:\n")
+	}
+	printJson("", response)
+
 	return nil
 }
 
@@ -153,18 +172,22 @@ func transactionStatus(rpcConfig bitmarkRPC, statusConfig transactionStatusData,
 	client := jsonrpc.NewClient(conn)
 	defer client.Close()
 
-	err = doTransferStatus(client, rpcConfig.network, statusConfig, verbose)
+	response, err := doTransactionStatus(client, rpcConfig.network, statusConfig, verbose)
 	if nil != err {
 		return err
 	}
+	if verbose {
+		fmt.Printf("Result:\n")
+	}
+	printJson("", response)
+
 	return nil
 }
 
-func bitmarkInfo(rpcConfig bitmarkRPC, verbose bool) bool {
+func bitmarkInfo(rpcConfig bitmarkRPC, verbose bool) error {
 	conn, err := connect(rpcConfig.hostPort)
 	if nil != err {
-		fmt.Printf("Error: %s\n", err)
-		return false
+		return err
 	}
 	defer conn.Close()
 
@@ -172,12 +195,16 @@ func bitmarkInfo(rpcConfig bitmarkRPC, verbose bool) bool {
 	client := jsonrpc.NewClient(conn)
 	defer client.Close()
 
-	err = getBitmarkInfo(client, verbose)
+	response, err := getBitmarkInfo(client, verbose)
 	if nil != err {
-		fmt.Printf("Error: %s\n", err)
-		return false
+		return err
 	}
-	return true
+	if verbose {
+		fmt.Printf("Result:\n")
+	}
+	printJson("", response)
+
+	return nil
 }
 
 func getDefaultRawKeyPair(c *cli.Context, globals globalFlags) {

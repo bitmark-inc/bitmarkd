@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2016 Bitmark Inc.
+// Copyright (c) 2014-2017 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -10,7 +10,6 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"github.com/bitmark-inc/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmark-cli/fault"
@@ -43,12 +42,12 @@ type RawKeyPair struct {
 	PrivateKey string `json:"private_key"`
 }
 
-func makeRawKeyPair(test bool) error {
+func makeRawKeyPair(test bool) (*RawKeyPair, *KeyPair, error) {
 
 	seedCore := make([]byte, 32)
 	n, err := rand.Read(seedCore)
 	if nil != err {
-		return err
+		return nil, nil, err
 	}
 	if 32 != n {
 		panic("too few random bytes")
@@ -66,7 +65,12 @@ func makeRawKeyPair(test bool) error {
 
 	privateKey, err := account.PrivateKeyFromBase58Seed(seed)
 	if nil != err {
-		return err
+		return nil, nil, err
+	}
+
+	keyPair := KeyPair{
+		PublicKey:  privateKey.Account().PublicKeyBytes(),
+		PrivateKey: privateKey.PrivateKeyBytes(),
 	}
 
 	rawKeyPair := RawKeyPair{
@@ -74,12 +78,8 @@ func makeRawKeyPair(test bool) error {
 		PublicKey:  hex.EncodeToString(privateKey.Account().PublicKeyBytes()),
 		PrivateKey: hex.EncodeToString(privateKey.PrivateKeyBytes()),
 	}
-	if b, err := json.MarshalIndent(rawKeyPair, "", "  "); nil != err {
-		return err
-	} else {
-		fmt.Printf("%s\n", b)
-	}
-	return nil
+
+	return &rawKeyPair, &keyPair, nil
 }
 
 // create a new public/private keypair
