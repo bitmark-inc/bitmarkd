@@ -11,7 +11,17 @@ import (
 	"time"
 )
 
-func batch(rpcConfig bitmarkRPC, assetConfig assetData, verbose bool) error {
+type progressType bool
+
+func (p progressType) Printf(format string, arguments ...interface{}) {
+	if p {
+		fmt.Printf(format, arguments...)
+	}
+}
+
+func batch(rpcConfig bitmarkRPC, assetConfig assetData, outputFilename string, verbose bool) error {
+
+	progress := progressType(!verbose)
 
 	conn, err := connect(rpcConfig.hostPort)
 	if nil != err {
@@ -24,12 +34,14 @@ func batch(rpcConfig bitmarkRPC, assetConfig assetData, verbose bool) error {
 	defer client.Close()
 
 	// make asset
+	progress.Printf("make asset\n")
 	assetIndex, err := makeAsset(client, rpcConfig.network, assetConfig, verbose)
 	if nil != err {
 		return err
 	}
 
 	// make Issues
+	progress.Printf("make issues\n")
 	issueConfig := issueData{
 		issuer:     assetConfig.registrant,
 		assetIndex: assetIndex,
@@ -39,10 +51,13 @@ func batch(rpcConfig bitmarkRPC, assetConfig assetData, verbose bool) error {
 	if nil != err {
 		return err
 	}
+	progress.Printf("issues completed\n")
 	printJson("Issue Result", issueResult, verbose)
 
+	progress.Printf("waiting for issues to be confirmed\n")
 loop:
 	for {
+		progress.Printf(".")
 		confirmed := true
 		for _, issueId := range issueResult.IssueIds {
 
@@ -63,6 +78,7 @@ loop:
 			}
 		}
 		if confirmed {
+			progress.Printf("\n")
 			break loop
 		}
 		time.Sleep(5 * time.Second)
@@ -76,6 +92,7 @@ loop:
 	accounts := make([]accountAndTransfer, len(issueResult.IssueIds))
 
 	for i, issueId := range issueResult.IssueIds {
+		progress.Printf("create account: %d\n", i)
 
 		rawKeyPair, newOwnerKeyPair, err := makeRawKeyPair("bitmark" != rpcConfig.network)
 		if nil != err {
@@ -89,6 +106,7 @@ loop:
 			txId:     issueId,
 		}
 
+		progress.Printf("transfer a bitmark to account: %d\n", i)
 		transferResult, err := doTransfer(client, rpcConfig.network, transferConfig, verbose)
 		if nil != err {
 			return err
@@ -108,10 +126,14 @@ loop:
 		Issues: issueResult,
 		Items:  accounts,
 	}
+	progress.Printf("saving data\n")
 	if verbose {
 		fmt.Printf("Result:\n")
 	}
-	printJson("", result)
-
+	if "" == outputFilename || "-" == outputFilename {
+		printJson("", result)
+	} else {
+		printJsonToFile(outputFilename, result)
+	}
 	return nil
 }

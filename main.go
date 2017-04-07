@@ -152,6 +152,11 @@ func main() {
 					Value: "",
 					Usage: " quantity to create [1]",
 				},
+				cli.StringFlag{
+					Name:  "output, o",
+					Value: "",
+					Usage: " file to store final output",
+				},
 			},
 			Action: func(c *cli.Context) {
 				runCreate(c, globals, true)

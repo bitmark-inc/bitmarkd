@@ -244,7 +244,9 @@ func runCreate(c *cli.Context, globals globalFlags, batchMode bool) {
 	}
 
 	if batchMode {
-		err = batch(bitmarkRpcConfig, assetConfig, verbose)
+		outputFilename := c.String("output")
+
+		err = batch(bitmarkRpcConfig, assetConfig, outputFilename, verbose)
 		if nil != err {
 			exitwithstatus.Message("Issue error: %s", err)
 		}
