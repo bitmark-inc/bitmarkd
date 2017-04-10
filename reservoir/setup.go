@@ -30,8 +30,9 @@ type globalDataType struct {
 	// from an invalid duplicate transfer
 	pendingTransfer map[merkle.Digest]merkle.Digest
 
-	verifier   verifierData
-	background *background.T
+	verifier      verifierData
+	rebroadcaster rebroadcaster
+	background    *background.T
 }
 
 type unverifiedEntry struct {
@@ -39,23 +40,34 @@ type unverifiedEntry struct {
 	index   map[merkle.Digest]pay.PayId
 }
 
-type unverifiedItem struct {
+type itemData struct {
 	txIds        []merkle.Digest
-	links        []merkle.Digest              // links[i] corresponds to txIds[i]
-	transactions [][]byte                     // transactions[i] corresponds to txIds[i]
-	nonce        PayNonce                     // only for issues
-	difficulty   *difficulty.Difficulty       // only for issues
-	payments     []*transactionrecord.Payment // currently only for transfers
-	expires      time.Time
+	links        []merkle.Digest // links[i] corresponds to txIds[i]
+	assetIds     [][]byte        // asset[i] index corresponds to txIds[iu]
+	transactions [][]byte        // transactions[i] corresponds to txIds[i]
+}
+
+type unverifiedItem struct {
+	*itemData
+	nonce      PayNonce                     // only for issues
+	difficulty *difficulty.Difficulty       // only for issues
+	payments   []*transactionrecord.Payment // currently only for transfers
+	expires    time.Time
 }
 
 type verifiedItem struct {
 	link        merkle.Digest
 	transaction []byte
+	data        *itemData // point to the item struct
+	index       int       // index of assetIds and transactions in an item
 }
 
 // background data
 type verifierData struct {
+	log *logger.L
+}
+
+type rebroadcaster struct {
 	log *logger.L
 }
 
@@ -86,12 +98,18 @@ func Initialise() error {
 		return fault.ErrInvalidLoggerChannel
 	}
 
+	globalData.rebroadcaster.log = logger.New("rebroadcaster")
+	if nil == globalData.rebroadcaster.log {
+		return fault.ErrInvalidLoggerChannel
+	}
+
 	// start background processes
 	globalData.log.Info("start background…")
 
 	// list of background processes to start
 	var processes = background.Processes{
 		&globalData.verifier,
+		&globalData.rebroadcaster,
 	}
 
 	globalData.background = background.Start(processes, &globalData)
@@ -178,7 +196,9 @@ func setVerified(payId pay.PayId) {
 		// move the record
 		for i, txId := range entry.txIds {
 			v := &verifiedItem{
+				data:        entry.itemData,
 				transaction: entry.transactions[i],
+				index:       i,
 			}
 			if nil != entry.links {
 				v.link = entry.links[i]

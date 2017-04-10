@@ -41,7 +41,7 @@ type IssueInfo struct {
 // for duplicate to be true all transactions must all match exactly to a
 // previous set - this is to allow for multiple submission from client
 // without receiving a duplicate transaction error
-func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, error) {
+func StoreIssues(issues []*transactionrecord.BitmarkIssue, isVerified bool) (*IssueInfo, bool, error) {
 
 	count := len(issues)
 	if count > maximumIssues {
@@ -55,10 +55,12 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, er
 	defer globalData.Unlock()
 
 	// individual packed issues
-	separated := make([][]byte, 100)
+	separated := make([][]byte, count)
 
 	// all the tx id corresponding to separated
 	txIds := make([]merkle.Digest, count)
+	// all the assets id corresponding to separated
+	assetIds := make([][]byte, count)
 
 	// this flags in already stored issues
 	// used to flags an error if pay id is different
@@ -98,8 +100,26 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, er
 
 		// accumulate the data
 		txIds[i] = txId
+		assetIds[i] = issue.AssetIndex[:]
 		separated[i] = packedIssue
 
+		// this length of the verified issues should be exactly one
+		// the verified issue will be stored directly
+		if len(issues) == 1 && !duplicate && isVerified {
+			transactions := [][]byte{packedIssue[:]}
+
+			v := &verifiedItem{
+				data: &itemData{
+					txIds:        txIds,
+					links:        nil,
+					assetIds:     assetIds,
+					transactions: transactions,
+				},
+				transaction: packedIssue,
+			}
+			globalData.verified[txId] = v
+			return nil, false, nil
+		}
 	}
 
 	// compute pay id
@@ -139,12 +159,15 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, er
 
 	// save transactions
 	entry := &unverifiedItem{
-		txIds:        txIds,
-		links:        nil,
-		transactions: separated,
-		nonce:        nonce,
-		difficulty:   difficulty,
-		expires:      expiresAt,
+		itemData: &itemData{
+			txIds:        txIds,
+			links:        nil,
+			assetIds:     assetIds,
+			transactions: separated,
+		},
+		nonce:      nonce, // FIXME: this value seems not used
+		difficulty: difficulty,
+		expires:    expiresAt,
 	}
 	//copy(entry.txIds, txIds)
 	//copy(entry.transactions, transactions)

@@ -79,11 +79,13 @@ func StoreTransfer(transfer *transactionrecord.BitmarkTransfer) (*TransferInfo, 
 
 	// save transactions
 	entry := &unverifiedItem{
-		txIds:        []merkle.Digest{txId},
-		links:        []merkle.Digest{link},
-		transactions: [][]byte{packedTransfer},
-		payments:     payments,
-		expires:      expiresAt,
+		itemData: &itemData{
+			txIds:        []merkle.Digest{txId},
+			links:        []merkle.Digest{link},
+			transactions: [][]byte{packedTransfer},
+		},
+		payments: payments,
+		expires:  expiresAt,
 	}
 
 	globalData.unverified.entries[payId] = entry

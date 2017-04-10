@@ -271,12 +271,12 @@ func (sbsc *subscriber) process(data [][]byte) {
 		}
 
 	case "issues":
-		log.Infof("received issues: %x", data[1])
-		err := processIssues(data[1])
+		log.Infof("received issues: %x, verified: %x", data[1], data[2])
+		err := processIssues(data[1], data[2])
 		if nil != err {
 			log.Warnf("failed issues: error: %v", err)
 		} else {
-			messagebus.Bus.Broadcast.Send("issues", data[1])
+			messagebus.Bus.Broadcast.Send("issues", data[1], data[2])
 		}
 
 	case "transfer":
@@ -369,7 +369,7 @@ func processAssets(packed []byte) error {
 }
 
 // un pack each issue and cache them
-func processIssues(packed []byte) error {
+func processIssues(packed, verified []byte) error {
 
 	if 0 == len(packed) {
 		return fault.ErrMissingParameters
@@ -402,7 +402,12 @@ func processIssues(packed []byte) error {
 		return fault.ErrMissingParameters
 	}
 
-	_, duplicate, err := reservoir.StoreIssues(issues)
+	isVerified := false
+	if v, _ := util.FromVarint64(verified); v == 1 {
+		isVerified = true
+	}
+
+	_, duplicate, err := reservoir.StoreIssues(issues, isVerified)
 	if nil != err {
 		return err
 	}
