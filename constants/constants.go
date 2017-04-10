@@ -17,3 +17,8 @@ const (
 const (
 	AssetTimeout = ReservoirTimeout + time.Hour
 )
+
+// the maximum time before unverified asset is expired
+const (
+	RebroadcastInterval = 1 * time.Minute
+)

@@ -14,6 +14,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
+	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 )
 
@@ -92,7 +93,7 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 	var stored *reservoir.IssueInfo
 	duplicate := false
 	if issueCount > 0 {
-		stored, duplicate, err = reservoir.StoreIssues(arguments.Issues)
+		stored, duplicate, err = reservoir.StoreIssues(arguments.Issues, false)
 		if nil != err {
 			return err
 		}
@@ -122,7 +123,7 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 
 		// announce transaction block to other peers
 		if !duplicate {
-			messagebus.Bus.Broadcast.Send("issues", packedIssues)
+			messagebus.Bus.Broadcast.Send("issues", packedIssues, util.ToVarint64(0))
 		}
 	}
 
