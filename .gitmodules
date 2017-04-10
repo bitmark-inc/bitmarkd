@@ -7,12 +7,6 @@
 [submodule "vendor/github.com/bitmark-inc/getoptions"]
 	path = vendor/github.com/bitmark-inc/getoptions
 	url = https://github.com/bitmark-inc/getoptions
-[submodule "vendor/github.com/bitmark-inc/go-argon2"]
-	path = vendor/github.com/bitmark-inc/go-argon2
-	url = https://github.com/bitmark-inc/go-argon2
-[submodule "vendor/github.com/bitmark-inc/go-libucl"]
-	path = vendor/github.com/bitmark-inc/go-libucl
-	url = https://github.com/bitmark-inc/go-libucl
 [submodule "vendor/github.com/bitmark-inc/listener"]
 	path = vendor/github.com/bitmark-inc/listener
 	url = https://github.com/bitmark-inc/listener

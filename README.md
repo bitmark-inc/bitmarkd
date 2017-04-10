@@ -53,6 +53,8 @@ brew install zeromq41
 To compile simply:
 
 ~~~~~
+go get github.com/bitmark-inc/go-libucl
+go get github.com/bitmark-inc/go-argon2
 go get github.com/bitmark-inc/bitmarkd
 go install -v github.com/bitmark-inc/bitmarkd/command/bitmarkd
 ~~~~~
