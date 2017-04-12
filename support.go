@@ -15,7 +15,7 @@ import (
 	"net/rpc/jsonrpc"
 )
 
-func addIdentity(configs *configuration.Configuration, name string, description string, privateKeyStr string, password string) bool {
+func addIdentity(configs *configuration.Configuration, name string, description string, privateKeyStr string, password string, testnet bool) bool {
 
 	for _, identity := range configs.Identity {
 		if name == identity.Name {
@@ -34,17 +34,18 @@ func addIdentity(configs *configuration.Configuration, name string, description 
 		}
 	}
 
-	publicKey, encryptPrivateKey, privateKeyConfig, err := makeKeyPair(privateKeyStr, password)
+	encrypted, privateKeyConfig, err := makeKeyPair(privateKeyStr, password, testnet)
 	if nil != err {
-		fmt.Printf("error generating server key pair: %s\n", err)
+		fmt.Printf("error generating key pair: %s\n", err)
 		return false
 	}
 
 	identity := configuration.IdentityType{
 		Name:               name,
 		Description:        description,
-		Public_key:         publicKey,
-		Private_key:        encryptPrivateKey,
+		Public_key:         encrypted.PublicKey,
+		Seed:               encrypted.EncryptedSeed,
+		Private_key:        encrypted.EncryptedPrivateKey,
 		Private_key_config: *privateKeyConfig,
 	}
 	configs.Identity = append(configs.Identity, identity)
@@ -246,7 +247,7 @@ func getDefaultRawKeyPair(c *cli.Context, globals globalFlags) {
 		Account:    makeAddress(keyPair, configData.Network),
 		PrivateKey: makePrivateKey(keyPair, configData.Network),
 		KeyPair: RawKeyPair{
-			Seed:       "?",
+			Seed:       keyPair.Seed,
 			PublicKey:  hex.EncodeToString(keyPair.PublicKey[:]),
 			PrivateKey: hex.EncodeToString(keyPair.PrivateKey[:]),
 		},
@@ -268,6 +269,9 @@ func changePassword(c *cli.Context, globals globalFlags) {
 	if nil != err {
 		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
+
+	// flag to indicate testnet keys
+	testnet := "bitmark" != configData.Network
 
 	identity, err := checkTransferFrom(globals.identity, configData)
 	if nil != err {
@@ -299,14 +303,22 @@ func changePassword(c *cli.Context, globals globalFlags) {
 		exitwithstatus.Message("input password fail: %s", err)
 	}
 
-	publicKey, encryptPrivateKey, privateKeyConfig, err := makeKeyPair(hex.EncodeToString(keyPair.PrivateKey[:]), newPassword)
+	input := ""
+	if 0 == len(keyPair.Seed) {
+		input = hex.EncodeToString(keyPair.PrivateKey[:])
+	} else {
+		input = "SEED:" + keyPair.Seed
+	}
+
+	encrypted, privateKeyConfig, err := makeKeyPair(input, newPassword, testnet)
 	if nil != err {
 		exitwithstatus.Message("make key pair error: %s", err)
 	}
-	if publicKey != identity.Public_key {
+	if encrypted.PublicKey != identity.Public_key {
 		exitwithstatus.Message("public key was modified", err)
 	}
-	identity.Private_key = encryptPrivateKey
+	identity.Seed = encrypted.EncryptedSeed
+	identity.Private_key = encrypted.EncryptedPrivateKey
 	identity.Private_key_config = *privateKeyConfig
 
 	err = configuration.Save(configFile, configData)

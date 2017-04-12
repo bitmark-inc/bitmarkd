@@ -21,6 +21,7 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 	"io"
 	"os"
+	"strings"
 )
 
 const (
@@ -32,6 +33,7 @@ const (
 var passwordConsole *terminal.Terminal
 
 type KeyPair struct {
+	Seed       string
 	PublicKey  []byte
 	PrivateKey []byte
 }
@@ -44,6 +46,7 @@ type RawKeyPair struct {
 
 func makeRawKeyPair(test bool) (*RawKeyPair, *KeyPair, error) {
 
+	// generate new seed
 	seedCore := make([]byte, 32)
 	n, err := rand.Read(seedCore)
 	if nil != err {
@@ -63,12 +66,18 @@ func makeRawKeyPair(test bool) (*RawKeyPair, *KeyPair, error) {
 
 	seed := util.ToBase58(packedSeed)
 
+	return makeRawKeyPairFromSeed(seed, test)
+}
+
+func makeRawKeyPairFromSeed(seed string, test bool) (*RawKeyPair, *KeyPair, error) {
+
 	privateKey, err := account.PrivateKeyFromBase58Seed(seed)
 	if nil != err {
 		return nil, nil, err
 	}
 
 	keyPair := KeyPair{
+		Seed:       seed,
 		PublicKey:  privateKey.Account().PublicKeyBytes(),
 		PrivateKey: privateKey.PrivateKeyBytes(),
 	}
@@ -82,23 +91,45 @@ func makeRawKeyPair(test bool) (*RawKeyPair, *KeyPair, error) {
 	return &rawKeyPair, &keyPair, nil
 }
 
+// return of makeKeyPair
+type EncryptedKeyPair struct {
+	PublicKey           string
+	EncryptedPrivateKey string
+	EncryptedSeed       string
+}
+
 // create a new public/private keypair
 // note: private key string must be either:
 //       * 64 bytes  =  [32 byte private key][32 byte public key]
 //       * 32 bytes  =  [32 byte private key]
-func makeKeyPair(privateKeyStr string, password string) (string, string, *configuration.PrivateKeyConfig, error) {
+//       * "SEED:<base58 encoded seed>"
+func makeKeyPair(privateKeyStr string, password string, test bool) (*EncryptedKeyPair, *configuration.PrivateKeyConfig, error) {
 	var publicKey, privateKey []byte
+	var seed string
 	var err error
 	// if privateKey is empty, make a new one
 	if "" == privateKeyStr {
-		publicKey, privateKey, err = ed25519.GenerateKey(rand.Reader)
+		raw, pair, err := makeRawKeyPair(test)
 		if nil != err {
-			return "", "", nil, err
+			return nil, nil, err
 		}
+		seed = raw.Seed
+		publicKey = pair.PublicKey
+		privateKey = pair.PrivateKey
+
+	} else if strings.HasPrefix(privateKeyStr, "SEED:") {
+		seed = privateKeyStr[5:]
+		_, pair, err := makeRawKeyPairFromSeed(seed, test)
+		if nil != err {
+			return nil, nil, err
+		}
+		publicKey = pair.PublicKey
+		privateKey = pair.PrivateKey
 	} else {
+		// DEBUG: fmt.Printf("Hex key: %s\n", privateKeyStr)
 		privateKey, err = hex.DecodeString(privateKeyStr)
 		if nil != err {
-			return "", "", nil, err
+			return nil, nil, err
 		}
 		// check privateKey is valid
 		if len(privateKey) == privateKeySize {
@@ -108,13 +139,13 @@ func makeKeyPair(privateKeyStr string, password string) (string, string, *config
 			b := bytes.NewBuffer(privateKey)
 			pub, prv, err := ed25519.GenerateKey(b)
 			if nil != err {
-				return "", "", nil, err
+				return nil, nil, err
 			}
 			if !bytes.Equal(privateKey, prv) {
-				return "", "", nil, fault.ErrUnableToRegenerateKeys
+				return nil, nil, fault.ErrUnableToRegenerateKeys
 			}
 			if !bytes.Equal(publicKey, pub) {
-				return "", "", nil, fault.ErrUnableToRegenerateKeys
+				return nil, nil, fault.ErrUnableToRegenerateKeys
 			}
 
 		} else if len(privateKey) == publicKeyOffset {
@@ -122,37 +153,50 @@ func makeKeyPair(privateKeyStr string, password string) (string, string, *config
 			b := bytes.NewBuffer(privateKey)
 			pub, prv, err := ed25519.GenerateKey(b)
 			if nil != err {
-				return "", "", nil, err
+				return nil, nil, err
 			}
 			if !bytes.Equal(privateKey, prv[:publicKeyOffset]) {
-				return "", "", nil, fault.ErrUnableToRegenerateKeys
+				return nil, nil, fault.ErrUnableToRegenerateKeys
 			}
 			privateKey = prv
 			publicKey = pub
 		} else {
-			return "", "", nil, fault.ErrInvalidPrivateKey
+			return nil, nil, fault.ErrInvalidPrivateKey
 		}
 
 	}
+	// DEBUG: fmt.Printf("seed: %q\n", seed)
+	// DEBUG: fmt.Printf("privateKey: %x\n", privateKey)
+	// DEBUG: fmt.Printf("publicKey: %x\n", publicKey)
 
 	salt, key, err := hashPassword(password)
 	if nil != err {
-		return "", "", nil, err
+		return nil, nil, err
 	}
 
 	// use key to encrypt private key
 	encryptedPrivateKey, err := encryptPrivateKey(privateKey, key)
 	if nil != err {
-		return "", "", nil, err
+		return nil, nil, err
 	}
 
-	publicStr := hex.EncodeToString(publicKey)
-	privateStr := hex.EncodeToString(encryptedPrivateKey)
+	// use key to encrypt seed
+	encryptedSeed, err := encryptSeed(seed, key)
+	if nil != err {
+		return nil, nil, err
+	}
+
+	result := &EncryptedKeyPair{
+		PublicKey:           hex.EncodeToString(publicKey),
+		EncryptedPrivateKey: hex.EncodeToString(encryptedPrivateKey),
+		EncryptedSeed:       hex.EncodeToString(encryptedSeed),
+	}
+
 	privateKeyConfig := &configuration.PrivateKeyConfig{
 		Salt: salt.String(),
 	}
 
-	return publicStr, privateStr, privateKeyConfig, nil
+	return result, privateKeyConfig, nil
 }
 
 func hashPassword(password string) (*configuration.Salt, []byte, error) {
@@ -224,6 +268,56 @@ func decryptPrivateKey(ciphertext []byte, key []byte) ([]byte, error) {
 	mode.CryptBlocks(ciphertext, ciphertext)
 
 	return ciphertext, nil
+}
+
+func encryptSeed(seed string, key []byte) ([]byte, error) {
+	block, error := aes.NewCipher(key)
+	if nil != error {
+		return nil, error
+	}
+	len := len(seed)
+	if len > 1024 {
+		panic("encrypting seed > 1024 bytes")
+	}
+
+	const countBytes = 2
+	padding := aes.BlockSize - ((len + countBytes) % aes.BlockSize)
+
+	plaintext := make([]byte, len+countBytes+padding)
+	plaintext[0] = byte(len / 256)
+	plaintext[1] = byte(len % 256)
+	copy(plaintext[2:], []byte(seed))
+
+	ciphertext := make([]byte, aes.BlockSize+len+countBytes+padding)
+	iv := ciphertext[:aes.BlockSize]
+	if _, error = io.ReadFull(rand.Reader, iv); nil != error {
+		return nil, error
+	}
+	mode := cipher.NewCBCEncrypter(block, iv)
+
+	mode.CryptBlocks(ciphertext[aes.BlockSize:], plaintext)
+
+	return ciphertext, nil
+}
+
+func decryptSeed(ciphertext []byte, key []byte) (string, error) {
+
+	if nil == ciphertext || 0 == len(ciphertext) {
+		return "", nil
+	}
+	block, error := aes.NewCipher(key)
+	if nil != error {
+		return "", error
+	}
+
+	iv := ciphertext[:aes.BlockSize]
+	ciphertext = ciphertext[aes.BlockSize:]
+	mode := cipher.NewCBCDecrypter(block, iv)
+	mode.CryptBlocks(ciphertext, ciphertext)
+
+	len := int(ciphertext[0])<<8 + int(ciphertext[1])
+
+	return string(ciphertext[2 : len+2]), nil
 }
 
 func checkSignature(publicKey []byte, privateKey []byte) bool {
@@ -338,7 +432,17 @@ func verifyPassword(password string, identity *configuration.IdentityType) (*Key
 		return nil, fault.ErrWrongPassword
 	}
 
+	ciphertext, err = hex.DecodeString(identity.Seed)
+	if nil != err {
+		return nil, err
+	}
+	seed, err := decryptSeed(ciphertext, key)
+	if nil != err {
+		return nil, err
+	}
+
 	keyPair := KeyPair{
+		Seed:       seed,
 		PublicKey:  publicKey,
 		PrivateKey: privateKey,
 	}

@@ -29,7 +29,10 @@ func runGenerate(c *cli.Context, globals globalFlags) {
 		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
 
-	rawKeyPair, _, err := makeRawKeyPair("bitmark" != configData.Network)
+	// flag to indicate testnet keys
+	testnet := "bitmark" != configData.Network
+
+	rawKeyPair, _, err := makeRawKeyPair(testnet)
 	if nil != err {
 		exitwithstatus.Message("Error: %s", err)
 	}
@@ -102,7 +105,10 @@ func runSetup(c *cli.Context, globals globalFlags) {
 		Identity:         make([]configuration.IdentityType, 0),
 	}
 
-	if !addIdentity(configData, name, description, privateKey, globals.password) {
+	// flag to indicate testnet keys
+	testnet := "bitmark" != configData.Network
+
+	if !addIdentity(configData, name, description, privateKey, globals.password, testnet) {
 		exitwithstatus.Message("Error: Setup failed")
 	}
 	err = configuration.Save(configFile, configData)
@@ -146,8 +152,10 @@ func runAdd(c *cli.Context, globals globalFlags) {
 		fmt.Printf("description: %s\n", description)
 		fmt.Println()
 	}
+	// flag to indicate testnet keys
+	testnet := "bitmark" != configData.Network
 
-	if !addIdentity(configData, name, description, privateKey, globals.password) {
+	if !addIdentity(configData, name, description, privateKey, globals.password, testnet) {
 		exitwithstatus.Message("Error: add failed")
 	}
 	err = configuration.Save(configFile, configData)
@@ -478,6 +486,19 @@ func runInfo(c *cli.Context, globals globalFlags) {
 	infoConfig, err := configuration.GetInfoConfiguration(globals.config)
 	if nil != err {
 		exitwithstatus.Message("Error: Get configuration failed: %s", err)
+	}
+
+	// add base58 Bitmark Account to output structure
+	for i, id := range infoConfig.Identity {
+		pub, err := hex.DecodeString(id.Public_key)
+		if nil != err {
+			exitwithstatus.Message("Error: Get configuration failed: %s", err)
+		}
+
+		keyPair := &KeyPair{
+			PublicKey: pub,
+		}
+		infoConfig.Identity[i].Account = makeAddress(keyPair, infoConfig.Network).String()
 	}
 
 	printJson("", infoConfig)

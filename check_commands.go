@@ -78,10 +78,15 @@ func checkDescription(description string) (string, error) {
 	return description, nil
 }
 
-// private key is optional, if present must be either 64 or 128 hex chars
+// private key is optional,
+// if present must be either 64 or 128 hex chars
+// or SEED:<base58-seed>
 func checkOptionalKey(key string) (string, error) {
 	if "" == key {
 		return "", nil
+	}
+	if strings.HasPrefix(key, "SEED:") {
+		return key, nil
 	}
 	k, err := hex.DecodeString(key)
 	if nil != err {

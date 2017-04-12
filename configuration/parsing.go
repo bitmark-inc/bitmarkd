@@ -23,6 +23,7 @@ type IdentityType struct {
 	Description        string           `libucl:"description"`
 	Public_key         string           `libucl:"public_key"`
 	Private_key        string           `libucl:"private_key"`
+	Seed               string           `libucl:"seed"`
 	Private_key_config PrivateKeyConfig `libucl:"private_key_config"`
 }
 
@@ -48,6 +49,7 @@ identity {
   description = "{{.Description}}"
   public_key = "{{.Public_key}}"
   private_key = "{{.Private_key}}"
+  seed = "{{.Seed}}"
   private_key_config {
     salt = "{{.Private_key_config.Salt}}"
   }
@@ -61,6 +63,7 @@ type InfoIdentityType struct {
 	Name        string `libucl:"name"`
 	Description string `libucl:"description"`
 	Public_key  string `libucl:"public_key"`
+	Account     string
 }
 
 type InfoConfiguration struct {

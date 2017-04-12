@@ -100,7 +100,7 @@ func main() {
 				cli.StringFlag{
 					Name:  "privateKey, k",
 					Value: "",
-					Usage: " using existing privateKey",
+					Usage: " using existing privateKey/seed",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -120,7 +120,7 @@ func main() {
 				cli.StringFlag{
 					Name:  "privateKey, k",
 					Value: "",
-					Usage: " using existing privateKey",
+					Usage: " using existing privateKey/seed",
 				},
 			},
 			Action: func(c *cli.Context) {
