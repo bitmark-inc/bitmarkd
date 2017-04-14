@@ -335,10 +335,10 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 		}
 	} else {
 		newOwnerKeyPair = &KeyPair{}
-		if len(newPublicKey) != len(newOwnerKeyPair.PublicKey) {
+		if len(newPublicKey) != publicKeySize {
 			exitwithstatus.Message("hex public key must be %d bytes", publicKeySize)
 		}
-		copy(newOwnerKeyPair.PublicKey[:], newPublicKey)
+		newOwnerKeyPair.PublicKey = newPublicKey
 	}
 	// just in case some internal breakage
 	if nil == newOwnerKeyPair {
