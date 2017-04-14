@@ -481,6 +481,42 @@ func runTransactionStatus(c *cli.Context, globals globalFlags) {
 	}
 }
 
+func runPublicKeyDisplay(c *cli.Context, globals globalFlags) {
+
+	configData, err := checkAndGetConfig(globals.config)
+	if nil != err {
+		exitwithstatus.Message("Error: Get configuration failed: %s", err)
+	}
+
+	// flag to indicate testnet keys
+	testnet := "bitmark" != configData.Network
+
+	publicKey, err := checkPublicKey(c.String("publickey"))
+	if nil != err {
+		exitwithstatus.Message("Error: %s", err)
+	}
+
+	verbose := globals.verbose
+	if verbose {
+		fmt.Printf("publicKey: %s\n", publicKey)
+	}
+
+	account, err := accountFromHexPublicKey(publicKey, testnet)
+	if nil != err {
+		exitwithstatus.Message("Transaction Status error: %s", err)
+	}
+
+	result := struct {
+		Hex    string `json:"hex"`
+		Base58 string `json:"account"`
+	}{
+		Hex:    publicKey,
+		Base58: account.String(),
+	}
+
+	printJson("", result)
+}
+
 func runInfo(c *cli.Context, globals globalFlags) {
 
 	infoConfig, err := configuration.GetInfoConfiguration(globals.config)

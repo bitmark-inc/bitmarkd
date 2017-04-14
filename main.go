@@ -268,6 +268,21 @@ func main() {
 			},
 		},
 		{
+			Name:      "account",
+			Usage:     "display account from a public key",
+			ArgsUsage: "\n   (* = required)",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "publickey, p",
+					Value: "",
+					Usage: "*hex public key",
+				},
+			},
+			Action: func(c *cli.Context) {
+				runPublicKeyDisplay(c, globals)
+			},
+		},
+		{
 			Name:  "info",
 			Usage: "display bitmark-cli status",
 			Action: func(c *cli.Context) {

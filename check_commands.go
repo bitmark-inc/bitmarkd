@@ -101,6 +101,25 @@ func checkOptionalKey(key string) (string, error) {
 	return key, nil
 }
 
+// prublic key is require,
+// if present must 64 hex chars
+func checkPublicKey(key string) (string, error) {
+	if "" == key {
+		return "", fault.ErrRequiredPublicKey
+
+	}
+	k, err := hex.DecodeString(key)
+	if nil != err {
+		return "", err
+	}
+	switch len(k) {
+	case publicKeySize: // have the full key
+	default:
+		return "", fault.ErrKeyLength
+	}
+	return key, nil
+}
+
 func checkIdentity(name string, config *configuration.Configuration) (*configuration.IdentityType, error) {
 	if "" == name {
 		return nil, fault.ErrRequiredIdentity

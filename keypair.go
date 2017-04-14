@@ -199,6 +199,22 @@ func makeKeyPair(privateKeyStr string, password string, test bool) (*EncryptedKe
 	return result, privateKeyConfig, nil
 }
 
+func accountFromHexPublicKey(publicKey string, test bool) (*account.Account, error) {
+
+	k, err := hex.DecodeString(publicKey)
+	if nil != err {
+		return nil, err
+	}
+
+	account := &account.Account{
+		AccountInterface: &account.ED25519Account{
+			Test:      test,
+			PublicKey: k,
+		},
+	}
+	return account, nil
+}
+
 func hashPassword(password string) (*configuration.Salt, []byte, error) {
 	salt, err := configuration.MakeSalt()
 	if nil != err {

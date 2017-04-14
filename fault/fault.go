@@ -38,6 +38,7 @@ var (
 	ErrRequiredFileName         = InvalidError("file name is required")
 	ErrRequiredIdentity         = InvalidError("identity is required")
 	ErrRequiredPayId            = InvalidError("payment id is required")
+	ErrRequiredPublicKey        = InvalidError("public key is required")
 	ErrRequiredReceipt          = InvalidError("receipt id is required")
 	ErrRequiredTransferTo       = InvalidError("transfer to is required")
 	ErrRequiredTransferTxId     = InvalidError("transaction id is required")
