@@ -36,33 +36,31 @@ loop:
 			break loop
 
 		case <-time.After(60 * time.Second):
-			for {
-				var blockNumber uint64
-				err := bitcoinCall("getblockcount", []interface{}{}, &blockNumber)
-				if nil != err {
-					continue loop
-				}
-				log.Infof("block number: %d", blockNumber)
+			var blockNumber uint64
+			err := bitcoinCall("getblockcount", []interface{}{}, &blockNumber)
+			if nil != err {
+				continue loop
+			}
+			log.Infof("block number: %d", blockNumber)
 
-				if blockNumber <= bitcoinConfirmations {
-					continue loop
-				}
-				blockNumber -= bitcoinConfirmations
-				if blockNumber <= state.latestBlockNumber {
-					continue loop
-				}
-				n, hash := process(log, state.latestBlockNumber, blockNumber, state.latestBlockHash)
-				if 0 == n || "" == hash {
-					continue loop
-				}
+			if blockNumber <= bitcoinConfirmations {
+				continue loop
+			}
+			blockNumber -= bitcoinConfirmations
+			if blockNumber <= state.latestBlockNumber {
+				continue loop
+			}
+			n, hash := process(log, state.latestBlockNumber, blockNumber, state.latestBlockHash)
+			if 0 == n || "" == hash {
+				continue loop
+			}
 
-				state.saveCount += n - state.latestBlockNumber
-				state.latestBlockNumber = n
-				state.latestBlockHash = hash
-				if state.saveCount >= saveModulus {
-					state.saveCount = 0
-					saveBlockCount(n, hash)
-				}
+			state.saveCount += n - state.latestBlockNumber
+			state.latestBlockNumber = n
+			state.latestBlockHash = hash
+			if state.saveCount >= saveModulus {
+				state.saveCount = 0
+				saveBlockCount(n, hash)
 			}
 		}
 	}
@@ -125,9 +123,11 @@ loop:
 
 		transationCount := len(block.Tx) // first is the coinbase and can be ignored
 		if transationCount > 1 {
+			log.Infof("block: %d  transactions: %d", block.Height, transationCount)
 		txLoop:
 			for i, txId := range block.Tx[1:] {
 				// fetch transaction and decode
+				log.Infof("tx[%d] tx id: %s", i, txId)
 				var reply bitcoinTransaction
 				err := bitcoinGetRawTransaction(txId, &reply)
 				if nil != err {
@@ -165,7 +165,9 @@ loop:
 		// rate limit
 		timeTaken := time.Since(startTime)
 		rate := float64(counter) / timeTaken.Seconds()
+		log.Infof("rate: %f", rate)
 		if rate > maximumBlockRate {
+			log.Infof("exceeds: %f", maximumBlockRate)
 			time.Sleep(2 * time.Second)
 		}
 
