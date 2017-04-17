@@ -61,13 +61,16 @@ var globalData bitcoinData
 // a block of configuration data
 // this is read from a libucl configuration file
 type Configuration struct {
-	Username      string `libucl:"username"`
-	Password      string `libucl:"password"`
-	URL           string `libucl:"url"`
-	ServerName    string `libucl:"server_name"`
-	CACertificate string `libucl:"ca_certificate"`
-	Certificate   string `libucl:"certificate"`
-	PrivateKey    string `libucl:"private_key"`
+	Username        string `libucl:"username"`
+	Password        string `libucl:"password"`
+	URL             string `libucl:"url"`
+	ServerName      string `libucl:"server_name"`
+	CACertificate   string `libucl:"ca_certificate"`
+	Certificate     string `libucl:"certificate"`
+	PrivateKey      string `libucl:"private_key"`
+	Block           uint64 `libucl:"block"`
+	Hash            string `libucl:"hash"`
+	ResetBlockCount bool   `libucl:"reset_block_count"`
 }
 
 // initialise for bitcoin payments
@@ -181,10 +184,29 @@ func Initialise(configuration *Configuration) error {
 
 	key := make([]byte, 8)
 	binary.BigEndian.PutUint64(key, currency.Bitcoin.Uint64())
+	if configuration.ResetBlockCount {
+		globalData.log.Warnf("resetting the bitcoin block database starting from block: %d", configuration.Block)
+		var hash string
+		err := bitcoinGetBlockHash(configuration.Block, &hash)
+		if nil != err {
+			return err
+		}
+		if configuration.Hash != hash {
+			globalData.log.Criticalf("returned hash: %s  but expected hash: %s", hash, configuration.Hash)
+			globalData.log.Critical("check configuration section: bitcoin")
+			return fault.ErrInitialisationFailed
+		}
+		globalData.log.Warnf("saving block: %d  hash: %s", configuration.Block, hash)
+		saveBlockCount(configuration.Block, hash)
+		globalData.log.Warn("SUGGESTION: change reset_block_count to false in configuration file")
+		globalData.log.Warn("SUGGESTION: as this will speed up net start")
+	}
 	record := storage.Pool.Currency.Get(key)
 	if nil != record {
 		globalData.latestBlockNumber = binary.BigEndian.Uint64(record[:8])
 		globalData.latestBlockHash = string(record[8:])
+		globalData.log.Infof("latest block on file:: %d", globalData.latestBlockNumber)
+		globalData.log.Infof("latest block hash: %s", globalData.latestBlockHash)
 	}
 
 	// start background processes

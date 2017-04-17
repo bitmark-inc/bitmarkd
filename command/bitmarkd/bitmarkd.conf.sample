@@ -110,6 +110,13 @@ bitcoin {
   # url = https://127.0.0.1:18555/rpc-call
   # server_name = bitcoin-proxy
 
+  # to reset the database to a more recent point:
+  # according to blockchain.info this was the last block of 2016
+  block = 446032
+  hash = "000000000000000003458396c743cdfa8247a4f6bc28ad413dba333a436edf75"
+
+  # NOTE: do not leave this set after initial run or startup will always reset
+  #reset_block_count = true
 }
 
 # logging configuration

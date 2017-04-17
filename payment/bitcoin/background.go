@@ -59,18 +59,21 @@ loop:
 			state.latestBlockNumber = n
 			state.latestBlockHash = hash
 			if state.saveCount >= saveModulus {
-
 				state.saveCount = 0
-
-				key := make([]byte, 8)
-				value := make([]byte, 8+len(hash))
-				binary.BigEndian.PutUint64(key, currency.Bitcoin.Uint64())
-				binary.BigEndian.PutUint64(value, n)
-				copy(value[8:], hash)
-				storage.Pool.Currency.Put(key, value)
+				saveBlockCount(n, hash)
 			}
 		}
 	}
+}
+
+// update the stored block count
+func saveBlockCount(blockCount uint64, hash string) {
+	key := make([]byte, 8)
+	value := make([]byte, 8+len(hash))
+	binary.BigEndian.PutUint64(key, currency.Bitcoin.Uint64())
+	binary.BigEndian.PutUint64(value, blockCount)
+	copy(value[8:], hash)
+	storage.Pool.Currency.Put(key, value)
 }
 
 const (
