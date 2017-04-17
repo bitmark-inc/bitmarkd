@@ -127,7 +127,7 @@ loop:
 		txLoop:
 			for i, txId := range block.Tx[1:] {
 				// fetch transaction and decode
-				log.Infof("tx[%d] tx id: %s", i, txId)
+				log.Debugf("tx[%d] tx id: %s", i, txId)
 				var reply bitcoinTransaction
 				err := bitcoinGetRawTransaction(txId, &reply)
 				if nil != err {
