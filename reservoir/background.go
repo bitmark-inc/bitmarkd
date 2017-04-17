@@ -120,7 +120,7 @@ func (r *rebroadcaster) process(globaldata *globalDataType) {
 	packedIssues := [][]byte{}
 	packedTransfer := [][]byte{}
 
-	log.Info("Start rebroadcasting local transactions...")
+	log.Info("Start rebroadcasting local transactions…")
 	for _, item := range globalData.unverified.entries {
 		if item.links != nil {
 			packedTransfer = append(packedTransfer, item.transactions[0])
