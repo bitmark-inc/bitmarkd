@@ -36,31 +36,33 @@ loop:
 			break loop
 
 		case <-time.After(60 * time.Second):
-			var blockNumber uint64
-			err := bitcoinCall("getblockcount", []interface{}{}, &blockNumber)
-			if nil != err {
-				continue loop
-			}
-			log.Infof("block number: %d", blockNumber)
+			for {
+				var blockNumber uint64
+				err := bitcoinCall("getblockcount", []interface{}{}, &blockNumber)
+				if nil != err {
+					continue loop
+				}
+				log.Infof("block number: %d", blockNumber)
 
-			if blockNumber <= bitcoinConfirmations {
-				continue loop
-			}
-			blockNumber -= bitcoinConfirmations
-			if blockNumber <= state.latestBlockNumber {
-				continue loop
-			}
-			n, hash := process(log, state.latestBlockNumber, blockNumber, state.latestBlockHash)
-			if 0 == n || "" == hash {
-				continue loop
-			}
+				if blockNumber <= bitcoinConfirmations {
+					continue loop
+				}
+				blockNumber -= bitcoinConfirmations
+				if blockNumber <= state.latestBlockNumber {
+					continue loop
+				}
+				n, hash := process(log, state.latestBlockNumber, blockNumber, state.latestBlockHash)
+				if 0 == n || "" == hash {
+					continue loop
+				}
 
-			state.saveCount += n - state.latestBlockNumber
-			state.latestBlockNumber = n
-			state.latestBlockHash = hash
-			if state.saveCount >= saveModulus {
-				state.saveCount = 0
-				saveBlockCount(n, hash)
+				state.saveCount += n - state.latestBlockNumber
+				state.latestBlockNumber = n
+				state.latestBlockHash = hash
+				if state.saveCount >= saveModulus {
+					state.saveCount = 0
+					saveBlockCount(n, hash)
+				}
 			}
 		}
 	}
