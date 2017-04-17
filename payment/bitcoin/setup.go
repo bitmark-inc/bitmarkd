@@ -186,8 +186,11 @@ func Initialise(configuration *Configuration) error {
 	binary.BigEndian.PutUint64(key, currency.Bitcoin.Uint64())
 	if configuration.ResetBlockCount {
 		globalData.log.Warnf("resetting the bitcoin block database starting from block: %d", configuration.Block)
+		arguments := []interface{}{
+			configuration.Block,
+		}
 		var hash string
-		err := bitcoinGetBlockHash(configuration.Block, &hash)
+		err := bitcoinCall("getblockhash", arguments, &hash)
 		if nil != err {
 			return err
 		}
