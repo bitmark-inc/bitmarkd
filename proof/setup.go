@@ -17,13 +17,13 @@ import (
 // this is read from a libucl configuration file
 type Configuration struct {
 	//MaximumConnections int          `libucl:"maximum_connections"`
-	Publish    []string `libucl:"publish"`
-	Submit     []string `libucl:"submit"`
-	PrivateKey string   `libucl:"private_key"`
-	PublicKey  string   `libucl:"public_key"`
-	SigningKey string   `libucl:"signing_key"`
-	Currency   string   `libucl:"currency"`
-	Address    string   `libucl:"address"`
+	Publish    []string `libucl:"publish" json:"publish"`
+	Submit     []string `libucl:"submit" json:"submit"`
+	PrivateKey string   `libucl:"private_key" json:"private_key"`
+	PublicKey  string   `libucl:"public_key" json:"public_key"`
+	SigningKey string   `libucl:"signing_key" json:"signing_key"`
+	Currency   string   `libucl:"currency" json:"currency"`
+	Address    string   `libucl:"address" json:"address"`
 }
 
 // globals for background proccess
