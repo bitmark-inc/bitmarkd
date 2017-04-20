@@ -17,7 +17,7 @@ import (
 
 // cycle time
 const (
-	timeout = 60 * time.Second
+	timeout = 15 * time.Minute
 )
 
 // background process loop

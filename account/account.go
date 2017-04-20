@@ -200,23 +200,6 @@ func AccountFromBytes(accountBytes []byte) (*Account, error) {
 	}
 }
 
-// convert an account from its Base58 JSON form to binary
-//
-// this cannot be forwarded by go compiler, since it needs to determine
-// the the resulting interface type from the encoded data
-// func (account *Account) UnmarshalJSON(s []byte) error {
-// 	// length = '"' + Base58 characters + '"'
-// 	if '"' != s[0] || '"' != s[len(s)-1] {
-// 		return fault.ErrInvalidCharacter
-// 	}
-// 	a, err := AccountFromBase58(string(s[1 : len(s)-1]))
-// 	if nil != err {
-// 		return err
-// 	}
-// 	account.AccountInterface = a.AccountInterface
-// 	return nil
-// }
-
 func (account *Account) UnmarshalText(s []byte) error {
 	a, err := AccountFromBase58(string(s))
 	if nil != err {

@@ -249,8 +249,11 @@ func (sbsc *subscriber) process(data [][]byte) {
 	log := sbsc.log
 	log.Info("incoming message")
 
-	// ***** FIX THIS: check len(data) is sufficient
-	// ***** FIX THIS: maybe need check length of individual data items
+	dataLength := len(data)
+	if dataLength < 2 {
+		log.Warnf("with too few data: %d items", dataLength)
+		return
+	}
 	switch string(data[0]) {
 	case "block":
 		log.Infof("received block: %x", data[1])
@@ -271,6 +274,10 @@ func (sbsc *subscriber) process(data [][]byte) {
 		}
 
 	case "issues":
+		if dataLength < 3 {
+			log.Warnf("issues with too few data: %d items", dataLength)
+			return
+		}
 		log.Infof("received issues: %x, verified: %x", data[1], data[2])
 		err := processIssues(data[1], data[2])
 		if nil != err {
@@ -297,22 +304,21 @@ func (sbsc *subscriber) process(data [][]byte) {
 			messagebus.Bus.Broadcast.Send("proof", data[1])
 		}
 
-	case "pay": // ***** FIX THIS: TO REMOVE
-		log.Infof("received pay: %x", data[1])
-		// err := processPay(data[1])
-		// if nil != err {
-		// 	log.Warnf("failed pay: error: %v", err)
-		// } else {
-		// 	messagebus.Bus.Broadcast.Send("pay", data[1])
-		// }
-
 	case "rpc":
+		if dataLength < 3 {
+			log.Warnf("rpc with too few data: %d items", dataLength)
+			return
+		}
 		log.Infof("received rpc: fingerprint: %x  rpc: %x", data[1], data[2])
 		if announce.AddRPC(data[1], data[2]) {
 			messagebus.Bus.Broadcast.Send("rpc", data[1], data[2])
 		}
 
 	case "peer":
+		if dataLength < 4 {
+			log.Warnf("peer with too few data: %d items", dataLength)
+			return
+		}
 		log.Infof("received peer: %x  broadcast: %x  listener: %x", data[1], data[2], data[3])
 		if announce.AddPeer(data[1], data[2], data[3]) {
 			messagebus.Bus.Broadcast.Send("peer", data[1], data[2], data[3])
@@ -479,33 +485,3 @@ func processProof(packed []byte) error {
 
 	return nil
 }
-
-// ***** FIX THIS: to remove
-// // process pay block
-// func processPay(packed []byte) error {
-
-// 	if 0 == len(packed) {
-// 		return fault.ErrMissingParameters
-// 	}
-
-// 	if !mode.Is(mode.Normal) {
-// 		return fault.ErrNotAvailableDuringSynchronise
-// 	}
-
-// 	var payId pay.PayId
-// 	if len(packed) > payment.ReceiptLength+len(payId) {
-// 		return fault.ErrInvalidNonce
-// 	}
-
-// 	// ***** FIX THIS: remove...
-// 	// copy(payId[:], packed[:len(payId)])
-// 	// receipt := string(packed[len(payId):])
-
-// 	// status := payment.TrackPayment(payId, receipt, payment.RequiredConfirmations)
-// 	// if payment.TrackingAccepted != status {
-// 	// 	// pay id already processed or was invalid
-// 	// 	return fault.ErrPayIdAlreadyUsed
-// 	// }
-
-// 	return nil
-// }

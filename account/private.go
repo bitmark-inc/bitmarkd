@@ -252,23 +252,6 @@ func PrivateKeyFromBytes(privateKeyBytes []byte) (*PrivateKey, error) {
 	}
 }
 
-// convert an private key from its Base58 JSON form to binary
-//
-// this cannot be forwarded by go compiler, since it needs to determine
-// the the resulting interface type from the encoded data
-// func (privateKey *PrivateKey) UnmarshalJSON(s []byte) error {
-// 	// length = '"' + Base58 characters + '"'
-// 	if '"' != s[0] || '"' != s[len(s)-1] {
-// 		return fault.ErrInvalidCharacter
-// 	}
-// 	a, err := PrivateKeyFromBase58(string(s[1 : len(s)-1]))
-// 	if nil != err {
-// 		return err
-// 	}
-// 	privateKey.PrivateKeyInterface = a.PrivateKeyInterface
-// 	return nil
-// }
-
 func (privateKey *PrivateKey) UnmarshalText(s []byte) error {
 	a, err := PrivateKeyFromBase58(string(s))
 	if nil != err {

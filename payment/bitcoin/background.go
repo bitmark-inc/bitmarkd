@@ -84,7 +84,6 @@ const (
 )
 
 func process(log *logger.L, startBlockNumber uint64, endBlockNumber uint64, lastHash string) (uint64, string) {
-	//func processBlocks(log *logger.L, startBlockNumber uint64) {
 
 	var hash string
 	log.Infof("starting from block: %d", startBlockNumber)
