@@ -285,9 +285,6 @@ func main() {
 		fingerprint := CertificateFingerprint(certificate)
 		log.Infof("%s: SHA3-256 fingerprint: %x", name, fingerprint)
 
-		// store certificate
-		announce.AddCertificate(fingerprint, certificate)
-
 		switch name {
 		case "rpc":
 			rpcs := make([]byte, 0, 100) // ***** FIX THIS: need a better default size
