@@ -213,26 +213,6 @@ func main() {
 			},
 		},
 		{
-			Name:      "receipt",
-			Usage:     "receipt payment transaction id",
-			ArgsUsage: "\n   (* = required)",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "payid, p",
-					Value: "",
-					Usage: "*payment id from a transfer",
-				},
-				cli.StringFlag{
-					Name:  "receipt, r",
-					Value: "",
-					Usage: "*hexadecimal transaction id from currency transfer",
-				},
-			},
-			Action: func(c *cli.Context) {
-				runReceipt(c, globals)
-			},
-		},
-		{
 			Name:      "provenance",
 			Usage:     "list provenance of a bitmark",
 			ArgsUsage: "\n   (* = required)",

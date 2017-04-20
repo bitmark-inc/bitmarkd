@@ -113,30 +113,6 @@ func transfer(rpcConfig bitmarkRPC, transferConfig transferData, verbose bool) e
 	return nil
 }
 
-func receipt(rpcConfig bitmarkRPC, receiptConfig receiptData, verbose bool) error {
-
-	conn, err := connect(rpcConfig.hostPort)
-	if nil != err {
-		return err
-	}
-	defer conn.Close()
-
-	// create a client
-	client := jsonrpc.NewClient(conn)
-	defer client.Close()
-
-	response, err := doReceipt(client, rpcConfig.network, receiptConfig, verbose)
-	if nil != err {
-		return err
-	}
-	if verbose {
-		fmt.Printf("Result:\n")
-	}
-	printJson("", response)
-
-	return nil
-}
-
 func provenance(rpcConfig bitmarkRPC, provenanceConfig provenanceData, verbose bool) error {
 
 	conn, err := connect(rpcConfig.hostPort)

@@ -368,46 +368,6 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 	}
 }
 
-func runReceipt(c *cli.Context, globals globalFlags) {
-
-	configData, err := checkAndGetConfig(globals.config)
-	if nil != err {
-		exitwithstatus.Message("Error: Get configuration failed: %s", err)
-	}
-
-	payId, err := checkPayId(c.String("payid"))
-	if nil != err {
-		exitwithstatus.Message("Error: %s", err)
-	}
-
-	receiptId, err := checkReceipt(c.String("receipt"))
-	if nil != err {
-		exitwithstatus.Message("Error: %s", err)
-	}
-
-	verbose := globals.verbose
-	if verbose {
-		fmt.Printf("payid: %s\n", payId)
-		fmt.Printf("receipt: %s\n", receiptId)
-	}
-
-	// TODO: deal with IPv6?
-	bitmarkRpcConfig := bitmarkRPC{
-		hostPort: configData.Connect,
-		network:  configData.Network,
-	}
-
-	receiptConfig := receiptData{
-		payId:   payId,
-		receipt: receiptId,
-	}
-
-	err = receipt(bitmarkRpcConfig, receiptConfig, verbose)
-	if nil != err {
-		exitwithstatus.Message("Receipt error: %s", err)
-	}
-}
-
 func runProvenance(c *cli.Context, globals globalFlags) {
 
 	configData, err := checkAndGetConfig(globals.config)

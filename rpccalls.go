@@ -383,36 +383,6 @@ func doTransfer(client *netrpc.Client, network string, transferConfig transferDa
 	return &response, nil
 }
 
-type receiptReply struct {
-	Status reservoir.TrackingStatus `json:"status"`
-}
-
-func doReceipt(client *netrpc.Client, network string, receiptConfig receiptData, verbose bool) (*receiptReply, error) {
-
-	payArgs := rpc.PayArguments{
-		Receipt: receiptConfig.receipt,
-	}
-
-	if err := payArgs.PayId.UnmarshalText([]byte(receiptConfig.payId)); nil != err {
-		return nil, err
-	}
-
-	printJson("Receipt Request", payArgs, verbose)
-
-	var reply rpc.PayReply
-	if err := client.Call("Bitmarks.Pay", payArgs, &reply); err != nil {
-		return nil, err
-	}
-
-	printJson("Receipt Reply", reply, verbose)
-
-	response := receiptReply{
-		Status: reply.Status,
-	}
-
-	return &response, nil
-}
-
 func doProvenance(client *netrpc.Client, network string, provenanceConfig provenanceData, verbose bool) (*rpc.ProvenanceReply, error) {
 
 	var txId merkle.Digest
