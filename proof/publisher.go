@@ -16,6 +16,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/currency"
+	"github.com/bitmark-inc/bitmarkd/currency/bitcoin"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
@@ -71,7 +72,36 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 		log.Errorf("currency: %q  error: %v", configuration.Currency, err)
 		return err
 	}
-	pub.paymentAddress = configuration.Address
+
+	switch pub.paymentCurrency {
+	case currency.Bitcoin:
+		cType, err := bitcoin.ValidateAddress(configuration.Address)
+		if nil != err {
+			log.Errorf("validate bitcoin address error: %s", err)
+			return err
+		}
+		switch cType {
+		case bitcoin.Testnet, bitcoin.TestnetScript:
+			if !mode.IsTesting() {
+				err := fault.ErrBitcoinAddressForWrongNetwork
+				log.Errorf("validate bitcoin address error: %s", err)
+				return err
+			}
+		case bitcoin.Livenet, bitcoin.LivenetScript:
+			if mode.IsTesting() {
+				err := fault.ErrBitcoinAddressForWrongNetwork
+				log.Errorf("validate bitcoin address error: %s", err)
+				return err
+			}
+		default:
+			return fault.ErrBitcoinAddressIsNotSupported
+		}
+		pub.paymentAddress = configuration.Address
+
+	default:
+		log.Errorf("unsupported currency: %q", configuration.Currency)
+		return fault.ErrCurrencyIsNotSupportedByProofer
+	}
 
 	if databytes, err := ioutil.ReadFile(configuration.SigningKey); err != nil {
 		return err
