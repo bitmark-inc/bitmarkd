@@ -10,8 +10,11 @@ import (
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/blockring"
+	"github.com/bitmark-inc/bitmarkd/currency"
+	"github.com/bitmark-inc/bitmarkd/currency/bitcoin"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
@@ -68,7 +71,6 @@ func StoreIncoming(packedBlock []byte) error {
 	}
 
 	digest := packedHeader.Digest()
-	storeAndUpdate(header, digest, packedBlock)
 
 	// store transactions
 	for i, item := range txs {
@@ -77,6 +79,30 @@ func StoreIncoming(packedBlock []byte) error {
 		switch tx := item.unpacked.(type) {
 
 		case *transactionrecord.BaseData:
+			// ensure valid currency/address
+			switch tx.Currency {
+			case currency.Bitcoin:
+				cType, err := bitcoin.ValidateAddress(tx.PaymentAddress)
+				if nil != err {
+					return err
+				}
+				switch cType {
+				case bitcoin.Testnet, bitcoin.TestnetScript:
+					if !mode.IsTesting() {
+						return fault.ErrBitcoinAddressForWrongNetwork
+					}
+				case bitcoin.Livenet, bitcoin.LivenetScript:
+					if mode.IsTesting() {
+						return fault.ErrBitcoinAddressForWrongNetwork
+					}
+				default:
+					return fault.ErrBitcoinAddressIsNotSupported
+				}
+
+			default:
+				return fault.ErrInvalidCurrency
+			}
+
 			blockNumber := make([]byte, 8)
 			binary.BigEndian.PutUint64(blockNumber, header.Number)
 			data := make([]byte, 8, 8+len(tx.PaymentAddress))
@@ -120,6 +146,9 @@ func StoreIncoming(packedBlock []byte) error {
 			fault.Panicf("unhandled transaction: %v", tx)
 		}
 	}
+
+	// finish be stoing the block header
+	storeAndUpdate(header, digest, packedBlock)
 
 	return nil
 }
