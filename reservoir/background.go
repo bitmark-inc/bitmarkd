@@ -92,9 +92,7 @@ loop:
 	log.Info("stopped")
 }
 
-func fetchAsset(data *itemData, index int) ([]byte, error) {
-	assetId := transactionrecord.AssetIndex{}
-	copy(assetId[:], data.assetIds[index][:])
+func fetchAsset(assetId transactionrecord.AssetIndex) ([]byte, error) {
 	packedAsset := asset.Get(assetId)
 	if nil == packedAsset {
 		return nil, fault.ErrAssetNotFound
@@ -127,16 +125,23 @@ func (r *rebroadcaster) process(globaldata *globalDataType) {
 		}
 	}
 
+	hadAsset := make(map[transactionrecord.AssetIndex]struct{})
 	for _, v := range globalData.verified {
 		if v.data.links == nil {
 			packedIssue := transactionrecord.Packed(v.transaction)
-			packedAsset, err := fetchAsset(v.data, v.index)
-			if err != nil {
-				log.Errorf("unable to draw assets from transaction: %s", err)
-				continue
+			assetId := v.data.assetIds[v.index]
+			if _, ok := hadAsset[assetId]; !ok {
+				packedAsset, err := fetchAsset(assetId)
+				if fault.ErrAssetNotFound == err {
+					// asset was confirmed in an earlier block
+				} else if err != nil {
+					log.Errorf("asset id[%d]: %s  error: %s", v.index, assetId, err)
+					continue // skip the corresponding issue since asset is corrupt
+				} else {
+					packedAssets = append(packedAssets, packedAsset...)
+				}
+				hadAsset[assetId] = struct{}{}
 			}
-
-			packedAssets = append(packedAssets, packedAsset...)
 			packedIssues = append(packedIssues, packedIssue)
 		} else {
 			packedTransfer = append(packedTransfer, v.transaction)

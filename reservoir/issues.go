@@ -60,7 +60,7 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue, isVerified bool) (*Is
 	// all the tx id corresponding to separated
 	txIds := make([]merkle.Digest, count)
 	// all the assets id corresponding to separated
-	assetIds := make([][]byte, count)
+	assetIds := make([]transactionrecord.AssetIndex, count)
 
 	// this flags in already stored issues
 	// used to flags an error if pay id is different
@@ -100,7 +100,7 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue, isVerified bool) (*Is
 
 		// accumulate the data
 		txIds[i] = txId
-		assetIds[i] = issue.AssetIndex[:]
+		assetIds[i] = issue.AssetIndex
 		separated[i] = packedIssue
 
 		// this length of the verified issues should be exactly one

@@ -42,9 +42,9 @@ type unverifiedEntry struct {
 
 type itemData struct {
 	txIds        []merkle.Digest
-	links        []merkle.Digest // links[i] corresponds to txIds[i]
-	assetIds     [][]byte        // asset[i] index corresponds to txIds[iu]
-	transactions [][]byte        // transactions[i] corresponds to txIds[i]
+	links        []merkle.Digest                // links[i] corresponds to txIds[i]
+	assetIds     []transactionrecord.AssetIndex // asset[i] index corresponds to txIds[i]
+	transactions [][]byte                       // transactions[i] corresponds to txIds[i]
 }
 
 type unverifiedItem struct {
