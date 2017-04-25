@@ -52,8 +52,6 @@ type LoglevelMap map[string]string
 // path expanded or calculated defaults
 var (
 	defaultLogLevels = LoglevelMap{
-		"main":            "info",
-		"config":          "info",
 		logger.DefaultTag: "critical",
 	}
 )
