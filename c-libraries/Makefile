@@ -5,8 +5,8 @@ all: libargon2 libucl
 
 .PHONY: clean
 clean:
-	cd libargon2 && ${MAKE} clean
-	cd libucl && ${MAKE} clean
+	cd libargon2 && [ -f Makefile ] && ${MAKE} clean || true
+	cd libucl && [ -f Makefile ] && ${MAKE} clean || true
 
 
 .PHONY: libargon2
