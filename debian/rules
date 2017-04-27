@@ -10,6 +10,8 @@ PC_WRAPPER = ${C_LIBRARIES_DIR}/pcwrapper
 
 override_dh_auto_build:
 	make -C "${C_LIBRARIES_DIR}" all
+	[ -x "${PC_WRAPPER}" ] || echo "not executable: ${PC_WRAPPER}"
+	${PC_WRAPPER} --cflags --libs libucl
 	cd "${PROJECT_DIR}" && env GOPATH="${GOPATH}" PKG_CONFIG="${PC_WRAPPER}" go install -buildmode=exe -v ./command/...
 
 

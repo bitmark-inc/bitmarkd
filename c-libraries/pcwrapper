@@ -44,6 +44,8 @@ Cflags: -I${dir}/${pkg}/include
 EOF
 }
 
+echo "cmd:" "$0" "$@" 1>&2
+
 [ X"${libucl}" = X"yes" ] && pc_file libucl "${this_dir}"
 [ X"${libargon2}" = X"yes" ] && pc_file libargon2 "${this_dir}"
 if [ -n "${pkg_path}" ]
@@ -51,5 +53,5 @@ then
   export PKG_CONFIG_PATH="${pkg_path}"
   ls -l "${pkg_path}" 1>&2
 fi
-echo PKG_CONFIG_PATH="${PKG_CONFIG_PATH}" 1>&2
+echo PKG_CONFIG_PATH="'${PKG_CONFIG_PATH}'" 1>&2
 exec pkg-config "$@"
