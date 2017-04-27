@@ -25,9 +25,11 @@ done
 
 pc_file()
 {
-  local pkg dir file
+  local pkg dir
   pkg="$1"; shift
   dir="$1"; shift
+
+  echo "pcfile: ${pkg}" 1>&2
 
   if [ -z "${pkg_path}" ]
   then
@@ -47,5 +49,7 @@ EOF
 if [ -n "${pkg_path}" ]
 then
   export PKG_CONFIG_PATH="${pkg_path}"
+  ls -l "${pkg_path}" 1>&2
 fi
+echo PKG_CONFIG_PATH="${PKG_CONFIG_PATH}" 1>&2
 exec pkg-config "$@"
