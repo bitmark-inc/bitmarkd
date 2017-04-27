@@ -28,15 +28,15 @@
 [submodule "c-libraries/libargon2"]
 	path = c-libraries/libargon2
 	url = https://github.com/P-H-C/phc-winner-argon2
-[submodule "vendor/go-argon2"]
-	path = vendor/go-argon2
-	url = https://github.com/bitmark-inc/go-argon2
-[submodule "vendor/go-libucl"]
-	path = vendor/go-libucl
-	url = https://github.com/bitmark-inc/go-libucl
-[submodule "vendor/seelog"]
-	path = vendor/seelog
-	url = https://github.com/cihub/seelog
-[submodule "vendor/snappy"]
-	path = vendor/snappy
+[submodule "vendor/github.com/golang/snappy"]
+	path = vendor/github.com/golang/snappy
 	url = https://github.com/golang/snappy
+[submodule "vendor/github.com/cihub/seelog"]
+	path = vendor/github.com/cihub/seelog
+	url = https://github.com/cihub/seelog
+[submodule "vendor/github.com/bitmark-inc/go-argon2"]
+	path = vendor/github.com/bitmark-inc/go-argon2
+	url = https://github.com/bitmark-inc/go-argon2
+[submodule "vendor/github.com/bitmark-inc/go-libucl"]
+	path = vendor/github.com/bitmark-inc/go-libucl
+	url = https://github.com/bitmark-inc/go-libucl
