@@ -26,7 +26,7 @@ fi
 unset gobin
 ~~~~~
 
-OnFreeBSD/PC-BSD
+On FreeBSD/PC-BSD
 
 ~~~~~
 pkg install libzmq4 libargon2 libucl
@@ -38,6 +38,7 @@ On a Debian like system
 ~~~~~
 apt-get install libzmq4-dev
 # lib ucl and argon2 need to be manually installed
+# see the Makefile in c-libraries to set up local static copies
 ~~~~~
 
 On a macosx

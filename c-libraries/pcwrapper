@@ -1,0 +1,49 @@
+#!/bin/sh
+
+this_dir=$(dirname "$0")
+
+cd "${this_dir}"
+this_dir=$(pwd)
+
+libucl=no
+libargon=no
+pkg_path=
+
+for arg in "$@"
+do
+  case "${arg}" in
+    (libucl)
+      pkg-config libucl || libucl=yes
+      ;;
+    (libargon2)
+      pkg-config libargon2 || libargon2=yes
+      ;;
+    (*)
+      ;;
+  esac
+done
+
+pc_file()
+{
+  local pkg dir file
+  pkg="$1"; shift
+  dir="$1"; shift
+
+  pkg_path="${dir}/pkgconf"
+  mkdir -p "${pkg_path}"
+
+  cat > "${pkg_path}/${pkg}.pc" <<EOF
+Name: ${pkg}
+Description: Development libraries for ${pkg}
+Libs: -L${dir}/${pkg} ${pkg}.a
+Cflags: -I${dir}/${pkg}/include
+EOF
+}
+
+[ X"${libucl}" = X"yes" ] && pc_file libucl "${this_dir}"
+[ X"${libargon2}" = X"yes" ] && pc_file libargon2 "${this_dir}"
+if [ -n "${pkg_path}" ]
+then
+  export PKG_CONFIG_PATH"=${pkg_path}"
+fi
+exec pkg-config "$@"

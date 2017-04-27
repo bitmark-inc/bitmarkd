@@ -1,74 +1,16 @@
 #!/usr/bin/make -f
 # -*- makefile -*-
 
-include debian/versions.mk
-
-# temporary build path (see http://golang.org/doc/code.html#GOPATH)
-export GOPATH = ${CURDIR}/.gopath
-GOPATH_PACKAGED = /usr/share/gocode
-
-LIBUCL_SRC = ${CURDIR}/libucl
-GO_LIBUCL_SRC = ${GOPATH}/src/github.com/bitmark-inc/go-libucl
-
-LIBARGON2_SRC = ${CURDIR}/phc-winner-argon2
-GO_LIBARGON2_SRC = ${GOPATH}/src/github.com/bitmark-inc/go-argon2
-
-SRC_DIR = ${GOPATH}/src/github.com/bitmark-inc/${SRC_NAME}
+GOPATH = ${CURDIR}
 BIN_DIR = ${GOPATH}/bin
-
-versions.mk:
+PROJECT_DIR = ${GOPATH}/src/github.com/bitmark-inc/bitmarkd
+COMMAND_DIR = ${PROJECT_DIR}/command
+C_LIBRARIES_DIR = ${PROJECT_DIR}/c-libraries
+PC_WRAPPER = ${C_LIBRARIES_DIR}/pcwrapper
 
 override_dh_auto_build:
-	# extract all of the dependencies
-	mkdir -p "${GOPATH}"
-	for p in ${GO_PACKAGES} ; \
-	do \
-	  hash="$${p##*:}" ; \
-	  p="$${p%%:*}" ; \
-	  account=$$(basename $$(dirname "$${p}")) ; \
-	  repo=$$(basename "$${p}") ; \
-	  dir="${GOPATH}/src/$${p}" ; \
-	  if [ ! -d "$${dir}" ] ; \
-	  then \
-	    dist="$${account}-$${repo}-$${hash}_GH0.tar.gz" ; \
-	    printf '==> untar: %s  into %s\n' "$${dist}" "$${dir}" ; \
-	    mkdir -p "$${dir}" ; \
-	    tar xf "$${dist}" -C "$${dir}" --transform 's@^[^/]*/@@' ; \
-            rmdir "$${dir}/$${repo}-$${hash}" ; \
-	  fi ; \
-	done
-
-	# extract libucl to its own work dir
-	mkdir -p "${LIBUCL_SRC}"
-	tar xf "${LIBUCL}" -C "${LIBUCL_SRC}" --transform 's@^[^/]*/@@'
-
-	# build the libucl.a library first; for http support: ./configure --prefix=/usr --enable-urls --enable-signatures
-	cd "${LIBUCL_SRC}" && \
-	  ./autogen.sh && \
-	  ./configure --prefix=/usr && \
-	  make
-
-	# patch the go-libucl source
-	cd "${GO_LIBUCL_SRC}" && \
-	  printf 'package libucl\n// #cgo CFLAGS: -I${LIBUCL_SRC}/include\n// #cgo LDFLAGS: ${LIBUCL_SRC}/src/.libs/libucl.a\nimport "C"\n' > libucl.go
-
-	# extract libargon2 to its own work dir
-	mkdir -p "${LIBARGON2_SRC}"
-	tar xf "${LIBARGON2}" -C "${LIBARGON2_SRC}" --transform 's@^[^/]*/@@' ; \
-
-	# build the libargon2.a
-	cd "${LIBARGON2_SRC}" && make all
-
-	# patch the go-libargon2 source
-	cd "${GO_LIBARGON2_SRC}" && \
-	  printf 'package argon2\n// #cgo CFLAGS: -I${LIBARGON2_SRC}/include\n// #cgo LDFLAGS: ${LIBARGON2_SRC}/libargon2.a\nimport "C"\n' > libargon2.go && \
-	  sed -i.orig 's/#cgo/#cgo freebsd/g' argon2.go
-
-	# compile the go programs - note APPS = ./command/app1 ./command/app2
-	for app in ${APPS} ; \
-	do \
-	  cd "${SRC_DIR}/$${app}" && go install -buildmode=exe -v . ; \
-	done
+	make -C "${C_LIBRARIES_DIR}" all
+	cd "${PROJECT_DIR}" && env GOPATH="${GOPATH}" PKG_CONFIG="${PC_WRAPPER}" go install -buildmode=exe -v ./command/...
 
 
 override_dh_auto_install:
@@ -77,16 +19,15 @@ override_dh_auto_install:
 	bin_dir="debian/tmp/bin" ; \
 	share_dir="debian/tmp/share" ; \
 	mkdir -p "$${etc_dir}" "$${bin_dir}" "$${share_dir}" ; \
-	for app in ${APPS} ; \
+	for app in "${COMMAND_DIR}"/* ; \
 	do \
 	  app_base=$$(basename "$${app}") ; \
 	  conf="${SRC_DIR}/$${app}/$${app_base}.conf.sample" ; \
 	  [ -f "$${conf}" ] && cp -p "$${conf}" "$${etc_dir}/$${app_base}.conf" || true ; \
 	  share="${SRC_DIR}/$${app}/share" ; \
 	  [ -d "$${share}" ] && cp -p "$${share}"/* "$${share_dir}/" || true ; \
-	  exe="${BIN_DIR}/$${app_base}" ; \
-	  [ -x "$${exe}" ] && cp -p "$${exe}" "$${bin_dir}/" ; \
-	done
+	done ; \
+	cp -p "${BINDIR}"/* "$${bin_dir}/"
 
 
 override_dh_strip:
@@ -94,6 +35,7 @@ override_dh_strip:
 
 
 override_dh_auto_test:
+	# no tests
 
 
 override_dh_installinit:
@@ -102,9 +44,8 @@ override_dh_installinit:
 
 override_dh_auto_clean:
 	dh_auto_clean
+	make -C "${C_LIBRARIES_DIR}" clean
 
-	# GOPATH/LIBUCL_SRC are created by this file - need to remove it
-	rm -rf "${GOPATH}" "${LIBUCL_SRC}" "${LIBARGON2_SRC}"
 
 # default rules
 %:

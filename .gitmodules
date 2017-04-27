@@ -22,3 +22,21 @@
 [submodule "vendor/golang.org/x/crypto"]
 	path = vendor/golang.org/x/crypto
 	url = https://go.googlesource.com/crypto
+[submodule "c-libraries/libucl"]
+	path = c-libraries/libucl
+	url = https://github.com/vstakhov/libucl
+[submodule "c-libraries/libargon2"]
+	path = c-libraries/libargon2
+	url = https://github.com/P-H-C/phc-winner-argon2
+[submodule "vendor/go-argon2"]
+	path = vendor/go-argon2
+	url = https://github.com/bitmark-inc/go-argon2
+[submodule "vendor/go-libucl"]
+	path = vendor/go-libucl
+	url = https://github.com/bitmark-inc/go-libucl
+[submodule "vendor/seelog"]
+	path = vendor/seelog
+	url = https://github.com/cihub/seelog
+[submodule "vendor/snappy"]
+	path = vendor/snappy
+	url = https://github.com/golang/snappy
