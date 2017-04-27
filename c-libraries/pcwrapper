@@ -2,11 +2,11 @@
 
 this_dir=$(dirname "$0")
 
-cd "${this_dir}"
+cd "${this_dir}" || exit 1
 this_dir=$(pwd)
 
 libucl=no
-libargon=no
+libargon2=no
 pkg_path=
 
 for arg in "$@"
@@ -29,9 +29,11 @@ pc_file()
   pkg="$1"; shift
   dir="$1"; shift
 
-  pkg_path="${dir}/pkgconf"
-  mkdir -p "${pkg_path}"
-
+  if [ -z "${pkg_path}" ]
+  then
+    pkg_path="${dir}/pkgconf"
+    mkdir -p "${pkg_path}"
+  fi
   cat > "${pkg_path}/${pkg}.pc" <<EOF
 Name: ${pkg}
 Description: Development libraries for ${pkg}
@@ -44,6 +46,6 @@ EOF
 [ X"${libargon2}" = X"yes" ] && pc_file libargon2 "${this_dir}"
 if [ -n "${pkg_path}" ]
 then
-  export PKG_CONFIG_PATH"=${pkg_path}"
+  export PKG_CONFIG_PATH="${pkg_path}"
 fi
 exec pkg-config "$@"
