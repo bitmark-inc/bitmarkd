@@ -19,3 +19,6 @@
 [submodule "vendor/golang.org/x/crypto"]
 	path = vendor/golang.org/x/crypto
 	url = https://go.googlesource.com/crypto
+[submodule "vendor/github.com/bitmark-inc/go-libucl"]
+	path = vendor/github.com/bitmark-inc/go-libucl
+	url = https://github.com/bitmark-inc/go-libucl
