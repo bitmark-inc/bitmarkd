@@ -54,4 +54,18 @@ then
   ls -l "${pkg_path}" 1>&2
 fi
 echo PKG_CONFIG_PATH="'${PKG_CONFIG_PATH}'" 1>&2
-exec pkg-config "$@"
+
+# determine read pkg-config
+OLD_IFS="${IFS}"
+IFS=':'
+for dir in ${PATH}
+do
+  [ X"${dir}" = X"${this_dir}" ] && continue
+  [ -d "${dir}" ] || continue
+  pkg_config="${dir}/pkg-config"
+  [ -x "${pkg_config}" ] && exec "${pkg_config}" "$@"
+done
+IFS="${OLD_IFS}"
+echo 'could determine path to pkg-config' 1>&2
+echo 'suggest: apt install pkgconf' 1>&2
+exit 1
