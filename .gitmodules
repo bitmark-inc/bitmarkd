@@ -1,15 +1,21 @@
 [submodule "c-libraries/libucl"]
 	path = c-libraries/libucl
 	url = https://github.com/vstakhov/libucl
-[submodule "vendor/github.com/bitmark-inc/bitmarkd"]
-	path = vendor/github.com/bitmark-inc/bitmarkd
-	url = https://github.com/bitmark-inc/bitmarkd
 [submodule "c-libraries/libargon2"]
 	path = c-libraries/libargon2
 	url = https://github.com/P-H-C/phc-winner-argon2
+[submodule "vendor/github.com/bitmark-inc/bitmarkd"]
+	path = vendor/github.com/bitmark-inc/bitmarkd
+	url = https://github.com/bitmark-inc/bitmarkd
 [submodule "vendor/github.com/codegangsta/cli"]
 	path = vendor/github.com/codegangsta/cli
 	url = https://github.com/codegangsta/cli
 [submodule "vendor/github.com/bitmark-inc/exitwithstatus"]
 	path = vendor/github.com/bitmark-inc/exitwithstatus
 	url = https://github.com/bitmark-inc/exitwithstatus
+[submodule "vendor/github.com/bitmark-inc/go-argon2"]
+	path = vendor/github.com/bitmark-inc/go-argon2
+	url = https://github.com/bitmark-inc/go-argon2
+[submodule "vendor/golang.org/x/crypto"]
+	path = vendor/golang.org/x/crypto
+	url = https://go.googlesource.com/crypto
