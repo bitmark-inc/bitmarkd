@@ -23,4 +23,4 @@ libucl:
 	  ./autogen.sh && \
 	  ./configure --disable-debug --disable-dependency-tracking --disable-silent-rules --prefix=/usr && \
 	  ${MAKE} && \
-	  cp -p .libs/libucl.a .
+	  cp -p src/.libs/libucl.a .
