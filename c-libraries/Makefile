@@ -1,4 +1,8 @@
 # Makefile
+#
+# this must compile each of the lib* directories to produce:
+# a) libX/include/*.h
+# b) libX/libX.a
 
 .PHONY: all
 all: libargon2 libucl
@@ -18,4 +22,5 @@ libucl:
 	cd libucl && \
 	  ./autogen.sh && \
 	  ./configure --disable-debug --disable-dependency-tracking --disable-silent-rules --prefix=/usr && \
-	  ${MAKE}
+	  ${MAKE} && \
+	  cp -p .libs/libucl.a .
