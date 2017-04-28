@@ -1,0 +1,15 @@
+[submodule "c-libraries/libucl"]
+	path = c-libraries/libucl
+	url = https://github.com/vstakhov/libucl
+[submodule "vendor/github.com/bitmark-inc/go-argon2"]
+	path = vendor/github.com/bitmark-inc/go-argon2
+	url = https://github.com/bitmark-inc/go-argon2
+[submodule "vendor/github.com/bitmark-inc/go-libucl"]
+	path = vendor/github.com/bitmark-inc/go-libucl
+	url = https://github.com/bitmark-inc/go-libucl
+[submodule "vendor/github.com/bitmark-inc/bitmarkd"]
+	path = vendor/github.com/bitmark-inc/bitmarkd
+	url = https://github.com/bitmark-inc/bitmarkd
+[submodule "c-libraries/libargon2"]
+	path = c-libraries/libargon2
+	url = https://github.com/P-H-C/phc-winner-argon2

@@ -115,7 +115,7 @@ func main() {
 				cli.StringFlag{
 					Name:  "description, d",
 					Value: "",
-					Usage: "*identity descriptiont",
+					Usage: "*identity description",
 				},
 				cli.StringFlag{
 					Name:  "privateKey, k",
