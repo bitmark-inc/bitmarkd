@@ -40,3 +40,12 @@ Description: Bitmark Blockchain database dump program
  This is a debugging  program for the Bitmark P2P network.
  .
  This dumps specific tables from the Bitmark Blockchain LevelDB database.
+
+Package: bitmark-info
+Architecture: linux-any
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Recommends:
+Description: Bitmark Blockchain information display
+ This is a debugging  program for the Bitmark P2P network.
+ .
+ This displays information by sending RPC calls to a bitmarkd server.
