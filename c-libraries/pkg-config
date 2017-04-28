@@ -1,35 +1,60 @@
 #!/bin/sh
+# pkg-config wrapper to deal with local libs
 
+# error handler
+ERROR()
+{
+  printf 'error: '
+  printf "$@"
+  printf '\n'
+  exit 1
+}
+
+MUST_CD()
+{
+  cd "$1" || ERROR 'cannot cd to: %s' "$1"
+}
+
+# determine the directory of this script as an absolute path
 this_dir=$(dirname "$0")
-
-cd "${this_dir}" || exit 1
+MUST_CD "${this_dir}"
 this_dir=$(pwd)
 
+# initailise variables
 libucl=no
 libargon2=no
 pkg_path=
+pkg_config=
 
-for arg in "$@"
+# determine real pkg-config
+OLD_IFS="${IFS}"
+IFS=':'
+for dir in ${PATH}
 do
-  case "${arg}" in
-    (libucl)
-      pkg-config libucl || libucl=yes
-      ;;
-    (libargon2)
-      pkg-config libargon2 || libargon2=yes
-      ;;
-    (*)
-      ;;
-  esac
-done
+  [ X"${dir}" = X"${this_dir}" ] && continue
+  [ -d "${dir}" ] || continue
 
+  # resolve any symlink
+  MUST_CD "${dir}"
+  pkg_config="$(pwd)/pkg-config"
+
+  [ X"$0" = X"${pkg_config}" ] && continue
+  [ -x "${pkg_config}" ] && break
+  pkg_config=
+done
+IFS="${OLD_IFS}"
+[ -z "${pkg_config}" ] && ERROR 'could determine path to pkg-config, suggest: apt install pkgconf'
+
+# restore cd
+MUST_CD "${this_dir}"
+
+
+# generate a pkg-config .pc file for static linking
 pc_file()
 {
   local pkg dir
   pkg="$1"; shift
   dir="$1"; shift
-
-  echo "pcfile: ${pkg}" 1>&2
 
   if [ -z "${pkg_path}" ]
   then
@@ -44,28 +69,22 @@ Cflags: -I${dir}/${pkg}/include
 EOF
 }
 
-echo "cmd:" "$0" "$@" 1>&2
+# check for local libraries
+for arg in "$@"
+do
+  case "${arg}" in
+    (-*)
+      ;;
+    (*)
+      ${pkg_config} "${arg}" || pc_file "${arg}" "${this_dir}"
+      ;;
+  esac
+done
 
-[ X"${libucl}" = X"yes" ] && pc_file libucl "${this_dir}"
-[ X"${libargon2}" = X"yes" ] && pc_file libargon2 "${this_dir}"
 if [ -n "${pkg_path}" ]
 then
   export PKG_CONFIG_PATH="${pkg_path}"
-  ls -l "${pkg_path}" 1>&2
 fi
-echo PKG_CONFIG_PATH="'${PKG_CONFIG_PATH}'" 1>&2
 
-# determine read pkg-config
-OLD_IFS="${IFS}"
-IFS=':'
-for dir in ${PATH}
-do
-  [ X"${dir}" = X"${this_dir}" ] && continue
-  [ -d "${dir}" ] || continue
-  pkg_config="${dir}/pkg-config"
-  [ -x "${pkg_config}" ] && exec "${pkg_config}" "$@"
-done
-IFS="${OLD_IFS}"
-echo 'could determine path to pkg-config' 1>&2
-echo 'suggest: apt install pkgconf' 1>&2
-exit 1
+# run the real pkg-config
+exec "${pkg_config}" "$@"
