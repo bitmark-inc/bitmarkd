@@ -10,3 +10,6 @@
 [submodule "vendor/github.com/codegangsta/cli"]
 	path = vendor/github.com/codegangsta/cli
 	url = https://github.com/codegangsta/cli
+[submodule "vendor/github.com/bitmark-inc/exitwithstatus"]
+	path = vendor/github.com/bitmark-inc/exitwithstatus
+	url = https://github.com/bitmark-inc/exitwithstatus
