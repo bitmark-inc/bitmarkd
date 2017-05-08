@@ -1,3 +1,9 @@
+bitmarkd (4.3-1) wily; urgency=medium
+
+  * new version from source version: 4.3
+
+ -- Christopher Hall <hsw@bitmark.com>  Mon, 08 May 2017 10:10:39 +0000
+
 bitmarkd (1.0+20160226.2+gitf5c23ca-1) wily; urgency=medium
 
   * Initial release (Closes: #0, #0)
