@@ -17,7 +17,7 @@ import (
 
 // cycle time
 const (
-	timeout = 15 * time.Minute
+	verifierCycleTime = 5 * time.Minute
 )
 
 // background process loop
@@ -35,7 +35,7 @@ loop:
 		case <-shutdown:
 			break loop
 
-		case <-time.After(timeout):
+		case <-time.After(verifierCycleTime):
 			state.process(globalData)
 		}
 	}
