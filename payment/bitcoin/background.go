@@ -12,6 +12,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
+	"strings"
 	"time"
 )
 
@@ -127,27 +128,13 @@ loop:
 			for i, txId := range block.Tx[1:] {
 				// fetch transaction and decode
 				log.Debugf("tx[%d] tx id: %s", i, txId)
-				var reply bitcoinTransaction
-				err := bitcoinGetRawTransaction(txId, &reply)
+
+				hexTx, err := bitcoinGetRawTransactionHex(txId)
 				if nil != err {
 					log.Errorf("failed to get block: %d  transaction[%d] for: %q", block.Height, i, txId)
-					continue
+					continue txLoop
 				}
-				for j, vout := range reply.Vout {
-					if bitcoin_OP_RETURN_RECORD_LENGTH == len(vout.ScriptPubKey.Hex) && bitcoin_OP_RETURN_HEX_CODE == vout.ScriptPubKey.Hex[0:4] {
-						var payId pay.PayId
-						payIdBytes := []byte(vout.ScriptPubKey.Hex[bitcoin_OP_RETURN_PAY_ID_OFFSET:])
-						err := payId.UnmarshalText(payIdBytes)
-						if nil != err {
-							log.Errorf("failed to get pay id: %d  transaction[%d] id: %q", block.Height, i, txId)
-							continue txLoop
-						}
-						log.Infof("possible transaction: %#v", reply)
-						scanTx(log, payId, j, &reply)
-						continue txLoop
-					}
-				}
-
+				checkForPaymentTransaction(log, hexTx)
 			}
 		}
 
@@ -162,12 +149,14 @@ loop:
 		}
 
 		// rate limit
-		timeTaken := time.Since(startTime)
-		rate := float64(counter) / timeTaken.Seconds()
-		log.Infof("rate: %f", rate)
-		if rate > maximumBlockRate {
-			log.Infof("exceeds: %f", maximumBlockRate)
-			time.Sleep(2 * time.Second)
+		if counter > 10 {
+			timeTaken := time.Since(startTime)
+			rate := float64(counter) / timeTaken.Seconds()
+			log.Infof("rate: %f", rate)
+			if rate > maximumBlockRate {
+				log.Infof("exceeds: %f", maximumBlockRate)
+				time.Sleep(2 * time.Second)
+			}
 		}
 
 		// set up to get next block
@@ -176,13 +165,51 @@ loop:
 	return n, hash
 }
 
+func checkForPaymentTransaction(log *logger.L, hexTx string) {
+
+	log.Infof("raw tx: %s", hexTx)
+
+	// quick check for OP_RETURN presence.  This is not a reliable
+	// check but should eliminate quite a lot of transactions and
+	// save on calls to decode.
+	if !strings.Contains(hexTx, bitcoin_OP_RETURN_HEX_CODE) {
+		return
+	}
+
+	// if quick check passes, decode and do full check
+	var reply bitcoinTransaction
+	err := bitcoinDecodeRawTransaction(hexTx, &reply)
+	if nil != err {
+		log.Errorf("failed to decode transaction: %q  error: %s", hexTx, err)
+		return
+	}
+
+	// scan all Vout looking for script with OP_RETURN
+	for j, vout := range reply.Vout {
+		if bitcoin_OP_RETURN_RECORD_LENGTH == len(vout.ScriptPubKey.Hex) && bitcoin_OP_RETURN_HEX_CODE == vout.ScriptPubKey.Hex[0:4] {
+			var payId pay.PayId
+			payIdBytes := []byte(vout.ScriptPubKey.Hex[bitcoin_OP_RETURN_PAY_ID_OFFSET:])
+			err := payId.UnmarshalText(payIdBytes)
+			if nil != err {
+				log.Errorf("failed to get pay id error: %s", err)
+			} else {
+				log.Infof("possible tx id:: %s", reply.TxId)
+				log.Debugf("possible transaction: %#v", reply)
+				scanTx(log, payId, j, &reply)
+			}
+			break
+		}
+	}
+
+}
+
 func scanTx(log *logger.L, payId pay.PayId, payIdIndex int, tx *bitcoinTransaction) {
 
 	amounts := make(map[string]uint64)
 
 	// extract payments, skipping already determine OP_RETURN vout
 	for i, vout := range tx.Vout {
-		log.Infof("vout[%d]: %v ", i, vout)
+		log.Debugf("vout[%d]: %v ", i, vout)
 		if payIdIndex == i {
 			continue
 		}
@@ -192,7 +219,7 @@ func scanTx(log *logger.L, payId pay.PayId, payIdIndex int, tx *bitcoinTransacti
 	}
 
 	if 0 == len(amounts) {
-		log.Warnf("found pay id bu no payments in tx id: %s", tx.TxId)
+		log.Warnf("found pay id but no payments in tx id: %s", tx.TxId)
 		return
 	}
 
@@ -218,5 +245,6 @@ func scanTx(log *logger.L, payId pay.PayId, payIdIndex int, tx *bitcoinTransacti
 		packed = append(packed, util.ToVarint64(value)...)
 	}
 
+	log.Infof("store bitcoin tx id: %s  pay id: %s", tx.TxId, payId)
 	storage.Pool.Payment.Put(payId[:], packed)
 }

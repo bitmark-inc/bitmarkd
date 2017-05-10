@@ -48,6 +48,9 @@ type bitcoinData struct {
 	// to reduce the number of Currency record overwrites
 	saveCount uint64
 
+	// zero confirm subscriber
+	zeroconf zcSubscriber
+
 	// for background
 	background *background.T
 
@@ -61,16 +64,17 @@ var globalData bitcoinData
 // a block of configuration data
 // this is read from a libucl configuration file
 type Configuration struct {
-	Username        string `libucl:"username" json:"username"`
-	Password        string `libucl:"password" json:"password"`
-	URL             string `libucl:"url" json:"url"`
-	ServerName      string `libucl:"server_name" json:"server_name"`
-	CACertificate   string `libucl:"ca_certificate" json:"ca_certificate"`
-	Certificate     string `libucl:"certificate" json:"certificate"`
-	PrivateKey      string `libucl:"private_key" json:"private_key"`
-	Block           uint64 `libucl:"block" json:"block"`
-	Hash            string `libucl:"hash" json:"hash"`
-	ResetBlockCount bool   `libucl:"reset_block_count" json:"reset_block_count"`
+	Username            string   `libucl:"username" json:"username"`
+	Password            string   `libucl:"password" json:"password"`
+	URL                 string   `libucl:"url" json:"url"`
+	ServerName          string   `libucl:"server_name" json:"server_name"`
+	CACertificate       string   `libucl:"ca_certificate" json:"ca_certificate"`
+	Certificate         string   `libucl:"certificate" json:"certificate"`
+	PrivateKey          string   `libucl:"private_key" json:"private_key"`
+	Block               uint64   `libucl:"block" json:"block"`
+	Hash                string   `libucl:"hash" json:"hash"`
+	ResetBlockCount     bool     `libucl:"reset_block_count" json:"reset_block_count"`
+	ZeroConfConnections []string `libucl:"zero_conf_connect"`
 }
 
 // initialise for bitcoin payments
@@ -212,6 +216,15 @@ func Initialise(configuration *Configuration) error {
 		globalData.log.Infof("latest block hash: %s", globalData.latestBlockHash)
 	}
 
+	// initialise background processes
+	zeroconf := len(configuration.ZeroConfConnections) > 0
+	if zeroconf {
+		err = (&globalData.zeroconf).initialise(configuration.ZeroConfConnections)
+		if nil != err {
+			return err
+		}
+	}
+
 	// start background processes
 	globalData.log.Info("start background…")
 
@@ -220,12 +233,17 @@ func Initialise(configuration *Configuration) error {
 		&globalData,
 	}
 
+	// this is optional
+	if zeroconf {
+		processes = append(processes, &globalData.zeroconf)
+	}
+
 	globalData.background = background.Start(processes, globalData.log)
 
 	return nil
 }
 
-// finialise - stop all background tasks
+// finalise - stop all background tasks
 // also calls the internal finalisePayment()
 func Finalise() error {
 	globalData.Lock()
