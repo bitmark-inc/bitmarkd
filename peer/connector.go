@@ -289,8 +289,7 @@ func (conn *connector) runStateMachine() bool {
 		conn.highestBlockNumber, conn.theClient = highestBlock(log, conn.clients)
 		height := block.GetHeight()
 
-		log.Infof("remote height: %d", conn.highestBlockNumber)
-		log.Infof("local height: %d", height)
+		log.Infof("height  remote: %d  local: %d", conn.highestBlockNumber, height)
 
 		continueLooping = false
 
@@ -415,7 +414,7 @@ client_loop:
 
 	retrying:
 		for retry := 1; retry <= 3; retry += 1 {
-			log.Infof("highestBlock: retry: %d", retry)
+			log.Debugf("highestBlock: retry: %d", retry)
 
 			err := client.Send("N")
 			if nil != err {

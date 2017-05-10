@@ -247,7 +247,6 @@ loop:
 func (sbsc *subscriber) process(data [][]byte) {
 
 	log := sbsc.log
-	log.Info("incoming message")
 
 	dataLength := len(data)
 	if dataLength < 2 {

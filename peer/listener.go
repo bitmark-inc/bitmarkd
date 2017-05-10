@@ -128,7 +128,7 @@ func (lstn *listener) process(socket *zmq.Socket) {
 
 	log := lstn.log
 
-	log.Info("process starting…")
+	log.Debug("process starting…")
 
 	data, err := socket.RecvMessageBytes(0)
 	if nil != err {
@@ -143,7 +143,7 @@ func (lstn *listener) process(socket *zmq.Socket) {
 	fn := string(data[0])
 	parameters := data[1:]
 
-	log.Infof("received message: %q: %x", fn, data)
+	log.Debugf("received message: %q: %x", fn, data)
 
 	result := []byte{}
 
