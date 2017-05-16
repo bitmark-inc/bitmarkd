@@ -31,7 +31,7 @@ func (state *bitcoinData) Run(args interface{}, shutdown <-chan struct{}) {
 
 loop:
 	for {
-		log.Info("waiting…")
+		log.Debug("waiting…")
 		select {
 		case <-shutdown:
 			break loop
@@ -167,7 +167,7 @@ loop:
 
 func checkForPaymentTransaction(log *logger.L, hexTx string) {
 
-	log.Infof("raw tx: %s", hexTx)
+	log.Debugf("raw tx: %s", hexTx)
 
 	// quick check for OP_RETURN presence.  This is not a reliable
 	// check but should eliminate quite a lot of transactions and

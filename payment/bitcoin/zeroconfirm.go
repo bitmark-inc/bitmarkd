@@ -114,7 +114,7 @@ func (sbsc *zcSubscriber) Run(args interface{}, shutdown <-chan struct{}) {
 
 	loop:
 		for {
-			log.Info("waiting…")
+			log.Debug("waiting…")
 
 			polled, _ := poller.Poll(-1)
 

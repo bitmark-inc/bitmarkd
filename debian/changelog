@@ -1,3 +1,15 @@
+bitmarkd (4.5-1) wily; urgency=medium
+
+  * log issue results from Bitmarks.Create
+
+ -- Christopher Hall <hsw@bitmark.com>  Tue, 16 May 2017 04:09:44 +0000
+
+bitmarkd (4.4-1) wily; urgency=medium
+
+  * add zero confirmation payment subsystem
+
+ -- Christopher Hall <hsw@bitmark.com>  Fri, 12 May 2017 08:59:20 +0000
+
 bitmarkd (4.3-1) wily; urgency=medium
 
   * new version from source version: 4.3

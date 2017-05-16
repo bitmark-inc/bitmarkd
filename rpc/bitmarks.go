@@ -127,6 +127,7 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 		}
 	}
 
+	log.Infof("Bitmarks.Create: result: %#v", result)
 	*reply = result
 	return nil
 }
