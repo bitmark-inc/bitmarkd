@@ -1,3 +1,9 @@
+bitmarkd (4.5-2) unstable; urgency=medium
+
+  * change the distribution
+
+ -- Christopher Hall <hsw@bitmark.com>  Tue, 16 May 2017 05:17:39 +0000
+
 bitmarkd (4.5-1) wily; urgency=medium
 
   * log issue results from Bitmarks.Create
