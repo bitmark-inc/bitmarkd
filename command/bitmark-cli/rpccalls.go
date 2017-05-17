@@ -10,6 +10,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/keypair"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
@@ -38,7 +39,7 @@ type assetData struct {
 	name        string
 	metadata    string
 	quantity    int
-	registrant  *KeyPair
+	registrant  *keypair.KeyPair
 	fingerprint string
 }
 
@@ -48,14 +49,14 @@ type bitmarkRPC struct {
 }
 
 type issueData struct {
-	issuer     *KeyPair
+	issuer     *keypair.KeyPair
 	assetIndex *transactionrecord.AssetIndex
 	quantity   int
 }
 
 type transferData struct {
-	owner    *KeyPair
-	newOwner *KeyPair
+	owner    *keypair.KeyPair
+	newOwner *keypair.KeyPair
 	txId     merkle.Digest
 }
 
@@ -77,7 +78,7 @@ type transactionStatusData struct {
 var dummySignature account.Signature
 
 // helper to make an address
-func makeAddress(keyPair *KeyPair, network string) *account.Account {
+func makeAddress(keyPair *keypair.KeyPair, network string) *account.Account {
 
 	testNet := true
 	if network == "bitmark" {
@@ -93,7 +94,7 @@ func makeAddress(keyPair *KeyPair, network string) *account.Account {
 }
 
 // helper to make a private key
-func makePrivateKey(keyPair *KeyPair, network string) *account.PrivateKey {
+func makePrivateKey(keyPair *keypair.KeyPair, network string) *account.PrivateKey {
 
 	testNet := true
 	if network == "bitmark" {
@@ -308,7 +309,7 @@ func doIssues(client *netrpc.Client, network string, issueConfig issueData, verb
 	return &response, nil
 }
 
-func makeTransfer(network string, link merkle.Digest, owner *KeyPair, newOwner *KeyPair) (*transactionrecord.BitmarkTransfer, error) {
+func makeTransfer(network string, link merkle.Digest, owner *keypair.KeyPair, newOwner *keypair.KeyPair) (*transactionrecord.BitmarkTransfer, error) {
 
 	newOwnerAddress := makeAddress(newOwner, network)
 	r := transactionrecord.BitmarkTransfer{

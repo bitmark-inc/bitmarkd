@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
+	"github.com/bitmark-inc/bitmarkd/keypair"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/codegangsta/cli"
 	"net/rpc/jsonrpc"
@@ -34,13 +35,13 @@ func addIdentity(configs *configuration.Configuration, name string, description 
 		}
 	}
 
-	encrypted, privateKeyConfig, err := makeKeyPair(privateKeyStr, password, testnet)
+	encrypted, privateKeyConfig, err := keypair.MakeKeyPair(privateKeyStr, password, testnet)
 	if nil != err {
 		fmt.Printf("error generating key pair: %s\n", err)
 		return false
 	}
 
-	identity := configuration.IdentityType{
+	identity := keypair.IdentityType{
 		Name:               name,
 		Description:        description,
 		Public_key:         encrypted.PublicKey,
@@ -195,7 +196,7 @@ func getDefaultRawKeyPair(c *cli.Context, globals globalFlags) {
 		exitwithstatus.Message("Error: %s", err)
 	}
 
-	var keyPair *KeyPair
+	var keyPair *keypair.KeyPair
 
 	// check owner password
 	if "" == globals.password {
@@ -204,7 +205,7 @@ func getDefaultRawKeyPair(c *cli.Context, globals globalFlags) {
 			exitwithstatus.Message("Error: %s", err)
 		}
 	} else {
-		keyPair, err = verifyPassword(globals.password, identity)
+		keyPair, err = keypair.VerifyPassword(globals.password, identity)
 		if nil != err {
 			exitwithstatus.Message("Error: %s", err)
 		}
@@ -217,12 +218,12 @@ func getDefaultRawKeyPair(c *cli.Context, globals globalFlags) {
 	type KeyPairDisplay struct {
 		Account    *account.Account    `json:"account"`
 		PrivateKey *account.PrivateKey `json:"private_key"`
-		KeyPair    RawKeyPair          `json:"raw"`
+		KeyPair    keypair.RawKeyPair  `json:"raw"`
 	}
 	output := KeyPairDisplay{
 		Account:    makeAddress(keyPair, configData.Network),
 		PrivateKey: makePrivateKey(keyPair, configData.Network),
-		KeyPair: RawKeyPair{
+		KeyPair: keypair.RawKeyPair{
 			Seed:       keyPair.Seed,
 			PublicKey:  hex.EncodeToString(keyPair.PublicKey[:]),
 			PrivateKey: hex.EncodeToString(keyPair.PrivateKey[:]),
@@ -254,7 +255,7 @@ func changePassword(c *cli.Context, globals globalFlags) {
 		exitwithstatus.Message("Error: %s", err)
 	}
 
-	var keyPair *KeyPair
+	var keyPair *keypair.KeyPair
 
 	// check owner password
 	if "" == globals.password {
@@ -263,7 +264,7 @@ func changePassword(c *cli.Context, globals globalFlags) {
 			exitwithstatus.Message("Error: %s", err)
 		}
 	} else {
-		keyPair, err = verifyPassword(globals.password, identity)
+		keyPair, err = keypair.VerifyPassword(globals.password, identity)
 		if nil != err {
 			exitwithstatus.Message("Error: %s", err)
 		}
@@ -286,7 +287,7 @@ func changePassword(c *cli.Context, globals globalFlags) {
 		input = "SEED:" + keyPair.Seed
 	}
 
-	encrypted, privateKeyConfig, err := makeKeyPair(input, newPassword, testnet)
+	encrypted, privateKeyConfig, err := keypair.MakeKeyPair(input, newPassword, testnet)
 	if nil != err {
 		exitwithstatus.Message("make key pair error: %s", err)
 	}

@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
+	"github.com/bitmark-inc/bitmarkd/keypair"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/codegangsta/cli"
 	"golang.org/x/crypto/ed25519"
@@ -32,7 +33,7 @@ func runGenerate(c *cli.Context, globals globalFlags) {
 	// flag to indicate testnet keys
 	testnet := "bitmark" != configData.Network
 
-	rawKeyPair, _, err := makeRawKeyPair(testnet)
+	rawKeyPair, _, err := keypair.MakeRawKeyPair(testnet)
 	if nil != err {
 		exitwithstatus.Message("Error: %s", err)
 	}
@@ -102,7 +103,7 @@ func runSetup(c *cli.Context, globals globalFlags) {
 		Default_identity: name,
 		Network:          network,
 		Connect:          connect,
-		Identity:         make([]configuration.IdentityType, 0),
+		Identity:         make([]keypair.IdentityType, 0),
 	}
 
 	// flag to indicate testnet keys
@@ -209,7 +210,7 @@ func runCreate(c *cli.Context, globals globalFlags, batchMode bool) {
 		fmt.Printf("quantity: %d\n", quantity)
 	}
 
-	var registrant *KeyPair
+	var registrant *keypair.KeyPair
 
 	// check password
 	if "" != globals.agent {
@@ -217,12 +218,12 @@ func runCreate(c *cli.Context, globals globalFlags, batchMode bool) {
 		if nil != err {
 			exitwithstatus.Message("Error: %s", err)
 		}
-		registrant, err = verifyPassword(password, issuer)
+		registrant, err = keypair.VerifyPassword(password, issuer)
 		if nil != err {
 			exitwithstatus.Message("Error: %s", err)
 		}
 	} else if "" != globals.password {
-		registrant, err = verifyPassword(globals.password, issuer)
+		registrant, err = keypair.VerifyPassword(globals.password, issuer)
 		if nil != err {
 			exitwithstatus.Message("Error: %s", err)
 		}
@@ -295,19 +296,19 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 		fmt.Printf("sender: %s\n", from.Name)
 	}
 
-	var ownerKeyPair *KeyPair
+	var ownerKeyPair *keypair.KeyPair
 	// check owner password
 	if "" != globals.agent {
 		password, err := passwordFromAgent(from.Name, "Transfer Bitmark", globals.agent, globals.clearCache)
 		if nil != err {
 			exitwithstatus.Message("Error: %s", err)
 		}
-		ownerKeyPair, err = verifyPassword(password, from)
+		ownerKeyPair, err = keypair.VerifyPassword(password, from)
 		if nil != err {
 			exitwithstatus.Message("Error: %s", err)
 		}
 	} else if "" != globals.password {
-		ownerKeyPair, err = verifyPassword(globals.password, from)
+		ownerKeyPair, err = keypair.VerifyPassword(globals.password, from)
 		if nil != err {
 			exitwithstatus.Message("Error: %s", err)
 		}
@@ -323,20 +324,20 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 		exitwithstatus.Message("internal error: nil keypair returned")
 	}
 
-	var newOwnerKeyPair *KeyPair
+	var newOwnerKeyPair *keypair.KeyPair
 
 	// ***** FIX THIS: possibly add base58 keys @@@@@
 	newPublicKey, err := hex.DecodeString(to)
 	if nil != err {
 
-		newOwnerKeyPair, err = publicKeyFromIdentity(to, configData.Identity)
+		newOwnerKeyPair, err = keypair.PublicKeyFromIdentity(to, configData.Identity)
 		if nil != err {
 			exitwithstatus.Message("receiver identity error: %s", err)
 		}
 	} else {
-		newOwnerKeyPair = &KeyPair{}
-		if len(newPublicKey) != publicKeySize {
-			exitwithstatus.Message("hex public key must be %d bytes", publicKeySize)
+		newOwnerKeyPair = &keypair.KeyPair{}
+		if len(newPublicKey) != keypair.PublicKeySize {
+			exitwithstatus.Message("hex public key must be %d bytes", keypair.PublicKeySize)
 		}
 		newOwnerKeyPair.PublicKey = newPublicKey
 	}
@@ -461,7 +462,7 @@ func runPublicKeyDisplay(c *cli.Context, globals globalFlags) {
 		fmt.Printf("publicKey: %s\n", publicKey)
 	}
 
-	account, err := accountFromHexPublicKey(publicKey, testnet)
+	account, err := keypair.AccountFromHexPublicKey(publicKey, testnet)
 	if nil != err {
 		exitwithstatus.Message("Transaction Status error: %s", err)
 	}
@@ -491,7 +492,7 @@ func runInfo(c *cli.Context, globals globalFlags) {
 			exitwithstatus.Message("Error: Get configuration failed: %s", err)
 		}
 
-		keyPair := &KeyPair{
+		keyPair := &keypair.KeyPair{
 			PublicKey: pub,
 		}
 		infoConfig.Identity[i].Account = makeAddress(keyPair, infoConfig.Network).String()
@@ -567,19 +568,19 @@ func runSign(c *cli.Context, globals globalFlags) {
 		fmt.Printf("signer: %s\n", from.Name)
 	}
 
-	var ownerKeyPair *KeyPair
+	var ownerKeyPair *keypair.KeyPair
 	// check owner password
 	if "" != globals.agent {
 		password, err := passwordFromAgent(from.Name, "Transfer Bitmark", globals.agent, globals.clearCache)
 		if nil != err {
 			exitwithstatus.Message("Error: %s", err)
 		}
-		ownerKeyPair, err = verifyPassword(password, from)
+		ownerKeyPair, err = keypair.VerifyPassword(password, from)
 		if nil != err {
 			exitwithstatus.Message("Error: %s", err)
 		}
 	} else if "" != globals.password {
-		ownerKeyPair, err = verifyPassword(globals.password, from)
+		ownerKeyPair, err = keypair.VerifyPassword(globals.password, from)
 		if nil != err {
 			exitwithstatus.Message("Error: %s", err)
 		}

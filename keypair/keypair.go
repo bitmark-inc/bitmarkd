@@ -2,7 +2,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package main
+package keypair
 
 import (
 	"bytes"
@@ -10,35 +10,29 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/hex"
-	"fmt"
 	"github.com/bitmark-inc/bitmarkd/account"
-	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/go-argon2"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/sha3"
-	"golang.org/x/crypto/ssh/terminal"
 	"io"
-	"os"
 	"strings"
 )
 
 const (
-	publicKeySize   = ed25519.PublicKeySize
-	privateKeySize  = ed25519.PrivateKeySize
-	publicKeyOffset = privateKeySize - publicKeySize
+	PublicKeySize   = ed25519.PublicKeySize
+	PrivateKeySize  = ed25519.PrivateKeySize
+	PublicKeyOffset = PrivateKeySize - PublicKeySize
 )
 
 var (
+	ErrKeyLength              = fault.InvalidError("key length is invalid")
+	ErrNotFoundIdentity       = fault.NotFoundError("identity name not found")
 	ErrInvalidPrivateKey      = fault.InvalidError("invalid private key")
-	ErrPasswordLength         = fault.InvalidError("password length is invalid")
 	ErrUnableToRegenerateKeys = fault.InvalidError("unable to regenerate keys")
-	ErrVerifiedPassword       = fault.InvalidError("verified password is different")
 	ErrWrongPassword          = fault.InvalidError("wrong password")
 )
-
-var passwordConsole *terminal.Terminal
 
 type KeyPair struct {
 	Seed       string
@@ -52,7 +46,21 @@ type RawKeyPair struct {
 	PrivateKey string `json:"private_key"`
 }
 
-func makeRawKeyPair(test bool) (*RawKeyPair, *KeyPair, error) {
+// full access to data (includes private data)
+type IdentityType struct {
+	Name               string           `libucl:"name"`
+	Description        string           `libucl:"description"`
+	Public_key         string           `libucl:"public_key"`
+	Private_key        string           `libucl:"private_key"`
+	Seed               string           `libucl:"seed"`
+	Private_key_config PrivateKeyConfig `libucl:"private_key_config"`
+}
+
+type PrivateKeyConfig struct {
+	Salt string `libucl:"salt"`
+}
+
+func MakeRawKeyPair(test bool) (*RawKeyPair, *KeyPair, error) {
 
 	// generate new seed
 	seedCore := make([]byte, 32)
@@ -111,13 +119,13 @@ type EncryptedKeyPair struct {
 //       * 64 bytes  =  [32 byte private key][32 byte public key]
 //       * 32 bytes  =  [32 byte private key]
 //       * "SEED:<base58 encoded seed>"
-func makeKeyPair(privateKeyStr string, password string, test bool) (*EncryptedKeyPair, *configuration.PrivateKeyConfig, error) {
+func MakeKeyPair(privateKeyStr string, password string, test bool) (*EncryptedKeyPair, *PrivateKeyConfig, error) {
 	var publicKey, privateKey []byte
 	var seed string
 	var err error
 	// if privateKey is empty, make a new one
 	if "" == privateKeyStr {
-		raw, pair, err := makeRawKeyPair(test)
+		raw, pair, err := MakeRawKeyPair(test)
 		if nil != err {
 			return nil, nil, err
 		}
@@ -140,9 +148,9 @@ func makeKeyPair(privateKeyStr string, password string, test bool) (*EncryptedKe
 			return nil, nil, err
 		}
 		// check privateKey is valid
-		if len(privateKey) == privateKeySize {
-			publicKey = make([]byte, publicKeySize)
-			copy(publicKey, privateKey[publicKeyOffset:])
+		if len(privateKey) == PrivateKeySize {
+			publicKey = make([]byte, PublicKeySize)
+			copy(publicKey, privateKey[PublicKeyOffset:])
 
 			b := bytes.NewBuffer(privateKey)
 			pub, prv, err := ed25519.GenerateKey(b)
@@ -156,14 +164,14 @@ func makeKeyPair(privateKeyStr string, password string, test bool) (*EncryptedKe
 				return nil, nil, ErrUnableToRegenerateKeys
 			}
 
-		} else if len(privateKey) == publicKeyOffset {
+		} else if len(privateKey) == PublicKeyOffset {
 			// only have the private part, must generate the public part
 			b := bytes.NewBuffer(privateKey)
 			pub, prv, err := ed25519.GenerateKey(b)
 			if nil != err {
 				return nil, nil, err
 			}
-			if !bytes.Equal(privateKey, prv[:publicKeyOffset]) {
+			if !bytes.Equal(privateKey, prv[:PublicKeyOffset]) {
 				return nil, nil, ErrUnableToRegenerateKeys
 			}
 			privateKey = prv
@@ -200,14 +208,14 @@ func makeKeyPair(privateKeyStr string, password string, test bool) (*EncryptedKe
 		EncryptedSeed:       hex.EncodeToString(encryptedSeed),
 	}
 
-	privateKeyConfig := &configuration.PrivateKeyConfig{
+	privateKeyConfig := &PrivateKeyConfig{
 		Salt: salt.String(),
 	}
 
 	return result, privateKeyConfig, nil
 }
 
-func accountFromHexPublicKey(publicKey string, test bool) (*account.Account, error) {
+func AccountFromHexPublicKey(publicKey string, test bool) (*account.Account, error) {
 
 	k, err := hex.DecodeString(publicKey)
 	if nil != err {
@@ -223,8 +231,8 @@ func accountFromHexPublicKey(publicKey string, test bool) (*account.Account, err
 	return account, nil
 }
 
-func hashPassword(password string) (*configuration.Salt, []byte, error) {
-	salt, err := configuration.MakeSalt()
+func hashPassword(password string) (*Salt, []byte, error) {
+	salt, err := MakeSalt()
 	if nil != err {
 		return nil, nil, err
 	}
@@ -237,7 +245,7 @@ func hashPassword(password string) (*configuration.Salt, []byte, error) {
 	return salt, cipher, nil
 }
 
-func generateKey(password string, salt *configuration.Salt) ([]byte, error) {
+func generateKey(password string, salt *Salt) ([]byte, error) {
 
 	saltBytes := salt.Bytes()
 
@@ -261,11 +269,11 @@ func encryptPrivateKey(plaintext []byte, key []byte) ([]byte, error) {
 		return nil, error
 	}
 
-	if len(plaintext) != privateKeySize {
+	if len(plaintext) != PrivateKeySize {
 		return nil, ErrKeyLength
 	}
 
-	ciphertext := make([]byte, aes.BlockSize+privateKeySize)
+	ciphertext := make([]byte, aes.BlockSize+PrivateKeySize)
 	iv := ciphertext[:aes.BlockSize]
 	if _, error = io.ReadFull(rand.Reader, iv); nil != error {
 		return nil, error
@@ -282,7 +290,7 @@ func decryptPrivateKey(ciphertext []byte, key []byte) ([]byte, error) {
 		return nil, error
 	}
 
-	if len(ciphertext) != aes.BlockSize+privateKeySize {
+	if len(ciphertext) != aes.BlockSize+PrivateKeySize {
 		return nil, ErrKeyLength
 	}
 
@@ -345,7 +353,7 @@ func decryptSeed(ciphertext []byte, key []byte) (string, error) {
 }
 
 func checkSignature(publicKey []byte, privateKey []byte) bool {
-	salt, err := configuration.MakeSalt()
+	salt, err := MakeSalt()
 	if nil != err {
 		return false
 	}
@@ -354,82 +362,8 @@ func checkSignature(publicKey []byte, privateKey []byte) bool {
 	return ed25519.Verify(publicKey, []byte(message), signature)
 }
 
-func getTerminal() (*terminal.Terminal, int, *terminal.State) {
-	oldState, err := terminal.MakeRaw(0)
-	if err != nil {
-		panic(err)
-	}
-
-	if nil != passwordConsole {
-		return passwordConsole, 0, oldState
-	}
-
-	tmpIO, err := os.OpenFile("/dev/tty", os.O_RDWR, os.ModePerm)
-	if nil != err {
-		panic("No console")
-	}
-
-	passwordConsole = terminal.NewTerminal(tmpIO, "bitmark-cli: ")
-
-	return passwordConsole, 0, oldState
-}
-
-func promptPasswordReader() (string, error) {
-	console, fd, state := getTerminal()
-	password, err := console.ReadPassword("Set identity password(length >= 8): ")
-	if nil != err {
-		fmt.Printf("Get password fail: %s\n", err)
-		return "", err
-	}
-	terminal.Restore(fd, state)
-
-	passwordLen := len(password)
-	if passwordLen < 8 {
-		return "", ErrPasswordLength
-	}
-
-	console, fd, state = getTerminal()
-	verifyPassword, err := console.ReadPassword("Verify password: ")
-	if nil != err {
-		fmt.Printf("verify failed: %s\n", err)
-		return "", ErrVerifiedPassword
-	}
-	terminal.Restore(fd, state)
-
-	if password != verifyPassword {
-		return "", ErrVerifiedPassword
-	}
-
-	return password, nil
-}
-
-func promptCheckPasswordReader() (string, error) {
-	console, fd, state := getTerminal()
-	password, err := console.ReadPassword("password: ")
-	if nil != err {
-		fmt.Printf("Get password fail: %s\n", err)
-		return "", err
-	}
-	terminal.Restore(fd, state)
-
-	return password, nil
-}
-
-func promptAndCheckPassword(issuer *configuration.IdentityType) (*KeyPair, error) {
-	password, err := promptCheckPasswordReader()
-	if nil != err {
-		return nil, err
-	}
-
-	keyPair, err := verifyPassword(password, issuer)
-	if nil != err {
-		return nil, err
-	}
-	return keyPair, nil
-}
-
-func verifyPassword(password string, identity *configuration.IdentityType) (*KeyPair, error) {
-	salt := new(configuration.Salt)
+func VerifyPassword(password string, identity *IdentityType) (*KeyPair, error) {
+	salt := new(Salt)
 	salt.UnmarshalText([]byte(identity.Private_key_config.Salt))
 
 	key, err := generateKey(password, salt)
@@ -474,7 +408,7 @@ func verifyPassword(password string, identity *configuration.IdentityType) (*Key
 	return &keyPair, nil
 }
 
-func publicKeyFromIdentity(name string, identities []configuration.IdentityType) (*KeyPair, error) {
+func PublicKeyFromIdentity(name string, identities []IdentityType) (*KeyPair, error) {
 
 	for _, identity := range identities {
 		if name != identity.Name {

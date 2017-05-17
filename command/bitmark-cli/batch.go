@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/bitmark-inc/bitmarkd/keypair"
 	"github.com/bitmark-inc/bitmarkd/rpc"
 	"net/rpc/jsonrpc"
 	"time"
@@ -85,8 +86,8 @@ loop:
 	}
 
 	type accountAndTransfer struct {
-		Account  *RawKeyPair    `json:"account"`
-		Transfer *transferReply `json:"transfer"`
+		Account  *keypair.RawKeyPair `json:"account"`
+		Transfer *transferReply      `json:"transfer"`
 	}
 
 	accounts := make([]accountAndTransfer, len(issueResult.IssueIds))
@@ -94,7 +95,7 @@ loop:
 	for i, issueId := range issueResult.IssueIds {
 		progress.Printf("create account: %d\n", i)
 
-		rawKeyPair, newOwnerKeyPair, err := makeRawKeyPair("bitmark" != rpcConfig.network)
+		rawKeyPair, newOwnerKeyPair, err := keypair.MakeRawKeyPair("bitmark" != rpcConfig.network)
 		if nil != err {
 			return err
 		}

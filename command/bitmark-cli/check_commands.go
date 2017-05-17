@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/keypair"
 	"github.com/bitmark-inc/exitwithstatus"
 	"os"
 	"strconv"
@@ -110,8 +111,8 @@ func checkOptionalKey(key string) (string, error) {
 		return "", err
 	}
 	switch len(k) {
-	case privateKeySize: // have the full key (private + public)
-	case publicKeyOffset: // just have the private part
+	case keypair.PrivateKeySize: // have the full key (private + public)
+	case keypair.PublicKeyOffset: // just have the private part
 	default:
 		return "", ErrKeyLength
 	}
@@ -130,14 +131,14 @@ func checkPublicKey(key string) (string, error) {
 		return "", err
 	}
 	switch len(k) {
-	case publicKeySize: // have the full key
+	case keypair.PublicKeySize: // have the full key
 	default:
 		return "", ErrKeyLength
 	}
 	return key, nil
 }
 
-func checkIdentity(name string, config *configuration.Configuration) (*configuration.IdentityType, error) {
+func checkIdentity(name string, config *configuration.Configuration) (*keypair.IdentityType, error) {
 	if "" == name {
 		return nil, ErrRequiredIdentity
 	}
@@ -194,7 +195,7 @@ func checkTransferTxId(txId string) (string, error) {
 	return txId, nil
 }
 
-func checkTransferFrom(from string, config *configuration.Configuration) (*configuration.IdentityType, error) {
+func checkTransferFrom(from string, config *configuration.Configuration) (*keypair.IdentityType, error) {
 	if "" == from {
 		from = config.Default_identity
 	}
@@ -254,7 +255,7 @@ func checkAndGetConfig(path string) (*configuration.Configuration, error) {
 
 // note: this returns apointer to tha actial config.Identity[i]
 //       so permanent modifications can be made to the identity
-func getIdentity(name string, config *configuration.Configuration) (*configuration.IdentityType, error) {
+func getIdentity(name string, config *configuration.Configuration) (*keypair.IdentityType, error) {
 	for i, identity := range config.Identity {
 		if name == identity.Name {
 			return &config.Identity[i], nil

@@ -2,12 +2,11 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package main
+package keypair
 
 import (
 	"bytes"
 	"encoding/hex"
-	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 	"testing"
 )
 
@@ -123,7 +122,7 @@ func TestDecryptionToPrivateKey(t *testing.T) {
 
 	for i, item := range control {
 
-		var salt configuration.Salt
+		var salt Salt
 		err := salt.UnmarshalText([]byte(item.salt))
 		if nil != err {
 			t.Fatalf("%d: unmarshal salt failed: %v", i, err)

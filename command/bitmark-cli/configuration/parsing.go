@@ -5,6 +5,7 @@
 package configuration
 
 import (
+	"github.com/bitmark-inc/bitmarkd/keypair"
 	"path/filepath"
 )
 
@@ -12,26 +13,11 @@ const (
 	DefaultNetwork = "testing"
 )
 
-type PrivateKeyConfig struct {
-	Salt string `libucl:"salt"`
-}
-
-// full access to data (includes private data)
-
-type IdentityType struct {
-	Name               string           `libucl:"name"`
-	Description        string           `libucl:"description"`
-	Public_key         string           `libucl:"public_key"`
-	Private_key        string           `libucl:"private_key"`
-	Seed               string           `libucl:"seed"`
-	Private_key_config PrivateKeyConfig `libucl:"private_key_config"`
-}
-
 type Configuration struct {
-	Default_identity string         `libucl:"default_identity"`
-	Network          string         `libucl:"network"`
-	Connect          string         `libucl:"connect"`
-	Identity         []IdentityType `libucl:"identity"`
+	Default_identity string                 `libucl:"default_identity"`
+	Network          string                 `libucl:"network"`
+	Connect          string                 `libucl:"connect"`
+	Identity         []keypair.IdentityType `libucl:"identity"`
 }
 
 // form of configuration in the config file
