@@ -5,6 +5,7 @@
 package configuration
 
 import (
+	"github.com/bitmark-inc/bitmarkd/configuration"
 	"github.com/bitmark-inc/bitmarkd/keypair"
 	"path/filepath"
 )
@@ -68,7 +69,7 @@ func GetConfiguration(configurationFileName string) (*Configuration, error) {
 	}
 
 	options := &Configuration{}
-	if err := readConfigurationFile(configurationFileName, options); err != nil {
+	if err := configuration.ParseConfigurationFile(configurationFileName, options); err != nil {
 		return nil, err
 	}
 
@@ -83,7 +84,7 @@ func GetInfoConfiguration(configurationFileName string) (*InfoConfiguration, err
 	}
 
 	options := &InfoConfiguration{}
-	if err := readConfigurationFile(configurationFileName, options); err != nil {
+	if err := configuration.ParseConfigurationFile(configurationFileName, options); err != nil {
 		return nil, err
 	}
 
