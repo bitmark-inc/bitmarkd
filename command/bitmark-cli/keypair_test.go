@@ -7,7 +7,7 @@ package main
 import (
 	"bytes"
 	"encoding/hex"
-	"github.com/bitmark-inc/bitmark-cli/configuration"
+	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 	"testing"
 )
 

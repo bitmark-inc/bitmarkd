@@ -11,9 +11,9 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"github.com/bitmark-inc/bitmark-cli/configuration"
-	"github.com/bitmark-inc/bitmark-cli/fault"
 	"github.com/bitmark-inc/bitmarkd/account"
+	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/go-argon2"
 	"golang.org/x/crypto/ed25519"
@@ -28,6 +28,14 @@ const (
 	publicKeySize   = ed25519.PublicKeySize
 	privateKeySize  = ed25519.PrivateKeySize
 	publicKeyOffset = privateKeySize - publicKeySize
+)
+
+var (
+	ErrInvalidPrivateKey      = fault.InvalidError("invalid private key")
+	ErrPasswordLength         = fault.InvalidError("password length is invalid")
+	ErrUnableToRegenerateKeys = fault.InvalidError("unable to regenerate keys")
+	ErrVerifiedPassword       = fault.InvalidError("verified password is different")
+	ErrWrongPassword          = fault.InvalidError("wrong password")
 )
 
 var passwordConsole *terminal.Terminal
@@ -142,10 +150,10 @@ func makeKeyPair(privateKeyStr string, password string, test bool) (*EncryptedKe
 				return nil, nil, err
 			}
 			if !bytes.Equal(privateKey, prv) {
-				return nil, nil, fault.ErrUnableToRegenerateKeys
+				return nil, nil, ErrUnableToRegenerateKeys
 			}
 			if !bytes.Equal(publicKey, pub) {
-				return nil, nil, fault.ErrUnableToRegenerateKeys
+				return nil, nil, ErrUnableToRegenerateKeys
 			}
 
 		} else if len(privateKey) == publicKeyOffset {
@@ -156,12 +164,12 @@ func makeKeyPair(privateKeyStr string, password string, test bool) (*EncryptedKe
 				return nil, nil, err
 			}
 			if !bytes.Equal(privateKey, prv[:publicKeyOffset]) {
-				return nil, nil, fault.ErrUnableToRegenerateKeys
+				return nil, nil, ErrUnableToRegenerateKeys
 			}
 			privateKey = prv
 			publicKey = pub
 		} else {
-			return nil, nil, fault.ErrInvalidPrivateKey
+			return nil, nil, ErrInvalidPrivateKey
 		}
 
 	}
@@ -254,7 +262,7 @@ func encryptPrivateKey(plaintext []byte, key []byte) ([]byte, error) {
 	}
 
 	if len(plaintext) != privateKeySize {
-		return nil, fault.ErrKeyLength
+		return nil, ErrKeyLength
 	}
 
 	ciphertext := make([]byte, aes.BlockSize+privateKeySize)
@@ -275,7 +283,7 @@ func decryptPrivateKey(ciphertext []byte, key []byte) ([]byte, error) {
 	}
 
 	if len(ciphertext) != aes.BlockSize+privateKeySize {
-		return nil, fault.ErrKeyLength
+		return nil, ErrKeyLength
 	}
 
 	iv := ciphertext[:aes.BlockSize]
@@ -297,7 +305,7 @@ func encryptSeed(seed string, key []byte) ([]byte, error) {
 	}
 
 	const countBytes = 2
-	padding := aes.BlockSize - ((len + countBytes) % aes.BlockSize)
+	padding := aes.BlockSize - (len+countBytes)%aes.BlockSize
 
 	plaintext := make([]byte, len+countBytes+padding)
 	plaintext[0] = byte(len / 256)
@@ -377,19 +385,19 @@ func promptPasswordReader() (string, error) {
 
 	passwordLen := len(password)
 	if passwordLen < 8 {
-		return "", fault.ErrPasswordLength
+		return "", ErrPasswordLength
 	}
 
 	console, fd, state = getTerminal()
 	verifyPassword, err := console.ReadPassword("Verify password: ")
 	if nil != err {
 		fmt.Printf("verify failed: %s\n", err)
-		return "", fault.ErrVerifiedPassword
+		return "", ErrVerifiedPassword
 	}
 	terminal.Restore(fd, state)
 
 	if password != verifyPassword {
-		return "", fault.ErrVerifiedPassword
+		return "", ErrVerifiedPassword
 	}
 
 	return password, nil
@@ -445,7 +453,7 @@ func verifyPassword(password string, identity *configuration.IdentityType) (*Key
 	}
 
 	if !checkSignature(publicKey, privateKey) {
-		return nil, fault.ErrWrongPassword
+		return nil, ErrWrongPassword
 	}
 
 	ciphertext, err = hex.DecodeString(identity.Seed)
@@ -482,5 +490,5 @@ func publicKeyFromIdentity(name string, identities []configuration.IdentityType)
 		}
 		return &keyPair, nil
 	}
-	return nil, fault.ErrNotFoundIdentity
+	return nil, ErrNotFoundIdentity
 }

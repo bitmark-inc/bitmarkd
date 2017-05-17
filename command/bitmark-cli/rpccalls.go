@@ -7,10 +7,9 @@ package main
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/bitmark-inc/bitmark-cli/fault"
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/currency"
-	bFault "github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
@@ -27,6 +26,12 @@ import (
 const (
 	paymentCommand = "bitmark-pay --json"
 	paymentNetwork = "--network="
+)
+
+var (
+	ErrMakeIssueFail    = fault.ProcessError("make issue failed")
+	ErrAssetRequestFail = fault.ProcessError("send asset request failed")
+	ErrMakeTransferFail = fault.ProcessError("make transfer failed")
 )
 
 type assetData struct {
@@ -120,26 +125,26 @@ func makeAsset(client *netrpc.Client, network string, assetConfig assetData, ver
 	}
 
 	if 1 != len(getReply.Assets) {
-		return nil, fault.ErrAssetRequestFail
+		return nil, ErrAssetRequestFail
 	}
 
 	switch getReply.Assets[0].Record {
 	case "AssetData":
 		ar, ok := getReply.Assets[0].Data.(map[string]interface{})
 		if !ok {
-			return nil, fault.ErrAssetRequestFail
+			return nil, ErrAssetRequestFail
 		}
 
 		if ar["metadata"] != assetConfig.metadata {
-			return nil, fault.ErrAssetRequestFail
+			return nil, ErrAssetRequestFail
 		}
 		if ar["name"] != assetConfig.name {
-			return nil, fault.ErrAssetRequestFail
+			return nil, ErrAssetRequestFail
 		}
 
 		buffer, ok := getReply.Assets[0].AssetIndex.(string)
 		if !ok {
-			return nil, fault.ErrAssetRequestFail
+			return nil, ErrAssetRequestFail
 		}
 		var ai transactionrecord.AssetIndex
 		err := ai.UnmarshalText([]byte(buffer))
@@ -150,7 +155,7 @@ func makeAsset(client *netrpc.Client, network string, assetConfig assetData, ver
 
 	default:
 		if nil != getReply.Assets[0].Data {
-			return nil, fault.ErrAssetRequestFail
+			return nil, ErrAssetRequestFail
 		}
 	}
 
@@ -171,7 +176,7 @@ func makeAsset(client *netrpc.Client, network string, assetConfig assetData, ver
 	}
 
 	packed, err := r.Pack(registrantAddress)
-	if bFault.ErrInvalidSignature != err {
+	if fault.ErrInvalidSignature != err {
 		return nil, err
 	}
 
@@ -214,7 +219,7 @@ func makeIssue(network string, issueConfig issueData, nonce uint64) (*transactio
 	}
 
 	packed, err := r.Pack(issuerAddress)
-	if bFault.ErrInvalidSignature != err {
+	if fault.ErrInvalidSignature != err {
 		return nil, err
 	}
 
@@ -250,7 +255,7 @@ func doIssues(client *netrpc.Client, network string, issueConfig issueData, verb
 			return nil, err
 		}
 		if nil == issue {
-			return nil, fault.ErrMakeIssueFail
+			return nil, ErrMakeIssueFail
 		}
 		issues[i] = issue
 	}
@@ -313,7 +318,7 @@ func makeTransfer(network string, link merkle.Digest, owner *KeyPair, newOwner *
 	}
 
 	packed, err := r.Pack(newOwnerAddress)
-	if bFault.ErrInvalidSignature != err {
+	if fault.ErrInvalidSignature != err {
 		return nil, err
 	}
 
@@ -342,7 +347,7 @@ func doTransfer(client *netrpc.Client, network string, transferConfig transferDa
 		return nil, err
 	}
 	if nil == transfer {
-		return nil, fault.ErrMakeTransferFail
+		return nil, ErrMakeTransferFail
 	}
 
 	printJson("Transfer Request", transfer, verbose)

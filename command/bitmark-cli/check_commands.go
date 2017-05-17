@@ -6,18 +6,35 @@ package main
 
 import (
 	"encoding/hex"
-	"github.com/bitmark-inc/bitmark-cli/configuration"
-	"github.com/bitmark-inc/bitmark-cli/fault"
+	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/exitwithstatus"
 	"os"
 	"strconv"
 	"strings"
 )
 
+var (
+	ErrAssetMetadataMustBeMap   = fault.InvalidError("asset metadata must be map")
+	ErrRequiredAssetFingerprint = fault.InvalidError("asset fingerprint is required")
+	ErrRequiredAssetMetadata    = fault.InvalidError("asset metadata is required")
+	ErrRequiredAssetName        = fault.InvalidError("asset name is required")
+	ErrRequiredConfigFile       = fault.InvalidError("config file is required")
+	ErrRequiredConnect          = fault.InvalidError("connect is required")
+	ErrRequiredDescription      = fault.InvalidError("description is required")
+	ErrRequiredFileName         = fault.InvalidError("file name is required")
+	ErrRequiredIdentity         = fault.InvalidError("identity is required")
+	ErrRequiredPayId            = fault.InvalidError("payment id is required")
+	ErrRequiredPublicKey        = fault.InvalidError("public key is required")
+	ErrRequiredReceipt          = fault.InvalidError("receipt id is required")
+	ErrRequiredTransferTo       = fault.InvalidError("transfer to is required")
+	ErrRequiredTransferTxId     = fault.InvalidError("transaction id is required")
+)
+
 // config is required
 func checkConfigFile(file string) (string, error) {
 	if "" == file {
-		return "", fault.ErrRequiredConfigFile
+		return "", ErrRequiredConfigFile
 	}
 
 	file = os.ExpandEnv(file)
@@ -27,7 +44,7 @@ func checkConfigFile(file string) (string, error) {
 // identity is required, but not check the config file
 func checkName(name string) (string, error) {
 	if "" == name {
-		return "", fault.ErrRequiredIdentity
+		return "", ErrRequiredIdentity
 	}
 
 	return name, nil
@@ -36,7 +53,7 @@ func checkName(name string) (string, error) {
 // check for non-blank file name
 func checkFileName(fileName string) (string, error) {
 	if "" == fileName {
-		return "", fault.ErrRequiredFileName
+		return "", ErrRequiredFileName
 	}
 
 	return fileName, nil
@@ -63,7 +80,7 @@ func checkNetwork(network string) string {
 // connect is required.
 func checkConnect(connect string) (string, error) {
 	if "" == connect {
-		return "", fault.ErrRequiredConnect
+		return "", ErrRequiredConnect
 	}
 
 	return connect, nil
@@ -72,7 +89,7 @@ func checkConnect(connect string) (string, error) {
 // description is required
 func checkDescription(description string) (string, error) {
 	if "" == description {
-		return "", fault.ErrRequiredDescription
+		return "", ErrRequiredDescription
 	}
 
 	return description, nil
@@ -96,7 +113,7 @@ func checkOptionalKey(key string) (string, error) {
 	case privateKeySize: // have the full key (private + public)
 	case publicKeyOffset: // just have the private part
 	default:
-		return "", fault.ErrKeyLength
+		return "", ErrKeyLength
 	}
 	return key, nil
 }
@@ -105,7 +122,7 @@ func checkOptionalKey(key string) (string, error) {
 // if present must 64 hex chars
 func checkPublicKey(key string) (string, error) {
 	if "" == key {
-		return "", fault.ErrRequiredPublicKey
+		return "", ErrRequiredPublicKey
 
 	}
 	k, err := hex.DecodeString(key)
@@ -115,14 +132,14 @@ func checkPublicKey(key string) (string, error) {
 	switch len(k) {
 	case publicKeySize: // have the full key
 	default:
-		return "", fault.ErrKeyLength
+		return "", ErrKeyLength
 	}
 	return key, nil
 }
 
 func checkIdentity(name string, config *configuration.Configuration) (*configuration.IdentityType, error) {
 	if "" == name {
-		return nil, fault.ErrRequiredIdentity
+		return nil, ErrRequiredIdentity
 	}
 
 	return getIdentity(name, config)
@@ -131,7 +148,7 @@ func checkIdentity(name string, config *configuration.Configuration) (*configura
 // asset name is required field
 func checkAssetName(name string) (string, error) {
 	if "" == name {
-		return "", fault.ErrRequiredAssetName
+		return "", ErrRequiredAssetName
 	}
 	return name, nil
 }
@@ -139,7 +156,7 @@ func checkAssetName(name string) (string, error) {
 // asset fingerprint is required field
 func checkAssetFingerprint(fingerprint string) (string, error) {
 	if "" == fingerprint {
-		return "", fault.ErrRequiredAssetFingerprint
+		return "", ErrRequiredAssetFingerprint
 	}
 	return fingerprint, nil
 }
@@ -147,14 +164,14 @@ func checkAssetFingerprint(fingerprint string) (string, error) {
 // asset metadata is required field
 func checkAssetMetadata(meta string) (string, error) {
 	if "" == meta {
-		return "", fault.ErrRequiredAssetMetadata
+		return "", ErrRequiredAssetMetadata
 	}
 	meta, err := strconv.Unquote(`"` + meta + `"`)
 	if nil != err {
 		return "", err
 	}
 	if 1 == len(strings.Split(meta, "\u0000"))%2 {
-		return "", fault.ErrAssetMetadataMustBeMap
+		return "", ErrAssetMetadataMustBeMap
 	}
 	return meta, nil
 }
@@ -171,7 +188,7 @@ func checkAssetQuantity(quantity string) (int, error) {
 // transfer txid is required field
 func checkTransferTxId(txId string) (string, error) {
 	if "" == txId {
-		return "", fault.ErrRequiredTransferTxId
+		return "", ErrRequiredTransferTxId
 	}
 
 	return txId, nil
@@ -188,7 +205,7 @@ func checkTransferFrom(from string, config *configuration.Configuration) (*confi
 // transfer to is required field
 func checkTransferTo(to string) (string, error) {
 	if "" == to {
-		return "", fault.ErrRequiredTransferTo
+		return "", ErrRequiredTransferTo
 	}
 	return to, nil
 }
@@ -196,7 +213,7 @@ func checkTransferTo(to string) (string, error) {
 // pay id is required field
 func checkPayId(payId string) (string, error) {
 	if "" == payId {
-		return "", fault.ErrRequiredPayId
+		return "", ErrRequiredPayId
 	}
 
 	return payId, nil
@@ -205,7 +222,7 @@ func checkPayId(payId string) (string, error) {
 // receipt is required field
 func checkReceipt(receipt string) (string, error) {
 	if "" == receipt {
-		return "", fault.ErrRequiredReceipt
+		return "", ErrRequiredReceipt
 	}
 
 	return receipt, nil
@@ -244,7 +261,7 @@ func getIdentity(name string, config *configuration.Configuration) (*configurati
 		}
 	}
 
-	return nil, fault.ErrNotFoundIdentity
+	return nil, ErrNotFoundIdentity
 }
 
 // check if file exists

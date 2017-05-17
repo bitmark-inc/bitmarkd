@@ -8,7 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/bitmark-inc/bitmark-cli/configuration"
+	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/codegangsta/cli"
 	"golang.org/x/crypto/ed25519"

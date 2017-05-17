@@ -8,12 +8,17 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"github.com/bitmark-inc/bitmark-cli/fault"
 	"io"
+
+	"github.com/bitmark-inc/bitmarkd/fault"
 )
 
 const (
 	saltSize = 16
+)
+
+var (
+	ErrUnmarshalTextFail = fault.ProcessError("unmarshal text failed")
 )
 
 type Salt [saltSize]byte
@@ -58,7 +63,7 @@ func (salt *Salt) UnmarshalText(s []byte) error {
 
 	if saltSize != byteCount {
 		fmt.Printf("invalid byte\n")
-		return fault.ErrUnmarshalTextFail
+		return ErrUnmarshalTextFail
 	}
 	copy(salt[:], buffer)
 	return nil
