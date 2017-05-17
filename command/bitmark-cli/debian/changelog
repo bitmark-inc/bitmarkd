@@ -1,0 +1,6 @@
+bitmark-cli (1.0+20160226.2+gitf5c23ca-1) wily; urgency=medium
+
+  * Initial release (Closes: #0, #0)
+  * Document initial release.
+
+ -- Bitmark Developers <developers@bitmark.com>  Fri, 19 Feb 2016 18:23:30 +0800

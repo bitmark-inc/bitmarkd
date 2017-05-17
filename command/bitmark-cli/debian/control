@@ -1,0 +1,22 @@
+Source: bitmark-cli
+Section: net
+Priority: optional
+Maintainer: Bitmark Developers <developers@bitmark.com>
+Uploaders: Bitmark Developers <developers@bitmark.com>
+Build-Depends: debhelper (>=9),
+               dh-systemd,
+               autoconf, automake, libtool, pkgconf,
+               libzmq3-dev,
+               golang [!powerpc],
+               gccgo [powerpc]
+Standards-Version: 3.9.6
+Homepage: https://bitmark.com
+Vcs-Git: git@github.com:bitmark-inc/bitmark-cli.git
+#Vcs-Browser: http://anonscm.debian.org/cgit/server-control/server-control.git
+
+Package: bitmark-cli
+Architecture: linux-any
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Recommends:
+Description: Bitmark command line interface
+ This is a command line program for bitmark.
