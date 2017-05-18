@@ -107,7 +107,7 @@ func Initialise() error {
 	globalData.log.Info("start background…")
 
 	// list of background processes to start
-	var processes = background.Processes{
+	processes := background.Processes{
 		&globalData.verifier,
 		&globalData.rebroadcaster,
 	}

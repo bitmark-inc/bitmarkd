@@ -21,7 +21,7 @@ func Example() {
 	}
 
 	// list of background processes to start
-	var processes = background.Processes{
+	processes := background.Processes{
 		proc,
 	}
 

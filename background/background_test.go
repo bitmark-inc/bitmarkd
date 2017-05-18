@@ -31,7 +31,7 @@ func TestBackground(t *testing.T) {
 	}
 
 	// list of background processes to start
-	var processes = background.Processes{
+	processes := background.Processes{
 		proc1,
 		proc2,
 	}

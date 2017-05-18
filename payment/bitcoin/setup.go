@@ -229,13 +229,13 @@ func Initialise(configuration *Configuration) error {
 	globalData.log.Info("start background…")
 
 	// list of background processes to start
-	var processes = background.Processes{
-		&globalData,
-	}
+	processes := background.Processes{}
 
-	// this is optional
+	// if zero conf mode only start zero conf
 	if zeroconf {
 		processes = append(processes, &globalData.zeroconf)
+	} else {
+		processes = append(processes, &globalData)
 	}
 
 	globalData.background = background.Start(processes, globalData.log)

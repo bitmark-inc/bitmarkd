@@ -65,7 +65,7 @@ func Initialise() error {
 	globalData.cache = make(map[transactionrecord.AssetIndex]*cacheData)
 
 	// list of background processes to start
-	var processes = background.Processes{
+	processes := background.Processes{
 		&globalData.expiry,
 	}
 

@@ -91,7 +91,9 @@ func (sbsc *zcSubscriber) initialise(subscribe []string) error {
 	// error handling
 fail:
 	for _, s := range sbsc.clients {
-		s.Close()
+		if nil != s {
+			s.Close()
+		}
 	}
 	return errX
 }

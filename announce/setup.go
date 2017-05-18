@@ -165,7 +165,7 @@ func Initialise(nodesDomain string) error {
 	// start background processes
 	globalData.log.Info("start background…")
 
-	var processes = background.Processes{
+	processes := background.Processes{
 		&globalData.ann,
 	}
 

@@ -91,7 +91,7 @@ func Initialise() error {
 	// start background processes
 	log.Info("start background…")
 
-	var processes = background.Processes{
+	processes := background.Processes{
 		&globalData.blk,
 	}
 
