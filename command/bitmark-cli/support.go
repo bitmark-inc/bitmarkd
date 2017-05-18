@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
+	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
 	"github.com/bitmark-inc/bitmarkd/keypair"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/codegangsta/cli"
@@ -35,13 +36,13 @@ func addIdentity(configs *configuration.Configuration, name string, description 
 		}
 	}
 
-	encrypted, privateKeyConfig, err := keypair.MakeKeyPair(privateKeyStr, password, testnet)
+	encrypted, privateKeyConfig, err := encrypt.MakeKeyPair(privateKeyStr, password, testnet)
 	if nil != err {
 		fmt.Printf("error generating key pair: %s\n", err)
 		return false
 	}
 
-	identity := keypair.IdentityType{
+	identity := encrypt.IdentityType{
 		Name:               name,
 		Description:        description,
 		Public_key:         encrypted.PublicKey,
@@ -205,7 +206,7 @@ func getDefaultRawKeyPair(c *cli.Context, globals globalFlags) {
 			exitwithstatus.Message("Error: %s", err)
 		}
 	} else {
-		keyPair, err = keypair.VerifyPassword(globals.password, identity)
+		keyPair, err = encrypt.VerifyPassword(globals.password, identity)
 		if nil != err {
 			exitwithstatus.Message("Error: %s", err)
 		}
@@ -264,7 +265,7 @@ func changePassword(c *cli.Context, globals globalFlags) {
 			exitwithstatus.Message("Error: %s", err)
 		}
 	} else {
-		keyPair, err = keypair.VerifyPassword(globals.password, identity)
+		keyPair, err = encrypt.VerifyPassword(globals.password, identity)
 		if nil != err {
 			exitwithstatus.Message("Error: %s", err)
 		}
@@ -287,7 +288,7 @@ func changePassword(c *cli.Context, globals globalFlags) {
 		input = "SEED:" + keyPair.Seed
 	}
 
-	encrypted, privateKeyConfig, err := keypair.MakeKeyPair(input, newPassword, testnet)
+	encrypted, privateKeyConfig, err := encrypt.MakeKeyPair(input, newPassword, testnet)
 	if nil != err {
 		exitwithstatus.Message("make key pair error: %s", err)
 	}

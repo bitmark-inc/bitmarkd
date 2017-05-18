@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
+	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
 	"github.com/bitmark-inc/bitmarkd/keypair"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/codegangsta/cli"
@@ -103,7 +104,7 @@ func runSetup(c *cli.Context, globals globalFlags) {
 		Default_identity: name,
 		Network:          network,
 		Connect:          connect,
-		Identity:         make([]keypair.IdentityType, 0),
+		Identity:         make([]encrypt.IdentityType, 0),
 	}
 
 	// flag to indicate testnet keys
@@ -218,12 +219,12 @@ func runCreate(c *cli.Context, globals globalFlags, batchMode bool) {
 		if nil != err {
 			exitwithstatus.Message("Error: %s", err)
 		}
-		registrant, err = keypair.VerifyPassword(password, issuer)
+		registrant, err = encrypt.VerifyPassword(password, issuer)
 		if nil != err {
 			exitwithstatus.Message("Error: %s", err)
 		}
 	} else if "" != globals.password {
-		registrant, err = keypair.VerifyPassword(globals.password, issuer)
+		registrant, err = encrypt.VerifyPassword(globals.password, issuer)
 		if nil != err {
 			exitwithstatus.Message("Error: %s", err)
 		}
@@ -303,12 +304,12 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 		if nil != err {
 			exitwithstatus.Message("Error: %s", err)
 		}
-		ownerKeyPair, err = keypair.VerifyPassword(password, from)
+		ownerKeyPair, err = encrypt.VerifyPassword(password, from)
 		if nil != err {
 			exitwithstatus.Message("Error: %s", err)
 		}
 	} else if "" != globals.password {
-		ownerKeyPair, err = keypair.VerifyPassword(globals.password, from)
+		ownerKeyPair, err = encrypt.VerifyPassword(globals.password, from)
 		if nil != err {
 			exitwithstatus.Message("Error: %s", err)
 		}
@@ -330,14 +331,14 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 	newPublicKey, err := hex.DecodeString(to)
 	if nil != err {
 
-		newOwnerKeyPair, err = keypair.PublicKeyFromIdentity(to, configData.Identity)
+		newOwnerKeyPair, err = encrypt.PublicKeyFromIdentity(to, configData.Identity)
 		if nil != err {
 			exitwithstatus.Message("receiver identity error: %s", err)
 		}
 	} else {
 		newOwnerKeyPair = &keypair.KeyPair{}
-		if len(newPublicKey) != keypair.PublicKeySize {
-			exitwithstatus.Message("hex public key must be %d bytes", keypair.PublicKeySize)
+		if len(newPublicKey) != encrypt.PublicKeySize {
+			exitwithstatus.Message("hex public key must be %d bytes", encrypt.PublicKeySize)
 		}
 		newOwnerKeyPair.PublicKey = newPublicKey
 	}
@@ -575,12 +576,12 @@ func runSign(c *cli.Context, globals globalFlags) {
 		if nil != err {
 			exitwithstatus.Message("Error: %s", err)
 		}
-		ownerKeyPair, err = keypair.VerifyPassword(password, from)
+		ownerKeyPair, err = encrypt.VerifyPassword(password, from)
 		if nil != err {
 			exitwithstatus.Message("Error: %s", err)
 		}
 	} else if "" != globals.password {
-		ownerKeyPair, err = keypair.VerifyPassword(globals.password, from)
+		ownerKeyPair, err = encrypt.VerifyPassword(globals.password, from)
 		if nil != err {
 			exitwithstatus.Message("Error: %s", err)
 		}

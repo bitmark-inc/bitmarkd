@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/keypair"
 	"golang.org/x/crypto/ssh/terminal"
@@ -76,13 +77,13 @@ func promptCheckPasswordReader() (string, error) {
 	return password, nil
 }
 
-func promptAndCheckPassword(issuer *keypair.IdentityType) (*keypair.KeyPair, error) {
+func promptAndCheckPassword(issuer *encrypt.IdentityType) (*keypair.KeyPair, error) {
 	password, err := promptCheckPasswordReader()
 	if nil != err {
 		return nil, err
 	}
 
-	keyPair, err := keypair.VerifyPassword(password, issuer)
+	keyPair, err := encrypt.VerifyPassword(password, issuer)
 	if nil != err {
 		return nil, err
 	}

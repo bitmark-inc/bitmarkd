@@ -5,8 +5,8 @@
 package configuration
 
 import (
+	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
 	"github.com/bitmark-inc/bitmarkd/configuration"
-	"github.com/bitmark-inc/bitmarkd/keypair"
 	"path/filepath"
 )
 
@@ -18,7 +18,7 @@ type Configuration struct {
 	Default_identity string                 `libucl:"default_identity"`
 	Network          string                 `libucl:"network"`
 	Connect          string                 `libucl:"connect"`
-	Identity         []keypair.IdentityType `libucl:"identity"`
+	Identity         []encrypt.IdentityType `libucl:"identity"`
 }
 
 // form of configuration in the config file
