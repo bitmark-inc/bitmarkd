@@ -173,6 +173,7 @@ func checkForPaymentTransaction(log *logger.L, hexTx string) {
 	// check but should eliminate quite a lot of transactions and
 	// save on calls to decode.
 	if !strings.Contains(hexTx, bitcoin_OP_RETURN_HEX_CODE) {
+		log.Debug("op_return not present")
 		return
 	}
 
@@ -183,6 +184,7 @@ func checkForPaymentTransaction(log *logger.L, hexTx string) {
 		log.Errorf("failed to decode transaction: %q  error: %s", hexTx, err)
 		return
 	}
+	log.Debugf("decoded tx: %#v", reply)
 
 	// scan all Vout looking for script with OP_RETURN
 	for j, vout := range reply.Vout {

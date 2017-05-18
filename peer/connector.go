@@ -414,7 +414,7 @@ client_loop:
 
 	retrying:
 		for retry := 1; retry <= 3; retry += 1 {
-			log.Debugf("highestBlock: retry: %d", retry)
+			log.Debugf("highestBlock: client: %s retry: %d", client, retry)
 
 			err := client.Send("N")
 			if nil != err {
@@ -430,7 +430,7 @@ client_loop:
 			data, err = client.Receive(0)
 			if nil != err {
 				log.Errorf("highestBlock: receive error: %v", err)
-				log.Error("highestBlock: reconnecting…")
+				log.Errorf("highestBlock: client: %s reconnecting…", client)
 				err := client.Reconnect()
 				if nil != err {
 					log.Errorf("highestBlock: reconnect error: %v", err)

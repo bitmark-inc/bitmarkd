@@ -1,3 +1,10 @@
+bitmarkd (4.6-1) unstable; urgency=medium
+
+  * log client address on highest block error
+  * add some extra zero confirm logs
+
+ -- Christopher Hall <hsw@bitmark.com>  Thu, 18 May 2017 03:17:29 +0000
+
 bitmarkd (4.5-2) unstable; urgency=medium
 
   * change the distribution
