@@ -49,3 +49,13 @@ Description: Bitmark Blockchain information display
  This is a debugging  program for the Bitmark P2P network.
  .
  This displays information by sending RPC calls to a bitmarkd server.
+
+Package: bitmark-cli
+Architecture: linux-any
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Recommends:
+Description: Bitmark Blockchain command line program
+ This is a debugging  program for the Bitmark P2P network.
+ .
+ This updates or displays information by sending RPC calls to a
+ bitmarkd server.
