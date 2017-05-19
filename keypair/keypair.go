@@ -30,13 +30,12 @@ type RawKeyPair struct {
 	PrivateKey string `json:"private_key"`
 }
 
-func MakeRawKeyPair(test bool) (*RawKeyPair, *KeyPair, error) {
-
+func NewSeed(test bool) (string, error) {
 	// generate new seed
 	seedCore := make([]byte, 32)
 	n, err := rand.Read(seedCore)
 	if nil != err {
-		return nil, nil, err
+		return "", err
 	}
 	if 32 != n {
 		panic("too few random bytes")
@@ -51,7 +50,14 @@ func MakeRawKeyPair(test bool) (*RawKeyPair, *KeyPair, error) {
 	packedSeed = append(packedSeed, checksum[:4]...)
 
 	seed := util.ToBase58(packedSeed)
+	return seed, nil
+}
 
+func MakeRawKeyPair(test bool) (*RawKeyPair, *KeyPair, error) {
+	seed, err := NewSeed(test)
+	if err != nil {
+		return nil, nil, err
+	}
 	return MakeRawKeyPairFromSeed(seed, test)
 }
 
