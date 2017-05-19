@@ -195,7 +195,7 @@ func checkForPaymentTransaction(log *logger.L, hexTx string) {
 			if nil != err {
 				log.Errorf("failed to get pay id error: %s", err)
 			} else {
-				log.Infof("possible tx id:: %s", reply.TxId)
+				log.Infof("possible tx id: %s", reply.TxId)
 				log.Debugf("possible transaction: %#v", reply)
 				scanTx(log, payId, j, &reply)
 			}
