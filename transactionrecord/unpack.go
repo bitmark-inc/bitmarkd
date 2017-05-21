@@ -21,7 +21,7 @@ import (
 // or:
 //   switch tx := result.(type) {
 //   case *transaction.Registration:
-func (record Packed) Unpack() (Transaction, int, error) {
+func (record Packed) Unpack(testing ...bool) (Transaction, int, error) {
 
 	recordType, n := util.FromVarint64(record)
 
@@ -52,6 +52,9 @@ func (record Packed) Unpack() (Transaction, int, error) {
 		owner, err := account.AccountFromBytes(record[n : n+int(ownerLength)])
 		if nil != err {
 			return nil, 0, err
+		}
+		if len(testing) > 0 && owner.IsTesting() != testing[0] {
+			return nil, 0, fault.ErrWrongNetworkForPublicKey
 		}
 		n += int(ownerLength)
 
@@ -107,6 +110,9 @@ func (record Packed) Unpack() (Transaction, int, error) {
 		if nil != err {
 			return nil, 0, err
 		}
+		if len(testing) > 0 && registrant.IsTesting() != testing[0] {
+			return nil, 0, fault.ErrWrongNetworkForPublicKey
+		}
 		n += int(registrantLength)
 
 		// signature is remainder of record
@@ -143,6 +149,9 @@ func (record Packed) Unpack() (Transaction, int, error) {
 		owner, err := account.AccountFromBytes(record[n : n+int(ownerLength)])
 		if nil != err {
 			return nil, 0, err
+		}
+		if len(testing) > 0 && owner.IsTesting() != testing[0] {
+			return nil, 0, fault.ErrWrongNetworkForPublicKey
 		}
 		n += int(ownerLength)
 
@@ -223,6 +232,9 @@ func (record Packed) Unpack() (Transaction, int, error) {
 		owner, err := account.AccountFromBytes(record[n : n+int(ownerLength)])
 		if nil != err {
 			return nil, 0, err
+		}
+		if len(testing) > 0 && owner.IsTesting() != testing[0] {
+			return nil, 0, fault.ErrWrongNetworkForPublicKey
 		}
 		n += int(ownerLength)
 

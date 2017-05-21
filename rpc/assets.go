@@ -112,7 +112,7 @@ loop:
 			}
 		}
 
-		assetTx, _, err := transactionrecord.Packed(packedAsset).Unpack()
+		assetTx, _, err := transactionrecord.Packed(packedAsset).Unpack(mode.IsTesting())
 		if nil != err {
 			continue loop
 		}

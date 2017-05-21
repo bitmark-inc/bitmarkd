@@ -346,7 +346,7 @@ func processAssets(packed []byte) error {
 
 	ok := false
 	for 0 != len(packed) {
-		transaction, n, err := transactionrecord.Packed(packed).Unpack()
+		transaction, n, err := transactionrecord.Packed(packed).Unpack(mode.IsTesting())
 		if nil != err {
 			return err
 		}
@@ -389,7 +389,7 @@ func processIssues(packed, verified []byte) error {
 
 	issues := make([]*transactionrecord.BitmarkIssue, 0, 100)
 	for 0 != len(packedIssues) {
-		transaction, n, err := packedIssues.Unpack()
+		transaction, n, err := packedIssues.Unpack(mode.IsTesting())
 		if nil != err {
 			return err
 		}
@@ -435,7 +435,7 @@ func processTransfer(packed []byte) error {
 		return fault.ErrNotAvailableDuringSynchronise
 	}
 
-	transaction, _, err := transactionrecord.Packed(packed).Unpack()
+	transaction, _, err := transactionrecord.Packed(packed).Unpack(mode.IsTesting())
 	if nil != err {
 		return err
 	}

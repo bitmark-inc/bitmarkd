@@ -7,7 +7,6 @@ package account
 import (
 	"bytes"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/sha3"
@@ -48,6 +47,7 @@ type AccountInterface interface {
 	Bytes() []byte
 	String() string
 	MarshalText() ([]byte, error)
+	IsTesting() bool
 }
 
 // for ed25519 signatures
@@ -89,9 +89,6 @@ func AccountFromBase58(accountBase58Encoded string) (*Account, error) {
 
 	// network selection
 	isTest := 0 != keyVariant&testKeyCode
-	if mode.IsTesting() != isTest {
-		return nil, fault.ErrWrongNetworkForPublicKey
-	}
 
 	// Compute key length
 	keyLength := len(accountDecoded) - keyVariantLength - checksumLength
@@ -159,9 +156,6 @@ func AccountFromBytes(accountBytes []byte) (*Account, error) {
 
 	// network selection
 	isTest := 0 != keyVariant&testKeyCode
-	if mode.IsTesting() != isTest {
-		return nil, fault.ErrWrongNetworkForPublicKey
-	}
 
 	// Compute key length
 	keyLength := len(accountBytes) - keyVariantLength
@@ -257,6 +251,11 @@ func (account ED25519Account) MarshalText() ([]byte, error) {
 	return []byte(account.String()), nil
 }
 
+// return whether the public key is in test mode or not
+func (account ED25519Account) IsTesting() bool {
+	return account.Test
+}
+
 // Nothing
 // -------
 
@@ -295,4 +294,9 @@ func (account *NothingAccount) String() string {
 // convert an account to its Base58 JSON form
 func (account NothingAccount) MarshalText() ([]byte, error) {
 	return []byte(account.String()), nil
+}
+
+// return whether the public key is in test mode or not
+func (account NothingAccount) IsTesting() bool {
+	return account.Test
 }

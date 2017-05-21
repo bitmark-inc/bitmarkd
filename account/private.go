@@ -7,7 +7,6 @@ package account
 import (
 	"bytes"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/nacl/secretbox"
@@ -25,6 +24,7 @@ type PrivateKeyInterface interface {
 	PrivateKeyBytes() []byte
 	Bytes() []byte
 	String() string
+	IsTesting() bool
 	MarshalText() ([]byte, error)
 }
 
@@ -141,9 +141,6 @@ func PrivateKeyFromBase58(privateKeyBase58Encoded string) (*PrivateKey, error) {
 
 	// network selection
 	isTest := 0 != keyVariant&testKeyCode
-	if mode.IsTesting() != isTest {
-		return nil, fault.ErrWrongNetworkForPrivateKey
-	}
 
 	// Compute key length
 	keyLength := len(privateKeyDecoded) - keyVariantLength - checksumLength
@@ -211,9 +208,6 @@ func PrivateKeyFromBytes(privateKeyBytes []byte) (*PrivateKey, error) {
 
 	// network selection
 	isTest := 0 != keyVariant&testKeyCode
-	if mode.IsTesting() != isTest {
-		return nil, fault.ErrWrongNetworkForPrivateKey
-	}
 
 	// Compute key length
 	keyLength := len(privateKeyBytes) - keyVariantLength
@@ -264,6 +258,11 @@ func (privateKey *PrivateKey) UnmarshalText(s []byte) error {
 // ED25519
 // -------
 
+// return whether the private key is in test mode or not
+func (privateKey *ED25519PrivateKey) IsTesting() bool {
+	return privateKey.Test
+}
+
 // key type code (see enumeration in account.go)
 func (privateKey *ED25519PrivateKey) KeyType() int {
 	return ED25519
@@ -308,6 +307,11 @@ func (privateKey ED25519PrivateKey) MarshalText() ([]byte, error) {
 
 // Nothing
 // -------
+
+// return whether the private key is in test mode or not
+func (privateKey *NothingPrivateKey) IsTesting() bool {
+	return privateKey.Test
+}
 
 // key type code (see enumeration in account.go)
 func (privateKey *NothingPrivateKey) KeyType() int {
