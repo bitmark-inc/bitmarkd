@@ -13,6 +13,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
@@ -69,6 +70,10 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue, isVerified bool) (*Is
 
 	// verify each transaction
 	for i, issue := range issues {
+
+		if issue.Owner.IsTesting() != mode.IsTesting() {
+			return nil, false, fault.ErrWrongNetworkForPublicKey
+		}
 
 		// validate issue record
 		packedIssue, err := issue.Pack(issue.Owner)

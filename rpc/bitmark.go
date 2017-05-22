@@ -43,6 +43,10 @@ func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransfer, r
 		return fault.ErrNotAvailableDuringSynchronise
 	}
 
+	if arguments.Owner.IsTesting() != mode.IsTesting() {
+		return fault.ErrWrongNetworkForPublicKey
+	}
+
 	stored, duplicate, err := reservoir.StoreTransfer(arguments)
 	//txId, packedTransfer, previousTransfer, ownerData, err := block.VerifyTransfer(arguments)
 	if nil != err {
