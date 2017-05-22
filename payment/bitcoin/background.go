@@ -247,6 +247,6 @@ func scanTx(log *logger.L, payId pay.PayId, payIdIndex int, tx *bitcoinTransacti
 		packed = append(packed, util.ToVarint64(value)...)
 	}
 
-	log.Infof("store bitcoin tx id: %s  pay id: %s", tx.TxId, payId)
+	log.Infof("store bitcoin tx id: %s for pay id: %s", tx.TxId, payId)
 	storage.Pool.Payment.Put(payId[:], packed)
 }
