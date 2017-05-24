@@ -200,6 +200,7 @@ func (lstn *listener) process(socket *zmq.Socket) {
 			listenerSendError(socket, fault.ErrIncorrectChain)
 			return
 		}
+
 		announce.AddPeer(parameters[1], parameters[2], parameters[3]) // publicKey, broadcasts, listeners
 		publicKey, broadcasts, listeners, err := announce.GetNext(parameters[1])
 		if nil != err {

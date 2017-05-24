@@ -59,22 +59,25 @@ func AddPeer(publicKey []byte, broadcasts []byte, listeners []byte) bool {
 // internal add a peer announcement, hold lock before calling
 func addPeer(publicKey []byte, broadcasts []byte, listeners []byte) bool {
 
-	// ***** FIX THIS: add more validation here
-
+	ts := time.Now()
 	peer := &peerEntry{
 		publicKey:  publicKey,
 		broadcasts: broadcasts,
 		listeners:  listeners,
-		timestamp:  time.Now(),
+		timestamp:  ts,
 	}
-	ts := time.Now()
 	if node := globalData.peerTree.Search(pubkey(publicKey)); nil != node {
 		peer := node.Value().(*peerEntry)
 		ts = peer.timestamp // preserve previous timestamp
 	}
 	change := globalData.peerTree.Insert(pubkey(publicKey), peer)
 
-	// if new node or a enough time has elapsed to make sure
+	// if adding this nodes data
+	if bytes.Equal(globalData.publicKey, publicKey) {
+		return false
+	}
+
+	// if new node or enough time has elapsed to make sure
 	// this is not an endless rebroadcast
 	if change || time.Since(ts) > announceRebroadcast {
 		globalData.change = true

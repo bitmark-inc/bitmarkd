@@ -5,23 +5,21 @@
 package announce
 
 import (
+	"bytes"
 	"fmt"
-	"math/rand"
-
 	"github.com/bitmark-inc/bitmarkd/avl"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/logger"
+	"math/rand"
 	"time"
 )
 
 const (
-	announceInitial     = 2 * time.Minute  // startup delay be for first send
-	announceRebroadcast = 7 * time.Minute  // to prevent too frequent rebroadcasts
-	announceInterval    = 11 * time.Minute // regular polling time
-	announceExpiry      = 70 * time.Minute // if no responses received within this time, delete the entry
-
-	broadcastCount = 5 // how many peer a node is going to braodcast each time
+	announceInitial     = 2 * time.Minute      // startup delay before first send
+	announceRebroadcast = 7 * time.Minute      // to prevent too frequent rebroadcasts
+	announceInterval    = 11 * time.Minute     // regular polling time
+	announceExpiry      = 5 * announceInterval // if no responses received within this time, delete the entry
 )
 
 type announcer struct {
@@ -63,12 +61,12 @@ loop:
 	}
 }
 
-// process the ann and return response to client
+// process the annoucement and return response to client
 func (ann *announcer) process() {
 
 	log := ann.log
 
-	log.Info("process starting…")
+	log.Debug("process starting…")
 
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -78,23 +76,7 @@ func (ann *announcer) process() {
 		messagebus.Bus.Broadcast.Send("rpc", globalData.fingerprint[:], globalData.rpcs)
 	}
 	if globalData.peerSet {
-		treeCount := globalData.peerTree.Count()
-		lastPeer := globalData.lastBroadcastPeer
-		var iterNum int
-		for i := 0; i < broadcastCount; i++ {
-			iterNum = (lastPeer + i) % treeCount
-			if iterNum == lastPeer && i != 0 {
-				iterNum -= 1
-				break
-			}
-
-			treeRoot := globalData.peerTree.Root()
-			node := treeRoot.GetNodeByOrder(uint(iterNum))
-			peer := node.Value().(*peerEntry)
-			log.Debugf("Current iter no. is : %d. broadcasting: %x", iterNum, peer.publicKey)
-			messagebus.Bus.Broadcast.Send("peer", peer.publicKey, peer.broadcasts, peer.listeners)
-		}
-		globalData.lastBroadcastPeer = iterNum + 1
+		messagebus.Bus.Broadcast.Send("peer", globalData.publicKey, globalData.broadcasts, globalData.listeners)
 	}
 
 	if globalData.change {
@@ -102,6 +84,7 @@ func (ann *announcer) process() {
 		globalData.change = false
 	}
 	expireRPC()
+	expirePeer(log)
 }
 
 func determineConnections(log *logger.L) {
@@ -154,7 +137,7 @@ func determineConnections(log *logger.L) {
 		messagebus.Bus.Connector.Send("N3", peer.publicKey, peer.listeners)
 	}
 
-	// ***** FIX THIS: more code to determine X25, X50 and X75 the cross ¼,½ and ¾ positions
+	// determine X25, X50 and X75 the cross ¼,½ and ¾ positions
 	thisNode := globalData.thisNode
 	nodeDepth := thisNode.Depth()
 	treeRoot := globalData.peerTree.Root()
@@ -201,7 +184,7 @@ func determineConnections(log *logger.L) {
 	for i, node := range toConnectNode {
 		nodeLabel := fmt.Sprintf("X%d", (i+1)*25) // it should by X25, X50 and X75
 		if nil == node {
-			log.Warnf("The node of %s is nil. This should not be happended.", nodeLabel)
+			log.Warnf("failed: node at: %s is nil", nodeLabel)
 			continue
 		}
 
@@ -221,4 +204,28 @@ func determineConnections(log *logger.L) {
 	// ***** FIX THIS:   possible treat key as a number and compute; assuming uniformly distributed keys
 	// ***** FIX THIS:   but would need the tree search to be able to find the "next highest/lowest key" for this to work
 	// ***** FIX THIS: more code to determine some random positions
+}
+
+func expirePeer(log *logger.L) {
+	now := time.Now()
+	nextNode := globalData.peerTree.First()
+	for node := nextNode; nil != node; node = nextNode {
+
+		peer := node.Value().(*peerEntry)
+		key := node.Key()
+
+		nextNode = node.Next()
+
+		// skip this node's entry
+		if bytes.Equal(globalData.publicKey, peer.publicKey) {
+			continue
+		}
+
+		log.Infof("public key: %x timestamp: %v", peer.publicKey, peer.timestamp)
+		if peer.timestamp.Add(announceExpiry).Before(now) {
+			log.Info("expired")
+			globalData.peerTree.Delete(key)
+		}
+
+	}
 }

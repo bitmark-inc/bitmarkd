@@ -1,3 +1,12 @@
+bitmarkd (4.9-1) unstable; urgency=medium
+
+  * library refactoring
+  * logging changes
+  * detect wrong network on RPCs
+  * only broadcast this nodes peer data
+
+ -- Christopher Hall <hsw@bitmark.com>  Mon, 22 May 2017 03:14:29 +0000
+
 bitmarkd (4.8-1) unstable; urgency=medium
 
   * update vendoring deps
