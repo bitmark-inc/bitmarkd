@@ -101,5 +101,5 @@ dynamicScan:
 	if nil != err {
 		log.Errorf("ConnectTo: %x @ %s  error: %v", serverPublicKey, *address, err)
 	}
-	return nil
+	return err
 }
