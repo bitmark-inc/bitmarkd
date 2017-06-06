@@ -45,7 +45,7 @@ func (node *Node) List(arguments *NodeArguments, reply *NodeReply) error {
 	reply.Nodes = nodes
 	reply.NextStart = nextStart
 
-	return err
+	return nil
 }
 
 // return some information about this node
