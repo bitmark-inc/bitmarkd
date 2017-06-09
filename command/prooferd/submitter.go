@@ -123,7 +123,7 @@ func Submitter(i int, connectTo string, v6 bool, serverPublicKey []byte, publicK
 		for {
 			request, err := dequeue.RecvMessageBytes(0)
 			fault.PanicIfError("dequeue.RecvMessageBytes", err)
-			//log.Infof("received data: %s", request)
+			log.Debugf("received data: %s", request)
 
 			// safety check
 			if identity != string(request[0]) {
@@ -155,9 +155,11 @@ func Submitter(i int, connectTo string, v6 bool, serverPublicKey []byte, publicK
 			// server response
 			response, err := rpc.Recv(0)
 			fault.PanicIfError("rpc recv", err)
-			//log.Infof("rpc: received data: %s", response)
+			log.Debugf("rpc: received data: %s", response)
+
 			var r interface{}
 			err = json.Unmarshal([]byte(response), &r)
+			fault.PanicIfError("unmarshal response: error: ", err)
 			log.Infof("rpc: received from server: %v", r)
 		}
 
