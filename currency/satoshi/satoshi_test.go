@@ -2,7 +2,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package bitcoin
+package satoshi
 
 import (
 	"testing"
@@ -50,7 +50,7 @@ func TestStringToSatoshi(t *testing.T) {
 	}
 
 	for i, item := range tests {
-		s := convertToSatoshi([]byte(item.btc))
+		s := FromByteString([]byte(item.btc))
 		if item.satoshi != s {
 			t.Errorf("%d: BTC: %q → %d  expected: %d", i, item.btc, s, item.satoshi)
 		}

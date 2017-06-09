@@ -2,7 +2,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package bitcoin
+package satoshi
 
 // convert a string to a Satoshi value
 //
@@ -11,7 +11,7 @@ package bitcoin
 // Note: Invalid characters are simply ignored and the conversion
 //       simply stops after 8 decimal places have been processed.
 //       Extra decimal points will also be ignored.
-func convertToSatoshi(btc []byte) uint64 {
+func FromByteString(btc []byte) uint64 {
 
 	s := uint64(0)
 	point := false
