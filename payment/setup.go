@@ -8,6 +8,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/payment/bitcoin"
+	"github.com/bitmark-inc/bitmarkd/payment/litecoin"
 	"github.com/bitmark-inc/logger"
 )
 
@@ -20,7 +21,8 @@ const (
 
 // configuration for each sub-module
 type Configuration struct {
-	Bitcoin *bitcoin.Configuration
+	Bitcoin  *bitcoin.Configuration  `libucl:"bitcoin"`
+	Litecoin *litecoin.Configuration `libucl:"litecoin"`
 }
 
 // globals
@@ -47,6 +49,11 @@ func Initialise(configuration *Configuration) error {
 			if nil != err {
 				return err
 			}
+		case currency.Litecoin:
+			err := litecoin.Initialise(configuration.Litecoin)
+			if nil != err {
+				return err
+			}
 		default: // only fails if new module not correctly installed
 			fault.Panicf("missing payment initialiser for Currency: %s", c.String())
 		}
@@ -66,6 +73,8 @@ func Finalise() {
 		switch c {
 		case currency.Bitcoin:
 			bitcoin.Finalise()
+		case currency.Litecoin:
+			litecoin.Finalise()
 		default: // only fails if new module not correctly installed
 			fault.Panicf("missing payment finaliser for Currency: %s", c.String())
 		}

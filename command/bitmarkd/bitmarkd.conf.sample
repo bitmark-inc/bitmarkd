@@ -92,37 +92,46 @@ proofing {
 
 }
 
+# setup for every payment service
+payment {
 
-# local bitcoin access to pool for blocks and forward client payments
-# not recommended to have this be a miner or retain any keys with funds
-bitcoin {
+  # local bitcoin access to pool for blocks and forward client payments
+  # not recommended to have this be a miner or retain any keys with funds
+  bitcoin {
 
-  # local connection to bitcoind
-  username = my-bitcoin-user
-  password = my-secret-bitcoin-password
-  url = http://127.0.0.1:18333
+    # local connection to bitcoind
+    username = my-bitcoin-user
+    password = my-secret-bitcoin-password
+    url = http://127.0.0.1:18333
 
-  # to enable client side TLS authentication
-  # for miniature-spoon proxy
-  # ca_certificate = ca.crt
-  # certificate = client.crt
-  # private_key = client.key
-  # url = https://127.0.0.1:18555/rpc-call
-  # server_name = bitcoin-proxy
+    # to enable client side TLS authentication
+    # for miniature-spoon proxy
+    # ca_certificate = ca.crt
+    # certificate = client.crt
+    # private_key = client.key
+    # url = https://127.0.0.1:18555/rpc-call
+    # server_name = bitcoin-proxy
 
-  # to reset the database to a more recent point:
-  # according to blockchain.info this was the last block of 2016
-  block = 446032
-  hash = "000000000000000003458396c743cdfa8247a4f6bc28ad413dba333a436edf75"
+    # to reset the database to a more recent point:
+    # according to blockchain.info this was the last block of 2016
+    block = 446032
+    hash = "000000000000000003458396c743cdfa8247a4f6bc28ad413dba333a436edf75"
 
-  # NOTE: do not leave this set after initial run or startup will always reset
-  #reset_block_count = true
+    # NOTE: do not leave this set after initial run or startup will always reset
+    #reset_block_count = true
+  }
+
+  # local litecoin access to REST API
+  litecoin {
+    url = http://127.0.0.1:9332/rest
+  }
+
 }
 
 # logging configuration
 logging {
   size = 1048576
-  count = 10
+  count = 100
 
   # set the logging level for various modules
   # modules not overridden with get the value from DEFAULT
@@ -131,29 +140,30 @@ logging {
     DEFAULT = info
     # DEFAULT = debug
 
-    # client RPC
-    rpc = info
-    rpc-server = info
-
-    # mining
-    mine-bg = info
-    mine-server = info
-
-    # data
-    mode = info
-    block = info
-    transaction = info
-    bitcoin = info
-    payment = info
-
-    # peering
-    peer = info
-    client = info
-    responder = info
     announcer = info
-
-    # other
+    announce = info
+    asset = info
+    asset-expiry = info
+    blockstore = info
+    block = info
+    ring = info
     main = info
-    bilateral = info
+    rpc-server = info
+    mode = info
+    payment = info
+    bitcoin = info
+    bitcoin-subscriber = info
+    litecoin = info
+    listener = info
+    peer = info
+    subscriber = info
+    connector = info
+    broadcaster = info
+    proof = info
+    submission = info
+    publisher = info
+    reservoir = info
+    reservoir-verifier = info
+    rebroadcaster = info
   }
 }

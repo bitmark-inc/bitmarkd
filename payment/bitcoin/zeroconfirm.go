@@ -149,7 +149,7 @@ func (sbsc *zcSubscriber) Run(args interface{}, shutdown <-chan struct{}) {
 		log.Info("stopped")
 	}()
 
-	// wait fr termination
+	// wait for termination
 	<-shutdown
 
 	log.Info("initiate shutdown")

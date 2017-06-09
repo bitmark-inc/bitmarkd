@@ -305,10 +305,7 @@ func main() {
 	}
 
 	// start payment services
-	paymentConfiguration := &payment.Configuration{
-		Bitcoin: &masterConfiguration.Bitcoin,
-	}
-	err = payment.Initialise(paymentConfiguration)
+	err = payment.Initialise(&masterConfiguration.Payment)
 	if nil != err {
 		log.Criticalf("payment initialise  error: %v", err)
 		exitwithstatus.Message("payment initialise error: %v", err)

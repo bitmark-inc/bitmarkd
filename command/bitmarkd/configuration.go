@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/configuration"
-	"github.com/bitmark-inc/bitmarkd/payment/bitcoin"
+	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/peer"
 	"github.com/bitmark-inc/bitmarkd/proof"
 	"github.com/bitmark-inc/bitmarkd/util"
@@ -87,7 +87,7 @@ type Configuration struct {
 	ClientRPC RPCType               `libucl:"client_rpc"`
 	Peering   peer.Configuration    `libucl:"peering"`
 	Proofing  proof.Configuration   `libucl:"proofing"`
-	Bitcoin   bitcoin.Configuration `libucl:"bitcoin"`
+	Payment   payment.Configuration `libucl:"payment"`
 	Logging   LoggerType            `libucl:"logging"`
 }
 
@@ -203,9 +203,9 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 	// optional absolute paths i.e. blank or an absolute path
 	optionalAbsolute := []*string{
 		&options.PidFile,
-		&options.Bitcoin.CACertificate,
-		&options.Bitcoin.Certificate,
-		&options.Bitcoin.PrivateKey,
+		&options.Payment.Bitcoin.CACertificate,
+		&options.Payment.Bitcoin.Certificate,
+		&options.Payment.Bitcoin.PrivateKey,
 	}
 	for _, f := range optionalAbsolute {
 		if "" != *f {

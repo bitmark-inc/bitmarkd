@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"github.com/bitmark-inc/bitmarkd/currency"
+	"github.com/bitmark-inc/bitmarkd/currency/satoshi"
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/util"
@@ -20,8 +21,8 @@ const (
 	saveModulus          = 16     // to reduce fequency of rewrites of currency record
 	hardForkBlockCount   = 6 * 24 // back one day in case of hard fork
 	bitcoinConfirmations = 3      // stop processing this many blocks back from most recent block
-	maximumBlockCount    = 500    // total blocks in one download
-	maximumBlockRate     = 20.0   // blocks per second
+	maximumBlockCount    = 10000  // total blocks in one download
+	maximumBlockRate     = 500.0  // blocks per second
 )
 
 // wait for new blocks
@@ -216,7 +217,7 @@ func scanTx(log *logger.L, payId pay.PayId, payIdIndex int, tx *bitcoinTransacti
 			continue
 		}
 		if 1 == len(vout.ScriptPubKey.Addresses) {
-			amounts[vout.ScriptPubKey.Addresses[0]] += convertToSatoshi(vout.Value)
+			amounts[vout.ScriptPubKey.Addresses[0]] += satoshi.FromByteString(vout.Value)
 		}
 	}
 

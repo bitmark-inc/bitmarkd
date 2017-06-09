@@ -17,6 +17,7 @@ type Currency uint64
 const (
 	Nothing      Currency = iota // this must be the first value
 	Bitcoin      Currency = iota
+	Litecoin     Currency = iota
 	maximumValue Currency = iota // this must be the last value
 	First        Currency = Nothing + 1
 	Last         Currency = maximumValue - 1
@@ -29,6 +30,8 @@ func toString(c Currency) ([]byte, error) {
 		return []byte{}, nil
 	case Bitcoin:
 		return []byte("BTC"), nil
+	case Litecoin:
+		return []byte("LTC"), nil
 	default:
 		return []byte{}, fault.ErrInvalidCurrency
 	}
@@ -40,6 +43,8 @@ func fromString(in string) (Currency, error) {
 	case "":
 		return Nothing, nil
 	case "btc", "bitcoin":
+		return Bitcoin, nil
+	case "ltc", "litecoin":
 		return Bitcoin, nil
 	default:
 		return Nothing, fault.ErrInvalidCurrency

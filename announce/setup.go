@@ -90,7 +90,7 @@ func Initialise(nodesDomain string) error {
 		return fault.ErrAlreadyInitialised
 	}
 
-	globalData.log = logger.New("announcer")
+	globalData.log = logger.New("announce")
 	if nil == globalData.log {
 		return fault.ErrInvalidLoggerChannel
 	}
