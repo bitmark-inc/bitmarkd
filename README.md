@@ -67,7 +67,7 @@ set up IPs, ports and local bitcoin testnet connection.
 
 ~~~~~
 mkdir -p ~/.config/bitmarkd
-cp bitmarkd.conf.sample  ~/.config/bitmarkd/bitmarkd.conf
+cp command/bitmarkd/bitmarkd.conf.sample  ~/.config/bitmarkd/bitmarkd.conf
 ${EDITOR}   ~/.config/bitmarkd/bitmarkd.conf
 ~~~~~
 
