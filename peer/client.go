@@ -69,7 +69,7 @@ func connectTo(log *logger.L, clients []*zmqutil.Client, dynamicStart int, prior
 		offset = offsetCross75
 	default:
 		log.Criticalf("invalid priority: %s", priority)
-		fault.Panicf("invalid priority: %s", priority)
+		logger.Panicf("invalid priority: %s", priority)
 	}
 
 	// scan dynamic clients to see if already connected

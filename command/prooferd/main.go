@@ -6,7 +6,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/version"
@@ -59,21 +58,16 @@ func main() {
 	}
 
 	// start logging
-	if err = logger.Initialise(masterConfiguration.Logging.File, masterConfiguration.Logging.Size, masterConfiguration.Logging.Count); nil != err {
+	if err = logger.Initialise(masterConfiguration.Logging); nil != err {
 		exitwithstatus.Message("%s: logger setup failed with error: %v", err)
 	}
 	defer logger.Finalise()
-	logger.LoadLevels(masterConfiguration.Logging.Levels)
 
 	// create a logger channel for the main program
 	log := logger.New("main")
 	defer log.Info("shutting down…")
 	log.Info("starting…")
 	log.Debugf("masterConfiguration: %v", masterConfiguration)
-
-	// set up the fault panic log (now that logging is available
-	fault.Initialise()
-	defer fault.Finalise()
 
 	// ------------------
 	// start of real main

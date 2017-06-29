@@ -9,7 +9,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/difficulty/filters"
-	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/logger"
 	"math"
 	"math/big"
 	"sync"
@@ -146,8 +146,8 @@ func (difficulty *Difficulty) SetBits(u uint64) *Difficulty {
 
 	// check for exponent overflow
 	if exponent >= 0xc0 {
-		fault.Criticalf("difficulty.SetBits(0x%16x) invalid value", u)
-		fault.Panic("difficulty.SetBits: failed")
+		logger.Criticalf("difficulty.SetBits(0x%16x) invalid value", u)
+		logger.Panic("difficulty.SetBits: failed")
 	}
 	d := big.NewInt(0)
 	d.SetUint64(mantissa)
@@ -198,8 +198,8 @@ func (difficulty *Difficulty) internalSetReciprocal(f float64) float64 {
 	buffer := d.Bytes() // no more than 32 bytes (256 bits)
 
 	if len(buffer) > 32 {
-		fault.Criticalf("difficulty.internalSetReciprocal(%g) invalid value", f)
-		fault.Panic("difficulty.SetBits: failed - needs more than 256 bits")
+		logger.Criticalf("difficulty.internalSetReciprocal(%g) invalid value", f)
+		logger.Panic("difficulty.SetBits: failed - needs more than 256 bits")
 	}
 
 	// first non-zero byte will not exceed 0x7f as bigints are signed
@@ -263,7 +263,7 @@ func (difficulty *Difficulty) SetBytes(b []byte) *Difficulty {
 
 	const byteLength = 8
 	if len(b) != byteLength {
-		fault.Panicf("difficulty.SetBytes: too few bytes expeced: %d had: %d", byteLength, len(b))
+		logger.Panicf("difficulty.SetBytes: too few bytes expeced: %d had: %d", byteLength, len(b))
 	}
 
 	u := uint64(b[0]) |

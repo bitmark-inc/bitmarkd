@@ -57,38 +57,30 @@ var (
 )
 
 type RPCType struct {
-	MaximumConnections int      `libucl:"maximum_connections"`
-	Listen             []string `libucl:"listen"`
-	Certificate        string   `libucl:"certificate"`
-	PrivateKey         string   `libucl:"private_key"`
-	Announce           []string `libucl:"announce"`
-}
-
-type LoggerType struct {
-	Directory string            `libucl:"directory"`
-	File      string            `libucl:"file"`
-	Size      int               `libucl:"size"`
-	Count     int               `libucl:"count"`
-	Levels    map[string]string `libucl:"levels"`
+	MaximumConnections int      `libucl:"maximum_connections" hcl:"maximum_connections" json:"maximum_connections"`
+	Listen             []string `libucl:"listen" hcl:"listen" json:"listen"`
+	Certificate        string   `libucl:"certificate" hcl:"certificate" json:"certificate"`
+	PrivateKey         string   `libucl:"private_key" hcl:"private_key" json:"private_key"`
+	Announce           []string `libucl:"announce" hcl:"announce" json:"announce"`
 }
 
 type DatabaseType struct {
-	Directory string `libucl:"directory"`
-	Name      string `libucl:"name"`
+	Directory string `libucl:"directory" hcl:"directory" json:"directory"`
+	Name      string `libucl:"name" hcl:"name" json:"name"`
 }
 
 type Configuration struct {
-	DataDirectory string       `libucl:"data_directory"`
-	PidFile       string       `libucl:"pidfile"`
-	Chain         string       `libucl:"chain"`
-	Nodes         string       `libucl:"nodes"`
-	Database      DatabaseType `libucl:"database"`
+	DataDirectory string       `libucl:"data_directory" hcl:"data_directory" json:"data_directory"`
+	PidFile       string       `libucl:"pidfile" hcl:"pidfile" json:"pidfile"`
+	Chain         string       `libucl:"chain" hcl:"chain" json:"chain"`
+	Nodes         string       `libucl:"nodes" hcl:"nodes" json:"nodes"`
+	Database      DatabaseType `libucl:"database" hcl:"database" json:"database"`
 
-	ClientRPC RPCType               `libucl:"client_rpc"`
-	Peering   peer.Configuration    `libucl:"peering"`
-	Proofing  proof.Configuration   `libucl:"proofing"`
-	Payment   payment.Configuration `libucl:"payment"`
-	Logging   LoggerType            `libucl:"logging"`
+	ClientRPC RPCType               `libucl:"client_rpc" hcl:"client_rpc" json:"client_rpc"`
+	Peering   peer.Configuration    `libucl:"peering" hcl:"peering" json:"peering"`
+	Proofing  proof.Configuration   `libucl:"proofing" hcl:"proofing" json:"proofing"`
+	Payment   payment.Configuration `libucl:"payment" hcl:"payment" json:"payment"`
+	Logging   logger.Configuration  `libucl:"logging" hcl:"logging" json:"logging"`
 }
 
 // will read decode and verify the configuration
@@ -132,7 +124,7 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 			SigningKey: defaultProofSigningKeyFile,
 		},
 
-		Logging: LoggerType{
+		Logging: logger.Configuration{
 			Directory: defaultLogDirectory,
 			File:      defaultLogFile,
 			Size:      defaultLogSize,
@@ -213,16 +205,20 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 		}
 	}
 
-	// fail if any of these are not simple file names i.e. must not contain path seperator
-	// then add the correct directory prefix, file item is first and corresponding directory is second
+	// fail if any of these are not simple file names i.e. must
+	// not contain path seperator, then add the correct directory
+	// prefix, file item is first and corresponding directory is
+	// second (or nil if no prefix can be added)
 	mustNotBePaths := [][2]*string{
 		{&options.Database.Name, &options.Database.Directory},
-		{&options.Logging.File, &options.Logging.Directory},
+		{&options.Logging.File, nil},
 	}
 	for _, f := range mustNotBePaths {
 		switch filepath.Dir(*f[0]) {
 		case "", ".":
-			*f[0] = util.EnsureAbsolute(*f[1], *f[0])
+			if nil != f[1] {
+				*f[0] = util.EnsureAbsolute(*f[1], *f[0])
+			}
 		default:
 			return nil, errors.New(fmt.Sprintf("Files: %q is not plain name", *f[0]))
 		}

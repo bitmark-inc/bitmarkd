@@ -75,11 +75,11 @@ loop:
 			}
 			if err := brdc.process(brdc.socket4, &item); nil != err {
 				log.Criticalf("IPv4 error: %s", err)
-				fault.Panicf("broadcaster: IPv4 error: %s", err)
+				logger.Panicf("broadcaster: IPv4 error: %s", err)
 			}
 			if err := brdc.process(brdc.socket6, &item); nil != err {
 				log.Criticalf("IPv6 error: %s", err)
-				fault.Panicf("broadcaster: IPv6 error: %s", err)
+				logger.Panicf("broadcaster: IPv6 error: %s", err)
 			}
 
 		case <-time.After(heartbeatInterval):
@@ -95,11 +95,11 @@ loop:
 			}
 			if err := brdc.process(brdc.socket4, beat); nil != err {
 				log.Criticalf("IPv4 error: %s", err)
-				fault.Panicf("broadcaster: IPv4 error: %s", err)
+				logger.Panicf("broadcaster: IPv4 error: %s", err)
 			}
 			if err := brdc.process(brdc.socket6, beat); nil != err {
 				log.Criticalf("IPv6 error: %s", err)
-				fault.Panicf("broadcaster: IPv6 error: %s", err)
+				logger.Panicf("broadcaster: IPv6 error: %s", err)
 			}
 		}
 	}

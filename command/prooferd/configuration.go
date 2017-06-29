@@ -42,43 +42,34 @@ var (
 
 // server public key identification in Z85 (ZeroMQ Base-85 Encoding) see: http://rfc.zeromq.org/spec:32
 type Connection struct {
-	PublicKey string `libucl:"public_key"`
-	Blocks    string `libucl:"blocks"`
-	Submit    string `libucl:"submit"`
+	PublicKey string `libucl:"public_key" hcl:"public_key" json:"public_key"`
+	Blocks    string `libucl:"blocks" hcl:"blocks" json:"blocks"`
+	Submit    string `libucl:"submit" hcl:"submit" json:"submit"`
 }
 
 //  client keys in Z85 (ZeroMQ Base-85 Encoding) see: http://rfc.zeromq.org/spec:32
 type PeerType struct {
-	PrivateKey string       `libucl:"private_key"`
-	PublicKey  string       `libucl:"public_key"`
-	Connect    []Connection `libucl:"connect"`
-}
-
-// define the logging settings
-type LoggerType struct {
-	Directory string            `libucl:"directory"`
-	File      string            `libucl:"file"`
-	Size      int               `libucl:"size"`
-	Count     int               `libucl:"count"`
-	Levels    map[string]string `libucl:"levels"`
+	PrivateKey string       `libucl:"private_key" hcl:"private_key" json:"private_key"`
+	PublicKey  string       `libucl:"public_key" hcl:"public_key" json:"public_key"`
+	Connect    []Connection `libucl:"connect" hcl:"connect" json:"connect"`
 }
 
 // type PaymentType struct {
 //      Account     ???? // separate private key field??
-// 	Currency    string `libucl:"currency"`
-// 	Address     string `libucl:"address"`
-// 	//Fee       string `libucl:"fee"` // ***** FIX THIS: can miner set its fee(s)
+// 	Currency    string `libucl:"currency" hcl:"currency" json:"currency"`
+// 	Address     string `libucl:"address" hcl:"address" json:"address"`
+// 	//Fee       string `libucl:"fee" hcl:"fee" json:"fee"` // ***** FIX THIS: can miner set its fee(s)
 // }
 //  add to configuration:
-//	//Payment PaymentType `libucl:"payment"`
+//	//Payment PaymentType `libucl:"payment" hcl:"payment" json:"payment"`
 
 type Configuration struct {
-	DataDirectory string     `libucl:"data_directory"`
-	PidFile       string     `libucl:"pidfile"`
-	Chain         string     `libucl:"chain"`
-	Threads       int        `libucl:"threads"`
-	Peering       PeerType   `libucl:"peering"`
-	Logging       LoggerType `libucl:"logging"`
+	DataDirectory string               `libucl:"data_directory" hcl:"data_directory" json:"data_directory"`
+	PidFile       string               `libucl:"pidfile" hcl:"pidfile" json:"pidfile"`
+	Chain         string               `libucl:"chain" hcl:"chain" json:"chain"`
+	Threads       int                  `libucl:"threads" hcl:"threads" json:"threads"`
+	Peering       PeerType             `libucl:"peering" hcl:"peering" json:"peering"`
+	Logging       logger.Configuration `libucl:"logging" hcl:"logging" json:"logging"`
 }
 
 // will read decode and verify the configuration
@@ -101,7 +92,7 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 
 		Peering: PeerType{},
 
-		Logging: LoggerType{
+		Logging: logger.Configuration{
 			Directory: defaultLogDirectory,
 			File:      defaultLogFile,
 			Size:      defaultLogSize,
@@ -163,15 +154,19 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 		}
 	}
 
-	// fail if any of these are not simple file names i.e. must not contain path seperator
-	// then add the correct directory prefix, file item is first and corresponding directory is second
+	// fail if any of these are not simple file names i.e. must
+	// not contain path seperator, then add the correct directory
+	// prefix, file item is first and corresponding directory is
+	// second (or nil if no prefix can be added)
 	mustNotBePaths := [][2]*string{
-		{&options.Logging.File, &options.Logging.Directory},
+		{&options.Logging.File, nil},
 	}
 	for _, f := range mustNotBePaths {
 		switch filepath.Dir(*f[0]) {
 		case "", ".":
-			*f[0] = util.EnsureAbsolute(*f[1], *f[0])
+			if nil != f[1] {
+				*f[0] = util.EnsureAbsolute(*f[1], *f[0])
+			}
 		default:
 			return nil, errors.New(fmt.Sprintf("Files: %q is not plain name", *f[0]))
 		}

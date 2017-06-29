@@ -7,6 +7,7 @@ package currency
 import (
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/logger"
 	"strings"
 )
 
@@ -55,7 +56,7 @@ func fromString(in string) (Currency, error) {
 func (currency Currency) String() string {
 	s, err := toString(currency)
 	if nil != err {
-		fault.Panicf("invalid currency enumeration: %d", currency)
+		logger.Panicf("invalid currency enumeration: %d", currency)
 	}
 	return string(s)
 }

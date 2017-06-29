@@ -247,7 +247,7 @@ func (pub *publisher) process() {
 	packedBase, err := base.Pack(pub.owner)
 	if nil != err {
 		pub.log.Criticalf("pack base error: %v", err)
-		fault.PanicWithError("publisher packe base", err)
+		logger.Panicf("publisher packed base error: %s", err)
 	}
 
 	// first txId is the base
@@ -259,7 +259,7 @@ func (pub *publisher) process() {
 		unpacked, _, err := transactionrecord.Packed(item).Unpack()
 		if nil != err {
 			pub.log.Criticalf("unpack error: %v", err)
-			fault.PanicWithError("publisher extraction transactions", err)
+			logger.Panicf("publisher extraction transactions error:", err)
 		}
 
 		// only issues and transfers are allowed here
@@ -272,7 +272,7 @@ func (pub *publisher) process() {
 					packedAsset := asset.Get(tx.AssetIndex)
 					if nil == packedAsset {
 						pub.log.Criticalf("missing asset: %v", tx.AssetIndex)
-						fault.Panicf("publisher missing asset: %v", tx.AssetIndex)
+						logger.Panicf("publisher missing asset: %v", tx.AssetIndex)
 					}
 					// add asset's transaction id to list
 					txId := merkle.NewDigest(packedAsset)
@@ -288,7 +288,7 @@ func (pub *publisher) process() {
 
 		default: // all other types cannot occur here
 			pub.log.Criticalf("unxpected transaction: %v", unpacked)
-			fault.Panicf("publisher unxpected transaction: %v", unpacked)
+			logger.Panicf("publisher unxpected transaction: %v", unpacked)
 		}
 
 		// concatenate items
@@ -304,7 +304,7 @@ func (pub *publisher) process() {
 	transactionCount := len(txIds)
 	if transactionCount > blockrecord.MaximumTransactions {
 		pub.log.Criticalf("too many transactions in block: %d", transactionCount)
-		fault.Panicf("too many transactions in block: %d", transactionCount)
+		logger.Panicf("too many transactions in block: %d", transactionCount)
 	}
 
 	// 64 bit nonce (8 bytes)
@@ -339,18 +339,18 @@ func (pub *publisher) process() {
 	enqueueToJobQueue(message, txData)
 
 	data, err := json.Marshal(message)
-	fault.PanicIfError("JSON encode error: %v", err)
+	logger.PanicIfError("JSON encode error: %v", err)
 
 	pub.log.Infof("json to send: %s", data)
 
 	// ***** FIX THIS: is the DONTWAIT flag needed or not?
 	if nil != pub.socket4 {
 		_, err = pub.socket4.SendBytes(data, 0|zmq.DONTWAIT)
-		fault.PanicIfError("publisher 4", err)
+		logger.PanicIfError("publisher 4", err)
 	}
 	if nil != pub.socket6 {
 		_, err = pub.socket6.SendBytes(data, 0|zmq.DONTWAIT)
-		fault.PanicIfError("publisher 6", err)
+		logger.PanicIfError("publisher 6", err)
 	}
 
 	time.Sleep(10 * time.Second)

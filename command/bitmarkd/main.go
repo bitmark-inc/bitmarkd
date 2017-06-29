@@ -12,7 +12,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockring"
 	"github.com/bitmark-inc/bitmarkd/chain"
-	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/peer"
@@ -86,25 +85,16 @@ func main() {
 	}
 
 	// start logging
-	if err = logger.Initialise(masterConfiguration.Logging.File, masterConfiguration.Logging.Size, masterConfiguration.Logging.Count); nil != err {
+	if err = logger.Initialise(masterConfiguration.Logging); nil != err {
 		exitwithstatus.Message("%s: logger setup failed with error: %v", err)
 	}
 	defer logger.Finalise()
-	logger.LoadLevels(masterConfiguration.Logging.Levels)
 
 	// create a logger channel for the main program
 	log := logger.New("main")
 	defer log.Info("finished")
 	log.Info("starting…")
 	log.Debugf("masterConfiguration: %v", masterConfiguration)
-
-	// set up the fault panic log (now that logging is available)
-	err = fault.Initialise()
-	if nil != err {
-		log.Criticalf("fault initialise error: %v", err)
-		exitwithstatus.Message("fault initialise error: %v", err)
-	}
-	defer fault.Finalise()
 
 	// ------------------
 	// start of real main

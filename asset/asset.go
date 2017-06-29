@@ -110,7 +110,7 @@ func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIndex, t
 		globalData.cache[assetIndex] = d
 	} else {
 		transaction, _, err := transactionrecord.Packed(r.packed).Unpack()
-		fault.PanicIfError("asset: bad packed record", err)
+		logger.PanicIfError("asset: bad packed record", err)
 
 		switch tx := transaction.(type) {
 		case *transactionrecord.AssetData:
@@ -125,7 +125,7 @@ func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIndex, t
 				dataWouldChange = true
 			}
 		default:
-			fault.Panicf("asset: non asset record in cache: %v", tx)
+			logger.Panicf("asset: non asset record in cache: %v", tx)
 		}
 	}
 	globalData.Unlock()
@@ -195,6 +195,6 @@ func SetVerified(assetIndex transactionrecord.AssetIndex) {
 
 	// fatal error if cache is missing
 	if !ok {
-		fault.Panicf("asset: Store: no cache for asset id: %v", assetIndex)
+		logger.Panicf("asset: Store: no cache for asset id: %v", assetIndex)
 	}
 }

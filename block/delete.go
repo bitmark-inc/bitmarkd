@@ -8,10 +8,10 @@ import (
 	"encoding/binary"
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
-	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
+	"github.com/bitmark-inc/logger"
 )
 
 // delete from current highest block down to and including the specified block
@@ -87,14 +87,14 @@ func DeleteDownToBlock(finalBlockNumber uint64) error {
 				linkOwner := OwnerOf(tx.Link)
 				if nil == linkOwner {
 					log.Criticalf("missing transaction record for: %v", tx.Link)
-					fault.Panic("Transactions database is corrupt")
+					logger.Panic("Transactions database is corrupt")
 				}
 				// just use zero here, as the fork restore should overwrite with new chain, including updated block number
 				// ***** FIX THIS: is the above statement sufficient
 				TransferOwnership(txId, tx.Link, 0, tx.Owner, linkOwner)
 
 			default:
-				fault.Panicf("unexpected transaction: %v", transaction)
+				logger.Panicf("unexpected transaction: %v", transaction)
 			}
 
 			data = data[n:]

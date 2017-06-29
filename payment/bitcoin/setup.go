@@ -64,17 +64,17 @@ var globalData bitcoinData
 // a block of configuration data
 // this is read from a libucl configuration file
 type Configuration struct {
-	Username            string   `libucl:"username" json:"username"`
-	Password            string   `libucl:"password" json:"password"`
-	URL                 string   `libucl:"url" json:"url"`
-	ServerName          string   `libucl:"server_name" json:"server_name"`
-	CACertificate       string   `libucl:"ca_certificate" json:"ca_certificate"`
-	Certificate         string   `libucl:"certificate" json:"certificate"`
-	PrivateKey          string   `libucl:"private_key" json:"private_key"`
-	Block               uint64   `libucl:"block" json:"block"`
-	Hash                string   `libucl:"hash" json:"hash"`
-	ResetBlockCount     bool     `libucl:"reset_block_count" json:"reset_block_count"`
-	ZeroConfConnections []string `libucl:"zero_conf_connect"`
+	Username            string   `libucl:"username" hcl:"username" json:"username"`
+	Password            string   `libucl:"password" hcl:"password" json:"password"`
+	URL                 string   `libucl:"url" hcl:"url" json:"url"`
+	ServerName          string   `libucl:"server_name" hcl:"server_name" json:"server_name"`
+	CACertificate       string   `libucl:"ca_certificate" hcl:"ca_certificate" json:"ca_certificate"`
+	Certificate         string   `libucl:"certificate" hcl:"certificate" json:"certificate"`
+	PrivateKey          string   `libucl:"private_key" hcl:"private_key" json:"private_key"`
+	Block               uint64   `libucl:"block" hcl:"block" json:"block"`
+	Hash                string   `libucl:"hash" hcl:"hash" json:"hash"`
+	ResetBlockCount     bool     `libucl:"reset_block_count" hcl:"reset_block_count" json:"reset_block_count"`
+	ZeroConfConnections []string `libucl:"zero_conf_connect" hcl:"zero_conf_connect" json:"zero_conf_connect"`
 }
 
 // initialise for bitcoin payments

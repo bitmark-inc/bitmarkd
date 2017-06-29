@@ -161,5 +161,5 @@ func (sub *submission) process(socket *zmq.Socket) {
 	// 	return err
 	// }
 	_, err = socket.SendBytes(result, 0|zmq.DONTWAIT)
-	fault.PanicIfError("Submission", err)
+	logger.PanicIfError("Submission", err)
 }

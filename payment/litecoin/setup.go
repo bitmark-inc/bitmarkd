@@ -44,7 +44,7 @@ var globalData litecoinData
 // a block of configuration data
 // this is read from a libucl configuration file
 type Configuration struct {
-	URL string `libucl:"url"`
+	URL string `libucl:"url" hcl:"url" json:"url"`
 }
 
 // initialise for litecoin payments

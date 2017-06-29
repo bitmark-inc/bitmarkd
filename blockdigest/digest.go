@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/go-argon2"
+	"github.com/bitmark-inc/logger"
 	"math/big"
 )
 
@@ -43,7 +44,7 @@ func NewDigest(record []byte) Digest {
 	}
 
 	hash, err := argon2.Hash(context, record, record)
-	fault.PanicIfError("block.NewDigest", err)
+	logger.PanicIfError("block.NewDigest", err)
 
 	var digest Digest
 	for i, b := range hash {

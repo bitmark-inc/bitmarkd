@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/logger"
 	"io/ioutil"
 	"net/http"
 )
@@ -16,7 +17,7 @@ import (
 // because the HTTP RPC cannot interleave calls and responses
 func bitcoinCall(method string, params []interface{}, reply interface{}) error {
 	if !globalData.initialised {
-		fault.Panic("bitcoin not initialised")
+		logger.Panic("bitcoin not initialised")
 	}
 
 	globalData.id += 1

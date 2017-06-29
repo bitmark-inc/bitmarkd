@@ -173,7 +173,7 @@ func (lstn *listener) process(socket *zmq.Socket) {
 			Height:  block.GetHeight(),
 		}
 		result, err = json.Marshal(info)
-		fault.PanicIfError("JSON encode error: %v", err)
+		logger.PanicIfError("JSON encode error: %v", err)
 
 	case "H": // get block hash
 		if 1 != len(parameters) {
@@ -208,15 +208,15 @@ func (lstn *listener) process(socket *zmq.Socket) {
 			return
 		}
 		_, err = socket.Send(fn, zmq.SNDMORE)
-		fault.PanicIfError("Listener", err)
+		logger.PanicIfError("Listener", err)
 		_, err = socket.Send(chain, zmq.SNDMORE)
-		fault.PanicIfError("Listener", err)
+		logger.PanicIfError("Listener", err)
 		_, err = socket.SendBytes(publicKey, zmq.SNDMORE)
-		fault.PanicIfError("Listener", err)
+		logger.PanicIfError("Listener", err)
 		_, err = socket.SendBytes(broadcasts, zmq.SNDMORE)
-		fault.PanicIfError("Listener", err)
+		logger.PanicIfError("Listener", err)
 		_, err = socket.SendBytes(listeners, 0)
-		fault.PanicIfError("Listener", err)
+		logger.PanicIfError("Listener", err)
 
 		return
 
@@ -229,9 +229,9 @@ func (lstn *listener) process(socket *zmq.Socket) {
 
 	// send results
 	_, err = socket.Send(fn, zmq.SNDMORE)
-	fault.PanicIfError("Listener", err)
+	logger.PanicIfError("Listener", err)
 	_, err = socket.SendBytes(result, 0)
-	fault.PanicIfError("Listener", err)
+	logger.PanicIfError("Listener", err)
 
 	log.Infof("sent: %q  result: %x", fn, result)
 }
@@ -240,7 +240,7 @@ func (lstn *listener) process(socket *zmq.Socket) {
 func listenerSendError(socket *zmq.Socket, err error) {
 	errorMessage := err.Error()
 	_, err = socket.Send("E", zmq.SNDMORE)
-	fault.PanicIfError("Listener", err)
+	logger.PanicIfError("Listener", err)
 	_, err = socket.Send(errorMessage, 0)
-	fault.PanicIfError("Listener", err)
+	logger.PanicIfError("Listener", err)
 }

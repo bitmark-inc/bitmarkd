@@ -6,6 +6,7 @@ package util
 
 import (
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/logger"
 	"net"
 	"strconv"
 	"strings"
@@ -104,7 +105,7 @@ func (conn *Connection) Pack() PackedConnection {
 	b := []byte(conn.ip)
 	length := len(b)
 	if 4 != length && 16 != length {
-		fault.Panicf("connection.Pack: invalid IP length: %d", length)
+		logger.Panicf("connection.Pack: invalid IP length: %d", length)
 	}
 	size := length + 3 // count++port.high++port.low++ip
 	b2 := make([]byte, size)

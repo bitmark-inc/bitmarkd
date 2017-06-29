@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
-	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
 )
@@ -80,7 +79,7 @@ func Subscribe(i int, connectTo string, v6 bool, serverPublicKey []byte, publicK
 
 		for {
 			data, err := socket.Recv(0)
-			fault.PanicIfError("subscriber", err)
+			logger.PanicIfError("subscriber", err)
 			log.Infof("received data: %s", data)
 
 			// ***** FIX THIS: just debugging? or really split block into multiple nonce ranges
@@ -90,9 +89,9 @@ func Subscribe(i int, connectTo string, v6 bool, serverPublicKey []byte, publicK
 
 			// initial try just forward block
 			_, err = proof.Send(mySubmitterIdentity, zmq.SNDMORE)
-			fault.PanicIfError("subscriber sending 1", err)
+			logger.PanicIfError("subscriber sending 1", err)
 			_, err = proof.Send(data, 0)
-			fault.PanicIfError("subscriber sending 2", err)
+			logger.PanicIfError("subscriber sending 2", err)
 			ProofQueueIncrement()
 			log.Infof("queue depth: %d", proofQueueDepth)
 		}

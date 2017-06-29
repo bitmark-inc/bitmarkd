@@ -117,7 +117,7 @@ func DigestForBlock(number uint64) *blockdigest.Digest {
 			j += Size
 		}
 		if number != globalData.ring[j].number {
-			fault.Panicf("block.DigestForBlock: ring buffer corrupted block number, actual: %d  expected: %d", globalData.ring[j].number, number)
+			logger.Panicf("block.DigestForBlock: ring buffer corrupted block number, actual: %d  expected: %d", globalData.ring[j].number, number)
 		}
 		return &globalData.ring[j].digest
 	}
@@ -134,7 +134,7 @@ func Put(number uint64, digest blockdigest.Digest, packedBlock []byte) {
 	globalData.log.Infof("put block number: %d", number)
 
 	if 0 != globalData.height && globalData.height+1 != number {
-		fault.Panicf("block number: actual: %d  expected: %d", number, globalData.height+1)
+		logger.Panicf("block number: actual: %d  expected: %d", number, globalData.height+1)
 	}
 
 	i := globalData.ringIndex

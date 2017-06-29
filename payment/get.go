@@ -8,10 +8,10 @@ import (
 	"bytes"
 	"encoding/binary"
 	"github.com/bitmark-inc/bitmarkd/currency"
-	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
+	"github.com/bitmark-inc/logger"
 )
 
 // get payment record from a specific block given the blocks 8 byte big endian key
@@ -58,7 +58,7 @@ func GetPayments(ownerData []byte, previousTransfer *transactionrecord.BitmarkTr
 func getPayment(blockNumberKey []byte) *transactionrecord.Payment {
 
 	if 8 != len(blockNumberKey) {
-		fault.Panicf("payment.getPayment: block number need 8 bytes: %x", blockNumberKey)
+		logger.Panicf("payment.getPayment: block number need 8 bytes: %x", blockNumberKey)
 	}
 
 	// if all 8 bytes are zero then no transfer payment as this is an issue
@@ -68,17 +68,17 @@ func getPayment(blockNumberKey []byte) *transactionrecord.Payment {
 
 	blockOwnerData := storage.Pool.BlockOwners.Get(blockNumberKey)
 	if nil == blockOwnerData {
-		fault.Panicf("payment.getPayment: no block owner data for block number: %x", blockNumberKey)
+		logger.Panicf("payment.getPayment: no block owner data for block number: %x", blockNumberKey)
 	}
 
 	c, err := currency.FromUint64(binary.BigEndian.Uint64(blockOwnerData[:8]))
 	if nil != err {
-		fault.Panicf("payment.getPayment: block currency invalid error: %v", err)
+		logger.Panicf("payment.getPayment: block currency invalid error: %v", err)
 	}
 
 	fee, err := c.GetFee()
 	if nil != err {
-		fault.Panicf("payment.getPayment: get fee returned error: %v", err)
+		logger.Panicf("payment.getPayment: get fee returned error: %v", err)
 	}
 
 	return &transactionrecord.Payment{

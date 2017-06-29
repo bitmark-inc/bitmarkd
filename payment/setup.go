@@ -21,8 +21,8 @@ const (
 
 // configuration for each sub-module
 type Configuration struct {
-	Bitcoin  *bitcoin.Configuration  `libucl:"bitcoin"`
-	Litecoin *litecoin.Configuration `libucl:"litecoin"`
+	Bitcoin  *bitcoin.Configuration  `libucl:"bitcoin" hcl:"bitcoin" json:"bitcoin"`
+	Litecoin *litecoin.Configuration `libucl:"litecoin" hcl:"litecoin" json:"litecoin"`
 }
 
 // globals
@@ -55,7 +55,7 @@ func Initialise(configuration *Configuration) error {
 				return err
 			}
 		default: // only fails if new module not correctly installed
-			fault.Panicf("missing payment initialiser for Currency: %s", c.String())
+			logger.Panicf("missing payment initialiser for Currency: %s", c.String())
 		}
 	}
 
@@ -76,7 +76,7 @@ func Finalise() {
 		case currency.Litecoin:
 			litecoin.Finalise()
 		default: // only fails if new module not correctly installed
-			fault.Panicf("missing payment finaliser for Currency: %s", c.String())
+			logger.Panicf("missing payment finaliser for Currency: %s", c.String())
 		}
 	}
 

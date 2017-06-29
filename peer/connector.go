@@ -384,7 +384,7 @@ func register(log *logger.L, clients []*zmqutil.Client) bool {
 			received := string(data[1])
 			if received != chain {
 				log.Criticalf("expected chain: %q but received: %q", chain, received)
-				fault.Panicf("expected chain: %q but received: %q", chain, received)
+				logger.Panicf("expected chain: %q but received: %q", chain, received)
 			}
 			log.Infof("register replied: %x:  broadcasts: %x  listeners: %x", data[2], data[3], data[4])
 			announce.AddPeer(data[2], data[3], data[4]) // publicKey, broadcasts, listeners

@@ -2,12 +2,13 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
+// +build !freebsd
+
 package configuration
 
 import (
 	"github.com/bitmark-inc/bitmarkd/fault"
-	libucl "github.com/bitmark-inc/go-libucl"
-	//libucl "github.com/mitchellh/go-libucl"
+	"github.com/hashicorp/hcl"
 	"reflect"
 )
 
@@ -26,23 +27,19 @@ func ParseConfigurationFile(fileName string, config interface{}) error {
 		return fault.ErrInvalidStructPointer
 	}
 
-	// create a libucl parser
-	p := libucl.NewParser(0)
-	defer p.Close()
+	f, err := os.Open(fileName)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
 
-	// add the master configuration file
-	if err := p.AddFile(fileName); err != nil {
+	b, err := ioutil.ReadAll(f)
+	if err != nil {
 		return err
 	}
 
-	// fetch the root object
-	rootObject := p.Object()
-	defer rootObject.Close()
-
-	// decode it into the callers struct
-	if err := rootObject.Decode(config); err != nil {
+	if err = hcl.Unmarshal(b, config); nil != err {
 		return err
 	}
-
 	return nil
 }

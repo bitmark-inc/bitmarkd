@@ -255,7 +255,7 @@ func Enable() {
 func DeleteByTxId(txId merkle.Digest) {
 	globalData.Lock()
 	if globalData.enabled {
-		fault.Panic("reservoir delete tx id when not locked")
+		logger.Panic("reservoir delete tx id when not locked")
 	}
 	if payId, ok := globalData.unverified.index[txId]; ok {
 		internalDelete(payId)
@@ -272,7 +272,7 @@ func DeleteByTxId(txId merkle.Digest) {
 func DeleteByLink(link merkle.Digest) {
 	globalData.Lock()
 	if globalData.enabled {
-		fault.Panic("reservoir delete link when not locked")
+		logger.Panic("reservoir delete link when not locked")
 	}
 	if txId, ok := globalData.pendingTransfer[link]; ok {
 		if payId, ok := globalData.unverified.index[txId]; ok {

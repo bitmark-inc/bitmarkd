@@ -7,7 +7,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
 )
@@ -21,7 +20,7 @@ const (
 func SubmitQueue() {
 	go func() {
 		err := submitForwarder()
-		fault.PanicIfError("proofProxy", err)
+		logger.PanicIfError("proofProxy", err)
 	}()
 }
 
@@ -122,7 +121,7 @@ func Submitter(i int, connectTo string, v6 bool, serverPublicKey []byte, publicK
 
 		for {
 			request, err := dequeue.RecvMessageBytes(0)
-			fault.PanicIfError("dequeue.RecvMessageBytes", err)
+			logger.PanicIfError("dequeue.RecvMessageBytes", err)
 			log.Debugf("received data: %s", request)
 
 			// safety check
@@ -150,16 +149,16 @@ func Submitter(i int, connectTo string, v6 bool, serverPublicKey []byte, publicK
 			log.Infof("rpc: json to send: %s", data)
 
 			_, err = rpc.SendBytes(data, 0)
-			fault.PanicIfError("rpc send", err)
+			logger.PanicIfError("rpc send", err)
 
 			// server response
 			response, err := rpc.Recv(0)
-			fault.PanicIfError("rpc recv", err)
+			logger.PanicIfError("rpc recv", err)
 			log.Debugf("rpc: received data: %s", response)
 
 			var r interface{}
 			err = json.Unmarshal([]byte(response), &r)
-			fault.PanicIfError("unmarshal response: error: ", err)
+			logger.PanicIfError("unmarshal response: error: ", err)
 			log.Infof("rpc: received from server: %v", r)
 		}
 

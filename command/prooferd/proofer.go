@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
-	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
 	"sync/atomic"
@@ -36,7 +35,7 @@ func ProofQueueDecrement() {
 func ProofProxy() {
 	go func() {
 		err := proofForwarder()
-		fault.PanicIfError("proofProxy", err)
+		logger.PanicIfError("proofProxy", err)
 	}()
 }
 
@@ -125,7 +124,7 @@ func ProofThread(log *logger.L) error {
 			request, err := request.RecvMessageBytes(0)
 			if nil != err {
 				log.Criticalf("RecvMessageBytes error: %v", err)
-				fault.PanicWithError("proofer", err)
+				logger.Panicf("proofer error: %s", err)
 			}
 
 			ProofQueueDecrement()
@@ -203,13 +202,13 @@ func ProofThread(log *logger.L) error {
 					binary.LittleEndian.PutUint64(nonce, uint64(blk.Nonce))
 
 					_, err := submit.SendBytes(submitter, zmq.SNDMORE) // routing address
-					fault.PanicIfError("submit send", err)
+					logger.PanicIfError("submit send", err)
 					_, err = submit.SendBytes(submitter, zmq.SNDMORE) // destination check
-					fault.PanicIfError("submit send", err)
+					logger.PanicIfError("submit send", err)
 					_, err = submit.Send(item.Job, zmq.SNDMORE) // job id
-					fault.PanicIfError("submit send", err)
+					logger.PanicIfError("submit send", err)
 					_, err = submit.SendBytes(nonce, 0) // actual data
-					fault.PanicIfError("submit send", err)
+					logger.PanicIfError("submit send", err)
 
 					// ************** if actual difficulty is met break
 					// if ... { break nonceLoop }

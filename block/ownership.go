@@ -7,12 +7,10 @@ package block
 import (
 	"encoding/binary"
 	"github.com/bitmark-inc/bitmarkd/account"
-	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
-	//"github.com/bitmark-inc/bitmarkd/pending"
-	//"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
+	"github.com/bitmark-inc/logger"
 	"sync"
 )
 
@@ -59,28 +57,28 @@ func TransferOwnership(previousTxId merkle.Digest, transferTxId merkle.Digest, t
 	dKey := append(currentOwner.Bytes(), previousTxId[:]...)
 	dCount := storage.Pool.OwnerDigest.Get(dKey)
 	if nil == dCount {
-		fault.Criticalf("TransferOwnership: dKey: %x", dKey)
-		fault.Criticalf("TransferOwnership: block number: %d", transferBlockNumber)
-		fault.Criticalf("TransferOwnership: previous tx id: %#v", previousTxId)
-		fault.Criticalf("TransferOwnership: transfer tx id: %#v", transferTxId)
-		fault.Criticalf("TransferOwnership: current owner: %x  %v", currentOwner.Bytes(), currentOwner)
-		fault.Criticalf("TransferOwnership: new     owner: %x  %v", newOwner.Bytes(), newOwner)
+		logger.Criticalf("TransferOwnership: dKey: %x", dKey)
+		logger.Criticalf("TransferOwnership: block number: %d", transferBlockNumber)
+		logger.Criticalf("TransferOwnership: previous tx id: %#v", previousTxId)
+		logger.Criticalf("TransferOwnership: transfer tx id: %#v", transferTxId)
+		logger.Criticalf("TransferOwnership: current owner: %x  %v", currentOwner.Bytes(), currentOwner)
+		logger.Criticalf("TransferOwnership: new     owner: %x  %v", newOwner.Bytes(), newOwner)
 
 		// ow, err := ListBitmarksFor(currentOwner, 0, 999)
 		// if nil != err {
-		// 	fault.Criticalf("lbf: error: %v", err)
+		// 	logger.Criticalf("lbf: error: %v", err)
 		// } else {
-		// 	fault.Criticalf("lbf: %#v", ow)
+		// 	logger.Criticalf("lbf: %#v", ow)
 		// }
 
-		fault.Panic("TransferOwnership: OwnerDigest database corrupt")
+		logger.Panic("TransferOwnership: OwnerDigest database corrupt")
 	}
 
 	// delete the current owners records
 	oKey := append(currentOwner.Bytes(), dCount...)
 	ownerData := storage.Pool.Ownership.Get(oKey)
 	if nil == ownerData {
-		fault.Panic("TransferOwnership: Ownership database corrupt")
+		logger.Panic("TransferOwnership: Ownership database corrupt")
 	}
 	storage.Pool.Ownership.Delete(oKey)
 	storage.Pool.OwnerDigest.Delete(dKey)
@@ -104,7 +102,7 @@ func create(txId merkle.Digest, ownerData []byte, owner *account.Account) {
 	if nil == count {
 		count = []byte{0, 0, 0, 0, 0, 0, 0, 0}
 	} else if 8 != len(count) {
-		fault.Panic("CreateOwnership: OwnerCount database corrupt")
+		logger.Panic("CreateOwnership: OwnerCount database corrupt")
 	}
 	newCount := make([]byte, 8)
 	binary.BigEndian.PutUint64(newCount, binary.BigEndian.Uint64(count)+1)
@@ -154,7 +152,7 @@ func OwnerOf(txId merkle.Digest) *account.Account {
 	}
 
 	transaction, _, err := transactionrecord.Packed(packed).Unpack()
-	fault.PanicIfError("block.OwnerOf", err)
+	logger.PanicIfError("block.OwnerOf", err)
 
 	switch tx := transaction.(type) {
 	case *transactionrecord.BitmarkIssue:
@@ -164,7 +162,7 @@ func OwnerOf(txId merkle.Digest) *account.Account {
 		return tx.Owner
 
 	default:
-		fault.Panicf("block.OwnerOf: incorrect transaction: %v", transaction)
+		logger.Panicf("block.OwnerOf: incorrect transaction: %v", transaction)
 		return nil
 	}
 }

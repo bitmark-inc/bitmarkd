@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/logger"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"reflect"
@@ -146,13 +147,13 @@ func (p *PoolHandle) prefixKey(key []byte) []byte {
 // store a key/value bytes pair to the database
 func (p *PoolHandle) Put(key []byte, value []byte) {
 	err := poolData.database.Put(p.prefixKey(key), value, nil)
-	fault.PanicIfError("pool.Put", err)
+	logger.PanicIfError("pool.Put", err)
 }
 
 // remove a key from the database
 func (p *PoolHandle) Delete(key []byte) {
 	err := poolData.database.Delete(p.prefixKey(key), nil)
-	fault.PanicIfError("pool.Delete", err)
+	logger.PanicIfError("pool.Delete", err)
 }
 
 // read a value for a given key
@@ -163,14 +164,14 @@ func (p *PoolHandle) Get(key []byte) []byte {
 	if leveldb.ErrNotFound == err {
 		return nil
 	}
-	fault.PanicIfError("pool.Get", err)
+	logger.PanicIfError("pool.Get", err)
 	return value
 }
 
 // Check if a key exists
 func (p *PoolHandle) Has(key []byte) bool {
 	value, err := poolData.database.Has(p.prefixKey(key), nil)
-	fault.PanicIfError("pool.Has", err)
+	logger.PanicIfError("pool.Has", err)
 	return value
 }
 
@@ -204,6 +205,6 @@ func (p *PoolHandle) LastElement() (Element, bool) {
 	}
 	iter.Release()
 	err := iter.Error()
-	fault.PanicIfError("pool.LastElement", err)
+	logger.PanicIfError("pool.LastElement", err)
 	return result, found
 }

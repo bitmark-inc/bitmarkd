@@ -18,6 +18,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
+	"github.com/bitmark-inc/logger"
 )
 
 // store an incoming block checking to make sure it is valid first
@@ -136,14 +137,14 @@ func StoreIncoming(packedBlock []byte) error {
 			storage.Pool.Transactions.Put(key, packed)
 			linkOwner := OwnerOf(tx.Link)
 			if nil == linkOwner {
-				fault.Criticalf("missing transaction record for link: %v refererenced by tx id: %v", tx.Link, txId)
-				fault.Panic("Transactions database is corrupt")
+				logger.Criticalf("missing transaction record for link: %v refererenced by tx id: %v", tx.Link, txId)
+				logger.Panic("Transactions database is corrupt")
 			}
 			TransferOwnership(tx.Link, txId, header.Number, linkOwner, tx.Owner)
 
 		default:
 			globalData.log.Criticalf("unhandled transaction: %v", tx)
-			fault.Panicf("unhandled transaction: %v", tx)
+			logger.Panicf("unhandled transaction: %v", tx)
 		}
 	}
 
@@ -159,7 +160,7 @@ func storeAndUpdate(header *blockrecord.Header, digest blockdigest.Digest, packe
 
 	expectedBlockNumber := globalData.height + 1
 	if expectedBlockNumber != header.Number {
-		fault.Panicf("block.Store: out of sequence block: actual: %d  expected: %d", header.Number, expectedBlockNumber)
+		logger.Panicf("block.Store: out of sequence block: actual: %d  expected: %d", header.Number, expectedBlockNumber)
 	}
 
 	globalData.previousBlock = digest
