@@ -10,6 +10,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/logger"
 	"testing"
 )
 
@@ -29,11 +30,10 @@ var testPrivateKey = []privateKeyTest{
 
 // Invalid privateKey
 var testInvalidPrivateKeyFromBase58 = []invalid{
-	{"3gLJjLSociTmf4kgL3ztUK;tgADFvg9yjXt1jFbEx9KgpEEAFn", fault.ErrCannotDecodePrivateKey},    // invalid base58 string
-	{"ZxbhGmFUuwUd9XPFoRjPg77T1h29urd2e85pryntETtXCFS3FZ", fault.ErrChecksumMismatch},          // checksum mismatch
-	{"dr63jfKBmHvtngo4xfjJKJfHEvTTKYNbvGJKAMasYUfWPg2dJS", fault.ErrWrongNetworkForPrivateKey}, // wrong network
-	{"3iNEz7VJ29DyFeiXGu9gSCUg4K6ykynfPYeyST1AWAti72mpvLd", fault.ErrInvalidKeyType},           // undefined key algorithm
-	{"anF8SWxSRY5vnN3Bbyz9buRYW1hfCAAZxfbv8Fw9SFXaktvLCj", fault.ErrNotPrivateKey},             // public key
+	{"3gLJjLSociTmf4kgL3ztUK;tgADFvg9yjXt1jFbEx9KgpEEAFn", fault.ErrCannotDecodePrivateKey}, // invalid base58 string
+	{"ZxbhGmFUuwUd9XPFoRjPg77T1h29urd2e85pryntETtXCFS3FZ", fault.ErrChecksumMismatch},       // checksum mismatch
+	{"3iNEz7VJ29DyFeiXGu9gSCUg4K6ykynfPYeyST1AWAti72mpvLd", fault.ErrInvalidKeyType},        // undefined key algorithm
+	{"anF8SWxSRY5vnN3Bbyz9buRYW1hfCAAZxfbv8Fw9SFXaktvLCj", fault.ErrNotPrivateKey},          // public key
 }
 
 // show manually created private keys
@@ -111,6 +111,14 @@ func TestLiveSeed(t *testing.T) {
 }
 
 func TestTestSeed(t *testing.T) {
+
+	logger.Initialise(logger.Configuration{
+		Directory: ".",
+		File:      "test.log",
+		Size:      50000,
+		Count:     10,
+	})
+	defer logger.Finalise()
 
 	mode.Initialise("testing")
 	defer mode.Finalise()

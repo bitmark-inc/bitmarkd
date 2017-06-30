@@ -34,11 +34,10 @@ type invalid struct {
 
 // Invalid account
 var testInvalidAccountFromBase58 = []invalid{
-	{"3gLJjLSociTmf4kgL3ztUK;tgADFvg9yjXt1jFbEx9KgpEEAFn", fault.ErrCannotDecodeAccount},      // invalid base58 string
-	{"anF8SWxSRY5vnN3Bbyz9buRYW1hfCAAZxfbv8Fw9SFXaktvLDj", fault.ErrChecksumMismatch},         // checksum mismatch
-	{"7ZpfCEWWU4v3JEAVVHzo7WaiuPeZLMuZ1g6W2dPEGA6g6XEFCz", fault.ErrWrongNetworkForPublicKey}, // wrong network
-	{"WjbRFkA9dhmMKnKTuufZ1sVD4E4H1NRnsmwjMKNHHRSCvDm5bXPV", fault.ErrInvalidKeyType},         // undefined key algorithm
-	{"YqVxD4vazrrnxnLH2MzCHJedPPz1VKHnKbVfya39nF96ABAYes", fault.ErrNotPublicKey},             // private key
+	{"3gLJjLSociTmf4kgL3ztUK;tgADFvg9yjXt1jFbEx9KgpEEAFn", fault.ErrCannotDecodeAccount}, // invalid base58 string
+	{"anF8SWxSRY5vnN3Bbyz9buRYW1hfCAAZxfbv8Fw9SFXaktvLDj", fault.ErrChecksumMismatch},    // checksum mismatch
+	{"WjbRFkA9dhmMKnKTuufZ1sVD4E4H1NRnsmwjMKNHHRSCvDm5bXPV", fault.ErrInvalidKeyType},    // undefined key algorithm
+	{"YqVxD4vazrrnxnLH2MzCHJedPPz1VKHnKbVfya39nF96ABAYes", fault.ErrNotPublicKey},        // private key
 }
 
 // show manually created accounts
