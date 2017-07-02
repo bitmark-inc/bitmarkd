@@ -9,6 +9,8 @@ package configuration
 import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/hashicorp/hcl"
+	"io/ioutil"
+	"os"
 	"reflect"
 )
 
