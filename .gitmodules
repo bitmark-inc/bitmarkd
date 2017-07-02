@@ -37,3 +37,6 @@
 [submodule "vendor/github.com/codegangsta/cli"]
 	path = vendor/github.com/codegangsta/cli
 	url = https://github.com/codegangsta/cli
+[submodule "vendor/github.com/hashicorp/hcl"]
+	path = vendor/github.com/hashicorp/hcl
+	url = https://github.com/hashicorp/hcl
