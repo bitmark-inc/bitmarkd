@@ -10,11 +10,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/account"
-	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
-	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"golang.org/x/crypto/ed25519"
@@ -228,17 +226,6 @@ func TestPackBaseData(t *testing.T) {
 		t.Errorf("pack tx id: %#v  expected: %#v", txId, expectedTxId)
 		t.Errorf("*** GENERATED tx id:\n%s", util.FormatBytes("expectedTxId", txId[:]))
 	}
-
-	// =====
-	// check test-network detection
-	//
-	// NOTE: this can only be done in the first record test since
-	//       mode.Initialise may not be repeated
-	if _, _, err := packed.Unpack(); err != fault.ErrWrongNetworkForPublicKey {
-		t.Errorf("expected 'wrong network for public key' but got error: %v", err)
-	}
-	mode.Initialise(chain.Testing) // enter test mode - ONLY ALLOWED ONCE (or panic will occur
-	// =====
 
 	// test the unpacker
 	unpacked, n, err := packed.Unpack()
