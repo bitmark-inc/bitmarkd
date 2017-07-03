@@ -66,7 +66,7 @@ func TestScanFmt(t *testing.T) {
 	}
 
 	if 0 != d.Cmp(&expectedBig) {
-		t.Errorf("digest: %s != expected: %x", d, expectedBig)
+		t.Errorf("digest: %s != expected: %s", d, expectedBig.Text(16))
 	}
 
 }

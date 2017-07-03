@@ -259,7 +259,7 @@ func (pub *publisher) process() {
 		unpacked, _, err := transactionrecord.Packed(item).Unpack()
 		if nil != err {
 			pub.log.Criticalf("unpack error: %v", err)
-			logger.Panicf("publisher extraction transactions error:", err)
+			logger.Panicf("publisher extraction transactions error: %s", err)
 		}
 
 		// only issues and transfers are allowed here
