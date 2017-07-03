@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/bitmark-inc/bitmarkd/version"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/codegangsta/cli"
 	"os"
@@ -29,7 +30,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "bitmark-cli"
 	// app.Usage = ""
-	app.Version = Version
+	app.Version = version.Version
 	app.HideVersion = true
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{
@@ -324,7 +325,7 @@ func main() {
 			Name:  "version",
 			Usage: "display bitmark-cli version",
 			Action: func(c *cli.Context) {
-				fmt.Println(Version)
+				fmt.Println(version.Version)
 			},
 		},
 	}

@@ -18,6 +18,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
+	"github.com/bitmark-inc/logger"
 	"testing"
 	"time"
 	"unicode"
@@ -114,6 +115,13 @@ func TestLiveGenesisAssembly(t *testing.T) {
 //
 // must be after the live test (since setting mode to test is permanent)
 func TestTestGenesisAssembly(t *testing.T) {
+	logger.Initialise(logger.Configuration{
+		Directory: ".",
+		File:      "test.log",
+		Size:      50000,
+		Count:     10,
+	})
+	defer logger.Finalise()
 
 	mode.Initialise(chain.Testing) // enter test mode - ONLY ALLOWED ONCE (or panic will occur
 

@@ -6,7 +6,10 @@ package reservoir_test
 
 import (
 	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/chain"
+	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/storage"
+	"github.com/bitmark-inc/logger"
 	"os"
 	"testing"
 )
@@ -21,11 +24,27 @@ const (
 // remove all files created by test
 func removeFiles() {
 	os.RemoveAll(databaseFileName)
+	os.RemoveAll("test.log")
 }
 
 // configure for testing
-func setup(t *testing.T) {
+func setup(t *testing.T, theChain ...string) {
+
 	removeFiles()
+
+	logger.Initialise(logger.Configuration{
+		Directory: ".",
+		File:      "test.log",
+		Size:      50000,
+		Count:     10,
+	})
+
+	if len(theChain) >= 1 {
+		mode.Initialise(theChain[0])
+	} else {
+		mode.Initialise(chain.Bitmark)
+	}
+
 	err := storage.Initialise(databaseFileName)
 	if nil != err {
 		t.Fatalf("storage initialise error: %s", err)
@@ -42,5 +61,7 @@ func setup(t *testing.T) {
 func teardown(t *testing.T) {
 	block.Finalise()
 	storage.Finalise()
+	mode.Finalise()
+	logger.Finalise()
 	removeFiles()
 }

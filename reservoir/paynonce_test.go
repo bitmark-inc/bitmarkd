@@ -8,12 +8,14 @@ import (
 	"encoding/json"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/chain"
-	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"testing"
 )
 
 func TestPayNonce(t *testing.T) {
+
+	setup(t)
+	defer teardown(t)
 
 	nonce := reservoir.PayNonce{
 		0x2b, 0xa1, 0x54, 0x14, 0x46, 0x74, 0x29, 0x1d,
@@ -77,8 +79,7 @@ func TestNewPayNonceTesting(t *testing.T) {
 	// dependant on the genesis digest for testing
 	expected := `"d1cc53a056227402"`
 
-	mode.Initialise(chain.Testing)
-	setup(t)
+	setup(t, chain.Testing)
 	defer teardown(t)
 
 	d, n := block.Get()
