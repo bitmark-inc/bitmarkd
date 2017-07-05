@@ -6,9 +6,10 @@ package currency
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/logger"
-	"strings"
 )
 
 // currency enumeration
@@ -30,9 +31,9 @@ func toString(c Currency) ([]byte, error) {
 	case Nothing:
 		return []byte{}, nil
 	case Bitcoin:
-		return []byte("BTC"), nil
+		return []byte("btc"), nil
 	case Litecoin:
-		return []byte("LTC"), nil
+		return []byte("ltc"), nil
 	default:
 		return []byte{}, fault.ErrInvalidCurrency
 	}

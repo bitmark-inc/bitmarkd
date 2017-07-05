@@ -7,6 +7,10 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/configuration"
 	"github.com/bitmark-inc/bitmarkd/payment"
@@ -14,9 +18,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/proof"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 // basic defaults (directories and files are relative to the "DataDirectory" from Configuration file)
@@ -195,9 +196,6 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 	// optional absolute paths i.e. blank or an absolute path
 	optionalAbsolute := []*string{
 		&options.PidFile,
-		&options.Payment.Bitcoin.CACertificate,
-		&options.Payment.Bitcoin.Certificate,
-		&options.Payment.Bitcoin.PrivateKey,
 	}
 	for _, f := range optionalAbsolute {
 		if "" != *f {

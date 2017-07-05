@@ -5,12 +5,14 @@
 package litecoin
 
 import (
+	"net/http"
+	"sync"
+
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
-	"net/http"
-	"sync"
 )
 
 // globals for background proccess
@@ -83,7 +85,7 @@ func Initialise(configuration *Configuration) error {
 		Hash   string `json:"bestblockhash"`
 	}
 
-	err := rpc(globalData.url+"/chaininfo.json", &reply)
+	err := util.FetchJSON(globalData.client, globalData.url+"/chaininfo.json", &reply)
 	if nil != err {
 		return err
 	}

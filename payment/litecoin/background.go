@@ -7,6 +7,8 @@ package litecoin
 import (
 	"encoding/hex"
 	"encoding/json"
+	"time"
+
 	"github.com/bitmark-inc/bitmarkd/constants"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/currency/satoshi"
@@ -14,7 +16,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
-	"time"
 )
 
 const (
@@ -73,7 +74,7 @@ loop:
 
 		case <-time.After(60 * time.Second):
 			var headers []BlockHeader
-			err := rpc(state.url+"/headers/1/"+state.latestBlockHash+".json", &headers)
+			err := util.FetchJSON(state.client, state.url+"/headers/1/"+state.latestBlockHash+".json", &headers)
 			if nil != err {
 				log.Errorf("headers: error: %s", err)
 				continue loop
@@ -114,7 +115,7 @@ func (state *litecoinData) process() {
 loop:
 	for {
 		var block Block
-		err := rpc(state.url+"/block/"+hash+".json", &block)
+		err := util.FetchJSON(state.client, state.url+"/block/"+hash+".json", &block)
 		if nil != err {
 			log.Errorf("failed block from hash: %s", hash)
 			return
@@ -137,7 +138,7 @@ loop:
 		if transactionCount > 1 {
 			log.Infof("block: %d  transactions: %d", block.Height, transactionCount)
 			for _, tx := range block.Tx[1:] {
-				checkForPaymentTransaction(log, &tx)
+				CheckForPaymentTransaction(log, &tx)
 			}
 		}
 
@@ -168,7 +169,7 @@ loop:
 	}
 }
 
-func checkForPaymentTransaction(log *logger.L, tx *Transaction) {
+func CheckForPaymentTransaction(log *logger.L, tx *Transaction) {
 
 	// scan all Vout looking for script with OP_RETURN
 	for j, vout := range tx.Vout {

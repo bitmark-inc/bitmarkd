@@ -2,7 +2,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package litecoin
+package util
 
 import (
 	"encoding/json"
@@ -11,14 +11,13 @@ import (
 	"net/http"
 )
 
-func rpc(url string, reply interface{}) error {
-
+func FetchJSON(client *http.Client, url string, reply interface{}) error {
 	request, err := http.NewRequest("GET", url, nil)
 	if nil != err {
 		return err
 	}
 
-	response, err := globalData.client.Do(request)
+	response, err := client.Do(request)
 	if nil != err {
 		return err
 	}
@@ -27,6 +26,7 @@ func rpc(url string, reply interface{}) error {
 	if nil != err {
 		return err
 	}
+
 	if http.StatusOK != response.StatusCode {
 		return fmt.Errorf("status: %d %q on: %q", response.StatusCode, response.Status, url)
 	}
