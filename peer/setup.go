@@ -18,27 +18,27 @@ import (
 // hardwired connections
 // this is read from a libucl configuration file
 type Connection struct {
-	PublicKey string `libucl:"public_key" hcl:"public_key" json:"public_key"`
-	Address   string `libucl:"address" hcl:"address" json:"address"`
+	PublicKey string `libucl:"public_key" json:"public_key"`
+	Address   string `libucl:"address" json:"address"`
 }
 
 // for announcements
 type Announce struct {
-	Broadcast []string `libucl:"broadcast" hcl:"broadcast" json:"broadcast"`
-	Listen    []string `libucl:"listen" hcl:"listen" json:"listen"`
+	Broadcast []string `libucl:"broadcast" json:"broadcast"`
+	Listen    []string `libucl:"listen" json:"listen"`
 }
 
 // a block of configuration data
 // this is read from a libucl configuration file
 type Configuration struct {
-	DynamicConnections bool         `libucl:"dynamic_connections" hcl:"dynamic_connections" json:"dynamic_connections"`
-	Broadcast          []string     `libucl:"broadcast" hcl:"broadcast" json:"broadcast"`
-	Listen             []string     `libucl:"listen" hcl:"listen" json:"listen"`
-	Announce           Announce     `libucl:"announce" hcl:"announce" json:"announce"`
-	PrivateKey         string       `libucl:"private_key" hcl:"private_key" json:"private_key"`
-	PublicKey          string       `libucl:"public_key" hcl:"public_key" json:"public_key"`
-	Subscribe          []Connection `libucl:"subscribe" hcl:"subscribe" json:"subscribe,omitempty"`
-	Connect            []Connection `libucl:"connect" hcl:"connect" json:"connect,omitempty"`
+	DynamicConnections bool         `libucl:"dynamic_connections" json:"dynamic_connections"`
+	Broadcast          []string     `libucl:"broadcast" json:"broadcast"`
+	Listen             []string     `libucl:"listen" json:"listen"`
+	Announce           Announce     `libucl:"announce" json:"announce"`
+	PrivateKey         string       `libucl:"private_key" json:"private_key"`
+	PublicKey          string       `libucl:"public_key" json:"public_key"`
+	Subscribe          []Connection `libucl:"subscribe" json:"subscribe,omitempty"`
+	Connect            []Connection `libucl:"connect" json:"connect,omitempty"`
 }
 
 // globals for background proccess

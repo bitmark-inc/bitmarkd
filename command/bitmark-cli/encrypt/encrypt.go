@@ -34,16 +34,16 @@ var (
 
 // full access to data (includes private data)
 type IdentityType struct {
-	Name               string           `libucl:"name" hcl:"name" json:"name"`
-	Description        string           `libucl:"description" hcl:"description" json:"description"`
-	Public_key         string           `libucl:"public_key" hcl:"public_key" json:"public_key"`
-	Private_key        string           `libucl:"private_key" hcl:"private_key" json:"private_key"`
-	Seed               string           `libucl:"seed" hcl:"seed" json:"seed"`
-	Private_key_config PrivateKeyConfig `libucl:"private_key_config" hcl:"private_key_config" json:"private_key_config"`
+	Name               string           `libucl:"name" json:"name"`
+	Description        string           `libucl:"description" json:"description"`
+	Public_key         string           `libucl:"public_key" json:"public_key"`
+	Private_key        string           `libucl:"private_key" json:"private_key"`
+	Seed               string           `libucl:"seed" json:"seed"`
+	Private_key_config PrivateKeyConfig `libucl:"private_key_config" json:"private_key_config"`
 }
 
 type PrivateKeyConfig struct {
-	Salt string `libucl:"salt" hcl:"salt" json:"salt"`
+	Salt string `libucl:"salt" json:"salt"`
 }
 
 // return of makeKeyPair

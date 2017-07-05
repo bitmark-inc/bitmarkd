@@ -57,30 +57,30 @@ var (
 )
 
 type RPCType struct {
-	MaximumConnections int      `libucl:"maximum_connections" hcl:"maximum_connections" json:"maximum_connections"`
-	Listen             []string `libucl:"listen" hcl:"listen" json:"listen"`
-	Certificate        string   `libucl:"certificate" hcl:"certificate" json:"certificate"`
-	PrivateKey         string   `libucl:"private_key" hcl:"private_key" json:"private_key"`
-	Announce           []string `libucl:"announce" hcl:"announce" json:"announce"`
+	MaximumConnections int      `libucl:"maximum_connections" json:"maximum_connections"`
+	Listen             []string `libucl:"listen" json:"listen"`
+	Certificate        string   `libucl:"certificate" json:"certificate"`
+	PrivateKey         string   `libucl:"private_key" json:"private_key"`
+	Announce           []string `libucl:"announce" json:"announce"`
 }
 
 type DatabaseType struct {
-	Directory string `libucl:"directory" hcl:"directory" json:"directory"`
-	Name      string `libucl:"name" hcl:"name" json:"name"`
+	Directory string `libucl:"directory" json:"directory"`
+	Name      string `libucl:"name" json:"name"`
 }
 
 type Configuration struct {
-	DataDirectory string       `libucl:"data_directory" hcl:"data_directory" json:"data_directory"`
-	PidFile       string       `libucl:"pidfile" hcl:"pidfile" json:"pidfile"`
-	Chain         string       `libucl:"chain" hcl:"chain" json:"chain"`
-	Nodes         string       `libucl:"nodes" hcl:"nodes" json:"nodes"`
-	Database      DatabaseType `libucl:"database" hcl:"database" json:"database"`
+	DataDirectory string       `libucl:"data_directory" json:"data_directory"`
+	PidFile       string       `libucl:"pidfile" json:"pidfile"`
+	Chain         string       `libucl:"chain" json:"chain"`
+	Nodes         string       `libucl:"nodes" json:"nodes"`
+	Database      DatabaseType `libucl:"database" json:"database"`
 
-	ClientRPC RPCType               `libucl:"client_rpc" hcl:"client_rpc" json:"client_rpc"`
-	Peering   peer.Configuration    `libucl:"peering" hcl:"peering" json:"peering"`
-	Proofing  proof.Configuration   `libucl:"proofing" hcl:"proofing" json:"proofing"`
-	Payment   payment.Configuration `libucl:"payment" hcl:"payment" json:"payment"`
-	Logging   logger.Configuration  `libucl:"logging" hcl:"logging" json:"logging"`
+	ClientRPC RPCType               `libucl:"client_rpc" json:"client_rpc"`
+	Peering   peer.Configuration    `libucl:"peering" json:"peering"`
+	Proofing  proof.Configuration   `libucl:"proofing" json:"proofing"`
+	Payment   payment.Configuration `libucl:"payment" json:"payment"`
+	Logging   logger.Configuration  `libucl:"logging" json:"logging"`
 }
 
 // will read decode and verify the configuration

@@ -21,8 +21,8 @@ const (
 
 // configuration for each sub-module
 type Configuration struct {
-	Bitcoin  *bitcoin.Configuration  `libucl:"bitcoin" hcl:"bitcoin" json:"bitcoin"`
-	Litecoin *litecoin.Configuration `libucl:"litecoin" hcl:"litecoin" json:"litecoin"`
+	Bitcoin  *bitcoin.Configuration  `libucl:"bitcoin" json:"bitcoin"`
+	Litecoin *litecoin.Configuration `libucl:"litecoin" json:"litecoin"`
 }
 
 // globals

@@ -40,3 +40,9 @@
 [submodule "vendor/github.com/hashicorp/hcl"]
 	path = vendor/github.com/hashicorp/hcl
 	url = https://github.com/hashicorp/hcl
+[submodule "c-libraries/libucl"]
+	path = c-libraries/libucl
+	url = https://github.com/vstakhov/libucl
+[submodule "vendor/github.com/bitmark-inc/go-libucl"]
+	path = vendor/github.com/bitmark-inc/go-libucl
+	url = https://github.com/bitmark-inc/go-libucl

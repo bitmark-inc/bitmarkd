@@ -15,10 +15,10 @@ const (
 )
 
 type Configuration struct {
-	Default_identity string                 `libucl:"default_identity" hcl:"default_identity" json:"default_identity"`
-	Network          string                 `libucl:"network" hcl:"network" json:"network"`
-	Connect          string                 `libucl:"connect" hcl:"connect" json:"connect"`
-	Identity         []encrypt.IdentityType `libucl:"identity" hcl:"identity" json:"identity"`
+	Default_identity string                 `libucl:"default_identity" json:"default_identity"`
+	Network          string                 `libucl:"network" json:"network"`
+	Connect          string                 `libucl:"connect" json:"connect"`
+	Identity         []encrypt.IdentityType `libucl:"identity" json:"identity"`
 }
 
 // form of configuration in the config file
@@ -47,17 +47,17 @@ identity {
 // restricted access to data (excludes private items)
 
 type InfoIdentityType struct {
-	Name        string `libucl:"name" hcl:"name" json:"name"`
-	Description string `libucl:"description" hcl:"description" json:"description"`
-	Public_key  string `libucl:"public_key" hcl:"public_key" json:"public_key"`
-	Account     string
+	Name        string `libucl:"name" json:"name"`
+	Description string `libucl:"description" json:"description"`
+	Public_key  string `libucl:"public_key" json:"public_key"`
+	Account     string `libucl:"account" json:"account"`
 }
 
 type InfoConfiguration struct {
-	Default_identity string             `libucl:"default_identity" hcl:"default_identity" json:"default_identity"`
-	Network          string             `libucl:"network" hcl:"network" json:"network"`
-	Connect          string             `libucl:"connect" hcl:"connect" json:"connect"`
-	Identity         []InfoIdentityType `libucl:"identity" hcl:"identity" json:"identity"`
+	Default_identity string             `libucl:"default_identity" json:"default_identity"`
+	Network          string             `libucl:"network" json:"network"`
+	Connect          string             `libucl:"connect" json:"connect"`
+	Identity         []InfoIdentityType `libucl:"identity" json:"identity"`
 }
 
 // full access to data (includes private data)
