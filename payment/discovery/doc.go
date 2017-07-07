@@ -2,9 +2,5 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
+// client side of discovery proxy
 package discovery
-
-type currencyHandler interface {
-	recover(dat []byte)   // process missed txs
-	processTx(dat []byte) // process new tx
-}
