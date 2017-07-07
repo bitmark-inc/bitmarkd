@@ -1,0 +1,20 @@
+#!/bin/sh
+# dump all tables upto count records
+
+n=2
+count=99
+
+[ -n "$1" ] && n="${1}"
+
+database="${HOME}/.config/bitmarkd${n}/data/local.leveldb"
+
+
+dumpdb | (
+  while read tag arrow description
+  do
+    [ X"${arrow}" = X"→" ] || continue
+
+    printf '*** %s\n' "${description}"
+    dumpdb "${database}" "${tag}" "${count}"
+  done
+)

@@ -1,0 +1,38 @@
+#!/bin/sh
+# track currently active module dependencies
+
+ERROR()
+{
+  echo error: $*
+  exit 1
+}
+
+[ -d "${GOPATH}" ]|| ERROR "missing directory: ${GOPATH}"
+
+os=$(uname -s | tr 'A-Z' 'a-z')
+machine=$(uname -m | tr 'A-Z' 'a-z')
+account=$(basename "$(dirname "${PWD}")")
+application=$(basename "${PWD}")
+
+pkg="${GOPATH}/pkg/${os}_${machine}/github.com/${account}/${application}"
+[ -d "${pkg}" ] || error "missing directory: ${pkg}"
+
+list=$(ls -1 "${pkg}" | grep '\.a$' | sed 's/\.a$//')
+
+list="${list} command/bitmarkd"
+
+for d in ${list}
+do
+  [ X"${d}" != X"${d#-}" ] && continue
+  printf '===> %s\n' "${d}"
+  go list -f '{{join .Deps "\n     "}}' ${d}/*.go | sort -u | grep 'github'
+  echo
+done
+
+echo 'No library for:'
+for d in *
+do
+  [ -d "${d}" ] || continue
+  [ -f "${pkg}/${d}.a" ] && continue
+  printf '  %s\n' "${d}"
+done

@@ -1,0 +1,20 @@
+#!/bin/sh
+# print files needing fixes
+
+for d in *
+do
+  [ ! -d "${d}" ] && continue
+  [ X"${d}" = X"OLD" ] && continue
+
+  flag=no
+  grep -rc '[*] FIX THIS:' "${d}" | grep -v ':0$' | sed 's/:\([0-9]*\)$/ \1/' | \
+    while read file count junk
+    do
+      if [ X"${flag}" = X"no" ]
+      then
+        flag=yes
+        printf '%s\n' "${d}"
+      fi
+      printf '  %s  (%d)\n' "${file#${d}/}" "${count}"
+    done
+done
