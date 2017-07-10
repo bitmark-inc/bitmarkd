@@ -13,7 +13,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/util"
-	"github.com/bitmark-inc/bitmarkd/version"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
@@ -26,6 +25,7 @@ const (
 
 type listener struct {
 	log     *logger.L
+	version string      // server version
 	push    *zmq.Socket // signal send
 	pull    *zmq.Socket // signal receive
 	socket4 *zmq.Socket // IPv4 traffic
@@ -41,13 +41,14 @@ type serverInfo struct {
 }
 
 // initialise the listener
-func (lstn *listener) initialise(privateKey []byte, publicKey []byte, listen []string) error {
+func (lstn *listener) initialise(privateKey []byte, publicKey []byte, listen []string, version string) error {
 
 	log := logger.New("listener")
 	if nil == log {
 		return fault.ErrInvalidLoggerChannel
 	}
 	lstn.log = log
+	lstn.version = version
 
 	log.Info("initialising…")
 
@@ -167,7 +168,7 @@ func (lstn *listener) process(socket *zmq.Socket) {
 
 	case "I": // server information
 		info := serverInfo{
-			Version: version.Version,
+			Version: lstn.version,
 			Chain:   mode.ChainName(),
 			Normal:  mode.Is(mode.Normal),
 			Height:  block.GetHeight(),

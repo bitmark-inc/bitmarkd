@@ -20,7 +20,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/util"
-	"github.com/bitmark-inc/bitmarkd/version"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/bitmark-inc/getoptions"
@@ -48,6 +47,10 @@ type serverChannel struct {
 	listener         *listener.MultiListener
 }
 
+// set by the linker: go build -ldflags "-X main.version=M.N" ./...
+var version string = "zero" // do not change this value
+
+// main program
 func main() {
 	// ensure exit handler is first
 	defer exitwithstatus.Handler()
@@ -66,7 +69,7 @@ func main() {
 	}
 
 	if len(options["version"]) > 0 {
-		exitwithstatus.Message("%s: version: %s", program, version.Version)
+		exitwithstatus.Message("%s: version: %s", program, version)
 	}
 
 	if len(options["help"]) > 0 {
@@ -249,6 +252,7 @@ func main() {
 			argument: &rpc.ServerArgument{
 				Log:       rpcLog,
 				StartTime: time.Now().UTC(),
+				Version:   version,
 			},
 		},
 	}
@@ -310,7 +314,7 @@ func main() {
 	}
 
 	// start up the peering background processes
-	err = peer.Initialise(&masterConfiguration.Peering)
+	err = peer.Initialise(&masterConfiguration.Peering, version)
 	if nil != err {
 		log.Criticalf("peer initialise error: %v", err)
 		exitwithstatus.Message("peer initialise error: %v", err)

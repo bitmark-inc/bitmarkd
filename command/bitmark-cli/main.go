@@ -6,7 +6,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/version"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/codegangsta/cli"
 	"os"
@@ -21,6 +20,9 @@ type globalFlags struct {
 	clearCache bool
 }
 
+// set by the linker: go build -ldflags "-X main.version=M.N" ./...
+var version string = "zero" // do not change this value
+
 func main() {
 	// ensure exit handler is first
 	defer exitwithstatus.Handler()
@@ -30,7 +32,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "bitmark-cli"
 	// app.Usage = ""
-	app.Version = version.Version
+	app.Version = version
 	app.HideVersion = true
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{
@@ -329,7 +331,7 @@ func main() {
 			Name:  "version",
 			Usage: "display bitmark-cli version",
 			Action: func(c *cli.Context) {
-				fmt.Println(version.Version)
+				fmt.Println(version)
 			},
 		},
 	}

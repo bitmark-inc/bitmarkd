@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
-	"github.com/bitmark-inc/bitmarkd/version"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/bitmark-inc/getoptions"
@@ -20,7 +19,10 @@ import (
 	"syscall"
 )
 
-// bitmark minerd main program
+// set by the linker: go build -ldflags "-X main.version=M.N" ./...
+var version string = "zero" // do not change this value
+
+// main program
 func main() {
 	// ensure exit handler is first
 	defer exitwithstatus.Handler()
@@ -39,7 +41,7 @@ func main() {
 	}
 
 	if len(options["version"]) > 0 {
-		exitwithstatus.Message("%s: version: %s", program, version.Version)
+		exitwithstatus.Message("%s: version: %s", program, version)
 	}
 
 	if len(options["help"]) > 0 {

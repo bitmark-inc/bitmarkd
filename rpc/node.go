@@ -12,14 +12,14 @@ import (
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/peer"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
-	"github.com/bitmark-inc/bitmarkd/version"
 	"github.com/bitmark-inc/logger"
 	"time"
 )
 
 type Node struct {
-	log   *logger.L
-	start time.Time
+	log     *logger.L
+	start   time.Time
+	version string
 }
 
 // list the RPC services available in the network
@@ -91,7 +91,7 @@ func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 	// reply.Miners = mine.ConnectionCount()
 	reply.TransactionCounters.Pending, reply.TransactionCounters.Verified, reply.TransactionCounters.Others = reservoir.ReadCounters()
 	reply.Difficulty = difficulty.Current.Reciprocal()
-	reply.Version = version.Version
+	reply.Version = node.version
 	reply.Uptime = time.Since(node.start).String()
 
 	return nil

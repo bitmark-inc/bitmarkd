@@ -20,6 +20,7 @@ const MaximumGetSize = 100
 type ServerArgument struct {
 	Log       *logger.L
 	StartTime time.Time
+	Version   string
 }
 
 var connectionCount counter.Counter
@@ -55,8 +56,9 @@ func Callback(conn io.ReadWriteCloser, argument interface{}) {
 	}
 
 	node := &Node{
-		log:   serverArgument.Log,
-		start: serverArgument.StartTime,
+		log:     serverArgument.Log,
+		start:   serverArgument.StartTime,
+		version: serverArgument.Version,
 	}
 
 	transaction := &Transaction{

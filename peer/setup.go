@@ -42,11 +42,10 @@ type Configuration struct {
 }
 
 // globals for background proccess
-type proofData struct {
+type peerData struct {
 	sync.RWMutex // to allow locking
 
-	// logger
-	log *logger.L
+	log *logger.L // logger
 
 	brdc broadcaster // for broadcasting blocks, transactions etc.
 	lstn listener    // for RPC responses
@@ -64,10 +63,10 @@ type proofData struct {
 }
 
 // global data
-var globalData proofData
+var globalData peerData
 
-// initialise proofer backgrouds processes
-func Initialise(configuration *Configuration) error {
+// initialise peer backgrouds processes
+func Initialise(configuration *Configuration, version string) error {
 
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -106,7 +105,7 @@ func Initialise(configuration *Configuration) error {
 	if err := globalData.brdc.initialise(privateKey, publicKey, configuration.Broadcast); nil != err {
 		return err
 	}
-	if err := globalData.lstn.initialise(privateKey, publicKey, configuration.Listen); nil != err {
+	if err := globalData.lstn.initialise(privateKey, publicKey, configuration.Listen, version); nil != err {
 		return err
 	}
 	if err := globalData.conn.initialise(privateKey, publicKey, configuration.Connect, configuration.DynamicConnections); nil != err {

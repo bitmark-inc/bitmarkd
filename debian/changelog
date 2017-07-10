@@ -1,3 +1,11 @@
+bitmarkd (4.13-1) unstable; urgency=medium
+
+  * remove version.go and replace with linker supplied version
+    which derives version from this changelog file
+  * cli program belongs in /usr/bin
+
+ -- Christopher Hall <hsw@bitmark.com>  Mon, 10 Jul 2017 06:15:57 +0000
+
 bitmarkd (4.12-1) unstable; urgency=medium
 
   * allow issue-only batches in bitmark-cli

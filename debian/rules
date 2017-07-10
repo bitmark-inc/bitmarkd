@@ -8,12 +8,14 @@ COMMAND_DIR = ${PROJECT_DIR}/command
 C_LIBRARIES_DIR = ${PROJECT_DIR}/c-libraries
 PC_WRAPPER_DIR = ${C_LIBRARIES_DIR}
 
+VERSION := $(shell dpkg-parsechangelog -SVersion | sed 's/-[^-]*$//')
+
 override_dh_auto_build:
 	make -C "${C_LIBRARIES_DIR}" all
 	cd "${PROJECT_DIR}" && \
 	  export GOPATH="${GOPATH}" && \
 	  export PATH="${PC_WRAPPER_DIR}:${PATH}" && \
-	  go install -buildmode=exe -v ./command/...
+	  go install -buildmode=exe -ldflags "-X main.version=${VERSION}" ./command/...
 
 
 override_dh_auto_install:
