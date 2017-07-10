@@ -8,7 +8,7 @@ COMMAND_DIR = ${PROJECT_DIR}/command
 C_LIBRARIES_DIR = ${PROJECT_DIR}/c-libraries
 PC_WRAPPER_DIR = ${C_LIBRARIES_DIR}
 
-VERSION := $(shell dpkg-parsechangelog -SVersion | sed 's/-[^-]*$//')
+VERSION := $(shell dpkg-parsechangelog -SVersion | sed 's/-[^-]*$$//')
 
 override_dh_auto_build:
 	make -C "${C_LIBRARIES_DIR}" all
