@@ -1,3 +1,9 @@
+bitmarkd (4.12-1) unstable; urgency=medium
+
+  * allow issue-only batches in bitmark-cli
+
+ -- Christopher Hall <hsw@bitmark.com>  Mon, 10 Jul 2017 03:27:14 +0000
+
 bitmarkd (4.11-1) unstable; urgency=medium
 
   * remove hcl as it causes too many incompatibilities and problems

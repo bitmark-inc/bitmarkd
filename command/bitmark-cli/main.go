@@ -41,25 +41,25 @@ func main() {
 		cli.StringFlag{
 			Name:        "config, c",
 			Value:       "",
-			Usage:       "bitmark-cli configuration directory",
+			Usage:       "bitmark-cli configuration `DIRECTORY`",
 			Destination: &globals.config,
 		},
 		cli.StringFlag{
 			Name:        "identity, i",
 			Value:       "",
-			Usage:       " identity name [default identity]",
+			Usage:       " identity `NAME` [default identity]",
 			Destination: &globals.identity,
 		},
 		cli.StringFlag{
 			Name:        "password, p",
 			Value:       "",
-			Usage:       " identity password",
+			Usage:       " identity `PASSWORD`",
 			Destination: &globals.password,
 		},
 		cli.StringFlag{
 			Name:        "use-agent, u",
 			Value:       "",
-			Usage:       " executable program that returns the password",
+			Usage:       " executable program that returns the password `EXE`",
 			Destination: &globals.agent,
 		},
 		cli.BoolFlag{
@@ -85,23 +85,23 @@ func main() {
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "network, n",
-					Value: "",
-					Usage: " bitmark|testing|local. Connect to which bitmark network [testing]",
+					Value: "testing",
+					Usage: " bitmark|testing|local. Connect to bitmark `NETWORK`",
 				},
 				cli.StringFlag{
 					Name:  "connect, x",
 					Value: "",
-					Usage: "*bitmarkd host/IP and port, HOST:PORT",
+					Usage: "*bitmarkd host/IP and port, `HOST:PORT`",
 				},
 				cli.StringFlag{
 					Name:  "description, d",
 					Value: "",
-					Usage: "*identity description",
+					Usage: "*identity description `STRING`",
 				},
 				cli.StringFlag{
 					Name:  "privateKey, k",
 					Value: "",
-					Usage: " using existing privateKey/seed",
+					Usage: " using existing privateKey/seed `KEY`",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -116,12 +116,12 @@ func main() {
 				cli.StringFlag{
 					Name:  "description, d",
 					Value: "",
-					Usage: "*identity description",
+					Usage: "*identity description `STRING`",
 				},
 				cli.StringFlag{
 					Name:  "privateKey, k",
 					Value: "",
-					Usage: " using existing privateKey/seed",
+					Usage: " using existing privateKey/seed `KEY`",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -136,27 +136,31 @@ func main() {
 				cli.StringFlag{
 					Name:  "asset, a",
 					Value: "",
-					Usage: "*asset name",
+					Usage: "*asset name `STRING`",
 				},
 				cli.StringFlag{
 					Name:  "metadata, m",
 					Value: "",
-					Usage: "*asset metadata",
+					Usage: "*asset metadata `META`",
 				},
 				cli.StringFlag{
 					Name:  "fingerprint, f",
 					Value: "",
-					Usage: "*asset fingerprint",
+					Usage: "*asset fingerprint `STRING`",
 				},
 				cli.StringFlag{
 					Name:  "quantity, q",
-					Value: "",
-					Usage: " quantity to create [1]",
+					Value: "1",
+					Usage: " quantity to create `COUNT`",
+				},
+				cli.BoolFlag{
+					Name:  "transfer, t",
+					Usage: " to create quantity new accounts and transfer a bitmark to each one",
 				},
 				cli.StringFlag{
 					Name:  "output, o",
 					Value: "",
-					Usage: " file to store final output",
+					Usage: " store final output in `FILE`",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -171,22 +175,22 @@ func main() {
 				cli.StringFlag{
 					Name:  "asset, a",
 					Value: "",
-					Usage: "*asset name",
+					Usage: "*asset name `STRING`",
 				},
 				cli.StringFlag{
 					Name:  "metadata, m",
 					Value: "",
-					Usage: "*asset metadata",
+					Usage: "*asset metadata `META`",
 				},
 				cli.StringFlag{
 					Name:  "fingerprint, f",
 					Value: "",
-					Usage: "*asset fingerprint",
+					Usage: "*asset fingerprint `STRING`",
 				},
 				cli.StringFlag{
 					Name:  "quantity, q",
-					Value: "",
-					Usage: " quantity to create [1]",
+					Value: "1",
+					Usage: " quantity to create `COUNT`",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -201,12 +205,12 @@ func main() {
 				cli.StringFlag{
 					Name:  "txid, t",
 					Value: "",
-					Usage: "*transaction id to transfer",
+					Usage: "*transaction id to transfer `TXID`",
 				},
 				cli.StringFlag{
 					Name:  "receiver, r",
 					Value: "",
-					Usage: "*identity name to receive the bitmark",
+					Usage: "*identity name to receive the bitmark `ACCOUNT`",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -221,12 +225,12 @@ func main() {
 				cli.StringFlag{
 					Name:  "txid, t",
 					Value: "",
-					Usage: "*transaction id to list provenance",
+					Usage: "*transaction id to list provenance `TXID`",
 				},
 				cli.StringFlag{
 					Name:  "count, c",
-					Value: "",
-					Usage: " maximum records to output [20]",
+					Value: "20",
+					Usage: " maximum records to output `COUNT`",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -241,7 +245,7 @@ func main() {
 				cli.StringFlag{
 					Name:  "txid, t",
 					Value: "",
-					Usage: "*transaction id to check status",
+					Usage: "*transaction id to check status `TXID`",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -256,7 +260,7 @@ func main() {
 				cli.StringFlag{
 					Name:  "publickey, p",
 					Value: "",
-					Usage: "*hex public key",
+					Usage: "*hex public `KEY`",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -299,7 +303,7 @@ func main() {
 				cli.StringFlag{
 					Name:  "file, f",
 					Value: "",
-					Usage: " file of data to fingerprint",
+					Usage: " `FILE` of data to fingerprint",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -314,7 +318,7 @@ func main() {
 				cli.StringFlag{
 					Name:  "file, f",
 					Value: "",
-					Usage: " file of data to sign",
+					Usage: " `FILE` of data to sign",
 				},
 			},
 			Action: func(c *cli.Context) {

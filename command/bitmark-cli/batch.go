@@ -20,7 +20,7 @@ func (p progressType) Printf(format string, arguments ...interface{}) {
 	}
 }
 
-func batch(rpcConfig bitmarkRPC, assetConfig assetData, outputFilename string, verbose bool) error {
+func batch(rpcConfig bitmarkRPC, assetConfig assetData, doTransfers bool, outputFilename string, verbose bool) error {
 
 	progress := progressType(!verbose)
 
@@ -90,33 +90,37 @@ loop:
 		Transfer *transferReply      `json:"transfer"`
 	}
 
-	accounts := make([]accountAndTransfer, len(issueResult.IssueIds))
+	accounts := []accountAndTransfer(nil)
 
-	for i, issueId := range issueResult.IssueIds {
-		progress.Printf("create account: %d\n", i)
+	if doTransfers {
+		accounts = make([]accountAndTransfer, len(issueResult.IssueIds))
 
-		rawKeyPair, newOwnerKeyPair, err := keypair.MakeRawKeyPair("bitmark" != rpcConfig.network)
-		if nil != err {
-			return err
+		for i, issueId := range issueResult.IssueIds {
+			progress.Printf("create account: %d\n", i)
+
+			rawKeyPair, newOwnerKeyPair, err := keypair.MakeRawKeyPair("bitmark" != rpcConfig.network)
+			if nil != err {
+				return err
+			}
+			printJson("New Key Pair", rawKeyPair, verbose)
+
+			transferConfig := transferData{
+				owner:    assetConfig.registrant,
+				newOwner: newOwnerKeyPair,
+				txId:     issueId,
+			}
+
+			progress.Printf("transfer a bitmark to account: %d\n", i)
+			transferResult, err := doTransfer(client, rpcConfig.network, transferConfig, verbose)
+			if nil != err {
+				return err
+			}
+
+			printJson("Transfer Result", transferResult, verbose)
+			accounts[i].Account = rawKeyPair
+			accounts[i].Transfer = transferResult
+
 		}
-		printJson("New Key Pair", rawKeyPair, verbose)
-
-		transferConfig := transferData{
-			owner:    assetConfig.registrant,
-			newOwner: newOwnerKeyPair,
-			txId:     issueId,
-		}
-
-		progress.Printf("transfer a bitmark to account: %d\n", i)
-		transferResult, err := doTransfer(client, rpcConfig.network, transferConfig, verbose)
-		if nil != err {
-			return err
-		}
-
-		printJson("Transfer Result", transferResult, verbose)
-		accounts[i].Account = rawKeyPair
-		accounts[i].Transfer = transferResult
-
 	}
 
 	type finalResult struct {

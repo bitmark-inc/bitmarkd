@@ -255,8 +255,9 @@ func runCreate(c *cli.Context, globals globalFlags, batchMode bool) {
 
 	if batchMode {
 		outputFilename := c.String("output")
+		doTransfers := c.Bool("transfer")
 
-		err = batch(bitmarkRpcConfig, assetConfig, outputFilename, verbose)
+		err = batch(bitmarkRpcConfig, assetConfig, doTransfers, outputFilename, verbose)
 		if nil != err {
 			exitwithstatus.Message("Issue error: %s", err)
 		}
