@@ -2,11 +2,12 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package payment
+package reservoir
 
 import (
 	"bytes"
 	"encoding/binary"
+
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/storage"
@@ -15,7 +16,7 @@ import (
 )
 
 // get payment record from a specific block given the blocks 8 byte big endian key
-func GetPayments(ownerData []byte, previousTransfer *transactionrecord.BitmarkTransfer) []*transactionrecord.Payment {
+func getPayments(ownerData []byte, previousTransfer *transactionrecord.BitmarkTransfer) []*transactionrecord.Payment {
 
 	// get block number of transfer and issue; see: storage/doc.go to determine offsets
 	const transferBlockNumberOffset = merkle.DigestLength

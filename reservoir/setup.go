@@ -5,7 +5,12 @@
 package reservoir
 
 import (
+	"fmt"
+	"sync"
+
 	"github.com/bitmark-inc/bitmarkd/background"
+	"github.com/bitmark-inc/bitmarkd/cache"
+	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
@@ -13,32 +18,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
-	"sync"
-	"time"
 )
-
-// globals
-type globalDataType struct {
-	sync.RWMutex
-	log        *logger.L
-	enabled    bool
-	unverified unverifiedEntry
-	verified   map[merkle.Digest]*verifiedItem
-
-	// indexed by link so that duplicate transfers can be detected
-	// data is the tx id so that the same transfer repeated can be distinguished
-	// from an invalid duplicate transfer
-	pendingTransfer map[merkle.Digest]merkle.Digest
-
-	verifier      verifierData
-	rebroadcaster rebroadcaster
-	background    *background.T
-}
-
-type unverifiedEntry struct {
-	entries map[pay.PayId]*unverifiedItem
-	index   map[merkle.Digest]pay.PayId
-}
 
 type itemData struct {
 	txIds        []merkle.Digest
@@ -52,66 +32,48 @@ type unverifiedItem struct {
 	nonce      PayNonce                     // only for issues
 	difficulty *difficulty.Difficulty       // only for issues
 	payments   []*transactionrecord.Payment // currently only for transfers
-	expires    time.Time
 }
 
 type verifiedItem struct {
+	*itemData
 	link        merkle.Digest
 	transaction []byte
-	data        *itemData // point to the item struct
-	index       int       // index of assetIds and transactions in an item
+	index       int // index of assetIds and transactions in an item
 }
 
-// background data
-type verifierData struct {
-	log *logger.L
+type PaymentDetail struct {
+	Currency currency.Currency
+	TxID     string
+	Amounts  map[string]uint64
 }
 
-type rebroadcaster struct {
-	log *logger.L
+type globalDataType struct {
+	sync.RWMutex
+	enabled    bool
+	log        *logger.L
+	background *background.T
 }
 
-// gobal storage
 var globalData globalDataType
 
 // create the cache
 func Initialise() error {
-
-	globalData.Lock()
-	defer globalData.Unlock()
-
 	globalData.log = logger.New("reservoir")
-	if nil == globalData.log {
+	if globalData.log == nil {
 		return fault.ErrInvalidLoggerChannel
 	}
 	globalData.log.Info("starting…")
 
-	globalData.unverified.entries = make(map[pay.PayId]*unverifiedItem)
-	globalData.unverified.index = make(map[merkle.Digest]pay.PayId)
-	globalData.verified = make(map[merkle.Digest]*verifiedItem)
-	globalData.pendingTransfer = make(map[merkle.Digest]merkle.Digest)
+	Enable()
 
-	globalData.enabled = true
-
-	globalData.verifier.log = logger.New("reservoir-verifier")
-	if nil == globalData.verifier.log {
+	// start background process "rebroadcaster"
+	var reb rebroadcaster
+	reb.log = logger.New("rebroadcaster")
+	if reb.log == nil {
 		return fault.ErrInvalidLoggerChannel
 	}
 
-	globalData.rebroadcaster.log = logger.New("rebroadcaster")
-	if nil == globalData.rebroadcaster.log {
-		return fault.ErrInvalidLoggerChannel
-	}
-
-	// start background processes
-	globalData.log.Info("start background…")
-
-	// list of background processes to start
-	processes := background.Processes{
-		&globalData.verifier,
-		&globalData.rebroadcaster,
-	}
-
+	processes := background.Processes{&reb}
 	globalData.background = background.Start(processes, &globalData)
 
 	return nil
@@ -119,26 +81,23 @@ func Initialise() error {
 
 // stop all
 func Finalise() {
-
 	globalData.log.Info("shutting down…")
 	globalData.log.Flush()
 
-	globalData.enabled = false
+	Disable()
 
-	// stop background
 	globalData.background.Stop()
 
 	globalData.log.Info("finished")
 	globalData.log.Flush()
 }
 
-// read counter
 func ReadCounters() (int, int, []int) {
 	n := []int{
-		len(globalData.pendingTransfer),
-		len(globalData.unverified.entries),
+		cache.Pool.PendingTransfer.Size(),
+		cache.Pool.UnverifiedTxEntries.Size(),
 	}
-	return len(globalData.unverified.index), len(globalData.verified), n
+	return cache.Pool.UnverifiedTxIndex.Size(), cache.Pool.VerifiedTx.Size(), n
 }
 
 // status
@@ -171,12 +130,12 @@ func TransactionStatus(txId merkle.Digest) TransactionState {
 	globalData.RLock()
 	defer globalData.RUnlock()
 
-	_, ok := globalData.unverified.index[txId]
+	_, ok := cache.Pool.UnverifiedTxIndex.Get(txId.String())
 	if ok {
 		return StatePending
 	}
 
-	_, ok = globalData.verified[txId]
+	_, ok = cache.Pool.VerifiedTx.Get(txId.String())
 	if ok {
 		return StateVerified
 	}
@@ -189,24 +148,32 @@ func TransactionStatus(txId merkle.Digest) TransactionState {
 }
 
 // move transaction(s) to verified cache
-// must hold lock before calling this
-func setVerified(payId pay.PayId) {
-	entry, ok := globalData.unverified.entries[payId]
+func setVerified(payId pay.PayId) bool {
+	val, ok := cache.Pool.UnverifiedTxEntries.Get(payId.String())
 	if ok {
-		// move the record
+		entry := val.(*unverifiedItem)
 		for i, txId := range entry.txIds {
 			v := &verifiedItem{
-				data:        entry.itemData,
+				itemData:    entry.itemData,
 				transaction: entry.transactions[i],
 				index:       i,
 			}
 			if nil != entry.links {
 				v.link = entry.links[i]
 			}
-			globalData.verified[txId] = v
-			delete(globalData.unverified.index, txId)
+			cache.Pool.VerifiedTx.Put(txId.String(), v)
+			cache.Pool.UnverifiedTxIndex.Delete(txId.String())
 		}
-		delete(globalData.unverified.entries, payId)
+		cache.Pool.UnverifiedTxEntries.Delete(payId.String())
+	}
+
+	return ok
+}
+
+func SetTransferVerified(payId pay.PayId, detail *PaymentDetail) {
+	if !setVerified(payId) {
+		globalData.log.Infof("orphan payment: txid=%s, payid=%s", payId, detail.TxID)
+		cache.Pool.OrphanPayment.Put(payId.String(), detail)
 	}
 }
 
@@ -221,9 +188,12 @@ func FetchVerified(count int) ([]merkle.Digest, []transactionrecord.Packed, int,
 
 	n := 0
 	totalBytes := 0
-	globalData.RLock()
-	if globalData.enabled {
-		for txId, data := range globalData.verified {
+	if enabled() {
+		for key, val := range cache.Pool.VerifiedTx.Items() {
+			var txId merkle.Digest
+			fmt.Sscan(key, &txId)
+			data := val.(*verifiedItem)
+
 			txIds = append(txIds, txId)
 			txData = append(txData, data.transaction)
 			totalBytes += len(data.transaction)
@@ -233,7 +203,7 @@ func FetchVerified(count int) ([]merkle.Digest, []transactionrecord.Packed, int,
 			}
 		}
 	}
-	globalData.RUnlock()
+
 	return txIds, txData, totalBytes, nil
 }
 
@@ -251,55 +221,63 @@ func Enable() {
 	globalData.Unlock()
 }
 
+func enabled() bool {
+	globalData.RLock()
+	defer globalData.RUnlock()
+	return globalData.enabled
+}
+
 // remove a record using a transaction id
 func DeleteByTxId(txId merkle.Digest) {
-	globalData.Lock()
-	if globalData.enabled {
+	if enabled() {
 		logger.Panic("reservoir delete tx id when not locked")
 	}
-	if payId, ok := globalData.unverified.index[txId]; ok {
+
+	if val, ok := cache.Pool.UnverifiedTxIndex.Get(txId.String()); ok {
+		payId := val.(pay.PayId)
 		internalDelete(payId)
 	}
-	if v, ok := globalData.verified[txId]; ok {
-		link := v.link
-		delete(globalData.verified, txId)
-		delete(globalData.pendingTransfer, link)
+	if val, ok := cache.Pool.VerifiedTx.Get(txId.String()); ok {
+		item := val.(*verifiedItem)
+		link := item.link
+		cache.Pool.VerifiedTx.Delete(txId.String())
+		cache.Pool.PendingTransfer.Delete(link.String())
 	}
-	globalData.Unlock()
 }
 
 // remove a record using a link id
 func DeleteByLink(link merkle.Digest) {
-	globalData.Lock()
-	if globalData.enabled {
+	if enabled() {
 		logger.Panic("reservoir delete link when not locked")
 	}
-	if txId, ok := globalData.pendingTransfer[link]; ok {
-		if payId, ok := globalData.unverified.index[txId]; ok {
+	if val, ok := cache.Pool.PendingTransfer.Get(link.String()); ok {
+		txId := val.(merkle.Digest)
+		if val, ok := cache.Pool.UnverifiedTxIndex.Get(txId.String()); ok {
+			payId := val.(pay.PayId)
 			internalDelete(payId)
 		}
-		if v, ok := globalData.verified[txId]; ok {
-			link := v.link
-			delete(globalData.verified, txId)
-			delete(globalData.pendingTransfer, link)
+		if val, ok := cache.Pool.VerifiedTx.Get(txId.String()); ok {
+			item := val.(*verifiedItem)
+			link := item.link
+			cache.Pool.VerifiedTx.Delete(txId.String())
+			cache.Pool.PendingTransfer.Delete(link.String())
 		}
 	}
-	globalData.Unlock()
 }
 
-// hold lock before calling
 // delete unverified transactions
 func internalDelete(payId pay.PayId) {
-	entry, ok := globalData.unverified.entries[payId]
+	val, ok := cache.Pool.UnverifiedTxEntries.Get(payId.String())
 	if ok {
+		entry := val.(*unverifiedItem)
 		for i, txId := range entry.txIds {
-			delete(globalData.unverified.index, txId)
-			delete(globalData.verified, txId)
+			cache.Pool.UnverifiedTxIndex.Delete(txId.String())
+			cache.Pool.VerifiedTx.Delete(txId.String())
 			if nil != entry.links {
 				link := entry.links[i]
-				delete(globalData.pendingTransfer, link)
+				cache.Pool.PendingTransfer.Delete(link.String())
 			}
 		}
-		delete(globalData.unverified.entries, payId)
+		cache.Pool.UnverifiedTxEntries.Delete(payId.String())
 	}
 }

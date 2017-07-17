@@ -6,14 +6,12 @@ package reservoir
 
 import (
 	"github.com/bitmark-inc/bitmarkd/account"
-	"github.com/bitmark-inc/bitmarkd/constants"
+	"github.com/bitmark-inc/bitmarkd/cache"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/pay"
-	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
-	"time"
 )
 
 // result returned by store transfer
@@ -24,15 +22,9 @@ type TransferInfo struct {
 	Payments []*transactionrecord.Payment
 }
 
-// store a single transfer
 func StoreTransfer(transfer *transactionrecord.BitmarkTransfer) (*TransferInfo, bool, error) {
-
-	// critical code - prevent overlapping blocks of transactions
-	globalData.Lock()
-	defer globalData.Unlock()
-
 	verifyResult, duplicate, err := verifyTransfer(transfer)
-	if nil != err {
+	if err != nil {
 		return nil, false, err
 	}
 
@@ -51,7 +43,7 @@ func StoreTransfer(transfer *transactionrecord.BitmarkTransfer) (*TransferInfo, 
 	previousTransfer := verifyResult.previousTransfer
 	ownerData := verifyResult.ownerData
 
-	payments := payment.GetPayments(ownerData, previousTransfer)
+	payments := getPayments(ownerData, previousTransfer)
 
 	result := &TransferInfo{
 		Id:       payId,
@@ -61,7 +53,7 @@ func StoreTransfer(transfer *transactionrecord.BitmarkTransfer) (*TransferInfo, 
 	}
 
 	// if already seen just return pay id
-	if _, ok := globalData.unverified.entries[payId]; ok {
+	if _, ok := cache.Pool.UnverifiedTxEntries.Get(payId.String()); ok {
 		return result, true, nil
 	}
 
@@ -71,24 +63,38 @@ func StoreTransfer(transfer *transactionrecord.BitmarkTransfer) (*TransferInfo, 
 		return nil, true, fault.ErrTransactionAlreadyExists
 	}
 
-	expiresAt := time.Now().Add(constants.ReservoirTimeout)
-
-	// create index and pending entries
-	globalData.unverified.index[txId] = payId
-	globalData.pendingTransfer[link] = txId
-
-	// save transactions
-	entry := &unverifiedItem{
-		itemData: &itemData{
-			txIds:        []merkle.Digest{txId},
-			links:        []merkle.Digest{link},
-			transactions: [][]byte{packedTransfer},
-		},
-		payments: payments,
-		expires:  expiresAt,
+	transferredItem := &itemData{
+		txIds:        []merkle.Digest{txId},
+		links:        []merkle.Digest{link},
+		transactions: [][]byte{packedTransfer},
 	}
 
-	globalData.unverified.entries[payId] = entry
+	// already received the payment for the transfer
+	// approve the transfer immediately
+	// TODO: what to return to indicate success
+	if _, ok := cache.Pool.OrphanPayment.Get(payId.String()); ok {
+		cache.Pool.VerifiedTx.Put(
+			txId.String(),
+			&verifiedItem{
+				itemData:    transferredItem,
+				transaction: packedTransfer,
+				index:       0,
+			},
+		)
+		cache.Pool.OrphanPayment.Delete(payId.String())
+		return result, false, nil
+	}
+
+	// waiting for the payment to come
+	cache.Pool.PendingTransfer.Put(link.String(), txId)
+	cache.Pool.UnverifiedTxIndex.Put(txId.String(), payId)
+	cache.Pool.UnverifiedTxEntries.Put(
+		payId.String(),
+		&unverifiedItem{
+			itemData: transferredItem,
+			payments: payments,
+		},
+	)
 
 	return result, false, nil
 }
@@ -141,8 +147,8 @@ func verifyTransfer(arguments *transactionrecord.BitmarkTransfer) (*verifiedInfo
 	txId := packedTransfer.MakeLink()
 
 	// check if this transfer was already received
-	_, okP := globalData.pendingTransfer[arguments.Link]
-	_, okU := globalData.unverified.index[txId]
+	_, okP := cache.Pool.PendingTransfer.Get(arguments.Link.String())
+	_, okU := cache.Pool.UnverifiedTxIndex.Get(txId.String())
 	duplicate := false
 	if okU && okP {
 		// if both then it is a possible duplicate
@@ -154,7 +160,7 @@ func verifyTransfer(arguments *transactionrecord.BitmarkTransfer) (*verifiedInfo
 	}
 
 	// a single verified transfer fails the whole block
-	if _, ok := globalData.verified[txId]; ok {
+	if _, ok := cache.Pool.VerifiedTx.Get(txId.String()); ok {
 		return nil, false, fault.ErrTransactionAlreadyExists
 	}
 	// a single confirmed transfer fails the whole block

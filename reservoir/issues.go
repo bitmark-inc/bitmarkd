@@ -7,9 +7,11 @@ package reservoir
 import (
 	"bytes"
 	"encoding/binary"
+	"math/big"
+
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/blockring"
-	"github.com/bitmark-inc/bitmarkd/constants"
+	"github.com/bitmark-inc/bitmarkd/cache"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
@@ -18,8 +20,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"golang.org/x/crypto/sha3"
-	"math/big"
-	"time"
 )
 
 const (
@@ -50,10 +50,6 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue, isVerified bool) (*Is
 	} else if 0 == count {
 		return nil, false, fault.ErrMissingParameters
 	}
-
-	// critical code - prevent overlapping blocks of issues
-	globalData.Lock()
-	defer globalData.Unlock()
 
 	// individual packed issues
 	separated := make([][]byte, count)
@@ -89,13 +85,13 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue, isVerified bool) (*Is
 
 		// an unverified issue tag the block as possible duplicate
 		// (if pay id matched later)
-		if _, ok := globalData.unverified.index[txId]; ok {
+		if _, ok := cache.Pool.UnverifiedTxIndex.Get(txId.String()); ok {
 			// if duplicate, activate pay id check
 			duplicate = true
 		}
 
 		// a single verified issue fails the whole block
-		if _, ok := globalData.verified[txId]; ok {
+		if _, ok := cache.Pool.VerifiedTx.Get(txId.String()); ok {
 			return nil, false, fault.ErrTransactionAlreadyExists
 		}
 		// a single confirmed issue fails the whole block
@@ -114,7 +110,7 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue, isVerified bool) (*Is
 			transactions := [][]byte{packedIssue[:]}
 
 			v := &verifiedItem{
-				data: &itemData{
+				itemData: &itemData{
 					txIds:        txIds,
 					links:        nil,
 					assetIds:     assetIds,
@@ -122,7 +118,7 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue, isVerified bool) (*Is
 				},
 				transaction: packedIssue,
 			}
-			globalData.verified[txId] = v
+			cache.Pool.VerifiedTx.Put(txId.String(), v)
 			return nil, false, nil
 		}
 	}
@@ -141,7 +137,7 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue, isVerified bool) (*Is
 	}
 
 	// if already seen just return pay id
-	if _, ok := globalData.unverified.entries[payId]; ok {
+	if _, ok := cache.Pool.UnverifiedTxEntries.Get(payId.String()); ok {
 		globalData.log.Debugf("duplicate pay id: %s", payId)
 		return result, true, nil
 	}
@@ -155,11 +151,9 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue, isVerified bool) (*Is
 
 	globalData.log.Infof("creating pay id: %s", payId)
 
-	expiresAt := time.Now().Add(constants.ReservoirTimeout)
-
 	// create index entries
 	for _, txId := range txIds {
-		globalData.unverified.index[txId] = payId
+		cache.Pool.UnverifiedTxIndex.Put(txId.String(), payId)
 	}
 
 	// save transactions
@@ -172,26 +166,25 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue, isVerified bool) (*Is
 		},
 		nonce:      nonce, // FIXME: this value seems not used
 		difficulty: difficulty,
-		expires:    expiresAt,
 	}
 	//copy(entry.txIds, txIds)
 	//copy(entry.transactions, transactions)
 
-	globalData.unverified.entries[payId] = entry
+	cache.Pool.UnverifiedTxEntries.Put(payId.String(), entry)
 
 	return result, false, nil
 }
 
 // instead of paying, try a proof from the client nonce
 func TryProof(payId pay.PayId, clientNonce []byte) TrackingStatus {
+	val, ok := cache.Pool.UnverifiedTxEntries.Get(payId.String())
 
-	globalData.RLock()
-	r, ok := globalData.unverified.entries[payId]
-	globalData.RUnlock()
 	//	r, done, ok := get(payId)
 	if !ok {
 		return TrackingNotFound
 	}
+
+	r := val.(*unverifiedItem)
 	// if done {
 	// 	return TrackingProcessed
 	// }
@@ -232,9 +225,7 @@ func TryProof(payId pay.PayId, clientNonce []byte) TrackingStatus {
 		// check difficulty and verify if ok
 		if bigDigest.Cmp(bigDifficulty) <= 0 {
 			globalData.log.Debugf("TryProof: success: pay id: %s", payId)
-			globalData.Lock()
 			setVerified(payId)
-			globalData.Unlock()
 			return TrackingAccepted
 		}
 	}

@@ -7,10 +7,14 @@ package main
 import (
 	"crypto/tls"
 	"fmt"
+	"os"
+	"os/signal"
+
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockring"
+	"github.com/bitmark-inc/bitmarkd/cache"
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/payment"
@@ -25,8 +29,6 @@ import (
 	"github.com/bitmark-inc/getoptions"
 	"github.com/bitmark-inc/listener"
 	"github.com/bitmark-inc/logger"
-	"os"
-	"os/signal"
 	//"runtime/pprof"
 	"syscall"
 	"time"
@@ -196,6 +198,13 @@ func main() {
 		exitwithstatus.Message("block initialise error: %v", err)
 	}
 	defer block.Finalise()
+
+	err = cache.Initialise()
+	if nil != err {
+		log.Criticalf("cache initialise error: %v", err)
+		exitwithstatus.Message("cache initialise error: %v", err)
+	}
+	defer cache.Finalise()
 
 	// these commands are allowed to access the internal database
 	if len(arguments) > 0 && processDataCommand(log, arguments, masterConfiguration) {
