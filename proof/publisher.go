@@ -75,7 +75,7 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 
 	switch pub.paymentCurrency {
 	case currency.Bitcoin:
-		cType, err := bitcoin.ValidateAddress(configuration.Address)
+		cType, _, err := bitcoin.ValidateAddress(configuration.Address)
 		if nil != err {
 			log.Errorf("validate bitcoin address error: %s", err)
 			return err

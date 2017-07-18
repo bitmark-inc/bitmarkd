@@ -15,6 +15,8 @@ func (currency Currency) GetFee() (uint64, error) {
 		return 0, nil
 	case Bitcoin:
 		return 10000, nil
+	case Litecoin:
+		return 10000, nil
 	default:
 		return 0, fault.ErrInvalidCurrency
 	}

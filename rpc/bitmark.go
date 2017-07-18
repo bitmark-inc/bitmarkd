@@ -27,10 +27,9 @@ type Bitmark struct {
 // ----------------
 
 type BitmarkTransferReply struct {
-	TxId     merkle.Digest                `json:"txId"`
-	PayId    pay.PayId                    `json:"payId"`
-	Payments []*transactionrecord.Payment `json:"payments"`
-	//PaymentAlternatives []block.MinerAddress `json:"paymentAlternatives"`// ***** FIX THIS: where to get addresses?
+	TxId     merkle.Digest                                   `json:"txId"`
+	PayId    pay.PayId                                       `json:"payId"`
+	Payments map[string]transactionrecord.PaymentAlternative `json:"payments"`
 }
 
 func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransfer, reply *BitmarkTransferReply) error {
@@ -61,7 +60,12 @@ func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransfer, r
 	log.Infof("id: %v", txId)
 	reply.TxId = txId
 	reply.PayId = payId
-	reply.Payments = stored.Payments
+	reply.Payments = make(map[string]transactionrecord.PaymentAlternative)
+
+	for _, payment := range stored.Payments {
+		c := payment[0].Currency.String()
+		reply.Payments[c] = payment
+	}
 
 	// announce transaction block to other peers
 	if !duplicate {

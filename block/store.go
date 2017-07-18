@@ -12,6 +12,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/blockring"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/currency/bitcoin"
+	"github.com/bitmark-inc/bitmarkd/currency/litecoin"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/mode"
@@ -73,6 +74,10 @@ func StoreIncoming(packedBlock []byte) error {
 
 	digest := packedHeader.Digest()
 
+	// this sets the maximum number of currencies supported
+	// order is determined by the currency enum order
+	currencyAddresses := [currency.Count]string{} // bitcoin, litecoin
+
 	// store transactions
 	for i, item := range txs {
 		txId := txIds[i]
@@ -80,10 +85,20 @@ func StoreIncoming(packedBlock []byte) error {
 		switch tx := item.unpacked.(type) {
 
 		case *transactionrecord.BaseData:
-			// ensure valid currency/address
+			// ensure base data is at the start of a block
+			if i >= len(currencyAddresses) {
+				return fault.ErrOutOfPlaceBaseData
+			}
+
+			// ensure order follows currency enum order
+			if tx.Currency.Index() != i {
+				return fault.ErrOutOfPlaceBaseData
+			}
+
+			// extract the currency address for payments
 			switch tx.Currency {
 			case currency.Bitcoin:
-				cType, err := bitcoin.ValidateAddress(tx.PaymentAddress)
+				cType, _, err := bitcoin.ValidateAddress(tx.PaymentAddress)
 				if nil != err {
 					return err
 				}
@@ -99,18 +114,36 @@ func StoreIncoming(packedBlock []byte) error {
 				default:
 					return fault.ErrBitcoinAddressIsNotSupported
 				}
+				// save bitcoin address
+				currencyAddresses[0] = tx.PaymentAddress
+
+				// simulate a litecoin address (from this bitcoin address) as a default
+				// and to provide a litecoin address for older blocks with no litecoin base record
+				currencyAddresses[1], err = litecoin.FromBitcoin(tx.PaymentAddress)
+
+			case currency.Litecoin:
+				cType, _, err := litecoin.ValidateAddress(tx.PaymentAddress)
+				if nil != err {
+					return err
+				}
+				switch cType {
+				case litecoin.Testnet, litecoin.TestnetScript:
+					if !mode.IsTesting() {
+						return fault.ErrLitecoinAddressForWrongNetwork
+					}
+				case litecoin.Livenet, litecoin.LivenetScript, litecoin.LivenetScript2:
+					if mode.IsTesting() {
+						return fault.ErrLitecoinAddressForWrongNetwork
+					}
+				default:
+					return fault.ErrLitecoinAddressIsNotSupported
+				}
+				// save litecoin address
+				currencyAddresses[1] = tx.PaymentAddress
 
 			default:
 				return fault.ErrInvalidCurrency
 			}
-
-			blockNumber := make([]byte, 8)
-			binary.BigEndian.PutUint64(blockNumber, header.Number)
-			data := make([]byte, 8, 8+len(tx.PaymentAddress))
-			binary.BigEndian.PutUint64(data[:8], tx.Currency.Uint64())
-			data = append(data, tx.PaymentAddress...)
-			storage.Pool.BlockOwners.Put(blockNumber, data)
-			// currently not stored separately
 
 		case *transactionrecord.AssetData:
 			assetIndex := tx.AssetIndex()
@@ -147,6 +180,21 @@ func StoreIncoming(packedBlock []byte) error {
 			logger.Panicf("unhandled transaction: %v", tx)
 		}
 	}
+
+	// currency database write
+	blockNumber := make([]byte, 8)
+	binary.BigEndian.PutUint64(blockNumber, header.Number)
+
+	byteCount := 0
+	for _, s := range currencyAddresses {
+		byteCount += len(s) + 1 // include a 0x00 separator byte as each string is Base58 ASCII text
+	}
+	currencyData := make([]byte, 0, byteCount)
+	for _, s := range currencyAddresses {
+		currencyData = append(currencyData, s...)
+		currencyData = append(currencyData, 0x00)
+	}
+	storage.Pool.BlockOwners.Put(blockNumber, currencyData)
 
 	// finish be stoing the block header
 	storeAndUpdate(header, digest, packedBlock)

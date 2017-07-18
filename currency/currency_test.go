@@ -28,6 +28,12 @@ var valid = []currencyTest{
 	{"BITCOIN", currency.Bitcoin, `"BTC"`},
 	{"BitCoin", currency.Bitcoin, `"BTC"`},
 	{"bitcoin", currency.Bitcoin, `"BTC"`},
+	{"ltc", currency.Litecoin, `"LTC"`},
+	{"LTC", currency.Litecoin, `"LTC"`},
+	{"Litecoin", currency.Litecoin, `"LTC"`},
+	{"LITECOIN", currency.Litecoin, `"LTC"`},
+	{"LiteCoin", currency.Litecoin, `"LTC"`},
+	{"litecoin", currency.Litecoin, `"LTC"`},
 }
 
 var invalid = []string{

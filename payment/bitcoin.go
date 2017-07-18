@@ -7,18 +7,17 @@ package payment
 import (
 	"encoding/hex"
 	"encoding/json"
-	"go-programs/uploader/fault"
-	"net/http"
-	"sync"
-	"time"
-
 	"github.com/bitmark-inc/bitmarkd/constants"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/currency/satoshi"
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
+	"net/http"
+	"sync"
+	"time"
 )
 
 const (

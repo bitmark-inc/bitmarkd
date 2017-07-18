@@ -19,7 +19,7 @@ type TransferInfo struct {
 	Id       pay.PayId
 	TxId     merkle.Digest
 	Packed   []byte
-	Payments []*transactionrecord.Payment
+	Payments []transactionrecord.PaymentAlternative
 }
 
 func StoreTransfer(transfer *transactionrecord.BitmarkTransfer) (*TransferInfo, bool, error) {

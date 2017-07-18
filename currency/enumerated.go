@@ -23,6 +23,7 @@ const (
 	maximumValue Currency = iota // this must be the last value
 	First        Currency = Nothing + 1
 	Last         Currency = maximumValue - 1
+	Count        int      = int(Last) // count of currencies
 )
 
 // internal conversion
@@ -47,7 +48,7 @@ func fromString(in string) (Currency, error) {
 	case "btc", "bitcoin":
 		return Bitcoin, nil
 	case "ltc", "litecoin":
-		return Bitcoin, nil
+		return Litecoin, nil
 	default:
 		return Nothing, fault.ErrInvalidCurrency
 	}
@@ -67,7 +68,7 @@ func (currency Currency) GoString() string {
 	return fmt.Sprintf("<Currency#%d:%q>", currency, currency.String())
 }
 
-// convert a big endian hex representation to a digest for use by the format package scan routines
+// convert a currency string
 func (currency *Currency) Scan(state fmt.ScanState, verb rune) error {
 	token, err := state.Token(true, func(c rune) bool {
 		if c >= '0' && c <= '9' {
@@ -91,4 +92,18 @@ func (currency *Currency) Scan(state fmt.ScanState, verb rune) error {
 
 	*currency = parsed
 	return nil
+}
+
+// valid currency if in range of First to Last
+// None is not considered as valid
+func (currency Currency) IsValid() bool {
+	return currency >= First && currency <= Last
+}
+
+// convert a valid currency to a zero based array index
+func (currency Currency) Index() int {
+	if !currency.IsValid() {
+		logger.Panicf("currency.Index: invalid currency: %d", currency)
+	}
+	return int(currency - First) // zero based index
 }

@@ -83,6 +83,13 @@ type Payment struct {
 	Amount   uint64            `json:"amount,string"` // number as string, in terms of smallest currency unit
 }
 
+// a single payment possibility - for use in RPC layers
+// up to entries:
+//   1. issue block owner payment
+//   2. last transfer block owner payment (can merge with 1 if same address)
+//   3. optional transfer payment
+type PaymentAlternative []*Payment
+
 // the unpacked BitmarkTransfer structure
 type BitmarkTransfer struct {
 	Link      merkle.Digest     `json:"link"`      // previous record

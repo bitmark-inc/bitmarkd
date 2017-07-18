@@ -29,9 +29,9 @@ type itemData struct {
 
 type unverifiedItem struct {
 	*itemData
-	nonce      PayNonce                     // only for issues
-	difficulty *difficulty.Difficulty       // only for issues
-	payments   []*transactionrecord.Payment // currently only for transfers
+	nonce      PayNonce                               // only for issues
+	difficulty *difficulty.Difficulty                 // only for issues
+	payments   []transactionrecord.PaymentAlternative // currently only for transfers
 }
 
 type verifiedItem struct {

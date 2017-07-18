@@ -28,6 +28,13 @@
 //                                data: header ++ base transaction ++ (concat transactions)
 //   F ++ block number          - current block owner
 //                                data: owner ++ currency ++ currency address
+//                                data: owner ++ 0x01 ++ currency address
+//                                data: owner ++ 0x02 ++ currency address ++ 0x00 ++ currency address
+
+//35: Key: 0000000000000025
+//35: Val: 0000000000000001 6d73784e37433763524e67626779557a743345637672706d5758633539735a564e34
+//                          m.s.x.N.7.C.7.c.R.N.g.b.g.y.U.z.t.3.E.c.v.r.p.m.W.X.c.5.9.s.Z.V.N.4.
+
 //
 // Transactions:
 //

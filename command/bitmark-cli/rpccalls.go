@@ -8,7 +8,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/account"
-	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/keypair"
 	"github.com/bitmark-inc/bitmarkd/merkle"
@@ -23,10 +22,11 @@ import (
 )
 
 // prefix for the payment command
-// assumed format is: paymentCommand paymentNetwork='network' 'PaymentId' 'BTCaddress₁' 'SatoshiAmount₁' … 'BTCaddressN' 'SatoshiAmountN'
+// assumed format is: paymentCommand paymentNetwork='network' paymentCurrency='currency' 'PaymentId' 'address₁' 'SatoshiAmount₁' … 'addressN' 'SatoshiAmountN'
 const (
-	paymentCommand = "bitmark-pay --json"
-	paymentNetwork = "--network="
+	paymentCommand  = "bitmark-pay --json"
+	paymentCurrency = "--currency"
+	paymentNetwork  = "--network"
 )
 
 var (
@@ -336,10 +336,10 @@ func makeTransfer(network string, link merkle.Digest, owner *keypair.KeyPair, ne
 
 // JSON data to output after transfer completes
 type transferReply struct {
-	TransferId merkle.Digest                `json:"transferId"`
-	PayId      pay.PayId                    `json:"payId"`
-	Payments   []*transactionrecord.Payment `json:"payments"`
-	Command    string                       `json:"command,omitempty"`
+	TransferId merkle.Digest                                   `json:"transferId"`
+	PayId      pay.PayId                                       `json:"payId"`
+	Payments   map[string]transactionrecord.PaymentAlternative `json:"payments"`
+	Commands   map[string]string                               `json:"commands,omitempty"`
 }
 
 func doTransfer(client *netrpc.Client, network string, transferConfig transferData, verbose bool) (*transferReply, error) {
@@ -363,17 +363,18 @@ func doTransfer(client *netrpc.Client, network string, transferConfig transferDa
 		return nil, err
 	}
 
-	command := paymentCommand +
-		" " + paymentNetwork + "'" + network +
-		"' '" + string(tpid) + "'"
-	for _, p := range reply.Payments {
-
-		switch p.Currency {
-		case currency.Bitcoin:
+	commands := make(map[string]string)
+	for _, payment := range reply.Payments {
+		currency := payment[0].Currency
+		command := fmt.Sprintf("%s %s='%s' %s='%s' '%s'",
+			paymentCommand,
+			paymentNetwork, network,
+			paymentCurrency, currency,
+			tpid)
+		for _, p := range payment {
 			command += fmt.Sprintf(" '%s' '%d'", p.Address, p.Amount)
-		default:
-			command += fmt.Sprintf(" 'UNKNOWN-%s' '%d'", p.Address, p.Amount)
 		}
+		commands[currency.String()] = command
 	}
 
 	printJson("Transfer Reply", reply, verbose)
@@ -383,7 +384,7 @@ func doTransfer(client *netrpc.Client, network string, transferConfig transferDa
 		TransferId: reply.TxId,
 		PayId:      reply.PayId,
 		Payments:   reply.Payments,
-		Command:    command,
+		Commands:   commands,
 	}
 
 	return &response, nil
