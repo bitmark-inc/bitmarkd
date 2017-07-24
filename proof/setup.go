@@ -5,24 +5,24 @@
 package proof
 
 import (
+	"sync"
+	"time"
+
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/logger"
-	"sync"
-	"time"
 )
 
 // server identification in Z85 (ZeroMQ Base-85 Encoding) see: http://rfc.zeromq.org/spec:32
 // a block of configuration data
 // this is read from a libucl configuration file
 type Configuration struct {
-	Publish    []string `libucl:"publish" json:"publish"`
-	Submit     []string `libucl:"submit" json:"submit"`
-	PrivateKey string   `libucl:"private_key" json:"private_key"`
-	PublicKey  string   `libucl:"public_key" json:"public_key"`
-	SigningKey string   `libucl:"signing_key" json:"signing_key"`
-	Currency   string   `libucl:"currency" json:"currency"`
-	Address    string   `libucl:"address" json:"address"`
+	Publish     []string          `libucl:"publish" json:"publish"`
+	Submit      []string          `libucl:"submit" json:"submit"`
+	PrivateKey  string            `libucl:"private_key" json:"private_key"`
+	PublicKey   string            `libucl:"public_key" json:"public_key"`
+	SigningKey  string            `libucl:"signing_key" json:"signing_key"`
+	PaymentAddr map[string]string `libucl:"payment_address" json:"payment_address"`
 }
 
 // globals for background proccess

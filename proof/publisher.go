@@ -11,12 +11,17 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"strings"
+	"time"
+
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/currency/bitcoin"
+	"github.com/bitmark-inc/bitmarkd/currency/litecoin"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
@@ -29,9 +34,6 @@ import (
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
 	"golang.org/x/crypto/ed25519"
-	"io/ioutil"
-	"strings"
-	"time"
 )
 
 // tags for the signing key data
@@ -47,13 +49,12 @@ const (
 )
 
 type publisher struct {
-	log             *logger.L
-	socket4         *zmq.Socket
-	socket6         *zmq.Socket
-	paymentCurrency currency.Currency
-	paymentAddress  string
-	owner           *account.Account
-	privateKey      []byte
+	log            *logger.L
+	socket4        *zmq.Socket
+	socket6        *zmq.Socket
+	paymentAddress map[currency.Currency]string
+	owner          *account.Account
+	privateKey     []byte
 }
 
 // initialise the publisher
@@ -67,40 +68,63 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 
 	log.Info("initialising…")
 
-	_, err := fmt.Sscan(configuration.Currency, &pub.paymentCurrency)
-	if nil != err {
-		log.Errorf("currency: %q  error: %v", configuration.Currency, err)
-		return err
-	}
-
-	switch pub.paymentCurrency {
-	case currency.Bitcoin:
-		cType, _, err := bitcoin.ValidateAddress(configuration.Address)
+	// set up payment address for each supported currency
+	pub.paymentAddress = make(map[currency.Currency]string)
+	for c, currencyAddress := range configuration.PaymentAddr {
+		var paymentCurrency currency.Currency
+		_, err := fmt.Sscan(c, &paymentCurrency)
 		if nil != err {
-			log.Errorf("validate bitcoin address error: %s", err)
+			log.Errorf("currency: %q  error: %v", c, err)
 			return err
 		}
-		switch cType {
-		case bitcoin.Testnet, bitcoin.TestnetScript:
-			if !mode.IsTesting() {
-				err := fault.ErrBitcoinAddressForWrongNetwork
-				log.Errorf("validate bitcoin address error: %s", err)
-				return err
-			}
-		case bitcoin.Livenet, bitcoin.LivenetScript:
-			if mode.IsTesting() {
-				err := fault.ErrBitcoinAddressForWrongNetwork
-				log.Errorf("validate bitcoin address error: %s", err)
-				return err
-			}
-		default:
-			return fault.ErrBitcoinAddressIsNotSupported
-		}
-		pub.paymentAddress = configuration.Address
 
-	default:
-		log.Errorf("unsupported currency: %q", configuration.Currency)
-		return fault.ErrCurrencyIsNotSupportedByProofer
+		switch paymentCurrency {
+		case currency.Bitcoin:
+			cType, _, err := bitcoin.ValidateAddress(currencyAddress)
+			if nil != err {
+				log.Errorf("validate bitcoin address error: %s", err)
+				return err
+			}
+			switch cType {
+			case bitcoin.Testnet, bitcoin.TestnetScript:
+				if !mode.IsTesting() {
+					err := fault.ErrBitcoinAddressForWrongNetwork
+					log.Errorf("validate bitcoin address error: %s", err)
+					return err
+				}
+			case bitcoin.Livenet, bitcoin.LivenetScript:
+				if mode.IsTesting() {
+					err := fault.ErrBitcoinAddressForWrongNetwork
+					log.Errorf("validate bitcoin address error: %s", err)
+					return err
+				}
+			default:
+				return fault.ErrBitcoinAddressIsNotSupported
+			}
+		case currency.Litecoin:
+			cType, _, err := litecoin.ValidateAddress(currencyAddress)
+			if nil != err {
+				return err
+			}
+			switch cType {
+			case litecoin.Testnet, litecoin.TestnetScript:
+				if !mode.IsTesting() {
+					return fault.ErrLitecoinAddressForWrongNetwork
+				}
+			case litecoin.Livenet, litecoin.LivenetScript, litecoin.LivenetScript2:
+				if mode.IsTesting() {
+					return fault.ErrLitecoinAddressForWrongNetwork
+				}
+			default:
+				return fault.ErrLitecoinAddressIsNotSupported
+			}
+
+		default:
+			log.Errorf("unsupported currency: %q", c)
+			return fault.ErrCurrencyIsNotSupportedByProofer
+		}
+
+		pub.paymentAddress[paymentCurrency] = currencyAddress
 	}
 
 	if databytes, err := ioutil.ReadFile(configuration.SigningKey); err != nil {
@@ -231,28 +255,35 @@ func (pub *publisher) process() {
 	// to accumulate new assets
 	assetIds := make([]transactionrecord.AssetIndex, 0, txCount)
 
-	base := &transactionrecord.BaseData{
-		Currency:       pub.paymentCurrency,
-		PaymentAddress: pub.paymentAddress,
-		Owner:          pub.owner,
-		Nonce:          1234,
+	// create the base record for each supported currency
+	var bases [currency.Count][]byte
+	for c := currency.First; c <= currency.Last; c++ {
+		base := &transactionrecord.BaseData{
+			Currency:       c,
+			PaymentAddress: pub.paymentAddress[c],
+			Owner:          pub.owner,
+			Nonce:          1234,
+		}
+
+		// sign the record and attach signature
+		partiallyPackedBase, _ := base.Pack(pub.owner) // ignore error to get packed without signature
+		signature := ed25519.Sign(pub.privateKey[:], partiallyPackedBase)
+		base.Signature = signature[:]
+
+		// re-pack to makesure signature is valid
+		packedBase, err := base.Pack(pub.owner)
+		if nil != err {
+			pub.log.Criticalf("pack base error: %v", err)
+			logger.Panicf("publisher packed base error: %s", err)
+		}
+
+		bases[c.Index()] = packedBase
 	}
 
-	// sign the record and attach signature
-	partiallyPackedBase, _ := base.Pack(pub.owner) // ignore error to get packed without signature
-	signature := ed25519.Sign(pub.privateKey[:], partiallyPackedBase)
-	base.Signature = signature[:]
-
-	// re-pack to makesure signature is valid
-	packedBase, err := base.Pack(pub.owner)
-	if nil != err {
-		pub.log.Criticalf("pack base error: %v", err)
-		logger.Panicf("publisher packed base error: %s", err)
-	}
-
-	// first txId is the base
-	txIds := make([]merkle.Digest, 1, len(pooledTxIds)*2) // allow room for inserted assets & allocate base
-	txIds[0] = merkle.NewDigest(packedBase)               // base is first
+	// the first two are base records
+	txIds := make([]merkle.Digest, currency.Count, len(pooledTxIds)*2) // allow room for inserted assets & allocate base
+	txIds[0] = merkle.NewDigest(bases[currency.Bitcoin.Index()])       // bitcoin base is the first
+	txIds[1] = merkle.NewDigest(bases[currency.Litecoin.Index()])      // litecoin base is the second
 
 	n := 0 // index for txIds
 	for _, item := range transactions {
@@ -326,7 +357,7 @@ func (pub *publisher) process() {
 			Difficulty:       bits,
 			Nonce:            nonce,
 		},
-		Base:     packedBase,
+		Bases:    bases,
 		TxIds:    txIds,
 		AssetIds: assetIds,
 	}

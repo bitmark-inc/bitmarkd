@@ -82,8 +82,10 @@ proofing {
   private_key = proof.private
   signing_key = proof.sign
 
-  currency = bitcoin
-  address = "msxN7C7cRNgbgyUzt3EcvrpmWXc59sZVN4"
+  payment_address = {
+    bitcoin = "msxN7C7cRNgbgyUzt3EcvrpmWXc59sZVN4"
+    litecoin = "msxN7C7cRNgbgyUzt3EcvrpmWXc59sZVN4"
+  }
 
   publish =  "0.0.0.0:2140"
   publish = "[::]:2140"
