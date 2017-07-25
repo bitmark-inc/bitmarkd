@@ -46,6 +46,7 @@ func Initialise(configuration *Configuration) error {
 	if globalData.log == nil {
 		return fault.ErrInvalidLoggerChannel
 	}
+	globalData.log.Info("starting…")
 
 	// initialise the handler for each currency
 	globalData.handlers = make(map[string]currencyHandler)
@@ -68,15 +69,19 @@ func Initialise(configuration *Configuration) error {
 		}
 	}
 
-	// set up background processes
+	// start background processes
+	globalData.log.Info("start background…")
+
 	processes := background.Processes{}
 	if configuration.UseDiscovery {
+		globalData.log.Info("discovery…")
 		discoverer, err := newDiscoverer(globalData.log, configuration.Discovery.SubEndpoint, configuration.Discovery.ReqEndpoint)
 		if err != nil {
 			return err
 		}
 		processes = append(processes, discoverer)
 	} else {
+		globalData.log.Info("checker…")
 		processes = append(processes, &checker{})
 	}
 
@@ -86,7 +91,9 @@ func Initialise(configuration *Configuration) error {
 }
 
 func Finalise() {
+	globalData.log.Info("shutting down…")
 	globalData.background.Stop()
 
+	globalData.log.Info("finished")
 	globalData.log.Flush()
 }
