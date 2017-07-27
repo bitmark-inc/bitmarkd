@@ -11,10 +11,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"strings"
-	"time"
-
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/block"
@@ -34,6 +30,9 @@ import (
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
 	"golang.org/x/crypto/ed25519"
+	"io/ioutil"
+	"strings"
+	"time"
 )
 
 // tags for the signing key data
@@ -285,7 +284,7 @@ func (pub *publisher) process() {
 	txIds[0] = merkle.NewDigest(bases[currency.Bitcoin.Index()])       // bitcoin base is the first
 	txIds[1] = merkle.NewDigest(bases[currency.Litecoin.Index()])      // litecoin base is the second
 
-	n := 0 // index for txIds
+	n := 0 // index for pooledTxIds
 	for _, item := range transactions {
 		unpacked, _, err := transactionrecord.Packed(item).Unpack()
 		if nil != err {

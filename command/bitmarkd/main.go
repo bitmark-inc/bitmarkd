@@ -7,9 +7,6 @@ package main
 import (
 	"crypto/tls"
 	"fmt"
-	"os"
-	"os/signal"
-
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/block"
@@ -29,6 +26,8 @@ import (
 	"github.com/bitmark-inc/getoptions"
 	"github.com/bitmark-inc/listener"
 	"github.com/bitmark-inc/logger"
+	"os"
+	"os/signal"
 	//"runtime/pprof"
 	"syscall"
 	"time"

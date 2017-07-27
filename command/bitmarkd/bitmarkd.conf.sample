@@ -82,9 +82,14 @@ proofing {
   private_key = proof.private
   signing_key = proof.sign
 
-  payment_address = {
+  # payments for future transfers
+  # private keys are just samples for testing
+  # (do not include such keys in a real configuration file)
+  payment_address {
+    # bitcoin key: "cPcHEqnqNG3Ze27Yqqxk8fQXmFVAgme1h1UT3HBN3MV4gERUVbVc"
     bitcoin = "msxN7C7cRNgbgyUzt3EcvrpmWXc59sZVN4"
-    litecoin = "msxN7C7cRNgbgyUzt3EcvrpmWXc59sZVN4"
+    # litecoin key: "cUhoPFEKgWzxX9Ycynemjtvh4kEv3vcoVW6RgLaxzEVTGHFWF6WY"
+    litecoin = "mjPkDNakVA4w4hJZ6WF7p8yKUV2merhyCM"
   }
 
   publish =  "0.0.0.0:2140"
