@@ -97,9 +97,10 @@ func getPayment(blockNumberKey []byte) *PaymentSegment {
 	}
 
 	// trim any trailing '0x00' bytes
+trim_bytes:
 	for l := len(blockOwnerData) - 1; l >= 0; l -= 1 {
 		if 0x00 != blockOwnerData[l] {
-			break
+			break trim_bytes
 		}
 		blockOwnerData = blockOwnerData[:l]
 	}

@@ -16,6 +16,8 @@ func FromByteString(btc []byte) uint64 {
 	s := uint64(0)
 	point := false
 	decimals := 0
+
+get_digits:
 	for _, b := range btc {
 		if b >= '0' && b <= '9' {
 			s *= 10
@@ -23,7 +25,7 @@ func FromByteString(btc []byte) uint64 {
 			if point {
 				decimals += 1
 				if decimals >= 8 {
-					break
+					break get_digits
 				}
 			}
 		} else if '.' == b {

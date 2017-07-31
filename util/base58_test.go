@@ -66,35 +66,38 @@ var hexTests = []struct {
 
 func TestBase58(t *testing.T) {
 	// Base58Encode tests
+encode_loop:
 	for x, test := range stringTests {
 		tmp := []byte(test.in)
 		if res := util.ToBase58(tmp); res != test.out {
 			t.Errorf("ToBase58 test #%d failed: got: %s want: %s",
 				x, res, test.out)
-			continue
+			continue encode_loop
 		}
 	}
 
 	// Base58Decode tests
+decode_loop:
 	for x, test := range hexTests {
 		b, err := hex.DecodeString(test.in)
 		if err != nil {
 			t.Errorf("hex.DecodeString failed failed #%d: got: %s", x, test.in)
-			continue
+			continue decode_loop
 		}
 		if res := util.FromBase58(test.out); bytes.Equal(res, b) != true {
 			t.Errorf("FromBase58 test #%d failed: got: %x want: %x",
 				x, res, b)
-			continue
+			continue decode_loop
 		}
 	}
 
 	// Base58Decode with invalid input
+invalid_loop:
 	for x, test := range invalidStringTests {
 		if res := util.FromBase58(test.in); string(res) != test.out {
 			t.Errorf("FromBase58 invalidString test #%d failed: got: %q want: %q",
 				x, res, test.out)
-			continue
+			continue invalid_loop
 		}
 	}
 }

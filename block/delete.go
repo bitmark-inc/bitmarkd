@@ -33,6 +33,7 @@ func DeleteDownToBlock(finalBlockNumber uint64) error {
 
 	packedBlock := last.Value
 
+outer_loop:
 	for {
 		packedHeader := blockrecord.PackedHeader(packedBlock[:blockrecord.TotalBlockSize])
 		header, err := packedHeader.Unpack()
@@ -52,7 +53,7 @@ func DeleteDownToBlock(finalBlockNumber uint64) error {
 
 		// packed transactions
 		data := packedBlock[blockrecord.TotalBlockSize:]
-	loop:
+	inner_loop:
 		for i := 1; true; i += 1 {
 			transaction, n, err := transactionrecord.Packed(data).Unpack()
 			if nil != err {
@@ -99,7 +100,7 @@ func DeleteDownToBlock(finalBlockNumber uint64) error {
 
 			data = data[n:]
 			if 0 == len(data) {
-				break loop
+				break inner_loop
 			}
 		}
 
@@ -113,7 +114,7 @@ func DeleteDownToBlock(finalBlockNumber uint64) error {
 		packedBlock = storage.Pool.Blocks.Get(key)
 
 		if nil == packedBlock {
-			break
+			break outer_loop
 		}
 
 	}

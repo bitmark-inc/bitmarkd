@@ -6,7 +6,6 @@ package main
 
 import (
 	"crypto/tls"
-	"fmt"
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/keypair"
@@ -19,14 +18,6 @@ import (
 	"net"
 	netrpc "net/rpc"
 	"time"
-)
-
-// prefix for the payment command
-// assumed format is: paymentCommand paymentNetwork='network' paymentCurrency='currency' 'PaymentId' 'address₁' 'SatoshiAmount₁' … 'addressN' 'SatoshiAmountN'
-const (
-	paymentCommand  = "bitmark-pay --json"
-	paymentCurrency = "--currency"
-	paymentNetwork  = "--network"
 )
 
 var (
@@ -366,15 +357,7 @@ func doTransfer(client *netrpc.Client, network string, transferConfig transferDa
 	commands := make(map[string]string)
 	for _, payment := range reply.Payments {
 		currency := payment[0].Currency
-		command := fmt.Sprintf("%s %s='%s' %s='%s' '%s'",
-			paymentCommand,
-			paymentNetwork, network,
-			paymentCurrency, currency,
-			tpid)
-		for _, p := range payment {
-			command += fmt.Sprintf(" '%s' '%d'", p.Address, p.Amount)
-		}
-		commands[currency.String()] = command
+		commands[currency.String()] = paymentCommand(network, currency, string(tpid), payment)
 	}
 
 	printJson("Transfer Reply", reply, verbose)

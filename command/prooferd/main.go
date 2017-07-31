@@ -167,25 +167,26 @@ func main() {
 	clientCount := 0
 	// start up bitmarkd clients these subscribe to bitmarkd
 	// blocks publisher to obtain blocks for mining
+connection_setup:
 	for i, remote := range masterConfiguration.Peering.Connect {
 
 		serverPublicKey, err := hex.DecodeString(remote.PublicKey)
 		if nil != err {
 			log.Warnf("client: %d invalid server publickey: %q error: %v", i, remote.PublicKey, err)
-			continue
+			continue connection_setup
 		}
 
 		bc, err := util.NewConnection(remote.Blocks)
 		if nil != err {
 			log.Warnf("client: %d invalid blocks publisher: %q error: %v", i, remote.Blocks, err)
-			continue
+			continue connection_setup
 		}
 		blocksAddress, blocksv6 := bc.CanonicalIPandPort("tcp://")
 
 		sc, err := util.NewConnection(remote.Submit)
 		if nil != err {
 			log.Warnf("client: %d invalid submit address: %q error: %v", i, remote.Submit, err)
-			continue
+			continue connection_setup
 		}
 		submitAddress, submitv6 := sc.CanonicalIPandPort("tcp://")
 
@@ -195,14 +196,14 @@ func main() {
 		err = Submitter(i, submitAddress, submitv6, serverPublicKey, publicKey, privateKey, mlog)
 		if nil != err {
 			log.Warnf("submitter: %d failed error: %v", i, err)
-			continue
+			continue connection_setup
 		}
 
 		slog := logger.New(fmt.Sprintf("subscriber-%d", i))
 		err = Subscribe(i, blocksAddress, blocksv6, serverPublicKey, publicKey, privateKey, slog)
 		if nil != err {
 			log.Warnf("subscribe: %d failed error: %v", i, err)
-			continue
+			continue connection_setup
 		}
 		clientCount += 1
 	}

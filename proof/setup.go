@@ -5,12 +5,10 @@
 package proof
 
 import (
-	"sync"
-	"time"
-
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/logger"
+	"sync"
 )
 
 // server identification in Z85 (ZeroMQ Base-85 Encoding) see: http://rfc.zeromq.org/spec:32
@@ -104,15 +102,8 @@ func Finalise() error {
 	globalData.log.Info("shutting down…")
 	globalData.log.Flush()
 
-	// // stop background
-	// globalData.background.Stop()
-
-	// ***** FIX THIS: temporary stop background
-	globalData.log.Info("run stop in goroutine…") // ***** FIX THIS: temporary until find fix
-	go globalData.background.Stop()               // ***** FIX THIS: temporary until find fix
-	globalData.log.Info("waiting 5 seconds…")     // ***** FIX THIS: temporary until find fix
-	time.Sleep(5 * time.Second)                   // ***** FIX THIS: temporary until find fix
-	globalData.log.Info("after delay")            // ***** FIX THIS: temporary until find fix
+	// stop background
+	globalData.background.Stop()
 
 	// finally...
 	globalData.initialised = false

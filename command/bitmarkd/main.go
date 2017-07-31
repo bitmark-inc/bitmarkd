@@ -266,6 +266,7 @@ func main() {
 	}
 
 	// validate server parameters
+validate:
 	for name, server := range servers {
 		log.Infof("validate: %s", name)
 		certificate, ok := verifyListen(log, name, server)
@@ -274,7 +275,7 @@ func main() {
 			exitwithstatus.Message("invalid %s parameters", name)
 		}
 		if 0 == server.limit {
-			continue
+			continue validate
 		}
 		log.Infof("multi listener for: %s", name)
 		ml, err := listener.NewMultiListener(name, server.addresses, server.tlsConfiguration, server.limiter, server.callback)

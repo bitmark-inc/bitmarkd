@@ -181,15 +181,16 @@ func determineConnections(log *logger.L) {
 		toConnectNode = append(toConnectNode, n.GetNodeByOrder(connectOrder))
 	}
 
+connections:
 	for i, node := range toConnectNode {
 		nodeLabel := fmt.Sprintf("X%d", (i+1)*25) // it should by X25, X50 and X75
 		if nil == node {
 			log.Warnf("failed: node at: %s is nil", nodeLabel)
-			continue
+			continue connections
 		}
 
 		if node == globalData.thisNode || node == globalData.n1 || node == globalData.n3 {
-			continue
+			continue connections
 		}
 
 		if n := globalData.crossNodes[nodeLabel]; n != node {
@@ -209,6 +210,7 @@ func determineConnections(log *logger.L) {
 func expirePeer(log *logger.L) {
 	now := time.Now()
 	nextNode := globalData.peerTree.First()
+scan_nodes:
 	for node := nextNode; nil != node; node = nextNode {
 
 		peer := node.Value().(*peerEntry)
@@ -218,7 +220,7 @@ func expirePeer(log *logger.L) {
 
 		// skip this node's entry
 		if bytes.Equal(globalData.publicKey, peer.publicKey) {
-			continue
+			continue scan_nodes
 		}
 
 		log.Infof("public key: %x timestamp: %v", peer.publicKey, peer.timestamp)

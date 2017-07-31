@@ -37,9 +37,10 @@ func FromBase58(b string) []byte {
 	tmpval := answer.Bytes()
 
 	var numZeros int
+loop:
 	for numZeros = 0; numZeros < len(b); numZeros++ {
 		if b[numZeros] != alphabet[0] {
-			break
+			break loop
 		}
 	}
 	flen := numZeros + len(tmpval)
@@ -62,9 +63,10 @@ func ToBase58(b []byte) string {
 	}
 
 	// leading zero bytes
+loop:
 	for _, i := range b {
 		if i != 0 {
-			break
+			break loop
 		}
 		answer = append(answer, alphabet[0])
 	}

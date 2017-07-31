@@ -40,7 +40,7 @@ words:
 
 		if 0 == i {
 			if taggedTXT == w {
-				continue
+				continue words
 			}
 			return nil, fault.ErrInvalidDnsTxtRecord
 		}

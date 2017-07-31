@@ -40,13 +40,14 @@ var testInvalidPrivateKeyFromBase58 = []invalid{
 // this has to be changed if private.go is modified
 // it is used to print the base58PrivateKey for testPrivateKey above
 func TestPrivateValid(t *testing.T) {
+loop:
 	for index, test := range testPrivateKey {
 		buffer := []byte{byte(test.algorithm << 4)}
 		buffer = append(buffer, test.privateKey...)
 		privateKey, err := account.PrivateKeyFromBytes(buffer)
 		if nil != err {
 			t.Errorf("%d: Create privateKey from bytes failed: %s", index, err)
-			continue
+			continue loop
 		}
 		t.Logf("%d: result: %s", index, privateKey)
 		t.Logf("%d:    hex: %x", index, privateKey.Bytes())
@@ -55,11 +56,12 @@ func TestPrivateValid(t *testing.T) {
 
 // From valid base58 string to privateKey
 func TestPrivateValidBase58(t *testing.T) {
+loop:
 	for index, test := range testPrivateKey {
 		prv, err := account.PrivateKeyFromBase58(test.base58PrivateKey)
 		if nil != err {
 			t.Errorf("%d: from base58 error: %s", index, err)
-			continue
+			continue loop
 		}
 		if prv.KeyType() != test.algorithm {
 			t.Errorf("%d: from base58 type: %d  expected: %d", index, prv.KeyType(), test.algorithm)
@@ -77,7 +79,7 @@ func TestPrivateValidBase58(t *testing.T) {
 		err = json.Unmarshal([]byte(j), &a)
 		if nil != err {
 			t.Errorf("%d: from JSON string error: %s", index, err)
-			continue
+			continue loop
 		}
 		t.Logf("%d: from JSON: %#v", index, a)
 

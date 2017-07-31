@@ -218,18 +218,19 @@ func (conn *connector) runStateMachine() bool {
 			log.Infof("block number: %d", h)
 
 			// check digests of descending blocks (to detect a fork)
+		check_digests:
 			for ; h > genesis.BlockNumber; h -= 1 {
 				digest, err := block.DigestForBlock(h)
 				if nil != err {
 					log.Infof("block number: %d  local digest error: %v", h, err)
 					conn.state = cStateHighestBlock // retry
-					break
+					break check_digests
 				}
 				d, err := blockDigest(conn.theClient, h)
 				if nil != err {
 					log.Infof("block number: %d  fetch digest error: %v", h, err)
 					conn.state = cStateHighestBlock // retry
-					break
+					break check_digests
 				} else if d == digest {
 					conn.startBlockNumber = h + 1
 					log.Infof("fork from block number: %d", conn.startBlockNumber)
@@ -240,7 +241,7 @@ func (conn *connector) runStateMachine() bool {
 						log.Errorf("delete down to block number: %d  error: %v", conn.startBlockNumber, err)
 						conn.state = cStateHighestBlock // retry
 					}
-					break
+					break check_digests
 				}
 			}
 		}
@@ -249,12 +250,13 @@ func (conn *connector) runStateMachine() bool {
 
 		continueLooping = false
 
+	fetch_blocks:
 		for n := 0; n < fetchBlocksPerCycle; n += 1 {
 
 			if conn.startBlockNumber > conn.highestBlockNumber {
 				conn.state = cStateHighestBlock // just in case block height has changed
 				continueLooping = true
-				break
+				break fetch_blocks
 			}
 
 			log.Infof("fetch block number: %d", conn.startBlockNumber)
@@ -262,14 +264,14 @@ func (conn *connector) runStateMachine() bool {
 			if nil != err {
 				log.Errorf("fetch block number: %d  error: %v", conn.startBlockNumber, err)
 				conn.state = cStateHighestBlock // retry
-				break
+				break fetch_blocks
 			}
 			log.Debugf("store block number: %d", conn.startBlockNumber)
 			err = block.StoreIncoming(packedBlock)
 			if nil != err {
 				log.Errorf("store block number: %d  error: %v", conn.startBlockNumber, err)
 				conn.state = cStateHighestBlock // retry
-				break
+				break fetch_blocks
 			}
 
 			// next block
@@ -343,11 +345,13 @@ func (conn *connector) runStateMachine() bool {
 // send a registration request to all connected clients
 func register(log *logger.L, clients []*zmqutil.Client) bool {
 	n := 0
+
+process_clients:
 	for i, client := range clients {
 		log.Infof("register trying client: %d", i)
 		if !client.IsConnected() {
 			log.Info("not connected")
-			continue
+			continue process_clients
 		}
 
 		err := announce.SendRegistration(client, "R")
@@ -357,7 +361,7 @@ func register(log *logger.L, clients []*zmqutil.Client) bool {
 			if nil != err {
 				log.Errorf("reconnect error: %v", err)
 			}
-			continue
+			continue process_clients
 		}
 		data, err := client.Receive(0)
 		if nil != err {
@@ -366,18 +370,18 @@ func register(log *logger.L, clients []*zmqutil.Client) bool {
 			if nil != err {
 				log.Errorf("reconnect error: %v", err)
 			}
-			continue
+			continue process_clients
 		}
 		switch string(data[0]) {
 		case "E":
 			if 2 == len(data) {
 				log.Errorf("register error: %q", data[1])
 			}
-			continue
+			continue process_clients
 		case "R":
 			if 5 != len(data) {
 				log.Errorf("register response incorrect: %x", data)
-				continue
+				continue process_clients
 			}
 			n += 1
 			chain := mode.ChainName()
@@ -389,7 +393,7 @@ func register(log *logger.L, clients []*zmqutil.Client) bool {
 			log.Infof("register replied: %x:  broadcasts: %x  listeners: %x", data[2], data[3], data[4])
 			announce.AddPeer(data[2], data[3], data[4]) // publicKey, broadcasts, listeners
 		default:
-			continue
+			continue process_clients
 		}
 	}
 	return n > 0 // if registration occured

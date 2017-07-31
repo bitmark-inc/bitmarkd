@@ -7,10 +7,6 @@ package payment
 import (
 	"encoding/hex"
 	"encoding/json"
-	"net/http"
-	"sync"
-	"time"
-
 	"github.com/bitmark-inc/bitmarkd/constants"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/currency/satoshi"
@@ -20,6 +16,9 @@ import (
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
+	"net/http"
+	"sync"
+	"time"
 )
 
 const (
@@ -180,6 +179,7 @@ func (state *litecoinState) process(log *logger.L) {
 
 	hash := state.latestBlockHash
 
+process_blocks:
 	for {
 		var block litecoinBlock
 		if err := util.FetchJSON(state.client, state.url+"/block/"+hash+".json", &block); err != nil {
@@ -193,10 +193,10 @@ func (state *litecoinState) process(log *logger.L) {
 			if !state.forward {
 				hash = block.PreviousBlockHash
 				state.latestBlockHash = hash
-				continue
+				continue process_blocks
 			}
 			state.latestBlockHash = hash
-			break
+			break process_blocks
 		}
 
 		// extract possible payment txs from the block
@@ -225,7 +225,7 @@ func (state *litecoinState) process(log *logger.L) {
 			blockTime := time.Unix(block.Time, 0)
 			if blockTime.Before(traceStopTime) {
 				state.forward = true
-				break
+				break process_blocks
 			}
 			hash = block.PreviousBlockHash
 		}
@@ -243,6 +243,7 @@ func inspectLitecoinTx(log *logger.L, tx *litecoinTransaction) {
 	amounts := make(map[string]uint64)
 	found := false
 
+scan_vouts:
 	for _, vout := range tx.Vout {
 		if len(vout.ScriptPubKey.Hex) == litecoinOPReturnRecordLength && vout.ScriptPubKey.Hex[0:4] == litecoinOPReturnHexCode {
 			pid := vout.ScriptPubKey.Hex[litecoinOPReturnPayIDOffset:]
@@ -252,7 +253,7 @@ func inspectLitecoinTx(log *logger.L, tx *litecoinTransaction) {
 			}
 
 			found = true
-			continue
+			continue scan_vouts
 		}
 
 		if len(vout.ScriptPubKey.Addresses) == 1 {

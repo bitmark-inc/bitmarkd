@@ -7,8 +7,6 @@ package litecoin
 import (
 	"encoding/hex"
 	"encoding/json"
-	"time"
-
 	"github.com/bitmark-inc/bitmarkd/constants"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/currency/satoshi"
@@ -16,6 +14,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
+	"time"
 )
 
 const (
@@ -128,7 +127,7 @@ loop:
 				continue loop
 			}
 			state.latestBlockHash = hash
-			break
+			break loop
 		}
 
 		log.Infof("block: %d  hash: %q", block.Height, block.Hash)
@@ -172,6 +171,7 @@ loop:
 func CheckForPaymentTransaction(log *logger.L, tx *Transaction) {
 
 	// scan all Vout looking for script with OP_RETURN
+scan_vout:
 	for j, vout := range tx.Vout {
 		if litecoin_OP_RETURN_RECORD_LENGTH == len(vout.ScriptPubKey.Hex) && litecoin_OP_RETURN_HEX_CODE == vout.ScriptPubKey.Hex[0:4] {
 			var payId pay.PayId
@@ -184,7 +184,7 @@ func CheckForPaymentTransaction(log *logger.L, tx *Transaction) {
 				//log.Debugf("possible transaction: %#v", *tx)
 				scanTx(log, payId, j, tx)
 			}
-			break
+			break scan_vout
 		}
 	}
 
@@ -195,10 +195,11 @@ func scanTx(log *logger.L, payId pay.PayId, payIdIndex int, tx *Transaction) {
 	amounts := make(map[string]uint64)
 
 	// extract payments, skipping already determine OP_RETURN vout
+scan_vout:
 	for i, vout := range tx.Vout {
 		log.Debugf("vout[%d]: %v ", i, vout)
 		if payIdIndex == i {
-			continue
+			continue scan_vout
 		}
 		if 1 == len(vout.ScriptPubKey.Addresses) {
 			amounts[vout.ScriptPubKey.Addresses[0]] += satoshi.FromByteString(vout.Value)

@@ -119,6 +119,7 @@ func Submitter(i int, connectTo string, v6 bool, serverPublicKey []byte, publicK
 		defer dequeue.Close()
 		defer rpc.Close()
 
+	dequeue_items:
 		for {
 			request, err := dequeue.RecvMessageBytes(0)
 			logger.PanicIfError("dequeue.RecvMessageBytes", err)
@@ -127,7 +128,7 @@ func Submitter(i int, connectTo string, v6 bool, serverPublicKey []byte, publicK
 			// safety check
 			if identity != string(request[0]) {
 				log.Errorf("received data for wrong submitter: %q  expected: %q", request[0], identity)
-				continue
+				continue dequeue_items
 			}
 
 			// compose a request for bitmarkd
@@ -144,7 +145,7 @@ func Submitter(i int, connectTo string, v6 bool, serverPublicKey []byte, publicK
 			data, err := json.Marshal(toSend)
 			if nil != err {
 				log.Errorf("JSON encode error: %v", err)
-				continue
+				continue dequeue_items
 			}
 			log.Infof("rpc: json to send: %s", data)
 

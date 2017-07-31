@@ -4,7 +4,9 @@
 
 package payment
 
-import "sync"
+import (
+	"sync"
+)
 
 type currencyHandler interface {
 	processPastTxs(dat []byte)

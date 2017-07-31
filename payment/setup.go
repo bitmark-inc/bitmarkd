@@ -75,7 +75,7 @@ func Initialise(configuration *Configuration) error {
 	processes := background.Processes{}
 	if configuration.UseDiscovery {
 		globalData.log.Info("discovery…")
-		discoverer, err := newDiscoverer(globalData.log, configuration.Discovery.SubEndpoint, configuration.Discovery.ReqEndpoint)
+		discoverer, err := newDiscoverer(configuration.Discovery.SubEndpoint, configuration.Discovery.ReqEndpoint)
 		if err != nil {
 			return err
 		}

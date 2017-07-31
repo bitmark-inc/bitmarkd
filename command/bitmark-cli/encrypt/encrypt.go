@@ -333,9 +333,10 @@ func VerifyPassword(password string, identity *IdentityType) (*keypair.KeyPair, 
 
 func PublicKeyFromIdentity(name string, identities []IdentityType) (*keypair.KeyPair, error) {
 
+loop:
 	for _, identity := range identities {
 		if name != identity.Name {
-			continue
+			continue loop
 		}
 		publicKey, err := hex.DecodeString(identity.Public_key)
 		if nil != err {

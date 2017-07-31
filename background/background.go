@@ -4,7 +4,15 @@
 
 package background
 
-// the shudown and completed type for a background
+import (
+	"time"
+)
+
+const (
+	shutdownDelay = 300 * time.Second
+)
+
+// the shutdown and completed type for a background
 type shutdown struct {
 	shutdown chan struct{}
 	finished chan struct{}
@@ -54,13 +62,26 @@ func (t *T) Stop() {
 		return
 	}
 
-	// shutdown all background tasks
+	// trigger shutdown of all background tasks
 	for _, shutdown := range t.s {
 		close(shutdown.shutdown)
 	}
 
 	// wait for finished
-	for _, shutdown := range t.s {
-		<-shutdown.finished
+	allDone := make(chan struct{})
+	go func() {
+		for _, shutdown := range t.s {
+			<-shutdown.finished
+		}
+		close(allDone)
+	}()
+
+	// wait for either final signal or timeout if some shutdown
+	// deadlock occurs
+	select {
+	case <-allDone:
+		// if all routines sucessfully shutdown
+	case <-time.After(shutdownDelay):
+		// if timer expires
 	}
 }

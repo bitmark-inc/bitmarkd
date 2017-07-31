@@ -44,13 +44,14 @@ var testInvalidAccountFromBase58 = []invalid{
 // this has to be changed if account.go is modified
 // it is used to print the base58Account for testAccount above
 func TestValid(t *testing.T) {
+loop:
 	for index, test := range testAccount {
 		buffer := []byte{byte(test.algorithm<<4 | 0x01)}
 		buffer = append(buffer, test.publicKey...)
 		account, err := account.AccountFromBytes(buffer)
 		if nil != err {
 			t.Errorf("%d: Create account from bytes failed: %s", index, err)
-			continue
+			continue loop
 		}
 		t.Logf("%d: result: %s", index, account)
 		t.Logf("%d:    hex: %x", index, account.Bytes())
@@ -59,11 +60,12 @@ func TestValid(t *testing.T) {
 
 // From valid base58 string to account
 func TestValidBase58(t *testing.T) {
+loop:
 	for index, test := range testAccount {
 		acc, err := account.AccountFromBase58(test.base58Account)
 		if nil != err {
 			t.Errorf("%d: from base58 error: %s", index, err)
-			continue
+			continue loop
 		}
 		if acc.KeyType() != test.algorithm {
 			t.Errorf("%d: from base58 type: %d  expected: %d", index, acc.KeyType(), test.algorithm)
@@ -81,7 +83,7 @@ func TestValidBase58(t *testing.T) {
 		err = json.Unmarshal([]byte(j), &a)
 		if nil != err {
 			t.Errorf("%d: from JSON string error: %s", index, err)
-			continue
+			continue loop
 		}
 		t.Logf("%d: from JSON: %#v", index, a)
 

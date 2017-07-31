@@ -67,11 +67,12 @@ func FromVarint64(buffer []byte) (uint64, int) {
 func CopyVarint64(buffer []byte) []byte {
 	result := make([]byte, 0)
 
+loop:
 	for count := 0; count < Varint64MaximumBytes; count += 1 {
 		currentByte := buffer[count]
 		result = append(result, currentByte)
 		if 0 == currentByte&0x80 {
-			break
+			break loop
 		}
 	}
 	return result

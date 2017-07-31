@@ -92,3 +92,12 @@ bitmarkd --config-file="${HOME}/.config/bitmarkd/bitmarkd.conf" start
 ~~~~~
 
 Note that a similar process is needed for the prooferd (mining subsystem)
+
+
+# Coding
+
+* all variables are camel case i.e. no underscores
+* labels are all lowercase with '_' between words
+* imports and one single block
+* all break/continue must have label
+* avoid break in switch and select

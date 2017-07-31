@@ -6,8 +6,6 @@ package bitcoin
 
 import (
 	"encoding/hex"
-	"time"
-
 	"github.com/bitmark-inc/bitmarkd/constants"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/currency/satoshi"
@@ -15,6 +13,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
+	"time"
 )
 
 const (
@@ -83,7 +82,7 @@ loop:
 				continue loop
 			}
 			state.latestBlockHash = hash
-			break
+			break loop
 		}
 
 		log.Infof("block: %d  hash: %q", block.Height, block.Hash)
@@ -135,6 +134,7 @@ func ScanTx(log *logger.L, tx *Transaction) {
 	amounts := make(map[string]uint64)
 	found := false
 
+scan_vouts:
 	for _, vout := range tx.Vout {
 		if len(vout.ScriptPubKey.Hex) == bitcoin_OP_RETURN_RECORD_LENGTH && vout.ScriptPubKey.Hex[0:4] == bitcoin_OP_RETURN_HEX_CODE {
 			pid := vout.ScriptPubKey.Hex[bitcoin_OP_RETURN_PAY_ID_OFFSET:]
@@ -144,7 +144,7 @@ func ScanTx(log *logger.L, tx *Transaction) {
 			}
 
 			found = true
-			continue
+			continue scan_vouts
 		}
 
 		if len(vout.ScriptPubKey.Addresses) == 1 {

@@ -49,6 +49,7 @@ func (cursor *FetchCursor) Fetch(count int) ([]Element, error) {
 
 	results := make([]Element, 0, count)
 	n := 0
+iterating:
 	for iter.Next() {
 
 		// contents of the returned slice must not be modified, and are
@@ -69,7 +70,7 @@ func (cursor *FetchCursor) Fetch(count int) ([]Element, error) {
 		results = append(results, e)
 		n += 1
 		if n >= count {
-			break
+			break iterating
 		}
 	}
 	iter.Release()

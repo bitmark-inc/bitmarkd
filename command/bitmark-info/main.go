@@ -4,12 +4,11 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"github.com/bitmark-inc/exitwithstatus"
+	"github.com/bitmark-inc/getoptions"
 	"net/rpc"
 	"net/rpc/jsonrpc"
 	"os"
-
-	"github.com/bitmark-inc/exitwithstatus"
-	"github.com/bitmark-inc/getoptions"
 )
 
 type RPCEmptyArguments struct{}
@@ -112,12 +111,13 @@ func main() {
 		"host": fmt.Sprintf("tcp://%s", hostPort),
 	}
 
+loop:
 	for _, t := range infoType {
 		var v interface{}
 		switch t {
 		case "all":
 			reply, err = r.GetAllInfo()
-			break
+			break loop
 		case "node":
 			v, err = r.GetNodeInfo()
 			reply["node"] = v

@@ -5,14 +5,13 @@
 package payment
 
 import (
-	"sync"
-	"time"
-
 	"github.com/bitmark-inc/bitmarkd/constants"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
+	"sync"
+	"time"
 )
 
 const (
@@ -30,7 +29,13 @@ type discoverer struct {
 	req  *zmq.Socket
 }
 
-func newDiscoverer(log *logger.L, subAddr, reqAddr string) (*discoverer, error) {
+func newDiscoverer(subAddr, reqAddr string) (*discoverer, error) {
+
+	log := logger.New("discoverer")
+	if nil == log {
+		return nil, fault.ErrInvalidLoggerChannel
+	}
+
 	push, pull, err := zmqutil.NewSignalPair(discovererStopSignal)
 	if err != nil {
 		return nil, fault.ErrNoConnectionsAvailable
@@ -49,10 +54,20 @@ func newDiscoverer(log *logger.L, subAddr, reqAddr string) (*discoverer, error) 
 	}
 	req.Connect(reqAddr)
 
-	return &discoverer{log, push, pull, sub, req}, nil
+	disc := &discoverer{
+		log:  log,
+		push: push,
+		pull: pull,
+		sub:  sub,
+		req:  req,
+	}
+	return disc, nil
 }
 
 func (d *discoverer) Run(args interface{}, shutdown <-chan struct{}) {
+
+	d.log.Info("starting…")
+
 	d.retrievePastTxs()
 
 	go func() {
@@ -128,22 +143,30 @@ func (d *discoverer) assignHandler(data [][]byte) {
 
 // checker periodically extracts possible txs in the latest block
 type checker struct {
+	log *logger.L
 }
 
 func (c *checker) Run(args interface{}, shutdown <-chan struct{}) {
+	log := logger.New("checker")
+	c.log = log
+
+	log.Info("starting…")
+loop:
 	for {
+		log.Info("begin…")
 		select {
 		case <-shutdown:
-			break
+			break loop
 
 		case <-time.After(blockchainCheckIntervel):
+			log.Info("checking…")
 			var wg sync.WaitGroup
 			for _, handler := range globalData.handlers {
 				wg.Add(1)
 				go handler.checkLatestBlock(&wg)
 			}
+			log.Info("waiting…")
 			wg.Wait()
-			globalData.log.Info("block check finished")
 		}
 	}
 }

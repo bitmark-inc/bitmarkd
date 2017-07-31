@@ -111,10 +111,11 @@ func doList(t *testing.T, addList []stringItem) {
 			t.Fatal("inconsistant tree")
 		}
 
+	delete_items:
 		for _, key := range addList[:i] {
 			//t.Logf("delete item: %v", key)
 			if _, ok := alreadyDeleted[key]; ok {
-				continue
+				continue delete_items
 			}
 			alreadyDeleted[key] = struct{}{}
 			dv := tree.Delete(key)
@@ -131,11 +132,11 @@ func doList(t *testing.T, addList []stringItem) {
 			t.Fatal("inconsistant tree")
 		}
 
-		// delete remainder
+	delete_remainder:
 		for _, key := range addList[i:] {
 			//t.Logf("delete item: %v", key)
 			if _, ok := alreadyDeleted[key]; ok {
-				continue
+				continue delete_remainder
 			}
 			alreadyDeleted[key] = struct{}{}
 			dv := tree.Delete(key)

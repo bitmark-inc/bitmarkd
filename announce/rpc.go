@@ -87,11 +87,12 @@ func addRPC(fingerprint fingerprintType, rpcs []byte, local bool) bool {
 func expireRPC() {
 
 	n := len(globalData.rpcList)
+expirations:
 	for i := n - 1; i >= 0; i -= 1 {
 
 		e := globalData.rpcList[i]
 		if nil == e || e.local {
-			continue
+			continue expirations
 		}
 
 		if time.Since(e.timestamp) > announceExpiry {
@@ -143,10 +144,11 @@ func FetchRPCs(start uint64, count int) ([]RPCEntry, uint64, error) {
 
 		conn := make([]*util.Connection, 0, 4)
 
+	inner_loop:
 		for {
 			c, n := a.Unpack()
 			if 0 == n {
-				break
+				break inner_loop
 			}
 			conn = append(conn, c)
 			a = a[n:]

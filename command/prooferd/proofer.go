@@ -120,6 +120,7 @@ func ProofThread(log *logger.L) error {
 	go func() {
 		defer request.Close()
 
+	receiver:
 		for {
 			request, err := request.RecvMessageBytes(0)
 			if nil != err {
@@ -133,7 +134,7 @@ func ProofThread(log *logger.L) error {
 
 			// flush short messages
 			if len(request) < 2 {
-				continue
+				continue receiver
 			}
 
 			// split message request
@@ -183,21 +184,6 @@ func ProofThread(log *logger.L) error {
 					log.Infof("job: %q nonce: 0x%016x", item.Job, blk.Nonce)
 					log.Infof("digest: %v", digest)
 
-					// request := struct {
-					// 	Packed []byte
-					// 	Digest blockdigest.Digest
-					// }{
-					// 	Packed: p,
-					// 	Digest: d,
-					// }
-
-					// data, err := json.Marshal(request)
-					// if nil != err {
-					// 	log.Errorf("JSON encode error: %v", err)
-					// 	continue
-					// }
-					// log.Infof("submit: json to send: %s", data)
-
 					nonce := make([]byte, blockrecord.NonceSize)
 					binary.LittleEndian.PutUint64(nonce, uint64(blk.Nonce))
 
@@ -210,7 +196,7 @@ func ProofThread(log *logger.L) error {
 					_, err = submit.SendBytes(nonce, 0) // actual data
 					logger.PanicIfError("submit send", err)
 
-					// ************** if actual difficulty is met break
+					// ************** if actual difficulty is met
 					// if ... { break nonceLoop }
 				}
 			}

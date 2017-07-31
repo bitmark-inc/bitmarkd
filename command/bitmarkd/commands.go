@@ -7,6 +7,7 @@ package main
 import (
 	"crypto/rand"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
@@ -17,7 +18,6 @@ import (
 	"golang.org/x/crypto/sha3"
 	"io/ioutil"
 	"net"
-	"os"
 	"strconv"
 	"strings"
 )
@@ -46,8 +46,8 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 		if nil != err {
 			fmt.Printf("cannot generate private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
 			log.Criticalf("cannot generate private key: %q and public key: %q", privateKeyFilename, publicKeyFilename)
-			fmt.Printf("error generating server key pair: %v\n", err)
-			log.Criticalf("error generating server key pair: %v", err)
+			fmt.Printf("error generating server key pair: %s\n", err)
+			log.Criticalf("error generating server key pair: %s", err)
 			exitwithstatus.Exit(1)
 		}
 		fmt.Printf("generated private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
@@ -72,8 +72,8 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 		if nil != err {
 			fmt.Printf("cannot generate RPC key: %q and certificate: %q\n", privateKeyFilename, certificateFilename)
 			log.Criticalf("cannot generate RPC key: %q and certificate: %q", privateKeyFilename, certificateFilename)
-			fmt.Printf("error generating RPC key/certificate: %v\n", err)
-			log.Criticalf("error generating RPC key/certificate: %v", err)
+			fmt.Printf("error generating RPC key/certificate: %s\n", err)
+			log.Criticalf("error generating RPC key/certificate: %s", err)
 			exitwithstatus.Exit(1)
 		}
 		fmt.Printf("generated RPC key: %q and certificate: %q\n", privateKeyFilename, certificateFilename)
@@ -93,16 +93,16 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 		if nil != err {
 			fmt.Printf("cannot generate private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
 			log.Criticalf("cannot generate private key: %q and public key: %q", privateKeyFilename, publicKeyFilename)
-			fmt.Printf("error generating server key pair: %v\n", err)
-			log.Criticalf("error generating server key pair: %v", err)
+			fmt.Printf("error generating server key pair: %s\n", err)
+			log.Criticalf("error generating server key pair: %s", err)
 			exitwithstatus.Exit(1)
 		}
 
 		// new random seed for signing base record
 		seedCore := make([]byte, 32)
 		if _, err := rand.Read(seedCore); err != nil {
-			fmt.Printf("error generating signing core error: %v\n", err)
-			log.Criticalf("error generating signing core error: %v", err)
+			fmt.Printf("error generating signing core error: %s\n", err)
+			log.Criticalf("error generating signing core error: %s", err)
 			exitwithstatus.Exit(1)
 		}
 		seed := []byte{0x5a, 0xfe, 0x01, 0x00} // header + network(live)
@@ -115,8 +115,8 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 
 		data := "SEED:" + util.ToBase58(seed) + "\n"
 		if err = ioutil.WriteFile(signingKeyFilename, []byte(data), 0600); err != nil {
-			fmt.Printf("error writing signing key file error: %v\n", err)
-			log.Criticalf("error writing signing key file error: %v", err)
+			fmt.Printf("error writing signing key file error: %s\n", err)
+			log.Criticalf("error writing signing key file error: %s", err)
 			exitwithstatus.Exit(1)
 		}
 
@@ -131,7 +131,10 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 	case "start", "run":
 		return false // continue processing
 
-	case "block-times":
+		// case "block-times":
+		// 	return false // defer processing until database is loaded
+
+	case "block":
 		return false // defer processing until database is loaded
 
 	default:
@@ -140,7 +143,7 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 		case "", " ":
 			fmt.Printf("error: missing command\n")
 		default:
-			fmt.Printf("error: no such command: %v\n", command)
+			fmt.Printf("error: no such command: %q\n", command)
 		}
 
 		fmt.Printf("supported commands:\n\n")
@@ -170,6 +173,9 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 		fmt.Printf("                                     for convienience when passing script arguments\n")
 		fmt.Printf("\n")
 
+		fmt.Printf("  block NUMBER           (b)       - dump block as a JSON structure\n")
+		fmt.Printf("\n")
+
 		//fmt.Printf("  block-times FILE BEGIN END       - write time and difficulty to text file for a range of blocks\n")
 		exitwithstatus.Exit(1)
 	}
@@ -194,46 +200,74 @@ func processDataCommand(log *logger.L, arguments []string, options *Configuratio
 	case "start", "run":
 		return false // continue processing
 
-	case "block-times":
-		if len(arguments) < 3 {
-			fmt.Printf("missing arguments arguments (use '' for stdout, and '0' for min/max)\n")
+	// case "block-times":
+	// 	if len(arguments) < 3 {
+	// 		fmt.Printf("missing arguments arguments (use '' for stdout, and '0' for min/max)\n")
+	// 		exitwithstatus.Exit(1)
+	// 	}
+
+	// 	begin, err := strconv.ParseUint(arguments[1], 10, 64)
+	// 	if nil != err {
+	// 		fmt.Printf("error in begin block number: %s\n", err)
+	// 		exitwithstatus.Exit(1)
+	// 	}
+	// 	end, err := strconv.ParseUint(arguments[2], 10, 64)
+	// 	if nil != err {
+	// 		fmt.Printf("error in end block number: %s\n", err)
+	// 		exitwithstatus.Exit(1)
+	// 	}
+
+	// 	fmt.Printf("*********** ERROR: %d %d\n", begin, end) // ***** FIX THIS: remove later when this code
+
+	// 	switch filename := arguments[0]; filename {
+	// 	case "": // use stdout
+	// 		fallthrough
+	// 	case "-": // use stdout
+	// 		// block.PrintBlockTimes(os.Stdout, begin, end)
+	// 		panic("HERE")
+
+	// 	default:
+	// 		fh, err := os.Create(filename)
+
+	// 		if nil != err {
+	// 			fmt.Printf("cannot create: %q  error: %s\n", filename, err)
+	// 			exitwithstatus.Exit(1)
+	// 		}
+	// 		defer fh.Close()
+	// 		//block.PrintBlockTimes(fh, begin, end)
+	// 		panic("HERE")
+	// 	}
+
+	case "block", "b":
+		if len(arguments) < 1 {
+			fmt.Printf("missing block number argument\n")
 			exitwithstatus.Exit(1)
 		}
 
-		begin, err := strconv.ParseUint(arguments[1], 10, 64)
+		n, err := strconv.ParseUint(arguments[0], 10, 64)
 		if nil != err {
-			fmt.Printf("error in begin block number: %v\n", err)
+			fmt.Printf("error in block number: %s\n", err)
 			exitwithstatus.Exit(1)
 		}
-		end, err := strconv.ParseUint(arguments[2], 10, 64)
+		if n < 2 {
+			fmt.Printf("error: invalid block number: %d mus be greater than 1\n", n)
+			exitwithstatus.Exit(1)
+		}
+		block, err := dumpBlock(n)
 		if nil != err {
-			fmt.Printf("error in end block number: %v\n", err)
+			fmt.Printf("dump block error: %s\n", err)
+			exitwithstatus.Exit(1)
+		}
+		s, err := json.MarshalIndent(block, "", "  ")
+		if nil != err {
+			fmt.Printf("dump block JSON error: %s\n", err)
 			exitwithstatus.Exit(1)
 		}
 
-		fmt.Printf("*********** ERROR: %d %d\n", begin, end) // ***** FIX THIS: remove later when this code
-
-		switch filename := arguments[0]; filename {
-		case "": // use stdout
-			fallthrough
-		case "-": // use stdout
-			// block.PrintBlockTimes(os.Stdout, begin, end)
-			panic("HERE")
-
-		default:
-			fh, err := os.Create(filename)
-
-			if nil != err {
-				fmt.Printf("cannot create: %q  error: %v\n", filename, err)
-				exitwithstatus.Exit(1)
-			}
-			defer fh.Close()
-			//block.PrintBlockTimes(fh, begin, end)
-			panic("HERE")
-		}
+		fmt.Printf("%s\n", s)
 
 	default:
-		fmt.Printf("error: no such command: %v\n", command)
+		fmt.Printf("error: no such command: %s\n", command)
 		exitwithstatus.Exit(1)
 
 	}
@@ -333,7 +367,6 @@ func getFirstConnections(connections []string) (string, string, int) {
 				}
 			}
 		}
-		// fmt.Printf("scan[%d]: %v  %d\n", i, IP, port)
 	}
 	return IP4, IP6, initialPort
 }

@@ -36,7 +36,7 @@ func StoreTransfer(transfer *transactionrecord.BitmarkTransfer) (*TransferInfo, 
 	link := transfer.Link
 	if txId == link {
 		// reject any transaction that links to itself
-		// this should never occur, but protect agains this situuation
+		// this should never occur, but protect against this situuation
 		return nil, false, fault.ErrTransactionLinksToSelf
 	}
 
@@ -70,19 +70,23 @@ func StoreTransfer(transfer *transactionrecord.BitmarkTransfer) (*TransferInfo, 
 	}
 
 	// already received the payment for the transfer
-	// approve the transfer immediately
-	// TODO: what to return to indicate success
-	if _, ok := cache.Pool.OrphanPayment.Get(payId.String()); ok {
-		cache.Pool.VerifiedTx.Put(
-			txId.String(),
-			&verifiedItem{
-				itemData:    transferredItem,
-				transaction: packedTransfer,
-				index:       0,
-			},
-		)
-		cache.Pool.OrphanPayment.Delete(payId.String())
-		return result, false, nil
+	// approve the transfer immediately if payment is ok
+	if val, ok := cache.Pool.OrphanPayment.Get(payId.String()); ok {
+		detail := val.(*PaymentDetail)
+
+		if acceptablePayment(detail, payments) {
+
+			cache.Pool.VerifiedTx.Put(
+				txId.String(),
+				&verifiedItem{
+					itemData:    transferredItem,
+					transaction: packedTransfer,
+					index:       0,
+				},
+			)
+			cache.Pool.OrphanPayment.Delete(payId.String())
+			return result, false, nil
+		}
 	}
 
 	// waiting for the payment to come

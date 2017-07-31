@@ -41,13 +41,13 @@ loop:
 				e := l.Front()
 				if nil == e {
 					delay = time.After(time.Minute)
-					break
+					break loop
 				}
 				item := e.Value.(expiry)
 				d := time.Since(item.expires)
 				if d < 0 {
 					delay = time.After(-d)
-					break
+					break loop
 				}
 				l.Remove(e)
 

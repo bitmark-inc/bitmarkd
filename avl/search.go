@@ -41,9 +41,10 @@ func (p *Node) GetOrder(key item) uint {
 // get the node of a tree in order
 func (p *Node) GetNodeByOrder(order uint) *Node {
 	node := p.first()
+loop:
 	for i := uint(0); i < order; i++ {
 		if node == p.last() {
-			break
+			break loop
 		}
 		node = node.Next()
 	}

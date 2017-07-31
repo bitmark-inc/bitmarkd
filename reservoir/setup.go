@@ -6,8 +6,6 @@ package reservoir
 
 import (
 	"fmt"
-	"sync"
-
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/cache"
 	"github.com/bitmark-inc/bitmarkd/currency"
@@ -18,6 +16,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
+	"sync"
 )
 
 type itemData struct {
@@ -148,10 +147,23 @@ func TransactionStatus(txId merkle.Digest) TransactionState {
 }
 
 // move transaction(s) to verified cache
-func setVerified(payId pay.PayId) bool {
+func setVerified(payId pay.PayId, detail *PaymentDetail) bool {
 	val, ok := cache.Pool.UnverifiedTxEntries.Get(payId.String())
 	if ok {
 		entry := val.(*unverifiedItem)
+
+		if nil != detail {
+			globalData.log.Infof("detail: currency: %s, amounts: %#v", detail.Currency, detail.Amounts)
+		}
+
+		if nil != entry.payments {
+			if !acceptablePayment(detail, entry.payments) {
+				globalData.log.Warnf("failed check for txid: %s  payid: %s", detail.TxID, payId)
+				return false
+			}
+			globalData.log.Infof("paid txid: %s  payid: %s", detail.TxID, payId)
+		}
+
 		for i, txId := range entry.txIds {
 			v := &verifiedItem{
 				itemData:    entry.itemData,
@@ -170,9 +182,33 @@ func setVerified(payId pay.PayId) bool {
 	return ok
 }
 
+// check that the incoming payment details match the stored payments records
+func acceptablePayment(detail *PaymentDetail, payments []transactionrecord.PaymentAlternative) bool {
+next_currency:
+	for _, p := range payments {
+		acceptable := true
+		globalData.log.Infof("sv: payment: %#v", p)
+		for _, item := range p {
+			globalData.log.Infof("sv: item: %#v", item)
+			if item.Currency != detail.Currency {
+				continue next_currency
+			}
+			if detail.Amounts[item.Address] < item.Amount {
+				acceptable = false
+			}
+		}
+		if acceptable {
+			return true
+		}
+	}
+	return false
+}
+
 func SetTransferVerified(payId pay.PayId, detail *PaymentDetail) {
-	if !setVerified(payId) {
-		globalData.log.Infof("orphan payment: txid=%s, payid=%s", payId, detail.TxID)
+	globalData.log.Infof("txid: %s  payid: %s", detail.TxID, payId)
+
+	if !setVerified(payId, detail) {
+		globalData.log.Infof("orphan payment: txid: %s  payid: %s", detail.TxID, payId)
 		cache.Pool.OrphanPayment.Put(payId.String(), detail)
 	}
 }
@@ -189,6 +225,7 @@ func FetchVerified(count int) ([]merkle.Digest, []transactionrecord.Packed, int,
 	n := 0
 	totalBytes := 0
 	if enabled() {
+	loop:
 		for key, val := range cache.Pool.VerifiedTx.Items() {
 			var txId merkle.Digest
 			fmt.Sscan(key, &txId)
@@ -199,7 +236,7 @@ func FetchVerified(count int) ([]merkle.Digest, []transactionrecord.Packed, int,
 			totalBytes += len(data.transaction)
 			n += 1
 			if n >= count {
-				break
+				break loop
 			}
 		}
 	}

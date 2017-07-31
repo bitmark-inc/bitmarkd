@@ -173,6 +173,7 @@ func (state *bitcoinState) process(log *logger.L) {
 
 	hash := state.latestBlockHash
 
+process_blocks:
 	for {
 		var block bitcoinBlock
 		if err := util.FetchJSON(state.client, state.url+"/block/"+hash+".json", &block); err != nil {
@@ -186,10 +187,10 @@ func (state *bitcoinState) process(log *logger.L) {
 			if !state.forward {
 				hash = block.PreviousBlockHash
 				state.latestBlockHash = hash
-				continue
+				continue process_blocks
 			}
 			state.latestBlockHash = hash
-			break
+			break process_blocks
 		}
 
 		// extract possible payment txs from the block
@@ -218,7 +219,7 @@ func (state *bitcoinState) process(log *logger.L) {
 			blockTime := time.Unix(block.Time, 0)
 			if blockTime.Before(traceStopTime) {
 				state.forward = true
-				break
+				break process_blocks
 			}
 			hash = block.PreviousBlockHash
 		}
@@ -236,6 +237,7 @@ func inspectBitcoinTx(log *logger.L, tx *bitcoinTransaction) {
 	amounts := make(map[string]uint64)
 	found := false
 
+scan_vouts:
 	for _, vout := range tx.Vout {
 		if len(vout.ScriptPubKey.Hex) == bitcoinOPReturnRecordLength && vout.ScriptPubKey.Hex[0:4] == bitcoinOPReturnHexCode {
 			pid := vout.ScriptPubKey.Hex[bitcoinOPReturnPayIDOffset:]
@@ -245,7 +247,7 @@ func inspectBitcoinTx(log *logger.L, tx *bitcoinTransaction) {
 			}
 
 			found = true
-			continue
+			continue scan_vouts
 		}
 
 		if len(vout.ScriptPubKey.Addresses) == 1 {

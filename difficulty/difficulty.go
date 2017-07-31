@@ -205,6 +205,7 @@ func (difficulty *Difficulty) internalSetReciprocal(f float64) float64 {
 	// first non-zero byte will not exceed 0x7f as bigints are signed
 	// but the above calculation results in an unsigned value
 	// need to extract 56 bits with 1st bit as 1  and compute exponent
+scan_buffer:
 	for i, b := range buffer {
 		if 0 != b {
 			u := uint64(b) << 56
@@ -251,7 +252,7 @@ func (difficulty *Difficulty) internalSetReciprocal(f float64) float64 {
 			//fmt.Printf("bits: %016x\n", u)
 
 			difficulty.bits = u
-			break
+			break scan_buffer
 		}
 	}
 

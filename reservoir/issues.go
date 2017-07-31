@@ -7,8 +7,6 @@ package reservoir
 import (
 	"bytes"
 	"encoding/binary"
-	"math/big"
-
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/blockring"
 	"github.com/bitmark-inc/bitmarkd/cache"
@@ -20,6 +18,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"golang.org/x/crypto/sha3"
+	"math/big"
 )
 
 const (
@@ -225,7 +224,7 @@ func TryProof(payId pay.PayId, clientNonce []byte) TrackingStatus {
 		// check difficulty and verify if ok
 		if bigDigest.Cmp(bigDifficulty) <= 0 {
 			globalData.log.Debugf("TryProof: success: pay id: %s", payId)
-			setVerified(payId)
+			setVerified(payId, nil)
 			return TrackingAccepted
 		}
 	}
