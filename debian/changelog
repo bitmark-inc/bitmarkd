@@ -1,3 +1,11 @@
+bitmarkd (5.0-1) unstable; urgency=medium
+
+  * change to dual currency payment system
+  * supports btc and ltc
+  * payment verification fixed for split issue/transfer
+
+ -- Christopher Hall <hsw@bitmark.com>  Tue, 01 Aug 2017 02:22:02 +0000
+
 bitmarkd (4.13-2) unstable; urgency=medium
 
   * fix version determination
