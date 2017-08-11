@@ -1,10 +1,11 @@
 # prooferd.conf  -*- mode: libucl -*-
 
 # "." is a special case - it uses the path from the configuration file
-# as the data directory.
+# as the data directory.  Use ${CURDIR} for working directory.
 # all keys and logs are relative to this directory
 # unless the are overridden with absolute paths.
 #data_directory = "."
+#data_directory = "${CURDIR}"
 data_directory = "/var/lib/prooferd"
 
 # optional pid file if not absolute path then is created relative to

@@ -73,7 +73,7 @@ type Configuration struct {
 }
 
 // will read decode and verify the configuration
-func getConfiguration(configurationFileName string) (*Configuration, error) {
+func getConfiguration(configurationFileName string, variables map[string]string) (*Configuration, error) {
 
 	configurationFileName, err := filepath.Abs(filepath.Clean(configurationFileName))
 	if nil != err {
@@ -101,7 +101,7 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 		},
 	}
 
-	if err := configuration.ParseConfigurationFile(configurationFileName, options); err != nil {
+	if err := configuration.ParseConfigurationFile(configurationFileName, options, variables); err != nil {
 		return nil, err
 	}
 

@@ -1,10 +1,11 @@
 # bitmarkd.conf  -*- mode: libucl -*-
 
 # "." is a special case - it uses the path from the configuration file
-# as the data directory.
+# as the data directory.  Use ${CURDIR} for working directory.
 # all certificates, logs and LevelDB files are relative to this directory
 # unless the are overridden with absolute paths.
 #data_directory = "."
+#data_directory = "${CURDIR}"
 data_directory = "/var/lib/bitmarkd"
 
 # optional pid file if not absolute path then is created relative to
@@ -21,6 +22,19 @@ chain = local
 # choose from: none, chain OR sub.domain.tld
 nodes = chain
 
+# macros to setup command-line or environment IPv4 setting
+# VPC systems tend to only give a RFC1319 IPv4 and NAT the public IP to it
+# they usually offer some way to retrieve the
+# either set the environment value EC2_IPV4=...
+# or add command-line option, either: --set=EC2_IPV4=...   or: --set=IPV4=...
+.set(var=IPV4) "IPV4:EC2_IPV4:ENV_EC2_IPV4"
+.set(var=RPC_IPV4) "IPV4"
+.append(var=RPC_IPV4) ":2130"
+.set(var=BROADCAST_IPV4) "IPV4"
+.append(var=BROADCAST_IPV4) ":2135"
+.set(var=LISTEN_IPV4) "IPV4"
+.append(var=LISTEN_IPV4) ":2136"
+
 
 # Bitmark Vault clients connect using JSON RPC to these listening ports
 client_rpc {
@@ -34,6 +48,9 @@ client_rpc {
   # if using firewall port forwarding use the firewall external IP:port
   # announce = 127.0.0.1:2130
   # announce = "[::1]:2130"
+
+  # this will only be used if variable expandd to non-blank
+  announce = ${RPC_IPV4}
 
   certificate = rpc.crt
   private_key = rpc.key
@@ -61,6 +78,10 @@ peering {
     #broadcast= "[::1]:2135"
     #listen = 127.0.0.1:2136
     #listen = "[::1]:2136"
+
+    # these will only be used if variables expand to non-blank
+    broadcast = "${BROADCAST_IPV4}"
+    listen = "${LISTEN_IPV4}"
   }
 
   public_key = peer.public

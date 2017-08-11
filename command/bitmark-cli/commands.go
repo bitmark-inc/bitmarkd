@@ -26,7 +26,7 @@ const (
 )
 
 func runGenerate(c *cli.Context, globals globalFlags) {
-	configData, err := checkAndGetConfig(globals.config)
+	configData, err := checkAndGetConfig(globals.config, globals.variables)
 	if nil != err {
 		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
@@ -126,7 +126,7 @@ func runAdd(c *cli.Context, globals globalFlags) {
 		exitwithstatus.Message("Error: %s", err)
 	}
 
-	configData, err := checkAndGetConfig(globals.config)
+	configData, err := checkAndGetConfig(globals.config, globals.variables)
 	if nil != err {
 		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
@@ -168,7 +168,7 @@ func runAdd(c *cli.Context, globals globalFlags) {
 
 func runCreate(c *cli.Context, globals globalFlags, batchMode bool) {
 
-	configData, err := checkAndGetConfig(globals.config)
+	configData, err := checkAndGetConfig(globals.config, globals.variables)
 	if nil != err {
 		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
@@ -271,7 +271,7 @@ func runCreate(c *cli.Context, globals globalFlags, batchMode bool) {
 
 func runTransfer(c *cli.Context, globals globalFlags) {
 
-	configData, err := checkAndGetConfig(globals.config)
+	configData, err := checkAndGetConfig(globals.config, globals.variables)
 	if nil != err {
 		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
@@ -373,7 +373,7 @@ func runTransfer(c *cli.Context, globals globalFlags) {
 
 func runProvenance(c *cli.Context, globals globalFlags) {
 
-	configData, err := checkAndGetConfig(globals.config)
+	configData, err := checkAndGetConfig(globals.config, globals.variables)
 	if nil != err {
 		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
@@ -413,7 +413,7 @@ func runProvenance(c *cli.Context, globals globalFlags) {
 
 func runTransactionStatus(c *cli.Context, globals globalFlags) {
 
-	configData, err := checkAndGetConfig(globals.config)
+	configData, err := checkAndGetConfig(globals.config, globals.variables)
 	if nil != err {
 		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
@@ -446,7 +446,7 @@ func runTransactionStatus(c *cli.Context, globals globalFlags) {
 
 func runPublicKeyDisplay(c *cli.Context, globals globalFlags) {
 
-	configData, err := checkAndGetConfig(globals.config)
+	configData, err := checkAndGetConfig(globals.config, globals.variables)
 	if nil != err {
 		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
@@ -482,7 +482,7 @@ func runPublicKeyDisplay(c *cli.Context, globals globalFlags) {
 
 func runInfo(c *cli.Context, globals globalFlags) {
 
-	infoConfig, err := configuration.GetInfoConfiguration(globals.config)
+	infoConfig, err := configuration.GetInfoConfiguration(globals.config, globals.variables)
 	if nil != err {
 		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
@@ -505,7 +505,7 @@ func runInfo(c *cli.Context, globals globalFlags) {
 
 func runBitmarkInfo(c *cli.Context, globals globalFlags) {
 
-	configData, err := checkAndGetConfig(globals.config)
+	configData, err := checkAndGetConfig(globals.config, globals.variables)
 	if nil != err {
 		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
@@ -549,7 +549,7 @@ func runFingerprint(c *cli.Context, globals globalFlags) {
 
 func runSign(c *cli.Context, globals globalFlags) {
 
-	configData, err := checkAndGetConfig(globals.config)
+	configData, err := checkAndGetConfig(globals.config, globals.variables)
 	if nil != err {
 		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}

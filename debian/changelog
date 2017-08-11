@@ -1,3 +1,9 @@
+bitmarkd (5.1-1) unstable; urgency=medium
+
+  * add support for configuration file variables and macros
+
+ -- Christopher Hall <hsw@bitmark.com>  Fri, 11 Aug 2017 04:47:48 +0000
+
 bitmarkd (5.0-1) unstable; urgency=medium
 
   * change to dual currency payment system

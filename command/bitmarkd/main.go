@@ -29,6 +29,7 @@ import (
 	"os"
 	"os/signal"
 	//"runtime/pprof"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -62,6 +63,7 @@ func main() {
 		{Long: "quiet", HasArg: getoptions.NO_ARGUMENT, Short: 'q'},
 		{Long: "version", HasArg: getoptions.NO_ARGUMENT, Short: 'V'},
 		{Long: "config-file", HasArg: getoptions.REQUIRED_ARGUMENT, Short: 'c'},
+		{Long: "set", HasArg: getoptions.REQUIRED_ARGUMENT, Short: 's'},
 	}
 
 	program, options, arguments, err := getoptions.GetOS(flags)
@@ -74,16 +76,25 @@ func main() {
 	}
 
 	if len(options["help"]) > 0 {
-		exitwithstatus.Message("usage: %s [--help] [--verbose] [--quiet] --config-file=FILE [[command|help] arguments...]", program)
+		exitwithstatus.Message("usage: %s [--help] [--verbose] [--quiet] --config-file=FILE --set=VAR=VALUE [[command|help] arguments...]", program)
 	}
 
 	if 1 != len(options["config-file"]) {
 		exitwithstatus.Message("%s: only one config-file option is required, %d were detected", program, len(options["config-file"]))
 	}
 
+	// extract command-line variables
+	variables := make(map[string]string)
+	for _, v := range options["set"] {
+		s := strings.SplitN(v, "=", 2)
+		if 2 == len(s) {
+			variables[s[0]] = s[1]
+		}
+	}
+
 	// read options and parse the configuration file
 	configurationFile := options["config-file"][0]
-	masterConfiguration, err := getConfiguration(configurationFile)
+	masterConfiguration, err := getConfiguration(configurationFile, variables)
 	if nil != err {
 		exitwithstatus.Message("%s: failed to read configuration from: %q  error: %v", program, configurationFile, err)
 	}
@@ -291,7 +302,11 @@ validate:
 		switch name {
 		case "rpc":
 			rpcs := make([]byte, 0, 100) // ***** FIX THIS: need a better default size
+		process_rpcs:
 			for _, address := range masterConfiguration.ClientRPC.Announce {
+				if "" == address {
+					continue process_rpcs
+				}
 				c, err := util.NewConnection(address)
 				if nil != err {
 					log.Criticalf("invalid %s listen announce: %q  error: %v", name, address, err)

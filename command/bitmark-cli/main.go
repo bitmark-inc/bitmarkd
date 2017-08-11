@@ -18,6 +18,7 @@ type globalFlags struct {
 	password   string
 	agent      string
 	clearCache bool
+	variables  map[string]string
 }
 
 // set by the linker: go build -ldflags "-X main.version=M.N" ./...

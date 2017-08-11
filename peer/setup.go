@@ -139,7 +139,11 @@ func setAnnounce(configuration *Configuration, publicKey []byte) error {
 	b := make([]byte, 0, 100) // ***** FIX THIS: need a better default size
 	l := make([]byte, 0, 100) // ***** FIX THIS: need a better default size
 
+process_broadcast:
 	for i, address := range configuration.Announce.Broadcast {
+		if "" == address {
+			continue process_broadcast
+		}
 		c, err := util.NewConnection(address)
 		if nil != err {
 			globalData.log.Errorf("announce broadcast[%d]=%q  error: %v", i, address, err)
@@ -147,7 +151,11 @@ func setAnnounce(configuration *Configuration, publicKey []byte) error {
 		}
 		b = append(b, c.Pack()...)
 	}
+process_listen:
 	for i, address := range configuration.Announce.Listen {
+		if "" == address {
+			continue process_listen
+		}
 		c, err := util.NewConnection(address)
 		if nil != err {
 			globalData.log.Errorf("announce listen[%d]=%q  error: %v", i, address, err)

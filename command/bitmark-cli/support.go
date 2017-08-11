@@ -187,7 +187,7 @@ func bitmarkInfo(rpcConfig bitmarkRPC, verbose bool) error {
 }
 
 func getDefaultRawKeyPair(c *cli.Context, globals globalFlags) {
-	configData, err := checkAndGetConfig(globals.config)
+	configData, err := checkAndGetConfig(globals.config, globals.variables)
 	if nil != err {
 		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}
@@ -243,7 +243,7 @@ func changePassword(c *cli.Context, globals globalFlags) {
 		exitwithstatus.Message("Error: %s", err)
 	}
 
-	configData, err := checkAndGetConfig(globals.config)
+	configData, err := checkAndGetConfig(globals.config, globals.variables)
 	if nil != err {
 		exitwithstatus.Message("Error: Get configuration failed: %s", err)
 	}

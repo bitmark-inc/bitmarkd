@@ -61,7 +61,7 @@ type InfoConfiguration struct {
 }
 
 // full access to data (includes private data)
-func GetConfiguration(configurationFileName string) (*Configuration, error) {
+func GetConfiguration(configurationFileName string, variables map[string]string) (*Configuration, error) {
 
 	configurationFileName, err := filepath.Abs(filepath.Clean(configurationFileName))
 	if nil != err {
@@ -69,7 +69,7 @@ func GetConfiguration(configurationFileName string) (*Configuration, error) {
 	}
 
 	options := &Configuration{}
-	if err := configuration.ParseConfigurationFile(configurationFileName, options); err != nil {
+	if err := configuration.ParseConfigurationFile(configurationFileName, options, variables); err != nil {
 		return nil, err
 	}
 
@@ -77,14 +77,14 @@ func GetConfiguration(configurationFileName string) (*Configuration, error) {
 }
 
 // restricted access to data (excludes private items)
-func GetInfoConfiguration(configurationFileName string) (*InfoConfiguration, error) {
+func GetInfoConfiguration(configurationFileName string, variables map[string]string) (*InfoConfiguration, error) {
 	configurationFileName, err := filepath.Abs(filepath.Clean(configurationFileName))
 	if nil != err {
 		return nil, err
 	}
 
 	options := &InfoConfiguration{}
-	if err := configuration.ParseConfigurationFile(configurationFileName, options); err != nil {
+	if err := configuration.ParseConfigurationFile(configurationFileName, options, variables); err != nil {
 		return nil, err
 	}
 

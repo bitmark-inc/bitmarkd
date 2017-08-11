@@ -238,13 +238,13 @@ func checkRecordCount(count string) (int, error) {
 	return i, err
 }
 
-func checkAndGetConfig(path string) (*configuration.Configuration, error) {
+func checkAndGetConfig(path string, variables map[string]string) (*configuration.Configuration, error) {
 	configFile, err := checkConfigFile(path)
 	if nil != err {
 		return nil, err
 	}
 
-	configuration, err := configuration.GetConfiguration(configFile)
+	configuration, err := configuration.GetConfiguration(configFile, variables)
 	if nil != err {
 		return nil, err
 	}

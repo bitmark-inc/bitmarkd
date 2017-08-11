@@ -7,10 +7,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
-
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/configuration"
 	"github.com/bitmark-inc/bitmarkd/payment"
@@ -18,6 +14,9 @@ import (
 	"github.com/bitmark-inc/bitmarkd/proof"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
+	"os"
+	"path/filepath"
+	"strings"
 )
 
 // basic defaults (directories and files are relative to the "DataDirectory" from Configuration file)
@@ -85,7 +84,7 @@ type Configuration struct {
 }
 
 // will read decode and verify the configuration
-func getConfiguration(configurationFileName string) (*Configuration, error) {
+func getConfiguration(configurationFileName string, variables map[string]string) (*Configuration, error) {
 
 	configurationFileName, err := filepath.Abs(filepath.Clean(configurationFileName))
 	if nil != err {
@@ -134,7 +133,7 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 		},
 	}
 
-	if err := configuration.ParseConfigurationFile(configurationFileName, options); err != nil {
+	if err := configuration.ParseConfigurationFile(configurationFileName, options, variables); err != nil {
 		return nil, err
 	}
 
