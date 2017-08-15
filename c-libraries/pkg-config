@@ -64,7 +64,7 @@ pc_file()
   cat > "${pkg_path}/${pkg}.pc" <<EOF
 Name: ${pkg}
 Description: Development libraries for ${pkg}
-Libs: -L${dir}/${pkg} ${dir}/${pkg}/${pkg}.a
+Libs: -L${dir}/${pkg} ${dir}/${pkg}/${pkg}.a -lm
 Cflags: -I${dir}/${pkg}/include
 EOF
 }
