@@ -49,7 +49,7 @@ client_rpc {
   # announce = 127.0.0.1:2130
   # announce = "[::1]:2130"
 
-  # this will only be used if variable expandd to non-blank
+  # this will only be used if variable expands to non-blank
   announce = ${RPC_IPV4}
 
   certificate = rpc.crt
