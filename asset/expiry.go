@@ -37,17 +37,18 @@ loop:
 				expires:    time.Now().Add(constants.AssetTimeout),
 			})
 		case <-delay:
+		inner_loop:
 			for {
 				e := l.Front()
 				if nil == e {
 					delay = time.After(time.Minute)
-					break loop
+					break inner_loop
 				}
 				item := e.Value.(expiry)
 				d := time.Since(item.expires)
 				if d < 0 {
 					delay = time.After(-d)
-					break loop
+					break inner_loop
 				}
 				l.Remove(e)
 
@@ -73,4 +74,5 @@ loop:
 			}
 		}
 	}
+	log.Info("finished")
 }
