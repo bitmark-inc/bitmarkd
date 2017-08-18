@@ -7,6 +7,7 @@ package payment
 import (
 	"github.com/bitmark-inc/bitmarkd/constants"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
@@ -29,30 +30,65 @@ type discoverer struct {
 	req  *zmq.Socket
 }
 
-func newDiscoverer(subAddr, reqAddr string) (*discoverer, error) {
+func newDiscoverer(subHostPort, reqHostPort string) (*discoverer, error) {
 
 	log := logger.New("discoverer")
 	if nil == log {
 		return nil, fault.ErrInvalidLoggerChannel
 	}
 
+	subConnection, err := util.NewConnection(subHostPort)
+	if err != nil {
+		log.Errorf("invalid subscribe connection: %q expect IP4:port or [IP6]:port  error: %s", subHostPort, err)
+		return nil, err
+	}
+	reqConnection, err := util.NewConnection(reqHostPort)
+	if err != nil {
+		log.Errorf("request connection: %q expect IP4:port or [IP6]:port  error: %s", reqHostPort, err)
+		return nil, err
+	}
+
 	push, pull, err := zmqutil.NewSignalPair(discovererStopSignal)
 	if err != nil {
-		return nil, fault.ErrNoConnectionsAvailable
+		return nil, err
 	}
 
 	sub, err := zmq.NewSocket(zmq.SUB)
 	if err != nil {
-		return nil, fault.ErrNoConnectionsAvailable
+		return nil, err
 	}
-	sub.Connect(subAddr)
+
+	subAddr, subIPv6 := subConnection.CanonicalIPandPort("tcp://")
+	err = sub.SetIpv6(subIPv6)
+	if err != nil {
+		return nil, err
+	}
+
+	err = sub.Connect(subAddr)
+	if err != nil {
+		return nil, err
+	}
+
 	sub.SetSubscribe("")
+
+	log.Infof("subscribe to: %q  IPv6: %t", subAddr, subIPv6)
 
 	req, err := zmq.NewSocket(zmq.REQ)
 	if err != nil {
-		return nil, fault.ErrNoConnectionsAvailable
+		return nil, err
 	}
-	req.Connect(reqAddr)
+
+	reqAddr, reqIPv6 := reqConnection.CanonicalIPandPort("tcp://")
+	err = req.SetIpv6(reqIPv6)
+	if err != nil {
+		return nil, err
+	}
+	err = req.Connect(reqAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Infof("connect to: %q  IPv6: %t", reqAddr, reqIPv6)
 
 	disc := &discoverer{
 		log:  log,

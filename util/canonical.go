@@ -27,7 +27,14 @@ func NewConnection(hostPort string) (*Connection, error) {
 
 	IP := net.ParseIP(strings.Trim(host, " "))
 	if nil == IP {
-		return nil, fault.ErrInvalidIPAddress
+		ips, err := net.LookupIP(host)
+		if nil != err {
+			return nil, err
+		}
+		if len(ips) < 1 {
+			return nil, fault.ErrInvalidIPAddress
+		}
+		IP = ips[0]
 	}
 
 	numericPort, err := strconv.Atoi(strings.Trim(port, " "))

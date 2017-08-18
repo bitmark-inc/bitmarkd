@@ -127,8 +127,8 @@ payment {
   use_discovery = true
 
   discovery {
-    sub_endpoint = tcp://127.0.0.1:5566
-    req_endpoint = tcp://127.0.0.1:5567
+    sub_endpoint = 127.0.0.1:5566
+    req_endpoint = 127.0.0.1:5567
   }
 
   # local bitcoin access to REST API
