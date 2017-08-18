@@ -346,7 +346,12 @@ func getFirstConnections(connections []string) (string, string, int) {
 	initialPort := 0
 	IP4 := ""
 	IP6 := ""
+
+scan_connections:
 	for i, c := range connections {
+		if "" == c {
+			continue scan_connections
+		}
 		v6, IP, port, err := splitConnection(c)
 		if nil != err {
 			fmt.Printf("error: cannot decode[%d]: %q  error: %s\n", i, c, err)
