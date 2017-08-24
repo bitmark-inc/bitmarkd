@@ -1,3 +1,9 @@
+bitmarkd (5.6-1) unstable; urgency=medium
+
+  * panic log update to give more data
+
+ -- Christopher Hall <hsw@bitmark.com>  Thu, 24 Aug 2017 05:36:48 +0000
+
 bitmarkd (5.5-1) unstable; urgency=medium
 
   * rename the dump database command to bitmark-dumpdb

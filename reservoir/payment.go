@@ -108,7 +108,7 @@ trim_bytes:
 	// split up individual addresses - these are in currency.Index() order
 	addresses := bytes.Split(blockOwnerData, []byte{0x00})
 	if len(addresses) != currency.Count {
-		logger.Panicf("payment.getPayment: block owner data has: %d addresses must have exactly: %d addresses", len(addresses), currency.Count)
+		logger.Panicf("payment.getPayment: block owner data %#v has: %d addresses must have exactly: %d addresses", blockOwnerData, len(addresses), currency.Count)
 	}
 	payments := &PaymentSegment{}
 
