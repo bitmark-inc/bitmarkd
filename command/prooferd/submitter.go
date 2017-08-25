@@ -123,7 +123,7 @@ func Submitter(i int, connectTo string, v6 bool, serverPublicKey []byte, publicK
 		for {
 			request, err := dequeue.RecvMessageBytes(0)
 			logger.PanicIfError("dequeue.RecvMessageBytes", err)
-			log.Debugf("received data: %s", request)
+			log.Debugf("received data: %x", request)
 
 			// safety check
 			if identity != string(request[0]) {
