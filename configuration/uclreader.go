@@ -90,7 +90,7 @@ func ParseConfigurationFile(fileName string, config interface{}, variables map[s
 	})
 
 	// macro
-	//   .prepend(var=NAME) "value"
+	//   .append(var=NAME) "value"
 	p.RegisterMacro("append", func(args libucl.Object, body string) bool {
 		v := args.Get("var")
 		if nil == v {

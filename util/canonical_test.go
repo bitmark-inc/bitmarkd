@@ -7,6 +7,7 @@ package util_test
 import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
+	"strings"
 	"testing"
 )
 
@@ -19,6 +20,7 @@ func TestCanonical(t *testing.T) {
 	}
 
 	testData := []item{
+		{"127.1:1234", "127.0.0.1:1234"},
 		{"127.0.0.1:1234", "127.0.0.1:1234"},
 		{"127.0.0.1:1", "127.0.0.1:1"},
 		{" 127.0.0.1 : 1 ", "127.0.0.1:1"},
@@ -68,7 +70,6 @@ func TestCanonical(t *testing.T) {
 func TestCanonicalIP(t *testing.T) {
 
 	testData := []string{
-		"127.1:1234",
 		"256.0.0.0:1234",
 		"0.256.0.0:1234",
 		"0.0.256.0:1234",
@@ -87,7 +88,9 @@ func TestCanonicalIP(t *testing.T) {
 			s, v6 := c.CanonicalIPandPort("")
 			t.Fatalf("eroneoulssly converted:[%d]: %q  to(%t): %q", i, d, v6, s)
 		}
-		if fault.ErrInvalidIPAddress != err {
+		if strings.Contains(err.Error(), "no such host") {
+			// expected error
+		} else if fault.ErrInvalidIPAddress != err {
 			t.Fatalf("NewConnection failed on:[%d] %q  error: %v", i, d, err)
 		}
 	}
