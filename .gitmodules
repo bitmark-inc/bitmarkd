@@ -46,3 +46,6 @@
 [submodule "vendor/github.com/bitmark-inc/go-libucl"]
 	path = vendor/github.com/bitmark-inc/go-libucl
 	url = https://github.com/bitmark-inc/go-libucl
+[submodule "vendor/golang.org/x/sys"]
+	path = vendor/golang.org/x/sys
+	url = https://go.googlesource.com/sys
