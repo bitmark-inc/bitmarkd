@@ -58,8 +58,8 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue, isVerified bool) (*Is
 	// all the assets id corresponding to separated
 	assetIds := make([]transactionrecord.AssetIndex, count)
 
-	// this flags in already stored issues
-	// used to flags an error if pay id is different
+	// this flags already stored issues
+	// used to flag an error if pay id is different
 	// as this would be an overlapping block of issues
 	duplicate := false
 
@@ -163,7 +163,7 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue, isVerified bool) (*Is
 			assetIds:     assetIds,
 			transactions: separated,
 		},
-		nonce:      nonce, // FIXME: this value seems not used
+		nonce:      nonce, // ***** FIX THIS: this value seems not used
 		difficulty: difficulty,
 	}
 	//copy(entry.txIds, txIds)
