@@ -39,6 +39,7 @@ func TestBackground(t *testing.T) {
 	p := background.Start(processes, t)
 	time.Sleep(50 * time.Millisecond)
 	p.Stop()
+	time.Sleep(20 * time.Millisecond)
 
 	if finalCount1 != proc1.count {
 		t.Fatalf("stop failed: final value expected: %d  actual: %d", finalCount1, proc1.count)
@@ -81,5 +82,53 @@ loop:
 		state.count = finalCount2
 	default:
 		t.Errorf("unexpected n: %d", n)
+	}
+}
+
+type bg2 struct {
+	count int
+}
+
+func TestTimeout(t *testing.T) {
+
+	proc1 := &bg2{
+		count: 1,
+	}
+	proc2 := &bg2{
+		count: 2,
+	}
+
+	// list of background processes to start
+	processes := background.Processes{
+		proc1,
+		proc2,
+	}
+
+	start := time.Now()
+	p := background.Start(processes, t)
+	time.Sleep(50 * time.Millisecond)
+	p.Stop()
+	finish := time.Now()
+	deltaT := finish.Sub(start)
+	if deltaT > 10*time.Second {
+		t.Errorf("too long: %s", deltaT)
+	} else {
+		t.Logf("shutdown time: %s", deltaT)
+	}
+}
+
+func (state *bg2) Run(args interface{}, shutdown <-chan struct{}) {
+
+	t := args.(*testing.T)
+
+	n := 0
+	if state.count > 2 {
+		t.Errorf("initialisation failed: unexpected initial count: %d", state.count)
+	}
+
+	for {
+		state.count += 1
+		t.Logf("state[%d]: %v", n, state)
+		time.Sleep(time.Second)
 	}
 }
