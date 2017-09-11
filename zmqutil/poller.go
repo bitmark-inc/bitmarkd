@@ -57,13 +57,7 @@ func (poller *Poller) Remove(socket *zmq.Socket) {
 
 	// remove the socket
 	delete(poller.sockets, socket)
-
-	// rebuild the zmq poller
-	p := zmq.NewPoller()
-	for s, events := range poller.sockets {
-		p.Add(s, events)
-	}
-	poller.poller = p
+	poller.poller.RemoveBySocket(socket)
 }
 
 // perform a poll
