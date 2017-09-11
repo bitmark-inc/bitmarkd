@@ -38,13 +38,18 @@ func Subscribe(i int, connectTo string, v6 bool, serverPublicKey []byte, publicK
 
 	socket.SetIdentity(string(publicKey)) // just use public key for identity
 
-	// // basic socket options
-	// //socket.SetIpv6(true)  // ***** FIX THIS find fix for FreeBSD libzmq4 ****
+	// basic socket options
+	socket.SetIpv6(v6)
 	// socket.SetSndtimeo(SEND_TIMEOUT)
 	// socket.SetLinger(LINGER_TIME)
 	// socket.SetRouterMandatory(0)   // discard unroutable packets
 	// socket.SetRouterHandover(true) // allow quick reconnect for a given public key
 	// socket.SetImmediate(false)     // queue messages sent to disconnected peer
+
+	// heartbeat
+	socket.SetHeartbeatIvl(heartbeatInterval)
+	socket.SetHeartbeatTimeout(heartbeatTimeout)
+	socket.SetHeartbeatTtl(heartbeatTTL)
 
 	// set subscription prefix - empty => receive everything
 	socket.SetSubscribe("")

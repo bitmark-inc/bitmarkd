@@ -9,11 +9,18 @@ import (
 	"fmt"
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
+	"time"
 )
 
 const (
 	submission = "inproc://proof.submit" // to fair-queue found proof submissions
 	subdeal    = "inproc://proof.dealer" // to route to specific submitter
+)
+
+const (
+	heartbeatInterval = 15 * time.Second
+	heartbeatTimeout  = 60 * time.Second
+	heartbeatTTL      = 120 * time.Second
 )
 
 // routes messages to the correct Submitter
@@ -99,13 +106,18 @@ func Submitter(i int, connectTo string, v6 bool, serverPublicKey []byte, publicK
 	// just use public key for identity
 	rpc.SetIdentity(string(publicKey))
 
-	// // basic socket options
+	// basic socket options
 	rpc.SetIpv6(v6)
 	// socket.SetSndtimeo(SEND_TIMEOUT)
 	// socket.SetLinger(LINGER_TIME)
 	// socket.SetRouterMandatory(0)   // discard unroutable packets
 	// socket.SetRouterHandover(true) // allow quick reconnect for a given public key
 	// socket.SetImmediate(false)     // queue messages sent to disconnected peer
+
+	// heartbeat
+	rpc.SetHeartbeatIvl(heartbeatInterval)
+	rpc.SetHeartbeatTimeout(heartbeatTimeout)
+	rpc.SetHeartbeatTtl(heartbeatTTL)
 
 	rpc.Connect(connectTo)
 	if nil != err {
