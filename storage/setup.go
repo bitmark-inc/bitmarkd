@@ -52,7 +52,7 @@ var currentVersion = []byte{0x00, 0x00, 0x00, 0x02}
 
 // holds the database handle
 var poolData struct {
-	sync.Mutex
+	sync.RWMutex
 	database *leveldb.DB
 }
 
@@ -134,6 +134,7 @@ func Finalise() {
 
 	poolData.database.Close()
 	poolData.database = nil
+
 	return
 }
 
@@ -146,12 +147,19 @@ func (p *PoolHandle) prefixKey(key []byte) []byte {
 
 // store a key/value bytes pair to the database
 func (p *PoolHandle) Put(key []byte, value []byte) {
+	poolData.RLock()
+	defer poolData.RUnlock()
+	if nil == poolData.database {
+		return
+	}
 	err := poolData.database.Put(p.prefixKey(key), value, nil)
 	logger.PanicIfError("pool.Put", err)
 }
 
 // remove a key from the database
 func (p *PoolHandle) Delete(key []byte) {
+	poolData.RLock()
+	defer poolData.RUnlock()
 	err := poolData.database.Delete(p.prefixKey(key), nil)
 	logger.PanicIfError("pool.Delete", err)
 }
@@ -160,6 +168,11 @@ func (p *PoolHandle) Delete(key []byte) {
 //
 // this returns the actual element - copy the result if it must be preserved
 func (p *PoolHandle) Get(key []byte) []byte {
+	poolData.RLock()
+	defer poolData.RUnlock()
+	if nil == poolData.database {
+		return nil
+	}
 	value, err := poolData.database.Get(p.prefixKey(key), nil)
 	if leveldb.ErrNotFound == err {
 		return nil
@@ -170,6 +183,11 @@ func (p *PoolHandle) Get(key []byte) []byte {
 
 // Check if a key exists
 func (p *PoolHandle) Has(key []byte) bool {
+	poolData.RLock()
+	defer poolData.RUnlock()
+	if nil == poolData.database {
+		return false
+	}
 	value, err := poolData.database.Has(p.prefixKey(key), nil)
 	logger.PanicIfError("pool.Has", err)
 	return value
@@ -180,6 +198,12 @@ func (p *PoolHandle) LastElement() (Element, bool) {
 	maxRange := util.Range{
 		Start: []byte{p.prefix}, // Start of key range, included in the range
 		Limit: p.limit,          // Limit of key range, excluded from the range
+	}
+
+	poolData.RLock()
+	defer poolData.RUnlock()
+	if nil == poolData.database {
+		return Element{}, false
 	}
 
 	iter := poolData.database.NewIterator(&maxRange, nil)

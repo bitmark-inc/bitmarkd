@@ -45,6 +45,12 @@ func (cursor *FetchCursor) Fetch(count int) ([]Element, error) {
 		return nil, fault.ErrInvalidCount
 	}
 
+	poolData.RLock()
+	defer poolData.RUnlock()
+	if nil == poolData.database {
+		return nil, nil
+	}
+
 	iter := poolData.database.NewIterator(&cursor.maxRange, nil)
 
 	results := make([]Element, 0, count)
