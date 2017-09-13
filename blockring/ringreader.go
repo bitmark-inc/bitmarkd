@@ -8,6 +8,7 @@ package blockring
 type RingReader struct {
 	stop    int
 	current int
+	crc     uint64
 }
 
 // start of ring iterator
@@ -29,15 +30,19 @@ func NewRingReader() *RingReader {
 
 // fetch item from ring
 // works in reverse, fetching older items
-func (r *RingReader) Get() (uint64, bool) {
+func (r *RingReader) Next() bool {
 	if r.stop == r.current {
-		return 0, false
+		return false
 	}
-	crc := globalData.ring[r.current].crc
+	r.crc = globalData.ring[r.current].crc
 	r.current -= 1
 	if r.current < 0 {
 		r.current = len(globalData.ring) - 1
 	}
+	return true
+}
 
-	return crc, true
+// read the fetched value
+func (r *RingReader) GetCRC() uint64 {
+	return r.crc
 }

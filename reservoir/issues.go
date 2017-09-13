@@ -201,8 +201,8 @@ func TryProof(payId pay.PayId, clientNonce []byte) TrackingStatus {
 	payNonce := make([]byte, 8)
 	iterator := blockring.NewRingReader()
 	i := 0 // ***** FIX THIS: debug
-	for crc, ok := iterator.Get(); ok; crc, ok = iterator.Get() {
-
+	for iterator.Next() {
+		crc := iterator.GetCRC()
 		binary.BigEndian.PutUint64(payNonce[:], crc)
 		i += 1 // ***** FIX THIS: debug
 		globalData.log.Debugf("TryProof: payNonce[%d]: %x", i, payNonce)
