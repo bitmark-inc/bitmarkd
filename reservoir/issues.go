@@ -180,6 +180,7 @@ func TryProof(payId pay.PayId, clientNonce []byte) TrackingStatus {
 
 	//	r, done, ok := get(payId)
 	if !ok {
+		globalData.log.Debugf("TryProof: issue item not found")
 		return TrackingNotFound
 	}
 
@@ -188,6 +189,7 @@ func TryProof(payId pay.PayId, clientNonce []byte) TrackingStatus {
 	// 	return TrackingProcessed
 	// }
 	if nil == r.difficulty { // only payment tracking; proof not allowed
+		globalData.log.Debugf("TryProof: item with out a difficulty")
 		return TrackingInvalid
 	}
 
@@ -196,20 +198,20 @@ func TryProof(payId pay.PayId, clientNonce []byte) TrackingStatus {
 
 	globalData.log.Infof("TryProof: difficulty: 0x%064x", bigDifficulty)
 
+	var payNonce [8]byte
 	// compute hash with all possible payNonces
 	h := sha3.New256()
-	payNonce := make([]byte, 8)
 	iterator := blockring.NewRingReader()
 	i := 0 // ***** FIX THIS: debug
 	for iterator.Next() {
 		crc := iterator.GetCRC()
 		binary.BigEndian.PutUint64(payNonce[:], crc)
-		i += 1 // ***** FIX THIS: debug
 		globalData.log.Debugf("TryProof: payNonce[%d]: %x", i, payNonce)
 
+		i += 1 // ***** FIX THIS: debug
 		h.Reset()
 		h.Write(payId[:])
-		h.Write(payNonce)
+		h.Write(payNonce[:])
 		h.Write(clientNonce)
 		var digest [32]byte
 		h.Sum(digest[:0])
