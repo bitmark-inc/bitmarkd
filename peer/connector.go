@@ -396,6 +396,7 @@ process_clients:
 			continue process_clients
 		}
 	}
+
 	return n > 0 // if registration occured
 }
 
@@ -417,8 +418,8 @@ client_loop:
 		data := [][]byte{}
 
 	retrying:
-		for retry := 1; retry <= 3; retry += 1 {
-			log.Debugf("highestBlock: client: %s retry: %d", client, retry)
+		for try := 1; try <= 3; try += 1 {
+			log.Debugf("highestBlock: client: %s try: %d", client, try)
 
 			err := client.Send("N")
 			if nil != err {
