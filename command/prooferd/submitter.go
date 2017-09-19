@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
-	"time"
 )
 
 const (
@@ -17,11 +16,13 @@ const (
 	subdeal    = "inproc://proof.dealer" // to route to specific submitter
 )
 
-const (
-	heartbeatInterval = 15 * time.Second
-	heartbeatTimeout  = 60 * time.Second
-	heartbeatTTL      = 120 * time.Second
-)
+// ***** FIX THIS: enabling this causes complete failure
+// ***** FIX THIS: socket disconnects, perhaps after IVL value
+// const (
+// 	heartbeatInterval = 15 * time.Second
+// 	heartbeatTimeout  = 60 * time.Second
+// 	heartbeatTTL      = 120 * time.Second
+// )
 
 // routes messages to the correct Submitter
 func SubmitQueue() {
@@ -108,16 +109,13 @@ func Submitter(i int, connectTo string, v6 bool, serverPublicKey []byte, publicK
 
 	// basic socket options
 	rpc.SetIpv6(v6)
-	// socket.SetSndtimeo(SEND_TIMEOUT)
-	// socket.SetLinger(LINGER_TIME)
-	// socket.SetRouterMandatory(0)   // discard unroutable packets
-	// socket.SetRouterHandover(true) // allow quick reconnect for a given public key
-	// socket.SetImmediate(false)     // queue messages sent to disconnected peer
 
+	// ***** FIX THIS: enabling this causes complete failure
+	// ***** FIX THIS: socket disconnects, perhaps after IVL value
 	// heartbeat
-	rpc.SetHeartbeatIvl(heartbeatInterval)
-	rpc.SetHeartbeatTimeout(heartbeatTimeout)
-	rpc.SetHeartbeatTtl(heartbeatTTL)
+	// rpc.SetHeartbeatIvl(heartbeatInterval)
+	// rpc.SetHeartbeatTimeout(heartbeatTimeout)
+	// rpc.SetHeartbeatTtl(heartbeatTTL)
 
 	rpc.Connect(connectTo)
 	if nil != err {

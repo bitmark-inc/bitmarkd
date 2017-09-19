@@ -11,11 +11,13 @@ import (
 	"time"
 )
 
-const (
-	heartbeatInterval = 15 * time.Second
-	heartbeatTimeout  = 60 * time.Second
-	heartbeatTTL      = 120 * time.Second
-)
+// ***** FIX THIS: enabling this causes complete failure
+// ***** FIX THIS: socket disconnects, perhaps after IVL value
+// const (
+// 	heartbeatInterval = 15 * time.Second
+// 	heartbeatTimeout  = 60 * time.Second
+// 	heartbeatTTL      = 60 * time.Second
+// )
 
 // return a pair of connected push/pull sockets
 // for shutdown signalling
@@ -89,14 +91,15 @@ func NewBind(log *logger.L, socketType zmq.Type, zapDomain string, privateKey []
 	}
 	return socket4, socket6, nil
 
-	// if an arror close any open sockets
+	// if an error close any open sockets
 fail:
-	if nil == socket4 {
+	if nil != socket4 {
 		socket4.Close()
 	}
 	if nil != socket6 {
 		socket6.Close()
 	}
+	log.Errorf("socket error: %s", err)
 	return nil, nil, err
 }
 
@@ -118,22 +121,66 @@ func NewServerSocket(socketType zmq.Type, zapDomain string, privateKey []byte, p
 	//socket.SetCurvePublickey(publicKey)
 	socket.SetCurveSecretkey(string(privateKey))
 
-	socket.SetZapDomain(zapDomain)
+	err = socket.SetZapDomain(zapDomain)
+	if nil != err {
+		goto failure
+	}
 
 	socket.SetIdentity(string(publicKey)) // just use public key for identity
 
-	socket.SetIpv6(v6) // conditionally set IPv6 state
+	err = socket.SetIpv6(v6) // conditionally set IPv6 state
+	if nil != err {
+		goto failure
+	}
 
-	// socket.SetSndtimeo(SEND_TIMEOUT)
-	// socket.SetLinger(LINGER_TIME)
-	// socket.SetRouterMandatory(0)   // discard unroutable packets
-	// socket.SetRouterHandover(true) // allow quick reconnect for a given public key
-	// socket.SetImmediate(false)     // queue messages sent to disconnected peer
+	// only queue message to connected peers
+	socket.SetImmediate(true)
+	socket.SetLinger(100 * time.Millisecond)
 
+	err = socket.SetSndtimeo(120 * time.Second)
+	if nil != err {
+		goto failure
+	}
+	err = socket.SetRcvtimeo(120 * time.Second)
+	if nil != err {
+		goto failure
+	}
+
+	err = socket.SetTcpKeepalive(1)
+	if nil != err {
+		goto failure
+	}
+	err = socket.SetTcpKeepaliveCnt(5)
+	if nil != err {
+		goto failure
+	}
+	err = socket.SetTcpKeepaliveIdle(60)
+	if nil != err {
+		goto failure
+	}
+	err = socket.SetTcpKeepaliveIntvl(60)
+	if nil != err {
+		goto failure
+	}
+
+	// ***** FIX THIS: enabling this causes complete failure
+	// ***** FIX THIS: socket disconnects, perhaps after IVL value
 	// heartbeat
-	socket.SetHeartbeatIvl(heartbeatInterval)
-	socket.SetHeartbeatTimeout(heartbeatTimeout)
-	socket.SetHeartbeatTtl(heartbeatTTL)
+	// err = socket.SetHeartbeatIvl(heartbeatInterval)
+	// if nil != err {
+	// 	goto failure
+	// }
+	// err = socket.SetHeartbeatTimeout(heartbeatTimeout)
+	// if nil != err {
+	// 	goto failure
+	// }
+	// err = socket.SetHeartbeatTtl(heartbeatTTL)
+	// if nil != err {
+	// 	goto failure
+	// }
 
 	return socket, nil
+
+failure:
+	return nil, err
 }

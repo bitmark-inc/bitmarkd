@@ -16,6 +16,8 @@ import (
 
 // structure to hold a client connection
 type Client struct {
+	sync.Mutex
+
 	publicKey       []byte
 	privateKey      []byte
 	serverPublicKey []byte
@@ -74,6 +76,8 @@ func NewClient(socketType zmq.Type, privateKey []byte, publicKey []byte, timeout
 
 // create a socket and connect to specific server with specifed key
 func (client *Client) openSocket() error {
+	client.Lock()
+	defer client.Unlock()
 
 	socket, err := zmq.NewSocket(client.socketType)
 	if nil != err {
@@ -114,10 +118,8 @@ func (client *Client) openSocket() error {
 		goto failure
 	}
 
-	// // basic socket options
-	// err=socket.SetRouterMandatory(0)   // discard unroutable packets
-	// err=socket.SetRouterHandover(true) // allow quick reconnect for a given public key
-	// err=socket.SetImmediate(false)     // queue messages sent to disconnected peer
+	// only queue messages sent to connected peers
+	socket.SetImmediate(true)
 
 	// zero => do not set timeout
 	if 0 != client.timeout {
@@ -130,7 +132,7 @@ func (client *Client) openSocket() error {
 			goto failure
 		}
 	}
-	err = socket.SetLinger(0)
+	err = socket.SetLinger(100 * time.Millisecond)
 	if nil != err {
 		goto failure
 	}
@@ -157,20 +159,38 @@ func (client *Client) openSocket() error {
 	default:
 	}
 
-	// this need zmq 4.2
+	err = socket.SetTcpKeepalive(1)
+	if nil != err {
+		goto failure
+	}
+	err = socket.SetTcpKeepaliveCnt(5)
+	if nil != err {
+		goto failure
+	}
+	err = socket.SetTcpKeepaliveIdle(60)
+	if nil != err {
+		goto failure
+	}
+	err = socket.SetTcpKeepaliveIntvl(60)
+	if nil != err {
+		goto failure
+	}
+
+	// ***** FIX THIS: enabling this causes complete failure
+	// ***** FIX THIS: socket disconnects, perhaps after IVL value
 	// heartbeat (constants from socket.go)
-	err = socket.SetHeartbeatIvl(heartbeatInterval)
-	if nil != err && zmq.ErrorNotImplemented42 != err {
-		goto failure
-	}
-	err = socket.SetHeartbeatTimeout(heartbeatTimeout)
-	if nil != err && zmq.ErrorNotImplemented42 != err {
-		goto failure
-	}
-	err = socket.SetHeartbeatTtl(heartbeatTTL)
-	if nil != err && zmq.ErrorNotImplemented42 != err {
-		goto failure
-	}
+	// err = socket.SetHeartbeatIvl(heartbeatInterval)
+	// if nil != err {
+	// 	goto failure
+	// }
+	// err = socket.SetHeartbeatTimeout(heartbeatTimeout)
+	// if nil != err {
+	// 	goto failure
+	// }
+	// err = socket.SetHeartbeatTtl(heartbeatTTL)
+	// if nil != err {
+	// 	goto failure
+	// }
 
 	// set IPv6 state before connect
 	err = socket.SetIpv6(client.v6)
@@ -204,6 +224,8 @@ failure:
 // destroy the socket, but leave other connection info so can reconnect
 // to the same endpoint again
 func (client *Client) closeSocket() error {
+	client.Lock()
+	defer client.Unlock()
 
 	if nil == client.socket {
 		return nil
@@ -309,6 +331,9 @@ func CloseClients(clients []*Client) {
 
 // send a message
 func (client *Client) Send(items ...interface{}) error {
+	client.Lock()
+	defer client.Unlock()
+
 	if "" == client.address {
 		return fault.ErrNotConnected
 	}
@@ -338,6 +363,9 @@ func (client *Client) Send(items ...interface{}) error {
 
 // receive a reply
 func (client *Client) Receive(flags zmq.Flag) ([][]byte, error) {
+	client.Lock()
+	defer client.Unlock()
+
 	if "" == client.address {
 		return nil, fault.ErrNotConnected
 	}
