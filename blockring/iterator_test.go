@@ -330,6 +330,7 @@ func TestIterate(t *testing.T) {
 		Count:     25,
 	})
 	defer logger.Finalise()
+	log := logger.New("crc-testing")
 
 	blockring.Initialise()
 
@@ -342,12 +343,35 @@ func TestIterate(t *testing.T) {
 	iterator := blockring.NewRingReader()
 	for iterator.Next() {
 		crc := iterator.GetCRC()
-		binary.BigEndian.PutUint64(nonce[:], crc)
-		binary.BigEndian.PutUint64(expected[:], crcs[i])
+		binary.BigEndian.PutUint64(nonce, crc)
+		binary.BigEndian.PutUint64(expected, crcs[i])
 
 		if crc != crcs[i] || !bytes.Equal(nonce, expected) {
 			t.Errorf("nonce[%d]: actual: %x  expected: %x", i, nonce, expected)
 		}
 		i += 1
 	}
+
+	blockring.Clear(log)
+
+	for i, b := range testblocks {
+		blockring.Put(uint64(i+1), digests[i], b)
+	}
+
+	i = 0
+	nonce = make([]byte, 8)
+	expected = make([]byte, 8)
+	iterator = blockring.NewRingReader()
+	for iterator.Next() {
+		crc := iterator.GetCRC()
+		binary.BigEndian.PutUint64(nonce, crc)
+		binary.BigEndian.PutUint64(expected, crcs[i])
+
+		if crc != crcs[i] || !bytes.Equal(nonce, expected) {
+			t.Errorf("nonce[%d]: actual: %x  expected: %x", i, nonce, expected)
+		}
+
+		i += 1
+	}
+
 }
