@@ -41,6 +41,12 @@ func Subscribe(i int, connectTo string, v6 bool, serverPublicKey []byte, publicK
 	// basic socket options
 	socket.SetIpv6(v6)
 
+	// keep-alive settings
+	socket.SetTcpKeepalive(1)
+	socket.SetTcpKeepaliveCnt(5)
+	socket.SetTcpKeepaliveIdle(60)
+	socket.SetTcpKeepaliveIntvl(60)
+
 	// ***** FIX THIS: enabling this causes complete failure
 	// ***** FIX THIS: socket disconnects, perhaps after IVL value
 	// heartbeat

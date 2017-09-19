@@ -110,6 +110,12 @@ func Submitter(i int, connectTo string, v6 bool, serverPublicKey []byte, publicK
 	// basic socket options
 	rpc.SetIpv6(v6)
 
+	// keep-alive settings
+	rpc.SetTcpKeepalive(1)
+	rpc.SetTcpKeepaliveCnt(5)
+	rpc.SetTcpKeepaliveIdle(60)
+	rpc.SetTcpKeepaliveIntvl(60)
+
 	// ***** FIX THIS: enabling this causes complete failure
 	// ***** FIX THIS: socket disconnects, perhaps after IVL value
 	// heartbeat
