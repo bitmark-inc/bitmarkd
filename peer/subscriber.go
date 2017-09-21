@@ -324,7 +324,7 @@ func (sbsc *subscriber) process(data [][]byte) {
 		}
 
 	case "heart":
-		log.Infof("received heart: %x", data[1])
+		log.Infof("received heart: %q", data[1])
 		// nothing to forward, this is just to keep communication alive
 
 	default:

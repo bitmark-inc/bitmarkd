@@ -282,7 +282,7 @@ func (client *Client) IsConnected() bool {
 
 // check if connected to a specific node
 func (client *Client) IsConnectedTo(serverPublicKey []byte) bool {
-	return bytes.Equal(client.publicKey, serverPublicKey)
+	return bytes.Equal(client.serverPublicKey, serverPublicKey)
 }
 
 // // check if not connected to any node
