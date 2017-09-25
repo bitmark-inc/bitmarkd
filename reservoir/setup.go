@@ -164,6 +164,8 @@ func setVerified(payId pay.PayId, detail *PaymentDetail) bool {
 			globalData.log.Infof("paid txid: %s  payid: %s", detail.TxID, payId)
 		}
 
+		var filter ProofFilter
+
 		for i, txId := range entry.txIds {
 			v := &verifiedItem{
 				itemData:    entry.itemData,
@@ -173,9 +175,13 @@ func setVerified(payId pay.PayId, detail *PaymentDetail) bool {
 			if nil != entry.links {
 				v.link = entry.links[i]
 			}
+			filter.Add(entry.transactions[i])
+
 			cache.Pool.VerifiedTx.Put(txId.String(), v)
 			cache.Pool.UnverifiedTxIndex.Delete(txId.String())
 		}
+
+		cache.Pool.ProofFilters.Put(payId.String(), filter)
 		cache.Pool.UnverifiedTxEntries.Delete(payId.String())
 	}
 

@@ -27,6 +27,7 @@ type poolData struct {
 type pools struct {
 	UnverifiedTxIndex   *poolData `exp:"72h"`
 	UnverifiedTxEntries *poolData `exp:"72h"`
+	ProofFilters        *poolData `exp:"72h"`
 	VerifiedTx          *poolData
 	PendingTransfer     *poolData `exp:"72h"`
 	OrphanPayment       *poolData `exp:"72h"`
