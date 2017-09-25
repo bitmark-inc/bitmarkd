@@ -55,14 +55,18 @@ type globalDataType struct {
 
 var globalData globalDataType
 
+var Store *ReservoirStore
+
 // create the cache
-func Initialise() error {
+func Initialise(reservoirDataFile string) error {
 	globalData.log = logger.New("reservoir")
 	if globalData.log == nil {
 		return fault.ErrInvalidLoggerChannel
 	}
 	globalData.log.Info("starting…")
 
+	globalData.log.Debugf("initialise a reservoir store using file: %s", reservoirDataFile)
+	Store = NewReservoirStore(reservoirDataFile)
 	Enable()
 
 	// start background process "rebroadcaster"
@@ -86,6 +90,10 @@ func Finalise() {
 	Disable()
 
 	globalData.background.Stop()
+	err := Store.Backup()
+	if err != nil {
+		globalData.log.Criticalf("fail to backup reservoir data: %s", err.Error())
+	}
 
 	globalData.log.Info("finished")
 	globalData.log.Flush()

@@ -141,3 +141,11 @@ func (p Packed) MarshalText() ([]byte, error) {
 	hex.Encode(b, p)
 	return b, nil
 }
+
+// convert a packed to its hex JSON form
+func (p *Packed) UnmarshalText(s []byte) error {
+	size := hex.DecodedLen(len(s))
+	*p = make([]byte, size)
+	_, err := hex.Decode(*p, s)
+	return err
+}

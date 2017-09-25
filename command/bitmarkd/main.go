@@ -176,7 +176,7 @@ func main() {
 
 	// start the reservoir (verified transaction data cache)
 	log.Info("initialise reservoir")
-	err = reservoir.Initialise()
+	err = reservoir.Initialise(masterConfiguration.ReservoirDataFile)
 	if nil != err {
 		log.Criticalf("reservoir initialise error: %v", err)
 		exitwithstatus.Message("reservoir initialise error: %v", err)
@@ -219,6 +219,11 @@ func main() {
 	// these commands are allowed to access the internal database
 	if len(arguments) > 0 && processDataCommand(log, arguments, masterConfiguration) {
 		return
+	}
+
+	err = reservoir.Store.Restore()
+	if nil != err {
+		log.Warnf("fail to recover reservoir data: %v", err)
 	}
 
 	// network announcements need to be before peer and rpc initialisation
