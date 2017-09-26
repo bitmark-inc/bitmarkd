@@ -25,6 +25,9 @@ nodes = chain
 # optional reservoir file if not absolute path then is created relative to
 # the data directory
 reservoir_file = "reservoir.json"
+# optional peer file if not absolute path then is created relative to
+# the data directory
+peer_file = "peers.json"
 
 # macros to setup command-line or environment IPv4 setting
 # VPC systems tend to only give a RFC1319 IPv4 and NAT the public IP to it

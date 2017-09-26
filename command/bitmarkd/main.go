@@ -252,7 +252,7 @@ func main() {
 		// trying to fetch the TXT records for validation
 		nodesDomain = masterConfiguration.Nodes // just assume it is a domain name
 	}
-	err = announce.Initialise(nodesDomain)
+	err = announce.Initialise(nodesDomain, masterConfiguration.PeerFile)
 	if nil != err {
 		log.Criticalf("announce initialise error: %v", err)
 		exitwithstatus.Message("announce initialise error: %v", err)

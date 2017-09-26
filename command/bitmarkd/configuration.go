@@ -76,6 +76,7 @@ type Configuration struct {
 	Nodes         string       `libucl:"nodes" json:"nodes"`
 	Database      DatabaseType `libucl:"database" json:"database"`
 
+	PeerFile          string `libucl:"peer_file" json:"peer_file"`
 	ReservoirDataFile string `libucl:"reservoir_file" json:"reservoir_file"`
 
 	ClientRPC RPCType               `libucl:"client_rpc" json:"client_rpc"`
@@ -101,6 +102,7 @@ func getConfiguration(configurationFileName string, variables map[string]string)
 		DataDirectory:     defaultDataDirectory,
 		PidFile:           "", // no PidFile by default
 		Chain:             chain.Bitmark,
+		PeerFile:          "peers.json",
 		ReservoirDataFile: "reservoir.json",
 
 		Database: DatabaseType{
@@ -181,6 +183,7 @@ func getConfiguration(configurationFileName string, variables map[string]string)
 	// force all relevant items to be absolute paths
 	// if not, assign them to the data directory
 	mustBeAbsolute := []*string{
+		&options.PeerFile,
 		&options.ReservoirDataFile,
 		&options.Database.Directory,
 		&options.ClientRPC.Certificate,

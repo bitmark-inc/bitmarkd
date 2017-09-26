@@ -36,7 +36,7 @@ func SetPeer(publicKey []byte, broadcasts []byte, listeners []byte) error {
 	globalData.listeners = listeners
 	globalData.peerSet = true
 
-	addPeer(publicKey, broadcasts, listeners)
+	addPeer(publicKey, broadcasts, listeners, 0)
 
 	globalData.thisNode = globalData.peerTree.Search(pubkey(publicKey))
 
@@ -51,15 +51,20 @@ func SetPeer(publicKey []byte, broadcasts []byte, listeners []byte) error {
 //   false if the update was within the limits (to prevent continuous relaying)
 func AddPeer(publicKey []byte, broadcasts []byte, listeners []byte) bool {
 	globalData.Lock()
-	rc := addPeer(publicKey, broadcasts, listeners)
+	rc := addPeer(publicKey, broadcasts, listeners, 0)
 	globalData.Unlock()
 	return rc
 }
 
 // internal add a peer announcement, hold lock before calling
-func addPeer(publicKey []byte, broadcasts []byte, listeners []byte) bool {
+func addPeer(publicKey []byte, broadcasts []byte, listeners []byte, timestamp int64) bool {
 
-	ts := time.Now()
+	now := time.Now()
+	ts := now
+	if timestamp != 0 {
+		ts = time.Unix(timestamp, 0)
+	}
+
 	peer := &peerEntry{
 		publicKey:  publicKey,
 		broadcasts: broadcasts,
@@ -71,6 +76,7 @@ func addPeer(publicKey []byte, broadcasts []byte, listeners []byte) bool {
 		ts = peer.timestamp // preserve previous timestamp
 	}
 	change := globalData.peerTree.Insert(pubkey(publicKey), peer)
+	globalData.log.Debugf("number of nodes in the peer tree: %d", globalData.peerTree.Count())
 
 	// if adding this nodes data
 	if bytes.Equal(globalData.publicKey, publicKey) {
@@ -79,7 +85,7 @@ func addPeer(publicKey []byte, broadcasts []byte, listeners []byte) bool {
 
 	// if new node or enough time has elapsed to make sure
 	// this is not an endless rebroadcast
-	if change || time.Since(ts) > announceRebroadcast {
+	if change || time.Since(now) > announceRebroadcast {
 		globalData.change = true
 		return true
 	}

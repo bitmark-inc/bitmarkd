@@ -54,6 +54,7 @@ type announcerData struct {
 	peerTree *avl.Tree
 	thisNode *avl.Node // this node's position in the tree
 	change   bool      // tree was changed
+	peerFile string
 
 	n1 *avl.Node // first neighbour
 	n3 *avl.Node // third neighbour
@@ -78,9 +79,9 @@ type announcerData struct {
 var globalData announcerData
 
 // initialise the announcement system
-// pass a fuklly qualified domain for root node list
+// pass a fully qualified domain for root node list
 // or empty string for no root nodes
-func Initialise(nodesDomain string) error {
+func Initialise(nodesDomain, peerFile string) error {
 
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -106,6 +107,12 @@ func Initialise(nodesDomain string) error {
 
 	globalData.peerSet = false
 	globalData.rpcsSet = false
+	globalData.peerFile = peerFile
+
+	globalData.log.Info("start restoring peer data…")
+	if err := restorePeers(globalData.peerFile); err != nil {
+		globalData.log.Errorf("fail to restore peer data: %s", err.Error())
+	}
 
 	if "" != nodesDomain {
 		texts, err := net.LookupTXT(nodesDomain)
@@ -147,7 +154,7 @@ func Initialise(nodesDomain string) error {
 					globalData.log.Infof("result[%d]: broadcasts: %x  listeners: %x", i, broadcasts, listeners)
 
 					// internal add, as lock is already held
-					addPeer(tag.publicKey, broadcasts, listeners)
+					addPeer(tag.publicKey, broadcasts, listeners, 0)
 				}
 			}
 		}
@@ -185,6 +192,11 @@ func Finalise() error {
 
 	// stop background
 	globalData.background.Stop()
+
+	globalData.log.Info("start backing up peer data…")
+	if err := backupPeers(globalData.peerFile); err != nil {
+		globalData.log.Errorf("fail to backup peer data: %s", err.Error())
+	}
 
 	// finally...
 	globalData.initialised = false
