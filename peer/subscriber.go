@@ -7,15 +7,9 @@ package peer
 import (
 	"bytes"
 	"encoding/hex"
-	"github.com/bitmark-inc/bitmarkd/announce"
-	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/mode"
-	"github.com/bitmark-inc/bitmarkd/pay"
-	"github.com/bitmark-inc/bitmarkd/payment"
-	"github.com/bitmark-inc/bitmarkd/reservoir"
-	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
@@ -29,6 +23,7 @@ const (
 
 type subscriber struct {
 	log          *logger.L
+	chain        string
 	push         *zmq.Socket
 	pull         *zmq.Socket
 	clients      []*zmqutil.Client
@@ -42,6 +37,7 @@ func (sbsc *subscriber) initialise(privateKey []byte, publicKey []byte, subscrib
 	if nil == log {
 		return fault.ErrInvalidLoggerChannel
 	}
+	sbsc.chain = mode.ChainName()
 	sbsc.log = log
 
 	log.Info("initialising…")
@@ -99,7 +95,7 @@ func (sbsc *subscriber) initialise(privateKey []byte, publicKey []byte, subscrib
 
 		sbsc.clients[i] = client
 
-		err = client.Connect(address, serverPublicKey)
+		err = client.Connect(address, serverPublicKey, sbsc.chain)
 		if nil != err {
 			log.Errorf("connect[%d]=%q  error: %v", i, c.Address, err)
 			errX = err
@@ -201,7 +197,7 @@ func (sbsc *subscriber) Run(args interface{}, shutdown <-chan struct{}) {
 						command := string(data[1])
 						publicKey := data[2]
 						broadcasts := data[3]
-						connectTo(sbsc.log, sbsc.clients, sbsc.dynamicStart, command, publicKey, broadcasts)
+						connectToPublisher(sbsc.log, sbsc.chain, sbsc.clients, sbsc.dynamicStart, command, publicKey, broadcasts)
 					default:
 						break loop
 					}
@@ -210,7 +206,18 @@ func (sbsc *subscriber) Run(args interface{}, shutdown <-chan struct{}) {
 					if nil != err {
 						log.Errorf("receive error: %v", err)
 					} else {
-						sbsc.process(data)
+
+						dataLength := len(data)
+						if dataLength < 3 {
+							log.Warnf("with too few data: %d items", dataLength)
+							continue loop
+						}
+						theChain := string(data[0])
+						if theChain != sbsc.chain {
+							log.Errorf("invalid chain: actual: %q  expect: %s", theChain, sbsc.chain)
+							continue loop
+						}
+						processSubscription(sbsc.log, string(data[1]), data[2:])
 					}
 					expiryRegister[s] = expiresAt
 				}
@@ -241,246 +248,4 @@ loop:
 	sbsc.push.SendMessage("stop")
 	sbsc.push.Close()
 	log.Info("finished")
-}
-
-// process the received subscription
-func (sbsc *subscriber) process(data [][]byte) {
-
-	log := sbsc.log
-
-	dataLength := len(data)
-	if dataLength < 2 {
-		log.Warnf("with too few data: %d items", dataLength)
-		return
-	}
-	switch string(data[0]) {
-	case "block":
-		log.Infof("received block: %x", data[1])
-		if !mode.Is(mode.Normal) {
-			err := fault.ErrNotAvailableDuringSynchronise
-			log.Warnf("failed assets: error: %v", err)
-		} else {
-			messagebus.Bus.Blockstore.Send("remote", data[1])
-		}
-
-	case "assets":
-		log.Infof("received assets: %x", data[1])
-		err := processAssets(data[1])
-		if nil != err {
-			log.Warnf("failed assets: error: %v", err)
-		} else {
-			messagebus.Bus.Broadcast.Send("assets", data[1])
-		}
-
-	case "issues":
-		if dataLength < 3 {
-			log.Warnf("issues with too few data: %d items", dataLength)
-			return
-		}
-		log.Infof("received issues: %x, verified: %x", data[1], data[2])
-		err := processIssues(data[1], data[2])
-		if nil != err {
-			log.Warnf("failed issues: error: %v", err)
-		} else {
-			messagebus.Bus.Broadcast.Send("issues", data[1], data[2])
-		}
-
-	case "transfer":
-		log.Infof("received transfer: %x", data[1])
-		err := processTransfer(data[1])
-		if nil != err {
-			log.Warnf("failed transfer: error: %v", err)
-		} else {
-			messagebus.Bus.Broadcast.Send("transfer", data[1])
-		}
-
-	case "proof":
-		log.Infof("received proof: %x", data[1])
-		err := processProof(data[1])
-		if nil != err {
-			log.Warnf("failed proof: error: %v", err)
-		} else {
-			messagebus.Bus.Broadcast.Send("proof", data[1])
-		}
-
-	case "rpc":
-		if dataLength < 3 {
-			log.Warnf("rpc with too few data: %d items", dataLength)
-			return
-		}
-		log.Infof("received rpc: fingerprint: %x  rpc: %x", data[1], data[2])
-		if announce.AddRPC(data[1], data[2]) {
-			messagebus.Bus.Broadcast.Send("rpc", data[1], data[2])
-		}
-
-	case "peer":
-		if dataLength < 4 {
-			log.Warnf("peer with too few data: %d items", dataLength)
-			return
-		}
-		log.Infof("received peer: %x  broadcast: %x  listener: %x", data[1], data[2], data[3])
-		if announce.AddPeer(data[1], data[2], data[3]) {
-			messagebus.Bus.Broadcast.Send("peer", data[1], data[2], data[3])
-		}
-
-	case "heart":
-		log.Infof("received heart: %q", data[1])
-		// nothing to forward, this is just to keep communication alive
-
-	default:
-		log.Warnf("received unhandled: %x", data)
-
-	}
-}
-
-// un pack each asset and cache them
-func processAssets(packed []byte) error {
-
-	if 0 == len(packed) {
-		return fault.ErrMissingParameters
-	}
-
-	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
-	}
-
-	ok := false
-	for 0 != len(packed) {
-		transaction, n, err := transactionrecord.Packed(packed).Unpack(mode.IsTesting())
-		if nil != err {
-			return err
-		}
-
-		switch tx := transaction.(type) {
-		case *transactionrecord.AssetData:
-			_, packedAsset, err := asset.Cache(tx)
-			if nil != err {
-				return err
-			}
-			if nil != packedAsset {
-				ok = true
-			}
-
-		default:
-			return fault.ErrTransactionIsNotAnAsset
-		}
-		packed = packed[n:]
-	}
-
-	if !ok {
-		return fault.ErrNoNewTransactions
-	}
-	return nil
-}
-
-// un pack each issue and cache them
-func processIssues(packed, verified []byte) error {
-
-	if 0 == len(packed) {
-		return fault.ErrMissingParameters
-	}
-
-	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
-	}
-
-	packedIssues := transactionrecord.Packed(packed)
-	issueCount := 0 // for payment difficulty
-
-	issues := make([]*transactionrecord.BitmarkIssue, 0, 100)
-	for 0 != len(packedIssues) {
-		transaction, n, err := packedIssues.Unpack(mode.IsTesting())
-		if nil != err {
-			return err
-		}
-
-		switch tx := transaction.(type) {
-		case *transactionrecord.BitmarkIssue:
-			issues = append(issues, tx)
-			issueCount += 1
-		default:
-			return fault.ErrTransactionIsNotAnIssue
-		}
-		packedIssues = packedIssues[n:]
-	}
-	if 0 == len(issues) {
-		return fault.ErrMissingParameters
-	}
-
-	isVerified := false
-	if v, _ := util.FromVarint64(verified); v == 1 {
-		isVerified = true
-	}
-
-	_, duplicate, err := reservoir.StoreIssues(issues, isVerified)
-	if nil != err {
-		return err
-	}
-
-	if duplicate {
-		return fault.ErrTransactionAlreadyExists
-	}
-
-	return nil
-}
-
-// unpack transfer and process it
-func processTransfer(packed []byte) error {
-
-	if 0 == len(packed) {
-		return fault.ErrMissingParameters
-	}
-
-	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
-	}
-
-	transaction, _, err := transactionrecord.Packed(packed).Unpack(mode.IsTesting())
-	if nil != err {
-		return err
-	}
-
-	switch tx := transaction.(type) {
-	case *transactionrecord.BitmarkTransfer:
-
-		_, duplicate, err := reservoir.StoreTransfer(tx)
-		if nil != err {
-			return err
-		}
-
-		if duplicate {
-			return fault.ErrTransactionAlreadyExists
-		}
-
-	default:
-		return fault.ErrTransactionIsNotATransfer
-	}
-	return nil
-}
-
-// process proof block
-func processProof(packed []byte) error {
-
-	if 0 == len(packed) {
-		return fault.ErrMissingParameters
-	}
-
-	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
-	}
-
-	var payId pay.PayId
-	if len(packed) > payment.NonceLength+len(payId) {
-		return fault.ErrInvalidNonce
-	}
-
-	copy(payId[:], packed[:len(payId)])
-	nonce := packed[len(payId):]
-	status := reservoir.TryProof(payId, nonce)
-	if reservoir.TrackingAccepted != status {
-		// pay id already processed or was invalid
-		return fault.ErrPayIdAlreadyUsed
-	}
-
-	return nil
 }

@@ -7,6 +7,7 @@ package peer
 import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
+	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
@@ -22,6 +23,7 @@ const (
 
 type broadcaster struct {
 	log     *logger.L
+	chain   string
 	socket4 *zmq.Socket
 	socket6 *zmq.Socket
 }
@@ -33,6 +35,8 @@ func (brdc *broadcaster) initialise(privateKey []byte, publicKey []byte, broadca
 	if nil == log {
 		return fault.ErrInvalidLoggerChannel
 	}
+
+	brdc.chain = mode.ChainName()
 	brdc.log = log
 
 	log.Info("initialising…")
@@ -60,7 +64,7 @@ func (brdc *broadcaster) Run(args interface{}, shutdown <-chan struct{}) {
 
 	log.Info("starting…")
 
-	queue := messagebus.Bus.Broadcast.Chan()
+	queue := messagebus.Bus.Broadcast.Chan(50)
 
 loop:
 	for {
@@ -119,7 +123,12 @@ func (brdc *broadcaster) process(socket *zmq.Socket, item *messagebus.Message) e
 		return nil
 	}
 
-	_, err := socket.Send(item.Command, zmq.SNDMORE|zmq.DONTWAIT)
+	_, err := socket.Send(brdc.chain, zmq.SNDMORE|zmq.DONTWAIT)
+	if nil != err {
+		return err
+	}
+
+	_, err = socket.Send(item.Command, zmq.SNDMORE|zmq.DONTWAIT)
 	if nil != err {
 		return err
 	}

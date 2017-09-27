@@ -17,6 +17,7 @@ type RecordError GenericError
 
 // common errors - keep in alphabetic order
 var (
+	ErrAddressIsNil                          = ProcessError("address is nil")
 	ErrAlreadyInitialised                    = ExistsError("already initialised")
 	ErrAssetNotFound                         = NotFoundError("asset not found")
 	ErrAssetsAlreadyRegistered               = InvalidError("assets already registered")
@@ -99,7 +100,6 @@ var (
 	ErrTransactionIsNotAnIssue               = InvalidError("transaction is not an issue")
 	ErrTransactionIsNotAnIssueOrATransfer    = InvalidError("transaction is not an issue or a transfer")
 	ErrTransactionLinksToSelf                = RecordError("transaction links to self")
-	ErrUnexpectedNilPointer                  = ProcessError("unexpected nil pointer")
 	ErrWrongNetworkForPrivateKey             = InvalidError("wrong network for private key")
 	ErrWrongNetworkForPublicKey              = InvalidError("wrong network for public key")
 )

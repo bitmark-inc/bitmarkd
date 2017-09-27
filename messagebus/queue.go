@@ -21,19 +21,28 @@ type Message struct {
 	Parameters [][]byte // array of parameters
 }
 
-// structure of an individual queue
+// a 1:1 queue
 type Queue struct {
-	c chan Message
+	c    chan Message
+	used bool
+}
+
+// a 1:M queue
+// out is synchronous, so messages to routines not waiting are dropped
+type BroadcastQueue struct {
+	in  chan Message
+	out []chan Message
 }
 
 // the exported message queues and their sizes
 // any item with a size option will be allocated that size
 // absent then default size is used
 type busses struct {
-	Broadcast  *Queue `size:"1000"` // to broadcast to other nodes
-	Subscriber *Queue `size:"50"`   // to control subscriber
-	Connector  *Queue `size:"50"`   // to control connector
-	Blockstore *Queue `size:"50"`   // to sequentially store blocks
+	Broadcast  *BroadcastQueue `size:"1000"` // to broadcast to other nodes
+	Subscriber *Queue          `size:"50"`   // to control subscriber
+	Connector  *Queue          `size:"50"`   // to control connector
+	Blockstore *Queue          `size:"50"`   // to sequentially store blocks
+	TestQueue  *Queue          `size:"50"`   // for testing use
 }
 
 // the instance
@@ -45,7 +54,7 @@ func init() {
 	// this will be a struct type
 	busType := reflect.TypeOf(Bus)
 
-	// get write acces by using pointer + Elem()
+	// get write access by using pointer + Elem()
 	busValue := reflect.ValueOf(&Bus).Elem()
 
 	// scan each field
@@ -67,16 +76,33 @@ func init() {
 				panic(m)
 			}
 		}
-		q := &Queue{
-			c: make(chan Message, queueSize),
-		}
-		newQueue := reflect.ValueOf(q)
 
-		busValue.Field(i).Set(newQueue)
+		switch qt := busValue.Field(i).Type(); qt {
+
+		case reflect.TypeOf((*BroadcastQueue)(nil)):
+			q := &BroadcastQueue{
+				in:  make(chan Message, queueSize),
+				out: make([]chan Message, 0, 10),
+			}
+			go q.multicast()
+
+			newQueue := reflect.ValueOf(q)
+			busValue.Field(i).Set(newQueue)
+
+		case reflect.TypeOf((*Queue)(nil)):
+			q := &Queue{
+				c:    make(chan Message, queueSize),
+				used: false,
+			}
+			newQueue := reflect.ValueOf(q)
+			busValue.Field(i).Set(newQueue)
+		default:
+			panic(fmt.Sprintf("queue type: %q is not handled", qt))
+		}
 	}
 }
 
-// send a message to a queue
+// send a message to a 1:1 queue
 func (queue *Queue) Send(command string, parameters ...[]byte) {
 	queue.c <- Message{
 		Command:    command,
@@ -84,7 +110,46 @@ func (queue *Queue) Send(command string, parameters ...[]byte) {
 	}
 }
 
-// channel to read from
+// channel to read from 1:1 queue
+// can only be called once
 func (queue *Queue) Chan() <-chan Message {
+	if queue.used {
+		panic("cannot get a second receive channel from a 1:1 queue")
+	}
+	queue.used = true
 	return queue.c
+}
+
+// send a message to a 1:M queue
+func (queue *BroadcastQueue) Send(command string, parameters ...[]byte) {
+	queue.in <- Message{
+		Command:    command,
+		Parameters: parameters,
+	}
+}
+
+// get a new channel to read from a 1:M queue
+// each call gets a distinct channel
+func (queue *BroadcastQueue) Chan(size int) <-chan Message {
+	if size < 0 {
+		size = 0
+	}
+	c := make(chan Message, size)
+	queue.out = append(queue.out, c)
+	return c
+}
+
+// background processing for the 1:M queue
+func (queue *BroadcastQueue) multicast() {
+	c := queue.in
+	for {
+		data := <-c
+		for _, out := range queue.out {
+			select {
+			case out <- data:
+			default:
+			}
+		}
+
+	}
 }

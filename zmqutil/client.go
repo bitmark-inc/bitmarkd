@@ -15,6 +15,10 @@ import (
 )
 
 // structure to hold a client connection
+//
+// prefix:
+//   REQ socket this adds an item before send
+//   SUB socket this adds/changes subscription
 type Client struct {
 	sync.Mutex
 
@@ -22,6 +26,7 @@ type Client struct {
 	privateKey      []byte
 	serverPublicKey []byte
 	address         string
+	prefix          string
 	v6              bool
 	socketType      zmq.Type
 	socket          *zmq.Socket
@@ -151,7 +156,7 @@ func (client *Client) openSocket() error {
 
 	case zmq.SUB:
 		// set subscription prefix - empty => receive everything
-		err = socket.SetSubscribe("")
+		err = socket.SetSubscribe(client.prefix)
 		if nil != err {
 			goto failure
 		}
@@ -253,7 +258,7 @@ func (client *Client) closeSocket() error {
 }
 
 // disconnect old address and connect to new
-func (client *Client) Connect(conn *util.Connection, serverPublicKey []byte) error {
+func (client *Client) Connect(conn *util.Connection, serverPublicKey []byte, prefix string) error {
 
 	// if already connected, disconnect first
 	err := client.closeSocket()
@@ -261,6 +266,7 @@ func (client *Client) Connect(conn *util.Connection, serverPublicKey []byte) err
 		return err
 	}
 	client.address = ""
+	client.prefix = prefix
 
 	// small delay to allow any backgroud socket closing
 	// and to restrict rate of reconnection
@@ -338,10 +344,17 @@ func (client *Client) Send(items ...interface{}) error {
 		return fault.ErrNotConnected
 	}
 
+	flag := zmq.SNDMORE
+
+	if "" != client.prefix {
+		_, err := client.socket.Send(client.prefix, flag)
+		if nil != err {
+			return err
+		}
+	}
+
 	last := len(items) - 1
 	for i, item := range items {
-
-		flag := zmq.SNDMORE
 		if i == last {
 			flag = 0
 		}
@@ -391,7 +404,7 @@ func (client *Client) BeginPolling(poller *Poller, events zmq.State) *zmq.Socket
 }
 
 // to string
-func (client Client) String() string {
+func (client *Client) String() string {
 	return client.address
 }
 

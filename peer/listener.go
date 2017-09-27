@@ -25,6 +25,7 @@ const (
 
 type listener struct {
 	log     *logger.L
+	chain   string
 	version string      // server version
 	push    *zmq.Socket // signal send
 	pull    *zmq.Socket // signal receive
@@ -47,6 +48,7 @@ func (lstn *listener) initialise(privateKey []byte, publicKey []byte, listen []s
 	if nil == log {
 		return fault.ErrInvalidLoggerChannel
 	}
+	lstn.chain = mode.ChainName()
 	lstn.log = log
 	lstn.version = version
 
@@ -137,18 +139,35 @@ func (lstn *listener) process(socket *zmq.Socket) {
 		return
 	}
 
-	if len(data) < 1 {
+	if len(data) < 2 {
 		return
 	}
 
-	fn := string(data[0])
-	parameters := data[1:]
+	theChain := string(data[0])
+	if theChain != lstn.chain {
+		log.Errorf("invalid chain: actual: %q  expect: %s", theChain, lstn.chain)
+		return
+	}
+
+	fn := string(data[1])
+	parameters := data[2:]
 
 	log.Debugf("received message: %q: %x", fn, data)
 
 	result := []byte{}
 
 	switch fn {
+
+	case "I": // server information
+		info := serverInfo{
+			Version: lstn.version,
+			Chain:   mode.ChainName(),
+			Normal:  mode.Is(mode.Normal),
+			Height:  block.GetHeight(),
+		}
+		result, err = json.Marshal(info)
+		logger.PanicIfError("JSON encode error: %v", err)
+
 	case "N": // get block number
 		blockNumber := block.GetHeight()
 		result = make([]byte, 8)
@@ -165,16 +184,6 @@ func (lstn *listener) process(socket *zmq.Socket) {
 		} else {
 			err = fault.ErrBlockNotFound
 		}
-
-	case "I": // server information
-		info := serverInfo{
-			Version: lstn.version,
-			Chain:   mode.ChainName(),
-			Normal:  mode.Is(mode.Normal),
-			Height:  block.GetHeight(),
-		}
-		result, err = json.Marshal(info)
-		logger.PanicIfError("JSON encode error: %v", err)
 
 	case "H": // get block hash
 		if 1 != len(parameters) {
@@ -221,6 +230,9 @@ func (lstn *listener) process(socket *zmq.Socket) {
 
 		return
 
+	default: // other commands as subscription-type commands
+		processSubscription(log, fn, parameters)
+		result = []byte{'A'}
 	}
 
 	if nil != err {
