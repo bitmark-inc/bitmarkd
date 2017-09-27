@@ -16,6 +16,7 @@ import (
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -33,14 +34,20 @@ type Upstream struct {
 	shutdown    chan<- struct{}
 }
 
+// atomically incremented counter for log names
+var upstreamCounter uint64 = 0
+
 func New(privateKey []byte, publicKey []byte, timeout time.Duration) (*Upstream, error) {
 	client, err := zmqutil.NewClient(zmq.REQ, privateKey, publicKey, timeout)
 	if nil != err {
 		return nil, err
 	}
+
+	n := atomic.AddUint64(&upstreamCounter, 1)
+
 	shutdown := make(chan struct{})
 	u := &Upstream{
-		log:         logger.New(fmt.Sprintf("upstream@%x", publicKey[:5])),
+		log:         logger.New(fmt.Sprintf("upstream@%d", n)),
 		client:      client,
 		registered:  false,
 		blockHeight: 0,
@@ -83,6 +90,8 @@ func (u *Upstream) ConnectedTo() *zmqutil.Connected {
 
 // connect (or reconnect) to a specific server
 func (u *Upstream) Connect(address *util.Connection, serverPublicKey []byte) error {
+	u.log.Infof("connecting to address: %s", address)
+	u.log.Infof("connecting to server: %x", serverPublicKey)
 	u.Lock()
 	err := u.client.Connect(address, serverPublicKey, mode.ChainName())
 	u.Unlock()
