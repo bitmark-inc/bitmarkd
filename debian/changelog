@@ -1,3 +1,11 @@
+bitmarkd (5.7-1) unstable; urgency=medium
+
+  * add the backup and restore mechanism for peer nodes, unverified items and verified items
+  * update CRC itereator
+  * bug fixes
+
+ -- Jim Yeh <jim@bitmark.com>  Wed, 27 Sep 2017 14:22:48 +0000
+
 bitmarkd (5.6-2) unstable; urgency=medium
 
   * rename the install file for dumpdb
