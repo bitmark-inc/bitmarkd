@@ -7,6 +7,7 @@ package zmqutil
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/hex"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	zmq "github.com/pebbe/zmq4"
@@ -406,6 +407,23 @@ func (client *Client) BeginPolling(poller *Poller, events zmq.State) *zmq.Socket
 // to string
 func (client *Client) String() string {
 	return client.address
+}
+
+type Connected struct {
+	Address string `json:"address"`
+	Server  string `json:"server"`
+}
+
+// to string
+func (client *Client) ConnectedTo() *Connected {
+
+	if "" == client.address {
+		return nil
+	}
+	return &Connected{
+		Address: client.address,
+		Server:  hex.EncodeToString(client.serverPublicKey),
+	}
 }
 
 // find the client corresponding to a socket

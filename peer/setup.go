@@ -8,6 +8,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/peer/upstream"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
@@ -51,7 +52,7 @@ type peerData struct {
 	conn connector   // for RPC requests
 	sbsc subscriber  // for subscriptions
 
-	connectorClients  []*zmqutil.Client
+	connectorClients  []*upstream.Upstream
 	subscriberClients []*zmqutil.Client
 
 	// for background

@@ -13,8 +13,13 @@ import (
 
 type RPCEmptyArguments struct{}
 
+type Connected struct {
+	Address string `json:"address"`
+	Server  string `json:"server"`
+}
+
 type ConnClient struct {
-	Clients []string `json:"clients"`
+	Clients []Connected `json:"clients"`
 }
 
 type RPCClient struct {

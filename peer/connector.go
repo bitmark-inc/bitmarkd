@@ -72,6 +72,7 @@ func (conn *connector) initialise(privateKey []byte, publicKey []byte, connect [
 	}
 	conn.clients = make([]*upstream.Upstream, staticCount+offsetCount)
 	conn.dynamicStart = staticCount // index of first dynamic socket
+	globalData.connectorClients = conn.clients
 
 	// error code for goto fail
 	errX := error(nil)
@@ -201,6 +202,7 @@ func (conn *connector) runStateMachine() bool {
 				clientCount += 1
 			}
 		}
+		log.Infof("connections: %d", clientCount)
 		if clientCount >= minimumClients {
 			conn.state += 1
 		}

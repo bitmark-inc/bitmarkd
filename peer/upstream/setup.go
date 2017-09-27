@@ -73,6 +73,14 @@ func (u *Upstream) IsOK() bool {
 	return result
 }
 
+// if registered the have avalid connection
+func (u *Upstream) ConnectedTo() *zmqutil.Connected {
+	u.Lock()
+	result := u.client.ConnectedTo()
+	u.Unlock()
+	return result
+}
+
 // connect (or reconnect) to a specific server
 func (u *Upstream) Connect(address *util.Connection, serverPublicKey []byte) error {
 	u.Lock()
@@ -197,6 +205,7 @@ loop:
 					if nil != err {
 						log.Errorf("push: reconnect error: %s", err)
 					}
+					u.Unlock()
 					continue loop // try again later
 				}
 				u.registered = true

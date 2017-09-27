@@ -12,6 +12,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/peer"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
+	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
 	"time"
 )
@@ -68,11 +69,11 @@ type InfoReply struct {
 }
 
 type ConnectorReply struct {
-	Clients []string
+	Clients []*zmqutil.Connected `json:"clients"`
 }
 
 type SubscriberReply struct {
-	Clients []string
+	Clients []*zmqutil.Connected `json:"clients"`
 }
 
 type Counters struct {
@@ -98,24 +99,10 @@ func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 }
 
 func (node *Node) Connectors(arguments *ConnectorArguments, reply *ConnectorReply) error {
-	clients := peer.FetchConnectors()
-	addrs := make([]string, 0, 10)
-	for _, c := range clients {
-		if addr := c.String(); addr != "" {
-			addrs = append(addrs, addr)
-		}
-	}
-	reply.Clients = addrs
+	reply.Clients = peer.FetchConnectors()
 	return nil
 }
 func (node *Node) Subscribers(arguments *SubscriberArguments, reply *SubscriberReply) error {
-	clients := peer.FetchSubscribers()
-	addrs := make([]string, 0, 10)
-	for _, c := range clients {
-		if addr := c.String(); addr != "" {
-			addrs = append(addrs, addr)
-		}
-	}
-	reply.Clients = addrs
+	reply.Clients = peer.FetchSubscribers()
 	return nil
 }
