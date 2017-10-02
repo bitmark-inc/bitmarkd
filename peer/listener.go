@@ -152,7 +152,7 @@ func (lstn *listener) process(socket *zmq.Socket) {
 	fn := string(data[1])
 	parameters := data[2:]
 
-	log.Debugf("received message: %q: %x", fn, data)
+	log.Infof("received message: %q: %x", fn, parameters)
 
 	result := []byte{}
 

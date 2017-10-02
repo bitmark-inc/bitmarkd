@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
+	"github.com/bitmark-inc/bitmarkd/counter"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/mode"
@@ -16,13 +17,12 @@ import (
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
 const (
 	cycleInterval = 30 * time.Second
-	queueSize     = 0 // 0=> synchronous queue
+	queueSize     = 10 // 0 => synchronous queue
 )
 
 type Upstream struct {
@@ -35,7 +35,7 @@ type Upstream struct {
 }
 
 // atomically incremented counter for log names
-var upstreamCounter uint64 = 0
+var upstreamCounter counter.Counter
 
 func New(privateKey []byte, publicKey []byte, timeout time.Duration) (*Upstream, error) {
 	client, err := zmqutil.NewClient(zmq.REQ, privateKey, publicKey, timeout)
@@ -43,7 +43,7 @@ func New(privateKey []byte, publicKey []byte, timeout time.Duration) (*Upstream,
 		return nil, err
 	}
 
-	n := atomic.AddUint64(&upstreamCounter, 1)
+	n := upstreamCounter.Increment()
 
 	shutdown := make(chan struct{})
 	u := &Upstream{
@@ -190,7 +190,7 @@ loop:
 			break loop
 
 		case item := <-queue:
-			log.Infof("received: %x", item)
+			log.Infof("received: %q  %x", item.Command, item.Parameters)
 			if u.registered {
 				u.Lock()
 				err := push(u.client, u.log, &item)
@@ -209,10 +209,10 @@ loop:
 			if !u.registered {
 				err := register(u.client, u.log)
 				if nil != err {
-					log.Errorf("push: error: %s", err)
+					log.Errorf("register: error: %s", err)
 					err := u.client.Reconnect()
 					if nil != err {
-						log.Errorf("push: reconnect error: %s", err)
+						log.Errorf("register: reconnect error: %s", err)
 					}
 					u.Unlock()
 					continue loop // try again later
@@ -241,7 +241,7 @@ loop:
 
 func register(client *zmqutil.Client, log *logger.L) error {
 
-	log.Debugf("getHeight: client: %s", client)
+	log.Debugf("register: client: %s", client)
 
 	err := announce.SendRegistration(client, "R")
 	if nil != err {
@@ -254,7 +254,7 @@ func register(client *zmqutil.Client, log *logger.L) error {
 	}
 
 	if len(data) < 2 {
-		return fmt.Errorf("received: %d  expected at least: 2", len(data))
+		return fmt.Errorf("register received: %d  expected at least: 2", len(data))
 	}
 
 	switch string(data[0]) {
@@ -292,7 +292,7 @@ func getHeight(client *zmqutil.Client, log *logger.L) (uint64, error) {
 		return 0, err
 	}
 	if 2 != len(data) {
-		return 0, fmt.Errorf("received: %d  expected: 2", len(data))
+		return 0, fmt.Errorf("getHeight received: %d  expected: 2", len(data))
 	}
 
 	switch string(data[0]) {
@@ -324,7 +324,7 @@ func push(client *zmqutil.Client, log *logger.L, item *messagebus.Message) error
 		return err
 	}
 	if 2 != len(data) {
-		return fmt.Errorf("received: %d  expected: 2", len(data))
+		return fmt.Errorf("push received: %d  expected: 2", len(data))
 	}
 
 	switch string(data[0]) {

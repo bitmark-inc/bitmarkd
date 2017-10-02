@@ -30,8 +30,9 @@ type Queue struct {
 // a 1:M queue
 // out is synchronous, so messages to routines not waiting are dropped
 type BroadcastQueue struct {
-	in  chan Message
-	out []chan Message
+	in          chan Message
+	out         []chan Message
+	defaultSize int
 }
 
 // the exported message queues and their sizes
@@ -41,6 +42,7 @@ type busses struct {
 	Broadcast  *BroadcastQueue `size:"1000"` // to broadcast to other nodes
 	Subscriber *Queue          `size:"50"`   // to control subscriber
 	Connector  *Queue          `size:"50"`   // to control connector
+	Announce   *Queue          `size:"50"`   // to control the announcer
 	Blockstore *Queue          `size:"50"`   // to sequentially store blocks
 	TestQueue  *Queue          `size:"50"`   // for testing use
 }
@@ -81,8 +83,9 @@ func init() {
 
 		case reflect.TypeOf((*BroadcastQueue)(nil)):
 			q := &BroadcastQueue{
-				in:  make(chan Message, queueSize),
-				out: make([]chan Message, 0, 10),
+				in:          make(chan Message, queueSize),
+				out:         make([]chan Message, 0, 10),
+				defaultSize: queueSize,
 			}
 			go q.multicast()
 
@@ -132,7 +135,7 @@ func (queue *BroadcastQueue) Send(command string, parameters ...[]byte) {
 // each call gets a distinct channel
 func (queue *BroadcastQueue) Chan(size int) <-chan Message {
 	if size < 0 {
-		size = 0
+		size = queue.defaultSize
 	}
 	c := make(chan Message, size)
 	queue.out = append(queue.out, c)
@@ -140,6 +143,9 @@ func (queue *BroadcastQueue) Chan(size int) <-chan Message {
 }
 
 // background processing for the 1:M queue
+//
+// if an outgoing queue is full just drop the message
+// to avoid blocking
 func (queue *BroadcastQueue) multicast() {
 	c := queue.in
 	for {

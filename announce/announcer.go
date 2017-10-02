@@ -47,6 +47,8 @@ func (ann *announcer) Run(args interface{}, shutdown <-chan struct{}) {
 
 	log.Info("starting…")
 
+	queue := messagebus.Bus.Announce.Chan()
+
 	delay := time.After(announceInitial)
 loop:
 	for {
@@ -54,6 +56,15 @@ loop:
 		select {
 		case <-shutdown:
 			break loop
+
+		case item := <-queue:
+			log.Infof("received control: %s  parameters: %x", item.Command, item.Parameters)
+			switch item.Command {
+			case "reconnect":
+				determineConnections(log)
+			default:
+			}
+
 		case <-delay:
 			delay = time.After(announceInterval)
 			ann.process()
@@ -73,9 +84,11 @@ func (ann *announcer) process() {
 
 	// announce this nodes IP and ports to other peers
 	if globalData.rpcsSet {
+		log.Debugf("send rpc: %x", globalData.fingerprint)
 		messagebus.Bus.Broadcast.Send("rpc", globalData.fingerprint[:], globalData.rpcs)
 	}
 	if globalData.peerSet {
+		log.Debugf("send peer: %x", globalData.publicKey)
 		messagebus.Bus.Broadcast.Send("peer", globalData.publicKey, globalData.broadcasts, globalData.listeners)
 	}
 

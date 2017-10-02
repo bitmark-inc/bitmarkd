@@ -205,6 +205,8 @@ func (conn *connector) runStateMachine() bool {
 		log.Infof("connections: %d", clientCount)
 		if clientCount >= minimumClients {
 			conn.state += 1
+		} else {
+			messagebus.Bus.Announce.Send("reconnect")
 		}
 		continueLooping = false
 
