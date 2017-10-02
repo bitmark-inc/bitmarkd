@@ -6,6 +6,7 @@ package announce
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
@@ -59,8 +60,7 @@ func AddPeer(publicKey []byte, broadcasts []byte, listeners []byte) bool {
 // internal add a peer announcement, hold lock before calling
 func addPeer(publicKey []byte, broadcasts []byte, listeners []byte, timestamp int64) bool {
 
-	now := time.Now()
-	ts := now
+	ts := time.Now()
 	if timestamp != 0 {
 		ts = time.Unix(timestamp, 0)
 	}
@@ -85,7 +85,7 @@ func addPeer(publicKey []byte, broadcasts []byte, listeners []byte, timestamp in
 
 	// if new node or enough time has elapsed to make sure
 	// this is not an endless rebroadcast
-	if change || time.Since(now) > announceRebroadcast {
+	if change || time.Since(ts) > announceRebroadcast {
 		globalData.change = true
 		return true
 	}
