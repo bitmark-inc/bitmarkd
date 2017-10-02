@@ -97,7 +97,7 @@ func (h *bitcoinHandler) processPastTxs(dat []byte) {
 	}
 
 	for _, tx := range txs {
-		h.log.Infof("old possible payment tx received: %s\n", tx.TxId)
+		h.log.Debugf("old possible payment tx received: %s\n", tx.TxId)
 		inspectBitcoinTx(h.log, &tx)
 	}
 }

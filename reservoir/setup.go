@@ -222,7 +222,7 @@ func SetTransferVerified(payId pay.PayId, detail *PaymentDetail) {
 	globalData.log.Infof("txid: %s  payid: %s", detail.TxID, payId)
 
 	if !setVerified(payId, detail) {
-		globalData.log.Infof("orphan payment: txid: %s  payid: %s", detail.TxID, payId)
+		globalData.log.Debugf("orphan payment: txid: %s  payid: %s", detail.TxID, payId)
 		cache.Pool.OrphanPayment.Put(payId.String(), detail)
 	}
 }
