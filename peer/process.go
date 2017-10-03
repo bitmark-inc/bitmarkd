@@ -5,6 +5,7 @@
 package peer
 
 import (
+	"encoding/binary"
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -89,23 +90,25 @@ func processSubscription(log *logger.L, command string, arguments [][]byte) {
 		}
 
 	case "rpc":
-		if dataLength < 2 {
+		if dataLength < 3 {
 			log.Warnf("rpc with too few data: %d items", dataLength)
 			return
 		}
-		log.Infof("received rpc: fingerprint: %x  rpc: %x", arguments[0], arguments[1])
-		if announce.AddRPC(arguments[0], arguments[1]) {
-			messagebus.Bus.Broadcast.Send("rpc", arguments[0], arguments[1])
+		timestamp := binary.BigEndian.Uint64(arguments[2])
+		log.Infof("received rpc: fingerprint: %x  rpc: %x  timestamp: %d", arguments[0], arguments[1], timestamp)
+		if announce.AddRPC(arguments[0], arguments[1], timestamp) {
+			messagebus.Bus.Broadcast.Send("rpc", arguments[0], arguments[1], arguments[2])
 		}
 
 	case "peer":
-		if dataLength < 3 {
+		if dataLength < 4 {
 			log.Warnf("peer with too few data: %d items", dataLength)
 			return
 		}
-		log.Infof("received peer: %x  broadcast: %x  listener: %x", arguments[0], arguments[1], arguments[2])
-		if announce.AddPeer(arguments[0], arguments[1], arguments[2]) {
-			messagebus.Bus.Broadcast.Send("peer", arguments[0], arguments[2], arguments[2])
+		timestamp := binary.BigEndian.Uint64(arguments[3])
+		log.Infof("received peer: %x  broadcast: %x  listener: %x  timestamp: %d", arguments[0], arguments[1], arguments[2], timestamp)
+		if announce.AddPeer(arguments[0], arguments[1], arguments[2], timestamp) {
+			messagebus.Bus.Broadcast.Send("peer", arguments[0], arguments[2], arguments[2], arguments[3])
 		}
 
 	case "heart":

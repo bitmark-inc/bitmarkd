@@ -261,7 +261,7 @@ func register(client *zmqutil.Client, log *logger.L) error {
 	case "E":
 		return fmt.Errorf("register error: %q", data[1])
 	case "R":
-		if 5 != len(data) {
+		if len(data) < 6 {
 			return fmt.Errorf("register response incorrect: %x", data)
 		}
 		chain := mode.ChainName()
@@ -270,8 +270,10 @@ func register(client *zmqutil.Client, log *logger.L) error {
 			log.Criticalf("expected chain: %q but received: %q", chain, received)
 			logger.Panicf("expected chain: %q but received: %q", chain, received)
 		}
-		log.Infof("register replied: %x:  broadcasts: %x  listeners: %x", data[2], data[3], data[4])
-		announce.AddPeer(data[2], data[3], data[4]) // publicKey, broadcasts, listeners
+
+		timestamp := binary.BigEndian.Uint64(data[5])
+		log.Infof("register replied: %x:  broadcasts: %x  listeners: %x  timestamp: %d", data[2], data[3], data[4], timestamp)
+		announce.AddPeer(data[2], data[3], data[4], timestamp) // publicKey, broadcasts, listeners
 		return nil
 	default:
 		return fmt.Errorf("rpc unexpected response: %q", data[0])

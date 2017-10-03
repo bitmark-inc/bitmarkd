@@ -23,7 +23,9 @@ func SetRPC(fingerprint fingerprintType, rpcs []byte) error {
 	globalData.rpcs = rpcs
 	globalData.rpcsSet = true
 
-	addRPC(fingerprint, rpcs, true) // add this nodes data to database
+	// add this nodes data to database
+	addRPC(fingerprint, rpcs, 0, true)
+
 	return nil
 }
 
@@ -31,7 +33,7 @@ func SetRPC(fingerprint fingerprintType, rpcs []byte) error {
 // returns:
 //   true  if this was a new/updated entry
 //   false if the update was within the limits (to prevent continuous relaying)
-func AddRPC(fingerprint []byte, rpcs []byte) bool {
+func AddRPC(fingerprint []byte, rpcs []byte, timestamp uint64) bool {
 
 	var fp fingerprintType
 	// discard invalid records
@@ -41,25 +43,30 @@ func AddRPC(fingerprint []byte, rpcs []byte) bool {
 	copy(fp[:], fingerprint)
 
 	globalData.Lock()
-	rc := addRPC(fp, rpcs, false)
+	rc := addRPC(fp, rpcs, timestamp, false)
 	globalData.Unlock()
 	return rc
 }
 
 // internal add an remote RPC listener, hold lock before calling
-func addRPC(fingerprint fingerprintType, rpcs []byte, local bool) bool {
+func addRPC(fingerprint fingerprintType, rpcs []byte, timestamp uint64, local bool) bool {
 
 	i, ok := globalData.rpcIndex[fingerprint]
 
 	// if new item
 	if !ok {
 
+		ts := time.Now()
+		if timestamp != 0 && timestamp <= uint64(ts.Unix()) {
+			ts = time.Unix(int64(timestamp), 0)
+		}
+
 		// ***** FIX THIS: add more validation here
 
 		e := &rpcEntry{
 			address:     rpcs,
 			fingerprint: fingerprint,
-			timestamp:   time.Now(),
+			timestamp:   ts,
 			local:       local,
 		}
 		i := len(globalData.rpcList)

@@ -6,6 +6,7 @@ package announce
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/avl"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -82,14 +83,18 @@ func (ann *announcer) process() {
 	globalData.Lock()
 	defer globalData.Unlock()
 
+	// get a big endian timestamp
+	timestamp := make([]byte, 8)
+	binary.BigEndian.PutUint64(timestamp, uint64(time.Now().Unix()))
+
 	// announce this nodes IP and ports to other peers
 	if globalData.rpcsSet {
 		log.Debugf("send rpc: %x", globalData.fingerprint)
-		messagebus.Bus.Broadcast.Send("rpc", globalData.fingerprint[:], globalData.rpcs)
+		messagebus.Bus.Broadcast.Send("rpc", globalData.fingerprint[:], globalData.rpcs, timestamp)
 	}
 	if globalData.peerSet {
 		log.Debugf("send peer: %x", globalData.publicKey)
-		messagebus.Bus.Broadcast.Send("peer", globalData.publicKey, globalData.broadcasts, globalData.listeners)
+		messagebus.Bus.Broadcast.Send("peer", globalData.publicKey, globalData.broadcasts, globalData.listeners, timestamp)
 	}
 
 	if globalData.change {

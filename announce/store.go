@@ -3,9 +3,8 @@ package announce
 import (
 	"encoding/hex"
 	"encoding/json"
-	"os"
-
 	"github.com/bitmark-inc/bitmarkd/util"
+	"os"
 )
 
 // PeerItem is the basic structure for backup and restore peers
@@ -13,7 +12,7 @@ type PeerItem struct {
 	PublicKey  []byte
 	Broadcasts []byte
 	Listeners  []byte
-	Timestamp  int64
+	Timestamp  uint64
 }
 
 // MarshalText is the json marshal function for PeerItem
@@ -63,7 +62,7 @@ func (item *PeerItem) UnmarshalText(data []byte) error {
 	item.PublicKey = publicKey
 	item.Broadcasts = broadcast
 	item.Listeners = listener
-	item.Timestamp = int64(timestamp)
+	item.Timestamp = timestamp
 	return nil
 }
 
@@ -76,7 +75,7 @@ func NewPeerItem(peer *peerEntry) *PeerItem {
 		PublicKey:  peer.publicKey,
 		Broadcasts: peer.broadcasts,
 		Listeners:  peer.listeners,
-		Timestamp:  peer.timestamp.Unix(),
+		Timestamp:  uint64(peer.timestamp.Unix()),
 	}
 }
 

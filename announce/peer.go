@@ -50,19 +50,19 @@ func SetPeer(publicKey []byte, broadcasts []byte, listeners []byte) error {
 // returns:
 //   true  if this was a new/updated entry
 //   false if the update was within the limits (to prevent continuous relaying)
-func AddPeer(publicKey []byte, broadcasts []byte, listeners []byte) bool {
+func AddPeer(publicKey []byte, broadcasts []byte, listeners []byte, timestamp uint64) bool {
 	globalData.Lock()
-	rc := addPeer(publicKey, broadcasts, listeners, 0)
+	rc := addPeer(publicKey, broadcasts, listeners, timestamp)
 	globalData.Unlock()
 	return rc
 }
 
 // internal add a peer announcement, hold lock before calling
-func addPeer(publicKey []byte, broadcasts []byte, listeners []byte, timestamp int64) bool {
+func addPeer(publicKey []byte, broadcasts []byte, listeners []byte, timestamp uint64) bool {
 
 	ts := time.Now()
-	if timestamp != 0 {
-		ts = time.Unix(timestamp, 0)
+	if timestamp != 0 && timestamp <= uint64(ts.Unix()) {
+		ts = time.Unix(int64(timestamp), 0)
 	}
 
 	peer := &peerEntry{
@@ -75,7 +75,7 @@ func addPeer(publicKey []byte, broadcasts []byte, listeners []byte, timestamp in
 		peer := node.Value().(*peerEntry)
 		ts = peer.timestamp // preserve previous timestamp
 	}
-	change := globalData.peerTree.Insert(pubkey(publicKey), peer)
+	recordAdded := globalData.peerTree.Insert(pubkey(publicKey), peer)
 	globalData.log.Debugf("number of nodes in the peer tree: %d", globalData.peerTree.Count())
 
 	// if adding this nodes data
@@ -85,7 +85,7 @@ func addPeer(publicKey []byte, broadcasts []byte, listeners []byte, timestamp in
 
 	// if new node or enough time has elapsed to make sure
 	// this is not an endless rebroadcast
-	if change || time.Since(ts) > announceRebroadcast {
+	if recordAdded || time.Since(ts) > announceRebroadcast {
 		globalData.change = true
 		return true
 	}
@@ -93,7 +93,7 @@ func addPeer(publicKey []byte, broadcasts []byte, listeners []byte, timestamp in
 }
 
 // fetch the data for the next node in the ring for a given public key
-func GetNext(publicKey []byte) ([]byte, []byte, []byte, error) {
+func GetNext(publicKey []byte) ([]byte, []byte, []byte, time.Time, error) {
 	globalData.Lock()
 	defer globalData.Unlock()
 
@@ -105,16 +105,21 @@ func GetNext(publicKey []byte) ([]byte, []byte, []byte, error) {
 		node = globalData.peerTree.First()
 	}
 	if nil == node {
-		return nil, nil, nil, fault.ErrInvalidPublicKey
+		return nil, nil, nil, time.Now(), fault.ErrInvalidPublicKey
 	}
 	peer := node.Value().(*peerEntry)
-	return peer.publicKey, peer.broadcasts, peer.listeners, nil
+	return peer.publicKey, peer.broadcasts, peer.listeners, peer.timestamp, nil
 }
 
 // send a peer registration request to a client channel
 func SendRegistration(client *zmqutil.Client, fn string) error {
 	chain := mode.ChainName()
-	return client.Send(fn, chain, globalData.publicKey, globalData.broadcasts, globalData.listeners)
+
+	// get a big endian timestamp
+	timestamp := make([]byte, 8)
+	binary.BigEndian.PutUint64(timestamp, uint64(time.Now().Unix()))
+
+	return client.Send(fn, chain, globalData.publicKey, globalData.broadcasts, globalData.listeners, timestamp)
 }
 
 // public key comparison for AVL interface
