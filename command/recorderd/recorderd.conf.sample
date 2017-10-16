@@ -1,4 +1,4 @@
-# prooferd.conf  -*- mode: libucl -*-
+# recorderd.conf  -*- mode: libucl -*-
 
 # "." is a special case - it uses the path from the configuration file
 # as the data directory.  Use ${CURDIR} for working directory.
@@ -6,11 +6,11 @@
 # unless the are overridden with absolute paths.
 #data_directory = "."
 #data_directory = "${CURDIR}"
-data_directory = "/var/lib/prooferd"
+data_directory = "/var/lib/recorderd"
 
 # optional pid file if not absolute path then is created relative to
 # the data directory
-# pidfile = "prooferd.pid"
+# pidfile = "recorderd.pid"
 
 # select the chain of the network for peer connections
 # cross chain networking connects will not work
@@ -27,8 +27,8 @@ chain = local
 peering {
 
   # the miners keys
-  public_key = prooferd.public
-  private_key = prooferd.private
+  public_key = recorderd.public
+  private_key = recorderd.private
 
   # connections to bitmarkd nodes
   connect {
@@ -44,7 +44,7 @@ peering {
 
 }
 
-# ***** future possibility: allow prooferd to sign its own proof record
+# ***** future possibility: allow recorderd to sign its own base records
 # # address to receive work payments
 # payment {
 #   account = bitmark account ***** need access to corresponding private-key

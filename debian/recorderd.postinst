@@ -16,19 +16,19 @@ set -e
 case "$1" in
   (configure)
     # create group
-    id -g prooferd > /dev/null 2>&1 || addgroup --system prooferd
+    id -g recorderd > /dev/null 2>&1 || addgroup --system recorderd
     # create user
-    id prooferd > /dev/null 2>&1 || \
-      adduser --system --home /var/lib/prooferd \
+    id recorderd > /dev/null 2>&1 || \
+      adduser --system --home /var/lib/recorderd \
               --disabled-password \
-              --gecos "Bitmark Proofer" \
-              --ingroup prooferd prooferd
+              --gecos "Bitmark Recorder" \
+              --ingroup recorderd recorderd
 
-    conf="/etc/prooferd.conf"
-    chown root:prooferd "${conf}"
+    conf="/etc/recorderd.conf"
+    chown root:recorderd "${conf}"
     chmod 640 "${conf}"
     # enable the unit, but don't start it
-    [ -x /bin/systemctl ] && systemctl enable prooferd.service >/dev/null 2>&1 || true
+    [ -x /bin/systemctl ] && systemctl enable recorderd.service >/dev/null 2>&1 || true
     ;;
 
   (abort-upgrade|abort-remove|abort-deconfigure)

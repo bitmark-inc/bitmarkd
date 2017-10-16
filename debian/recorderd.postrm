@@ -20,11 +20,11 @@ case "$1" in
   (upgrade)
     # systemd: start the new version of nginx
     [ -d /run/systemd/system ] && systemctl --system daemon-reload >/dev/null || true
-    [ -x /bin/systemctl ] && systemctl restart prooferd.service
+    [ -x /bin/systemctl ] && systemctl restart recorderd.service
     ;;
 
   (purge)
-    [ -x /bin/systemctl ] && systemctl stop prooferd.service >/dev/null 2>&1 || true
+    [ -x /bin/systemctl ] && systemctl stop recorderd.service >/dev/null 2>&1 || true
     # By debian Policy §6.5, we may only rely on essential packages and
     # must fail gracefully if they are unavailable.
     # Use userdel/groupdel from passwd instead of deluser/delgroup from
@@ -32,13 +32,13 @@ case "$1" in
     # but is of lesser priority.
     # Note that at the time of this writing, neither passwd nor adduser
     # are essential packages.
-    userdel prooferd >/dev/null 2>&1 || true
-    groupdel prooferd >/dev/null 2>&1 || true
-    rm -rf /var/lib/prooferd /etc/prooferd.conf
+    userdel recorderd >/dev/null 2>&1 || true
+    groupdel recorderd >/dev/null 2>&1 || true
+    rm -rf /var/lib/recorderd /etc/recorderd.conf
     ;;
 
   (remove|failed-upgrade|abort-install|abort-upgrade|disappear)
-    [ -x /bin/systemctl ] && systemctl stop prooferd.service >/dev/null 2>&1 || true
+    [ -x /bin/systemctl ] && systemctl stop recorderd.service >/dev/null 2>&1 || true
     ;;
 
   (*)

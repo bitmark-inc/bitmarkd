@@ -23,12 +23,12 @@ Description: Bitmark Blockchain Daemon
  .
  This runs the Bitmark distributed ownership blockchain.
 
-Package: prooferd
+Package: recorderd
 Architecture: linux-any
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Recommends:
-Description: Bitmark Blockchain Proofing Daemon
- This is the proofing program for the Bitmark P2P network.
+Description: Bitmark Blockchain Recording Daemon
+ This is the recording program for the Bitmark P2P network.
  .
  This finds Argon2 hashes for blocks.
 

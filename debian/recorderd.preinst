@@ -10,15 +10,20 @@
 set -e
 
 case "$1" in
-  (remove|remove-in-favour|deconfigure|deconfigure-in-favour)
-    systemctl stop prooferd >/dev/null 2>&1 || true
+  (install)
+    # fresh install - remove any old logs
+    rm -f /var/lib/recorderd/log/*
     ;;
 
-  (upgrade|failed-upgrade)
+  (upgrade)
+    # stop?  systemctl stop recorderd
+    ;;
+
+  (abort-upgrade)
     ;;
 
   *)
-    echo "prerm called with unknown argument \`$1'" >&2
+    echo "preinst called with unknown argument \`$1'" >&2
     exit 1
     ;;
 esac

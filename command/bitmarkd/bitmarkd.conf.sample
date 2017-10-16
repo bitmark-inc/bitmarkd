@@ -103,7 +103,7 @@ peering {
 }
 
 
-# configuration of prooferd connections
+# configuration of recorderd connections
 proofing {
 
   public_key = proof.public
