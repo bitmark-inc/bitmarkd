@@ -1,3 +1,10 @@
+bitmarkd (6.0-1) unstable; urgency=medium
+
+  * new peer protocol for protection against chain overlap
+  * upstream system to push data over the REQ/REP channel
+
+ -- Christopher Hall <hsw@bitmark.com>  Wed, 27 Sep 2017 06:44:55 +0000
+
 bitmarkd (5.7-1) unstable; urgency=medium
 
   * add the backup and restore mechanism for peer nodes, unverified items and verified items
