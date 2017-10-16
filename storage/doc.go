@@ -30,11 +30,6 @@
 //                                data: owner ++ currency ++ currency address
 //                                data: owner ++ 0x01 ++ currency address
 //                                data: owner ++ 0x02 ++ currency address ++ 0x00 ++ currency address
-
-//35: Key: 0000000000000025
-//35: Val: 0000000000000001 6d73784e37433763524e67626779557a743345637672706d5758633539735a564e34
-//                          m.s.x.N.7.C.7.c.R.N.g.b.g.y.U.z.t.3.E.c.v.r.p.m.W.X.c.5.9.s.Z.V.N.4.
-
 //
 // Transactions:
 //
@@ -54,15 +49,6 @@
 //                                data: last transfer txId ++ last transfer block number ++ issue txId ++ issue block number ++ asset index
 //   D ++ owner ++ txId         - position in list of owned items, for delete after transfer
 //                                data: count
-//
-// Payment:
-//
-//   C ++ currency(uint64)      - currency processing
-//                                data: latest block number (big endian uint64, 8 bytes)
-//
-//   P ++ payId                 - payment confirmation (array of addresses + values)
-//                                data: currency(varint) ++ txId_bytes(varint) ++ txId ++ [ count(varint) ++ address ++ value(varint) ]
-//
 //
 // Testing:
 //   Z ++ key                   - testing data

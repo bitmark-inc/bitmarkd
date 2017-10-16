@@ -38,8 +38,6 @@ type pools struct {
 	OwnerCount   *PoolHandle `prefix:"N"`
 	Ownership    *PoolHandle `prefix:"K"`
 	OwnerDigest  *PoolHandle `prefix:"D"`
-	Currency     *PoolHandle `prefix:"C"`
-	Payment      *PoolHandle `prefix:"P"`
 	TestData     *PoolHandle `prefix:"Z"`
 }
 
