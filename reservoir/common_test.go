@@ -12,6 +12,7 @@ import (
 	"github.com/bitmark-inc/logger"
 	"os"
 	"testing"
+	"time"
 )
 
 // test database file
@@ -64,4 +65,7 @@ func teardown(t *testing.T) {
 	mode.Finalise()
 	logger.Finalise()
 	removeFiles()
+
+	// just to ensure background process in block has stopped
+	time.Sleep(25 * time.Millisecond)
 }

@@ -112,6 +112,8 @@ func Finalise() error {
 	globalData.log.Info("shutting down…")
 	globalData.log.Flush()
 
+	globalData.background.Stop()
+
 	// finally...
 	globalData.initialised = false
 

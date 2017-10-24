@@ -24,6 +24,7 @@ type Message struct {
 // a 1:1 queue
 type Queue struct {
 	c    chan Message
+	size int
 	used bool
 }
 
@@ -95,6 +96,7 @@ func init() {
 		case reflect.TypeOf((*Queue)(nil)):
 			q := &Queue{
 				c:    make(chan Message, queueSize),
+				size: queueSize,
 				used: false,
 			}
 			newQueue := reflect.ValueOf(q)
@@ -106,6 +108,7 @@ func init() {
 }
 
 // send a message to a 1:1 queue
+// but only if listener is connected
 func (queue *Queue) Send(command string, parameters ...[]byte) {
 	queue.c <- Message{
 		Command:    command,
@@ -121,6 +124,13 @@ func (queue *Queue) Chan() <-chan Message {
 	}
 	queue.used = true
 	return queue.c
+}
+
+// give the channel back
+func (queue *Queue) Release() {
+	queue.used = false
+	close(queue.c)
+	queue.c = make(chan Message, queue.size)
 }
 
 // send a message to a 1:M queue

@@ -48,6 +48,7 @@ loop:
 			blk.process(&item)
 		}
 	}
+	messagebus.Bus.Blockstore.Release()
 }
 
 // process the received block
