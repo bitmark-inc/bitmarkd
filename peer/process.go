@@ -60,7 +60,7 @@ func processSubscription(log *logger.L, command string, arguments [][]byte) {
 		if nil != err {
 			log.Warnf("failed issues: error: %v", err)
 		} else {
-			messagebus.Bus.Broadcast.Send("issues", arguments[0], arguments[1])
+			messagebus.Bus.Broadcast.Send("issues", arguments[0:2]...)
 		}
 
 	case "transfer":
@@ -97,7 +97,7 @@ func processSubscription(log *logger.L, command string, arguments [][]byte) {
 		timestamp := binary.BigEndian.Uint64(arguments[2])
 		log.Infof("received rpc: fingerprint: %x  rpc: %x  timestamp: %d", arguments[0], arguments[1], timestamp)
 		if announce.AddRPC(arguments[0], arguments[1], timestamp) {
-			messagebus.Bus.Broadcast.Send("rpc", arguments[0], arguments[1], arguments[2])
+			messagebus.Bus.Broadcast.Send("rpc", arguments[0:3]...)
 		}
 
 	case "peer":
@@ -108,7 +108,7 @@ func processSubscription(log *logger.L, command string, arguments [][]byte) {
 		timestamp := binary.BigEndian.Uint64(arguments[3])
 		log.Infof("received peer: %x  broadcast: %x  listener: %x  timestamp: %d", arguments[0], arguments[1], arguments[2], timestamp)
 		if announce.AddPeer(arguments[0], arguments[1], arguments[2], timestamp) {
-			messagebus.Bus.Broadcast.Send("peer", arguments[0], arguments[2], arguments[2], arguments[3])
+			messagebus.Bus.Broadcast.Send("peer", arguments[0:4]...)
 		}
 
 	case "heart":
