@@ -1,3 +1,10 @@
+bitmarkd (6.1-1) unstable; urgency=medium
+
+  * protocol fix: peer request sent wrong data
+  * block background was not shut down
+
+ -- Christopher Hall <hsw@bitmark.com>  Wed, 25 Oct 2017 01:32:13 +0000
+
 bitmarkd (6.0-1) unstable; urgency=medium
 
   * new peer protocol for protection against chain overlap
