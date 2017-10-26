@@ -7,6 +7,7 @@ package peer
 import (
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -140,12 +141,14 @@ func (lstn *listener) process(socket *zmq.Socket) {
 	}
 
 	if len(data) < 2 {
+		listenerSendError(socket, fmt.Errorf("packet too short"))
 		return
 	}
 
 	theChain := string(data[0])
 	if theChain != lstn.chain {
 		log.Errorf("invalid chain: actual: %q  expect: %s", theChain, lstn.chain)
+		listenerSendError(socket, fmt.Errorf("invalid chain: actual: %q  expect: %s", theChain, lstn.chain))
 		return
 	}
 

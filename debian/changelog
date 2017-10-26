@@ -1,3 +1,10 @@
+bitmarkd (6.2-1) unstable; urgency=medium
+
+  * fix for ZMQ REQ/REP sequencing i.e. always reply, even to invalid
+    response to ensure ZMQ state machine stays consistent
+
+ -- Christopher Hall <hsw@bitmark.com>  Thu, 26 Oct 2017 03:30:26 +0000
+
 bitmarkd (6.1-1) unstable; urgency=medium
 
   * protocol fix: peer request sent wrong data

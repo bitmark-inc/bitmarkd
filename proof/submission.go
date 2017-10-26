@@ -127,17 +127,19 @@ func (sub *submission) process(socket *zmq.Socket) {
 
 	log.Infof("received message: %q", data)
 
+	ok := false
 	var request SubmittedItem
 	err = json.Unmarshal([]byte(data[0]), &request)
 	if nil != err {
 		log.Errorf("JSON decode error: %v", err)
+	} else {
+
+		log.Infof("received message: %v", request)
+
+		ok = matchToJobQueue(&request)
+
+		log.Infof("maches: %v", ok)
 	}
-
-	log.Infof("received message: %v", request)
-
-	ok := matchToJobQueue(&request)
-
-	log.Infof("maches: %v", ok)
 
 	response := struct {
 		Job string `json:"job"`
@@ -148,10 +150,8 @@ func (sub *submission) process(socket *zmq.Socket) {
 	}
 
 	result, err := json.Marshal(response)
-	if nil != err {
-		log.Errorf("JSON encode error: %v", err)
-		return
-	}
+	logger.PanicIfError("JSON encode error", err)
+
 	log.Infof("json to send: %s", result)
 
 	// if _, err := socket.Send(to, zmq.SNDMORE|zmq.DONTWAIT); nil != err {
