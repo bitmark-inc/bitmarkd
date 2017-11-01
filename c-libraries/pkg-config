@@ -52,7 +52,7 @@ MUST_CD "${this_dir}"
 # generate a pkg-config .pc file for static linking
 pc_file()
 {
-  local pkg dir
+  local pkg dir date
   pkg="$1"; shift
   dir="$1"; shift
 
@@ -61,9 +61,11 @@ pc_file()
     pkg_path="${dir}/pkgconf"
     mkdir -p "${pkg_path}"
   fi
+  date=$(date '+%Y%m%d')
   cat > "${pkg_path}/${pkg}.pc" <<EOF
 Name: ${pkg}
 Description: Development libraries for ${pkg}
+Version: ${date}
 Libs: -L${dir}/${pkg} ${dir}/${pkg}/${pkg}.a -lm
 Cflags: -I${dir}/${pkg}/include
 EOF
