@@ -21,11 +21,11 @@ import (
 const (
 	defaultDataDirectory = "" // this will error; use "." for the same directory as the config file
 
-	defaultPublicKeyFile  = "prooferd.private"
-	defaultPrivateKeyFile = "prooferd.public"
+	defaultPublicKeyFile  = "recorderd.private"
+	defaultPrivateKeyFile = "recorderd.public"
 
 	defaultLogDirectory = "log"
-	defaultLogFile      = "prooferd.log"
+	defaultLogFile      = "recorderd.log"
 	defaultLogCount     = 10          //  number of log files retained
 	defaultLogSize      = 1024 * 1024 // rotate when <logfile> exceeds this size
 )
