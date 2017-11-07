@@ -55,6 +55,8 @@ type peerData struct {
 	connectorClients  []*upstream.Upstream
 	subscriberClients []*zmqutil.Client
 
+	publicKey []byte
+
 	// for background
 	background *background.T
 
@@ -95,6 +97,8 @@ func Initialise(configuration *Configuration, version string) error {
 	}
 	globalData.log.Tracef("peer private key: %q", privateKey)
 	globalData.log.Tracef("peer public key:  %q", publicKey)
+
+	globalData.publicKey = publicKey
 
 	// set up announcer before any connections
 	err = setAnnounce(configuration, publicKey)
@@ -193,4 +197,9 @@ func Finalise() error {
 	globalData.log.Flush()
 
 	return nil
+}
+
+// return public key
+func PublicKey() []byte {
+	return globalData.publicKey
 }

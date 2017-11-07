@@ -65,6 +65,11 @@ func addPeer(publicKey []byte, broadcasts []byte, listeners []byte, timestamp ui
 		ts = time.Unix(int64(timestamp), 0)
 	}
 
+	// ignore expired request
+	if time.Since(ts) >= announceExpiry {
+		return false
+	}
+
 	peer := &peerEntry{
 		publicKey:  publicKey,
 		broadcasts: broadcasts,

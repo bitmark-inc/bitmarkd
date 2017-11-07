@@ -61,6 +61,11 @@ func addRPC(fingerprint fingerprintType, rpcs []byte, timestamp uint64, local bo
 			ts = time.Unix(int64(timestamp), 0)
 		}
 
+		// ignore expired request
+		if time.Since(ts) >= announceExpiry {
+			return false
+		}
+
 		// ***** FIX THIS: add more validation here
 
 		e := &rpcEntry{

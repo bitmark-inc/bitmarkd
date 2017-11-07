@@ -5,6 +5,7 @@
 package rpc
 
 import (
+	"encoding/hex"
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
@@ -64,6 +65,7 @@ type InfoReply struct {
 	Difficulty          float64  `json:"difficulty"`
 	Version             string   `json:"version"`
 	Uptime              string   `json:"uptime"`
+	PublicKey           string   `json:"public_key"`
 	// Peers    int     `json:"peers"`
 	// Miners   uint64  `json:"miners"`
 }
@@ -94,7 +96,7 @@ func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 	reply.Difficulty = difficulty.Current.Reciprocal()
 	reply.Version = node.version
 	reply.Uptime = time.Since(node.start).String()
-
+	reply.PublicKey = hex.EncodeToString(peer.PublicKey())
 	return nil
 }
 

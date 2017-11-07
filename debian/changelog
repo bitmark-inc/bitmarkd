@@ -1,3 +1,10 @@
+bitmarkd (6.3-1) unstable; urgency=medium
+
+  * ignore expired peer/rpd requests to prevent continuous rebroadcast
+  * add public key to Node.Info RPC
+
+ -- Christopher Hall <hsw@bitmark.com>  Tue, 07 Nov 2017 03:09:37 +0000
+
 bitmarkd (6.2-1) unstable; urgency=medium
 
   * fix for ZMQ REQ/REP sequencing i.e. always reply, even to invalid
