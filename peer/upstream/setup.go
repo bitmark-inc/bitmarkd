@@ -66,26 +66,17 @@ func (u *Upstream) Destroy() {
 // does not mean actually connected, as could be in a timeout and
 // reconnect state
 func (u *Upstream) IsConnectedTo(serverPublicKey []byte) bool {
-	u.Lock()
-	result := u.client.IsConnectedTo(serverPublicKey)
-	u.Unlock()
-	return result
+	return u.client.IsConnectedTo(serverPublicKey)
 }
 
 // if registered the have avalid connection
 func (u *Upstream) IsOK() bool {
-	u.Lock()
-	result := u.registered
-	u.Unlock()
-	return result
+	return u.registered
 }
 
 // if registered the have avalid connection
 func (u *Upstream) ConnectedTo() *zmqutil.Connected {
-	u.Lock()
-	result := u.client.ConnectedTo()
-	u.Unlock()
-	return result
+	return u.client.ConnectedTo()
 }
 
 // connect (or reconnect) to a specific server
@@ -100,10 +91,7 @@ func (u *Upstream) Connect(address *util.Connection, serverPublicKey []byte) err
 
 // fetch height from last polled value
 func (u *Upstream) GetHeight() uint64 {
-	u.Lock()
-	height := u.blockHeight
-	u.Unlock()
-	return height
+	return u.blockHeight
 }
 
 // fetch block digest
