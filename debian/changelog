@@ -1,3 +1,9 @@
+bitmarkd (6.4-1) unstable; urgency=medium
+
+  * remove some locks to try to speed up info RPC
+
+ -- Christopher Hall <hsw@bitmark.com>  Wed, 08 Nov 2017 03:40:27 +0000
+
 bitmarkd (6.3-1) unstable; urgency=medium
 
   * ignore expired peer/rpd requests to prevent continuous rebroadcast
