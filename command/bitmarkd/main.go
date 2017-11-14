@@ -5,7 +5,6 @@
 package main
 
 import (
-	"crypto/tls"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/asset"
@@ -20,34 +19,16 @@ import (
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/storage"
-	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/bitmark-inc/getoptions"
-	"github.com/bitmark-inc/listener"
 	"github.com/bitmark-inc/logger"
 	"os"
 	"os/signal"
 	//"runtime/pprof"
 	"strings"
 	"syscall"
-	"time"
 )
-
-type serverChannel struct {
-	// initial values
-	limit               int
-	addresses           []string
-	certificateFileName string
-	keyFileName         string
-	callback            listener.Callback
-	argument            interface{}
-
-	// filled in later
-	tlsConfiguration *tls.Config
-	limiter          *listener.Limiter
-	listener         *listener.MultiListener
-}
 
 // set by the linker: go build -ldflags "-X main.version=M.N" ./...
 var version string = "zero" // do not change this value
@@ -259,74 +240,6 @@ func main() {
 	}
 	defer announce.Finalise()
 
-	// various logs
-	rpcLog := logger.New("rpc-server")
-	if nil == rpcLog {
-		log.Critical("failed to create rpcLog")
-		exitwithstatus.Message("failed to create rpcLog")
-	}
-
-	servers := map[string]*serverChannel{
-		"rpc": {
-			limit:               masterConfiguration.ClientRPC.MaximumConnections,
-			addresses:           masterConfiguration.ClientRPC.Listen,
-			certificateFileName: masterConfiguration.ClientRPC.Certificate,
-			keyFileName:         masterConfiguration.ClientRPC.PrivateKey,
-			callback:            rpc.Callback,
-			argument: &rpc.ServerArgument{
-				Log:       rpcLog,
-				StartTime: time.Now().UTC(),
-				Version:   version,
-			},
-		},
-	}
-
-	// validate server parameters
-validate:
-	for name, server := range servers {
-		log.Infof("validate: %s", name)
-		certificate, ok := verifyListen(log, name, server)
-		if !ok {
-			log.Criticalf("invalid %s parameters", name)
-			exitwithstatus.Message("invalid %s parameters", name)
-		}
-		if 0 == server.limit {
-			continue validate
-		}
-		log.Infof("multi listener for: %s", name)
-		ml, err := listener.NewMultiListener(name, server.addresses, server.tlsConfiguration, server.limiter, server.callback)
-		if nil != err {
-			log.Criticalf("invalid %s listen addresses", name)
-			exitwithstatus.Message("invalid %s listen addresses", name)
-		}
-		server.listener = ml
-
-		fingerprint := CertificateFingerprint(certificate)
-		log.Infof("%s: SHA3-256 fingerprint: %x", name, fingerprint)
-
-		switch name {
-		case "rpc":
-			rpcs := make([]byte, 0, 100) // ***** FIX THIS: need a better default size
-		process_rpcs:
-			for _, address := range masterConfiguration.ClientRPC.Announce {
-				if "" == address {
-					continue process_rpcs
-				}
-				c, err := util.NewConnection(address)
-				if nil != err {
-					log.Criticalf("invalid %s listen announce: %q  error: %v", name, address, err)
-					exitwithstatus.Message("invalid %s listen announce: %q  error: %v", name, address, err)
-				}
-				rpcs = append(rpcs, c.Pack()...)
-			}
-			err := announce.SetRPC(fingerprint, rpcs)
-			if nil != err {
-				log.Criticalf("announce.SetRPC error: %v", err)
-				exitwithstatus.Message("announce.SetRPC error: %v", err)
-			}
-		}
-	}
-
 	// start payment services
 	err = payment.Initialise(&masterConfiguration.Payment)
 	if nil != err {
@@ -350,20 +263,13 @@ validate:
 	}
 	defer peer.Finalise()
 
-	// now start rpc listeners - these can access memory pools
-	serversStarted := 0
-	for name, server := range servers {
-		if nil != server.listener {
-			log.Infof("starting server: %s  with: %v", name, server.argument)
-			server.listener.Start(server.argument)
-			defer server.listener.Stop()
-			serversStarted += 1
-		}
+	// start up the rpc background processes
+	err = rpc.Initialise(&masterConfiguration.ClientRPC, &masterConfiguration.HttpsRPC, version)
+	if nil != err {
+		log.Criticalf("rpc initialise error: %v", err)
+		exitwithstatus.Message("peer initialise error: %v", err)
 	}
-	if 0 == serversStarted {
-		log.Critical("no RPC servers started")
-		exitwithstatus.Message("no RPC servers started")
-	}
+	defer rpc.Finalise()
 
 	// start proof background processes
 	err = proof.Initialise(&masterConfiguration.Proofing)

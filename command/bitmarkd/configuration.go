@@ -12,6 +12,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/peer"
 	"github.com/bitmark-inc/bitmarkd/proof"
+	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 	"os"
@@ -56,12 +57,12 @@ var (
 	}
 )
 
-type RPCType struct {
+type HTTPSType struct {
 	MaximumConnections int      `libucl:"maximum_connections" json:"maximum_connections"`
 	Listen             []string `libucl:"listen" json:"listen"`
+	StatusAllowIP      []string `libucl:"status_allow_ip" json:"status_allow_ip"`
 	Certificate        string   `libucl:"certificate" json:"certificate"`
 	PrivateKey         string   `libucl:"private_key" json:"private_key"`
-	Announce           []string `libucl:"announce" json:"announce"`
 }
 
 type DatabaseType struct {
@@ -79,11 +80,12 @@ type Configuration struct {
 	PeerFile          string `libucl:"peer_file" json:"peer_file"`
 	ReservoirDataFile string `libucl:"reservoir_file" json:"reservoir_file"`
 
-	ClientRPC RPCType               `libucl:"client_rpc" json:"client_rpc"`
-	Peering   peer.Configuration    `libucl:"peering" json:"peering"`
-	Proofing  proof.Configuration   `libucl:"proofing" json:"proofing"`
-	Payment   payment.Configuration `libucl:"payment" json:"payment"`
-	Logging   logger.Configuration  `libucl:"logging" json:"logging"`
+	ClientRPC rpc.RPCConfiguration   `libucl:"client_rpc" json:"client_rpc"`
+	HttpsRPC  rpc.HTTPSConfiguration `libucl:"https_rpc" json:"https_rpc"`
+	Peering   peer.Configuration     `libucl:"peering" json:"peering"`
+	Proofing  proof.Configuration    `libucl:"proofing" json:"proofing"`
+	Payment   payment.Configuration  `libucl:"payment" json:"payment"`
+	Logging   logger.Configuration   `libucl:"logging" json:"logging"`
 }
 
 // will read decode and verify the configuration
@@ -110,7 +112,14 @@ func getConfiguration(configurationFileName string, variables map[string]string)
 			Name:      defaultBitmarkDatabase,
 		},
 
-		ClientRPC: RPCType{
+		ClientRPC: rpc.RPCConfiguration{
+			MaximumConnections: defaultRPCClients,
+			Certificate:        defaultCertificateFile,
+			PrivateKey:         defaultKeyFile,
+		},
+
+		// default: share config with normal RPC
+		HttpsRPC: rpc.HTTPSConfiguration{
 			MaximumConnections: defaultRPCClients,
 			Certificate:        defaultCertificateFile,
 			PrivateKey:         defaultKeyFile,
@@ -188,6 +197,8 @@ func getConfiguration(configurationFileName string, variables map[string]string)
 		&options.Database.Directory,
 		&options.ClientRPC.Certificate,
 		&options.ClientRPC.PrivateKey,
+		&options.HttpsRPC.Certificate,
+		&options.HttpsRPC.PrivateKey,
 		&options.Peering.PublicKey,
 		&options.Peering.PrivateKey,
 		&options.Proofing.PublicKey,

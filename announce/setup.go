@@ -23,7 +23,7 @@ const (
 	TypePeer = iota
 )
 
-//tpe for SHA3 fingerprints
+// type for SHA3 fingerprints
 type fingerprintType [32]byte
 
 // RPC entries

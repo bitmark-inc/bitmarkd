@@ -10,17 +10,15 @@ import (
 	"io"
 	"net/rpc"
 	"net/rpc/jsonrpc"
-	"time"
 )
 
 // limit the number of gets
-const MaximumGetSize = 100
+//const MaximumGetSize = 100
 
 // the argument passed to the callback
-type ServerArgument struct {
-	Log       *logger.L
-	StartTime time.Time
-	Version   string
+type serverArgument struct {
+	Log    *logger.L
+	Server *rpc.Server
 }
 
 var connectionCount counter.Counter
@@ -28,52 +26,12 @@ var connectionCount counter.Counter
 // listener callback
 func Callback(conn io.ReadWriteCloser, argument interface{}) {
 
-	serverArgument := argument.(*ServerArgument)
-	if nil == serverArgument {
-		panic("rpc: nil serverArgument")
-	}
-	if nil == serverArgument.Log {
-		panic("rpc: nil serverArgument.Log")
-	}
+	serverArgument := argument.(*serverArgument)
 
 	log := serverArgument.Log
 	log.Info("starting…")
 
-	assets := &Assets{
-		log: serverArgument.Log,
-	}
-
-	bitmark := &Bitmark{
-		log: serverArgument.Log,
-	}
-
-	bitmarks := &Bitmarks{
-		log: serverArgument.Log,
-	}
-
-	owner := &Owner{
-		log: serverArgument.Log,
-	}
-
-	node := &Node{
-		log:     serverArgument.Log,
-		start:   serverArgument.StartTime,
-		version: serverArgument.Version,
-	}
-
-	transaction := &Transaction{
-		log:   serverArgument.Log,
-		start: serverArgument.StartTime,
-	}
-
-	server := rpc.NewServer()
-
-	server.Register(assets)
-	server.Register(bitmark)
-	server.Register(bitmarks)
-	server.Register(owner)
-	server.Register(node)
-	server.Register(transaction)
+	server := serverArgument.Server
 
 	connectionCount.Increment()
 	defer connectionCount.Decrement()

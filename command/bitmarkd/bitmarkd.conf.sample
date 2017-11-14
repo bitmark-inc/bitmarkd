@@ -63,6 +63,26 @@ client_rpc {
   private_key = rpc.key
 }
 
+# https connection for rpc services and status requests
+https_rpc {
+  maximum_connections = 50
+
+  # POST /bitmarkd/rpc     (json body as client rpc)
+  # GET  /bitmarkd/info    (same as Node.Info but for curl)
+  # GET  /bitmarkd/local/* (protected)
+  listen = 0.0.0.0:2131
+  listen = "[::]:2131"
+
+  # IPs that can access the /bitmarkd/local/* APIs
+  # default is deny
+  local_allow = 127.0.0.1
+  local_allow = "[::1]"
+
+  # this example shares keys with client rpc
+  certificate = rpc.crt
+  private_key = rpc.key
+}
+
 
 # peer-to-peer networking configuration
 peering {
@@ -154,6 +174,9 @@ payment {
 logging {
   size = 1048576
   count = 100
+
+  # set to yes to log to console
+  console = no
 
   # set the logging level for various modules
   # modules not overridden with get the value from DEFAULT

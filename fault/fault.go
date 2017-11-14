@@ -28,6 +28,7 @@ var (
 	ErrCannotDecodePrivateKey                = RecordError("cannot decode private key")
 	ErrCannotDecodeSeed                      = RecordError("cannot decode seed")
 	ErrCertificateFileAlreadyExists          = ExistsError("certificate file already exists")
+	ErrCertificateFileNotFound               = NotFoundError("cerfificate file not found")
 	ErrChecksumMismatch                      = ProcessError("checksum mismatch")
 	ErrConnectingToSelfForbidden             = ProcessError("connecting to self forbidden")
 	ErrCurrencyIsNotSupportedByProofer       = InvalidError("currency is not supported by proofer")
