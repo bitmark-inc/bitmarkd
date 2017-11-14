@@ -1,3 +1,11 @@
+bitmarkd (6.5-1) unstable; urgency=medium
+
+  * RPC refactor
+  * https RPC
+  * https status and restricted local status
+
+ -- Christopher Hall <hsw@bitmark.com>  Tue, 14 Nov 2017 03:58:55 +0000
+
 bitmarkd (6.4-1) unstable; urgency=medium
 
   * remove some locks to try to speed up info RPC
