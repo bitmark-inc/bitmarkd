@@ -45,6 +45,7 @@ func main() {
 		{Long: "version", HasArg: getoptions.NO_ARGUMENT, Short: 'V'},
 		{Long: "config-file", HasArg: getoptions.REQUIRED_ARGUMENT, Short: 'c'},
 		{Long: "set", HasArg: getoptions.REQUIRED_ARGUMENT, Short: 's'},
+		{Long: "memory-stats", HasArg: getoptions.NO_ARGUMENT, Short: 'm'},
 	}
 
 	program, options, arguments, err := getoptions.GetOS(flags)
@@ -278,6 +279,11 @@ func main() {
 		exitwithstatus.Message("proof initialise error: %v", err)
 	}
 	defer proof.Finalise()
+
+	// if memory logging enabled
+	if len(options["memory-stats"]) > 0 {
+		go memstats()
+	}
 
 	// wait for CTRL-C before shutting down to allow manual testing
 	if 0 == len(options["quiet"]) {
