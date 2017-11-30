@@ -238,10 +238,10 @@ local_loop:
 			TLSConfig:      tlsConfiguration,
 		}
 
-		go func() {
+		go func(s *http.Server) {
 			err := s.ListenAndServeTLS(configuration.Certificate, configuration.PrivateKey)
-			log.Errorf("server: %s on: %q  error: %s", name, listen, err)
-		}()
+			log.Errorf("server: %s on: %q  error: %s", name, s.Addr, err)
+		}(s)
 	}
 
 	return nil
