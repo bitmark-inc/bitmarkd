@@ -34,9 +34,6 @@
 [submodule "vendor/github.com/bitmark-inc/go-argon2"]
 	path = vendor/github.com/bitmark-inc/go-argon2
 	url = https://github.com/bitmark-inc/go-argon2
-[submodule "vendor/github.com/codegangsta/cli"]
-	path = vendor/github.com/codegangsta/cli
-	url = https://github.com/codegangsta/cli
 [submodule "vendor/github.com/hashicorp/hcl"]
 	path = vendor/github.com/hashicorp/hcl
 	url = https://github.com/hashicorp/hcl
@@ -49,3 +46,6 @@
 [submodule "vendor/golang.org/x/sys"]
 	path = vendor/golang.org/x/sys
 	url = https://go.googlesource.com/sys
+[submodule "vendor/github.com/urfave/cli"]
+	path = vendor/github.com/urfave/cli
+	url = https://github.com/urfave/cli
