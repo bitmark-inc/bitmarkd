@@ -6,69 +6,65 @@ package main
 
 import (
 	"fmt"
-	"github.com/bitmark-inc/exitwithstatus"
-	"github.com/codegangsta/cli"
+	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
+	"github.com/urfave/cli"
+	"io"
 	"os"
 )
 
-type globalFlags struct {
-	verbose    bool
-	config     string
-	identity   string
-	password   string
-	agent      string
-	clearCache bool
-	variables  map[string]string
+type metadata struct {
+	file      string
+	config    *configuration.Configuration
+	save      bool
+	testnet   bool
+	verbose   bool
+	variables map[string]string
+	e         io.Writer
+	w         io.Writer
 }
 
 // set by the linker: go build -ldflags "-X main.version=M.N" ./...
 var version string = "zero" // do not change this value
 
 func main() {
-	// ensure exit handler is first
-	defer exitwithstatus.Handler()
-
-	globals := globalFlags{}
 
 	app := cli.NewApp()
 	app.Name = "bitmark-cli"
 	// app.Usage = ""
 	app.Version = version
 	app.HideVersion = true
+
+	app.Writer = os.Stdout
+	app.ErrWriter = os.Stderr
+
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{
-			Name:        "verbose, v",
-			Usage:       " verbose result",
-			Destination: &globals.verbose,
+			Name:  "verbose, v",
+			Usage: " verbose result",
 		},
 		cli.StringFlag{
-			Name:        "config, c",
-			Value:       "",
-			Usage:       "bitmark-cli configuration `DIRECTORY`",
-			Destination: &globals.config,
+			Name:  "config, c",
+			Value: "",
+			Usage: "bitmark-cli configuration `DIRECTORY`",
 		},
 		cli.StringFlag{
-			Name:        "identity, i",
-			Value:       "",
-			Usage:       " identity `NAME` [default identity]",
-			Destination: &globals.identity,
+			Name:  "identity, i",
+			Value: "",
+			Usage: " identity `NAME` [default identity]",
 		},
 		cli.StringFlag{
-			Name:        "password, p",
-			Value:       "",
-			Usage:       " identity `PASSWORD`",
-			Destination: &globals.password,
+			Name:  "password, p",
+			Value: "",
+			Usage: " identity `PASSWORD`",
 		},
 		cli.StringFlag{
-			Name:        "use-agent, u",
-			Value:       "",
-			Usage:       " executable program that returns the password `EXE`",
-			Destination: &globals.agent,
+			Name:  "use-agent, u",
+			Value: "",
+			Usage: " executable program that returns the password `EXE`",
 		},
 		cli.BoolFlag{
-			Name:        "zero-agent-cache, z",
-			Usage:       " force re-entry of agent password",
-			Destination: &globals.clearCache,
+			Name:  "zero-agent-cache, z",
+			Usage: " force re-entry of agent password",
 		},
 	}
 	app.Commands = []cli.Command{
@@ -77,9 +73,7 @@ func main() {
 			Usage:     "generate key pair, will not store in config file",
 			ArgsUsage: "\n   (* = required)",
 			Flags:     []cli.Flag{},
-			Action: func(c *cli.Context) {
-				runGenerate(c, globals)
-			},
+			Action:    runGenerate,
 		},
 		{
 			Name:      "setup",
@@ -107,9 +101,7 @@ func main() {
 					Usage: " using existing privateKey/seed `KEY`",
 				},
 			},
-			Action: func(c *cli.Context) {
-				runSetup(c, globals)
-			},
+			Action: runSetup,
 		},
 		{
 			Name:      "add",
@@ -127,48 +119,7 @@ func main() {
 					Usage: " using existing privateKey/seed `KEY`",
 				},
 			},
-			Action: func(c *cli.Context) {
-				runAdd(c, globals)
-			},
-		},
-		{
-			Name:      "batch",
-			Usage:     "create and transfer bitmarks to new accounts",
-			ArgsUsage: "\n   (* = required)",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "asset, a",
-					Value: "",
-					Usage: "*asset name `STRING`",
-				},
-				cli.StringFlag{
-					Name:  "metadata, m",
-					Value: "",
-					Usage: "*asset metadata `META`",
-				},
-				cli.StringFlag{
-					Name:  "fingerprint, f",
-					Value: "",
-					Usage: "*asset fingerprint `STRING`",
-				},
-				cli.StringFlag{
-					Name:  "quantity, q",
-					Value: "1",
-					Usage: " quantity to create `COUNT`",
-				},
-				cli.BoolFlag{
-					Name:  "transfer, t",
-					Usage: " to create quantity new accounts and transfer a bitmark to each one",
-				},
-				cli.StringFlag{
-					Name:  "output, o",
-					Value: "",
-					Usage: " store final output in `FILE`",
-				},
-			},
-			Action: func(c *cli.Context) {
-				runCreate(c, globals, true)
-			},
+			Action: runAdd,
 		},
 		{
 			Name:      "create",
@@ -196,9 +147,7 @@ func main() {
 					Usage: " quantity to create `COUNT`",
 				},
 			},
-			Action: func(c *cli.Context) {
-				runCreate(c, globals, false)
-			},
+			Action: runCreate,
 		},
 		{
 			Name:      "transfer",
@@ -215,10 +164,25 @@ func main() {
 					Value: "",
 					Usage: "*identity name to receive the bitmark `ACCOUNT`",
 				},
+				cli.BoolFlag{
+					Name:  "unratified, u",
+					Usage: " perform an unratified transfer (default is output single signed hex)",
+				},
 			},
-			Action: func(c *cli.Context) {
-				runTransfer(c, globals)
+			Action: runTransfer,
+		},
+		{
+			Name:      "countersign",
+			Usage:     "countersign transfer a bitmark to current account",
+			ArgsUsage: "\n   (* = required)",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "transfer, t",
+					Value: "",
+					Usage: "*sender signed transfer `HEX` code",
+				},
 			},
+			Action: runCountersign,
 		},
 		{
 			Name:      "provenance",
@@ -236,9 +200,7 @@ func main() {
 					Usage: " maximum records to output `COUNT`",
 				},
 			},
-			Action: func(c *cli.Context) {
-				runProvenance(c, globals)
-			},
+			Action: runProvenance,
 		},
 		{
 			Name:      "status",
@@ -251,9 +213,7 @@ func main() {
 					Usage: "*transaction id to check status `TXID`",
 				},
 			},
-			Action: func(c *cli.Context) {
-				runTransactionStatus(c, globals)
-			},
+			Action: runTransactionStatus,
 		},
 		{
 			Name:      "account",
@@ -266,37 +226,27 @@ func main() {
 					Usage: "*hex public `KEY`",
 				},
 			},
-			Action: func(c *cli.Context) {
-				runPublicKeyDisplay(c, globals)
-			},
+			Action: runAccount,
 		},
 		{
-			Name:  "info",
-			Usage: "display bitmark-cli status",
-			Action: func(c *cli.Context) {
-				runInfo(c, globals)
-			},
+			Name:   "info",
+			Usage:  "display bitmark-cli status",
+			Action: runInfo,
 		},
 		{
-			Name:  "bitmarkInfo",
-			Usage: "display bitmarkd status",
-			Action: func(c *cli.Context) {
-				runBitmarkInfo(c, globals)
-			},
+			Name:   "bitmarkInfo",
+			Usage:  "display bitmarkd status",
+			Action: runBitmarkInfo,
 		},
 		{
-			Name:  "keypair",
-			Usage: "get default identity's raw key pair",
-			Action: func(c *cli.Context) {
-				getDefaultRawKeyPair(c, globals)
-			},
+			Name:   "keypair",
+			Usage:  "get default identity's raw key pair",
+			Action: runKeyPair,
 		},
 		{
-			Name:  "password",
-			Usage: "change default identity's password",
-			Action: func(c *cli.Context) {
-				changePassword(c, globals)
-			},
+			Name:   "password",
+			Usage:  "change default identity's password",
+			Action: runChangePassword,
 		},
 		{
 			Name:      "fingerprint",
@@ -309,9 +259,7 @@ func main() {
 					Usage: " `FILE` of data to fingerprint",
 				},
 			},
-			Action: func(c *cli.Context) {
-				runFingerprint(c, globals)
-			},
+			Action: runFingerprint,
 		},
 		{
 			Name:      "sign",
@@ -324,18 +272,104 @@ func main() {
 					Usage: " `FILE` of data to sign",
 				},
 			},
-			Action: func(c *cli.Context) {
-				runSign(c, globals)
-			},
+			Action: runSign,
 		},
 		{
 			Name:  "version",
 			Usage: "display bitmark-cli version",
-			Action: func(c *cli.Context) {
-				fmt.Println(version)
+			Action: func(c *cli.Context) error {
+				fmt.Fprintf(c.App.Writer, "%s\n", version)
+				return nil
 			},
 		},
 	}
 
-	app.Run(os.Args)
+	// read the configuration
+	app.Before = func(c *cli.Context) error {
+
+		e := c.App.ErrWriter
+		w := c.App.Writer
+		verbose := c.GlobalBool("verbose")
+
+		// to suppress reading config file if certain commands
+		command := c.Args().Get(0)
+		if "version" == command {
+			return nil
+		}
+
+		file := c.GlobalString("config")
+		if "" == file {
+			return ErrRequiredConfigFile
+		}
+
+		// expand ${HOME} etc.
+		file = os.ExpandEnv(file)
+
+		// config file macros - currently empty
+		variables := make(map[string]string)
+
+		if "setup" == command {
+			// do not run setup if there is an existing configuration
+			if ensureFileExists(file) {
+				return fmt.Errorf("not overwriting existing configuration: %q", file)
+			}
+
+			c.App.Metadata["config"] = &metadata{
+				file:      file,
+				save:      false,
+				variables: variables,
+				verbose:   verbose,
+				e:         e,
+				w:         w,
+			}
+
+		} else {
+
+			if verbose {
+				fmt.Fprintf(e, "reading config file: %s\n", file)
+			}
+
+			configuration, err := configuration.GetConfiguration(file, variables)
+			if nil != err {
+				return err
+			}
+
+			c.App.Metadata["config"] = &metadata{
+				file:    file,
+				config:  configuration,
+				testnet: "bitmark" != configuration.Network,
+				save:    false,
+				verbose: verbose,
+				e:       e,
+				w:       w,
+			}
+		}
+
+		return nil
+	}
+
+	// update the configuration if required
+	app.After = func(c *cli.Context) error {
+		e := c.App.ErrWriter
+		m, ok := c.App.Metadata["config"].(*metadata)
+		if !ok {
+			return nil
+		}
+		if m.save {
+			if c.GlobalBool("verbose") {
+				fmt.Fprintf(e, "updating config file: %s\n", m.file)
+			}
+			err := configuration.Save(m.file, m.config)
+			if nil != err {
+				return err
+			}
+		}
+		return nil
+	}
+
+	err := app.Run(os.Args)
+	if nil != err {
+		fmt.Fprintf(app.ErrWriter, "terminated with error: %s\n", err)
+		os.Exit(1)
+	}
 }

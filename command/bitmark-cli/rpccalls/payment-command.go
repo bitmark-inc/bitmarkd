@@ -2,7 +2,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package main
+package rpccalls
 
 import (
 	"fmt"
@@ -18,16 +18,13 @@ const (
 	paymentCommandTest = "bitmark-wallet --conf ${XDG_CONFIG_HOME}/bitmark-wallet/bitmark-wallet.conf %s --testnet sendmany --hex-data '%s'"
 )
 
-func paymentCommand(network string, currency currency.Currency, payId string, payments transactionrecord.PaymentAlternative) string {
+func paymentCommand(testnet bool, currency currency.Currency, payId string, payments transactionrecord.PaymentAlternative) string {
 
 	f := ""
-	switch network {
-	case "bitmark":
-		f = paymentCommandLive
-	case "testing", "local":
+	if testnet {
 		f = paymentCommandTest
-	default:
-		panic("invalid network")
+	} else {
+		f = paymentCommandLive
 	}
 
 	c := strings.ToLower(currency.String())

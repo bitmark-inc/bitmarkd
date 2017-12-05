@@ -2,21 +2,28 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package main
+package rpccalls
 
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 )
 
-func printJson(handle io.Writer, message interface{}) error {
+func (client *Client) printJson(title string, message interface{}) error {
+
+	if !client.verbose {
+		return nil
+	}
 
 	b, err := json.MarshalIndent(message, "", "  ")
 	if nil != err {
 		return err
 	}
 
-	fmt.Fprintf(handle, "%s\n", b)
+	if "" == title {
+		fmt.Fprintf(client.handle, "%s\n", b)
+	} else {
+		fmt.Fprintf(client.handle, "%s:\n%s\n", title, b)
+	}
 	return nil
 }

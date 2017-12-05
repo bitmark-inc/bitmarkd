@@ -9,7 +9,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/exitwithstatus"
 	"os"
 	"strconv"
 	"strings"
@@ -29,18 +28,9 @@ var (
 	ErrRequiredPublicKey        = fault.InvalidError("public key is required")
 	ErrRequiredReceipt          = fault.InvalidError("receipt id is required")
 	ErrRequiredTransferTo       = fault.InvalidError("transfer to is required")
+	ErrRequiredTransferTx       = fault.InvalidError("transaction hex data is required")
 	ErrRequiredTransferTxId     = fault.InvalidError("transaction id is required")
 )
-
-// config is required
-func checkConfigFile(file string) (string, error) {
-	if "" == file {
-		return "", ErrRequiredConfigFile
-	}
-
-	file = os.ExpandEnv(file)
-	return file, nil
-}
 
 // identity is required, but not check the config file
 func checkName(name string) (string, error) {
@@ -60,22 +50,22 @@ func checkFileName(fileName string) (string, error) {
 	return fileName, nil
 }
 
-func checkNetwork(network string) string {
+func checkNetwork(network string) (string, error) {
 	switch network {
 	case "":
 		network = configuration.DefaultNetwork
 	case "bitmark", "live", "production":
-		return "bitmark"
+		network = "bitmark"
 	case "testing", "test":
-		return "testing"
+		network = "testing"
 	case "dev", "development", "devel":
-		return "development"
+		network = "development"
 	case "local":
-		return "local"
+		network = "local"
 	default:
-		exitwithstatus.Message("Error: Wrong Network expected: [bitmark | testing | development | local]  actual: %s", network)
+		return "", ErrInvalidNetwork
 	}
-	return network
+	return network, nil
 }
 
 // connect is required.
@@ -195,6 +185,15 @@ func checkTransferTxId(txId string) (string, error) {
 	return txId, nil
 }
 
+// transfer tx is required field
+func checkTransferTx(txId string) (string, error) {
+	if "" == txId {
+		return "", ErrRequiredTransferTx
+	}
+
+	return txId, nil
+}
+
 func checkTransferFrom(from string, config *configuration.Configuration) (*encrypt.IdentityType, error) {
 	if "" == from {
 		from = config.Default_identity
@@ -236,21 +235,6 @@ func checkRecordCount(count string) (int, error) {
 
 	i, err := strconv.Atoi(count)
 	return i, err
-}
-
-func checkAndGetConfig(path string, variables map[string]string) (*configuration.Configuration, error) {
-	configFile, err := checkConfigFile(path)
-	if nil != err {
-		return nil, err
-	}
-
-	configuration, err := configuration.GetConfiguration(configFile, variables)
-	if nil != err {
-		return nil, err
-	}
-
-	return configuration, nil
-
 }
 
 // note: this returns apointer to tha actial config.Identity[i]
