@@ -79,20 +79,21 @@ outer_loop:
 				reservoir.DeleteByTxId(txId)
 				TransferOwnership(txId, txId, 0, tx.Owner, nil)
 
-			case *transactionrecord.BitmarkTransfer:
+			case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
+				tr := tx.(transactionrecord.BitmarkTransfer)
 				txId := packedTransaction.MakeLink()
 				key := txId[:]
 				storage.Pool.Transactions.Delete(key)
 				reservoir.DeleteByTxId(txId)
-
-				linkOwner := OwnerOf(tx.Link)
+				link := tr.GetLink()
+				linkOwner := OwnerOf(link)
 				if nil == linkOwner {
-					log.Criticalf("missing transaction record for: %v", tx.Link)
+					log.Criticalf("missing transaction record for: %v", link)
 					logger.Panic("Transactions database is corrupt")
 				}
 				// just use zero here, as the fork restore should overwrite with new chain, including updated block number
 				// ***** FIX THIS: is the above statement sufficient
-				TransferOwnership(txId, tx.Link, 0, tx.Owner, linkOwner)
+				TransferOwnership(txId, link, 0, tr.GetOwner(), linkOwner)
 
 			default:
 				logger.Panicf("unexpected transaction: %v", transaction)

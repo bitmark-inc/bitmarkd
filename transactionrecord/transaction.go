@@ -21,10 +21,11 @@ const (
 	NullTag = TagType(iota)
 
 	// valid record type
-	BaseDataTag        = TagType(iota)
-	AssetDataTag       = TagType(iota)
-	BitmarkIssueTag    = TagType(iota)
-	BitmarkTransferTag = TagType(iota)
+	BaseDataTag                     = TagType(iota)
+	AssetDataTag                    = TagType(iota)
+	BitmarkIssueTag                 = TagType(iota)
+	BitmarkTransferUnratifiedTag    = TagType(iota)
+	BitmarkTransferCountersignedTag = TagType(iota)
 
 	// this item must be last
 	InvalidTag = TagType(iota)
@@ -36,6 +37,7 @@ type Packed []byte
 // generic transaction interface
 type Transaction interface {
 	Pack(account *account.Account) (Packed, error)
+	IsTransfer() bool
 }
 
 // byte sizes for various fields
@@ -59,6 +61,8 @@ type BaseData struct {
 	Signature      account.Signature `json:"signature,"`     // hex
 }
 
+func (*BaseData) IsTransfer() bool { return false }
+
 // the unpacked Asset Data structure
 type AssetData struct {
 	Name        string            `json:"name"`        // utf-8
@@ -68,6 +72,8 @@ type AssetData struct {
 	Signature   account.Signature `json:"signature"`   // hex
 }
 
+func (*AssetData) IsTransfer() bool { return false }
+
 // the unpacked BitmarkIssue structure
 type BitmarkIssue struct {
 	AssetIndex AssetIndex        `json:"asset"`     // link to asset record
@@ -75,6 +81,8 @@ type BitmarkIssue struct {
 	Nonce      uint64            `json:"nonce"`     // to allow for multiple issues at the same time
 	Signature  account.Signature `json:"signature"` // hex: corresponds to owner in linked record
 }
+
+func (*BitmarkIssue) IsTransfer() bool { return false }
 
 // optional payment record
 type Payment struct {
@@ -90,13 +98,34 @@ type Payment struct {
 //   3. optional transfer payment
 type PaymentAlternative []*Payment
 
+// to access field of various transfer types
+type BitmarkTransfer interface {
+	Transaction
+	GetLink() merkle.Digest
+	GetPayment() *Payment
+	GetOwner() *account.Account
+}
+
 // the unpacked BitmarkTransfer structure
-type BitmarkTransfer struct {
+type BitmarkTransferUnratified struct {
 	Link      merkle.Digest     `json:"link"`      // previous record
 	Payment   *Payment          `json:"payment"`   // optional payment address
 	Owner     *account.Account  `json:"owner"`     // base58: the "destination" owner
 	Signature account.Signature `json:"signature"` // hex: corresponds to owner in linked record
 }
+
+func (*BitmarkTransferUnratified) IsTransfer() bool { return true }
+
+// the unpacked Countersigned BitmarkTransfer structure
+type BitmarkTransferCountersigned struct {
+	Link             merkle.Digest     `json:"link"`             // previous record
+	Payment          *Payment          `json:"payment"`          // optional payment address
+	Owner            *account.Account  `json:"owner"`            // base58: the "destination" owner
+	Signature        account.Signature `json:"signature"`        // hex: corresponds to owner in linked record
+	Countersignature account.Signature `json:"countersignature"` // hex: corresponds to owner in this record
+}
+
+func (*BitmarkTransferCountersigned) IsTransfer() bool { return true }
 
 // determine the record type code
 func (record Packed) Type() TagType {
@@ -116,8 +145,11 @@ func RecordName(record interface{}) (string, bool) {
 	case *BitmarkIssue, BitmarkIssue:
 		return "BitmarkIssue", true
 
-	case *BitmarkTransfer, BitmarkTransfer:
-		return "BitmarkTransfer", true
+	case *BitmarkTransferUnratified, BitmarkTransferUnratified:
+		return "BitmarkTransferUnratified", true
+
+	case *BitmarkTransferCountersigned, BitmarkTransferCountersigned:
+		return "BitmarkTransferCountersigned", true
 
 	default:
 		return "*unknown*", false
@@ -149,3 +181,5 @@ func (p *Packed) UnmarshalText(s []byte) error {
 	_, err := hex.Decode(*p, s)
 	return err
 }
+
+// to detect record types

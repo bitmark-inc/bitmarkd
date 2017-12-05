@@ -176,7 +176,7 @@ func (record Packed) Unpack(testing ...bool) (Transaction, int, error) {
 		}
 		return r, n, nil
 
-	case BitmarkTransferTag:
+	case BitmarkTransferUnratifiedTag:
 
 		// link
 		linkLength, linkOffset := util.FromVarint64(record[n:])
@@ -245,11 +245,96 @@ func (record Packed) Unpack(testing ...bool) (Transaction, int, error) {
 		copy(signature, record[n:])
 		n += int(signatureLength)
 
-		r := &BitmarkTransfer{
+		r := &BitmarkTransferUnratified{
 			Link:      link,
 			Payment:   payment,
 			Owner:     owner,
 			Signature: signature,
+		}
+		return r, n, nil
+
+	case BitmarkTransferCountersignedTag:
+
+		// link
+		linkLength, linkOffset := util.FromVarint64(record[n:])
+		n += linkOffset
+		var link merkle.Digest
+		err := merkle.DigestFromBytes(&link, record[n:n+int(linkLength)])
+		if nil != err {
+			return nil, 0, err
+		}
+		n += int(linkLength)
+
+		// optional payment
+		payment := (*Payment)(nil)
+
+		if 0 == record[n] {
+			n += 1
+		} else if 1 == record[n] {
+			n += 1
+
+			// currency
+			c := uint64(0)
+			var currencyLength int
+			c, currencyLength = util.FromVarint64(record[n:])
+			n += int(currencyLength)
+			currency, err := currency.FromUint64(c)
+			if nil != err {
+				return nil, 0, err
+			}
+
+			// address
+			addressLength, addressOffset := util.FromVarint64(record[n:])
+			address := make([]byte, addressLength)
+			n += addressOffset
+			copy(address, record[n:])
+			n += int(addressLength)
+
+			// amount
+			amount, amountLength := util.FromVarint64(record[n:])
+			n += int(amountLength)
+
+			payment = &Payment{
+				Currency: currency,
+				Address:  string(address),
+				Amount:   amount,
+			}
+		} else {
+			return nil, 0, fault.ErrNotTransactionPack
+		}
+
+		// owner public key
+		ownerLength, ownerOffset := util.FromVarint64(record[n:])
+		n += ownerOffset
+		owner, err := account.AccountFromBytes(record[n : n+int(ownerLength)])
+		if nil != err {
+			return nil, 0, err
+		}
+		if len(testing) > 0 && owner.IsTesting() != testing[0] {
+			return nil, 0, fault.ErrWrongNetworkForPublicKey
+		}
+		n += int(ownerLength)
+
+		// signature
+		signatureLength, signatureOffset := util.FromVarint64(record[n:])
+		signature := make(account.Signature, signatureLength)
+		n += signatureOffset
+		copy(signature, record[n:])
+		n += int(signatureLength)
+
+		// countersignature
+		countersignatureLength, countersignatureOffset := util.FromVarint64(record[n:])
+		countersignature := make(account.Signature, countersignatureLength)
+		n += countersignatureOffset
+		copy(countersignature, record[n:])
+		n += int(countersignatureLength)
+
+		r := &BitmarkTransferCountersigned{
+			Link:             link,
+			Payment:          payment,
+			Owner:            owner,
+			Signature:        signature,
+			Countersignature: countersignature,
 		}
 		return r, n, nil
 

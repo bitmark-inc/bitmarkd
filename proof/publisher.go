@@ -313,7 +313,7 @@ func (pub *publisher) process() {
 				seenAsset[tx.AssetIndex] = struct{}{}
 			}
 
-		case *transactionrecord.BitmarkTransfer:
+		case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
 			// ok
 
 		default: // all other types cannot occur here

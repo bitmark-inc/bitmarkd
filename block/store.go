@@ -157,23 +157,25 @@ func StoreIncoming(packedBlock []byte) error {
 			storage.Pool.Transactions.Put(key, packed)
 			CreateOwnership(txId, header.Number, tx.AssetIndex, tx.Owner)
 
-		case *transactionrecord.BitmarkTransfer:
+		case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
+			tr := tx.(transactionrecord.BitmarkTransfer)
 			key := txId[:]
 			reservoir.DeleteByTxId(txId)
+			link := tr.GetLink()
 
 			// when deleting a pending it is possible that the tx id
 			// it was holding was different to this tx id
 			// i.e. it is a duplicate so it also must be removed
 			// to prevent the possibility of a double-spend
-			reservoir.DeleteByLink(tx.Link)
+			reservoir.DeleteByLink(link)
 
 			storage.Pool.Transactions.Put(key, packed)
-			linkOwner := OwnerOf(tx.Link)
+			linkOwner := OwnerOf(link)
 			if nil == linkOwner {
-				logger.Criticalf("missing transaction record for link: %v refererenced by tx id: %v", tx.Link, txId)
+				logger.Criticalf("missing transaction record for link: %v refererenced by tx id: %v", link, txId)
 				logger.Panic("Transactions database is corrupt")
 			}
-			TransferOwnership(tx.Link, txId, header.Number, linkOwner, tx.Owner)
+			TransferOwnership(link, txId, header.Number, linkOwner, tr.GetOwner())
 
 		default:
 			globalData.log.Criticalf("unhandled transaction: %v", tx)

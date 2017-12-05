@@ -232,21 +232,21 @@ func processTransfer(packed []byte) error {
 		return err
 	}
 
-	switch tx := transaction.(type) {
-	case *transactionrecord.BitmarkTransfer:
-
-		_, duplicate, err := reservoir.StoreTransfer(tx)
-		if nil != err {
-			return err
-		}
-
-		if duplicate {
-			return fault.ErrTransactionAlreadyExists
-		}
-
-	default:
+	if !transaction.IsTransfer() {
 		return fault.ErrTransactionIsNotATransfer
 	}
+
+	tx := transaction.(transactionrecord.BitmarkTransfer)
+
+	_, duplicate, err := reservoir.StoreTransfer(tx)
+	if nil != err {
+		return err
+	}
+
+	if duplicate {
+		return fault.ErrTransactionAlreadyExists
+	}
+
 	return nil
 }
 

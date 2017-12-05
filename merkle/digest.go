@@ -112,6 +112,11 @@ func (digest *Digest) UnmarshalText(s []byte) error {
 	return nil
 }
 
+// convert to slice
+func (digest Digest) Bytes() []byte {
+	return digest[:]
+}
+
 // convert and validate Little Endian binary byte slice to a digest
 // the input bytes are Little Endian
 func DigestFromBytes(digest *Digest, buffer []byte) error {

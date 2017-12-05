@@ -18,7 +18,7 @@ import (
 type PaymentSegment [currency.Count]*transactionrecord.Payment
 
 // get payment record from a specific block given the blocks 8 byte big endian key
-func getPayments(ownerData []byte, previousTransfer *transactionrecord.BitmarkTransfer) []transactionrecord.PaymentAlternative {
+func getPayments(ownerData []byte, previousTransfer transactionrecord.BitmarkTransfer) []transactionrecord.PaymentAlternative {
 
 	// get block number of transfer and issue; see: storage/doc.go to determine offsets
 	const transferBlockNumberOffset = merkle.DigestLength
@@ -65,13 +65,13 @@ func getPayments(ownerData []byte, previousTransfer *transactionrecord.BitmarkTr
 	}
 
 	// optional payment record (if previous record was transfer and contains such)
-	if nil != previousTransfer && nil != previousTransfer.Payment {
+	if nil != previousTransfer && nil != previousTransfer.GetPayment() {
 
-		i := previousTransfer.Payment.Currency.Index() // zero based index (panics if any problem)
+		i := previousTransfer.GetPayment().Currency.Index() // zero based index (panics if any problem)
 
 		// always keep this as a separate amount even if address is the same
 		// so it shows up separately in currency transaction
-		payments[i] = append(payments[i], previousTransfer.Payment)
+		payments[i] = append(payments[i], previousTransfer.GetPayment())
 
 		return []transactionrecord.PaymentAlternative{payments[i]}
 	}

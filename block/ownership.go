@@ -158,7 +158,10 @@ func OwnerOf(txId merkle.Digest) *account.Account {
 	case *transactionrecord.BitmarkIssue:
 		return tx.Owner
 
-	case *transactionrecord.BitmarkTransfer:
+	case *transactionrecord.BitmarkTransferUnratified:
+		return tx.Owner
+
+	case *transactionrecord.BitmarkTransferCountersigned:
 		return tx.Owner
 
 	default:

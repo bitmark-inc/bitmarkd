@@ -155,7 +155,7 @@ func (issue *BitmarkIssue) Pack(address *account.Account) (Packed, error) {
 //
 // NOTE: returns the "unsigned" message on signature failure - for
 //       debugging/testing
-func (transfer *BitmarkTransfer) Pack(address *account.Account) (Packed, error) {
+func (transfer *BitmarkTransferUnratified) Pack(address *account.Account) (Packed, error) {
 	if len(transfer.Signature) > maxSignatureLength {
 		return nil, fault.ErrSignatureTooLong
 	}
@@ -165,7 +165,7 @@ func (transfer *BitmarkTransfer) Pack(address *account.Account) (Packed, error) 
 	}
 
 	// concatenate bytes
-	message := util.ToVarint64(uint64(BitmarkTransferTag))
+	message := util.ToVarint64(uint64(BitmarkTransferUnratifiedTag))
 	message = appendBytes(message, transfer.Link[:])
 
 	if nil == transfer.Payment {
@@ -190,6 +190,62 @@ func (transfer *BitmarkTransfer) Pack(address *account.Account) (Packed, error) 
 
 	// Signature Last
 	return appendBytes(message, transfer.Signature), nil
+}
+
+// local function to pack BitmarkTransferCountersigned
+//
+// Pack Varint64(tag) followed by fields in order as struct above with
+// signature last
+//
+// NOTE: returns the "unsigned" message on signature failure - for
+//       debugging/testing
+func (transfer *BitmarkTransferCountersigned) Pack(address *account.Account) (Packed, error) {
+	if len(transfer.Signature) > maxSignatureLength {
+		return nil, fault.ErrSignatureTooLong
+	}
+
+	if len(transfer.Countersignature) > maxSignatureLength {
+		return nil, fault.ErrSignatureTooLong
+	}
+
+	if nil == transfer.Owner || nil == address {
+		return nil, fault.ErrInvalidOwnerOrRegistrant
+	}
+
+	// concatenate bytes
+	message := util.ToVarint64(uint64(BitmarkTransferCountersignedTag))
+	message = appendBytes(message, transfer.Link[:])
+
+	if nil == transfer.Payment {
+		message = append(message, 0)
+	} else {
+		if utf8.RuneCountInString(transfer.Payment.Address) > maxPaymentAddressLength {
+			return nil, fault.ErrPaymentAddressTooLong
+		}
+		message = append(message, 1)
+		message = appendUint64(message, transfer.Payment.Currency.Uint64())
+		message = appendString(message, transfer.Payment.Address)
+		message = appendUint64(message, transfer.Payment.Amount)
+	}
+
+	message = appendAccount(message, transfer.Owner)
+
+	// signature
+	err := address.CheckSignature(message, transfer.Signature)
+	if nil != err {
+		return message, err
+	}
+
+	// add signature Signature
+	message = appendBytes(message, transfer.Signature)
+
+	err = transfer.Owner.CheckSignature(message, transfer.Countersignature)
+	if nil != err {
+		return message, err
+	}
+
+	// Countersignature Last
+	return appendBytes(message, transfer.Countersignature), nil
 }
 
 // append a single field to a buffer

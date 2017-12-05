@@ -22,7 +22,7 @@ type TransferInfo struct {
 	Payments []transactionrecord.PaymentAlternative
 }
 
-func StoreTransfer(transfer *transactionrecord.BitmarkTransfer) (*TransferInfo, bool, error) {
+func StoreTransfer(transfer transactionrecord.BitmarkTransfer) (*TransferInfo, bool, error) {
 	verifyResult, duplicate, err := verifyTransfer(transfer)
 	if err != nil {
 		return nil, false, err
@@ -33,7 +33,7 @@ func StoreTransfer(transfer *transactionrecord.BitmarkTransfer) (*TransferInfo, 
 	payId := pay.NewPayId([][]byte{packedTransfer})
 
 	txId := verifyResult.txId
-	link := transfer.Link
+	link := transfer.GetLink()
 	if txId == link {
 		// reject any transaction that links to itself
 		// this should never occur, but protect against this situuation
@@ -107,16 +107,16 @@ func StoreTransfer(transfer *transactionrecord.BitmarkTransfer) (*TransferInfo, 
 type verifiedInfo struct {
 	txId             merkle.Digest
 	packedTransfer   []byte
-	previousTransfer *transactionrecord.BitmarkTransfer
+	previousTransfer transactionrecord.BitmarkTransfer
 	ownerData        []byte
 }
 
 // verify that a transfer is ok
 // ensure lock is held before calling
-func verifyTransfer(arguments *transactionrecord.BitmarkTransfer) (*verifiedInfo, bool, error) {
+func verifyTransfer(newTransfer transactionrecord.BitmarkTransfer) (*verifiedInfo, bool, error) {
 
 	// find the current owner via the link
-	previousPacked := storage.Pool.Transactions.Get(arguments.Link[:])
+	previousPacked := storage.Pool.Transactions.Get(newTransfer.GetLink().Bytes())
 	if nil == previousPacked {
 		return nil, false, fault.ErrLinkToInvalidOrUnconfirmedTransaction
 	}
@@ -127,22 +127,32 @@ func verifyTransfer(arguments *transactionrecord.BitmarkTransfer) (*verifiedInfo
 	}
 
 	var currentOwner *account.Account
-	var previousTransfer *transactionrecord.BitmarkTransfer
+	var previousTransfer transactionrecord.BitmarkTransfer
 
 	switch tx := previousTransaction.(type) {
 	case *transactionrecord.BitmarkIssue:
 		currentOwner = tx.Owner
 
-	case *transactionrecord.BitmarkTransfer:
+	case *transactionrecord.BitmarkTransferUnratified:
 		currentOwner = tx.Owner
 		previousTransfer = tx
+
+	case *transactionrecord.BitmarkTransferCountersigned:
+		// do not permit transfer downgrade
+		switch newTransfer.(type) {
+		case *transactionrecord.BitmarkTransferCountersigned:
+			currentOwner = tx.Owner
+			previousTransfer = tx
+		default:
+			return nil, false, fault.ErrLinkToInvalidOrUnconfirmedTransaction
+		}
 
 	default:
 		return nil, false, fault.ErrLinkToInvalidOrUnconfirmedTransaction
 	}
 
 	// pack transfer and check signature
-	packedTransfer, err := arguments.Pack(currentOwner)
+	packedTransfer, err := newTransfer.Pack(currentOwner)
 	if nil != err {
 		return nil, false, err
 	}
@@ -151,7 +161,7 @@ func verifyTransfer(arguments *transactionrecord.BitmarkTransfer) (*verifiedInfo
 	txId := packedTransfer.MakeLink()
 
 	// check if this transfer was already received
-	_, okP := cache.Pool.PendingTransfer.Get(arguments.Link.String())
+	_, okP := cache.Pool.PendingTransfer.Get(newTransfer.GetLink().String())
 	_, okU := cache.Pool.UnverifiedTxIndex.Get(txId.String())
 	duplicate := false
 	if okU && okP {
@@ -177,7 +187,7 @@ func verifyTransfer(arguments *transactionrecord.BitmarkTransfer) (*verifiedInfo
 
 	// get count for current owner record
 	// to make sure that the record has not already been transferred
-	dKey := append(currentOwner.Bytes(), arguments.Link[:]...)
+	dKey := append(currentOwner.Bytes(), newTransfer.GetLink().Bytes()...)
 	// log.Infof("dKey: %x", dKey)
 	dCount := storage.Pool.OwnerDigest.Get(dKey)
 	if nil == dCount {

@@ -32,11 +32,12 @@ type BitmarkTransferReply struct {
 	Payments map[string]transactionrecord.PaymentAlternative `json:"payments"`
 }
 
-func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransfer, reply *BitmarkTransferReply) error {
+func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransferCountersigned, reply *BitmarkTransferReply) error {
 
 	log := bitmark.log
+	transfer := transactionrecord.BitmarkTransfer(arguments)
 
-	log.Infof("Bitmark.Transfer: %v", arguments)
+	log.Infof("Bitmark.Transfer: %v", transfer)
 
 	if !mode.Is(mode.Normal) {
 		return fault.ErrNotAvailableDuringSynchronise
@@ -46,8 +47,19 @@ func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransfer, r
 		return fault.ErrWrongNetworkForPublicKey
 	}
 
-	stored, duplicate, err := reservoir.StoreTransfer(arguments)
-	//txId, packedTransfer, previousTransfer, ownerData, err := block.VerifyTransfer(arguments)
+	// ***** FIX THIS: remove this later
+	// ***** FIX THIS: this is to support unratified transfers
+	if 0 == len(arguments.Countersignature) {
+		transfer = &transactionrecord.BitmarkTransferUnratified{
+			Link:      arguments.Link,
+			Payment:   arguments.Payment,
+			Owner:     arguments.Owner,
+			Signature: arguments.Signature,
+		}
+	}
+
+	// save transfer/check for duplicate
+	stored, duplicate, err := reservoir.StoreTransfer(transfer)
 	if nil != err {
 		return err
 	}
@@ -165,17 +177,18 @@ loop:
 			provenance = append(provenance, h)
 			break loop
 
-		case *transactionrecord.BitmarkTransfer:
+		case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
+			tr := tx.(transactionrecord.BitmarkTransfer)
 
 			if 0 == i {
-				dKey := append(tx.Owner.Bytes(), id[:]...)
+				dKey := append(tr.GetOwner().Bytes(), id[:]...)
 				if nil != storage.Pool.OwnerDigest.Get(dKey) {
 					h.IsOwner = true
 				}
 			}
 
 			provenance = append(provenance, h)
-			id = tx.Link
+			id = tr.GetLink()
 
 		default:
 			break loop

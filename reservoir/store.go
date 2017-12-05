@@ -4,12 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"os"
-
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/cache"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
+	"os"
 )
 
 var (
@@ -71,13 +70,13 @@ func (rs *ReservoirStore) Restore() error {
 		return err
 	}
 
-	rs.recover()
+	rs.internalRecover()
 	return nil
 }
 
 // recover from the ReservoirStore. It put proof filters back and then
 // re-broadcasts assets, issues and transfers.
-func (rs *ReservoirStore) recover() {
+func (rs *ReservoirStore) internalRecover() {
 	globalData.log.Debugf("start recovering from data: %+v\n", rs)
 
 	// Put back proof filters
@@ -144,8 +143,8 @@ TRANSFER_RECOVERY:
 			globalData.log.Errorf("unable to unpack transfer: %s", err.Error())
 			continue TRANSFER_RECOVERY
 		}
-		if transfer, ok := transaction.(*transactionrecord.BitmarkTransfer); ok {
-			_, _, err := StoreTransfer(transfer)
+		if transaction.IsTransfer() {
+			_, _, err := StoreTransfer(transaction.(transactionrecord.BitmarkTransfer))
 			if nil != err {
 				globalData.log.Errorf("fail to store transfer: %s", err.Error())
 			}
@@ -184,6 +183,7 @@ func (rs *ReservoirStore) backup() {
 	}
 
 	// backup all verified items
+backup_loop:
 	for _, val := range cache.Pool.VerifiedTx.Items() {
 		v := val.(*verifiedItem)
 		if v.links == nil {
@@ -193,7 +193,7 @@ func (rs *ReservoirStore) backup() {
 				packedAsset, err := fetchAsset(assetId)
 				if err != nil {
 					globalData.log.Errorf("asset [%s]: error: %s", assetId, err.Error())
-					continue // skip the corresponding issue since asset is corrupt
+					continue backup_loop // skip the corresponding issue since asset is corrupt
 				} else {
 					packedAssets[assetId] = packedAsset
 				}
