@@ -1,3 +1,14 @@
+bitmarkd (6.7-1) unstable; urgency=medium
+
+  * add the two signature countersigned transfer
+  * refactored bitmark-cli to
+    + add new commands
+    + because codegangst/cli changed to urfave/cli
+  * update bitmark-cli to be able to send countersigned transfers
+  * retain the old transfer mechanism
+
+ -- Christopher Hall <hsw@bitmark.com>  Tue, 05 Dec 2017 08:05:14 +0000
+
 bitmarkd (6.6-1) unstable; urgency=medium
 
   * memory logging by command-line option
