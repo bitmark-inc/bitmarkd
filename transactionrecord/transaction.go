@@ -104,6 +104,8 @@ type BitmarkTransfer interface {
 	GetLink() merkle.Digest
 	GetPayment() *Payment
 	GetOwner() *account.Account
+	GetSignature() account.Signature
+	GetCountersignature() account.Signature
 }
 
 // the unpacked BitmarkTransfer structure
