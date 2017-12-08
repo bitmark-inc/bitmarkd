@@ -6,7 +6,6 @@ package proof
 
 import (
 	"encoding/json"
-	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
@@ -30,9 +29,6 @@ type submission struct {
 func (sub *submission) initialise(configuration *Configuration) error {
 
 	log := logger.New("submission")
-	if nil == log {
-		return fault.ErrInvalidLoggerChannel
-	}
 	sub.log = log
 
 	log.Info("initialising…")

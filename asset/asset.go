@@ -50,16 +50,10 @@ var globalData globalDataType
 // initialise the asset cache
 func Initialise() error {
 	globalData.log = logger.New("asset")
-	if nil == globalData.log {
-		return fault.ErrInvalidLoggerChannel
-	}
 	globalData.log.Info("starting…")
 
 	// for expiry requests, only a small queue should be sufficient
 	globalData.expiry.log = logger.New("asset-expiry")
-	if nil == globalData.expiry.log {
-		return fault.ErrInvalidLoggerChannel
-	}
 	globalData.expiry.queue = make(chan transactionrecord.AssetIndex, 10)
 
 	globalData.cache = make(map[transactionrecord.AssetIndex]*cacheData)

@@ -60,9 +60,6 @@ var Store *ReservoirStore
 // create the cache
 func Initialise(reservoirDataFile string) error {
 	globalData.log = logger.New("reservoir")
-	if globalData.log == nil {
-		return fault.ErrInvalidLoggerChannel
-	}
 	globalData.log.Info("starting…")
 
 	globalData.log.Debugf("initialise a reservoir store using file: %s", reservoirDataFile)
@@ -72,9 +69,6 @@ func Initialise(reservoirDataFile string) error {
 	// start background process "rebroadcaster"
 	var reb rebroadcaster
 	reb.log = logger.New("rebroadcaster")
-	if reb.log == nil {
-		return fault.ErrInvalidLoggerChannel
-	}
 
 	processes := background.Processes{&reb}
 	globalData.background = background.Start(processes, &globalData)

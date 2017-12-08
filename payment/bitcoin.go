@@ -10,7 +10,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/constants"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/currency/satoshi"
-	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/util"
@@ -74,9 +73,6 @@ type bitcoinHandler struct {
 
 func newBitcoinHandler(useDiscovery bool, conf *currencyConfiguration) (*bitcoinHandler, error) {
 	log := logger.New("bitcoin")
-	if log == nil {
-		return nil, fault.ErrInvalidLoggerChannel
-	}
 
 	if useDiscovery {
 		return &bitcoinHandler{log: log}, nil

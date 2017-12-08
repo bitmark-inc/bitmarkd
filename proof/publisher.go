@@ -60,9 +60,6 @@ type publisher struct {
 func (pub *publisher) initialise(configuration *Configuration) error {
 
 	log := logger.New("publisher")
-	if nil == log {
-		return fault.ErrInvalidLoggerChannel
-	}
 	pub.log = log
 
 	log.Info("initialising…")

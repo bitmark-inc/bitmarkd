@@ -46,9 +46,7 @@ type serverInfo struct {
 func (lstn *listener) initialise(privateKey []byte, publicKey []byte, listen []string, version string) error {
 
 	log := logger.New("listener")
-	if nil == log {
-		return fault.ErrInvalidLoggerChannel
-	}
+
 	lstn.chain = mode.ChainName()
 	lstn.log = log
 	lstn.version = version

@@ -6,7 +6,6 @@ package payment
 
 import (
 	"github.com/bitmark-inc/bitmarkd/constants"
-	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
@@ -33,9 +32,6 @@ type discoverer struct {
 func newDiscoverer(subHostPort, reqHostPort string) (*discoverer, error) {
 
 	log := logger.New("discoverer")
-	if nil == log {
-		return nil, fault.ErrInvalidLoggerChannel
-	}
 
 	subConnection, err := util.NewConnection(subHostPort)
 	if err != nil {

@@ -57,9 +57,6 @@ type connector struct {
 func (conn *connector) initialise(privateKey []byte, publicKey []byte, connect []Connection, dynamicEnabled bool) error {
 
 	log := logger.New("connector")
-	if nil == log {
-		return fault.ErrInvalidLoggerChannel
-	}
 	conn.log = log
 
 	log.Info("initialising…")

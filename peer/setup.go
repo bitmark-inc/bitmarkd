@@ -79,9 +79,6 @@ func Initialise(configuration *Configuration, version string) error {
 	}
 
 	globalData.log = logger.New("peer")
-	if nil == globalData.log {
-		return fault.ErrInvalidLoggerChannel
-	}
 	globalData.log.Info("starting…")
 
 	// read the keys

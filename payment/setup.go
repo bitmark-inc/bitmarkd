@@ -7,7 +7,6 @@ package payment
 import (
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/currency"
-	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/logger"
 )
 
@@ -43,9 +42,6 @@ var globalData globalDataType
 
 func Initialise(configuration *Configuration) error {
 	globalData.log = logger.New("payment")
-	if globalData.log == nil {
-		return fault.ErrInvalidLoggerChannel
-	}
 	globalData.log.Info("starting…")
 
 	// initialise the handler for each currency

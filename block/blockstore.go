@@ -5,7 +5,6 @@
 package block
 
 import (
-	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/logger"
 )
@@ -18,9 +17,6 @@ type blockstore struct {
 func (blk *blockstore) initialise() error {
 
 	log := logger.New("blockstore")
-	if nil == log {
-		return fault.ErrInvalidLoggerChannel
-	}
 	blk.log = log
 
 	log.Info("initialising…")

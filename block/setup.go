@@ -53,9 +53,6 @@ func Initialise() error {
 	}
 
 	log := logger.New("block")
-	if nil == log {
-		return fault.ErrInvalidLoggerChannel
-	}
 	globalData.log = log
 	log.Info("starting…")
 

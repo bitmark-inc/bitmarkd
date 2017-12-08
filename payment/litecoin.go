@@ -76,9 +76,6 @@ type litecoinHandler struct {
 
 func newLitecoinHandler(useDiscovery bool, conf *currencyConfiguration) (*litecoinHandler, error) {
 	log := logger.New("litecoin")
-	if log == nil {
-		return nil, fault.ErrInvalidLoggerChannel
-	}
 
 	if useDiscovery {
 		return &litecoinHandler{log: log}, nil

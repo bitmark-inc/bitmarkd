@@ -5,7 +5,6 @@
 package peer
 
 import (
-	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
@@ -32,9 +31,6 @@ type broadcaster struct {
 func (brdc *broadcaster) initialise(privateKey []byte, publicKey []byte, broadcast []string) error {
 
 	log := logger.New("broadcaster")
-	if nil == log {
-		return fault.ErrInvalidLoggerChannel
-	}
 
 	brdc.chain = mode.ChainName()
 	brdc.log = log

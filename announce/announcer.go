@@ -9,7 +9,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/avl"
-	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/logger"
 	"math/rand"
@@ -31,9 +30,6 @@ type announcer struct {
 func (ann *announcer) initialise() error {
 
 	log := logger.New("announcer")
-	if nil == log {
-		return fault.ErrInvalidLoggerChannel
-	}
 	ann.log = log
 
 	log.Info("initialising…")

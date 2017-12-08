@@ -92,9 +92,6 @@ func Initialise(nodesDomain, peerFile string) error {
 	}
 
 	globalData.log = logger.New("announce")
-	if nil == globalData.log {
-		return fault.ErrInvalidLoggerChannel
-	}
 	globalData.log.Info("starting…")
 
 	globalData.peerTree = avl.New()

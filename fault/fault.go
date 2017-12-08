@@ -50,7 +50,6 @@ var (
 	ErrInvalidKeyType                        = InvalidError("invalid key type")
 	ErrInvalidLength                         = InvalidError("invalid length")
 	ErrInvalidLitecoinAddress                = InvalidError("invalid litecoin address")
-	ErrInvalidLoggerChannel                  = InvalidError("invalid logger channel")
 	ErrInvalidNonce                          = InvalidError("invalid nonce")
 	ErrInvalidOwnerOrRegistrant              = InvalidError("invalid owner or registrant")
 	ErrInvalidPeerResponse                   = InvalidError("invalid peer response")

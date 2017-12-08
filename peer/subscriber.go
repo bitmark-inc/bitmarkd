@@ -34,9 +34,6 @@ type subscriber struct {
 func (sbsc *subscriber) initialise(privateKey []byte, publicKey []byte, subscribe []Connection, dynamicEnabled bool) error {
 
 	log := logger.New("subscriber")
-	if nil == log {
-		return fault.ErrInvalidLoggerChannel
-	}
 	sbsc.chain = mode.ChainName()
 	sbsc.log = log
 

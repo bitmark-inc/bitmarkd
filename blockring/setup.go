@@ -54,9 +54,6 @@ func Initialise() error {
 	}
 
 	log := logger.New("ring")
-	if nil == log {
-		return fault.ErrInvalidLoggerChannel
-	}
 	globalData.log = log
 	log.Info("starting…")
 

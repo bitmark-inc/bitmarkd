@@ -58,9 +58,6 @@ func Initialise(configuration *Configuration) error {
 	}
 
 	globalData.log = logger.New("proof")
-	if nil == globalData.log {
-		return fault.ErrInvalidLoggerChannel
-	}
 	globalData.log.Info("starting…")
 
 	if err := globalData.pub.initialise(configuration); nil != err {
