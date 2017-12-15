@@ -334,6 +334,7 @@ func getHeight(clients []*upstream.Upstream) (height uint64, theClient *upstream
 			theClient = client
 		}
 	}
+	globalData.blockHeight = height
 	return height, theClient
 }
 

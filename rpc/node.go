@@ -60,6 +60,7 @@ type InfoReply struct {
 	Chain               string   `json:"chain"`
 	Mode                string   `json:"mode"`
 	Blocks              uint64   `json:"blocks"`
+	BlockHeight         uint64   `json:"block_height"`
 	RPCs                uint64   `json:"rpcs"`
 	TransactionCounters Counters `json:"transactionCounters"`
 	Difficulty          float64  `json:"difficulty"`
@@ -89,6 +90,7 @@ func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 	reply.Chain = mode.ChainName()
 	reply.Mode = mode.String()
 	reply.Blocks = block.GetHeight()
+	reply.BlockHeight = peer.BlockHeight()
 	reply.RPCs = connectionCount.Uint64()
 	// reply.Peers = peer.ConnectionCount()
 	// reply.Miners = mine.ConnectionCount()

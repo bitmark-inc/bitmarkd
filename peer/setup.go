@@ -57,6 +57,8 @@ type peerData struct {
 
 	publicKey []byte
 
+	blockHeight uint64
+
 	// for background
 	background *background.T
 
@@ -199,4 +201,9 @@ func Finalise() error {
 // return public key
 func PublicKey() []byte {
 	return globalData.publicKey
+}
+
+// return public key
+func BlockHeight() uint64 {
+	return globalData.blockHeight
 }
