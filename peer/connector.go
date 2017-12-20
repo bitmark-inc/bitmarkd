@@ -200,9 +200,11 @@ func (conn *connector) runStateMachine() bool {
 			}
 		}
 		log.Infof("connections: %d", clientCount)
+		globalData.clientCount = clientCount
 		if clientCount >= minimumClients {
 			conn.state += 1
 		} else {
+			log.Warnf("can not reach the minimum client counts")
 			messagebus.Bus.Announce.Send("reconnect")
 		}
 		continueLooping = false

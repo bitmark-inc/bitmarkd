@@ -57,6 +57,7 @@ type peerData struct {
 
 	publicKey []byte
 
+	clientCount int
 	blockHeight uint64
 
 	// for background
@@ -203,7 +204,12 @@ func PublicKey() []byte {
 	return globalData.publicKey
 }
 
-// return public key
+// return connection counts
+func ClientCount() uint64 {
+	return uint64(globalData.clientCount)
+}
+
+// return global block height
 func BlockHeight() uint64 {
 	return globalData.blockHeight
 }
