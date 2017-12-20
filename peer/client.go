@@ -45,7 +45,10 @@ extract_addresses:
 			address = conn
 			break extract_addresses
 		}
-		log.Errorf("reconnect: %x (conn: %x)error: address is nil", serverPublicKey, conn)
+		if n <= 0 {
+			break
+		}
+		log.Errorf("reconnect: %x (conn: %x)  error: address is nil", serverPublicKey, conn)
 	}
 
 	if nil == address {
@@ -87,7 +90,7 @@ dynamicScan:
 	log.Infof("reconnect: %x @ %s", serverPublicKey, *address)
 	err := dynamic[offset].Connect(address, serverPublicKey)
 	if nil != err {
-		log.Errorf("ConnectTo: %x @ %s  error: %v", serverPublicKey, *address, err)
+		log.Errorf("ConnectTo: %x @ %s  error: %s", serverPublicKey, *address, err)
 	}
 	return err
 }
@@ -110,7 +113,10 @@ extract_addresses:
 			address = conn
 			break extract_addresses
 		}
-		log.Errorf("reconnect: %x (conn: %x)error: address is nil", serverPublicKey, conn)
+		if n <= 0 {
+			break
+		}
+		log.Errorf("reconnect: %x (conn: %x)  error: address is nil", serverPublicKey, conn)
 	}
 
 	if nil == address {
@@ -152,7 +158,7 @@ dynamicScan:
 	log.Infof("reconnect: %x @ %s", serverPublicKey, *address)
 	err := dynamic[offset].Connect(address, serverPublicKey, chain)
 	if nil != err {
-		log.Errorf("ConnectTo: %x @ %s  error: %v", serverPublicKey, *address, err)
+		log.Errorf("ConnectTo: %x @ %s  error: %s", serverPublicKey, *address, err)
 	}
 	return err
 }
