@@ -105,7 +105,7 @@ func (h *bitcoinHandler) processIncomingTx(dat []byte) {
 		return
 	}
 
-	h.log.Infof("new possible payment tx received: %s\n", tx.TxId)
+	h.log.Debugf("new possible payment tx received: %s\n", tx.TxId)
 	inspectBitcoinTx(h.log, &tx)
 }
 
