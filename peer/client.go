@@ -1,3 +1,4 @@
+// Copyright (c) 2014-2017 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -46,7 +47,7 @@ extract_addresses:
 			break extract_addresses
 		}
 		if n <= 0 {
-			break
+			break extract_addresses
 		}
 		log.Errorf("reconnect: %x (conn: %x)  error: address is nil", serverPublicKey, conn)
 	}
@@ -114,7 +115,7 @@ extract_addresses:
 			break extract_addresses
 		}
 		if n <= 0 {
-			break
+			break extract_addresses
 		}
 		log.Errorf("reconnect: %x (conn: %x)  error: address is nil", serverPublicKey, conn)
 	}
