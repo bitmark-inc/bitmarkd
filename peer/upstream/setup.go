@@ -23,7 +23,7 @@ import (
 
 const (
 	cycleInterval = 30 * time.Second
-	queueSize     = 10 // 0 => synchronous queue
+	queueSize     = 50 // 0 => synchronous queue
 )
 
 type Upstream struct {
@@ -179,7 +179,7 @@ loop:
 			break loop
 
 		case item := <-queue:
-			log.Infof("received: %q  %x", item.Command, item.Parameters)
+			log.Infof("from queue: %q  %x", item.Command, item.Parameters)
 			if u.registered {
 				u.Lock()
 				err := push(u.client, u.log, &item)
@@ -197,7 +197,11 @@ loop:
 			u.Lock()
 			if !u.registered {
 				err := register(u.client, u.log)
-				if nil != err {
+				if fault.ErrNotConnected == err {
+					log.Infof("register: %s", err)
+					u.Unlock()
+					continue loop // try again late
+				} else if nil != err {
 					log.Errorf("register: error: %s", err)
 					err := u.client.Reconnect()
 					if nil != err {
@@ -303,15 +307,17 @@ func getHeight(client *zmqutil.Client, log *logger.L) (uint64, error) {
 
 func push(client *zmqutil.Client, log *logger.L, item *messagebus.Message) error {
 
-	log.Debugf("push: client: %s", client)
+	log.Debugf("push: client: %s  %q %x", client, item.Command, item.Parameters)
 
 	err := client.Send(item.Command, item.Parameters)
 	if nil != err {
+		log.Errorf("push: %s send error: %s", client, err)
 		return err
 	}
 
 	data, err := client.Receive(0)
 	if nil != err {
+		log.Errorf("push: %s receive error: %s", client, err)
 		return err
 	}
 	if 2 != len(data) {
@@ -321,7 +327,8 @@ func push(client *zmqutil.Client, log *logger.L, item *messagebus.Message) error
 	switch string(data[0]) {
 	case "E":
 		return fmt.Errorf("rpc error response: %q", data[1])
-	case "A":
+	case item.Command:
+		log.Debugf("push: client: %s complete: %q", client, data[1])
 		return nil
 	default:
 		return fmt.Errorf("rpc unexpected response: %q", data[0])
