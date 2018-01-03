@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
+	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
 	"sync"
 	"time"
@@ -345,33 +346,79 @@ func (client *Client) Send(items ...interface{}) error {
 		return fault.ErrNotConnected
 	}
 
-	flag := zmq.SNDMORE
+	if 0 == len(items) {
+		logger.Panicf("zmqutil.Client.Send no arguments provided")
+	}
 
 	if "" != client.prefix {
-		_, err := client.socket.Send(client.prefix, flag)
+		_, err := client.socket.Send(client.prefix, zmq.SNDMORE)
 		if nil != err {
 			return err
 		}
 	}
 
-	last := len(items) - 1
-	for i, item := range items {
-		if i == last {
-			flag = 0
-		}
+	n := len(items) - 1
+	a := items[:n]
+	final := items[n] // just the final item
+
+	for i, item := range a {
 		switch it := item.(type) {
 		case string:
-			_, err := client.socket.Send(it, flag)
+			_, err := client.socket.Send(it, zmq.SNDMORE)
 			if nil != err {
 				return err
 			}
 		case []byte:
-			_, err := client.socket.SendBytes(it, flag)
+			_, err := client.socket.SendBytes(it, zmq.SNDMORE)
+			if nil != err {
+				return err
+			}
+		case [][]byte:
+			for _, sub := range it {
+				_, err := client.socket.SendBytes(sub, zmq.SNDMORE)
+				if nil != err {
+					return err
+				}
+			}
+		default:
+			logger.Panicf("zmqutil.Client.Send cannot send[%d]: %#v", i, item)
+		}
+	}
+
+	switch it := final.(type) {
+	case string:
+		_, err := client.socket.Send(it, 0)
+		if nil != err {
+			return err
+		}
+	case []byte:
+		_, err := client.socket.SendBytes(it, 0)
+		if nil != err {
+			return err
+		}
+	case [][]byte:
+		if 0 == len(it) {
+			logger.Panicf("zmqutil.Client.Send empty [][]byte")
+		}
+		n := len(it) - 1
+		a := it[:n]
+		last := it[n] // just the final item []byte
+
+		for _, sub := range a {
+			_, err := client.socket.SendBytes(sub, zmq.SNDMORE)
 			if nil != err {
 				return err
 			}
 		}
+		_, err := client.socket.SendBytes(last, 0)
+		if nil != err {
+			return err
+		}
+
+	default:
+		logger.Panicf("zmqutil.Client.Send cannot send[%d]: %#v", n, final)
 	}
+
 	return nil
 }
 
