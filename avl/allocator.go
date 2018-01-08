@@ -15,12 +15,14 @@ type item interface {
 
 // a node in the tree
 type Node struct {
-	left    *Node       // left sub-tree
-	right   *Node       // right sub-tree
-	up      *Node       // points to parent node
-	key     item        // key part for ordering
-	value   interface{} // value part for data storage
-	balance int         // -1, 0, +1
+	left       *Node       // left sub-tree
+	right      *Node       // right sub-tree
+	up         *Node       // points to parent node
+	key        item        // key part for ordering
+	value      interface{} // value part for data storage
+	leftNodes  int         // node count
+	rightNodes int         // node count
+	balance    int         // -1, 0, +1
 }
 
 // global data for allocator
@@ -49,6 +51,8 @@ func newNode(key item, value interface{}) *Node {
 	p.key = key
 	p.value = value
 	p.balance = 0
+	p.leftNodes = 0
+	p.rightNodes = 0
 	p.left = nil
 	p.right = nil
 	p.up = nil // ensure freelist pointer is cleared
@@ -67,6 +71,8 @@ func freeNode(node *Node) {
 	node.key = nil
 	node.value = nil
 	node.balance = 0
+	node.leftNodes = 0
+	node.rightNodes = 0
 	freeNodes += 1
 
 	pool = node

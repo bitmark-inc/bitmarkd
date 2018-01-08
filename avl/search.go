@@ -5,48 +5,21 @@
 package avl
 
 // find a specific item
-func (tree *Tree) Search(key item) *Node {
-	return search(key, tree.root)
+func (tree *Tree) Search(key item) (*Node, int) {
+	return search(key, tree.root, 0)
 }
 
-func search(key item, tree *Node) *Node {
+func search(key item, tree *Node, index int) (*Node, int) {
 	if nil == tree {
-		return nil
+		return nil, -1
 	}
 
 	switch tree.key.Compare(key) {
 	case +1: // tree.key > key
-		return search(key, tree.left)
+		return search(key, tree.left, index)
 	case -1: // tree.key < key
-		return search(key, tree.right)
+		return search(key, tree.right, index+tree.leftNodes+1)
 	default:
-		return tree
+		return tree, index + tree.leftNodes
 	}
-}
-
-// get the order of a node with a specific key in a tree
-func (p *Node) GetOrder(key item) uint {
-	iterNode := p.first()
-	lastKey := p.last().Key()
-	order := uint(0)
-
-	for iterNode.Key().Compare(key) != 0 && iterNode.Key().Compare(lastKey) != 0 {
-		order += 1
-		iterNode = iterNode.Next()
-	}
-
-	return order
-}
-
-// get the node of a tree in order
-func (p *Node) GetNodeByOrder(order uint) *Node {
-	node := p.first()
-loop:
-	for i := uint(0); i < order; i++ {
-		if node == p.last() {
-			break loop
-		}
-		node = node.Next()
-	}
-	return node
 }

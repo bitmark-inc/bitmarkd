@@ -49,9 +49,9 @@ func printTree(tree *Node, prefix string, br branch, printData bool) int {
 		up = tree.up.key
 	}
 	if printData {
-		fmt.Printf("%v → '%v' up: %v\n", tree.key, tree.value, up)
+		fmt.Printf("%q → %q ^%v %+2d/[%d,%d]\n", tree.key, tree.value, up, tree.balance, tree.leftNodes, tree.rightNodes)
 	} else {
-		fmt.Printf("%v up: %v\n", tree.key, up)
+		fmt.Printf("%q ^%v\n", tree.key, up)
 	}
 	if nil != tree.left {
 		t := "       "

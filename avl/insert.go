@@ -27,6 +27,9 @@ func insert(key item, value interface{}, p *Node) (*Node, bool, bool) {
 	switch p.key.Compare(key) {
 	case +1: // p.key > key
 		p.left, added, h = insert(key, value, p.left)
+		if added {
+			p.leftNodes += 1
+		}
 		if h {
 			if nil != p.left {
 				p.left.up = p
@@ -44,7 +47,12 @@ func insert(key item, value interface{}, p *Node) (*Node, bool, bool) {
 					// single LL rotation
 					p.left = p1.right
 					p1.right = p
+
 					p.balance = 0
+
+					nn := 1 + p1.rightNodes + p.rightNodes
+					p.leftNodes = p1.rightNodes
+					p1.rightNodes = nn
 
 					p1.up = p.up
 					p.up = p1
@@ -53,7 +61,8 @@ func insert(key item, value interface{}, p *Node) (*Node, bool, bool) {
 					}
 
 					p = p1
-				} else { // double LR rotation
+				} else {
+					// double LR rotation
 					p2 := p1.right
 					p1.right = p2.left
 					p2.left = p1
@@ -69,6 +78,15 @@ func insert(key item, value interface{}, p *Node) (*Node, bool, bool) {
 					} else {
 						p1.balance = 0
 					}
+
+					nl := 1 + p1.leftNodes + p2.leftNodes
+					nr := 1 + p2.rightNodes + p.rightNodes
+
+					p1.rightNodes = p2.leftNodes
+					p.leftNodes = p2.rightNodes
+
+					p2.leftNodes = nl
+					p2.rightNodes = nr
 
 					if nil != p.left {
 						p.left.up = p
@@ -88,6 +106,9 @@ func insert(key item, value interface{}, p *Node) (*Node, bool, bool) {
 		}
 	case -1: // p.key < key
 		p.right, added, h = insert(key, value, p.right)
+		if added {
+			p.rightNodes += 1
+		}
 		if h {
 			if nil != p.right {
 				p.right.up = p
@@ -99,14 +120,18 @@ func insert(key item, value interface{}, p *Node) (*Node, bool, bool) {
 				h = false
 			} else if 0 == p.balance {
 				p.balance = 1
-			} else {
-				// balance = +1, rebalance
+			} else { // balance = +1, rebalance
 				p1 := p.right
 				if 1 == p1.balance {
 					// single RR rotation
 					p.right = p1.left
 					p1.left = p
+
 					p.balance = 0
+
+					nn := 1 + p.leftNodes + p1.leftNodes
+					p.rightNodes = p1.leftNodes
+					p1.leftNodes = nn
 
 					p1.up = p.up
 					p.up = p1
@@ -132,6 +157,15 @@ func insert(key item, value interface{}, p *Node) (*Node, bool, bool) {
 					} else {
 						p1.balance = 0
 					}
+
+					nl := 1 + p.leftNodes + p2.leftNodes
+					nr := 1 + p2.rightNodes + p1.rightNodes
+
+					p.rightNodes = p2.leftNodes
+					p1.leftNodes = p2.rightNodes
+
+					p2.leftNodes = nl
+					p2.rightNodes = nr
 
 					if nil != p.right {
 						p.right.up = p

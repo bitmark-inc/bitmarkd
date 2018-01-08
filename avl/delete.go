@@ -16,7 +16,8 @@ func balanceLeft(pp **Node) bool {
 		h = false
 	} else { // balance = 1, rebalance
 		p1 := p.right
-		if p1.balance >= 0 { // single rr rotation
+		if p1.balance >= 0 {
+			// single RR rotation
 			p.right = p1.left
 			p1.left = p
 			if 0 == p1.balance {
@@ -28,6 +29,10 @@ func balanceLeft(pp **Node) bool {
 				p1.balance = 0
 			}
 
+			nn := 1 + p.leftNodes + p1.leftNodes
+			p.rightNodes = p1.leftNodes
+			p1.leftNodes = nn
+
 			p1.up = p.up
 			p.up = p1
 			if nil != p.right {
@@ -35,7 +40,8 @@ func balanceLeft(pp **Node) bool {
 			}
 
 			*pp = p1
-		} else { // double rl rotation
+		} else {
+			// double RL rotation
 			p2 := p1.left
 			p1.left = p2.right
 			p2.right = p1
@@ -52,6 +58,15 @@ func balanceLeft(pp **Node) bool {
 				p1.balance = 0
 			}
 			p2.balance = 0
+
+			nl := 1 + p.leftNodes + p2.leftNodes
+			nr := 1 + p2.rightNodes + p1.rightNodes
+
+			p.rightNodes = p2.leftNodes
+			p1.leftNodes = p2.rightNodes
+
+			p2.leftNodes = nl
+			p2.rightNodes = nr
 
 			p2.up = p.up
 			if nil != p.right {
@@ -81,7 +96,8 @@ func balanceRight(pp **Node) bool {
 		h = false
 	} else { // balance = -1, rebalance
 		p1 := p.left
-		if p1.balance <= 0 { // single ll rotation
+		if p1.balance <= 0 {
+			// single LL rotation
 			p.left = p1.right
 			p1.right = p
 			if 0 == p1.balance {
@@ -93,6 +109,10 @@ func balanceRight(pp **Node) bool {
 				p1.balance = 0
 			}
 
+			nn := 1 + p1.rightNodes + p.rightNodes
+			p.leftNodes = p1.rightNodes
+			p1.rightNodes = nn
+
 			p1.up = p.up
 			p.up = p1
 			if nil != p.left {
@@ -100,7 +120,8 @@ func balanceRight(pp **Node) bool {
 			}
 
 			*pp = p1
-		} else { // double lr rotation
+		} else {
+			// double LR rotation
 			p2 := p1.right
 			p1.right = p2.left
 			p2.left = p1
@@ -117,6 +138,15 @@ func balanceRight(pp **Node) bool {
 				p1.balance = 0
 			}
 			p2.balance = 0
+
+			nl := 1 + p1.leftNodes + p2.leftNodes
+			nr := 1 + p2.rightNodes + p.rightNodes
+
+			p1.rightNodes = p2.leftNodes
+			p.leftNodes = p2.rightNodes
+
+			p2.leftNodes = nl
+			p2.rightNodes = nr
 
 			p2.up = p.up
 			if nil != p.left {
@@ -139,6 +169,7 @@ func del(qq **Node, rr **Node) bool {
 	h := false
 	if nil != (*rr).right {
 		h = del(qq, &(*rr).right)
+		(*rr).rightNodes -= 1
 		if h {
 			h = balanceRight(rr)
 		}
@@ -152,10 +183,12 @@ func del(qq **Node, rr **Node) bool {
 
 		if r != q.left {
 			r.left = q.left
+			r.leftNodes = q.leftNodes - 1
 		}
 		r.right = q.right
 		r.up = q.up
 		r.balance = q.balance
+		r.rightNodes = q.rightNodes
 
 		if nil != r.right {
 			r.right.up = r
@@ -192,11 +225,17 @@ func delete(key item, pp **Node) (interface{}, bool, bool) {
 	switch (*pp).key.Compare(key) {
 	case +1: // (*pp).key > key
 		value, removed, h = delete(key, &(*pp).left)
+		if removed {
+			(*pp).leftNodes -= 1
+		}
 		if h {
 			h = balanceLeft(pp)
 		}
 	case -1: // (*pp).key < key
 		value, removed, h = delete(key, &(*pp).right)
+		if removed {
+			(*pp).rightNodes -= 1
+		}
 		if h {
 			h = balanceRight(pp)
 		}
