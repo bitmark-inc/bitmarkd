@@ -17,15 +17,14 @@ import (
 type pubkey []byte
 
 type peerEntry struct {
-	publicKey  []byte
-	broadcasts []byte
-	listeners  []byte
-	timestamp  time.Time
+	publicKey []byte
+	listeners []byte
+	timestamp time.Time
 }
 
 // called by the peering initialisation to set up this node's
 // announcement data
-func SetPeer(publicKey []byte, broadcasts []byte, listeners []byte) error {
+func SetPeer(publicKey []byte, listeners []byte) error {
 	globalData.Lock()
 	defer globalData.Unlock()
 
@@ -33,13 +32,12 @@ func SetPeer(publicKey []byte, broadcasts []byte, listeners []byte) error {
 		return fault.ErrAlreadyInitialised
 	}
 	globalData.publicKey = publicKey
-	globalData.broadcasts = broadcasts
 	globalData.listeners = listeners
 	globalData.peerSet = true
 
-	addPeer(publicKey, broadcasts, listeners, 0)
+	addPeer(publicKey, listeners, 0)
 
-	globalData.thisNode = globalData.peerTree.Search(pubkey(publicKey))
+	globalData.thisNode, _ = globalData.peerTree.Search(pubkey(publicKey))
 
 	determineConnections(globalData.log)
 
@@ -50,15 +48,15 @@ func SetPeer(publicKey []byte, broadcasts []byte, listeners []byte) error {
 // returns:
 //   true  if this was a new/updated entry
 //   false if the update was within the limits (to prevent continuous relaying)
-func AddPeer(publicKey []byte, broadcasts []byte, listeners []byte, timestamp uint64) bool {
+func AddPeer(publicKey []byte, listeners []byte, timestamp uint64) bool {
 	globalData.Lock()
-	rc := addPeer(publicKey, broadcasts, listeners, timestamp)
+	rc := addPeer(publicKey, listeners, timestamp)
 	globalData.Unlock()
 	return rc
 }
 
 // internal add a peer announcement, hold lock before calling
-func addPeer(publicKey []byte, broadcasts []byte, listeners []byte, timestamp uint64) bool {
+func addPeer(publicKey []byte, listeners []byte, timestamp uint64) bool {
 
 	ts := time.Now()
 	if timestamp != 0 && timestamp <= uint64(ts.Unix()) {
@@ -71,12 +69,11 @@ func addPeer(publicKey []byte, broadcasts []byte, listeners []byte, timestamp ui
 	}
 
 	peer := &peerEntry{
-		publicKey:  publicKey,
-		broadcasts: broadcasts,
-		listeners:  listeners,
-		timestamp:  ts,
+		publicKey: publicKey,
+		listeners: listeners,
+		timestamp: ts,
 	}
-	if node := globalData.peerTree.Search(pubkey(publicKey)); nil != node {
+	if node, _ := globalData.peerTree.Search(pubkey(publicKey)); nil != node {
 		peer := node.Value().(*peerEntry)
 		ts = peer.timestamp // preserve previous timestamp
 	}
@@ -91,18 +88,18 @@ func addPeer(publicKey []byte, broadcasts []byte, listeners []byte, timestamp ui
 	// if new node or enough time has elapsed to make sure
 	// this is not an endless rebroadcast
 	if recordAdded || time.Since(ts) > announceRebroadcast {
-		globalData.change = true
+		globalData.treeChanged = true
 		return true
 	}
 	return false
 }
 
 // fetch the data for the next node in the ring for a given public key
-func GetNext(publicKey []byte) ([]byte, []byte, []byte, time.Time, error) {
+func GetNext(publicKey []byte) ([]byte, []byte, time.Time, error) {
 	globalData.Lock()
 	defer globalData.Unlock()
 
-	node := globalData.peerTree.Search(pubkey(publicKey))
+	node, _ := globalData.peerTree.Search(pubkey(publicKey))
 	if nil != node {
 		node = node.Next()
 	}
@@ -110,10 +107,10 @@ func GetNext(publicKey []byte) ([]byte, []byte, []byte, time.Time, error) {
 		node = globalData.peerTree.First()
 	}
 	if nil == node {
-		return nil, nil, nil, time.Now(), fault.ErrInvalidPublicKey
+		return nil, nil, time.Now(), fault.ErrInvalidPublicKey
 	}
 	peer := node.Value().(*peerEntry)
-	return peer.publicKey, peer.broadcasts, peer.listeners, peer.timestamp, nil
+	return peer.publicKey, peer.listeners, peer.timestamp, nil
 }
 
 // send a peer registration request to a client channel
@@ -124,7 +121,7 @@ func SendRegistration(client *zmqutil.Client, fn string) error {
 	timestamp := make([]byte, 8)
 	binary.BigEndian.PutUint64(timestamp, uint64(time.Now().Unix()))
 
-	return client.Send(fn, chain, globalData.publicKey, globalData.broadcasts, globalData.listeners, timestamp)
+	return client.Send(fn, chain, globalData.publicKey, globalData.listeners, timestamp)
 }
 
 // public key comparison for AVL interface

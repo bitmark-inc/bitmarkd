@@ -6,6 +6,7 @@ package peer
 
 import (
 	"bytes"
+	"container/list"
 	"encoding/hex"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -20,12 +21,13 @@ import (
 
 // various timeouts
 const (
-	cycleInterval       = 15 * time.Second // pause to limit bandwidth
-	connectorTimeout    = 60 * time.Second // time out for connections
-	samplelingLimit     = 10               // number of cycles to be 1 block out of sync before resync
-	fetchBlocksPerCycle = 100              // number of blocks to fetch in one set
-	forkProtection      = 10               // fail to fork if height difference is greater than this
-	minimumClients      = 3                // do not proceed unless this many clients are connected
+	cycleInterval         = 15 * time.Second // pause to limit bandwidth
+	connectorTimeout      = 60 * time.Second // time out for connections
+	samplelingLimit       = 10               // number of cycles to be 1 block out of sync before resync
+	fetchBlocksPerCycle   = 100              // number of blocks to fetch in one set
+	forkProtection        = 10               // fail to fork if height difference is greater than this
+	minimumClients        = 3                // do not proceed unless this many clients are connected
+	maximumDynamicClients = 10               // total number of dynamic clients
 )
 
 // a state type for the thread
@@ -42,15 +44,18 @@ const (
 )
 
 type connector struct {
-	log          *logger.L
-	clients      []*upstream.Upstream
-	dynamicStart int
-	state        connectorState
+	log *logger.L
 
-	theClient        *upstream.Upstream
-	startBlockNumber uint64 // block number where local chain forks
-	height           uint64 // block number on best node
-	samples          int    // counter to detect missed block broadcast
+	staticClients []*upstream.Upstream
+
+	dynamicClients list.List
+
+	state connectorState
+
+	theClient        *upstream.Upstream // client used for fetching blocks
+	startBlockNumber uint64             // block number where local chain forks
+	height           uint64             // block number on best node
+	samples          int                // counter to detect missed block broadcast
 }
 
 // initialise the connector
@@ -67,9 +72,7 @@ func (conn *connector) initialise(privateKey []byte, publicKey []byte, connect [
 		log.Error("zero static connections and dynamic is disabled")
 		return fault.ErrNoConnectionsAvailable
 	}
-	conn.clients = make([]*upstream.Upstream, staticCount+offsetCount)
-	conn.dynamicStart = staticCount // index of first dynamic socket
-	globalData.connectorClients = conn.clients
+	conn.staticClients = make([]*upstream.Upstream, staticCount)
 
 	// error code for goto fail
 	errX := error(nil)
@@ -103,7 +106,8 @@ func (conn *connector) initialise(privateKey []byte, publicKey []byte, connect [
 			goto fail
 		}
 
-		conn.clients[i] = client
+		conn.staticClients[i] = client
+		globalData.connectorClients = append(globalData.connectorClients, client) // ***** FIX THIS: remove?
 
 		err = client.Connect(address, serverPublicKey)
 		if nil != err {
@@ -115,7 +119,7 @@ func (conn *connector) initialise(privateKey []byte, publicKey []byte, connect [
 	}
 
 	// just create sockets for dynamic clients
-	for i := conn.dynamicStart; i < len(conn.clients); i += 1 {
+	for i := 0; i < maximumDynamicClients; i += 1 {
 		client, err := upstream.New(privateKey, publicKey, connectorTimeout)
 		if nil != err {
 			log.Errorf("client[%d]  error: %v", i, err)
@@ -123,7 +127,10 @@ func (conn *connector) initialise(privateKey []byte, publicKey []byte, connect [
 			goto fail
 		}
 
-		conn.clients[i] = client
+		// create list of all dynamic clients
+		conn.dynamicClients.PushBack(client)
+
+		globalData.connectorClients = append(globalData.connectorClients, client) // ***** FIX THIS: remove?
 	}
 
 	// start state machine
@@ -133,10 +140,37 @@ func (conn *connector) initialise(privateKey []byte, publicKey []byte, connect [
 
 	// error handling
 fail:
-	for _, client := range conn.clients {
-		client.Destroy()
-	}
+	conn.destroy()
+
 	return errX
+}
+
+func (conn *connector) allClients(f func(client *upstream.Upstream, e *list.Element)) {
+	for _, client := range conn.staticClients {
+		f(client, nil)
+	}
+	for e := conn.dynamicClients.Front(); nil != e; e = e.Next() {
+		f(e.Value.(*upstream.Upstream), e)
+	}
+}
+
+func (conn *connector) searchClients(f func(client *upstream.Upstream, e *list.Element) bool) {
+	for _, client := range conn.staticClients {
+		if f(client, nil) {
+			return
+		}
+	}
+	for e := conn.dynamicClients.Front(); nil != e; e = e.Next() {
+		if f(e.Value.(*upstream.Upstream), e) {
+			return
+		}
+	}
+}
+
+func (conn *connector) destroy() {
+	conn.allClients(func(client *upstream.Upstream, e *list.Element) {
+		client.Destroy()
+	})
 }
 
 // various RPC calls to upstream connections
@@ -158,16 +192,15 @@ loop:
 			break loop
 		case item := <-queue:
 			conn.log.Infof("received control: %s  public key: %x  connect: %x", item.Command, item.Parameters[0], item.Parameters[1])
-			connectToUpstream(conn.log, conn.clients, conn.dynamicStart, item.Command, item.Parameters[0], item.Parameters[1])
+			//connectToUpstream(conn.log, conn.clients, conn.dynamicStart, item.Command, item.Parameters[0], item.Parameters[1])
+			conn.connectUpstream(item.Command, item.Parameters[0], item.Parameters[1])
 
 		case <-time.After(cycleInterval):
 			conn.process()
 		}
 	}
 	log.Info("shutting down…")
-	for _, client := range conn.clients {
-		client.Destroy()
-	}
+	conn.destroy()
 	log.Info("stopped")
 }
 
@@ -194,11 +227,13 @@ func (conn *connector) runStateMachine() bool {
 		mode.Set(mode.Resynchronise)
 		clientCount := 0
 
-		for _, client := range conn.clients {
+		conn.allClients(func(client *upstream.Upstream, e *list.Element) {
 			if client.IsOK() {
+
 				clientCount += 1
 			}
-		}
+		})
+
 		log.Infof("connections: %d", clientCount)
 		globalData.clientCount = clientCount
 		if clientCount >= minimumClients {
@@ -210,7 +245,7 @@ func (conn *connector) runStateMachine() bool {
 		continueLooping = false
 
 	case cStateHighestBlock:
-		conn.height, conn.theClient = getHeight(conn.clients)
+		conn.height, conn.theClient = getHeight(conn)
 		if conn.height > 0 && nil != conn.theClient {
 			conn.state += 1
 		} else {
@@ -303,7 +338,7 @@ func (conn *connector) runStateMachine() bool {
 
 	case cStateSampling:
 		// check peers
-		conn.height, conn.theClient = getHeight(conn.clients)
+		conn.height, conn.theClient = getHeight(conn)
 		height := block.GetHeight()
 
 		log.Infof("height  remote: %d  local: %d", conn.height, height)
@@ -326,16 +361,18 @@ func (conn *connector) runStateMachine() bool {
 	return continueLooping
 }
 
-func getHeight(clients []*upstream.Upstream) (height uint64, theClient *upstream.Upstream) {
+func getHeight(conn *connector) (height uint64, theClient *upstream.Upstream) {
 	theClient = nil
 	height = 0
-	for _, client := range clients {
+
+	conn.allClients(func(client *upstream.Upstream, e *list.Element) {
 		h := client.GetHeight()
 		if h > height {
 			height = h
 			theClient = client
 		}
-	}
+	})
+
 	globalData.blockHeight = height
 	return height, theClient
 }
@@ -357,4 +394,68 @@ func (state connectorState) String() string {
 	default:
 		return "*Unknown*"
 	}
+}
+
+func (conn *connector) connectUpstream(priority string, serverPublicKey []byte, addresses []byte) error {
+
+	log := conn.log
+
+	log.Infof("connect: %s to: %x @ %x", priority, serverPublicKey, addresses)
+
+	// extract the first valid address
+	var address *util.Connection
+
+extract_addresses:
+	for {
+		conn, n := util.PackedConnection(addresses).Unpack()
+		addresses = addresses[n:]
+
+		// ***** FIX THIS: could select for IPv4 or IPv6 here
+		// ***** FIX THIS: need to get preference e.g. if have IPv6 the prefer IPv6
+		if nil != conn {
+			address = conn
+			break extract_addresses
+		}
+		if n <= 0 {
+			break extract_addresses
+		}
+		log.Errorf("reconnect: %x (conn: %x)  error: address is nil", serverPublicKey, conn)
+	}
+
+	if nil == address {
+		log.Errorf("reconnect: %s  error: no addresses found", serverPublicKey)
+		return fault.ErrAddressIsNil
+	}
+
+	// see if already connected to this node
+	alreadyConnected := false
+	conn.searchClients(func(client *upstream.Upstream, e *list.Element) bool {
+		if client.IsConnectedTo(serverPublicKey) {
+			if nil == e {
+				log.Debugf("already have static connection to: %x @ %s", serverPublicKey, *address)
+			} else {
+				log.Debugf("ignore change to: %x @ %s", serverPublicKey, *address)
+				conn.dynamicClients.MoveToBack(e)
+			}
+			alreadyConnected = true
+			return true
+		}
+		return false
+	})
+
+	if alreadyConnected {
+		return nil
+	}
+
+	// reconnect the oldest entry to new node
+	log.Infof("reconnect: %x @ %s", serverPublicKey, *address)
+	client := conn.dynamicClients.Front().Value.(*upstream.Upstream)
+	err := client.Connect(address, serverPublicKey)
+	if nil != err {
+		log.Errorf("ConnectTo: %x @ %s  error: %s", serverPublicKey, *address, err)
+	} else {
+		conn.dynamicClients.MoveToBack(conn.dynamicClients.Front())
+	}
+
+	return err
 }

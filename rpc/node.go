@@ -13,7 +13,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/peer"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
-	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
 	"time"
 )
@@ -51,64 +50,41 @@ func (node *Node) List(arguments *NodeArguments, reply *NodeReply) error {
 }
 
 // return some information about this node
+// only enough for clients to determin node state
+// for more detaile information use http GET requests
 
 type InfoArguments struct{}
-type ConnectorArguments struct{}
-type SubscriberArguments struct{}
 
 type InfoReply struct {
 	Chain               string   `json:"chain"`
 	Mode                string   `json:"mode"`
 	Blocks              uint64   `json:"blocks"`
-	BlockHeight         uint64   `json:"block_height"`
-	ClientCount         uint64   `json:"client_count"`
 	RPCs                uint64   `json:"rpcs"`
+	Peers               uint64   `json:"peers"`
 	TransactionCounters Counters `json:"transactionCounters"`
 	Difficulty          float64  `json:"difficulty"`
 	Version             string   `json:"version"`
 	Uptime              string   `json:"uptime"`
-	PublicKey           string   `json:"public_key"`
-	// Peers    int     `json:"peers"`
-	// Miners   uint64  `json:"miners"`
-}
-
-type ConnectorReply struct {
-	Clients []*zmqutil.Connected `json:"clients"`
-}
-
-type SubscriberReply struct {
-	Clients []*zmqutil.Connected `json:"clients"`
+	PublicKey           string   `json:"publicKey"`
 }
 
 type Counters struct {
-	Pending  int   `json:"pending"`
-	Verified int   `json:"verified"`
-	Others   []int `json:"others"`
+	Pending  int `json:"pending"`
+	Verified int `json:"verified"`
 }
 
 func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 
+	l, r := peer.GetCounts()
 	reply.Chain = mode.ChainName()
 	reply.Mode = mode.String()
 	reply.Blocks = block.GetHeight()
-	reply.BlockHeight = peer.BlockHeight()
-	reply.ClientCount = peer.ClientCount()
 	reply.RPCs = connectionCount.Uint64()
-	// reply.Peers = peer.ConnectionCount()
-	// reply.Miners = mine.ConnectionCount()
-	reply.TransactionCounters.Pending, reply.TransactionCounters.Verified, reply.TransactionCounters.Others = reservoir.ReadCounters()
+	reply.Peers = l + r
+	reply.TransactionCounters.Pending, reply.TransactionCounters.Verified = reservoir.ReadCounters()
 	reply.Difficulty = difficulty.Current.Reciprocal()
 	reply.Version = node.version
 	reply.Uptime = time.Since(node.start).String()
 	reply.PublicKey = hex.EncodeToString(peer.PublicKey())
-	return nil
-}
-
-func (node *Node) Connectors(arguments *ConnectorArguments, reply *ConnectorReply) error {
-	reply.Clients = peer.FetchConnectors()
-	return nil
-}
-func (node *Node) Subscribers(arguments *SubscriberArguments, reply *SubscriberReply) error {
-	reply.Clients = peer.FetchSubscribers()
 	return nil
 }

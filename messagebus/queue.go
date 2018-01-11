@@ -41,7 +41,6 @@ type BroadcastQueue struct {
 // absent then default size is used
 type busses struct {
 	Broadcast  *BroadcastQueue `size:"1000"` // to broadcast to other nodes
-	Subscriber *Queue          `size:"50"`   // to control subscriber
 	Connector  *Queue          `size:"50"`   // to control connector
 	Announce   *Queue          `size:"50"`   // to control the announcer
 	Blockstore *Queue          `size:"50"`   // to sequentially store blocks

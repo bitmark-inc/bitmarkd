@@ -76,10 +76,9 @@ func NewPeerItem(peer *peerEntry) *PeerItem {
 		return nil
 	}
 	return &PeerItem{
-		PublicKey:  peer.publicKey,
-		Broadcasts: peer.broadcasts,
-		Listeners:  peer.listeners,
-		Timestamp:  uint64(peer.timestamp.Unix()),
+		PublicKey: peer.publicKey,
+		Listeners: peer.listeners,
+		Timestamp: uint64(peer.timestamp.Unix()),
 	}
 }
 
@@ -139,7 +138,7 @@ func restorePeers(peerFile string) error {
 	}
 
 	for _, peer := range peers {
-		addPeer(peer.PublicKey, peer.Broadcasts, peer.Listeners, peer.Timestamp)
+		addPeer(peer.PublicKey, peer.Listeners, peer.Timestamp)
 	}
 	return nil
 }

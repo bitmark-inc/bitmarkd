@@ -86,6 +86,9 @@ func (u *Upstream) Connect(address *util.Connection, serverPublicKey []byte) err
 	u.log.Infof("connecting to server: %x", serverPublicKey)
 	u.Lock()
 	err := u.client.Connect(address, serverPublicKey, mode.ChainName())
+	if nil == err {
+		err = register(u.client, u.log)
+	}
 	u.Unlock()
 	return err
 }
@@ -254,7 +257,7 @@ func register(client *zmqutil.Client, log *logger.L) error {
 	case "E":
 		return fmt.Errorf("register error: %q", data[1])
 	case "R":
-		if len(data) < 6 {
+		if len(data) < 5 {
 			return fmt.Errorf("register response incorrect: %x", data)
 		}
 		chain := mode.ChainName()
@@ -264,9 +267,9 @@ func register(client *zmqutil.Client, log *logger.L) error {
 			logger.Panicf("expected chain: %q but received: %q", chain, received)
 		}
 
-		timestamp := binary.BigEndian.Uint64(data[5])
-		log.Infof("register replied: %x:  broadcasts: %x  listeners: %x  timestamp: %d", data[2], data[3], data[4], timestamp)
-		announce.AddPeer(data[2], data[3], data[4], timestamp) // publicKey, broadcasts, listeners
+		timestamp := binary.BigEndian.Uint64(data[4])
+		log.Infof("register replied: public key: %x:  listeners: %x  timestamp: %d", data[2], data[3], timestamp)
+		announce.AddPeer(data[2], data[3], timestamp) // publicKey, broadcasts, listeners
 		return nil
 	default:
 		return fmt.Errorf("rpc unexpected response: %q", data[0])

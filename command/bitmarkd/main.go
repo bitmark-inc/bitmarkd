@@ -16,6 +16,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/peer"
 	"github.com/bitmark-inc/bitmarkd/proof"
+	"github.com/bitmark-inc/bitmarkd/publish"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/storage"
@@ -145,6 +146,7 @@ func main() {
 	// connection info
 	log.Debugf("%s = %#v", "ClientRPC", masterConfiguration.ClientRPC)
 	log.Debugf("%s = %#v", "Peering", masterConfiguration.Peering)
+	log.Debugf("%s = %#v", "Publishing", masterConfiguration.Publishing)
 	log.Debugf("%s = %#v", "Proofing", masterConfiguration.Proofing)
 
 	// start the data storage
@@ -263,6 +265,14 @@ func main() {
 		exitwithstatus.Message("peer initialise error: %v", err)
 	}
 	defer peer.Finalise()
+
+	// start up the publishing background processes
+	err = publish.Initialise(&masterConfiguration.Publishing, version)
+	if nil != err {
+		log.Criticalf("publish initialise error: %v", err)
+		exitwithstatus.Message("publish initialise error: %v", err)
+	}
+	defer publish.Finalise()
 
 	// start up the rpc background processes
 	err = rpc.Initialise(&masterConfiguration.ClientRPC, &masterConfiguration.HttpsRPC, version)

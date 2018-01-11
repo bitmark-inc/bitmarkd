@@ -27,23 +27,3 @@ func FetchConnectors() []*zmqutil.Connected {
 
 	return result
 }
-
-func FetchSubscribers() []*zmqutil.Connected {
-
-	globalData.RLock()
-
-	result := make([]*zmqutil.Connected, 0, len(globalData.subscriberClients))
-
-	for _, c := range globalData.subscriberClients {
-		if nil != c {
-			connect := c.ConnectedTo()
-			if nil != connect {
-				result = append(result, connect)
-			}
-		}
-	}
-
-	globalData.RUnlock()
-
-	return result
-}

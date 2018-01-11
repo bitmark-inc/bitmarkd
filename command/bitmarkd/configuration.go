@@ -12,6 +12,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/peer"
 	"github.com/bitmark-inc/bitmarkd/proof"
+	"github.com/bitmark-inc/bitmarkd/publish"
 	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
@@ -80,12 +81,13 @@ type Configuration struct {
 	PeerFile          string `libucl:"peer_file" json:"peer_file"`
 	ReservoirDataFile string `libucl:"reservoir_file" json:"reservoir_file"`
 
-	ClientRPC rpc.RPCConfiguration   `libucl:"client_rpc" json:"client_rpc"`
-	HttpsRPC  rpc.HTTPSConfiguration `libucl:"https_rpc" json:"https_rpc"`
-	Peering   peer.Configuration     `libucl:"peering" json:"peering"`
-	Proofing  proof.Configuration    `libucl:"proofing" json:"proofing"`
-	Payment   payment.Configuration  `libucl:"payment" json:"payment"`
-	Logging   logger.Configuration   `libucl:"logging" json:"logging"`
+	ClientRPC  rpc.RPCConfiguration   `libucl:"client_rpc" json:"client_rpc"`
+	HttpsRPC   rpc.HTTPSConfiguration `libucl:"https_rpc" json:"https_rpc"`
+	Peering    peer.Configuration     `libucl:"peering" json:"peering"`
+	Publishing publish.Configuration  `libucl:"publishing" json:"publishing"`
+	Proofing   proof.Configuration    `libucl:"proofing" json:"proofing"`
+	Payment    payment.Configuration  `libucl:"payment" json:"payment"`
+	Logging    logger.Configuration   `libucl:"logging" json:"logging"`
 }
 
 // will read decode and verify the configuration
@@ -127,6 +129,11 @@ func getConfiguration(configurationFileName string, variables map[string]string)
 
 		Peering: peer.Configuration{
 			//MaximumConnections: defaultPeers,
+			PublicKey:  defaultPeerPublicKeyFile,
+			PrivateKey: defaultPeerPrivateKeyFile,
+		},
+
+		Publishing: publish.Configuration{
 			PublicKey:  defaultPeerPublicKeyFile,
 			PrivateKey: defaultPeerPrivateKeyFile,
 		},
@@ -201,6 +208,8 @@ func getConfiguration(configurationFileName string, variables map[string]string)
 		&options.HttpsRPC.PrivateKey,
 		&options.Peering.PublicKey,
 		&options.Peering.PrivateKey,
+		&options.Publishing.PublicKey,
+		&options.Publishing.PrivateKey,
 		&options.Proofing.PublicKey,
 		&options.Proofing.PrivateKey,
 		&options.Proofing.SigningKey,

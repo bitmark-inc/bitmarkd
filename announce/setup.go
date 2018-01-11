@@ -43,7 +43,6 @@ type announcerData struct {
 
 	// this node's packed annoucements
 	publicKey   []byte
-	broadcasts  []byte
 	listeners   []byte
 	fingerprint fingerprintType
 	rpcs        []byte
@@ -51,15 +50,10 @@ type announcerData struct {
 	rpcsSet     bool
 
 	// tree of nodes available
-	peerTree *avl.Tree
-	thisNode *avl.Node // this node's position in the tree
-	change   bool      // tree was changed
-	peerFile string
-
-	n1 *avl.Node // first neighbour
-	n3 *avl.Node // third neighbour
-
-	crossNodes map[string]*avl.Node // map of cross nodes
+	peerTree    *avl.Tree
+	thisNode    *avl.Node // this node's position in the tree
+	treeChanged bool      // tree was changed
+	peerFile    string
 
 	// database of all RPCs
 	rpcIndex map[fingerprintType]int // index to find rpc entry
@@ -96,9 +90,8 @@ func Initialise(nodesDomain, peerFile string) error {
 
 	globalData.peerTree = avl.New()
 	globalData.thisNode = nil
-	globalData.change = false
+	globalData.treeChanged = false
 
-	globalData.crossNodes = make(map[string]*avl.Node, 3)
 	globalData.rpcIndex = make(map[fingerprintType]int, 1000)
 	globalData.rpcList = make([]*rpcEntry, 0, 1000)
 
@@ -129,29 +122,24 @@ func Initialise(nodesDomain, peerFile string) error {
 				globalData.log.Infof("result[%d]: peer public key: %x", i, tag.publicKey)
 				globalData.log.Infof("result[%d]: rpc fingerprint: %x", i, tag.certificateFingerprint)
 
-				broadcasts := []byte{}
 				listeners := []byte{}
 
 				if nil != tag.ipv4 {
-					s1 := util.ConnectionFromIPandPort(tag.ipv4, tag.subscribePort)
 					c1 := util.ConnectionFromIPandPort(tag.ipv4, tag.connectPort)
-					broadcasts = append(broadcasts, s1.Pack()...)
 					listeners = append(listeners, c1.Pack()...)
 				}
 				if nil != tag.ipv6 {
-					s2 := util.ConnectionFromIPandPort(tag.ipv6, tag.subscribePort)
 					c2 := util.ConnectionFromIPandPort(tag.ipv6, tag.connectPort)
-					broadcasts = append(broadcasts, s2.Pack()...)
 					listeners = append(listeners, c2.Pack()...)
 				}
 
 				if nil == tag.ipv4 && nil == tag.ipv6 {
-					globalData.log.Infof("result[%d]: ignoring invalid record", i)
+					globalData.log.Debugf("result[%d]: ignoring invalid record", i)
 				} else {
-					globalData.log.Infof("result[%d]: broadcasts: %x  listeners: %x", i, broadcasts, listeners)
+					globalData.log.Infof("result[%d]: adding: %x", i, listeners)
 
 					// internal add, as lock is already held
-					addPeer(tag.publicKey, broadcasts, listeners, 0)
+					addPeer(tag.publicKey, listeners, 0)
 				}
 			}
 		}

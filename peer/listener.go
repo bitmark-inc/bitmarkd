@@ -201,8 +201,8 @@ func (lstn *listener) process(socket *zmq.Socket) {
 			err = fault.ErrBlockNotFound
 		}
 
-	case "R": // registration: chain, publicKey, broadcasts, listeners, timestamp
-		if len(parameters) < 5 {
+	case "R": // registration: chain, publicKey, listeners, timestamp
+		if len(parameters) < 4 {
 			listenerSendError(socket, fault.ErrMissingParameters)
 			return
 		}
@@ -212,9 +212,9 @@ func (lstn *listener) process(socket *zmq.Socket) {
 			return
 		}
 
-		timestamp := binary.BigEndian.Uint64(parameters[4])
-		announce.AddPeer(parameters[1], parameters[2], parameters[3], timestamp) // publicKey, broadcasts, listeners, timestamp
-		publicKey, broadcasts, listeners, ts, err := announce.GetNext(parameters[1])
+		timestamp := binary.BigEndian.Uint64(parameters[3])
+		announce.AddPeer(parameters[1], parameters[2], timestamp) // publicKey, listeners, timestamp
+		publicKey, listeners, ts, err := announce.GetNext(parameters[1])
 		if nil != err {
 			listenerSendError(socket, err)
 			return
@@ -228,8 +228,6 @@ func (lstn *listener) process(socket *zmq.Socket) {
 		_, err = socket.Send(chain, zmq.SNDMORE)
 		logger.PanicIfError("Listener", err)
 		_, err = socket.SendBytes(publicKey, zmq.SNDMORE)
-		logger.PanicIfError("Listener", err)
-		_, err = socket.SendBytes(broadcasts, zmq.SNDMORE)
 		logger.PanicIfError("Listener", err)
 		_, err = socket.SendBytes(listeners, zmq.SNDMORE)
 		logger.PanicIfError("Listener", err)

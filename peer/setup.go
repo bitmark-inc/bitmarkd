@@ -22,23 +22,21 @@ type Connection struct {
 	Address   string `libucl:"address" json:"address"`
 }
 
-// for announcements
-type Announce struct {
-	Broadcast []string `libucl:"broadcast" json:"broadcast"`
-	Listen    []string `libucl:"listen" json:"listen"`
-}
-
 // a block of configuration data
 // this is read from a libucl configuration file
 type Configuration struct {
 	DynamicConnections bool         `libucl:"dynamic_connections" json:"dynamic_connections"`
-	Broadcast          []string     `libucl:"broadcast" json:"broadcast"`
 	Listen             []string     `libucl:"listen" json:"listen"`
-	Announce           Announce     `libucl:"announce" json:"announce"`
+	Announce           []string     `libucl:"announce" json:"announce"`
 	PrivateKey         string       `libucl:"private_key" json:"private_key"`
 	PublicKey          string       `libucl:"public_key" json:"public_key"`
-	Subscribe          []Connection `libucl:"subscribe" json:"subscribe,omitempty"`
 	Connect            []Connection `libucl:"connect" json:"connect,omitempty"`
+}
+
+type PublishConfiguration struct {
+	Broadcast  []string `libucl:"broadcast" json:"broadcast"`
+	PrivateKey string   `libucl:"private_key" json:"private_key"`
+	PublicKey  string   `libucl:"public_key" json:"public_key"`
 }
 
 // globals for background proccess
@@ -47,13 +45,10 @@ type peerData struct {
 
 	log *logger.L // logger
 
-	brdc broadcaster // for broadcasting blocks, transactions etc.
-	lstn listener    // for RPC responses
-	conn connector   // for RPC requests
-	sbsc subscriber  // for subscriptions
+	lstn listener  // for RPC responses
+	conn connector // for RPC requests
 
-	connectorClients  []*upstream.Upstream
-	subscriberClients []*zmqutil.Client
+	connectorClients []*upstream.Upstream
 
 	publicKey []byte
 
@@ -106,16 +101,13 @@ func Initialise(configuration *Configuration, version string) error {
 		return err
 	}
 
-	if err := globalData.brdc.initialise(privateKey, publicKey, configuration.Broadcast); nil != err {
-		return err
-	}
+	// if err := globalData.brdc.initialise(privateKey, publicKey, configuration.Broadcast); nil != err {
+	// 	return err
+	// }
 	if err := globalData.lstn.initialise(privateKey, publicKey, configuration.Listen, version); nil != err {
 		return err
 	}
 	if err := globalData.conn.initialise(privateKey, publicKey, configuration.Connect, configuration.DynamicConnections); nil != err {
-		return err
-	}
-	if err := globalData.sbsc.initialise(privateKey, publicKey, configuration.Subscribe, configuration.DynamicConnections); nil != err {
 		return err
 	}
 
@@ -126,10 +118,9 @@ func Initialise(configuration *Configuration, version string) error {
 	globalData.log.Info("start background…")
 
 	processes := background.Processes{
-		&globalData.brdc,
+		// &globalData.brdc,
 		&globalData.lstn,
 		&globalData.conn,
-		&globalData.sbsc,
 	}
 
 	globalData.background = background.Start(processes, globalData.log)
@@ -141,23 +132,10 @@ func Initialise(configuration *Configuration, version string) error {
 // connection to neighbours
 func setAnnounce(configuration *Configuration, publicKey []byte) error {
 
-	b := make([]byte, 0, 100) // ***** FIX THIS: need a better default size
 	l := make([]byte, 0, 100) // ***** FIX THIS: need a better default size
 
-process_broadcast:
-	for i, address := range configuration.Announce.Broadcast {
-		if "" == address {
-			continue process_broadcast
-		}
-		c, err := util.NewConnection(address)
-		if nil != err {
-			globalData.log.Errorf("announce broadcast[%d]=%q  error: %v", i, address, err)
-			return err
-		}
-		b = append(b, c.Pack()...)
-	}
 process_listen:
-	for i, address := range configuration.Announce.Listen {
+	for i, address := range configuration.Announce {
 		if "" == address {
 			continue process_listen
 		}
@@ -168,7 +146,7 @@ process_listen:
 		}
 		l = append(l, c.Pack()...)
 	}
-	if err := announce.SetPeer(publicKey, b, l); nil != err {
+	if err := announce.SetPeer(publicKey, l); nil != err {
 		globalData.log.Errorf("announce.SetPeer error: %v", err)
 		return err
 	}
@@ -205,8 +183,8 @@ func PublicKey() []byte {
 }
 
 // return connection counts
-func ClientCount() uint64 {
-	return uint64(globalData.clientCount)
+func GetCounts() (uint64, uint64) {
+	return uint64(globalData.clientCount), 0 // ***** FIX THIS: need remote count i.e. number of connected listen sockets
 }
 
 // return global block height

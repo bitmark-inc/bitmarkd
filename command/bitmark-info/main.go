@@ -38,14 +38,6 @@ func (r *RPCClient) GetNodeInfo() (json.RawMessage, error) {
 	return reply, err
 }
 
-// GetSubscribers will get all its subscribers of a node from bitmark rpc
-func (r *RPCClient) GetSubscribers() (ConnClient, error) {
-	args := RPCEmptyArguments{}
-	var reply ConnClient
-	err := r.Client.Call("Node.Subscribers", &args, &reply)
-	return reply, err
-}
-
 // GetConnectors will get all its connectors of a node from bitmark rpc
 func (r *RPCClient) GetConnectors() (ConnClient, error) {
 	args := RPCEmptyArguments{}
@@ -59,17 +51,12 @@ func (r *RPCClient) GetAllInfo() (reply map[string]interface{}, err error) {
 	if err != nil {
 		return
 	}
-	sbsc, err := r.GetSubscribers()
-	if err != nil {
-		return
-	}
 	conn, err := r.GetConnectors()
 	if err != nil {
 		return
 	}
 	reply = map[string]interface{}{
 		"node": node,
-		"sbsc": sbsc,
 		"conn": conn,
 	}
 	return
@@ -130,9 +117,6 @@ loop:
 		case "node":
 			v, err = r.GetNodeInfo()
 			reply["node"] = v
-		case "sbsc":
-			v, err = r.GetSubscribers()
-			reply["sbsc"] = v
 		case "conn":
 			v, err = r.GetConnectors()
 			reply["conn"] = v

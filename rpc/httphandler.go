@@ -9,7 +9,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"github.com/bitmark-inc/bitmarkd/announce"
+	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/difficulty"
+	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/peer"
+	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/util"
+	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
 	"io"
 	"net/http"
@@ -44,11 +50,11 @@ func (c *InternalConnection) Close() error {
 
 // the argument passed to the handlers
 type httpHandler struct {
-	Log        *logger.L
-	Version    string
-	Server     *rpc.Server
-	Node       *Node
-	LocalAllow map[string]struct{}
+	log     *logger.L
+	server  *rpc.Server
+	start   time.Time
+	version string
+	allow   map[string]map[string]struct{}
 }
 
 // this matches anything not matched and returns error
@@ -63,7 +69,7 @@ func (s *httpHandler) rpc(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	server := s.Server
+	server := s.server
 
 	connectionCount.Increment()
 	defer connectionCount.Decrement()
@@ -80,63 +86,101 @@ func (s *httpHandler) rpc(w http.ResponseWriter, r *http.Request) {
 }
 
 // to allow a GET for the same response and Node.Info RPC
-func (s *httpHandler) info(w http.ResponseWriter, r *http.Request) {
+func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 	if http.MethodGet != r.Method {
 		sendMethodNotAllowed(w)
 		return
 	}
+
+	last := strings.LastIndex(r.RemoteAddr, ":")
+	if last >= 0 {
+		addr := r.RemoteAddr[:last]
+		if _, ok := s.allow["details"][addr]; ok {
+			goto allow_access
+		}
+	}
+	s.log.Warnf("Deny access: %q", r.RemoteAddr)
+	sendForbidden(w)
+	return // *IMPORTANT*
+
+allow_access:
+
 	connectionCount.Increment()
 	defer connectionCount.Decrement()
 
-	var info InfoReply
-	err := s.Node.Info(nil, &info)
-	if nil != err {
-		sendInternalServerError(w)
-		return
+	type lrCount struct {
+		Local  uint64 `json:"local"`
+		Remote uint64 `json:"remote"`
+	}
+	type theReply struct {
+		Chain               string   `json:"chain"`
+		Mode                string   `json:"mode"`
+		Blocks              lrCount  `json:"blocks"`
+		RPCs                uint64   `json:"rpcs"`
+		Peers               lrCount  `json:"peers"`
+		TransactionCounters Counters `json:"transactionCounters"`
+		Difficulty          float64  `json:"difficulty"`
+		Version             string   `json:"version"`
+		Uptime              string   `json:"uptime"`
+		PublicKey           string   `json:"publicKey"`
 	}
 
-	sendReply(w, info)
+	reply := theReply{
+		Chain: mode.ChainName(),
+		Mode:  mode.String(),
+		Blocks: lrCount{
+			Local:  block.GetHeight(),
+			Remote: peer.BlockHeight(),
+		},
+		RPCs: connectionCount.Uint64(),
+		// Miners : mine.ConnectionCount(),
+		Difficulty: difficulty.Current.Reciprocal(),
+		Version:    s.version,
+		Uptime:     time.Since(s.start).String(),
+		PublicKey:  hex.EncodeToString(peer.PublicKey()),
+	}
+	reply.Peers.Local, reply.Peers.Remote = peer.GetCounts()
+	reply.TransactionCounters.Pending, reply.TransactionCounters.Verified = reservoir.ReadCounters()
+
+	sendReply(w, reply)
 }
 
-func (s *httpHandler) connectors(w http.ResponseWriter, r *http.Request) {
+func (s *httpHandler) connections(w http.ResponseWriter, r *http.Request) {
 	if http.MethodGet != r.Method {
 		sendMethodNotAllowed(w)
 		return
 	}
+
+	last := strings.LastIndex(r.RemoteAddr, ":")
+	if last >= 0 {
+		addr := r.RemoteAddr[:last]
+		if _, ok := s.allow["connections"][addr]; ok {
+			goto allow_access
+		}
+	}
+	s.log.Warnf("Deny access: %q", r.RemoteAddr)
+	sendForbidden(w)
+	return // *IMPORTANT*
+
+allow_access:
+
 	connectionCount.Increment()
 	defer connectionCount.Decrement()
 
-	var info ConnectorReply
-	err := s.Node.Connectors(nil, &info)
-	if nil != err {
-		sendInternalServerError(w)
-		return
+	type reply struct {
+		ConnectedTo []*zmqutil.Connected `json:"connectedTo"`
 	}
 
-	sendReply(w, info)
-}
+	var info reply
 
-func (s *httpHandler) subscribers(w http.ResponseWriter, r *http.Request) {
-	if http.MethodGet != r.Method {
-		sendMethodNotAllowed(w)
-		return
-	}
-	connectionCount.Increment()
-	defer connectionCount.Decrement()
-
-	var info SubscriberReply
-	err := s.Node.Subscribers(nil, &info)
-	if nil != err {
-		sendInternalServerError(w)
-		return
-	}
+	info.ConnectedTo = peer.FetchConnectors()
 
 	sendReply(w, info)
 }
 
 // to output peer data
 type entry struct {
-	PublicKey  string    `json:"public_key"`
+	PublicKey  string    `json:"publicKey"`
 	Broadcasts []string  `json:"broadcasts"`
 	Listeners  []string  `json:"listeners"`
 	Timestamp  time.Time `json:"timestamp"`
@@ -157,11 +201,11 @@ func (s *httpHandler) peers(w http.ResponseWriter, r *http.Request) {
 	last := strings.LastIndex(r.RemoteAddr, ":")
 	if last >= 0 {
 		addr := r.RemoteAddr[:last]
-		if _, ok := s.LocalAllow[addr]; ok {
+		if _, ok := s.allow["peers"][addr]; ok {
 			goto allow_access
 		}
 	}
-	s.Log.Warnf("Deny access: %q", r.RemoteAddr)
+	s.log.Warnf("Deny access: %q", r.RemoteAddr)
 	sendForbidden(w)
 	return // *IMPORTANT*
 
@@ -190,7 +234,7 @@ allow_access:
 
 item_loop:
 	for i := 0; i < count; i += 1 {
-		publicKey, broadcasts, listeners, timestamp, err := announce.GetNext(startkey)
+		publicKey, listeners, timestamp, err := announce.GetNext(startkey)
 		if nil != err {
 			sendInternalServerError(w)
 			return
@@ -202,17 +246,6 @@ item_loop:
 
 		p := hex.EncodeToString(publicKey)
 
-		bPack := util.PackedConnection(broadcasts)
-		bc := make([]string, 0, 2)
-	bc_loop:
-		for {
-			conn, n := bPack.Unpack()
-			if nil == conn {
-				break bc_loop
-			}
-			bc = append(bc, conn.String())
-			bPack = bPack[n:]
-		}
 		lPack := util.PackedConnection(listeners)
 		lc := make([]string, 0, 2)
 	lc_loop:
@@ -226,10 +259,9 @@ item_loop:
 		}
 
 		peers = append(peers, entry{
-			PublicKey:  p,
-			Broadcasts: bc,
-			Listeners:  lc,
-			Timestamp:  timestamp,
+			PublicKey: p,
+			Listeners: lc,
+			Timestamp: timestamp,
 		})
 	}
 

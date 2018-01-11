@@ -307,23 +307,17 @@ func dnsTXT(log *logger.L, options *Configuration) {
 
 	peeringAnnounce := options.Peering.Announce
 
-	broadcastIP4, broadcastIP6, broadcastPort := getFirstConnections(peeringAnnounce.Broadcast)
-	if 0 == broadcastPort {
-		fmt.Printf("error: cannot determine broadcast port\n")
-		exitwithstatus.Exit(1)
-	}
-
-	listenIP4, listenIP6, listenPort := getFirstConnections(peeringAnnounce.Listen)
+	listenIP4, listenIP6, listenPort := getFirstConnections(peeringAnnounce)
 	if 0 == listenPort {
 		fmt.Printf("error: cannot determine listen port\n")
 		exitwithstatus.Exit(1)
 	}
 
 	IPs := ""
-	if "" != rpcIP4 && rpcIP4 == broadcastIP4 && rpcIP4 == listenIP4 {
+	if "" != rpcIP4 && rpcIP4 == listenIP4 {
 		IPs = rpcIP4
 	}
-	if "" != rpcIP6 && rpcIP6 == broadcastIP6 && rpcIP6 == listenIP6 {
+	if "" != rpcIP6 && rpcIP6 == listenIP6 {
 		if "" == IPs {
 			IPs = rpcIP6
 		} else {
@@ -334,11 +328,10 @@ func dnsTXT(log *logger.L, options *Configuration) {
 	fmt.Printf("rpc fingerprint: %x\n", fingerprint)
 	fmt.Printf("rpc port:        %d\n", rpcPort)
 	fmt.Printf("public key:      %x\n", publicKey)
-	fmt.Printf("subscribe port:  %d\n", broadcastPort)
 	fmt.Printf("connect port:    %d\n", listenPort)
 	fmt.Printf("IP4 IP6:         %s\n", IPs)
 
-	fmt.Printf(txtRecord, IPs, listenPort, broadcastPort, rpcPort, fingerprint, publicKey)
+	fmt.Printf(txtRecord, IPs, listenPort, rpcPort, fingerprint, publicKey)
 }
 
 // extract first IP4 and/or IP6 connection

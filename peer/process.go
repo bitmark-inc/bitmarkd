@@ -101,14 +101,14 @@ func processSubscription(log *logger.L, command string, arguments [][]byte) {
 		}
 
 	case "peer":
-		if dataLength < 4 {
+		if dataLength < 3 {
 			log.Warnf("peer with too few data: %d items", dataLength)
 			return
 		}
-		timestamp := binary.BigEndian.Uint64(arguments[3])
-		log.Infof("received peer: %x  broadcast: %x  listener: %x  timestamp: %d", arguments[0], arguments[1], arguments[2], timestamp)
-		if announce.AddPeer(arguments[0], arguments[1], arguments[2], timestamp) {
-			messagebus.Bus.Broadcast.Send("peer", arguments[0:4]...)
+		timestamp := binary.BigEndian.Uint64(arguments[2])
+		log.Infof("received peer: %x  listener: %x  timestamp: %d", arguments[0], arguments[1], timestamp)
+		if announce.AddPeer(arguments[0], arguments[1], timestamp) {
+			messagebus.Bus.Broadcast.Send("peer", arguments[0:3]...)
 		}
 
 	case "heart":

@@ -93,12 +93,8 @@ func Finalise() {
 	globalData.log.Flush()
 }
 
-func ReadCounters() (int, int, []int) {
-	n := []int{
-		cache.Pool.PendingTransfer.Size(),
-		cache.Pool.UnverifiedTxEntries.Size(),
-	}
-	return cache.Pool.UnverifiedTxIndex.Size(), cache.Pool.VerifiedTx.Size(), n
+func ReadCounters() (int, int) {
+	return cache.Pool.UnverifiedTxIndex.Size(), cache.Pool.VerifiedTx.Size()
 }
 
 // status

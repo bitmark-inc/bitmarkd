@@ -7,11 +7,8 @@ package announce
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
-	"github.com/bitmark-inc/bitmarkd/avl"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/logger"
-	"math/rand"
 	"time"
 )
 
@@ -90,12 +87,12 @@ func (ann *announcer) process() {
 	}
 	if globalData.peerSet {
 		log.Debugf("send peer: %x", globalData.publicKey)
-		messagebus.Bus.Broadcast.Send("peer", globalData.publicKey, globalData.broadcasts, globalData.listeners, timestamp)
+		messagebus.Bus.Broadcast.Send("peer", globalData.publicKey, globalData.listeners, timestamp)
 	}
 
-	if globalData.change {
+	if globalData.treeChanged {
 		determineConnections(log)
-		globalData.change = false
+		globalData.treeChanged = false
 	}
 	expireRPC()
 	expirePeer(log)
@@ -107,26 +104,23 @@ func determineConnections(log *logger.L) {
 		return // called to early
 	}
 
+	log.Infof("DC: this: %x", globalData.publicKey)
+
 	// N1
-	node := globalData.thisNode.Next()
-	if nil == node {
-		node = globalData.peerTree.First()
+	n1 := globalData.thisNode.Next()
+	if nil == n1 {
+		n1 = globalData.peerTree.First()
 	}
-	if nil == node || node == globalData.thisNode {
+	if nil == n1 || n1 == globalData.thisNode {
 		log.Errorf("determineConnections tree too small")
-		return // tree still too small
+		return
 	}
-	if globalData.n1 != node {
-		globalData.n1 = node
-		peer := node.Value().(*peerEntry)
-		log.Infof("N1: this: %x", globalData.publicKey)
-		log.Infof("N1: peer: %x", peer)
-		messagebus.Bus.Subscriber.Send("N1", peer.publicKey, peer.broadcasts)
-		messagebus.Bus.Connector.Send("N1", peer.publicKey, peer.listeners)
-	}
+	peer := n1.Value().(*peerEntry)
+	log.Infof("N1: peer: %x", peer)
+	messagebus.Bus.Connector.Send("N1", peer.publicKey, peer.listeners)
 
 	// N2
-	node = node.Next()
+	node := n1.Next()
 	if nil == node {
 		node = globalData.peerTree.First()
 	}
@@ -135,90 +129,66 @@ func determineConnections(log *logger.L) {
 	}
 
 	// N3
-	node = node.Next()
-	if nil == node {
-		node = globalData.peerTree.First()
+	n3 := node.Next()
+	if nil == n3 {
+		n3 = globalData.peerTree.First()
 	}
-	if nil == node || node == globalData.thisNode {
+	if nil == n3 || n3 == globalData.thisNode {
 		return // tree still too small
 	}
-	if globalData.n3 != node {
-		globalData.n3 = node
+	if n3 != n1 {
 		peer := node.Value().(*peerEntry)
-		log.Infof("N3: this: %x", globalData.publicKey)
 		log.Infof("N3: peer: %x", peer)
-		messagebus.Bus.Subscriber.Send("N3", peer.publicKey, peer.broadcasts)
 		messagebus.Bus.Connector.Send("N3", peer.publicKey, peer.listeners)
 	}
 
-	// determine X25, X50 and X75 the cross ¼,½ and ¾ positions
-	thisNode := globalData.thisNode
-	nodeDepth := thisNode.Depth()
-	treeRoot := globalData.peerTree.Root()
-	lv2NodeChildren := treeRoot.GetChildrenByDepth(2)
-
-	toConnectTree := make([]*avl.Node, 0, 3)
-	toConnectNode := make([]*avl.Node, 0, 3)
-	var connectOrder uint
-
-	if nodeDepth < 2 {
-		if len(lv2NodeChildren) > 3 {
-			switch thisNode.Key().Compare(treeRoot.Key()) {
-			case -1:
-				toConnectTree = lv2NodeChildren[:3]
-			case 1:
-				fallthrough
-			case 0:
-				toConnectTree = lv2NodeChildren[1:]
-			}
-		} else {
-			toConnectTree = lv2NodeChildren
-		}
-		connectOrder = uint(rand.Uint32())
-	} else if nodeDepth >= 2 {
-		depth2Parent := thisNode
-		// find parent node in level 2 by search parent recursively
-		for l := nodeDepth; l > 2; l-- {
-			depth2Parent = depth2Parent.Parent()
-		}
-
-		// try to find rest of nodes which is not an ancestor in level 2
-		for _, n := range lv2NodeChildren {
-			if n.Key().Compare(depth2Parent.Key()) != 0 {
-				toConnectTree = append(toConnectTree, n)
-			}
-		}
-		connectOrder = depth2Parent.GetOrder(thisNode.Key())
+	// determine X25, X50 and X75 the cross ¼,½ and ¾ positions (mod tree size)
+	_, index := globalData.peerTree.Search(globalData.thisNode.Key())
+	count := globalData.peerTree.Count()
+	quarter := count/4 + index
+	if quarter >= count {
+		quarter -= count
 	}
 
-	for _, n := range toConnectTree {
-		toConnectNode = append(toConnectNode, n.GetNodeByOrder(connectOrder))
+	half := count/2 + index
+	if half >= count {
+		half -= count
 	}
 
-connections:
-	for i, node := range toConnectNode {
-		nodeLabel := fmt.Sprintf("X%d", (i+1)*25) // it should by X25, X50 and X75
-		if nil == node {
-			log.Warnf("failed: node at: %s is nil", nodeLabel)
-			continue connections
-		}
+	threequarters := half + count/4
+	if threequarters >= count {
+		threequarters -= count
+	}
 
-		if node == globalData.thisNode || node == globalData.n1 || node == globalData.n3 {
-			continue connections
-		}
+	log.Debugf("N0: %d  tree size: %d", index, count)
+	log.Debugf("Xi: ¼: %d  ½: %d  ¾: %d", quarter, half, threequarters)
 
-		if n := globalData.crossNodes[nodeLabel]; n != node {
-			globalData.crossNodes[nodeLabel] = node
-			peer := node.Value().(*peerEntry)
-			log.Infof("%s: this: %x", nodeLabel, globalData.publicKey)
-			log.Infof("%s: peer: %x", nodeLabel, peer)
-			messagebus.Bus.Subscriber.Send(nodeLabel, peer.publicKey, peer.broadcasts)
-			messagebus.Bus.Connector.Send(nodeLabel, peer.publicKey, peer.listeners)
+	x25 := globalData.peerTree.Get(quarter)
+	x50 := globalData.peerTree.Get(half)
+	x75 := globalData.peerTree.Get(threequarters)
+
+	log.Infof("X25: this: %x", globalData.publicKey)
+	if nil != x25 {
+		if x25 != n1 && x25 != n3 {
+			peer := x25.Value().(*peerEntry)
+			log.Infof("X25: peer: %x", peer)
+			messagebus.Bus.Connector.Send("X25", peer.publicKey, peer.listeners)
 		}
 	}
-	// ***** FIX THIS:   possible treat key as a number and compute; assuming uniformly distributed keys
-	// ***** FIX THIS:   but would need the tree search to be able to find the "next highest/lowest key" for this to work
-	// ***** FIX THIS: more code to determine some random positions
+	if nil != x50 {
+		if x50 != n1 && x50 != n3 && x50 != x25 {
+			peer := x50.Value().(*peerEntry)
+			log.Infof("X50: peer: %x", peer)
+			messagebus.Bus.Connector.Send("X50", peer.publicKey, peer.listeners)
+		}
+	}
+	if nil != x75 {
+		if x75 != n1 && x75 != n3 && x75 != x25 && x75 != x50 {
+			peer := x75.Value().(*peerEntry)
+			log.Infof("X75: peer: %x", peer)
+			messagebus.Bus.Connector.Send("X75", peer.publicKey, peer.listeners)
+		}
+	}
 }
 
 func expirePeer(log *logger.L) {

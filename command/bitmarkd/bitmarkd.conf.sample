@@ -37,10 +37,8 @@ peer_file = "peers.json"
 .set(var=IPV4) "IPV4:EC2_IPV4:ENV_EC2_IPV4"
 .set(var=RPC_IPV4) "IPV4"
 .append(var=RPC_IPV4) ":2130"
-.set(var=BROADCAST_IPV4) "IPV4"
-.append(var=BROADCAST_IPV4) ":2135"
-.set(var=LISTEN_IPV4) "IPV4"
-.append(var=LISTEN_IPV4) ":2136"
+.set(var=PEER_IPV4) "IPV4"
+.append(var=PEER_IPV4) ":2136"
 
 
 # Bitmark Vault clients connect using JSON RPC to these listening ports
@@ -87,41 +85,41 @@ https_rpc {
 # peer-to-peer networking configuration
 peering {
 
-  # set to off to prevent additional connections
+  # set to false to prevent additional connections
   dynamic_connections = true
 
-  # for subscribers to receive various announcements
-  broadcast = 0.0.0.0:2135
-  broadcast = "[::]:2135"
-
-  # for incoming rpc connections
+  # for incoming peer connections
   listen = 0.0.0.0:2136
   listen = "[::]:2136"
 
   # announce certain public IP:ports to network
   # if using firewall port forwarding use the firewall external IP:port
-  announce {
-    #broadcast = 127.0.0.1:2135
-    #broadcast= "[::1]:2135"
-    #listen = 127.0.0.1:2136
-    #listen = "[::1]:2136"
+  #announce = 127.0.0.1:2136
+  #announce = "[::1]:2136"
 
-    # these will only be used if variables expand to non-blank
-    broadcast = "${BROADCAST_IPV4}"
-    listen = "${LISTEN_IPV4}"
-  }
+  # these will only be used if variables expand to non-blank
+  announce = "${PEER_IPV4}"
 
   public_key = peer.public
   private_key = peer.private
 
   # dedicated connections
-  subscribe = {public_key = "781d78a9eb338a511ae88a9be5383095ede46445596506e29ad8f022a3f8596e", address = "127.0.0.1:3135"}
-  #subscribe = {public_key = "781d78a9eb338a511ae88a9be5383095ede46445596506e29ad8f022a3f8596e", address = "[::1]:3135"}
   connect = {public_key = "781d78a9eb338a511ae88a9be5383095ede46445596506e29ad8f022a3f8596e", address = "127.0.0.1:3136"}
   #connect = {public_key = "781d78a9eb338a511ae88a9be5383095ede46445596506e29ad8f022a3f8596e", address = "[::1]:3136"}
 
 }
 
+# optional transaction/block publishing for subscribers to receive various announcements
+# intended for local services
+publishing {
+
+  #broadcast = 0.0.0.0:2135
+  #broadcast = "[::]:2135"
+
+  # ok to use the same keys as peer
+  public_key = peer.public
+  private_key = peer.private
+}
 
 # configuration of recorderd connections
 proofing {

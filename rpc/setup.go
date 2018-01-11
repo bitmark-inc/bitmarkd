@@ -29,11 +29,11 @@ type RPCConfiguration struct {
 }
 
 type HTTPSConfiguration struct {
-	MaximumConnections int      `libucl:"maximum_connections" json:"maximum_connections"`
-	Listen             []string `libucl:"listen" json:"listen"`
-	Certificate        string   `libucl:"certificate" json:"certificate"`
-	PrivateKey         string   `libucl:"private_key" json:"private_key"`
-	LocalAllow         []string `libucl:"local_allow" json:"local_allow"`
+	MaximumConnections int                 `libucl:"maximum_connections" json:"maximum_connections"`
+	Listen             []string            `libucl:"listen" json:"listen"`
+	Certificate        string              `libucl:"certificate" json:"certificate"`
+	PrivateKey         string              `libucl:"private_key" json:"private_key"`
+	Allow              map[string][]string `libucl:"allow" json:"allow"`
 }
 
 // globals
@@ -160,7 +160,7 @@ process_rpcs:
 		return err
 	}
 
-	server, _ := createRPCServer(log, version)
+	server := createRPCServer(log, version)
 	argument := &serverArgument{
 		Log:    log,
 		Server: server,
@@ -196,35 +196,39 @@ func initialiseHTTPS(configuration *HTTPSConfiguration, version string) error {
 	log.Infof("%s: SHA3-256 fingerprint: %x", name, fingerprint)
 
 	// create access control and format strings to match http.Request.RemoteAddr
-	local := make(map[string]struct{})
-local_loop:
-	for _, la := range configuration.LocalAllow {
-		ip := net.ParseIP(strings.Trim(la, " "))
-		if nil == ip {
-			continue local_loop
-		}
-		if nil != ip.To4() {
-			local[ip.String()] = struct{}{}
-		} else {
+	local := make(map[string]map[string]struct{})
+	for path, addresses := range configuration.Allow {
+		set := make(map[string]struct{})
+		local[path] = set
+	local_loop:
+		for _, ip := range addresses {
+			ip := net.ParseIP(strings.Trim(ip, " "))
+			if nil == ip {
+				continue local_loop
+			}
+			if nil != ip.To4() {
+				set[ip.String()] = struct{}{}
+			} else {
 
-			local["["+ip.String()+"]"] = struct{}{}
+				set["["+ip.String()+"]"] = struct{}{}
+			}
 		}
 	}
 
-	server, node := createRPCServer(log, version)
+	server := createRPCServer(log, version)
 	handler := &httpHandler{
-		Log:        log,
-		Server:     server,
-		Node:       node,
-		LocalAllow: local,
+		log:     log,
+		server:  server,
+		version: version,
+		start:   time.Now(),
+		allow:   local,
 	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/bitmarkd/rpc", handler.rpc)
-	mux.HandleFunc("/bitmarkd/info", handler.info)
-	mux.HandleFunc("/bitmarkd/info/connectors", handler.connectors)
-	mux.HandleFunc("/bitmarkd/info/subscribers", handler.subscribers)
-	mux.HandleFunc("/bitmarkd/local/peers", handler.peers)
+	mux.HandleFunc("/bitmarkd/details", handler.details)
+	mux.HandleFunc("/bitmarkd/connections", handler.connections)
+	mux.HandleFunc("/bitmarkd/peers", handler.peers)
 	mux.HandleFunc("/", handler.root)
 
 	for _, listen := range configuration.Listen {
@@ -247,7 +251,7 @@ local_loop:
 	return nil
 }
 
-func createRPCServer(log *logger.L, version string) (*rpc.Server, *Node) {
+func createRPCServer(log *logger.L, version string) *rpc.Server {
 
 	start := time.Now().UTC()
 
@@ -287,7 +291,7 @@ func createRPCServer(log *logger.L, version string) (*rpc.Server, *Node) {
 	server.Register(node)
 	server.Register(transaction)
 
-	return server, node
+	return server
 }
 
 // Verify that a set of listener parameters are valid
