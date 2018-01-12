@@ -164,10 +164,6 @@ func main() {
 					Value: "",
 					Usage: "*identity name to receive the bitmark `ACCOUNT`",
 				},
-				cli.BoolFlag{
-					Name:  "unratified, u",
-					Usage: " perform an unratified transfer (default is output single signed hex)",
-				},
 			},
 			Action: runTransfer,
 		},

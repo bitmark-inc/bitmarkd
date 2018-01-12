@@ -32,10 +32,9 @@ type BitmarkTransferReply struct {
 	Payments map[string]transactionrecord.PaymentAlternative `json:"payments"`
 }
 
-func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransferCountersigned, reply *BitmarkTransferReply) error {
+func (bitmark *Bitmark) Transfer(transfer *transactionrecord.BitmarkTransferCountersigned, reply *BitmarkTransferReply) error {
 
 	log := bitmark.log
-	transfer := transactionrecord.BitmarkTransfer(arguments)
 
 	log.Infof("Bitmark.Transfer: %v", transfer)
 
@@ -43,19 +42,8 @@ func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransferCou
 		return fault.ErrNotAvailableDuringSynchronise
 	}
 
-	if arguments.Owner.IsTesting() != mode.IsTesting() {
+	if transfer.Owner.IsTesting() != mode.IsTesting() {
 		return fault.ErrWrongNetworkForPublicKey
-	}
-
-	// ***** FIX THIS: remove this later
-	// ***** FIX THIS: this is to support unratified transfers
-	if 0 == len(arguments.Countersignature) {
-		transfer = &transactionrecord.BitmarkTransferUnratified{
-			Link:      arguments.Link,
-			Payment:   arguments.Payment,
-			Owner:     arguments.Owner,
-			Signature: arguments.Signature,
-		}
 	}
 
 	// save transfer/check for duplicate

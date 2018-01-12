@@ -232,11 +232,11 @@ func processTransfer(packed []byte) error {
 		return err
 	}
 
-	if !transaction.IsTransfer() {
+	// ensure that only countersigned transfers are allowed
+	tx, ok := transaction.(*transactionrecord.BitmarkTransferCountersigned)
+	if !ok {
 		return fault.ErrTransactionIsNotATransfer
 	}
-
-	tx := transaction.(transactionrecord.BitmarkTransfer)
 
 	_, duplicate, err := reservoir.StoreTransfer(tx)
 	if nil != err {
