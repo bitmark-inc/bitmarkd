@@ -37,7 +37,6 @@ type Packed []byte
 // generic transaction interface
 type Transaction interface {
 	Pack(account *account.Account) (Packed, error)
-	IsTransfer() bool
 }
 
 // byte sizes for various fields
@@ -61,8 +60,6 @@ type BaseData struct {
 	Signature      account.Signature `json:"signature,"`     // hex
 }
 
-func (*BaseData) IsTransfer() bool { return false }
-
 // the unpacked Asset Data structure
 type AssetData struct {
 	Name        string            `json:"name"`        // utf-8
@@ -72,8 +69,6 @@ type AssetData struct {
 	Signature   account.Signature `json:"signature"`   // hex
 }
 
-func (*AssetData) IsTransfer() bool { return false }
-
 // the unpacked BitmarkIssue structure
 type BitmarkIssue struct {
 	AssetIndex AssetIndex        `json:"asset"`     // link to asset record
@@ -81,8 +76,6 @@ type BitmarkIssue struct {
 	Nonce      uint64            `json:"nonce"`     // to allow for multiple issues at the same time
 	Signature  account.Signature `json:"signature"` // hex: corresponds to owner in linked record
 }
-
-func (*BitmarkIssue) IsTransfer() bool { return false }
 
 // optional payment record
 type Payment struct {
@@ -116,8 +109,6 @@ type BitmarkTransferUnratified struct {
 	Signature account.Signature `json:"signature"` // hex: corresponds to owner in linked record
 }
 
-func (*BitmarkTransferUnratified) IsTransfer() bool { return true }
-
 // the unpacked Countersigned BitmarkTransfer structure
 type BitmarkTransferCountersigned struct {
 	Link             merkle.Digest     `json:"link"`             // previous record
@@ -127,7 +118,6 @@ type BitmarkTransferCountersigned struct {
 	Countersignature account.Signature `json:"countersignature"` // hex: corresponds to owner in this record
 }
 
-func (*BitmarkTransferCountersigned) IsTransfer() bool { return true }
 
 // determine the record type code
 func (record Packed) Type() TagType {

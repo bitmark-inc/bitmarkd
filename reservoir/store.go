@@ -147,8 +147,10 @@ TRANSFER_RECOVERY:
 			globalData.log.Errorf("unable to unpack transfer: %s", err.Error())
 			continue TRANSFER_RECOVERY
 		}
-		if transaction.IsTransfer() {
-			_, _, err := StoreTransfer(transaction.(transactionrecord.BitmarkTransfer))
+
+		transfer, ok := transaction.(transactionrecord.BitmarkTransfer)
+		if ok {
+			_, _, err := StoreTransfer(transfer)
 			if nil != err {
 				globalData.log.Errorf("fail to store transfer: %s", err.Error())
 			}
