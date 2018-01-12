@@ -70,7 +70,7 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 		var paymentCurrency currency.Currency
 		_, err := fmt.Sscan(c, &paymentCurrency)
 		if nil != err {
-			log.Errorf("currency: %q  error: %v", c, err)
+			log.Errorf("currency: %q  error: %s", c, err)
 			return err
 		}
 
@@ -152,7 +152,7 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 		rand := bytes.NewBuffer(databytes)
 		publicKey, privateKey, err := ed25519.GenerateKey(rand)
 		if nil != err {
-			log.Errorf("public key generation  error: %v", err)
+			log.Errorf("public key generation  error: %s", err)
 			return err
 		}
 		pub.owner = &account.Account{
@@ -167,12 +167,12 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 	// read the keys
 	privateKey, err := zmqutil.ReadPrivateKeyFile(configuration.PrivateKey)
 	if nil != err {
-		log.Errorf("read private key file: %q  error: %v", configuration.PrivateKey, err)
+		log.Errorf("read private key file: %q  error: %s", configuration.PrivateKey, err)
 		return err
 	}
 	publicKey, err := zmqutil.ReadPublicKeyFile(configuration.PublicKey)
 	if nil != err {
-		log.Errorf("read public key file: %q  error: %v", configuration.PublicKey, err)
+		log.Errorf("read public key file: %q  error: %s", configuration.PublicKey, err)
 		return err
 	}
 	log.Tracef("server public:  %x", publicKey)
@@ -184,7 +184,7 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 	// allocate IPv4 and IPv6 sockets
 	pub.socket4, pub.socket6, err = zmqutil.NewBind(log, zmq.PUB, publisherZapDomain, privateKey, publicKey, c)
 	if nil != err {
-		log.Errorf("bind error: %v", err)
+		log.Errorf("bind error: %s", err)
 		return err
 	}
 
@@ -269,7 +269,7 @@ func (pub *publisher) process() {
 		// re-pack to makesure signature is valid
 		packedBase, err := base.Pack(pub.owner)
 		if nil != err {
-			pub.log.Criticalf("pack base error: %v", err)
+			pub.log.Criticalf("pack base error: %s", err)
 			logger.Panicf("publisher packed base error: %s", err)
 		}
 
@@ -285,7 +285,7 @@ func (pub *publisher) process() {
 	for _, item := range transactions {
 		unpacked, _, err := transactionrecord.Packed(item).Unpack()
 		if nil != err {
-			pub.log.Criticalf("unpack error: %v", err)
+			pub.log.Criticalf("unpack error: %s", err)
 			logger.Panicf("publisher extraction transactions error: %s", err)
 		}
 
@@ -366,7 +366,7 @@ func (pub *publisher) process() {
 	enqueueToJobQueue(message, txData)
 
 	data, err := json.Marshal(message)
-	logger.PanicIfError("JSON encode error: %v", err)
+	logger.PanicIfError("JSON encode error: %s", err)
 
 	pub.log.Infof("json to send: %s", data)
 

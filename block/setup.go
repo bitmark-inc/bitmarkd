@@ -133,7 +133,7 @@ func fillRingBuffer(log *logger.L) error {
 		packedHeader := blockrecord.PackedHeader(last.Value[:blockrecord.TotalBlockSize])
 		header, err := packedHeader.Unpack()
 		if nil != err {
-			log.Criticalf("failed to unpack block: %d from storage  error: %v", binary.BigEndian.Uint64(last.Key), err)
+			log.Criticalf("failed to unpack block: %d from storage  error: %s", binary.BigEndian.Uint64(last.Key), err)
 			return err
 		}
 		globalData.previousBlock = packedHeader.Digest()
@@ -170,7 +170,7 @@ func fillRingBuffer(log *logger.L) error {
 			digest := packedHeader.Digest()
 			header, err := packedHeader.Unpack()
 			if nil != err {
-				log.Criticalf("failed to unpack block: %d from storage  error: %v", binary.BigEndian.Uint64(last.Key), err)
+				log.Criticalf("failed to unpack block: %d from storage  error: %s", binary.BigEndian.Uint64(last.Key), err)
 				return err
 			}
 			log.Infof("ring[%d] from block: %d", i, header.Number)
@@ -194,9 +194,9 @@ func fillRingBuffer(log *logger.L) error {
 				for i := 1; true; i += 1 {
 					transaction, n, err := transactionrecord.Packed(data).Unpack()
 					if nil != err {
-						//log.Errorf("tx[%d]: error: %v", i, err)
+						//log.Errorf("tx[%d]: error: %s", i, err)
 						//return err
-						return fmt.Sprintf("tx[%d]: error: %v", i, err)
+						return fmt.Sprintf("tx[%d]: error: %s", i, err)
 					}
 					txs[i-1] = transaction
 					data = data[n:]
@@ -214,7 +214,7 @@ func fillRingBuffer(log *logger.L) error {
 				jsonData, err := json.MarshalIndent(s, "", "  ")
 				if nil != err {
 					//return err
-					return fmt.Sprintf("JSON marshal error: %v", err)
+					return fmt.Sprintf("JSON marshal error: %s", err)
 				}
 				//log.Infof("block: %s", jsonData)
 				return fmt.Sprintf("block: %s", jsonData)

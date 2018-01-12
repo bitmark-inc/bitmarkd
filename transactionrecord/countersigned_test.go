@@ -29,7 +29,7 @@ func TestPackBitmarkTransferCountersignedOne(t *testing.T) {
 	var link merkle.Digest
 	err := merkleDigestFromLE("79a67be2b3d313bd490363fb0d27901c46ed53d3f7b21f60d48bc42439b06084", &link)
 	if nil != err {
-		t.Fatalf("hex to link error: %v", err)
+		t.Fatalf("hex to link error: %s", err)
 	}
 
 	r := transactionrecord.BitmarkTransferCountersigned{
@@ -73,7 +73,7 @@ func TestPackBitmarkTransferCountersignedOne(t *testing.T) {
 	// test the packer
 	packed, err := r.Pack(issuerAccount)
 	if nil != err {
-		t.Errorf("pack error: %v", err)
+		t.Errorf("pack error: %s", err)
 	}
 
 	// if either of above fail we will have the message _without_ a signature
@@ -97,7 +97,7 @@ func TestPackBitmarkTransferCountersignedOne(t *testing.T) {
 	// test the unpacker
 	unpacked, n, err := packed.Unpack()
 	if nil != err {
-		t.Fatalf("unpack error: %v", err)
+		t.Fatalf("unpack error: %s", err)
 	}
 	if len(packed) != n {
 		t.Errorf("did not unpack all data: only used: %d of: %d bytes", n, len(packed))
@@ -118,7 +118,7 @@ func TestPackBitmarkTransferCountersignedOne(t *testing.T) {
 	}
 	b, err := json.MarshalIndent(item, "", "  ")
 	if nil != err {
-		t.Fatalf("json error: %v", err)
+		t.Fatalf("json error: %s", err)
 	}
 
 	t.Logf("Bitmark Transfer: JSON: %s", b)
@@ -142,7 +142,7 @@ func TestPackBitmarkTransferCountersignedTwo(t *testing.T) {
 	var link merkle.Digest
 	err := merkleDigestFromLE("630c041cd1f586bcb9097e816189185c1e0379f67bbfc2f0626724f542047873", &link)
 	if nil != err {
-		t.Fatalf("hex to link error: %v", err)
+		t.Fatalf("hex to link error: %s", err)
 	}
 
 	r := transactionrecord.BitmarkTransferCountersigned{
@@ -196,7 +196,7 @@ func TestPackBitmarkTransferCountersignedTwo(t *testing.T) {
 	// test the packer
 	packed, err := r.Pack(ownerOneAccount)
 	if nil != err {
-		t.Errorf("pack error: %v", err)
+		t.Errorf("pack error: %s", err)
 	}
 
 	// if either of above fail we will have the message _without_ a signature
@@ -220,7 +220,7 @@ func TestPackBitmarkTransferCountersignedTwo(t *testing.T) {
 	// test the unpacker
 	unpacked, n, err := packed.Unpack()
 	if nil != err {
-		t.Fatalf("unpack error: %v", err)
+		t.Fatalf("unpack error: %s", err)
 	}
 	if len(packed) != n {
 		t.Errorf("did not unpack all data: only used: %d of: %d bytes", n, len(packed))
@@ -241,7 +241,7 @@ func TestPackBitmarkTransferCountersignedTwo(t *testing.T) {
 	}
 	b, err := json.MarshalIndent(item, "", "  ")
 	if nil != err {
-		t.Fatalf("json error: %v", err)
+		t.Fatalf("json error: %s", err)
 	}
 
 	t.Logf("Bitmark Transfer: JSON: %s", b)
@@ -265,7 +265,7 @@ func TestPackBitmarkTransferCountersignedThree(t *testing.T) {
 	var link merkle.Digest
 	err := merkleDigestFromLE("14eb103a0c8fb22e50e73ae9b4ff88595b1cd5f60c4afb690d8fbd014c3ed091", &link)
 	if nil != err {
-		t.Fatalf("hex to link error: %v", err)
+		t.Fatalf("hex to link error: %s", err)
 	}
 
 	r := transactionrecord.BitmarkTransferCountersigned{
@@ -310,7 +310,7 @@ func TestPackBitmarkTransferCountersignedThree(t *testing.T) {
 	// test the packer
 	packed, err := r.Pack(ownerTwoAccount)
 	if nil != err {
-		t.Errorf("pack error: %v", err)
+		t.Errorf("pack error: %s", err)
 	}
 
 	// if either of above fail we will have the message _without_ a signature
@@ -334,7 +334,7 @@ func TestPackBitmarkTransferCountersignedThree(t *testing.T) {
 	// test the unpacker
 	unpacked, n, err := packed.Unpack()
 	if nil != err {
-		t.Fatalf("unpack error: %v", err)
+		t.Fatalf("unpack error: %s", err)
 	}
 	if len(packed) != n {
 		t.Errorf("did not unpack all data: only used: %d of: %d bytes", n, len(packed))
@@ -355,7 +355,7 @@ func TestPackBitmarkTransferCountersignedThree(t *testing.T) {
 	}
 	b, err := json.MarshalIndent(item, "", "  ")
 	if nil != err {
-		t.Fatalf("json error: %v", err)
+		t.Fatalf("json error: %s", err)
 	}
 
 	t.Logf("Bitmark Transfer: JSON: %s", b)
@@ -378,7 +378,7 @@ func TestPackBitmarkTransferCountersignedFail(t *testing.T) {
 	var link merkle.Digest
 	err := merkleDigestFromLE("14eb103a0c8fb22e50e73ae9b4ff88595b1cd5f60c4afb690d8fbd014c3ed091", &link)
 	if nil != err {
-		t.Fatalf("hex to link error: %v", err)
+		t.Fatalf("hex to link error: %s", err)
 	}
 
 	r := transactionrecord.BitmarkTransferCountersigned{
@@ -421,7 +421,7 @@ func TestPackBitmarkTransferCountersignedFail(t *testing.T) {
 	if nil == err {
 		t.Error("unexpected pack success, should fail with invalid signature")
 	} else {
-		t.Errorf("pack error: %v", err)
+		t.Errorf("pack error: %s", err)
 	}
 
 	t.Fatal("fatal error")

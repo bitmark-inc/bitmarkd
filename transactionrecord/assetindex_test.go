@@ -82,7 +82,7 @@ func TestAssetIndex(t *testing.T) {
 	var asset transactionrecord.AssetIndex
 	n, err := fmt.Sscan("37de3195b879cf5692a564e7f19bd6203e3fd8cffa8064ebe86ec8fff8dbf326ffa4d65cfef8350db4d72d93406f54fa0d06ce98005a939995ed05cc34fb7344", &asset)
 	if nil != err {
-		t.Fatalf("hex to link error: %v", err)
+		t.Fatalf("hex to link error: %s", err)
 	}
 	if 1 != n {
 		t.Fatalf("hex to link scanned: %d  expected: 1", n)
@@ -103,7 +103,7 @@ func TestAssetIndex(t *testing.T) {
 	}
 	convertedJSON, err := json.Marshal(item)
 	if nil != err {
-		t.Fatalf("marshal json error: %v", err)
+		t.Fatalf("marshal json error: %s", err)
 	}
 	if expectedJSON != string(convertedJSON) {
 		t.Errorf("JSON converted: %q", convertedJSON)
@@ -116,7 +116,7 @@ func TestAssetIndex(t *testing.T) {
 	}
 	err = json.Unmarshal([]byte(expectedJSON), &newItem)
 	if nil != err {
-		t.Fatalf("unmarshal json error: %v", err)
+		t.Fatalf("unmarshal json error: %s", err)
 	}
 
 	if newItem.AssetIndex != expectedAssetIndex {
@@ -153,7 +153,7 @@ func TestAssetIndexFromBytes(t *testing.T) {
 	var assetIndex transactionrecord.AssetIndex
 	err := transactionrecord.AssetIndexFromBytes(&assetIndex, valid)
 	if nil != err {
-		t.Fatalf("AssetIndexFromBytes error: %v", err)
+		t.Fatalf("AssetIndexFromBytes error: %s", err)
 	}
 
 	if assetIndex != expectedAssetIndex {
@@ -162,6 +162,6 @@ func TestAssetIndexFromBytes(t *testing.T) {
 
 	err = transactionrecord.AssetIndexFromBytes(&assetIndex, valid[1:])
 	if fault.ErrNotAssetIndex != err {
-		t.Fatalf("AssetIndexFromBytes error: %v", err)
+		t.Fatalf("AssetIndexFromBytes error: %s", err)
 	}
 }

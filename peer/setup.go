@@ -82,12 +82,12 @@ func Initialise(configuration *Configuration, version string) error {
 	// read the keys
 	privateKey, err := zmqutil.ReadPrivateKeyFile(configuration.PrivateKey)
 	if nil != err {
-		globalData.log.Errorf("read private key file: %q  error: %v", configuration.PrivateKey, err)
+		globalData.log.Errorf("read private key file: %q  error: %s", configuration.PrivateKey, err)
 		return err
 	}
 	publicKey, err := zmqutil.ReadPublicKeyFile(configuration.PublicKey)
 	if nil != err {
-		globalData.log.Errorf("read public key file: %q  error: %v", configuration.PublicKey, err)
+		globalData.log.Errorf("read public key file: %q  error: %s", configuration.PublicKey, err)
 		return err
 	}
 	globalData.log.Tracef("peer private key: %q", privateKey)
@@ -141,13 +141,13 @@ process_listen:
 		}
 		c, err := util.NewConnection(address)
 		if nil != err {
-			globalData.log.Errorf("announce listen[%d]=%q  error: %v", i, address, err)
+			globalData.log.Errorf("announce listen[%d]=%q  error: %s", i, address, err)
 			return err
 		}
 		l = append(l, c.Pack()...)
 	}
 	if err := announce.SetPeer(publicKey, l); nil != err {
-		globalData.log.Errorf("announce.SetPeer error: %v", err)
+		globalData.log.Errorf("announce.SetPeer error: %s", err)
 		return err
 	}
 	return nil

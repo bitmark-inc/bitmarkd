@@ -51,7 +51,7 @@ func main() {
 
 	program, options, arguments, err := getoptions.GetOS(flags)
 	if nil != err {
-		exitwithstatus.Message("%s: getoptions error: %v", program, err)
+		exitwithstatus.Message("%s: getoptions error: %s", program, err)
 	}
 
 	if len(options["version"]) > 0 {
@@ -79,12 +79,12 @@ func main() {
 	configurationFile := options["config-file"][0]
 	masterConfiguration, err := getConfiguration(configurationFile, variables)
 	if nil != err {
-		exitwithstatus.Message("%s: failed to read configuration from: %q  error: %v", program, configurationFile, err)
+		exitwithstatus.Message("%s: failed to read configuration from: %q  error: %s", program, configurationFile, err)
 	}
 
 	// start logging
 	if err = logger.Initialise(masterConfiguration.Logging); nil != err {
-		exitwithstatus.Message("%s: logger setup failed with error: %v", err)
+		exitwithstatus.Message("%s: logger setup failed with error: %s", err)
 	}
 	defer logger.Finalise()
 
@@ -106,7 +106,7 @@ func main() {
 			if os.IsExist(err) {
 				exitwithstatus.Message("%s: another instance is already running", program)
 			}
-			exitwithstatus.Message("%s: PID file: %q creation failed, error: %v", program, masterConfiguration.PidFile, err)
+			exitwithstatus.Message("%s: PID file: %q creation failed, error: %s", program, masterConfiguration.PidFile, err)
 		}
 		fmt.Fprintf(lockFile, "%d\n", os.Getpid())
 		lockFile.Close()
@@ -116,8 +116,8 @@ func main() {
 	// set the initial system mode - before any background tasks are started
 	err = mode.Initialise(masterConfiguration.Chain)
 	if nil != err {
-		log.Criticalf("mode initialise error: %v", err)
-		exitwithstatus.Message("mode initialise error: %v", err)
+		log.Criticalf("mode initialise error: %s", err)
+		exitwithstatus.Message("mode initialise error: %s", err)
 	}
 	defer mode.Finalise()
 
@@ -131,7 +131,7 @@ func main() {
 	// if "" != masterConfiguration.ProfileFile {
 	// 	f, err := os.Create(masterConfiguration.ProfileFile)
 	// 	if nil != err {
-	// 		log.Criticalf("cannot open profile output file: '%s'  error: %v", masterConfiguration.ProfileFile, err)
+	// 		log.Criticalf("cannot open profile output file: '%s'  error: %s", masterConfiguration.ProfileFile, err)
 	// 		exitwithstatus.Exit(1)
 	// 	}
 	// 	defer f.Close()
@@ -153,8 +153,8 @@ func main() {
 	log.Info("initialise storage")
 	err = storage.Initialise(masterConfiguration.Database.Name)
 	if nil != err {
-		log.Criticalf("storage initialise error: %v", err)
-		exitwithstatus.Message("storage initialise error: %v", err)
+		log.Criticalf("storage initialise error: %s", err)
+		exitwithstatus.Message("storage initialise error: %s", err)
 	}
 	defer storage.Finalise()
 
@@ -162,16 +162,16 @@ func main() {
 	log.Info("initialise reservoir")
 	err = reservoir.Initialise(masterConfiguration.ReservoirDataFile)
 	if nil != err {
-		log.Criticalf("reservoir initialise error: %v", err)
-		exitwithstatus.Message("reservoir initialise error: %v", err)
+		log.Criticalf("reservoir initialise error: %s", err)
+		exitwithstatus.Message("reservoir initialise error: %s", err)
 	}
 	defer reservoir.Finalise()
 
 	// start asset cache
 	err = asset.Initialise()
 	if nil != err {
-		log.Criticalf("asset initialise error: %v", err)
-		exitwithstatus.Message("asset initialise error: %v", err)
+		log.Criticalf("asset initialise error: %s", err)
+		exitwithstatus.Message("asset initialise error: %s", err)
 	}
 	defer asset.Finalise()
 
@@ -179,8 +179,8 @@ func main() {
 	log.Info("initialise blockring")
 	err = blockring.Initialise()
 	if nil != err {
-		log.Criticalf("blockring initialise error: %v", err)
-		exitwithstatus.Message("blockring initialise error: %v", err)
+		log.Criticalf("blockring initialise error: %s", err)
+		exitwithstatus.Message("blockring initialise error: %s", err)
 	}
 	defer blockring.Finalise()
 
@@ -188,15 +188,15 @@ func main() {
 	log.Info("initialise block")
 	err = block.Initialise()
 	if nil != err {
-		log.Criticalf("block initialise error: %v", err)
-		exitwithstatus.Message("block initialise error: %v", err)
+		log.Criticalf("block initialise error: %s", err)
+		exitwithstatus.Message("block initialise error: %s", err)
 	}
 	defer block.Finalise()
 
 	err = cache.Initialise()
 	if nil != err {
-		log.Criticalf("cache initialise error: %v", err)
-		exitwithstatus.Message("cache initialise error: %v", err)
+		log.Criticalf("cache initialise error: %s", err)
+		exitwithstatus.Message("cache initialise error: %s", err)
 	}
 	defer cache.Finalise()
 
@@ -238,55 +238,55 @@ func main() {
 	}
 	err = announce.Initialise(nodesDomain, masterConfiguration.PeerFile)
 	if nil != err {
-		log.Criticalf("announce initialise error: %v", err)
-		exitwithstatus.Message("announce initialise error: %v", err)
+		log.Criticalf("announce initialise error: %s", err)
+		exitwithstatus.Message("announce initialise error: %s", err)
 	}
 	defer announce.Finalise()
 
 	// start payment services
 	err = payment.Initialise(&masterConfiguration.Payment)
 	if nil != err {
-		log.Criticalf("payment initialise  error: %v", err)
-		exitwithstatus.Message("payment initialise error: %v", err)
+		log.Criticalf("payment initialise  error: %s", err)
+		exitwithstatus.Message("payment initialise error: %s", err)
 	}
 	defer payment.Finalise()
 
 	// initialise encryption
 	err = zmqutil.StartAuthentication()
 	if nil != err {
-		log.Criticalf("zmq.AuthStart: error: %v", err)
-		exitwithstatus.Message("zmq.AuthStart: error: %v", err)
+		log.Criticalf("zmq.AuthStart: error: %s", err)
+		exitwithstatus.Message("zmq.AuthStart: error: %s", err)
 	}
 
 	// start up the peering background processes
 	err = peer.Initialise(&masterConfiguration.Peering, version)
 	if nil != err {
-		log.Criticalf("peer initialise error: %v", err)
-		exitwithstatus.Message("peer initialise error: %v", err)
+		log.Criticalf("peer initialise error: %s", err)
+		exitwithstatus.Message("peer initialise error: %s", err)
 	}
 	defer peer.Finalise()
 
 	// start up the publishing background processes
 	err = publish.Initialise(&masterConfiguration.Publishing, version)
 	if nil != err {
-		log.Criticalf("publish initialise error: %v", err)
-		exitwithstatus.Message("publish initialise error: %v", err)
+		log.Criticalf("publish initialise error: %s", err)
+		exitwithstatus.Message("publish initialise error: %s", err)
 	}
 	defer publish.Finalise()
 
 	// start up the rpc background processes
 	err = rpc.Initialise(&masterConfiguration.ClientRPC, &masterConfiguration.HttpsRPC, version)
 	if nil != err {
-		log.Criticalf("rpc initialise error: %v", err)
-		exitwithstatus.Message("peer initialise error: %v", err)
+		log.Criticalf("rpc initialise error: %s", err)
+		exitwithstatus.Message("peer initialise error: %s", err)
 	}
 	defer rpc.Finalise()
 
 	// start proof background processes
 	err = proof.Initialise(&masterConfiguration.Proofing)
 	if nil != err {
-		log.Criticalf("proof initialise error: %v", err)
-		exitwithstatus.Message("proof initialise error: %v", err)
+		log.Criticalf("proof initialise error: %s", err)
+		exitwithstatus.Message("proof initialise error: %s", err)
 	}
 	defer proof.Finalise()
 

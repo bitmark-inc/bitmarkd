@@ -83,7 +83,7 @@ func NewBind(log *logger.L, socketType zmq.Type, zapDomain string, privateKey []
 			err = socket4.Bind(bindTo)
 		}
 		if nil != err {
-			log.Errorf("cannot bind[%d]: %q  error: %v", i, bindTo, err)
+			log.Errorf("cannot bind[%d]: %q  error: %s", i, bindTo, err)
 			goto fail
 		}
 		log.Infof("bind[%d]: %q  IPv6: %v", i, bindTo, v6)

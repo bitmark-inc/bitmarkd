@@ -39,7 +39,7 @@ func TestCanonical(t *testing.T) {
 		// create a connection item
 		c, err := util.NewConnection(d.in)
 		if nil != err {
-			t.Fatalf("NewConnection failed on:[%d] %q  error: %v", i, d.in, err)
+			t.Fatalf("NewConnection failed on:[%d] %q  error: %s", i, d.in, err)
 		}
 
 		// convert to text
@@ -91,7 +91,7 @@ func TestCanonicalIP(t *testing.T) {
 		if strings.Contains(err.Error(), "no such host") {
 			// expected error
 		} else if fault.ErrInvalidIPAddress != err {
-			t.Fatalf("NewConnection failed on:[%d] %q  error: %v", i, d, err)
+			t.Fatalf("NewConnection failed on:[%d] %q  error: %s", i, d, err)
 		}
 	}
 }
@@ -112,7 +112,7 @@ func TestCanonicalPort(t *testing.T) {
 			t.Fatalf("eroneoulssly converted:[%d]: %q  to(%t): %q", i, d, v6, s)
 		}
 		if fault.ErrInvalidPortNumber != err {
-			t.Fatalf("NewConnection failed on:[%d] %q  error: %v", i, d, err)
+			t.Fatalf("NewConnection failed on:[%d] %q  error: %s", i, d, err)
 		}
 	}
 }

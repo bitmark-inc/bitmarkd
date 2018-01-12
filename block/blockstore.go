@@ -59,7 +59,7 @@ func (blk *blockstore) process(item *messagebus.Message) {
 			// broadcast this packedBlock to peers if the block was valid
 			messagebus.Bus.Broadcast.Send("block", packedBlock)
 		} else {
-			log.Warnf("store block: %x  error: %v", packedBlock, err)
+			log.Warnf("store block: %x  error: %s", packedBlock, err)
 		}
 	}
 }

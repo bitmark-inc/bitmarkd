@@ -124,7 +124,7 @@ func ProofThread(log *logger.L) error {
 		for {
 			request, err := request.RecvMessageBytes(0)
 			if nil != err {
-				log.Criticalf("RecvMessageBytes error: %v", err)
+				log.Criticalf("RecvMessageBytes error: %s", err)
 				logger.Panicf("proofer error: %s", err)
 			}
 

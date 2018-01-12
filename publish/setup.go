@@ -57,12 +57,12 @@ func Initialise(configuration *Configuration, version string) error {
 	// read the keys
 	privateKey, err := zmqutil.ReadPrivateKeyFile(configuration.PrivateKey)
 	if nil != err {
-		globalData.log.Errorf("read private key file: %q  error: %v", configuration.PrivateKey, err)
+		globalData.log.Errorf("read private key file: %q  error: %s", configuration.PrivateKey, err)
 		return err
 	}
 	publicKey, err := zmqutil.ReadPublicKeyFile(configuration.PublicKey)
 	if nil != err {
-		globalData.log.Errorf("read public key file: %q  error: %v", configuration.PublicKey, err)
+		globalData.log.Errorf("read public key file: %q  error: %s", configuration.PublicKey, err)
 		return err
 	}
 	globalData.log.Tracef("private key: %q", privateKey)

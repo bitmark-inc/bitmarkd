@@ -54,7 +54,7 @@ func setup(t *testing.T, theChain ...string) {
 	// need to initialise block befor any tests can be performed
 	err = block.Initialise()
 	if nil != err {
-		t.Fatalf("block initialise error: %v", err)
+		t.Fatalf("block initialise error: %s", err)
 	}
 }
 

@@ -55,7 +55,7 @@ func TestBlockDigestFromHex(t *testing.T) {
 	var expected blockdigest.Digest
 	n, err := fmt.Sscan(r.beExpectedDigest, &expected)
 	if nil != err {
-		t.Fatalf("hex to link error: %v", err)
+		t.Fatalf("hex to link error: %s", err)
 	}
 
 	if 1 != n {
@@ -74,7 +74,7 @@ func blockDigestFromLittleEndian(t *testing.T, s string) *blockdigest.Digest {
 
 	_, err := fmt.Sscan(s, d)
 	if nil != err {
-		t.Fatalf("hex(%s) to block digest error: %v", s, err)
+		t.Fatalf("hex(%s) to block digest error: %s", s, err)
 	}
 
 	// need to reverse
@@ -92,7 +92,7 @@ func merkleDigestFromLittleEndian(t *testing.T, s string) *merkle.Digest {
 
 	_, err := fmt.Sscan(s, d)
 	if nil != err {
-		t.Fatalf("hex(%s) to merkle digest error: %v", s, err)
+		t.Fatalf("hex(%s) to merkle digest error: %s", s, err)
 	}
 
 	// need to reverse
@@ -114,7 +114,7 @@ func TestBlockDigestFromBlock(t *testing.T) {
 	fromLE := func(s string) uint64 {
 		h, err := hex.DecodeString(s)
 		if nil != err {
-			t.Fatalf("fromLE hex error: %v", err)
+			t.Fatalf("fromLE hex error: %s", err)
 		}
 		b := bytes.NewBuffer(h)
 		n := len(h)
@@ -123,21 +123,21 @@ func TestBlockDigestFromBlock(t *testing.T) {
 			n := uint16(0)
 			err = binary.Read(b, binary.LittleEndian, &n)
 			if nil != err {
-				t.Fatalf("fromLE read error: %v", err)
+				t.Fatalf("fromLE read error: %s", err)
 			}
 			return uint64(n)
 		case 4:
 			n := uint32(0)
 			err = binary.Read(b, binary.LittleEndian, &n)
 			if nil != err {
-				t.Fatalf("fromLE read error: %v", err)
+				t.Fatalf("fromLE read error: %s", err)
 			}
 			return uint64(n)
 		case 8:
 			n := uint64(0)
 			err = binary.Read(b, binary.LittleEndian, &n)
 			if nil != err {
-				t.Fatalf("fromLE read error: %v", err)
+				t.Fatalf("fromLE read error: %s", err)
 			}
 			return n
 		default:
@@ -166,7 +166,7 @@ func TestBlockDigestFromBlock(t *testing.T) {
 	var expected blockdigest.Digest
 	n, err := fmt.Sscan(r.beExpectedDigest, &expected)
 	if nil != err {
-		t.Fatalf("hex to link error: %v", err)
+		t.Fatalf("hex to link error: %s", err)
 	}
 
 	if 1 != n {
@@ -189,7 +189,7 @@ func TestBlockDigestFromBlock(t *testing.T) {
 	// marshal to JSON
 	j, err := json.Marshal(h)
 	if nil != err {
-		t.Fatalf("marshal to JSON error: %v", err)
+		t.Fatalf("marshal to JSON error: %s", err)
 	}
 
 	je := `{"version":1,"transactionCount":1,"number":"32","previousBlock":"81cd02ab7e569e8bcd9317e2fe99f2de44d49ab2b8851ba4a308000000000000","merkleRoot":"e320b6c2fffc8d750423db8b1eb942ae710e951ed797f7affc8892b0f1fc122b","timestamp":"1305998791","difficulty":"f2b9441a3243250d","nonce":"42a1469535a7d421"}`
@@ -202,7 +202,7 @@ func TestBlockDigestFromBlock(t *testing.T) {
 	var uHeader blockrecord.Header
 	err = json.Unmarshal(j, &uHeader)
 	if nil != err {
-		t.Fatalf("unmarshal from JSON error: %v", err)
+		t.Fatalf("unmarshal from JSON error: %s", err)
 	}
 
 	if !reflect.DeepEqual(uHeader, h) {

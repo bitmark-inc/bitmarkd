@@ -23,13 +23,13 @@ func TestInitialBits(t *testing.T) {
 
 		buffer, err := json.Marshal(expected)
 		if nil != err {
-			t.Fatalf("%d: JSON encode error: %v", i, err)
+			t.Fatalf("%d: JSON encode error: %s", i, err)
 		}
 
 		var actual blockrecord.NonceType
 		err = json.Unmarshal(buffer, &actual)
 		if nil != err {
-			t.Fatalf("%d: JSON decode error: %v", i, err)
+			t.Fatalf("%d: JSON decode error: %s", i, err)
 		}
 
 		if actual != expected {

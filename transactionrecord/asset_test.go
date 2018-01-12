@@ -75,7 +75,7 @@ func TestPackAssetData(t *testing.T) {
 	// test the packer
 	packed, err := r.Pack(registrantAccount)
 	if nil != err {
-		t.Fatalf("pack error: %v", err)
+		t.Fatalf("pack error: %s", err)
 	}
 
 	// if either of above fail we will have the message _without_ a signature
@@ -111,7 +111,7 @@ func TestPackAssetData(t *testing.T) {
 	// test the unpacker
 	unpacked, n, err := packed.Unpack()
 	if nil != err {
-		t.Fatalf("unpack error: %v", err)
+		t.Fatalf("unpack error: %s", err)
 	}
 	if len(packed) != n {
 		t.Errorf("did not unpack all data: only used: %d of: %d bytes", n, len(packed))
@@ -134,7 +134,7 @@ func TestPackAssetData(t *testing.T) {
 	}
 	b, err := json.MarshalIndent(item, "", "  ")
 	if nil != err {
-		t.Fatalf("json error: %v", err)
+		t.Fatalf("json error: %s", err)
 	}
 
 	t.Logf("AssetData: JSON: %s", b)
@@ -165,7 +165,7 @@ func TestPackAssetDataWithEmptyName(t *testing.T) {
 		t.Fatalf("pack should have failed")
 	}
 	if fault.ErrNameTooShort != err {
-		t.Fatalf("unexpected pack error: %v", err)
+		t.Fatalf("unexpected pack error: %s", err)
 	}
 }
 
@@ -188,7 +188,7 @@ func TestPackAssetDataWithEmptyFingerprint(t *testing.T) {
 		t.Fatalf("pack should have failed")
 	}
 	if fault.ErrFingerprintTooShort != err {
-		t.Fatalf("unexpected pack error: %v", err)
+		t.Fatalf("unexpected pack error: %s", err)
 	}
 }
 
@@ -211,7 +211,7 @@ func TestPackAssetDataWithInvalidMetadata(t *testing.T) {
 		t.Fatalf("pack should have failed")
 	}
 	if fault.ErrMetadataIsNotMap != err {
-		t.Fatalf("unexpected pack error: %v", err)
+		t.Fatalf("unexpected pack error: %s", err)
 	}
 }
 
@@ -270,7 +270,7 @@ func TestPackAssetDataWithEmptyMetadata(t *testing.T) {
 	// test the packer
 	packed, err := r.Pack(registrantAccount)
 	if nil != err {
-		t.Errorf("pack error: %v", err)
+		t.Errorf("pack error: %s", err)
 	}
 
 	// if either of above fail we will have the message _without_ a signature
@@ -304,7 +304,7 @@ func TestPackAssetDataWithEmptyMetadata(t *testing.T) {
 	// test the unpacker
 	unpacked, n, err := packed.Unpack()
 	if nil != err {
-		t.Fatalf("unpack error: %v", err)
+		t.Fatalf("unpack error: %s", err)
 	}
 	if len(packed) != n {
 		t.Errorf("did not unpack all data: only used: %d of: %d bytes", n, len(packed))

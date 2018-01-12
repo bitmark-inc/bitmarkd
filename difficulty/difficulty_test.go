@@ -197,13 +197,13 @@ func TestJSON(t *testing.T) {
 
 		buffer, err := json.Marshal(d)
 		if nil != err {
-			t.Fatalf("%d: JSON encode error: %v", i, err)
+			t.Fatalf("%d: JSON encode error: %s", i, err)
 		}
 
 		dNew := difficulty.New()
 		err = json.Unmarshal(buffer, dNew)
 		if nil != err {
-			t.Fatalf("%d: JSON decode error: %v", i, err)
+			t.Fatalf("%d: JSON decode error: %s", i, err)
 		}
 
 		actual := dNew.Bits()

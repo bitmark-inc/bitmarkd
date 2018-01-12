@@ -38,7 +38,7 @@ func main() {
 
 	program, options, arguments, err := getoptions.GetOS(flags)
 	if nil != err {
-		exitwithstatus.Message("%s: getoptions error: %v", program, err)
+		exitwithstatus.Message("%s: getoptions error: %s", program, err)
 	}
 
 	if len(options["version"]) > 0 {
@@ -66,12 +66,12 @@ func main() {
 	configurationFile := options["config-file"][0]
 	masterConfiguration, err := getConfiguration(configurationFile, variables)
 	if nil != err {
-		exitwithstatus.Message("%s: failed to read configuration from: %q  error: %v", program, configurationFile, err)
+		exitwithstatus.Message("%s: failed to read configuration from: %q  error: %s", program, configurationFile, err)
 	}
 
 	// start logging
 	if err = logger.Initialise(masterConfiguration.Logging); nil != err {
-		exitwithstatus.Message("%s: logger setup failed with error: %v", err)
+		exitwithstatus.Message("%s: logger setup failed with error: %s", err)
 	}
 	defer logger.Finalise()
 
@@ -93,7 +93,7 @@ func main() {
 			if os.IsExist(err) {
 				exitwithstatus.Message("%s: another instance is already running", program)
 			}
-			exitwithstatus.Message("%s: PID file: %q creation failed, error: %v", program, masterConfiguration.PidFile, err)
+			exitwithstatus.Message("%s: PID file: %q creation failed, error: %s", program, masterConfiguration.PidFile, err)
 		}
 		fmt.Fprintf(lockFile, "%d\n", os.Getpid())
 		lockFile.Close()
@@ -111,7 +111,7 @@ func main() {
 	// if "" != masterConfiguration.ProfileFile {
 	// 	f, err := os.Create(masterConfiguration.ProfileFile)
 	// 	if nil != err {
-	// 		log.Criticalf("cannot open profile output file: '%s'  error: %v", masterConfiguration.ProfileFile, err)
+	// 		log.Criticalf("cannot open profile output file: '%s'  error: %s", masterConfiguration.ProfileFile, err)
 	// 		exitwithstatus.Exit(1)
 	// 	}
 	// 	defer f.Close()
@@ -129,13 +129,13 @@ func main() {
 	}
 	publicKey, err := zmqutil.ReadPublicKeyFile(masterConfiguration.Peering.PublicKey)
 	if nil != err {
-		log.Criticalf("read error on: %s  error: %v", masterConfiguration.Peering.PublicKey, err)
-		exitwithstatus.Message("%s: failed reading Public Key: %q  error: %v", program, masterConfiguration.Peering.PublicKey, err)
+		log.Criticalf("read error on: %s  error: %s", masterConfiguration.Peering.PublicKey, err)
+		exitwithstatus.Message("%s: failed reading Public Key: %q  error: %s", program, masterConfiguration.Peering.PublicKey, err)
 	}
 	privateKey, err := zmqutil.ReadPrivateKeyFile(masterConfiguration.Peering.PrivateKey)
 	if nil != err {
-		log.Criticalf("read error on: %s  error: %v", masterConfiguration.Peering.PrivateKey, err)
-		exitwithstatus.Message("%s: failed reading Private Key: %q  error: %v", program, masterConfiguration.Peering.PrivateKey, err)
+		log.Criticalf("read error on: %s  error: %s", masterConfiguration.Peering.PrivateKey, err)
+		exitwithstatus.Message("%s: failed reading Private Key: %q  error: %s", program, masterConfiguration.Peering.PrivateKey, err)
 	}
 
 	// general info
@@ -159,8 +159,8 @@ func main() {
 		prflog := logger.New(fmt.Sprintf("proofer-%d", i))
 		err := ProofThread(prflog)
 		if nil != err {
-			log.Criticalf("proof[%d]: error: %v", i, err)
-			exitwithstatus.Message("%s: proof[%d]: error: %v", program, i, err)
+			log.Criticalf("proof[%d]: error: %s", i, err)
+			exitwithstatus.Message("%s: proof[%d]: error: %s", program, i, err)
 		}
 	}
 
@@ -170,8 +170,8 @@ func main() {
 	// initialise encryption
 	err = zmqutil.StartAuthentication()
 	if nil != err {
-		log.Criticalf("zmq.AuthStart(): error: %v", err)
-		exitwithstatus.Message("%s: zmq.AuthStart() error: %v", program, err)
+		log.Criticalf("zmq.AuthStart(): error: %s", err)
+		exitwithstatus.Message("%s: zmq.AuthStart() error: %s", program, err)
 	}
 
 	clientCount := 0
@@ -182,20 +182,20 @@ connection_setup:
 
 		serverPublicKey, err := hex.DecodeString(remote.PublicKey)
 		if nil != err {
-			log.Warnf("client: %d invalid server publickey: %q error: %v", i, remote.PublicKey, err)
+			log.Warnf("client: %d invalid server publickey: %q error: %s", i, remote.PublicKey, err)
 			continue connection_setup
 		}
 
 		bc, err := util.NewConnection(remote.Blocks)
 		if nil != err {
-			log.Warnf("client: %d invalid blocks publisher: %q error: %v", i, remote.Blocks, err)
+			log.Warnf("client: %d invalid blocks publisher: %q error: %s", i, remote.Blocks, err)
 			continue connection_setup
 		}
 		blocksAddress, blocksv6 := bc.CanonicalIPandPort("tcp://")
 
 		sc, err := util.NewConnection(remote.Submit)
 		if nil != err {
-			log.Warnf("client: %d invalid submit address: %q error: %v", i, remote.Submit, err)
+			log.Warnf("client: %d invalid submit address: %q error: %s", i, remote.Submit, err)
 			continue connection_setup
 		}
 		submitAddress, submitv6 := sc.CanonicalIPandPort("tcp://")
@@ -205,14 +205,14 @@ connection_setup:
 		mlog := logger.New(fmt.Sprintf("submitter-%d", i))
 		err = Submitter(i, submitAddress, submitv6, serverPublicKey, publicKey, privateKey, mlog)
 		if nil != err {
-			log.Warnf("submitter: %d failed error: %v", i, err)
+			log.Warnf("submitter: %d failed error: %s", i, err)
 			continue connection_setup
 		}
 
 		slog := logger.New(fmt.Sprintf("subscriber-%d", i))
 		err = Subscribe(i, blocksAddress, blocksv6, serverPublicKey, publicKey, privateKey, slog)
 		if nil != err {
-			log.Warnf("subscribe: %d failed error: %v", i, err)
+			log.Warnf("subscribe: %d failed error: %s", i, err)
 			continue connection_setup
 		}
 		clientCount += 1

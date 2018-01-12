@@ -16,7 +16,7 @@ func hexToLink(t *testing.T, s string) *merkle.Digest {
 	var link merkle.Digest
 	n, err := fmt.Sscan(s, &link)
 	if nil != err {
-		t.Fatalf("hex to link error: %v", err)
+		t.Fatalf("hex to link error: %s", err)
 		return nil
 	}
 	if 1 != n {

@@ -66,7 +66,7 @@ func TransferOwnership(previousTxId merkle.Digest, transferTxId merkle.Digest, t
 
 		// ow, err := ListBitmarksFor(currentOwner, 0, 999)
 		// if nil != err {
-		// 	logger.Criticalf("lbf: error: %v", err)
+		// 	logger.Criticalf("lbf: error: %s", err)
 		// } else {
 		// 	logger.Criticalf("lbf: %#v", ow)
 		// }

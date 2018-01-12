@@ -38,7 +38,7 @@ outer_loop:
 		packedHeader := blockrecord.PackedHeader(packedBlock[:blockrecord.TotalBlockSize])
 		header, err := packedHeader.Unpack()
 		if nil != err {
-			log.Criticalf("failed to unpack block: %d from storage  error: %v", binary.BigEndian.Uint64(last.Key), err)
+			log.Criticalf("failed to unpack block: %d from storage  error: %s", binary.BigEndian.Uint64(last.Key), err)
 			return err
 		}
 
@@ -57,7 +57,7 @@ outer_loop:
 		for i := 1; true; i += 1 {
 			transaction, n, err := transactionrecord.Packed(data).Unpack()
 			if nil != err {
-				log.Errorf("tx[%d]: error: %v", i, err)
+				log.Errorf("tx[%d]: error: %s", i, err)
 				return err
 			}
 

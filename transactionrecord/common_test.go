@@ -24,7 +24,7 @@ func TestGenerateKeypair(t *testing.T) {
 		// use the displayed values to modify data below
 		publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
 		if nil != err {
-			t.Errorf("key pair generation error: %v", err)
+			t.Errorf("key pair generation error: %s", err)
 			return
 		}
 		t.Errorf("*** GENERATED:\n%s", util.FormatBytes("publicKey", publicKey))

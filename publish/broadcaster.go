@@ -39,14 +39,14 @@ func (brdc *broadcaster) initialise(privateKey []byte, publicKey []byte, broadca
 
 	c, err := util.NewConnections(broadcast)
 	if nil != err {
-		log.Errorf("ip and port error: %v", err)
+		log.Errorf("ip and port error: %s", err)
 		return err
 	}
 
 	// allocate IPv4 and IPv6 sockets
 	brdc.socket4, brdc.socket6, err = zmqutil.NewBind(log, zmq.PUB, broadcasterZapDomain, privateKey, publicKey, c)
 	if nil != err {
-		log.Errorf("bind error: %v", err)
+		log.Errorf("bind error: %s", err)
 		return err
 	}
 

@@ -55,7 +55,7 @@ func (lstn *listener) initialise(privateKey []byte, publicKey []byte, listen []s
 
 	c, err := util.NewConnections(listen)
 	if nil != err {
-		log.Errorf("ip and port error: %v", err)
+		log.Errorf("ip and port error: %s", err)
 		return err
 	}
 
@@ -68,7 +68,7 @@ func (lstn *listener) initialise(privateKey []byte, publicKey []byte, listen []s
 	// allocate IPv4 and IPv6 sockets
 	lstn.socket4, lstn.socket6, err = zmqutil.NewBind(log, zmq.REP, listenerZapDomain, privateKey, publicKey, c)
 	if nil != err {
-		log.Errorf("bind error: %v", err)
+		log.Errorf("bind error: %s", err)
 		return err
 	}
 
@@ -134,7 +134,7 @@ func (lstn *listener) process(socket *zmq.Socket) {
 
 	data, err := socket.RecvMessageBytes(0)
 	if nil != err {
-		log.Errorf("receive error: %v", err)
+		log.Errorf("receive error: %s", err)
 		return
 	}
 
@@ -167,7 +167,7 @@ func (lstn *listener) process(socket *zmq.Socket) {
 			Height:  block.GetHeight(),
 		}
 		result, err = json.Marshal(info)
-		logger.PanicIfError("JSON encode error: %v", err)
+		logger.PanicIfError("JSON encode error: %s", err)
 
 	case "N": // get block number
 		blockNumber := block.GetHeight()

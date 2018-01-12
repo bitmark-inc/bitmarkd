@@ -21,7 +21,7 @@ func TestScanFmt(t *testing.T) {
 	var d merkle.Digest
 	n, err := fmt.Sscan(stringDigest, &d)
 	if nil != err {
-		t.Fatalf("hex to digest error: %v", err)
+		t.Fatalf("hex to digest error: %s", err)
 	}
 
 	if 1 != n {
@@ -68,7 +68,7 @@ func TestDigest(t *testing.T) {
 	var expected merkle.Digest
 	n, err := fmt.Sscan(stringDigest, &expected)
 	if nil != err {
-		t.Fatalf("hex to digest error: %v", err)
+		t.Fatalf("hex to digest error: %s", err)
 	}
 
 	if 1 != n {
@@ -141,7 +141,7 @@ func TestLink(t *testing.T) {
 	var link merkle.Digest
 	n, err := fmt.Sscan("4bf8131ca2a32eadc097e14b48ecc7c87288a7b6b79757c8290834bacfda16aa", &link)
 	if nil != err {
-		t.Errorf("hex to link error: %v", err)
+		t.Errorf("hex to link error: %s", err)
 		return
 	}
 	if 1 != n {
@@ -164,7 +164,7 @@ func TestLink(t *testing.T) {
 	}
 	convertedJSON, err := json.Marshal(item)
 	if nil != err {
-		t.Errorf("marshal json error: %v", err)
+		t.Errorf("marshal json error: %s", err)
 		return
 	}
 	if expectedJSON != string(convertedJSON) {
@@ -178,7 +178,7 @@ func TestLink(t *testing.T) {
 	}
 	err = json.Unmarshal([]byte(expectedJSON), &newItem)
 	if nil != err {
-		t.Errorf("unmarshal json error: %v", err)
+		t.Errorf("unmarshal json error: %s", err)
 		return
 	}
 
@@ -208,7 +208,7 @@ func TestLinkFromBytes(t *testing.T) {
 	var link merkle.Digest
 	err := merkle.DigestFromBytes(&link, valid)
 	if nil != err {
-		t.Fatalf("LinkFromBytes error: %v", err)
+		t.Fatalf("LinkFromBytes error: %s", err)
 	}
 
 	if link != expectedLink {
@@ -217,6 +217,6 @@ func TestLinkFromBytes(t *testing.T) {
 
 	err = merkle.DigestFromBytes(&link, valid[1:])
 	if fault.ErrNotLink != err {
-		t.Fatalf("LinkFromBytes error: %v", err)
+		t.Fatalf("LinkFromBytes error: %s", err)
 	}
 }

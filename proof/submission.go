@@ -57,7 +57,7 @@ func (sub *submission) initialise(configuration *Configuration) error {
 	// allocate IPv4 and IPv6 sockets
 	sub.socket4, sub.socket6, err = zmqutil.NewBind(log, zmq.REP, submissionZapDomain, privateKey, publicKey, c)
 	if nil != err {
-		log.Errorf("bind error: %v", err)
+		log.Errorf("bind error: %s", err)
 		return err
 	}
 
@@ -117,7 +117,7 @@ func (sub *submission) process(socket *zmq.Socket) {
 
 	data, err := socket.RecvMessage(0)
 	if nil != err {
-		log.Errorf("JSON encode error: %v", err)
+		log.Errorf("JSON encode error: %s", err)
 		return
 	}
 
@@ -127,7 +127,7 @@ func (sub *submission) process(socket *zmq.Socket) {
 	var request SubmittedItem
 	err = json.Unmarshal([]byte(data[0]), &request)
 	if nil != err {
-		log.Errorf("JSON decode error: %v", err)
+		log.Errorf("JSON decode error: %s", err)
 	} else {
 
 		log.Infof("received message: %v", request)

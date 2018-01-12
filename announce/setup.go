@@ -115,7 +115,7 @@ func Initialise(nodesDomain, peerFile string) error {
 			t = strings.TrimSpace(t)
 			tag, err := parseTag(t)
 			if nil != err {
-				globalData.log.Infof("ignore TXT[%d]: %q  error: %v", i, t, err)
+				globalData.log.Infof("ignore TXT[%d]: %q  error: %s", i, t, err)
 			} else {
 				globalData.log.Infof("process TXT[%d]: %q", i, t)
 				globalData.log.Infof("result[%d]: IPv4: %q  IPv6: %q  rpc: %d  connect: %d  subscribe: %d", i, tag.ipv4, tag.ipv6, tag.rpcPort, tag.connectPort, tag.subscribePort)

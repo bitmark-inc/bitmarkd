@@ -27,7 +27,7 @@ func TestPackBitmarkIssue(t *testing.T) {
 	var asset transactionrecord.AssetIndex
 	_, err := fmt.Sscan("59d06155d25dffdb982729de8dce9d7855ca094d8bab8124b347c40668477056b3c27ccb7d71b54043d207ccd187642bf9c8466f9a8d0dbefb4c41633a7e39ef", &asset)
 	if nil != err {
-		t.Fatalf("hex to asset index error: %v", err)
+		t.Fatalf("hex to asset index error: %s", err)
 	}
 
 	r := transactionrecord.BitmarkIssue{
@@ -69,7 +69,7 @@ func TestPackBitmarkIssue(t *testing.T) {
 	// test the packer
 	packed, err := r.Pack(issuerAccount)
 	if nil != err {
-		t.Errorf("pack error: %v", err)
+		t.Errorf("pack error: %s", err)
 	}
 
 	// if either of above fail we will have the message _without_ a signature
@@ -93,7 +93,7 @@ func TestPackBitmarkIssue(t *testing.T) {
 	// test the unpacker
 	unpacked, n, err := packed.Unpack()
 	if nil != err {
-		t.Fatalf("unpack error: %v", err)
+		t.Fatalf("unpack error: %s", err)
 	}
 	if len(packed) != n {
 		t.Errorf("did not unpack all data: only used: %d of: %d bytes", n, len(packed))
@@ -114,7 +114,7 @@ func TestPackBitmarkIssue(t *testing.T) {
 	}
 	b, err := json.MarshalIndent(item, "", "  ")
 	if nil != err {
-		t.Fatalf("json error: %v", err)
+		t.Fatalf("json error: %s", err)
 	}
 
 	t.Logf("Bitmark Issue: JSON: %s", b)
@@ -137,7 +137,7 @@ func TestPackTenBitmarkIssues(t *testing.T) {
 	var asset transactionrecord.AssetIndex
 	_, err := fmt.Sscan("59d06155d25dffdb982729de8dce9d7855ca094d8bab8124b347c40668477056b3c27ccb7d71b54043d207ccd187642bf9c8466f9a8d0dbefb4c41633a7e39ef", &asset)
 	if nil != err {
-		t.Fatalf("hex to asset index error: %v", err)
+		t.Fatalf("hex to asset index error: %s", err)
 	}
 
 	rs := make([]*transactionrecord.BitmarkIssue, 10)
@@ -151,20 +151,20 @@ func TestPackTenBitmarkIssues(t *testing.T) {
 
 		partial, err := r.Pack(issuerAccount)
 		if fault.ErrInvalidSignature != err {
-			t.Fatalf("pack error: %v", err)
+			t.Fatalf("pack error: %s", err)
 		}
 		signature := ed25519.Sign(issuer.privateKey, partial)
 		r.Signature = signature
 
 		_, err = r.Pack(issuerAccount)
 		if nil != err {
-			t.Fatalf("pack error: %v", err)
+			t.Fatalf("pack error: %s", err)
 		}
 	}
 	// display a JSON version for information
 	b, err := json.MarshalIndent(rs, "", "  ")
 	if nil != err {
-		t.Fatalf("json error: %v", err)
+		t.Fatalf("json error: %s", err)
 	}
 
 	t.Logf("Bitmark Issue: JSON: %s", b)

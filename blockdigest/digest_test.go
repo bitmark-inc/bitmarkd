@@ -20,7 +20,7 @@ func TestScanFmt(t *testing.T) {
 	var d blockdigest.Digest
 	n, err := fmt.Sscan(stringDigest, &d)
 	if nil != err {
-		t.Fatalf("hex to digest error: %v", err)
+		t.Fatalf("hex to digest error: %s", err)
 	}
 
 	if 1 != n {
@@ -58,7 +58,7 @@ func TestScanFmt(t *testing.T) {
 	var expectedBig big.Int
 	n, err = fmt.Sscanf(stringDigest, "%x", &expectedBig)
 	if nil != err {
-		t.Fatalf("hex to big error: %v", err)
+		t.Fatalf("hex to big error: %s", err)
 	}
 
 	if 1 != n {
@@ -82,7 +82,7 @@ func TestDigest(t *testing.T) {
 	var expected blockdigest.Digest
 	n, err := fmt.Sscan(stringDigest, &expected)
 	if nil != err {
-		t.Fatalf("hex to digest error: %v", err)
+		t.Fatalf("hex to digest error: %s", err)
 	}
 
 	if 1 != n {
@@ -117,7 +117,7 @@ func TestBlockDataDigest(t *testing.T) {
 	var expected blockdigest.Digest
 	n, err := fmt.Sscan(stringDigest, &expected)
 	if nil != err {
-		t.Fatalf("hex to digest error: %v", err)
+		t.Fatalf("hex to digest error: %s", err)
 	}
 
 	if 1 != n {
@@ -131,7 +131,7 @@ func TestBlockDataDigest(t *testing.T) {
 	// test JSON
 	buffer, err := json.Marshal(d)
 	if nil != err {
-		t.Fatalf("marshal JSON error: %v", err)
+		t.Fatalf("marshal JSON error: %s", err)
 	}
 
 	if expectedJSON != string(buffer) {
@@ -141,7 +141,7 @@ func TestBlockDataDigest(t *testing.T) {
 	var jd blockdigest.Digest
 	err = json.Unmarshal([]byte(expectedJSON), &jd)
 	if nil != err {
-		t.Fatalf("unmarshal JSON error: %v", err)
+		t.Fatalf("unmarshal JSON error: %s", err)
 	}
 
 	if d != jd {

@@ -132,12 +132,12 @@ func checkAssembly(t *testing.T, title string, source SourceData, gDigest blockd
 
 	proofedbyAccount, err := account.AccountFromBase58(source.ProofedBy)
 	if nil != err {
-		t.Fatalf("failed to parse account: error: %v", err)
+		t.Fatalf("failed to parse account: error: %s", err)
 	}
 
 	timestamp, err := time.Parse(time.RFC3339, source.Timestamp.utc)
 	if nil != err {
-		t.Fatalf("failed to parse time: error: %v", err)
+		t.Fatalf("failed to parse time: error: %s", err)
 	}
 	timeUint64 := uint64(timestamp.UTC().Unix())
 	if timeUint64 != source.Timestamp.timestamp {
@@ -157,7 +157,7 @@ func checkAssembly(t *testing.T, title string, source SourceData, gDigest blockd
 
 	base, err := b.Pack(proofedbyAccount)
 	if nil != err {
-		t.Fatalf("failed to pack base: error: %v", err)
+		t.Fatalf("failed to pack base: error: %s", err)
 	}
 	baseDigest := merkle.Digest(base.MakeLink())
 
@@ -252,7 +252,7 @@ func checkAssembly(t *testing.T, title string, source SourceData, gDigest blockd
 	// unpack the block header
 	unpackedHeader, err := blockrecord.PackedHeader(blk[:blockrecord.TotalBlockSize]).Unpack()
 	if nil != err {
-		t.Fatalf("unpack block header failed: error: %v", err)
+		t.Fatalf("unpack block header failed: error: %s", err)
 	}
 
 	if unpackedHeader.Timestamp != h.Timestamp {

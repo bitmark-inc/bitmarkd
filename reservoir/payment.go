@@ -116,7 +116,7 @@ trim_bytes:
 		i := c.Index() // zero based index
 		fee, err := c.GetFee()
 		if nil != err {
-			logger.Panicf("payment.getPayment: get fee returned error: %v", err)
+			logger.Panicf("payment.getPayment: get fee returned error: %s", err)
 		}
 
 		payments[i] = &transactionrecord.Payment{

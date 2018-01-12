@@ -149,7 +149,7 @@ process_rpcs:
 		}
 		c, err := util.NewConnection(address)
 		if nil != err {
-			log.Errorf("invalid %s listen announce: %q  error: %v", name, address, err)
+			log.Errorf("invalid %s listen announce: %q  error: %s", name, address, err)
 			return err
 		}
 		rpcs = append(rpcs, c.Pack()...)

@@ -116,7 +116,7 @@ func (d *discoverer) Run(args interface{}, shutdown <-chan struct{}) {
 				switch s := p.Socket; s {
 				case d.pull:
 					if _, err := s.RecvMessageBytes(0); err != nil {
-						d.log.Errorf("pull receive error: %v", err)
+						d.log.Errorf("pull receive error: %s", err)
 						break loop
 					}
 					break loop
@@ -124,7 +124,7 @@ func (d *discoverer) Run(args interface{}, shutdown <-chan struct{}) {
 				default:
 					msg, err := s.RecvMessageBytes(0)
 					if err != nil {
-						d.log.Errorf("sub receive error: %v", err)
+						d.log.Errorf("sub receive error: %s", err)
 					}
 
 					d.assignHandler(msg)

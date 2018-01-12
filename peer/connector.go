@@ -81,13 +81,13 @@ func (conn *connector) initialise(privateKey []byte, publicKey []byte, connect [
 	for i, c := range connect {
 		address, err := util.NewConnection(c.Address)
 		if nil != err {
-			log.Errorf("client[%d]=address: %q  error: %v", i, c.Address, err)
+			log.Errorf("client[%d]=address: %q  error: %s", i, c.Address, err)
 			errX = err
 			goto fail
 		}
 		serverPublicKey, err := hex.DecodeString(c.PublicKey)
 		if nil != err {
-			log.Errorf("client[%d]=public: %q  error: %v", i, c.PublicKey, err)
+			log.Errorf("client[%d]=public: %q  error: %s", i, c.PublicKey, err)
 			errX = err
 			goto fail
 		}
@@ -95,13 +95,13 @@ func (conn *connector) initialise(privateKey []byte, publicKey []byte, connect [
 		// prevent connection to self
 		if bytes.Equal(publicKey, serverPublicKey) {
 			errX = fault.ErrConnectingToSelfForbidden
-			log.Errorf("client[%d]=public: %q  error: %v", i, c.PublicKey, errX)
+			log.Errorf("client[%d]=public: %q  error: %s", i, c.PublicKey, errX)
 			goto fail
 		}
 
 		client, err := upstream.New(privateKey, publicKey, connectorTimeout)
 		if nil != err {
-			log.Errorf("client[%d]=%q  error: %v", i, address, err)
+			log.Errorf("client[%d]=%q  error: %s", i, address, err)
 			errX = err
 			goto fail
 		}
@@ -111,7 +111,7 @@ func (conn *connector) initialise(privateKey []byte, publicKey []byte, connect [
 
 		err = client.Connect(address, serverPublicKey)
 		if nil != err {
-			log.Errorf("connect[%d]=%q  error: %v", i, address, err)
+			log.Errorf("connect[%d]=%q  error: %s", i, address, err)
 			errX = err
 			goto fail
 		}
@@ -122,7 +122,7 @@ func (conn *connector) initialise(privateKey []byte, publicKey []byte, connect [
 	for i := 0; i < maximumDynamicClients; i += 1 {
 		client, err := upstream.New(privateKey, publicKey, connectorTimeout)
 		if nil != err {
-			log.Errorf("client[%d]  error: %v", i, err)
+			log.Errorf("client[%d]  error: %s", i, err)
 			errX = err
 			goto fail
 		}
@@ -268,13 +268,13 @@ func (conn *connector) runStateMachine() bool {
 			for h := height; h > genesis.BlockNumber; h -= 1 {
 				digest, err := block.DigestForBlock(h)
 				if nil != err {
-					log.Infof("block number: %d  local digest error: %v", h, err)
+					log.Infof("block number: %d  local digest error: %s", h, err)
 					conn.state = cStateHighestBlock // retry
 					break check_digests
 				}
 				d, err := conn.theClient.GetBlockDigest(h)
 				if nil != err {
-					log.Infof("block number: %d  fetch digest error: %v", h, err)
+					log.Infof("block number: %d  fetch digest error: %s", h, err)
 					conn.state = cStateHighestBlock // retry
 					break check_digests
 				} else if d == digest {
@@ -288,7 +288,7 @@ func (conn *connector) runStateMachine() bool {
 					// remove old blocks
 					err := block.DeleteDownToBlock(conn.startBlockNumber)
 					if nil != err {
-						log.Errorf("delete down to block number: %d  error: %v", conn.startBlockNumber, err)
+						log.Errorf("delete down to block number: %d  error: %s", conn.startBlockNumber, err)
 						conn.state = cStateHighestBlock // retry
 					}
 					break check_digests
@@ -312,14 +312,14 @@ func (conn *connector) runStateMachine() bool {
 			log.Infof("fetch block number: %d", conn.startBlockNumber)
 			packedBlock, err := conn.theClient.GetBlockData(conn.startBlockNumber)
 			if nil != err {
-				log.Errorf("fetch block number: %d  error: %v", conn.startBlockNumber, err)
+				log.Errorf("fetch block number: %d  error: %s", conn.startBlockNumber, err)
 				conn.state = cStateHighestBlock // retry
 				break fetch_blocks
 			}
 			log.Debugf("store block number: %d", conn.startBlockNumber)
 			err = block.StoreIncoming(packedBlock)
 			if nil != err {
-				log.Errorf("store block number: %d  error: %v", conn.startBlockNumber, err)
+				log.Errorf("store block number: %d  error: %s", conn.startBlockNumber, err)
 				conn.state = cStateHighestBlock // retry
 				break fetch_blocks
 			}

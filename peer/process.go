@@ -32,7 +32,7 @@ func processSubscription(log *logger.L, command string, arguments [][]byte) {
 		log.Infof("received block: %x", arguments[0])
 		if !mode.Is(mode.Normal) {
 			err := fault.ErrNotAvailableDuringSynchronise
-			log.Warnf("failed assets: error: %v", err)
+			log.Warnf("failed assets: error: %s", err)
 		} else {
 			messagebus.Bus.Blockstore.Send("remote", arguments[0])
 		}
@@ -45,7 +45,7 @@ func processSubscription(log *logger.L, command string, arguments [][]byte) {
 		log.Infof("received assets: %x", arguments[0])
 		err := processAssets(arguments[0])
 		if nil != err {
-			log.Warnf("failed assets: error: %v", err)
+			log.Warnf("failed assets: error: %s", err)
 		} else {
 			messagebus.Bus.Broadcast.Send("assets", arguments[0])
 		}
@@ -58,7 +58,7 @@ func processSubscription(log *logger.L, command string, arguments [][]byte) {
 		log.Infof("received issues: %x, verified: %x", arguments[0], arguments[1])
 		err := processIssues(arguments[0], arguments[1])
 		if nil != err {
-			log.Warnf("failed issues: error: %v", err)
+			log.Warnf("failed issues: error: %s", err)
 		} else {
 			messagebus.Bus.Broadcast.Send("issues", arguments[0:2]...)
 		}
@@ -71,7 +71,7 @@ func processSubscription(log *logger.L, command string, arguments [][]byte) {
 		log.Infof("received transfer: %x", arguments[0])
 		err := processTransfer(arguments[0])
 		if nil != err {
-			log.Warnf("failed transfer: error: %v", err)
+			log.Warnf("failed transfer: error: %s", err)
 		} else {
 			messagebus.Bus.Broadcast.Send("transfer", arguments[0])
 		}
@@ -84,7 +84,7 @@ func processSubscription(log *logger.L, command string, arguments [][]byte) {
 		log.Infof("received proof: %x", arguments[0])
 		err := processProof(arguments[0])
 		if nil != err {
-			log.Warnf("failed proof: error: %v", err)
+			log.Warnf("failed proof: error: %s", err)
 		} else {
 			messagebus.Bus.Broadcast.Send("proof", arguments[0])
 		}
