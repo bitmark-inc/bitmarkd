@@ -38,36 +38,11 @@ func (r *RPCClient) GetNodeInfo() (json.RawMessage, error) {
 	return reply, err
 }
 
-// GetConnectors will get all its connectors of a node from bitmark rpc
-func (r *RPCClient) GetConnectors() (ConnClient, error) {
-	args := RPCEmptyArguments{}
-	var reply ConnClient
-	err := r.Client.Call("Node.Connectors", &args, &reply)
-	return reply, err
-}
-
-func (r *RPCClient) GetAllInfo() (reply map[string]interface{}, err error) {
-	node, err := r.GetNodeInfo()
-	if err != nil {
-		return
-	}
-	conn, err := r.GetConnectors()
-	if err != nil {
-		return
-	}
-	reply = map[string]interface{}{
-		"node": node,
-		"conn": conn,
-	}
-	return
-}
-
 func main() {
 	defer exitwithstatus.Handler()
 
 	flags := []getoptions.Option{
 		{Long: "help", HasArg: getoptions.NO_ARGUMENT, Short: 'h'},
-		{Long: "info-type", HasArg: getoptions.OPTIONAL_ARGUMENT, Short: 'i'},
 	}
 
 	program, options, arguments, err := getoptions.GetOS(flags)
@@ -77,13 +52,6 @@ func main() {
 
 	if len(options["help"]) > 0 {
 		exitwithstatus.Message("usage: %s [--help] [--info-type=TYPE] [host:port]", program)
-	}
-
-	// set the default info type
-	infoType := []string{"node"}
-
-	if len(options["info-type"]) != 0 {
-		infoType = options["info-type"]
 	}
 
 	var hostPort string
@@ -107,23 +75,7 @@ func main() {
 		"host": fmt.Sprintf("tcp://%s", hostPort),
 	}
 
-loop:
-	for _, t := range infoType {
-		var v interface{}
-		switch t {
-		case "all":
-			reply, err = r.GetAllInfo()
-			break loop
-		case "node":
-			v, err = r.GetNodeInfo()
-			reply["node"] = v
-		case "conn":
-			v, err = r.GetConnectors()
-			reply["conn"] = v
-		default:
-			err = fmt.Errorf("incorrect info type provided: %s", infoType)
-		}
-	}
+	reply["info"], err = r.GetNodeInfo()
 
 	if err != nil {
 		exitwithstatus.Message("rpc error: %s", err)

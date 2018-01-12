@@ -180,10 +180,9 @@ allow_access:
 
 // to output peer data
 type entry struct {
-	PublicKey  string    `json:"publicKey"`
-	Broadcasts []string  `json:"broadcasts"`
-	Listeners  []string  `json:"listeners"`
-	Timestamp  time.Time `json:"timestamp"`
+	PublicKey string    `json:"publicKey"`
+	Listeners []string  `json:"listeners"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 // GET to find data on all peers seen in the announcer
