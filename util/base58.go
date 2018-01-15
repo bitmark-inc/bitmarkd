@@ -1,5 +1,5 @@
 // Copyright (c) 2013-2014 Conformal Systems LLC.
-// Copyright (c) 2014-2017 Bitmark Inc.
+// Copyright (c) 2014-2018 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
