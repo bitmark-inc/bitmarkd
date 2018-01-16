@@ -20,15 +20,14 @@ const (
 
 func paymentCommand(testnet bool, currency currency.Currency, payId string, payments transactionrecord.PaymentAlternative) string {
 
-	f := ""
-	if testnet {
-		f = paymentCommandTest
-	} else {
-		f = paymentCommandLive
-	}
-
 	c := strings.ToLower(currency.String())
-	command := fmt.Sprintf(f, c, payId)
+
+	command := ""
+	if testnet {
+		command = fmt.Sprintf(paymentCommandTest, c, payId)
+	} else {
+		command = fmt.Sprintf(paymentCommandLive, c, payId)
+	}
 
 	for _, p := range payments {
 		command += fmt.Sprintf(" '%s,%d'", p.Address, p.Amount)
