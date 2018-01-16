@@ -13,8 +13,12 @@ import (
 )
 
 // the tag to detect applicable TXT records from DNS
+var supportedTags = map[string]struct{}{
+	"bitmark=v2": struct{}{},
+	"bitmark=v3": struct{}{},
+}
+
 const (
-	taggedTXT         = "bitmark=v2"
 	publicKeyLength   = 2 * 32 // characters
 	fingerprintLength = 2 * 32 // characters
 )
@@ -23,7 +27,6 @@ type tagline struct {
 	ipv4                   net.IP
 	ipv6                   net.IP
 	rpcPort                uint16
-	subscribePort          uint16
 	connectPort            uint16
 	certificateFingerprint []byte
 	publicKey              []byte
@@ -31,7 +34,7 @@ type tagline struct {
 
 // decode DNS TXT records of these forms
 //
-//   <TAG> a=<IPv4;IPv6> c=<PORT> s=<PORT> r=<PORT> f=<SHA3-256(cert)> p=<PUBLIC-KEY>
+//   <TAG> a=<IPv4;IPv6> c=<PORT> r=<PORT> f=<SHA3-256(cert)> p=<PUBLIC-KEY>
 //
 // other invalid combinations or extraneous items are ignored
 
@@ -43,7 +46,7 @@ words:
 	for i, w := range strings.Split(strings.TrimSpace(s), " ") {
 
 		if 0 == i {
-			if taggedTXT == w {
+			if _, ok := supportedTags[w]; ok {
 				continue words
 			}
 			return nil, fault.ErrInvalidDnsTxtRecord
@@ -88,8 +91,8 @@ words:
 
 		case 'c':
 			t.connectPort, err = getPort(parameter)
-		case 's':
-			t.subscribePort, err = getPort(parameter)
+		case 's': // not actually used but stil check
+			_, err = getPort(parameter)
 		case 'r':
 			t.rpcPort, err = getPort(parameter)
 		case 'p':

@@ -118,7 +118,7 @@ func Initialise(nodesDomain, peerFile string) error {
 				globalData.log.Infof("ignore TXT[%d]: %q  error: %s", i, t, err)
 			} else {
 				globalData.log.Infof("process TXT[%d]: %q", i, t)
-				globalData.log.Infof("result[%d]: IPv4: %q  IPv6: %q  rpc: %d  connect: %d  subscribe: %d", i, tag.ipv4, tag.ipv6, tag.rpcPort, tag.connectPort, tag.subscribePort)
+				globalData.log.Infof("result[%d]: IPv4: %q  IPv6: %q  rpc: %d  connect: %d", i, tag.ipv4, tag.ipv6, tag.rpcPort, tag.connectPort)
 				globalData.log.Infof("result[%d]: peer public key: %x", i, tag.publicKey)
 				globalData.log.Infof("result[%d]: rpc fingerprint: %x", i, tag.certificateFingerprint)
 
