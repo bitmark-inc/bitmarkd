@@ -42,6 +42,12 @@ func parseTag(s string) (*tagline, error) {
 
 	t := &tagline{}
 
+	countA := 0
+	countC := 0
+	countF := 0
+	countP := 0
+	countR := 0
+
 words:
 	for i, w := range strings.Split(strings.TrimSpace(s), " ") {
 
@@ -88,13 +94,16 @@ words:
 					}
 				}
 			}
+			countA += 1
 
 		case 'c':
 			t.connectPort, err = getPort(parameter)
+			countC += 1
 		case 's': // not actually used but stil check
 			_, err = getPort(parameter)
 		case 'r':
 			t.rpcPort, err = getPort(parameter)
+			countR += 1
 		case 'p':
 			if len(parameter) != publicKeyLength {
 				err = fault.ErrInvalidPublicKey
@@ -104,6 +113,7 @@ words:
 					err = fault.ErrInvalidPublicKey
 				}
 			}
+			countP += 1
 		case 'f':
 			if len(parameter) != fingerprintLength {
 				err = fault.ErrInvalidFingerprint
@@ -113,12 +123,18 @@ words:
 					err = fault.ErrInvalidFingerprint
 				}
 			}
+			countF += 1
 		default:
 			err = fault.ErrInvalidDnsTxtRecord
 		}
 		if nil != err {
 			return nil, err
 		}
+	}
+
+	// ensure that there is only one each of the required items
+	if countA != 1 || countC != 1 || countF != 1 || countP != 1 || countR != 1 {
+		return nil, fault.ErrInvalidDnsTxtRecord
 	}
 
 	return t, nil
