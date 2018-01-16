@@ -6,11 +6,19 @@ package transactionrecord
 
 import (
 	"github.com/bitmark-inc/bitmarkd/account"
+	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"strings"
 	"unicode/utf8"
 )
+
+// supported currency sets
+// code here will support all versions
+var versions = []currency.Set{
+	currency.MakeSet(),                                    // 0
+	currency.MakeSet(currency.Bitcoin, currency.Litecoin), // 1
+}
 
 // pack BaseData
 //
@@ -28,24 +36,25 @@ func (baseData *BaseData) Pack(address *account.Account) (Packed, error) {
 		return nil, fault.ErrInvalidOwnerOrRegistrant
 	}
 
-	if utf8.RuneCountInString(baseData.PaymentAddress) > maxPaymentAddressLength {
-		return nil, fault.ErrPaymentAddressTooLong
+	err := baseData.Currency.ValidateAddress(baseData.PaymentAddress, address.IsTesting())
+	if nil != err {
+		return nil, err
 	}
 
 	// concatenate bytes
-	message := util.ToVarint64(uint64(BaseDataTag))
-	message = appendUint64(message, baseData.Currency.Uint64())
-	message = appendString(message, baseData.PaymentAddress)
-	message = appendAccount(message, baseData.Owner)
-	message = appendUint64(message, baseData.Nonce)
+	message := createPacked(BaseDataTag)
+	message.appendUint64(baseData.Currency.Uint64())
+	message.appendString(baseData.PaymentAddress)
+	message.appendAccount(baseData.Owner)
+	message.appendUint64(baseData.Nonce)
 
 	// signature
-	err := address.CheckSignature(message, baseData.Signature)
+	err = address.CheckSignature(message, baseData.Signature)
 	if nil != err {
 		return message, err
 	}
 	// Signature Last
-	return appendBytes(message, baseData.Signature), nil
+	return *message.appendBytes(baseData.Signature), nil
 }
 
 // pack AssetData
@@ -101,11 +110,11 @@ func (assetData *AssetData) Pack(address *account.Account) (Packed, error) {
 	}
 
 	// concatenate bytes
-	message := util.ToVarint64(uint64(AssetDataTag))
-	message = appendString(message, assetData.Name)
-	message = appendString(message, assetData.Fingerprint)
-	message = appendString(message, assetData.Metadata)
-	message = appendAccount(message, assetData.Registrant)
+	message := createPacked(AssetDataTag)
+	message.appendString(assetData.Name)
+	message.appendString(assetData.Fingerprint)
+	message.appendString(assetData.Metadata)
+	message.appendAccount(assetData.Registrant)
 
 	// signature
 	err := address.CheckSignature(message, assetData.Signature)
@@ -113,7 +122,7 @@ func (assetData *AssetData) Pack(address *account.Account) (Packed, error) {
 		return message, err
 	}
 	// Signature Last
-	return appendBytes(message, assetData.Signature), nil
+	return *message.appendBytes(assetData.Signature), nil
 }
 
 // pack BitmarkIssue
@@ -133,10 +142,10 @@ func (issue *BitmarkIssue) Pack(address *account.Account) (Packed, error) {
 	}
 
 	// concatenate bytes
-	message := util.ToVarint64(uint64(BitmarkIssueTag))
-	message = appendBytes(message, issue.AssetIndex[:])
-	message = appendAccount(message, issue.Owner)
-	message = appendUint64(message, issue.Nonce)
+	message := createPacked(BitmarkIssueTag)
+	message.appendBytes(issue.AssetIndex[:])
+	message.appendAccount(issue.Owner)
+	message.appendUint64(issue.Nonce)
 
 	// signature
 	err := address.CheckSignature(message, issue.Signature)
@@ -145,7 +154,7 @@ func (issue *BitmarkIssue) Pack(address *account.Account) (Packed, error) {
 	}
 
 	// Signature Last
-	return appendBytes(message, issue.Signature), nil
+	return *message.appendBytes(issue.Signature), nil
 }
 
 // local function to pack BitmarkTransfer
@@ -164,23 +173,26 @@ func (transfer *BitmarkTransferUnratified) Pack(address *account.Account) (Packe
 		return nil, fault.ErrInvalidOwnerOrRegistrant
 	}
 
+	testnet := address.IsTesting()
+
 	// concatenate bytes
-	message := util.ToVarint64(uint64(BitmarkTransferUnratifiedTag))
-	message = appendBytes(message, transfer.Link[:])
+	message := createPacked(BitmarkTransferUnratifiedTag)
+	message.appendBytes(transfer.Link[:])
 
 	if nil == transfer.Payment {
 		message = append(message, 0)
 	} else {
-		if utf8.RuneCountInString(transfer.Payment.Address) > maxPaymentAddressLength {
-			return nil, fault.ErrPaymentAddressTooLong
+		err := transfer.Payment.Currency.ValidateAddress(transfer.Payment.Address, testnet)
+		if nil != err {
+			return nil, err
 		}
 		message = append(message, 1)
-		message = appendUint64(message, transfer.Payment.Currency.Uint64())
-		message = appendString(message, transfer.Payment.Address)
-		message = appendUint64(message, transfer.Payment.Amount)
+		message.appendUint64(transfer.Payment.Currency.Uint64())
+		message.appendString(transfer.Payment.Address)
+		message.appendUint64(transfer.Payment.Amount)
 	}
 
-	message = appendAccount(message, transfer.Owner)
+	message.appendAccount(transfer.Owner)
 
 	// signature
 	err := address.CheckSignature(message, transfer.Signature)
@@ -189,7 +201,7 @@ func (transfer *BitmarkTransferUnratified) Pack(address *account.Account) (Packe
 	}
 
 	// Signature Last
-	return appendBytes(message, transfer.Signature), nil
+	return *message.appendBytes(transfer.Signature), nil
 }
 
 // local function to pack BitmarkTransferCountersigned
@@ -212,23 +224,27 @@ func (transfer *BitmarkTransferCountersigned) Pack(address *account.Account) (Pa
 		return nil, fault.ErrInvalidOwnerOrRegistrant
 	}
 
+	testnet := address.IsTesting()
+
 	// concatenate bytes
-	message := util.ToVarint64(uint64(BitmarkTransferCountersignedTag))
-	message = appendBytes(message, transfer.Link[:])
+	message := createPacked(BitmarkTransferCountersignedTag)
+	message.appendBytes(transfer.Link[:])
 
 	if nil == transfer.Payment {
 		message = append(message, 0)
 	} else {
-		if utf8.RuneCountInString(transfer.Payment.Address) > maxPaymentAddressLength {
-			return nil, fault.ErrPaymentAddressTooLong
+		err := transfer.Payment.Currency.ValidateAddress(transfer.Payment.Address, testnet)
+		if nil != err {
+			return nil, err
 		}
+
 		message = append(message, 1)
-		message = appendUint64(message, transfer.Payment.Currency.Uint64())
-		message = appendString(message, transfer.Payment.Address)
-		message = appendUint64(message, transfer.Payment.Amount)
+		message.appendUint64(transfer.Payment.Currency.Uint64())
+		message.appendString(transfer.Payment.Address)
+		message.appendUint64(transfer.Payment.Amount)
 	}
 
-	message = appendAccount(message, transfer.Owner)
+	message.appendAccount(transfer.Owner)
 
 	// signature
 	err := address.CheckSignature(message, transfer.Signature)
@@ -237,7 +253,7 @@ func (transfer *BitmarkTransferCountersigned) Pack(address *account.Account) (Pa
 	}
 
 	// add signature Signature
-	message = appendBytes(message, transfer.Signature)
+	message.appendBytes(transfer.Signature)
 
 	err = transfer.Owner.CheckSignature(message, transfer.Countersignature)
 	if nil != err {
@@ -245,42 +261,160 @@ func (transfer *BitmarkTransferCountersigned) Pack(address *account.Account) (Pa
 	}
 
 	// Countersignature Last
-	return appendBytes(message, transfer.Countersignature), nil
+	return *message.appendBytes(transfer.Countersignature), nil
+}
+
+// pack BlockOwnerIssue
+//
+// Pack Varint64(tag) followed by fields in order as struct above with
+// signature last
+//
+// NOTE: returns the "unsigned" message on signature failure - for
+//       debugging/testing
+func (issue *BlockOwnerIssue) Pack(address *account.Account) (Packed, error) {
+	if len(issue.Signature) > maxSignatureLength {
+		return nil, fault.ErrSignatureTooLong
+	}
+
+	if nil == issue.Owner || nil == address {
+		return nil, fault.ErrInvalidOwnerOrRegistrant
+	}
+
+	err := checkPayments(issue.Version, address.IsTesting(), issue.Payments)
+	if nil != err {
+		return nil, err
+	}
+
+	// concatenate bytes
+	message := createPacked(BlockOwnerIssueTag)
+	message.appendUint64(issue.Version)
+	for currency, address := range issue.Payments {
+		message.appendUint64(currency.Uint64())
+		message.appendString(address)
+	}
+	message.appendAccount(issue.Owner)
+	message.appendUint64(issue.Nonce)
+
+	// signature
+	err = address.CheckSignature(message, issue.Signature)
+	if nil != err {
+		return message, err
+	}
+	// Signature Last
+	return *message.appendBytes(issue.Signature), nil
+}
+
+// pack BlockOwnerTransfer
+//
+// Pack Varint64(tag) followed by fields in order as struct above with
+// signature last
+//
+// NOTE: returns the "unsigned" message on signature failure - for
+//       debugging/testing
+func (transfer *BlockOwnerTransfer) Pack(address *account.Account) (Packed, error) {
+	if len(transfer.Signature) > maxSignatureLength {
+		return nil, fault.ErrSignatureTooLong
+	}
+
+	if nil == transfer.Owner || nil == address {
+		return nil, fault.ErrInvalidOwnerOrRegistrant
+	}
+
+	err := checkPayments(transfer.Version, address.IsTesting(), transfer.Payments)
+	if nil != err {
+		return nil, err
+	}
+
+	// concatenate bytes
+	message := createPacked(BlockOwnerTransferTag)
+	message.appendBytes(transfer.Link[:])
+	message.appendUint64(transfer.Version)
+	for currency, address := range transfer.Payments {
+		message.appendUint64(currency.Uint64())
+		message.appendString(address)
+	}
+	message.appendAccount(transfer.Owner)
+
+	// signature
+	err = address.CheckSignature(message, transfer.Signature)
+	if nil != err {
+		return message, err
+	}
+	// Signature Last
+	return *message.appendBytes(transfer.Signature), nil
+}
+
+// internal routines below here
+// ----------------------------
+
+// check all currency addresses for correct network and validity
+func checkPayments(version uint64, testnet bool, payments BlockPayment) error {
+	// validate version
+	if version < 1 || version >= uint64(len(versions)) {
+		return fault.ErrInvalidCurrencyAddress
+	}
+
+	cs := currency.MakeSet()
+	for currency, address := range payments {
+
+		err := currency.ValidateAddress(address, testnet)
+		if nil != err {
+			return err
+		}
+
+		// if a duplicate currency value
+		if cs.Add(currency) {
+			return fault.ErrInvalidCurrencyAddress
+		}
+	}
+
+	// validate the set of supplied currencies
+	if versions[version] != cs {
+		return fault.ErrInvalidCurrencyAddress
+	}
+
+	return nil
+}
+
+// create a new packed buffer
+func createPacked(tag TagType) Packed {
+	return util.ToVarint64(uint64(tag))
 }
 
 // append a single field to a buffer
 //
 // the field is prefixed by Varint64(length)
-func appendString(buffer Packed, s string) Packed {
+func (buffer *Packed) appendString(s string) *Packed {
 	l := util.ToVarint64(uint64(len(s)))
-	buffer = append(buffer, l...)
-	return append(buffer, s...)
+	*buffer = append(*buffer, l...)
+	*buffer = append(*buffer, s...)
+	return buffer
 }
 
 // append an address to a buffer
 //
 // the field is prefixed by Varint64(length)
-func appendAccount(buffer Packed, address *account.Account) Packed {
+func (buffer *Packed) appendAccount(address *account.Account) *Packed {
 	data := address.Bytes()
 	l := util.ToVarint64(uint64(len(data)))
-	buffer = append(buffer, l...)
-	buffer = append(buffer, data...)
+	*buffer = append(*buffer, l...)
+	*buffer = append(*buffer, data...)
 	return buffer
 }
 
 // append a bytes to a buffer
 //
 // the field is prefixed by Varint64(length)
-func appendBytes(buffer Packed, data []byte) Packed {
+func (buffer *Packed) appendBytes(data []byte) *Packed {
 	l := util.ToVarint64(uint64(len(data)))
-	buffer = append(buffer, l...)
-	buffer = append(buffer, data...)
+	*buffer = append(*buffer, l...)
+	*buffer = append(*buffer, data...)
 	return buffer
 }
 
 // append a Varint64 to buffer
-func appendUint64(buffer Packed, value uint64) Packed {
+func (buffer *Packed) appendUint64(value uint64) *Packed {
 	valueBytes := util.ToVarint64(value)
-	buffer = append(buffer, valueBytes...)
+	*buffer = append(*buffer, valueBytes...)
 	return buffer
 }

@@ -20,12 +20,15 @@ const (
 	// null marks beginning of list - not used as a record type
 	NullTag = TagType(iota)
 
-	// valid record type
-	BaseDataTag                     = TagType(iota)
-	AssetDataTag                    = TagType(iota)
-	BitmarkIssueTag                 = TagType(iota)
-	BitmarkTransferUnratifiedTag    = TagType(iota)
-	BitmarkTransferCountersignedTag = TagType(iota)
+	// valid record types
+	// OBSOLETE items must still be supported to process older blocks
+	BaseDataTag                     = TagType(iota) // OBSOLETE: block owner
+	AssetDataTag                    = TagType(iota) // create asset
+	BitmarkIssueTag                 = TagType(iota) // issue asset
+	BitmarkTransferUnratifiedTag    = TagType(iota) // OBSOLETE: transfer
+	BitmarkTransferCountersignedTag = TagType(iota) // transfer
+	BlockOwnerIssueTag              = TagType(iota) // block owner
+	BlockOwnerTransferTag           = TagType(iota) // block owner transfer
 
 	// this item must be last
 	InvalidTag = TagType(iota)
@@ -41,14 +44,13 @@ type Transaction interface {
 
 // byte sizes for various fields
 const (
-	minNameLength           = 1
-	maxNameLength           = 64
-	maxMetadataLength       = 2048
-	minFingerprintLength    = 1
-	maxFingerprintLength    = 1024
-	maxSignatureLength      = 1024
-	maxTimestampLength      = len("2014-06-21T14:32:16Z")
-	maxPaymentAddressLength = 64
+	minNameLength        = 1
+	maxNameLength        = 64
+	maxMetadataLength    = 2048
+	minFingerprintLength = 1
+	maxFingerprintLength = 1024
+	maxSignatureLength   = 1024
+	maxTimestampLength   = len("2014-06-21T14:32:16Z")
 )
 
 // the unpacked Proofer Data structure
@@ -118,6 +120,25 @@ type BitmarkTransferCountersigned struct {
 	Countersignature account.Signature `json:"countersignature"` // hex: corresponds to owner in this record
 }
 
+type BlockPayment map[currency.Currency]string
+
+// the unpacked Block Owner Issue Data structure
+type BlockOwnerIssue struct {
+	Version   uint64            `json:"version"`      // reflects combination of supported currencies
+	Payments  BlockPayment      `json:"payments"`     // contents depend on version
+	Owner     *account.Account  `json:"owner"`        // base58
+	Nonce     uint64            `json:"nonce,string"` // unsigned 0..N
+	Signature account.Signature `json:"signature,"`   // hex
+}
+
+// the unpacked Block Owner Transfer Data structure
+type BlockOwnerTransfer struct {
+	Link      merkle.Digest     `json:"link"`       // previous record
+	Version   uint64            `json:"version"`    // reflects combination of supported currencies
+	Payments  BlockPayment      `json:"payments"`   // require length and contents depend on version
+	Owner     *account.Account  `json:"owner"`      // base58
+	Signature account.Signature `json:"signature,"` // hex
+}
 
 // determine the record type code
 func (record Packed) Type() TagType {
@@ -142,6 +163,12 @@ func RecordName(record interface{}) (string, bool) {
 
 	case *BitmarkTransferCountersigned, BitmarkTransferCountersigned:
 		return "BitmarkTransferCountersigned", true
+
+	case *BlockOwnerIssue, BlockOwnerIssue:
+		return "BlockOwnerIssue", true
+
+	case *BlockOwnerTransfer, BlockOwnerTransfer:
+		return "BlockOwnerTransfer", true
 
 	default:
 		return "*unknown*", false

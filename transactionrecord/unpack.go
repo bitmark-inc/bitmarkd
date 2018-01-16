@@ -9,6 +9,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
 )
 
@@ -21,8 +22,9 @@ import (
 // or:
 //   switch tx := result.(type) {
 //   case *transaction.Registration:
-func (record Packed) Unpack(testing ...bool) (Transaction, int, error) {
+func (record Packed) Unpack() (Transaction, int, error) {
 
+	testnet := mode.IsTesting()
 	recordType, n := util.FromVarint64(record)
 
 	switch TagType(recordType) {
@@ -30,9 +32,7 @@ func (record Packed) Unpack(testing ...bool) (Transaction, int, error) {
 	case BaseDataTag:
 
 		// currency
-		c := uint64(0)
-		var currencyLength int
-		c, currencyLength = util.FromVarint64(record[n:])
+		c, currencyLength := util.FromVarint64(record[n:])
 		n += int(currencyLength)
 		currency, err := currency.FromUint64(c)
 		if nil != err {
@@ -41,9 +41,8 @@ func (record Packed) Unpack(testing ...bool) (Transaction, int, error) {
 
 		// paymentAddress
 		paymentAddressLength, paymentAddressOffset := util.FromVarint64(record[n:])
-		paymentAddress := make([]byte, paymentAddressLength)
 		n += paymentAddressOffset
-		copy(paymentAddress, record[n:])
+		paymentAddress := string(record[n : n+int(paymentAddressLength)])
 		n += int(paymentAddressLength)
 
 		// owner public key
@@ -53,15 +52,13 @@ func (record Packed) Unpack(testing ...bool) (Transaction, int, error) {
 		if nil != err {
 			return nil, 0, err
 		}
-		if len(testing) > 0 && owner.IsTesting() != testing[0] {
+		if owner.IsTesting() != testnet {
 			return nil, 0, fault.ErrWrongNetworkForPublicKey
 		}
 		n += int(ownerLength)
 
 		// nonce
-		nonce := uint64(0)
-		var nonceLength int
-		nonce, nonceLength = util.FromVarint64(record[n:])
+		nonce, nonceLength := util.FromVarint64(record[n:])
 		n += int(nonceLength)
 
 		// signature is remainder of record
@@ -110,7 +107,7 @@ func (record Packed) Unpack(testing ...bool) (Transaction, int, error) {
 		if nil != err {
 			return nil, 0, err
 		}
-		if len(testing) > 0 && registrant.IsTesting() != testing[0] {
+		if registrant.IsTesting() != testnet {
 			return nil, 0, fault.ErrWrongNetworkForPublicKey
 		}
 		n += int(registrantLength)
@@ -150,7 +147,7 @@ func (record Packed) Unpack(testing ...bool) (Transaction, int, error) {
 		if nil != err {
 			return nil, 0, err
 		}
-		if len(testing) > 0 && owner.IsTesting() != testing[0] {
+		if owner.IsTesting() != testnet {
 			return nil, 0, fault.ErrWrongNetworkForPublicKey
 		}
 		n += int(ownerLength)
@@ -208,9 +205,8 @@ func (record Packed) Unpack(testing ...bool) (Transaction, int, error) {
 
 			// address
 			addressLength, addressOffset := util.FromVarint64(record[n:])
-			address := make([]byte, addressLength)
 			n += addressOffset
-			copy(address, record[n:])
+			address := string(record[n : n+int(addressLength)])
 			n += int(addressLength)
 
 			// amount
@@ -219,7 +215,7 @@ func (record Packed) Unpack(testing ...bool) (Transaction, int, error) {
 
 			payment = &Payment{
 				Currency: currency,
-				Address:  string(address),
+				Address:  address,
 				Amount:   amount,
 			}
 		} else {
@@ -233,7 +229,7 @@ func (record Packed) Unpack(testing ...bool) (Transaction, int, error) {
 		if nil != err {
 			return nil, 0, err
 		}
-		if len(testing) > 0 && owner.IsTesting() != testing[0] {
+		if owner.IsTesting() != testnet {
 			return nil, 0, fault.ErrWrongNetworkForPublicKey
 		}
 		n += int(ownerLength)
@@ -285,9 +281,8 @@ func (record Packed) Unpack(testing ...bool) (Transaction, int, error) {
 
 			// address
 			addressLength, addressOffset := util.FromVarint64(record[n:])
-			address := make([]byte, addressLength)
 			n += addressOffset
-			copy(address, record[n:])
+			address := string(record[n : n+int(addressLength)])
 			n += int(addressLength)
 
 			// amount
@@ -296,7 +291,7 @@ func (record Packed) Unpack(testing ...bool) (Transaction, int, error) {
 
 			payment = &Payment{
 				Currency: currency,
-				Address:  string(address),
+				Address:  address,
 				Amount:   amount,
 			}
 		} else {
@@ -310,7 +305,7 @@ func (record Packed) Unpack(testing ...bool) (Transaction, int, error) {
 		if nil != err {
 			return nil, 0, err
 		}
-		if len(testing) > 0 && owner.IsTesting() != testing[0] {
+		if owner.IsTesting() != testnet {
 			return nil, 0, fault.ErrWrongNetworkForPublicKey
 		}
 		n += int(ownerLength)
@@ -335,6 +330,152 @@ func (record Packed) Unpack(testing ...bool) (Transaction, int, error) {
 			Owner:            owner,
 			Signature:        signature,
 			Countersignature: countersignature,
+		}
+		return r, n, nil
+
+	case BlockOwnerIssueTag:
+
+		// version
+		version, versionLength := util.FromVarint64(record[n:])
+		n += int(versionLength)
+		if version < 1 || version >= uint64(len(versions)) {
+			return nil, 0, fault.ErrInvalidCurrencyAddress // ***** FIX THIS: is this error right?
+		}
+
+		payments := make(map[currency.Currency]string)
+		cs := currency.MakeSet()
+		for i := 0; i < versions[version].Count(); i += 1 {
+			// currency
+			c, currencyLength := util.FromVarint64(record[n:])
+			n += int(currencyLength)
+			currency, err := currency.FromUint64(c)
+			if nil != err {
+				return nil, 0, err
+			}
+			cs.Add(currency)
+
+			// paymentAddress
+			paymentAddressLength, paymentAddressOffset := util.FromVarint64(record[n:])
+			n += paymentAddressOffset
+			paymentAddress := string(record[n : n+int(paymentAddressLength)])
+			n += int(paymentAddressLength)
+
+			err = currency.ValidateAddress(paymentAddress, testnet)
+			if nil != err {
+				return nil, 0, err
+			}
+
+			payments[currency] = paymentAddress
+		}
+		if cs != versions[version] {
+			return nil, 0, fault.ErrInvalidCurrencyAddress // ***** FIX THIS: is this error right?
+		}
+
+		// owner public key
+		ownerLength, ownerOffset := util.FromVarint64(record[n:])
+		n += ownerOffset
+		owner, err := account.AccountFromBytes(record[n : n+int(ownerLength)])
+		if nil != err {
+			return nil, 0, err
+		}
+		if owner.IsTesting() != testnet {
+			return nil, 0, fault.ErrWrongNetworkForPublicKey
+		}
+		n += int(ownerLength)
+
+		// nonce
+		nonce, nonceLength := util.FromVarint64(record[n:])
+		n += int(nonceLength)
+
+		// signature is remainder of record
+		signatureLength, signatureOffset := util.FromVarint64(record[n:])
+		signature := make(account.Signature, signatureLength)
+		n += signatureOffset
+		copy(signature, record[n:])
+		n += int(signatureLength)
+
+		r := &BlockOwnerIssue{
+			Version:   version,
+			Owner:     owner,
+			Payments:  payments,
+			Nonce:     nonce,
+			Signature: signature,
+		}
+		return r, n, nil
+
+	case BlockOwnerTransferTag:
+
+		// link
+		linkLength, linkOffset := util.FromVarint64(record[n:])
+		n += linkOffset
+		var link merkle.Digest
+		err := merkle.DigestFromBytes(&link, record[n:n+int(linkLength)])
+		if nil != err {
+			return nil, 0, err
+		}
+		n += int(linkLength)
+
+		// version
+		version, versionLength := util.FromVarint64(record[n:])
+		n += int(versionLength)
+		if version < 1 || version >= uint64(len(versions)) {
+			return nil, 0, fault.ErrInvalidCurrencyAddress // ***** FIX THIS: is this error right?
+		}
+
+		payments := make(BlockPayment)
+		cs := currency.MakeSet()
+		for i := 0; i < versions[version].Count(); i += 1 {
+			// currency
+			c, currencyLength := util.FromVarint64(record[n:])
+			n += int(currencyLength)
+			currency, err := currency.FromUint64(c)
+			if nil != err {
+				return nil, 0, err
+			}
+			cs.Add(currency)
+
+			// paymentAddress
+			paymentAddressLength, paymentAddressOffset := util.FromVarint64(record[n:])
+			n += paymentAddressOffset
+			paymentAddress := string(record[n : n+int(paymentAddressLength)])
+			n += int(paymentAddressLength)
+
+			err = currency.ValidateAddress(paymentAddress, testnet)
+			if nil != err {
+				return nil, 0, err
+			}
+
+			payments[currency] = paymentAddress
+		}
+		if cs != versions[version] {
+			return nil, 0, fault.ErrInvalidCurrencyAddress // ***** FIX THIS: is this error right?
+		}
+
+		// owner public key
+		ownerLength, ownerOffset := util.FromVarint64(record[n:])
+		n += ownerOffset
+		owner, err := account.AccountFromBytes(record[n : n+int(ownerLength)])
+		if nil != err {
+			return nil, 0, err
+		}
+		if owner.IsTesting() != testnet {
+			return nil, 0, fault.ErrWrongNetworkForPublicKey
+		}
+		n += int(ownerLength)
+
+		// signature is remainder of record
+		signatureLength, signatureOffset := util.FromVarint64(record[n:])
+		signature := make(account.Signature, signatureLength)
+		n += signatureOffset
+		copy(signature, record[n:])
+		n += int(signatureLength)
+
+		r := &BlockOwnerTransfer{
+			Link:      link,
+			Version:   version,
+			Owner:     owner,
+			Payments:  payments,
+			Signature: signature,
 		}
 		return r, n, nil
 

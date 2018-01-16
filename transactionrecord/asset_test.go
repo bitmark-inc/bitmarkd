@@ -21,6 +21,9 @@ import (
 // ensures that pack->unpack returns the same original value
 func TestPackAssetData(t *testing.T) {
 
+	setup(t)
+	defer teardown(t)
+
 	registrantAccount := makeAccount(registrant.publicKey)
 
 	r := transactionrecord.AssetData{

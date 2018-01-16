@@ -6,10 +6,9 @@ package currency
 
 import (
 	"fmt"
-	"strings"
-
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/logger"
+	"strings"
 )
 
 // currency enumeration

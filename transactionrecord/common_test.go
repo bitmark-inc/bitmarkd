@@ -7,11 +7,41 @@ package transactionrecord_test
 import (
 	"crypto/rand"
 	"github.com/bitmark-inc/bitmarkd/account"
+	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
+	"github.com/bitmark-inc/logger"
 	"golang.org/x/crypto/ed25519"
+	"os"
 	"testing"
 )
+
+// remove all files created by test
+func removeFiles() {
+	os.RemoveAll("test.log")
+}
+
+// configure for testing
+func setup(t *testing.T) {
+	removeFiles()
+
+	logger.Initialise(logger.Configuration{
+		Directory: ".",
+		File:      "test.log",
+		Size:      50000,
+		Count:     10,
+	})
+
+	mode.Initialise(chain.Local)
+}
+
+// post test cleanup
+func teardown(t *testing.T) {
+	mode.Finalise()
+	logger.Finalise()
+	removeFiles()
+}
 
 // to print a keypair for future tests
 func TestGenerateKeypair(t *testing.T) {

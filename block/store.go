@@ -53,7 +53,7 @@ func StoreIncoming(packedBlock []byte) error {
 
 	// check all transactions are valid
 	for i := uint16(0); i < header.TransactionCount; i += 1 {
-		transaction, n, err := transactionrecord.Packed(data).Unpack(mode.IsTesting())
+		transaction, n, err := transactionrecord.Packed(data).Unpack()
 		if nil != err {
 			return err
 		}

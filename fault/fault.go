@@ -42,6 +42,7 @@ var (
 	ErrInvalidChain                          = InvalidError("invalid chain")
 	ErrInvalidCount                          = InvalidError("invalid count")
 	ErrInvalidCurrency                       = InvalidError("invalid currency")
+	ErrInvalidCurrencyAddress                = InvalidError("invalid currency address")
 	ErrInvalidCursor                         = InvalidError("invalid cursor")
 	ErrInvalidDnsTxtRecord                   = InvalidError("invalid dns txt record")
 	ErrInvalidFingerprint                    = InvalidError("invalid fingerprint")
