@@ -12,8 +12,6 @@ import (
 	"testing"
 )
 
-// Test account functionality
-
 type currencyTest struct {
 	str string
 	c   currency.Currency

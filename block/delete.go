@@ -63,7 +63,7 @@ outer_loop:
 
 			packedTransaction := transactionrecord.Packed(data[:n])
 			switch tx := transaction.(type) {
-			case *transactionrecord.BaseData:
+			case *transactionrecord.OldBaseData:
 				// currently not stored separately
 
 			case *transactionrecord.AssetData:

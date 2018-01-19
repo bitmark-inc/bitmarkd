@@ -26,10 +26,13 @@
 //
 //   B ++ block number          - block store
 //                                data: header ++ base transaction ++ (concat transactions)
-//   F ++ block number          - current block owner
-//                                data: owner ++ currency ++ currency address
-//                                data: owner ++ 0x01 ++ currency address
-//                                data: owner ++ 0x02 ++ currency address ++ 0x00 ++ currency address
+//   G ++ block number          - current block owner account
+//                                data: owner
+//   H ++ block number          - current block currencies
+//                                data: map(currency → currency address)
+//   I ++ txId                  - block transaction index
+//                                data: block number
+//
 //
 // Transactions:
 //

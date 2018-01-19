@@ -23,7 +23,7 @@ func TestPackBaseData(t *testing.T) {
 
 	proofedbyAccount := makeAccount(proofedby.publicKey)
 
-	r := transactionrecord.BaseData{
+	r := transactionrecord.OldBaseData{
 		Currency:       currency.Bitcoin,
 		PaymentAddress: "mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn",
 		Owner:          proofedbyAccount,
@@ -96,7 +96,7 @@ func TestPackBaseData(t *testing.T) {
 		t.Errorf("did not unpack all data: only used: %d of: %d bytes", n, len(packed))
 	}
 
-	baseData, ok := unpacked.(*transactionrecord.BaseData)
+	baseData, ok := unpacked.(*transactionrecord.OldBaseData)
 	if !ok {
 		t.Fatalf("did not unpack to BaseData")
 	}
@@ -104,7 +104,7 @@ func TestPackBaseData(t *testing.T) {
 	// display a JSON version for information
 	item := struct {
 		TxId     merkle.Digest
-		BaseData *transactionrecord.BaseData
+		BaseData *transactionrecord.OldBaseData
 	}{
 		TxId:     txId,
 		BaseData: baseData,

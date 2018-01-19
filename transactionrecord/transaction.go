@@ -54,7 +54,7 @@ const (
 )
 
 // the unpacked Proofer Data structure
-type BaseData struct {
+type OldBaseData struct {
 	Currency       currency.Currency `json:"currency"`       // utf-8 → Enum
 	PaymentAddress string            `json:"paymentAddress"` // utf-8
 	Owner          *account.Account  `json:"owner"`          // base58
@@ -120,12 +120,10 @@ type BitmarkTransferCountersigned struct {
 	Countersignature account.Signature `json:"countersignature"` // hex: corresponds to owner in this record
 }
 
-type BlockPayment map[currency.Currency]string
-
 // the unpacked Block Owner Issue Data structure
 type BlockOwnerIssue struct {
 	Version   uint64            `json:"version"`      // reflects combination of supported currencies
-	Payments  BlockPayment      `json:"payments"`     // contents depend on version
+	Payments  currency.Map      `json:"payments"`     // contents depend on version
 	Owner     *account.Account  `json:"owner"`        // base58
 	Nonce     uint64            `json:"nonce,string"` // unsigned 0..N
 	Signature account.Signature `json:"signature,"`   // hex
@@ -135,7 +133,7 @@ type BlockOwnerIssue struct {
 type BlockOwnerTransfer struct {
 	Link      merkle.Digest     `json:"link"`       // previous record
 	Version   uint64            `json:"version"`    // reflects combination of supported currencies
-	Payments  BlockPayment      `json:"payments"`   // require length and contents depend on version
+	Payments  currency.Map      `json:"payments"`   // require length and contents depend on version
 	Owner     *account.Account  `json:"owner"`      // base58
 	Signature account.Signature `json:"signature,"` // hex
 }
@@ -149,7 +147,7 @@ func (record Packed) Type() TagType {
 // get the name of a transaction record as a string
 func RecordName(record interface{}) (string, bool) {
 	switch record.(type) {
-	case *BaseData, BaseData:
+	case *OldBaseData, OldBaseData:
 		return "BaseData", true
 
 	case *AssetData, AssetData:

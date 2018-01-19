@@ -251,35 +251,34 @@ func (pub *publisher) process() {
 	// to accumulate new assets
 	assetIds := make([]transactionrecord.AssetIndex, 0, txCount)
 
-	// create the base record for each supported currency
-	var bases [currency.Count][]byte
+	// create record for each supported currency
+	p := make(currency.Map)
 	for c := currency.First; c <= currency.Last; c++ {
-		base := &transactionrecord.BaseData{
-			Currency:       c,
-			PaymentAddress: pub.paymentAddress[c],
-			Owner:          pub.owner,
-			Nonce:          1234,
-		}
+		p[c] = pub.paymentAddress[c]
+	}
 
-		// sign the record and attach signature
-		partiallyPackedBase, _ := base.Pack(pub.owner) // ignore error to get packed without signature
-		signature := ed25519.Sign(pub.privateKey[:], partiallyPackedBase)
-		base.Signature = signature[:]
+	blockIssue := &transactionrecord.BlockOwnerIssue{
+		Version:  1,
+		Payments: p,
+		Owner:    pub.owner,
+		Nonce:    1234,
+	}
 
-		// re-pack to makesure signature is valid
-		packedBase, err := base.Pack(pub.owner)
-		if nil != err {
-			pub.log.Criticalf("pack base error: %s", err)
-			logger.Panicf("publisher packed base error: %s", err)
-		}
+	// sign the record and attach signature
+	partiallyPacked, _ := blockIssue.Pack(pub.owner) // ignore error to get packed without signature
+	signature := ed25519.Sign(pub.privateKey[:], partiallyPacked)
+	blockIssue.Signature = signature[:]
 
-		bases[c.Index()] = packedBase
+	// re-pack to makesure signature is valid
+	packedBI, err := blockIssue.Pack(pub.owner)
+	if nil != err {
+		pub.log.Criticalf("pack base error: %s", err)
+		logger.Panicf("publisher packed base error: %s", err)
 	}
 
 	// the first two are base records
-	txIds := make([]merkle.Digest, currency.Count, len(pooledTxIds)*2) // allow room for inserted assets & allocate base
-	txIds[0] = merkle.NewDigest(bases[currency.Bitcoin.Index()])       // bitcoin base is the first
-	txIds[1] = merkle.NewDigest(bases[currency.Litecoin.Index()])      // litecoin base is the second
+	txIds := make([]merkle.Digest, 1, len(pooledTxIds)*2) // allow room for inserted assets & allocate base
+	txIds[0] = merkle.NewDigest(packedBI)
 
 	n := 0 // index for pooledTxIds
 	for _, item := range transactions {
@@ -353,7 +352,7 @@ func (pub *publisher) process() {
 			Difficulty:       bits,
 			Nonce:            nonce,
 		},
-		Bases:    bases,
+		TxZero:   packedBI,
 		TxIds:    txIds,
 		AssetIds: assetIds,
 	}

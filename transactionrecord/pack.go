@@ -27,7 +27,7 @@ var versions = []currency.Set{
 //
 // NOTE: returns the "unsigned" message on signature failure - for
 //       debugging/testing
-func (baseData *BaseData) Pack(address *account.Account) (Packed, error) {
+func (baseData *OldBaseData) Pack(address *account.Account) (Packed, error) {
 	if len(baseData.Signature) > maxSignatureLength {
 		return nil, fault.ErrSignatureTooLong
 	}
@@ -280,7 +280,7 @@ func (issue *BlockOwnerIssue) Pack(address *account.Account) (Packed, error) {
 		return nil, fault.ErrInvalidOwnerOrRegistrant
 	}
 
-	err := checkPayments(issue.Version, address.IsTesting(), issue.Payments)
+	err := CheckPayments(issue.Version, address.IsTesting(), issue.Payments)
 	if nil != err {
 		return nil, err
 	}
@@ -320,7 +320,7 @@ func (transfer *BlockOwnerTransfer) Pack(address *account.Account) (Packed, erro
 		return nil, fault.ErrInvalidOwnerOrRegistrant
 	}
 
-	err := checkPayments(transfer.Version, address.IsTesting(), transfer.Payments)
+	err := CheckPayments(transfer.Version, address.IsTesting(), transfer.Payments)
 	if nil != err {
 		return nil, err
 	}
@@ -348,7 +348,7 @@ func (transfer *BlockOwnerTransfer) Pack(address *account.Account) (Packed, erro
 // ----------------------------
 
 // check all currency addresses for correct network and validity
-func checkPayments(version uint64, testnet bool, payments BlockPayment) error {
+func CheckPayments(version uint64, testnet bool, payments currency.Map) error {
 	// validate version
 	if version < 1 || version >= uint64(len(versions)) {
 		return fault.ErrInvalidCurrencyAddress

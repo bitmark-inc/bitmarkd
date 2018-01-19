@@ -32,7 +32,7 @@ func TestPackBlockOwnerTransfer(t *testing.T) {
 	r := transactionrecord.BlockOwnerTransfer{
 		Link:    link,
 		Version: 1,
-		Payments: transactionrecord.BlockPayment{
+		Payments: currency.Map{
 			currency.Bitcoin:  "mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn",
 			currency.Litecoin: "mmCKZS7toE69QgXNs1JZcjW6LFj8LfUbz6",
 		},

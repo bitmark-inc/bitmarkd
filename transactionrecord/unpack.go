@@ -68,7 +68,7 @@ func (record Packed) Unpack() (Transaction, int, error) {
 		copy(signature, record[n:])
 		n += int(signatureLength)
 
-		r := &BaseData{
+		r := &OldBaseData{
 			Owner:          owner,
 			Currency:       currency,
 			PaymentAddress: string(paymentAddress),
@@ -342,34 +342,15 @@ func (record Packed) Unpack() (Transaction, int, error) {
 			return nil, 0, fault.ErrInvalidCurrencyAddress // ***** FIX THIS: is this error right?
 		}
 
-		payments := make(map[currency.Currency]string)
-		cs := currency.MakeSet()
-		for i := 0; i < versions[version].Count(); i += 1 {
-			// currency
-			c, currencyLength := util.FromVarint64(record[n:])
-			n += int(currencyLength)
-			currency, err := currency.FromUint64(c)
-			if nil != err {
-				return nil, 0, err
-			}
-			cs.Add(currency)
-
-			// paymentAddress
-			paymentAddressLength, paymentAddressOffset := util.FromVarint64(record[n:])
-			n += paymentAddressOffset
-			paymentAddress := string(record[n : n+int(paymentAddressLength)])
-			n += int(paymentAddressLength)
-
-			err = currency.ValidateAddress(paymentAddress, testnet)
-			if nil != err {
-				return nil, 0, err
-			}
-
-			payments[currency] = paymentAddress
+		// payment map
+		payments, cs, paymentsOffset, err := currency.UnpackMap(record, testnet)
+		if nil != err {
+			return nil, 0, err
 		}
 		if cs != versions[version] {
 			return nil, 0, fault.ErrInvalidCurrencyAddress // ***** FIX THIS: is this error right?
 		}
+		n += paymentsOffset
 
 		// owner public key
 		ownerLength, ownerOffset := util.FromVarint64(record[n:])
@@ -422,34 +403,15 @@ func (record Packed) Unpack() (Transaction, int, error) {
 			return nil, 0, fault.ErrInvalidCurrencyAddress // ***** FIX THIS: is this error right?
 		}
 
-		payments := make(BlockPayment)
-		cs := currency.MakeSet()
-		for i := 0; i < versions[version].Count(); i += 1 {
-			// currency
-			c, currencyLength := util.FromVarint64(record[n:])
-			n += int(currencyLength)
-			currency, err := currency.FromUint64(c)
-			if nil != err {
-				return nil, 0, err
-			}
-			cs.Add(currency)
-
-			// paymentAddress
-			paymentAddressLength, paymentAddressOffset := util.FromVarint64(record[n:])
-			n += paymentAddressOffset
-			paymentAddress := string(record[n : n+int(paymentAddressLength)])
-			n += int(paymentAddressLength)
-
-			err = currency.ValidateAddress(paymentAddress, testnet)
-			if nil != err {
-				return nil, 0, err
-			}
-
-			payments[currency] = paymentAddress
+		// payment map
+		payments, cs, paymentsOffset, err := currency.UnpackMap(record, testnet)
+		if nil != err {
+			return nil, 0, err
 		}
 		if cs != versions[version] {
 			return nil, 0, fault.ErrInvalidCurrencyAddress // ***** FIX THIS: is this error right?
 		}
+		n += paymentsOffset
 
 		// owner public key
 		ownerLength, ownerOffset := util.FromVarint64(record[n:])

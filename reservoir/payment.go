@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
@@ -91,28 +92,19 @@ func getPayment(blockNumberKey []byte) *PaymentSegment {
 		return nil
 	}
 
-	blockOwnerData := storage.Pool.BlockOwners.Get(blockNumberKey)
-	if nil == blockOwnerData {
-		logger.Panicf("payment.getPayment: no block owner data for block number: %x", blockNumberKey)
+	paymentData := storage.Pool.BlockOwnerPayment.Get(blockNumberKey)
+	if nil == paymentData {
+		logger.Panicf("payment.getPayment: no block payment data for block number: %x", blockNumberKey)
 	}
 
-	// trim any trailing '0x00' bytes
-trim_bytes:
-	for l := len(blockOwnerData) - 1; l >= 0; l -= 1 {
-		if 0x00 != blockOwnerData[l] {
-			break trim_bytes
-		}
-		blockOwnerData = blockOwnerData[:l]
+	cMap, _, _, err := currency.UnpackMap(paymentData, mode.IsTesting())
+	if nil != err {
+		logger.Panicf("payment.getPayment: block payment data error: %s", err)
 	}
 
-	// split up individual addresses - these are in currency.Index() order
-	addresses := bytes.Split(blockOwnerData, []byte{0x00})
-	if len(addresses) != currency.Count {
-		logger.Panicf("payment.getPayment: block owner data %#v has: %d addresses must have exactly: %d addresses", blockOwnerData, len(addresses), currency.Count)
-	}
 	payments := &PaymentSegment{}
 
-	for c := currency.First; c <= currency.Last; c += 1 {
+	for c, address := range cMap {
 		i := c.Index() // zero based index
 		fee, err := c.GetFee()
 		if nil != err {
@@ -121,7 +113,7 @@ trim_bytes:
 
 		payments[i] = &transactionrecord.Payment{
 			Currency: c,
-			Address:  string(addresses[i]),
+			Address:  address,
 			Amount:   fee,
 		}
 	}

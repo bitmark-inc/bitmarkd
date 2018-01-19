@@ -55,6 +55,10 @@ loop:
 		}
 		t.Logf("%d: result: %s", index, account)
 		t.Logf("%d:    hex: %x", index, account.Bytes())
+
+		if !bytes.Equal(buffer, account.Bytes()) {
+			t.Errorf("%d: account bytes: %x does not match: %x", index, account.Bytes(), buffer)
+		}
 	}
 }
 

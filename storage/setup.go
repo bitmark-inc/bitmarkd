@@ -31,14 +31,16 @@ type PoolHandle struct {
 //
 // note all must be exported (i.e. initial capital) or initialisation will panic
 type pools struct {
-	Blocks       *PoolHandle `prefix:"B"`
-	BlockOwners  *PoolHandle `prefix:"F"`
-	Assets       *PoolHandle `prefix:"A"`
-	Transactions *PoolHandle `prefix:"T"`
-	OwnerCount   *PoolHandle `prefix:"N"`
-	Ownership    *PoolHandle `prefix:"K"`
-	OwnerDigest  *PoolHandle `prefix:"D"`
-	TestData     *PoolHandle `prefix:"Z"`
+	Blocks            *PoolHandle `prefix:"B"`
+	BlockOwnerAccount *PoolHandle `prefix:"G"`
+	BlockOwnerPayment *PoolHandle `prefix:"H"`
+	BlockOwnerTxIndex *PoolHandle `prefix:"I"`
+	Assets            *PoolHandle `prefix:"A"`
+	Transactions      *PoolHandle `prefix:"T"`
+	OwnerCount        *PoolHandle `prefix:"N"`
+	Ownership         *PoolHandle `prefix:"K"`
+	OwnerDigest       *PoolHandle `prefix:"D"`
+	TestData          *PoolHandle `prefix:"Z"`
 }
 
 // the instance
@@ -46,7 +48,7 @@ var Pool pools
 
 // for database version
 var versionKey = []byte{0x00, 'V', 'E', 'R', 'S', 'I', 'O', 'N'}
-var currentVersion = []byte{0x00, 0x00, 0x00, 0x02}
+var currentVersion = []byte{0x00, 0x00, 0x00, 0x03}
 
 // holds the database handle
 var poolData struct {
