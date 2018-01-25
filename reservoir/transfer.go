@@ -9,6 +9,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/cache"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
@@ -121,7 +122,7 @@ func verifyTransfer(newTransfer transactionrecord.BitmarkTransfer) (*verifiedInf
 		return nil, false, fault.ErrLinkToInvalidOrUnconfirmedTransaction
 	}
 
-	previousTransaction, _, err := transactionrecord.Packed(previousPacked).Unpack()
+	previousTransaction, _, err := transactionrecord.Packed(previousPacked).Unpack(mode.IsTesting())
 	if nil != err {
 		return nil, false, err
 	}

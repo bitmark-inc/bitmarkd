@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
+	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
@@ -55,7 +56,7 @@ outer_loop:
 		data := packedBlock[blockrecord.TotalBlockSize:]
 	inner_loop:
 		for i := 1; true; i += 1 {
-			transaction, n, err := transactionrecord.Packed(data).Unpack()
+			transaction, n, err := transactionrecord.Packed(data).Unpack(mode.IsTesting())
 			if nil != err {
 				log.Errorf("tx[%d]: error: %s", i, err)
 				return err
@@ -64,6 +65,12 @@ outer_loop:
 			packedTransaction := transactionrecord.Packed(data[:n])
 			switch tx := transaction.(type) {
 			case *transactionrecord.OldBaseData:
+				// currently not stored separately
+
+			case *transactionrecord.BlockOwnerIssue:
+				// currently not stored separately
+
+			case *transactionrecord.BlockOwnerTransfer:
 				// currently not stored separately
 
 			case *transactionrecord.AssetData:

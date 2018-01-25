@@ -77,7 +77,7 @@ func (client *Client) CountersignTransfer(countersignConfig *CountersignData) (*
 		return nil, err
 	}
 
-	r, _, err := transactionrecord.Packed(b).Unpack()
+	r, _, err := transactionrecord.Packed(b).Unpack(client.testnet)
 	if nil != err {
 		return nil, err
 	}

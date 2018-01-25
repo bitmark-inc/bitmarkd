@@ -9,7 +9,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
-	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
 )
 
@@ -22,9 +21,8 @@ import (
 // or:
 //   switch tx := result.(type) {
 //   case *transaction.Registration:
-func (record Packed) Unpack() (Transaction, int, error) {
+func (record Packed) Unpack(testnet bool) (Transaction, int, error) {
 
-	testnet := mode.IsTesting()
 	recordType, n := util.FromVarint64(record)
 
 	switch TagType(recordType) {
@@ -343,14 +341,16 @@ func (record Packed) Unpack() (Transaction, int, error) {
 		}
 
 		// payment map
-		payments, cs, paymentsOffset, err := currency.UnpackMap(record, testnet)
+		paymentsLength, paymentsOffset := util.FromVarint64(record[n:])
+		n += paymentsOffset
+		payments, cs, err := currency.UnpackMap(record[n:n+int(paymentsLength)], testnet)
 		if nil != err {
 			return nil, 0, err
 		}
 		if cs != versions[version] {
 			return nil, 0, fault.ErrInvalidCurrencyAddress // ***** FIX THIS: is this error right?
 		}
-		n += paymentsOffset
+		n += int(paymentsLength)
 
 		// owner public key
 		ownerLength, ownerOffset := util.FromVarint64(record[n:])
@@ -404,14 +404,17 @@ func (record Packed) Unpack() (Transaction, int, error) {
 		}
 
 		// payment map
-		payments, cs, paymentsOffset, err := currency.UnpackMap(record, testnet)
+
+		paymentsLength, paymentsOffset := util.FromVarint64(record[n:])
+		n += paymentsOffset
+		payments, cs, err := currency.UnpackMap(record[n:n+int(paymentsLength)], testnet)
 		if nil != err {
 			return nil, 0, err
 		}
 		if cs != versions[version] {
 			return nil, 0, fault.ErrInvalidCurrencyAddress // ***** FIX THIS: is this error right?
 		}
-		n += paymentsOffset
+		n += int(paymentsLength)
 
 		// owner public key
 		ownerLength, ownerOffset := util.FromVarint64(record[n:])

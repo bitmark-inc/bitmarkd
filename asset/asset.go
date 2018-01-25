@@ -7,6 +7,7 @@ package asset
 import (
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
@@ -103,7 +104,7 @@ func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIndex, t
 	if r, ok := globalData.cache[assetIndex]; !ok {
 		globalData.cache[assetIndex] = d
 	} else {
-		transaction, _, err := transactionrecord.Packed(r.packed).Unpack()
+		transaction, _, err := transactionrecord.Packed(r.packed).Unpack(mode.IsTesting())
 		logger.PanicIfError("asset: bad packed record", err)
 
 		switch tx := transaction.(type) {

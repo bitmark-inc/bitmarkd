@@ -7,9 +7,7 @@ package transactionrecord_test
 import (
 	"crypto/rand"
 	"github.com/bitmark-inc/bitmarkd/account"
-	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/merkle"
-	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 	"golang.org/x/crypto/ed25519"
@@ -32,13 +30,10 @@ func setup(t *testing.T) {
 		Size:      50000,
 		Count:     10,
 	})
-
-	mode.Initialise(chain.Local)
 }
 
 // post test cleanup
 func teardown(t *testing.T) {
-	mode.Finalise()
 	logger.Finalise()
 	removeFiles()
 }

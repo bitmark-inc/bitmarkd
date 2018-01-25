@@ -69,6 +69,9 @@ func TestPackBitmarkIssue(t *testing.T) {
 	// test the packer
 	packed, err := r.Pack(issuerAccount)
 	if nil != err {
+		if nil != packed {
+			t.Errorf("partial packed:\n%s", util.FormatBytes("expected", packed))
+		}
 		t.Errorf("pack error: %s", err)
 	}
 
@@ -91,7 +94,7 @@ func TestPackBitmarkIssue(t *testing.T) {
 	}
 
 	// test the unpacker
-	unpacked, n, err := packed.Unpack()
+	unpacked, n, err := packed.Unpack(true)
 	if nil != err {
 		t.Fatalf("unpack error: %s", err)
 	}
@@ -151,6 +154,9 @@ func TestPackTenBitmarkIssues(t *testing.T) {
 
 		partial, err := r.Pack(issuerAccount)
 		if fault.ErrInvalidSignature != err {
+			if nil != partial {
+				t.Errorf("partial packed:\n%s", util.FormatBytes("expected", partial))
+			}
 			t.Fatalf("pack error: %s", err)
 		}
 		signature := ed25519.Sign(issuer.privateKey, partial)

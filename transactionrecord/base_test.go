@@ -87,7 +87,7 @@ func TestPackBaseData(t *testing.T) {
 	}
 
 	// test the unpacker
-	unpacked, n, err := packed.Unpack()
+	unpacked, n, err := packed.Unpack(true)
 	if nil != err {
 		t.Fatalf("unpack error: %s", err)
 	}

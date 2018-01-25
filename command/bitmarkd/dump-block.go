@@ -10,6 +10,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
@@ -49,7 +50,7 @@ func dumpBlock(number uint64) (*blockResult, error) {
 	txs := make([]transactionItem, header.TransactionCount)
 loop:
 	for i := 1; true; i += 1 {
-		transaction, n, err := transactionrecord.Packed(data).Unpack()
+		transaction, n, err := transactionrecord.Packed(data).Unpack(mode.IsTesting())
 		if nil != err {
 			return nil, err
 		}

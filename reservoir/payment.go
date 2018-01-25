@@ -97,7 +97,7 @@ func getPayment(blockNumberKey []byte) *PaymentSegment {
 		logger.Panicf("payment.getPayment: no block payment data for block number: %x", blockNumberKey)
 	}
 
-	cMap, _, _, err := currency.UnpackMap(paymentData, mode.IsTesting())
+	cMap, _, err := currency.UnpackMap(paymentData, mode.IsTesting())
 	if nil != err {
 		logger.Panicf("payment.getPayment: block payment data error: %s", err)
 	}

@@ -192,7 +192,7 @@ func fillRingBuffer(log *logger.L) error {
 				txs := make([]interface{}, header.TransactionCount)
 			loop:
 				for i := 1; true; i += 1 {
-					transaction, n, err := transactionrecord.Packed(data).Unpack()
+					transaction, n, err := transactionrecord.Packed(data).Unpack(mode.IsTesting())
 					if nil != err {
 						//log.Errorf("tx[%d]: error: %s", i, err)
 						//return err

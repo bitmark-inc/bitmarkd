@@ -65,6 +65,9 @@ func TestPackBitmarkTransferOne(t *testing.T) {
 	// test the packer
 	packed, err := r.Pack(issuerAccount)
 	if nil != err {
+		if nil != packed {
+			t.Errorf("partial packed:\n%s", util.FormatBytes("expected", packed))
+		}
 		t.Errorf("pack error: %s", err)
 	}
 
@@ -87,7 +90,7 @@ func TestPackBitmarkTransferOne(t *testing.T) {
 	}
 
 	// test the unpacker
-	unpacked, n, err := packed.Unpack()
+	unpacked, n, err := packed.Unpack(true)
 	if nil != err {
 		t.Fatalf("unpack error: %s", err)
 	}
@@ -181,6 +184,9 @@ func TestPackBitmarkTransferTwo(t *testing.T) {
 	// test the packer
 	packed, err := r.Pack(ownerOneAccount)
 	if nil != err {
+		if nil != packed {
+			t.Errorf("partial packed:\n%s", util.FormatBytes("expected", packed))
+		}
 		t.Errorf("pack error: %s", err)
 	}
 
@@ -203,7 +209,7 @@ func TestPackBitmarkTransferTwo(t *testing.T) {
 	}
 
 	// test the unpacker
-	unpacked, n, err := packed.Unpack()
+	unpacked, n, err := packed.Unpack(true)
 	if nil != err {
 		t.Fatalf("unpack error: %s", err)
 	}
@@ -288,6 +294,9 @@ func TestPackBitmarkTransferThree(t *testing.T) {
 	// test the packer
 	packed, err := r.Pack(ownerTwoAccount)
 	if nil != err {
+		if nil != packed {
+			t.Errorf("partial packed:\n%s", util.FormatBytes("expected", packed))
+		}
 		t.Errorf("pack error: %s", err)
 	}
 
@@ -310,7 +319,7 @@ func TestPackBitmarkTransferThree(t *testing.T) {
 	}
 
 	// test the unpacker
-	unpacked, n, err := packed.Unpack()
+	unpacked, n, err := packed.Unpack(true)
 	if nil != err {
 		t.Fatalf("unpack error: %s", err)
 	}

@@ -30,7 +30,7 @@
 //                                data: owner
 //   H ++ block number          - current block currencies
 //                                data: map(currency → currency address)
-//   I ++ txId                  - block transaction index
+//   I ++ txId                  - current block owner transaction index
 //                                data: block number
 //
 //

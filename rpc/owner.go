@@ -9,6 +9,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
@@ -83,7 +84,7 @@ func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitm
 			return fault.ErrLinkToInvalidOrUnconfirmedTransaction
 		}
 
-		tx, _, err := transactionrecord.Packed(transaction).Unpack()
+		tx, _, err := transactionrecord.Packed(transaction).Unpack(mode.IsTesting())
 		if nil != err {
 			return err
 		}
@@ -113,7 +114,7 @@ func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitm
 			return fault.ErrAssetNotFound
 		}
 
-		tx, _, err := transactionrecord.Packed(transaction).Unpack()
+		tx, _, err := transactionrecord.Packed(transaction).Unpack(mode.IsTesting())
 		if nil != err {
 			return err
 		}

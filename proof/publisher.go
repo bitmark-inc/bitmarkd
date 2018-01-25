@@ -272,8 +272,8 @@ func (pub *publisher) process() {
 	// re-pack to makesure signature is valid
 	packedBI, err := blockIssue.Pack(pub.owner)
 	if nil != err {
-		pub.log.Criticalf("pack base error: %s", err)
-		logger.Panicf("publisher packed base error: %s", err)
+		pub.log.Criticalf("pack block issue error: %s", err)
+		logger.Panicf("publisher packed block issue error: %s", err)
 	}
 
 	// the first two are base records
@@ -282,7 +282,7 @@ func (pub *publisher) process() {
 
 	n := 0 // index for pooledTxIds
 	for _, item := range transactions {
-		unpacked, _, err := transactionrecord.Packed(item).Unpack()
+		unpacked, _, err := transactionrecord.Packed(item).Unpack(mode.IsTesting())
 		if nil != err {
 			pub.log.Criticalf("unpack error: %s", err)
 			logger.Panicf("publisher extraction transactions error: %s", err)

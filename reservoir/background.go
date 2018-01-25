@@ -5,16 +5,16 @@
 package reservoir
 
 import (
-	"time"
-
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/cache"
 	"github.com/bitmark-inc/bitmarkd/constants"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
+	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
+	"time"
 )
 
 type rebroadcaster struct {
@@ -48,7 +48,7 @@ func fetchAsset(assetId transactionrecord.AssetIndex) ([]byte, error) {
 		return nil, fault.ErrAssetNotFound
 	}
 
-	unpacked, _, err := packedAsset.Unpack()
+	unpacked, _, err := packedAsset.Unpack(mode.IsTesting())
 	if err != nil {
 		return nil, err
 	}
@@ -77,6 +77,7 @@ func (r *rebroadcaster) process(globaldata *globalDataType) {
 	}
 
 	hadAsset := make(map[transactionrecord.AssetIndex]struct{})
+verified_tx:
 	for _, val := range cache.Pool.VerifiedTx.Items() {
 		v := val.(*verifiedItem)
 		if v.itemData.links == nil {
@@ -88,7 +89,7 @@ func (r *rebroadcaster) process(globaldata *globalDataType) {
 					// asset was confirmed in an earlier block
 				} else if err != nil {
 					log.Errorf("asset id[%d]: %s  error: %s", v.index, assetId, err)
-					continue // skip the corresponding issue since asset is corrupt
+					continue verified_tx // skip the corresponding issue since asset is corrupt
 				} else {
 					packedAssets = append(packedAssets, packedAsset...)
 				}

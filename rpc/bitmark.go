@@ -118,7 +118,7 @@ loop:
 			break loop
 		}
 
-		transaction, _, err := transactionrecord.Packed(packed).Unpack()
+		transaction, _, err := transactionrecord.Packed(packed).Unpack(mode.IsTesting())
 		if nil != err {
 			break loop
 		}
@@ -149,7 +149,7 @@ loop:
 			if nil == packedAsset {
 				break loop
 			}
-			assetTx, _, err := transactionrecord.Packed(packedAsset).Unpack()
+			assetTx, _, err := transactionrecord.Packed(packedAsset).Unpack(mode.IsTesting())
 			if nil != err {
 				break loop
 			}

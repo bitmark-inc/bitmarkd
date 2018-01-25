@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
@@ -151,7 +152,7 @@ func OwnerOf(txId merkle.Digest) *account.Account {
 		return nil
 	}
 
-	transaction, _, err := transactionrecord.Packed(packed).Unpack()
+	transaction, _, err := transactionrecord.Packed(packed).Unpack(mode.IsTesting())
 	logger.PanicIfError("block.OwnerOf", err)
 
 	switch tx := transaction.(type) {

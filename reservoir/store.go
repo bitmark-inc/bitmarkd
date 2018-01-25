@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/cache"
+	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"os"
 )
@@ -89,7 +90,7 @@ func (rs *ReservoirStore) internalRecover() {
 
 ASSET_RECOVERY:
 	for _, packedAsset := range rs.Assets {
-		transaction, _, err := packedAsset.Unpack()
+		transaction, _, err := packedAsset.Unpack(mode.IsTesting())
 		if nil != err {
 			globalData.log.Errorf("unable to unpack asset: %s", err.Error())
 			continue ASSET_RECOVERY
@@ -119,7 +120,7 @@ ISSUE_RECOVERY:
 
 		issues := make([]*transactionrecord.BitmarkIssue, 0, 1)
 		for len(packedIssues) != 0 {
-			transaction, n, err := packedIssues.Unpack()
+			transaction, n, err := packedIssues.Unpack(mode.IsTesting())
 			if nil != err {
 				globalData.log.Errorf("unable to unpack issue: %s", err.Error())
 				continue ISSUE_RECOVERY
@@ -141,7 +142,7 @@ ISSUE_RECOVERY:
 
 TRANSFER_RECOVERY:
 	for _, packedTransfer := range rs.Transfers {
-		transaction, _, err := packedTransfer.Unpack()
+		transaction, _, err := packedTransfer.Unpack(mode.IsTesting())
 		if nil != err {
 			globalData.log.Errorf("unable to unpack transfer: %s", err.Error())
 			continue TRANSFER_RECOVERY

@@ -284,14 +284,15 @@ func (issue *BlockOwnerIssue) Pack(address *account.Account) (Packed, error) {
 	if nil != err {
 		return nil, err
 	}
+	packedPayments, err := issue.Payments.Pack(address.IsTesting())
+	if nil != err {
+		return nil, err
+	}
 
 	// concatenate bytes
 	message := createPacked(BlockOwnerIssueTag)
 	message.appendUint64(issue.Version)
-	for currency, address := range issue.Payments {
-		message.appendUint64(currency.Uint64())
-		message.appendString(address)
-	}
+	message.appendBytes(packedPayments)
 	message.appendAccount(issue.Owner)
 	message.appendUint64(issue.Nonce)
 
@@ -325,14 +326,16 @@ func (transfer *BlockOwnerTransfer) Pack(address *account.Account) (Packed, erro
 		return nil, err
 	}
 
+	packedPayments, err := transfer.Payments.Pack(address.IsTesting())
+	if nil != err {
+		return nil, err
+	}
+
 	// concatenate bytes
 	message := createPacked(BlockOwnerTransferTag)
 	message.appendBytes(transfer.Link[:])
 	message.appendUint64(transfer.Version)
-	for currency, address := range transfer.Payments {
-		message.appendUint64(currency.Uint64())
-		message.appendString(address)
-	}
+	message.appendBytes(packedPayments)
 	message.appendAccount(transfer.Owner)
 
 	// signature
