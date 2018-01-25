@@ -147,7 +147,7 @@ func checkAssembly(t *testing.T, title string, source SourceData, gDigest blockd
 	// some common static data
 	previousBlock := blockdigest.Digest{}
 
-	b := transactionrecord.BaseData{
+	b := transactionrecord.OldBaseData{
 		Currency:       currency.Nothing,
 		PaymentAddress: source.Message,
 		Owner:          proofedbyAccount,
