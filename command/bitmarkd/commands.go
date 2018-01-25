@@ -9,6 +9,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
@@ -134,7 +135,7 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 		// case "block-times":
 		// 	return false // defer processing until database is loaded
 
-	case "block":
+	case "block", "b", "save-blocks", "save", "load-blocks", "load", "delete-down", "dd":
 		return false // defer processing until database is loaded
 
 	default:
@@ -174,6 +175,16 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 		fmt.Printf("\n")
 
 		fmt.Printf("  block NUMBER           (b)       - dump block as a JSON structure\n")
+		fmt.Printf("\n")
+
+		fmt.Printf("  save-blocks FILE       (save)    - dump all blocks to a file\n")
+		fmt.Printf("\n")
+
+		fmt.Printf("  load-blocks FILE       (load)    - restore all blocks from a file\n")
+		fmt.Printf("                                     only runs if database is deleted first\n")
+		fmt.Printf("\n")
+
+		fmt.Printf("  delete-down NUMBER     (dd)      - delete blocks in descending order\n")
 		fmt.Printf("\n")
 
 		//fmt.Printf("  block-times FILE BEGIN END       - write time and difficulty to text file for a range of blocks\n")
@@ -265,6 +276,61 @@ func processDataCommand(log *logger.L, arguments []string, options *Configuratio
 		}
 
 		fmt.Printf("%s\n", s)
+
+	case "save-blocks", "save":
+		if len(arguments) < 1 {
+			fmt.Printf("missing file name argument\n")
+			exitwithstatus.Exit(1)
+		}
+		filename := arguments[0]
+		if "" == filename {
+			fmt.Printf("missing file name\n")
+			exitwithstatus.Exit(1)
+		}
+		err := saveBinaryBlocks(filename)
+		if nil != err {
+			fmt.Printf("failed writing: %q  error: %s\n", filename, err)
+			exitwithstatus.Exit(1)
+		}
+
+	case "load-blocks", "load":
+		if len(arguments) < 1 {
+			fmt.Printf("missing file name argument\n")
+			exitwithstatus.Exit(1)
+		}
+		filename := arguments[0]
+		if "" == filename {
+			fmt.Printf("missing file name\n")
+			exitwithstatus.Exit(1)
+		}
+		err := restoreBinaryBlocks(filename)
+		if nil != err {
+			fmt.Printf("failed writing: %q  error: %s\n", filename, err)
+			exitwithstatus.Exit(1)
+		}
+
+	case "delete-down", "dd":
+		// delete blocks down to a given block number
+		if len(arguments) < 1 {
+			fmt.Printf("missing block number argument\n")
+			exitwithstatus.Exit(1)
+		}
+
+		n, err := strconv.ParseUint(arguments[0], 10, 64)
+		if nil != err {
+			fmt.Printf("error in block number: %s\n", err)
+			exitwithstatus.Exit(1)
+		}
+		if n < 2 {
+			fmt.Printf("error: invalid block number: %d mus be greater than 1\n", n)
+			exitwithstatus.Exit(1)
+		}
+		err = block.DeleteDownToBlock(n)
+		if nil != err {
+			fmt.Printf("block delete error: %s\n", err)
+			exitwithstatus.Exit(1)
+		}
+		fmt.Printf("reduced height to: %d\n", block.GetHeight())
 
 	default:
 		fmt.Printf("error: no such command: %s\n", command)
