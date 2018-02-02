@@ -183,41 +183,10 @@ func (record Packed) Unpack(testnet bool) (Transaction, int, error) {
 		}
 		n += int(linkLength)
 
-		// optional payment
-		payment := (*Payment)(nil)
-
-		if 0 == record[n] {
-			n += 1
-		} else if 1 == record[n] {
-			n += 1
-
-			// currency
-			c := uint64(0)
-			var currencyLength int
-			c, currencyLength = util.FromVarint64(record[n:])
-			n += int(currencyLength)
-			currency, err := currency.FromUint64(c)
-			if nil != err {
-				return nil, 0, err
-			}
-
-			// address
-			addressLength, addressOffset := util.FromVarint64(record[n:])
-			n += addressOffset
-			address := string(record[n : n+int(addressLength)])
-			n += int(addressLength)
-
-			// amount
-			amount, amountLength := util.FromVarint64(record[n:])
-			n += int(amountLength)
-
-			payment = &Payment{
-				Currency: currency,
-				Address:  address,
-				Amount:   amount,
-			}
-		} else {
-			return nil, 0, fault.ErrNotTransactionPack
+		// optional escrow payment
+		escrow, n, err := unpackEscrow(record, n)
+		if nil != err {
+			return nil, 0, err
 		}
 
 		// owner public key
@@ -241,7 +210,7 @@ func (record Packed) Unpack(testnet bool) (Transaction, int, error) {
 
 		r := &BitmarkTransferUnratified{
 			Link:      link,
-			Payment:   payment,
+			Escrow:    escrow,
 			Owner:     owner,
 			Signature: signature,
 		}
@@ -259,41 +228,10 @@ func (record Packed) Unpack(testnet bool) (Transaction, int, error) {
 		}
 		n += int(linkLength)
 
-		// optional payment
-		payment := (*Payment)(nil)
-
-		if 0 == record[n] {
-			n += 1
-		} else if 1 == record[n] {
-			n += 1
-
-			// currency
-			c := uint64(0)
-			var currencyLength int
-			c, currencyLength = util.FromVarint64(record[n:])
-			n += int(currencyLength)
-			currency, err := currency.FromUint64(c)
-			if nil != err {
-				return nil, 0, err
-			}
-
-			// address
-			addressLength, addressOffset := util.FromVarint64(record[n:])
-			n += addressOffset
-			address := string(record[n : n+int(addressLength)])
-			n += int(addressLength)
-
-			// amount
-			amount, amountLength := util.FromVarint64(record[n:])
-			n += int(amountLength)
-
-			payment = &Payment{
-				Currency: currency,
-				Address:  address,
-				Amount:   amount,
-			}
-		} else {
-			return nil, 0, fault.ErrNotTransactionPack
+		// optional escrow payment
+		escrow, n, err := unpackEscrow(record, n)
+		if nil != err {
+			return nil, 0, err
 		}
 
 		// owner public key
@@ -324,14 +262,14 @@ func (record Packed) Unpack(testnet bool) (Transaction, int, error) {
 
 		r := &BitmarkTransferCountersigned{
 			Link:             link,
-			Payment:          payment,
+			Escrow:           escrow,
 			Owner:            owner,
 			Signature:        signature,
 			Countersignature: countersignature,
 		}
 		return r, n, nil
 
-	case BlockOwnerIssueTag:
+	case BlockFoundationTag:
 
 		// version
 		version, versionLength := util.FromVarint64(record[n:])
@@ -375,7 +313,7 @@ func (record Packed) Unpack(testnet bool) (Transaction, int, error) {
 		copy(signature, record[n:])
 		n += int(signatureLength)
 
-		r := &BlockOwnerIssue{
+		r := &BlockFoundation{
 			Version:   version,
 			Owner:     owner,
 			Payments:  payments,
@@ -395,6 +333,12 @@ func (record Packed) Unpack(testnet bool) (Transaction, int, error) {
 			return nil, 0, err
 		}
 		n += int(linkLength)
+
+		// optional escrow payment
+		escrow, n, err := unpackEscrow(record, n)
+		if nil != err {
+			return nil, 0, err
+		}
 
 		// version
 		version, versionLength := util.FromVarint64(record[n:])
@@ -428,23 +372,73 @@ func (record Packed) Unpack(testnet bool) (Transaction, int, error) {
 		}
 		n += int(ownerLength)
 
-		// signature is remainder of record
+		// signature
 		signatureLength, signatureOffset := util.FromVarint64(record[n:])
 		signature := make(account.Signature, signatureLength)
 		n += signatureOffset
 		copy(signature, record[n:])
 		n += int(signatureLength)
 
+		// countersignature
+		countersignatureLength, countersignatureOffset := util.FromVarint64(record[n:])
+		countersignature := make(account.Signature, countersignatureLength)
+		n += countersignatureOffset
+		copy(countersignature, record[n:])
+		n += int(countersignatureLength)
+
 		r := &BlockOwnerTransfer{
-			Link:      link,
-			Version:   version,
-			Owner:     owner,
-			Payments:  payments,
-			Signature: signature,
+			Link:             link,
+			Escrow:           escrow,
+			Version:          version,
+			Owner:            owner,
+			Payments:         payments,
+			Signature:        signature,
+			Countersignature: countersignature,
 		}
 		return r, n, nil
 
 	default:
 	}
 	return nil, 0, fault.ErrNotTransactionPack
+}
+
+func unpackEscrow(record []byte, n int) (*Payment, int, error) {
+
+	// optional escrow payment
+	payment := (*Payment)(nil)
+
+	if 0 == record[n] {
+		n += 1
+	} else if 1 == record[n] {
+		n += 1
+
+		// currency
+		c := uint64(0)
+		var currencyLength int
+		c, currencyLength = util.FromVarint64(record[n:])
+		n += int(currencyLength)
+		currency, err := currency.FromUint64(c)
+		if nil != err {
+			return nil, 0, err
+		}
+
+		// address
+		addressLength, addressOffset := util.FromVarint64(record[n:])
+		n += addressOffset
+		address := string(record[n : n+int(addressLength)])
+		n += int(addressLength)
+
+		// amount
+		amount, amountLength := util.FromVarint64(record[n:])
+		n += int(amountLength)
+
+		payment = &Payment{
+			Currency: currency,
+			Address:  address,
+			Amount:   amount,
+		}
+	} else {
+		return nil, 0, fault.ErrNotTransactionPack
+	}
+	return payment, n, nil
 }

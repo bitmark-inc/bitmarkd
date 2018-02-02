@@ -5,6 +5,7 @@
 package rpc
 
 import (
+	"encoding/binary"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
@@ -36,7 +37,7 @@ func (bitmark *Bitmark) Transfer(transfer *transactionrecord.BitmarkTransferCoun
 
 	log := bitmark.log
 
-	log.Infof("Bitmark.Transfer: %v", transfer)
+	log.Infof("Bitmark.Transfer: %+v", transfer)
 
 	if !mode.Is(mode.Normal) {
 		return fault.ErrNotAvailableDuringSynchronise
@@ -92,6 +93,10 @@ type ProvenanceRecord struct {
 	Data       interface{} `json:"data"`
 }
 
+type BlockRoot struct {
+	Number uint64 `json:"number"`
+}
+
 type ProvenanceReply struct {
 	Data []ProvenanceRecord `json:"data"`
 }
@@ -99,7 +104,7 @@ type ProvenanceReply struct {
 func (bitmark *Bitmark) Provenance(arguments *ProvenanceArguments, reply *ProvenanceReply) error {
 	log := bitmark.log
 
-	log.Infof("Bitmark.Provenance: %v", arguments)
+	log.Infof("Bitmark.Provenance: %+v", arguments)
 
 	count := arguments.Count
 	id := arguments.TxId
@@ -134,8 +139,7 @@ loop:
 
 		switch tx := transaction.(type) {
 
-		case *transactionrecord.BitmarkIssue:
-
+		case *transactionrecord.OldBaseData:
 			if 0 == i {
 				dKey := append(tx.Owner.Bytes(), id[:]...)
 				if nil != storage.Pool.OwnerDigest.Get(dKey) {
@@ -143,6 +147,57 @@ loop:
 				}
 			}
 
+			root := BlockRoot{
+				Number: 0,
+			}
+			buffer := storage.Pool.BlockOwnerTxIndex.Get(id[:])
+			if nil != buffer {
+				root.Number = binary.BigEndian.Uint64(buffer)
+			}
+
+			hRoot := ProvenanceRecord{
+				Record:     "Block",
+				IsOwner:    false,
+				TxId:       nil,
+				AssetIndex: nil,
+				Data:       root,
+			}
+			provenance = append(provenance, hRoot)
+			provenance = append(provenance, h)
+			break loop
+
+		case *transactionrecord.BlockFoundation:
+			if 0 == i {
+				dKey := append(tx.Owner.Bytes(), id[:]...)
+				if nil != storage.Pool.OwnerDigest.Get(dKey) {
+					h.IsOwner = true
+				}
+			}
+
+			root := BlockRoot{}
+			buffer := storage.Pool.BlockOwnerTxIndex.Get(id[:])
+			if nil != buffer {
+				root.Number = binary.BigEndian.Uint64(buffer)
+			}
+
+			hRoot := ProvenanceRecord{
+				Record:     "Block",
+				IsOwner:    false,
+				TxId:       nil,
+				AssetIndex: nil,
+				Data:       root,
+			}
+			provenance = append(provenance, hRoot)
+			provenance = append(provenance, h)
+			break loop
+
+		case *transactionrecord.BitmarkIssue:
+			if 0 == i {
+				dKey := append(tx.Owner.Bytes(), id[:]...)
+				if nil != storage.Pool.OwnerDigest.Get(dKey) {
+					h.IsOwner = true
+				}
+			}
 			provenance = append(provenance, h)
 
 			packedAsset := storage.Pool.Assets.Get(tx.AssetIndex[:])
@@ -165,7 +220,9 @@ loop:
 			provenance = append(provenance, h)
 			break loop
 
-		case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
+		case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned, *transactionrecord.BlockOwnerTransfer:
+			provenance = append(provenance, h)
+
 			tr := tx.(transactionrecord.BitmarkTransfer)
 
 			if 0 == i {

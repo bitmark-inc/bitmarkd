@@ -93,7 +93,7 @@ func (assets *Assets) Get(arguments *AssetGetArguments, reply *AssetGetReply) er
 		return fault.ErrNotAvailableDuringSynchronise
 	}
 
-	log.Infof("Assets.Get: %v", arguments)
+	log.Infof("Assets.Get: %+v", arguments)
 
 	a := make([]AssetRecord, count)
 loop:

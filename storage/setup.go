@@ -32,7 +32,6 @@ type PoolHandle struct {
 // note all must be exported (i.e. initial capital) or initialisation will panic
 type pools struct {
 	Blocks            *PoolHandle `prefix:"B"`
-	BlockOwnerAccount *PoolHandle `prefix:"G"`
 	BlockOwnerPayment *PoolHandle `prefix:"H"`
 	BlockOwnerTxIndex *PoolHandle `prefix:"I"`
 	Assets            *PoolHandle `prefix:"A"`

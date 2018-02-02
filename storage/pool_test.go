@@ -6,8 +6,10 @@ package storage_test
 
 import (
 	"bytes"
+	"crypto/rand"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"testing"
+	"time"
 )
 
 // helper to add to pool
@@ -180,4 +182,119 @@ func checkAgain(t *testing.T, empty bool) {
 	if nil != dn {
 		t.Errorf("checkAgain: Unexpected data on Get('/nonexistant'), got: '%s'  expected: nil", dn)
 	}
+}
+
+func TestWriteRead1(t *testing.T) {
+	doWriteRead(t)
+}
+func TestWriteRead2(t *testing.T) {
+	doWriteRead(t)
+}
+func TestWriteRead3(t *testing.T) {
+	doWriteRead(t)
+}
+func TestWriteRead4(t *testing.T) {
+	doWriteRead(t)
+}
+
+// main pool test
+func doWriteRead(t *testing.T) {
+	setup(t)
+	defer teardown(t)
+
+	p := storage.Pool.TestData
+
+	key := rb(127)
+
+	finish := time.After(90 * time.Second)
+	stop := make(chan struct{})
+
+	for j := 0; j < 10; j += 1 {
+		go bg(&key, stop)
+		go jr(&key, stop)
+	}
+
+	i := 0
+loop:
+	for {
+		select {
+		case <-finish:
+			break loop
+			//case <-time.After(1 * time.Millisecond):
+		default:
+		}
+
+		i += 1
+
+		oldkey := key
+		key = rb(127)
+		data := rb(156)
+
+		p.Delete(key)
+		d := p.Get(key)
+		p.Put(key, data)
+
+		p.Delete(oldkey)
+
+		d = p.Get(key)
+		if !bytes.Equal(data, d) {
+			t.Errorf("%d: actual: %x  expected: %x", i, d, data)
+		}
+
+		d1 := p.Get(oldkey)
+		if nil != d1 {
+			t.Errorf("%d: actual: %x  expected: nil", i, d1)
+		}
+	}
+	close(stop)
+	time.Sleep(2 * time.Second)
+}
+
+func bg(key *[]byte, stop <-chan struct{}) {
+
+	p := storage.Pool.TestData
+
+	for {
+		select {
+		case <-stop:
+			return
+		//case <-time.After(t):
+		default:
+		}
+
+		key2 := rb(129)
+		data1 := rb(15)
+		data2 := rb(165)
+
+		p.Delete(key2)
+		p.Put(key2, data1)
+		p.Get(*key)
+		p.Get(key2)
+		p.Put(key2, data2)
+		p.Get(key2)
+		p.Get(*key)
+	}
+}
+
+func jr(key *[]byte, stop <-chan struct{}) {
+
+	p := storage.Pool.TestData
+
+	for {
+		select {
+		case <-stop:
+			return
+		default:
+			p.Get(*key)
+		}
+	}
+}
+
+func rb(n int) []byte {
+	buffer := make([]byte, n)
+	_, err := rand.Read(buffer)
+	if nil != err {
+		panic(err)
+	}
+	return buffer
 }

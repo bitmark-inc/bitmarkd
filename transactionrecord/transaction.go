@@ -27,7 +27,7 @@ const (
 	BitmarkIssueTag                 = TagType(iota) // issue asset
 	BitmarkTransferUnratifiedTag    = TagType(iota) // OBSOLETE: transfer
 	BitmarkTransferCountersignedTag = TagType(iota) // transfer
-	BlockOwnerIssueTag              = TagType(iota) // block owner
+	BlockFoundationTag              = TagType(iota) // block owner
 	BlockOwnerTransferTag           = TagType(iota) // block owner transfer
 
 	// this item must be last
@@ -53,7 +53,8 @@ const (
 	maxTimestampLength   = len("2014-06-21T14:32:16Z")
 )
 
-// the unpacked Proofer Data structure
+// the unpacked Proofer Data structure (OBSOLETE)
+// this is first tx in every block and can only be used there
 type OldBaseData struct {
 	Currency       currency.Currency `json:"currency"`       // utf-8 → Enum
 	PaymentAddress string            `json:"paymentAddress"` // utf-8
@@ -106,7 +107,7 @@ type BitmarkTransfer interface {
 // the unpacked BitmarkTransfer structure
 type BitmarkTransferUnratified struct {
 	Link      merkle.Digest     `json:"link"`      // previous record
-	Payment   *Payment          `json:"payment"`   // optional payment address
+	Escrow    *Payment          `json:"escrow"`    // optional escrow payment address
 	Owner     *account.Account  `json:"owner"`     // base58: the "destination" owner
 	Signature account.Signature `json:"signature"` // hex: corresponds to owner in linked record
 }
@@ -114,14 +115,15 @@ type BitmarkTransferUnratified struct {
 // the unpacked Countersigned BitmarkTransfer structure
 type BitmarkTransferCountersigned struct {
 	Link             merkle.Digest     `json:"link"`             // previous record
-	Payment          *Payment          `json:"payment"`          // optional payment address
+	Escrow           *Payment          `json:"escrow"`           // optional escrow payment address
 	Owner            *account.Account  `json:"owner"`            // base58: the "destination" owner
 	Signature        account.Signature `json:"signature"`        // hex: corresponds to owner in linked record
 	Countersignature account.Signature `json:"countersignature"` // hex: corresponds to owner in this record
 }
 
-// the unpacked Block Owner Issue Data structure
-type BlockOwnerIssue struct {
+// the unpacked Proofer Data structure
+// this is first tx in every block and can only be used there
+type BlockFoundation struct {
 	Version   uint64            `json:"version"`      // reflects combination of supported currencies
 	Payments  currency.Map      `json:"payments"`     // contents depend on version
 	Owner     *account.Account  `json:"owner"`        // base58
@@ -130,12 +132,16 @@ type BlockOwnerIssue struct {
 }
 
 // the unpacked Block Owner Transfer Data structure
+// forms a chain that links back to a foundation record which has a TxId of:
+// SHA3-256 . concat blockDigest leBlockNumberUint64
 type BlockOwnerTransfer struct {
-	Link      merkle.Digest     `json:"link"`       // previous record
-	Version   uint64            `json:"version"`    // reflects combination of supported currencies
-	Payments  currency.Map      `json:"payments"`   // require length and contents depend on version
-	Owner     *account.Account  `json:"owner"`      // base58
-	Signature account.Signature `json:"signature,"` // hex
+	Link             merkle.Digest     `json:"link"`             // previous record
+	Escrow           *Payment          `json:"escrow"`           // optional escrow payment address
+	Version          uint64            `json:"version"`          // reflects combination of supported currencies
+	Payments         currency.Map      `json:"payments"`         // require length and contents depend on version
+	Owner            *account.Account  `json:"owner"`            // base58
+	Signature        account.Signature `json:"signature,"`       // hex
+	Countersignature account.Signature `json:"countersignature"` // hex: corresponds to owner in this record
 }
 
 // determine the record type code
@@ -162,8 +168,8 @@ func RecordName(record interface{}) (string, bool) {
 	case *BitmarkTransferCountersigned, BitmarkTransferCountersigned:
 		return "BitmarkTransferCountersigned", true
 
-	case *BlockOwnerIssue, BlockOwnerIssue:
-		return "BlockOwnerIssue", true
+	case *BlockFoundation, BlockFoundation:
+		return "BlockFoundation", true
 
 	case *BlockOwnerTransfer, BlockOwnerTransfer:
 		return "BlockOwnerTransfer", true

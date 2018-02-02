@@ -1,3 +1,9 @@
+bitmarkd (7.0-1) unstable; urgency=medium
+
+  * new block issue/transfer system
+
+ -- Christopher Hall <hsw@bitmark.com>  Fri, 19 Jan 2018 09:39:48 +0000
+
 bitmarkd (6.9-1) unstable; urgency=medium
 
   * client counts for web ui

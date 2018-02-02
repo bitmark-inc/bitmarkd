@@ -104,7 +104,7 @@ func StoreTransfer(transfer transactionrecord.BitmarkTransfer) (*TransferInfo, b
 	return result, false, nil
 }
 
-// returned data from veriftyTransfer
+// returned data from verifyTransfer
 type verifiedInfo struct {
 	txId             merkle.Digest
 	packedTransfer   []byte
@@ -130,18 +130,59 @@ func verifyTransfer(newTransfer transactionrecord.BitmarkTransfer) (*verifiedInf
 	var currentOwner *account.Account
 	var previousTransfer transactionrecord.BitmarkTransfer
 
+	// ensure that the transaction is a valid chain transition
 	switch tx := previousTransaction.(type) {
 	case *transactionrecord.BitmarkIssue:
-		currentOwner = tx.Owner
+		// ensure link to correct transfer type
+		switch newTransfer.(type) {
+		case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
+			currentOwner = tx.Owner
+		default:
+			return nil, false, fault.ErrLinkToInvalidOrUnconfirmedTransaction
+		}
 
 	case *transactionrecord.BitmarkTransferUnratified:
-		currentOwner = tx.Owner
-		previousTransfer = tx
+		// ensure link to correct transfer type
+		switch newTransfer.(type) {
+		case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
+			currentOwner = tx.Owner
+			previousTransfer = tx
+		default:
+			return nil, false, fault.ErrLinkToInvalidOrUnconfirmedTransaction
+		}
 
 	case *transactionrecord.BitmarkTransferCountersigned:
 		// do not permit transfer downgrade
 		switch newTransfer.(type) {
 		case *transactionrecord.BitmarkTransferCountersigned:
+			currentOwner = tx.Owner
+			previousTransfer = tx
+		default:
+			return nil, false, fault.ErrLinkToInvalidOrUnconfirmedTransaction
+		}
+
+	case *transactionrecord.OldBaseData:
+		// ensure link to correct transfer type
+		switch newTransfer.(type) {
+		case *transactionrecord.BlockOwnerTransfer:
+			currentOwner = tx.Owner
+		default:
+			return nil, false, fault.ErrLinkToInvalidOrUnconfirmedTransaction
+		}
+
+	case *transactionrecord.BlockFoundation:
+		// ensure link to correct transfer type
+		switch newTransfer.(type) {
+		case *transactionrecord.BlockOwnerTransfer:
+			currentOwner = tx.Owner
+		default:
+			return nil, false, fault.ErrLinkToInvalidOrUnconfirmedTransaction
+		}
+
+	case *transactionrecord.BlockOwnerTransfer:
+		// ensure link to correct transfer type
+		switch newTransfer.(type) {
+		case *transactionrecord.BlockOwnerTransfer:
 			currentOwner = tx.Owner
 			previousTransfer = tx
 		default:

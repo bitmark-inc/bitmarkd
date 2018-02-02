@@ -257,7 +257,7 @@ func (pub *publisher) process() {
 		p[c] = pub.paymentAddress[c]
 	}
 
-	blockIssue := &transactionrecord.BlockOwnerIssue{
+	blockFoundation := &transactionrecord.BlockFoundation{
 		Version:  1,
 		Payments: p,
 		Owner:    pub.owner,
@@ -265,15 +265,15 @@ func (pub *publisher) process() {
 	}
 
 	// sign the record and attach signature
-	partiallyPacked, _ := blockIssue.Pack(pub.owner) // ignore error to get packed without signature
+	partiallyPacked, _ := blockFoundation.Pack(pub.owner) // ignore error to get packed without signature
 	signature := ed25519.Sign(pub.privateKey[:], partiallyPacked)
-	blockIssue.Signature = signature[:]
+	blockFoundation.Signature = signature[:]
 
 	// re-pack to makesure signature is valid
-	packedBI, err := blockIssue.Pack(pub.owner)
+	packedBI, err := blockFoundation.Pack(pub.owner)
 	if nil != err {
-		pub.log.Criticalf("pack block issue error: %s", err)
-		logger.Panicf("publisher packed block issue error: %s", err)
+		pub.log.Criticalf("pack block foundation error: %s", err)
+		logger.Panicf("publisher packed block foundation error: %s", err)
 	}
 
 	// the first two are base records

@@ -15,44 +15,44 @@
 // Notes:
 // 1. each separate pool has a single byte prefix (to spread the keys in LevelDB)
 // 2. ++           = concatenation of byte data
-// 3. block number = big endian uint64 (8 bytes)
+// 3. BN           = block number as 8 byte big endian (uint64)
 // 4. txId         = transaction digest as 32 byte SHA3-256(data)
 // 5. asset index  = fingerprint digest as 64 byte SHA3-512(data)
-// 6. count        = successive index value as big endian uint64 (8 bytes)
+// 6. count        = successive index value as 8 byte big endian (uint64)
 // 7. owner        = bitmark account (32 byte public key)
-// 8. *others*     = byte values of various length
+// 8. 00           = single byte values 00..ff
+// 9. *others*     = byte values of various length
 //
 // Blocks:
 //
-//   B ++ block number          - block store
-//                                data: header ++ base transaction ++ (concat transactions)
-//   G ++ block number          - current block owner account
-//                                data: owner
-//   H ++ block number          - current block currencies
-//                                data: map(currency → currency address)
-//   I ++ txId                  - current block owner transaction index
-//                                data: block number
+//   B ++ BN               - block store
+//                           data: header ++ (concat transactions)
+//   H ++ BN               - current block currencies
+//                           data: map(currency → currency address)
+//   I ++ txId             - current block owner transaction index
+//                           data: BN
 //
 //
 // Transactions:
 //
-//   T ++ txId                  - confirmed transactions
-//                                data: packed transaction data
+//   T ++ txId             - confirmed transactions
+//                           data: BN ++ packed transaction data
 //
 // Assets:
 //
-//   A ++ asset index           - confirmed asset
-//                                data: packed asset data
+//   A ++ asset index      - confirmed asset
+//                           data: packed asset data
 //
 // Ownership:
 //
-//   N ++ owner                 - next count value to use for appending to owned items
-//                                data: count
-//   K ++ owner ++ count        - list of owned items
-//                                data: last transfer txId ++ last transfer block number ++ issue txId ++ issue block number ++ asset index
-//   D ++ owner ++ txId         - position in list of owned items, for delete after transfer
-//                                data: count
+//   N ++ owner            - next count value to use for appending to owned items
+//                           data: count
+//   K ++ owner ++ count   - list of owned items
+//                           data: 00 ++ last transfer txId ++ last transfer BN ++ issue txId ++ issue BN ++ asset index
+//                           data: 01 ++ last transfer txId ++ last transfer BN ++ issue txId ++ issue BN ++ owned BN
+//   D ++ owner ++ txId    - position in list of owned items, for delete after transfer
+//                           data: count
 //
 // Testing:
-//   Z ++ key                   - testing data
+//   Z ++ key              - testing data
 package storage

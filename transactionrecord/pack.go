@@ -178,24 +178,14 @@ func (transfer *BitmarkTransferUnratified) Pack(address *account.Account) (Packe
 	// concatenate bytes
 	message := createPacked(BitmarkTransferUnratifiedTag)
 	message.appendBytes(transfer.Link[:])
-
-	if nil == transfer.Payment {
-		message = append(message, 0)
-	} else {
-		err := transfer.Payment.Currency.ValidateAddress(transfer.Payment.Address, testnet)
-		if nil != err {
-			return nil, err
-		}
-		message = append(message, 1)
-		message.appendUint64(transfer.Payment.Currency.Uint64())
-		message.appendString(transfer.Payment.Address)
-		message.appendUint64(transfer.Payment.Amount)
+	_, err := message.appendEscrow(transfer.Escrow, testnet)
+	if nil != err {
+		return nil, err
 	}
-
 	message.appendAccount(transfer.Owner)
 
 	// signature
-	err := address.CheckSignature(message, transfer.Signature)
+	err = address.CheckSignature(message, transfer.Signature)
 	if nil != err {
 		return message, err
 	}
@@ -229,25 +219,14 @@ func (transfer *BitmarkTransferCountersigned) Pack(address *account.Account) (Pa
 	// concatenate bytes
 	message := createPacked(BitmarkTransferCountersignedTag)
 	message.appendBytes(transfer.Link[:])
-
-	if nil == transfer.Payment {
-		message = append(message, 0)
-	} else {
-		err := transfer.Payment.Currency.ValidateAddress(transfer.Payment.Address, testnet)
-		if nil != err {
-			return nil, err
-		}
-
-		message = append(message, 1)
-		message.appendUint64(transfer.Payment.Currency.Uint64())
-		message.appendString(transfer.Payment.Address)
-		message.appendUint64(transfer.Payment.Amount)
+	_, err := message.appendEscrow(transfer.Escrow, testnet)
+	if nil != err {
+		return nil, err
 	}
-
 	message.appendAccount(transfer.Owner)
 
 	// signature
-	err := address.CheckSignature(message, transfer.Signature)
+	err = address.CheckSignature(message, transfer.Signature)
 	if nil != err {
 		return message, err
 	}
@@ -264,14 +243,14 @@ func (transfer *BitmarkTransferCountersigned) Pack(address *account.Account) (Pa
 	return *message.appendBytes(transfer.Countersignature), nil
 }
 
-// pack BlockOwnerIssue
+// pack BlockFoundation
 //
 // Pack Varint64(tag) followed by fields in order as struct above with
 // signature last
 //
 // NOTE: returns the "unsigned" message on signature failure - for
 //       debugging/testing
-func (issue *BlockOwnerIssue) Pack(address *account.Account) (Packed, error) {
+func (issue *BlockFoundation) Pack(address *account.Account) (Packed, error) {
 	if len(issue.Signature) > maxSignatureLength {
 		return nil, fault.ErrSignatureTooLong
 	}
@@ -290,7 +269,7 @@ func (issue *BlockOwnerIssue) Pack(address *account.Account) (Packed, error) {
 	}
 
 	// concatenate bytes
-	message := createPacked(BlockOwnerIssueTag)
+	message := createPacked(BlockFoundationTag)
 	message.appendUint64(issue.Version)
 	message.appendBytes(packedPayments)
 	message.appendAccount(issue.Owner)
@@ -331,9 +310,15 @@ func (transfer *BlockOwnerTransfer) Pack(address *account.Account) (Packed, erro
 		return nil, err
 	}
 
+	testnet := address.IsTesting()
+
 	// concatenate bytes
 	message := createPacked(BlockOwnerTransferTag)
 	message.appendBytes(transfer.Link[:])
+	_, err = message.appendEscrow(transfer.Escrow, testnet)
+	if nil != err {
+		return nil, err
+	}
 	message.appendUint64(transfer.Version)
 	message.appendBytes(packedPayments)
 	message.appendAccount(transfer.Owner)
@@ -343,8 +328,15 @@ func (transfer *BlockOwnerTransfer) Pack(address *account.Account) (Packed, erro
 	if nil != err {
 		return message, err
 	}
-	// Signature Last
-	return *message.appendBytes(transfer.Signature), nil
+	message.appendBytes(transfer.Signature)
+
+	err = transfer.Owner.CheckSignature(message, transfer.Countersignature)
+	if nil != err {
+		return message, err
+	}
+
+	// Countersignature Last
+	return *message.appendBytes(transfer.Countersignature), nil
 }
 
 // internal routines below here
@@ -420,4 +412,22 @@ func (buffer *Packed) appendUint64(value uint64) *Packed {
 	valueBytes := util.ToVarint64(value)
 	*buffer = append(*buffer, valueBytes...)
 	return buffer
+}
+
+// append a Escrop[ payment to buffer
+func (buffer *Packed) appendEscrow(escrow *Payment, testnet bool) (*Packed, error) {
+
+	if nil == escrow {
+		*buffer = append(*buffer, 0)
+	} else {
+		err := escrow.Currency.ValidateAddress(escrow.Address, testnet)
+		if nil != err {
+			return nil, err
+		}
+		*buffer = append(*buffer, 1)
+		buffer.appendUint64(escrow.Currency.Uint64())
+		buffer.appendString(escrow.Address)
+		buffer.appendUint64(escrow.Amount)
+	}
+	return buffer, nil
 }

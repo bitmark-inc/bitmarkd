@@ -282,6 +282,10 @@ func createRPCServer(log *logger.L, version string) *rpc.Server {
 		start: start,
 	}
 
+	blockOwner := &BlockOwner{
+		log: log,
+	}
+
 	server := rpc.NewServer()
 
 	server.Register(assets)
@@ -290,6 +294,7 @@ func createRPCServer(log *logger.L, version string) *rpc.Server {
 	server.Register(owner)
 	server.Register(node)
 	server.Register(transaction)
+	server.Register(blockOwner)
 
 	return server
 }

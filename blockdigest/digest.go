@@ -47,9 +47,7 @@ func NewDigest(record []byte) Digest {
 	logger.PanicIfError("block.NewDigest", err)
 
 	var digest Digest
-	for i, b := range hash {
-		digest[i] = b
-	}
+	copy(digest[:], hash)
 	return digest
 }
 

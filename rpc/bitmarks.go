@@ -78,7 +78,7 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 		return fault.ErrNotAvailableDuringSynchronise
 	}
 
-	log.Infof("Bitmarks.Create: %v", arguments)
+	log.Infof("Bitmarks.Create: %+v", arguments)
 
 	assetStatus, packedAssets, err := assetRegister(arguments.Assets)
 	if nil != err {

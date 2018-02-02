@@ -67,7 +67,7 @@ outer_loop:
 			case *transactionrecord.OldBaseData:
 				// currently not stored separately
 
-			case *transactionrecord.BlockOwnerIssue:
+			case *transactionrecord.BlockFoundation:
 				// currently not stored separately
 
 			case *transactionrecord.BlockOwnerTransfer:

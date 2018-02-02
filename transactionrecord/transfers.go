@@ -16,7 +16,7 @@ func (transfer *BitmarkTransferUnratified) GetLink() merkle.Digest {
 }
 
 func (transfer *BitmarkTransferUnratified) GetPayment() *Payment {
-	return transfer.Payment
+	return transfer.Escrow
 }
 
 func (transfer *BitmarkTransferUnratified) GetOwner() *account.Account {
@@ -38,7 +38,7 @@ func (transfer *BitmarkTransferCountersigned) GetLink() merkle.Digest {
 }
 
 func (transfer *BitmarkTransferCountersigned) GetPayment() *Payment {
-	return transfer.Payment
+	return transfer.Escrow
 }
 
 func (transfer *BitmarkTransferCountersigned) GetOwner() *account.Account {
@@ -50,5 +50,27 @@ func (transfer *BitmarkTransferCountersigned) GetSignature() account.Signature {
 }
 
 func (transfer *BitmarkTransferCountersigned) GetCountersignature() account.Signature {
+	return transfer.Countersignature
+}
+
+// for block owner transfer
+
+func (transfer *BlockOwnerTransfer) GetLink() merkle.Digest {
+	return transfer.Link
+}
+
+func (transfer *BlockOwnerTransfer) GetPayment() *Payment {
+	return transfer.Escrow
+}
+
+func (transfer *BlockOwnerTransfer) GetOwner() *account.Account {
+	return transfer.Owner
+}
+
+func (transfer *BlockOwnerTransfer) GetSignature() account.Signature {
+	return transfer.Signature
+}
+
+func (transfer *BlockOwnerTransfer) GetCountersignature() account.Signature {
 	return transfer.Countersignature
 }

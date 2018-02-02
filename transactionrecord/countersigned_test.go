@@ -147,7 +147,7 @@ func TestPackBitmarkTransferCountersignedTwo(t *testing.T) {
 
 	r := transactionrecord.BitmarkTransferCountersigned{
 		Link: link,
-		Payment: &transactionrecord.Payment{
+		Escrow: &transactionrecord.Payment{
 			Currency: currency.Bitcoin,
 			Address:  "mnnemVbQECtikaGZPYux4dGHH3YZyCg4sq",
 			Amount:   250000,
@@ -269,9 +269,9 @@ func TestPackBitmarkTransferCountersignedThree(t *testing.T) {
 	}
 
 	r := transactionrecord.BitmarkTransferCountersigned{
-		Link:    link,
-		Payment: nil,
-		Owner:   ownerOneAccount,
+		Link:   link,
+		Escrow: nil,
+		Owner:  ownerOneAccount,
 	}
 
 	expected := []byte{
@@ -382,9 +382,9 @@ func TestPackBitmarkTransferCountersignedFail(t *testing.T) {
 	}
 
 	r := transactionrecord.BitmarkTransferCountersigned{
-		Link:    link,
-		Payment: nil,
-		Owner:   ownerOneAccount,
+		Link:   link,
+		Escrow: nil,
+		Owner:  ownerOneAccount,
 	}
 
 	expected := []byte{

@@ -142,7 +142,7 @@ func TestPackBitmarkTransferTwo(t *testing.T) {
 
 	r := transactionrecord.BitmarkTransferUnratified{
 		Link: link,
-		Payment: &transactionrecord.Payment{
+		Escrow: &transactionrecord.Payment{
 			Currency: currency.Bitcoin,
 			Address:  "mnnemVbQECtikaGZPYux4dGHH3YZyCg4sq",
 			Amount:   250000,
@@ -260,9 +260,9 @@ func TestPackBitmarkTransferThree(t *testing.T) {
 	}
 
 	r := transactionrecord.BitmarkTransferUnratified{
-		Link:    link,
-		Payment: nil,
-		Owner:   ownerOneAccount,
+		Link:   link,
+		Escrow: nil,
+		Owner:  ownerOneAccount,
 	}
 
 	expected := []byte{

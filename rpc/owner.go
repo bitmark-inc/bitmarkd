@@ -45,9 +45,13 @@ type BitmarksRecord struct {
 	Data       interface{} `json:"data"`
 }
 
+type BlockAsset struct {
+	Number uint64 `json:"number"`
+}
+
 func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitmarksReply) error {
 	log := owner.log
-	log.Infof("Owner.Bitmarks: %v", arguments)
+	log.Infof("Owner.Bitmarks: %+v", arguments)
 
 	if arguments.Count <= 0 || arguments.Count > 100 {
 		return fault.ErrInvalidCount
@@ -58,7 +62,7 @@ func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitm
 		return err
 	}
 
-	log.Infof("ownership: %v", ownership)
+	log.Infof("ownership: %+v", ownership)
 
 	// extract unique TxIds
 	//   issues TxId == IssueTxId
@@ -105,9 +109,22 @@ func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitm
 		}
 	}
 
+asset_loop:
 	for assetIndex := range assetIndexes {
 
 		log.Infof("assetIndex: %v", assetIndex)
+
+		var nnn transactionrecord.AssetIndex
+		if nnn == assetIndex {
+			records["00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"] = BitmarksRecord{
+				Record: "Block",
+				//AssetIndex: assetIndex,
+				Data: BlockAsset{
+					Number: 0,
+				},
+			}
+			continue asset_loop
+		}
 
 		transaction := storage.Pool.Assets.Get(assetIndex[:])
 		if nil == transaction {

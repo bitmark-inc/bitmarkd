@@ -36,6 +36,8 @@ func StoreIncoming(packedBlock []byte) error {
 	if nil != err {
 		return err
 	}
+	blockNumberKey := make([]byte, 8)
+	binary.BigEndian.PutUint64(blockNumberKey, header.Number)
 
 	if globalData.previousBlock != header.PreviousBlock {
 		return fault.ErrPreviousBlockDigestDoesNotMatch
@@ -68,37 +70,6 @@ func StoreIncoming(packedBlock []byte) error {
 			// repack records to check signature is valid
 			switch tx := transaction.(type) {
 
-			case *transactionrecord.BlockOwnerIssue:
-				_, err := tx.Pack(tx.Owner)
-				if nil != err {
-					return err
-				}
-
-			case *transactionrecord.BlockOwnerTransfer:
-				link := tx.Link
-				n := storage.Pool.BlockOwnerTxIndex.Get(link[:])
-				if nil == n {
-					// invalid transfer link
-					return fault.ErrLinkToInvalidOrUnconfirmedTransaction
-				}
-				linkOwner, err := account.AccountFromBytes(storage.Pool.BlockOwnerAccount.Get(n))
-
-				if nil != err {
-					return err
-				}
-				_, err = tx.Pack(linkOwner)
-				if nil != err {
-					return err
-				}
-
-				err = transactionrecord.CheckPayments(tx.Version, mode.IsTesting(), tx.Payments)
-				if nil != err {
-					return err
-				}
-
-				txs[i].previousBlockNumberKey = n
-				txs[i].linkOwner = linkOwner
-
 			case *transactionrecord.OldBaseData:
 				_, err := tx.Pack(tx.Owner)
 				if nil != err {
@@ -130,6 +101,35 @@ func StoreIncoming(packedBlock []byte) error {
 				}
 				txs[i].linkOwner = linkOwner
 
+			case *transactionrecord.BlockFoundation:
+				_, err := tx.Pack(tx.Owner)
+				if nil != err {
+					return err
+				}
+
+			case *transactionrecord.BlockOwnerTransfer:
+				link := tx.Link
+				linkOwner := OwnerOf(link)
+				_, err = tx.Pack(linkOwner)
+				if nil != err {
+					return err
+				}
+
+				// get the block number that is being transferred by this record
+				n := storage.Pool.BlockOwnerTxIndex.Get(link[:])
+				if nil == n {
+					globalData.log.Criticalf("missing BlockOwnerTxIndex: %v", link)
+					logger.Panicf("missing BlockOwnerTxIndex: %v", link)
+				}
+
+				err = transactionrecord.CheckPayments(tx.Version, mode.IsTesting(), tx.Payments)
+				if nil != err {
+					return err
+				}
+
+				txs[i].previousBlockNumberKey = n
+				txs[i].linkOwner = linkOwner
+
 			default:
 				globalData.log.Criticalf("unhandled transaction: %v", tx)
 				logger.Panicf("unhandled transaction: %v", tx)
@@ -153,22 +153,24 @@ func StoreIncoming(packedBlock []byte) error {
 	}
 
 	// create the ownership record
-	var packedOwner []byte
 	var packedPayments []byte
+	var packedFoundation []byte
+	var blockOwner *account.Account
 	txStart := 1
 	// ensure the first transaction is base or owner
 	switch tx := txs[0].unpacked.(type) {
 
-	case *transactionrecord.BlockOwnerIssue:
+	case *transactionrecord.BlockFoundation:
 		err := transactionrecord.CheckPayments(tx.Version, mode.IsTesting(), tx.Payments)
 		if nil != err {
 			return err
 		}
-		packedOwner = tx.Owner.Bytes()
 		packedPayments, err = tx.Payments.Pack(mode.IsTesting())
 		if nil != err {
 			return err
 		}
+		packedFoundation = txs[0].packed
+		blockOwner = tx.Owner
 
 	case *transactionrecord.OldBaseData:
 		err := tx.Currency.ValidateAddress(tx.PaymentAddress, mode.IsTesting())
@@ -182,15 +184,17 @@ func StoreIncoming(packedBlock []byte) error {
 			// second tx is another base record
 			currencies[tx1.Currency] = tx1.PaymentAddress
 			txStart = 2
+			packedFoundation = append(txs[0].packed, txs[1].packed...)
 		} else {
 			// else if single base block generate corresponding Litecoin address
 			currencies[currency.Litecoin], err = litecoin.FromBitcoin(tx.PaymentAddress)
+			packedFoundation = txs[0].packed
 		}
-		packedOwner = tx.Owner.Bytes()
 		packedPayments, err = currencies.Pack(mode.IsTesting())
 		if nil != err {
 			return err
 		}
+		blockOwner = tx.Owner
 
 	default:
 		return fault.ErrMissingBlockOwner
@@ -203,21 +207,6 @@ func StoreIncoming(packedBlock []byte) error {
 		//packed := item.packed
 
 		switch tx := item.unpacked.(type) {
-
-		case *transactionrecord.BlockOwnerIssue:
-			logger.Panicf("should not occur: %+v", tx)
-
-		case *transactionrecord.BlockOwnerTransfer:
-			reservoir.DeleteByTxId(item.txId)
-			storage.Pool.BlockOwnerTxIndex.Delete(tx.Link[:])
-			storage.Pool.BlockOwnerAccount.Put(item.previousBlockNumberKey, tx.Owner.Bytes())
-			p, err := tx.Payments.Pack(mode.IsTesting())
-			if nil != err {
-				// packing was checked earlier, an error here is memory corruption
-				logger.Panicf("pack, should not error: %s", err)
-			}
-			storage.Pool.BlockOwnerPayment.Put(item.previousBlockNumberKey, p)
-			storage.Pool.BlockOwnerTxIndex.Put(item.txId[:], item.previousBlockNumberKey)
 
 		case *transactionrecord.OldBaseData:
 			logger.Panicf("should not occur: %+v", tx)
@@ -246,21 +235,47 @@ func StoreIncoming(packedBlock []byte) error {
 			storage.Pool.Transactions.Put(item.txId[:], item.packed)
 			TransferOwnership(link, item.txId, header.Number, item.linkOwner, tr.GetOwner())
 
+		case *transactionrecord.BlockFoundation:
+			logger.Panicf("should not occur: %+v", tx)
+
+		case *transactionrecord.BlockOwnerTransfer:
+			reservoir.DeleteByTxId(item.txId)
+			link := tx.Link
+
+			// when deleting a pending it is possible that the tx id
+			// it was holding was different to this tx id
+			// i.e. it is a duplicate so it also must be removed
+			// to prevent the possibility of a double-spend
+			reservoir.DeleteByLink(link)
+
+			p, err := tx.Payments.Pack(mode.IsTesting())
+			if nil != err {
+				// packing was checked earlier, an error here is memory corruption
+				logger.Panicf("pack, should not error: %s", err)
+			}
+			storage.Pool.BlockOwnerPayment.Put(item.previousBlockNumberKey, p)
+			storage.Pool.BlockOwnerTxIndex.Put(item.txId[:], blockNumberKey)
+
 		default:
 			globalData.log.Criticalf("unhandled transaction: %v", tx)
 			logger.Panicf("unhandled transaction: %v", tx)
 		}
 	}
 
-	// for accessing the block owner data
-	blockNumberKey := make([]byte, 8)
-	binary.BigEndian.PutUint64(blockNumberKey, header.Number)
-	storage.Pool.BlockOwnerAccount.Put(blockNumberKey, packedOwner)
+	// payment data
 	storage.Pool.BlockOwnerPayment.Put(blockNumberKey, packedPayments)
-	storage.Pool.BlockOwnerTxIndex.Put(txs[0].txId[:], blockNumberKey)
+
+	// block digest
+	digest := packedHeader.Digest()
+
+	// create the foundation record
+	foundationTxId := blockrecord.FoundationTxId(header, digest)
+	storage.Pool.Transactions.Put(foundationTxId[:], packedFoundation)
+	storage.Pool.BlockOwnerTxIndex.Put(foundationTxId[:], blockNumberKey)
+
+	CreateOwnership(foundationTxId, header.Number, transactionrecord.AssetIndex{}, blockOwner)
 
 	// finish be storing the block header
-	digest := packedHeader.Digest()
 	storeAndUpdate(header, digest, packedBlock)
 
 	return nil
@@ -280,6 +295,7 @@ func storeAndUpdate(header *blockrecord.Header, digest blockdigest.Digest, packe
 
 	blockring.Put(header.Number, digest, packedBlock)
 
+	// finally store the block
 	blockNumber := make([]byte, 8)
 	binary.BigEndian.PutUint64(blockNumber, header.Number)
 

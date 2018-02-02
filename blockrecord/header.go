@@ -127,3 +127,11 @@ func (header *Header) Pack() PackedHeader {
 
 	return buffer
 }
+
+// create the foundation record
+// its TxId is sha3-256 . concat blockDigest leBlockNumberUint64
+func FoundationTxId(header *Header, digest blockdigest.Digest) merkle.Digest {
+	leBlockNumber := make([]byte, 8)
+	binary.LittleEndian.PutUint64(leBlockNumber, header.Number)
+	return merkle.NewDigest(append(digest[:], leBlockNumber...))
+}

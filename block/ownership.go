@@ -143,7 +143,6 @@ func CreateOwnership(issueTxId merkle.Digest, issueBlockNumber uint64, assetInde
 }
 
 // find the owner of a specific transaction
-// (only issue or transfer is allowed)
 func OwnerOf(txId merkle.Digest) *account.Account {
 
 	key := txId[:]
@@ -163,6 +162,12 @@ func OwnerOf(txId merkle.Digest) *account.Account {
 		return tx.Owner
 
 	case *transactionrecord.BitmarkTransferCountersigned:
+		return tx.Owner
+
+	case *transactionrecord.BlockFoundation:
+		return tx.Owner
+
+	case *transactionrecord.BlockOwnerTransfer:
 		return tx.Owner
 
 	default:
