@@ -2,7 +2,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package block
+package ownership
 
 import (
 	"encoding/binary"
@@ -17,38 +17,49 @@ import (
 
 // from storage/doc.go:
 //
-//   owner                 - next count value to use for appending to owned items
+//   N ++ owner            - next count value to use for appending to owned items
 //                           data: count
-//   owner ++ count        - list of owned items
-//                           data: last transfer txId ++ last transfer block number ++ issue txId ++ issue block number ++ asset index
-//   owner ++ txId         - position in list of owned items, for delete after transfer
-//                           data: count
+//   K ++ owner ++ count   - list of owned items
+//                           data: 00 ++ last transfer txId ++ last transfer BN ++ issue txId ++ issue BN ++ asset index
+//                           data: 01 ++ last transfer txId ++ last transfer BN ++ issue txId ++ issue BN ++ owned BN
+//   D ++ owner ++ txId    - position in list of owned items, for delete after transfer
 
 // to ensure synchronised ownership updates
 var toLock sync.Mutex
 
+const (
+	oneByteSize    = 1
+	uint64ByteSize = 8
+)
+
 // structure of the ownership record
 const (
-	txIdStart  = 0
-	txIdFinish = txIdStart + merkle.DigestLength
+	FlagByteStart  = 0
+	FlagByteFinish = FlagByteStart + oneByteSize
 
-	transferBlockNumberStart  = txIdFinish
-	transferBlockNumberFinish = transferBlockNumberStart + 8
+	TxIdStart  = FlagByteFinish
+	TxIdFinish = TxIdStart + merkle.DigestLength
 
-	remainderStart = transferBlockNumberFinish // everything after transfer data
+	TransferBlockNumberStart  = TxIdFinish
+	TransferBlockNumberFinish = TransferBlockNumberStart + uint64ByteSize
 
-	issueTxIdStart  = transferBlockNumberFinish
-	issueTxIdFinish = issueTxIdStart + merkle.DigestLength
+	IssueTxIdStart  = TransferBlockNumberFinish
+	IssueTxIdFinish = IssueTxIdStart + merkle.DigestLength
 
-	issueBlockNumberStart  = issueTxIdFinish
-	issueBlockNumberFinish = issueBlockNumberStart + 8
+	IssueBlockNumberStart  = IssueTxIdFinish
+	IssueBlockNumberFinish = IssueBlockNumberStart + uint64ByteSize
 
-	assetIndexStart  = issueBlockNumberFinish
-	assetIndexFinish = assetIndexStart + transactionrecord.AssetIndexLength
+	// overlap flag==0x00
+	AssetIndexStart  = IssueBlockNumberFinish
+	AssetIndexFinish = AssetIndexStart + transactionrecord.AssetIndexLength
+
+	// overlap flag==0x01
+	OwnedBlockNumberStart  = IssueBlockNumberFinish
+	OwnedBlockNumberFinish = OwnedBlockNumberStart + uint64ByteSize
 )
 
 // need to have a lock
-func TransferOwnership(previousTxId merkle.Digest, transferTxId merkle.Digest, transferBlockNumber uint64, currentOwner *account.Account, newOwner *account.Account) {
+func Transfer(previousTxId merkle.Digest, transferTxId merkle.Digest, transferBlockNumber uint64, currentOwner *account.Account, newOwner *account.Account) {
 
 	// ensure single threaded
 	toLock.Lock()
@@ -89,8 +100,8 @@ func TransferOwnership(previousTxId merkle.Digest, transferTxId merkle.Digest, t
 		return
 	}
 
-	copy(ownerData[txIdStart:txIdFinish], transferTxId[:])
-	binary.BigEndian.PutUint64(ownerData[transferBlockNumberStart:transferBlockNumberFinish], transferBlockNumber)
+	copy(ownerData[TxIdStart:TxIdFinish], transferTxId[:])
+	binary.BigEndian.PutUint64(ownerData[TransferBlockNumberStart:TransferBlockNumberFinish], transferBlockNumber)
 	create(transferTxId, ownerData, newOwner)
 }
 
@@ -102,10 +113,10 @@ func create(txId merkle.Digest, ownerData []byte, owner *account.Account) {
 	count := storage.Pool.OwnerCount.Get(nKey)
 	if nil == count {
 		count = []byte{0, 0, 0, 0, 0, 0, 0, 0}
-	} else if 8 != len(count) {
+	} else if uint64ByteSize != len(count) {
 		logger.Panic("CreateOwnership: OwnerCount database corrupt")
 	}
-	newCount := make([]byte, 8)
+	newCount := make([]byte, uint64ByteSize)
 	binary.BigEndian.PutUint64(newCount, binary.BigEndian.Uint64(count)+1)
 	storage.Pool.OwnerCount.Put(nKey, newCount)
 
@@ -120,20 +131,22 @@ func create(txId merkle.Digest, ownerData []byte, owner *account.Account) {
 	storage.Pool.OwnerDigest.Put(dKey, count)
 }
 
-func CreateOwnership(issueTxId merkle.Digest, issueBlockNumber uint64, assetIndex transactionrecord.AssetIndex, newOwner *account.Account) {
+func CreateAsset(issueTxId merkle.Digest, issueBlockNumber uint64, assetIndex transactionrecord.AssetIndex, newOwner *account.Account) {
 	// ensure single threaded
 	toLock.Lock()
 	defer toLock.Unlock()
 
 	// 8 byte block number
-	blk := make([]byte, 8)
+	blk := make([]byte, uint64ByteSize)
 	binary.BigEndian.PutUint64(blk, issueBlockNumber)
 
 	// create a new owner data value:
-	//   Issue id ++ zero  block number  -- replaced by sucessive: transfer id ++ transfer block number
-	//   Issue id ++ issue block number  -- will remain constant
+	//   flag = OwnedAsset
+	//   issue id ++ zero  block number  -- replaced by sucessive: transfer id ++ transfer block number
+	//   issue id ++ issue block number  -- will remain constant
 	//   asset index
-	newData := append(issueTxId[:], []byte{0, 0, 0, 0, 0, 0, 0, 0}...)
+	newData := append([]byte{byte(OwnedAsset)}, issueTxId[:]...)
+	newData = append(newData, []byte{0, 0, 0, 0, 0, 0, 0, 0}...)
 	newData = append(newData, issueTxId[:]...)
 	newData = append(newData, blk...)
 	newData = append(newData, assetIndex[:]...)
@@ -142,11 +155,34 @@ func CreateOwnership(issueTxId merkle.Digest, issueBlockNumber uint64, assetInde
 	create(issueTxId, newData, newOwner)
 }
 
+func CreateBlock(issueTxId merkle.Digest, blockNumber uint64, newOwner *account.Account) {
+	// ensure single threaded
+	toLock.Lock()
+	defer toLock.Unlock()
+
+	// 8 byte block number
+	blk := make([]byte, uint64ByteSize)
+	binary.BigEndian.PutUint64(blk, blockNumber)
+
+	// create a new owner data value:
+	//   flag = OwnedBlock
+	//   issue id ++ zero  block number  -- replaced by sucessive: transfer id ++ transfer block number
+	//   issue id ++ issue block number  -- will remain constant
+	//   block number
+	newData := append([]byte{byte(OwnedBlock)}, issueTxId[:]...)
+	newData = append(newData, []byte{0, 0, 0, 0, 0, 0, 0, 0}...)
+	newData = append(newData, issueTxId[:]...)
+	newData = append(newData, blk...)
+	newData = append(newData, blk...)
+
+	// store to database
+	create(issueTxId, newData, newOwner)
+}
+
 // find the owner of a specific transaction
 func OwnerOf(txId merkle.Digest) *account.Account {
 
-	key := txId[:]
-	packed := storage.Pool.Transactions.Get(key)
+	_, packed := storage.Pool.Transactions.GetSplit2(txId[:], 8) // drop block number
 	if nil == packed {
 		return nil
 	}
@@ -174,39 +210,4 @@ func OwnerOf(txId merkle.Digest) *account.Account {
 		logger.Panicf("block.OwnerOf: incorrect transaction: %v", transaction)
 		return nil
 	}
-}
-
-// type to represent an ownership record
-type Ownership struct {
-	N          uint64                       `json:"n,string"`
-	TxId       merkle.Digest                `json:"txId"`
-	IssueTxId  merkle.Digest                `json:"issue"`
-	AssetIndex transactionrecord.AssetIndex `json:"index"`
-}
-
-// fetch a list of bitmarks for an owner
-func ListBitmarksFor(owner *account.Account, start uint64, count int) ([]Ownership, error) {
-
-	startBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(startBytes, start)
-	prefix := append(owner.Bytes(), startBytes...)
-
-	cursor := storage.Pool.Ownership.NewFetchCursor().Seek(prefix)
-
-	items, err := cursor.Fetch(count)
-	if nil != err {
-		return nil, err
-	}
-
-	records := make([]Ownership, len(items))
-
-	for i, item := range items {
-		n := len(item.Key)
-		records[i].N = binary.BigEndian.Uint64(item.Key[n-8:])
-		merkle.DigestFromBytes(&records[i].TxId, item.Value[txIdStart:txIdFinish])
-		merkle.DigestFromBytes(&records[i].IssueTxId, item.Value[issueTxIdStart:issueTxIdFinish])
-		transactionrecord.AssetIndexFromBytes(&records[i].AssetIndex, item.Value[assetIndexStart:assetIndexFinish])
-	}
-
-	return records, nil
 }

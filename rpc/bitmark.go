@@ -89,6 +89,7 @@ type ProvenanceRecord struct {
 	Record     string      `json:"record"`
 	IsOwner    bool        `json:"isOwner"`
 	TxId       interface{} `json:"txId,omitempty"`
+	InBlock    uint64      `json:"inBlock"`
 	AssetIndex interface{} `json:"index,omitempty"`
 	Data       interface{} `json:"data"`
 }
@@ -118,7 +119,7 @@ func (bitmark *Bitmark) Provenance(arguments *ProvenanceArguments, reply *Proven
 loop:
 	for i := 0; i < count; i += 1 {
 
-		packed := storage.Pool.Transactions.Get(id[:])
+		inBlockBuffer, packed := storage.Pool.Transactions.GetSplit2(id[:], 8)
 		if nil == packed {
 			break loop
 		}
@@ -128,11 +129,14 @@ loop:
 			break loop
 		}
 
+		inBlock := binary.BigEndian.Uint64(inBlockBuffer)
+
 		record, _ := transactionrecord.RecordName(transaction)
 		h := ProvenanceRecord{
 			Record:     record,
 			IsOwner:    false,
 			TxId:       id,
+			InBlock:    inBlock,
 			AssetIndex: nil,
 			Data:       transaction,
 		}
@@ -148,7 +152,7 @@ loop:
 			}
 
 			root := BlockRoot{
-				Number: 0,
+				Number: inBlock,
 			}
 			buffer := storage.Pool.BlockOwnerTxIndex.Get(id[:])
 			if nil != buffer {

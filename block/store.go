@@ -16,6 +16,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/ownership"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
@@ -90,7 +91,7 @@ func StoreIncoming(packedBlock []byte) error {
 			case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
 				tr := tx.(transactionrecord.BitmarkTransfer)
 				link := tr.GetLink()
-				linkOwner := OwnerOf(link)
+				linkOwner := ownership.OwnerOf(link)
 				if nil == linkOwner {
 					logger.Criticalf("missing transaction record for link: %v refererenced by tx: %+v", link, tx)
 					logger.Panic("Transactions database is corrupt")
@@ -109,7 +110,7 @@ func StoreIncoming(packedBlock []byte) error {
 
 			case *transactionrecord.BlockOwnerTransfer:
 				link := tx.Link
-				linkOwner := OwnerOf(link)
+				linkOwner := ownership.OwnerOf(link)
 				_, err = tx.Pack(linkOwner)
 				if nil != err {
 					return err
@@ -218,8 +219,8 @@ func StoreIncoming(packedBlock []byte) error {
 
 		case *transactionrecord.BitmarkIssue:
 			reservoir.DeleteByTxId(item.txId)
-			storage.Pool.Transactions.Put(item.txId[:], item.packed)
-			CreateOwnership(item.txId, header.Number, tx.AssetIndex, tx.Owner)
+			storage.Pool.Transactions.Put(item.txId[:], blockNumberKey, item.packed)
+			ownership.CreateAsset(item.txId, header.Number, tx.AssetIndex, tx.Owner)
 
 		case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
 			tr := tx.(transactionrecord.BitmarkTransfer)
@@ -232,8 +233,8 @@ func StoreIncoming(packedBlock []byte) error {
 			// to prevent the possibility of a double-spend
 			reservoir.DeleteByLink(link)
 
-			storage.Pool.Transactions.Put(item.txId[:], item.packed)
-			TransferOwnership(link, item.txId, header.Number, item.linkOwner, tr.GetOwner())
+			storage.Pool.Transactions.Put(item.txId[:], blockNumberKey, item.packed)
+			ownership.Transfer(link, item.txId, header.Number, item.linkOwner, tr.GetOwner())
 
 		case *transactionrecord.BlockFoundation:
 			logger.Panicf("should not occur: %+v", tx)
@@ -270,10 +271,10 @@ func StoreIncoming(packedBlock []byte) error {
 
 	// create the foundation record
 	foundationTxId := blockrecord.FoundationTxId(header, digest)
-	storage.Pool.Transactions.Put(foundationTxId[:], packedFoundation)
+	storage.Pool.Transactions.Put(foundationTxId[:], blockNumberKey, packedFoundation)
 	storage.Pool.BlockOwnerTxIndex.Put(foundationTxId[:], blockNumberKey)
 
-	CreateOwnership(foundationTxId, header.Number, transactionrecord.AssetIndex{}, blockOwner)
+	ownership.CreateBlock(foundationTxId, header.Number, blockOwner)
 
 	// finish be storing the block header
 	storeAndUpdate(header, digest, packedBlock)

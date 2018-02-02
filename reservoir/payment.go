@@ -7,8 +7,8 @@ package reservoir
 import (
 	"bytes"
 	"github.com/bitmark-inc/bitmarkd/currency"
-	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/ownership"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
@@ -21,12 +21,8 @@ type PaymentSegment [currency.Count]*transactionrecord.Payment
 // get payment record from a specific block given the blocks 8 byte big endian key
 func getPayments(ownerData []byte, previousTransfer transactionrecord.BitmarkTransfer) []transactionrecord.PaymentAlternative {
 
-	// get block number of transfer and issue; see: storage/doc.go to determine offsets
-	const transferBlockNumberOffset = merkle.DigestLength
-	const issueBlockNumberOffset = 8 + 2*merkle.DigestLength
-
-	tKey := ownerData[transferBlockNumberOffset : transferBlockNumberOffset+8]
-	iKey := ownerData[issueBlockNumberOffset : issueBlockNumberOffset+8]
+	tKey := ownerData[ownership.TransferBlockNumberStart:ownership.TransferBlockNumberFinish]
+	iKey := ownerData[ownership.IssueBlockNumberStart:ownership.IssueBlockNumberFinish]
 
 	// block owner (from issue) payment
 	// 0: issue block owner

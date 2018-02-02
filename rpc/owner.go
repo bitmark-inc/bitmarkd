@@ -5,11 +5,12 @@
 package rpc
 
 import (
+	"encoding/binary"
 	"github.com/bitmark-inc/bitmarkd/account"
-	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/ownership"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
@@ -33,7 +34,7 @@ type OwnerBitmarksArguments struct {
 
 type OwnerBitmarksReply struct {
 	Next uint64                    `json:"next,string"` // start value for the next call
-	Data []block.Ownership         `json:"data"`        // list of bitmarks either issue or transfer
+	Data []ownership.Ownership     `json:"data"`        // list of bitmarks either issue or transfer
 	Tx   map[string]BitmarksRecord `json:"tx"`          // table of tx records
 }
 
@@ -41,6 +42,7 @@ type OwnerBitmarksReply struct {
 type BitmarksRecord struct {
 	Record     string      `json:"record"`
 	TxId       interface{} `json:"txId,omitempty"`
+	InBlock    uint64      `json:inBlock"`
 	AssetIndex interface{} `json:"index,omitempty"`
 	Data       interface{} `json:"data"`
 }
@@ -57,12 +59,12 @@ func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitm
 		return fault.ErrInvalidCount
 	}
 
-	ownership, err := block.ListBitmarksFor(arguments.Owner, arguments.Start, arguments.Count)
+	ownershipData, err := ownership.ListBitmarksFor(arguments.Owner, arguments.Start, arguments.Count)
 	if nil != err {
 		return err
 	}
 
-	log.Infof("ownership: %+v", ownership)
+	log.Infof("ownership: %+v", ownershipData)
 
 	// extract unique TxIds
 	//   issues TxId == IssueTxId
@@ -70,10 +72,16 @@ func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitm
 	txIds := make(map[merkle.Digest]struct{})
 	assetIndexes := make(map[transactionrecord.AssetIndex]struct{})
 	current := uint64(0)
-	for _, r := range ownership {
+	for _, r := range ownershipData {
 		txIds[r.TxId] = struct{}{}
 		txIds[r.IssueTxId] = struct{}{}
-		assetIndexes[r.AssetIndex] = struct{}{}
+		switch r.Item {
+		case ownership.OwnedAsset:
+			assetIndexes[r.AssetIndex] = struct{}{}
+		case ownership.OwnedBlock:
+		default:
+			logger.Panicf("unsupported item type: %d", r.Item)
+		}
 		current = r.N
 	}
 
@@ -83,10 +91,12 @@ func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitm
 
 		log.Infof("txId: %v", txId)
 
-		transaction := storage.Pool.Transactions.Get(txId[:])
+		inBlockBuffer, transaction := storage.Pool.Transactions.GetSplit2(txId[:], 8)
 		if nil == transaction {
 			return fault.ErrLinkToInvalidOrUnconfirmedTransaction
 		}
+
+		inBlock := binary.BigEndian.Uint64(inBlockBuffer)
 
 		tx, _, err := transactionrecord.Packed(transaction).Unpack(mode.IsTesting())
 		if nil != err {
@@ -103,9 +113,10 @@ func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitm
 		}
 
 		records[string(textTxId)] = BitmarksRecord{
-			Record: record,
-			TxId:   txId,
-			Data:   tx,
+			Record:  record,
+			TxId:    txId,
+			InBlock: inBlock,
+			Data:    tx,
 		}
 	}
 
@@ -152,7 +163,7 @@ asset_loop:
 		}
 	}
 
-	reply.Data = ownership
+	reply.Data = ownershipData
 	reply.Tx = records
 
 	// if no record were found the just return Next as zero

@@ -145,14 +145,23 @@ func (p *PoolHandle) prefixKey(key []byte) []byte {
 }
 
 // store a key/value bytes pair to the database
-func (p *PoolHandle) Put(key []byte, value []byte) {
+func (p *PoolHandle) Put(key []byte, value []byte, extra ...[]byte) {
 	poolData.RLock()
 	defer poolData.RUnlock()
 	if nil == poolData.database {
 		return
 	}
-	err := poolData.database.Put(p.prefixKey(key), value, nil)
-	logger.PanicIfError("pool.Put", err)
+	if 0 == len(extra) {
+		err := poolData.database.Put(p.prefixKey(key), value, nil)
+		logger.PanicIfError("pool.Put (single)", err)
+	} else {
+		data := value
+		for _, d := range extra {
+			data = append(data, d...)
+		}
+		err := poolData.database.Put(p.prefixKey(key), data, nil)
+		logger.PanicIfError("pool.Put (multiple)", err)
+	}
 }
 
 // remove a key from the database
@@ -178,6 +187,17 @@ func (p *PoolHandle) Get(key []byte) []byte {
 	}
 	logger.PanicIfError("pool.Get", err)
 	return value
+}
+
+// read and split value into two pieces for a given key
+//
+// this returns the actual element - copy the result if it must be preserved
+func (p *PoolHandle) GetSplit2(key []byte, firstLength int) ([]byte, []byte) {
+	data := p.Get(key)
+	if nil == data || len(data) < firstLength {
+		return nil, nil
+	}
+	return data[:firstLength], data[firstLength:]
 }
 
 // Check if a key exists

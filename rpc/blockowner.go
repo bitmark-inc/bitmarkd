@@ -60,13 +60,6 @@ func (bitmark *BlockOwner) TxIdForBlock(info *TxIdForBlockArguments, reply *TxId
 
 	reply.TxId = blockrecord.FoundationTxId(header, digest)
 
-	tx := storage.Pool.Transactions.Get(reply.TxId[:])
-	if nil == tx {
-		log.Info("BlockOwner.TxIdForBlock: tx: nil")
-	} else {
-		log.Infof("BlockOwner.TxIdForBlock: tx: %x", tx)
-	}
-
 	return nil
 }
 

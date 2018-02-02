@@ -9,6 +9,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/ownership"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
@@ -84,7 +85,7 @@ outer_loop:
 				key := txId[:]
 				storage.Pool.Transactions.Delete(key)
 				reservoir.DeleteByTxId(txId)
-				TransferOwnership(txId, txId, 0, tx.Owner, nil)
+				ownership.Transfer(txId, txId, 0, tx.Owner, nil)
 
 			case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
 				tr := tx.(transactionrecord.BitmarkTransfer)
@@ -93,14 +94,14 @@ outer_loop:
 				storage.Pool.Transactions.Delete(key)
 				reservoir.DeleteByTxId(txId)
 				link := tr.GetLink()
-				linkOwner := OwnerOf(link)
+				linkOwner := ownership.OwnerOf(link)
 				if nil == linkOwner {
 					log.Criticalf("missing transaction record for: %v", link)
 					logger.Panic("Transactions database is corrupt")
 				}
 				// just use zero here, as the fork restore should overwrite with new chain, including updated block number
 				// ***** FIX THIS: is the above statement sufficient
-				TransferOwnership(txId, link, 0, tr.GetOwner(), linkOwner)
+				ownership.Transfer(txId, link, 0, tr.GetOwner(), linkOwner)
 
 			default:
 				logger.Panicf("unexpected transaction: %v", transaction)

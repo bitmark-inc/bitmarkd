@@ -48,6 +48,7 @@ var (
 	ErrInvalidDnsTxtRecord                   = InvalidError("invalid dns txt record")
 	ErrInvalidFingerprint                    = InvalidError("invalid fingerprint")
 	ErrInvalidIPAddress                      = InvalidError("invalid IP Address")
+	ErrInvalidItem                           = InvalidError("invalid item")
 	ErrInvalidKeyLength                      = InvalidError("invalid key length")
 	ErrInvalidKeyType                        = InvalidError("invalid key type")
 	ErrInvalidLength                         = InvalidError("invalid length")
