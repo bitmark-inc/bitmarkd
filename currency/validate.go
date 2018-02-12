@@ -16,7 +16,7 @@ const (
 	maxPaymentAddressLength = 64
 )
 
-// convert a currency to its string symbol
+// generic validate function
 func (currency Currency) ValidateAddress(address string, testnet bool) error {
 	if utf8.RuneCountInString(address) > maxPaymentAddressLength {
 		return fault.ErrPaymentAddressTooLong
