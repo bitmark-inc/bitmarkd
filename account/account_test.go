@@ -17,14 +17,17 @@ import (
 
 type accountTest struct {
 	algorithm     int
+	testnet       bool
 	publicKey     []byte
 	base58Account string
 }
 
 // Valid account
 var testAccount = []accountTest{
-	{account.ED25519, decodeHex("60b3c6e20cfff7091a86488b1656b96ec0a2f69907e2c035175918f42c37d72e"), "anF8SWxSRY5vnN3Bbyz9buRYW1hfCAAZxfbv8Fw9SFXaktvLCj"},
-	{account.Nothing, decodeHex("12fa"), "3MvykBZzN"},
+	{account.ED25519, false, decodeHex("60b3c6e20cfff7091a86488b1656b96ec0a2f69907e2c035175918f42c37d72e"), "anF8SWxSRY5vnN3Bbyz9buRYW1hfCAAZxfbv8Fw9SFXaktvLCj"},
+	{account.ED25519, true, decodeHex("731114267f15754a5fce4aaed8380b28aff25af7b378b011d92ef7b3f08910db"), "eopaSeB7uiSVMdAmTrijq3W2MCWA5KHZrZvm5QLFGRVd3oWNe2"},
+	{account.ED25519, true, decodeHex("cb6ff605f79deba3deb0c5122e40359a258481c151dffc176a2da5e8bc87cd2e"), "fUjtNvmUJn7yJ7PVP7NT2FZbKDrudFxLVBHkwLJFgKWmGsPNVi"},
+	{account.Nothing, false, decodeHex("12fa"), "3MvykBZzN"},
 }
 
 type invalid struct {
@@ -46,7 +49,12 @@ var testInvalidAccountFromBase58 = []invalid{
 func TestValid(t *testing.T) {
 loop:
 	for index, test := range testAccount {
-		buffer := []byte{byte(test.algorithm<<4 | 0x01)}
+		testnet := 0x00
+		if test.testnet {
+			testnet = 0x02
+		}
+
+		buffer := []byte{byte(test.algorithm<<4 | 0x01 | testnet)}
 		buffer = append(buffer, test.publicKey...)
 		account, err := account.AccountFromBytes(buffer)
 		if nil != err {
