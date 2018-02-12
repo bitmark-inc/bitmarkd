@@ -19,6 +19,7 @@ import (
 	"golang.org/x/crypto/sha3"
 	"io/ioutil"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -174,7 +175,7 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 		fmt.Printf("                                     for convienience when passing script arguments\n")
 		fmt.Printf("\n")
 
-		fmt.Printf("  block NUMBER           (b)       - dump block as a JSON structure\n")
+		fmt.Printf("  block S [E [FILE]]     (b)       - dump block(s) as a JSON structures to stdout/file\n")
 		fmt.Printf("\n")
 
 		fmt.Printf("  save-blocks FILE       (save)    - dump all blocks to a file\n")
@@ -251,90 +252,107 @@ func processDataCommand(log *logger.L, arguments []string, options *Configuratio
 
 	case "block", "b":
 		if len(arguments) < 1 {
-			fmt.Printf("missing block number argument\n")
-			exitwithstatus.Exit(1)
+			exitwithstatus.Message("missing block number argument\n")
 		}
 
 		n, err := strconv.ParseUint(arguments[0], 10, 64)
 		if nil != err {
-			fmt.Printf("error in block number: %s\n", err)
-			exitwithstatus.Exit(1)
+			exitwithstatus.Message("error in block number: %s\n", err)
 		}
 		if n < 2 {
-			fmt.Printf("error: invalid block number: %d mus be greater than 1\n", n)
-			exitwithstatus.Exit(1)
-		}
-		block, err := dumpBlock(n)
-		if nil != err {
-			fmt.Printf("dump block error: %s\n", err)
-			exitwithstatus.Exit(1)
-		}
-		s, err := json.MarshalIndent(block, "", "  ")
-		if nil != err {
-			fmt.Printf("dump block JSON error: %s\n", err)
-			exitwithstatus.Exit(1)
+			exitwithstatus.Message("error: invalid block number: %d must be greater than 1\n", n)
 		}
 
-		fmt.Printf("%s\n", s)
+		output := "-"
+
+		// optional end range
+		nEnd := n
+		if len(arguments) > 1 {
+
+			nEnd, err = strconv.ParseUint(arguments[1], 10, 64)
+			if nil != err {
+				exitwithstatus.Message("error in ending block number: %s\n", err)
+			}
+			if nEnd < n {
+				exitwithstatus.Message("error: invalid ending block number: %d must be greater than 1\n", n)
+			}
+		}
+
+		if len(arguments) > 2 {
+			output = strings.TrimSpace(arguments[2])
+		}
+		fd := os.Stdout
+
+		if output != "" && output != "-" {
+			fd, err = os.Create(output)
+			if nil != err {
+				exitwithstatus.Message("error: creating: %q error: %s", output, err)
+			}
+		}
+
+		fmt.Fprintf(fd, "[\n")
+		for ; n <= nEnd; n += 1 {
+			block, err := dumpBlock(n)
+			if nil != err {
+				exitwithstatus.Message("dump block error: %s\n", err)
+			}
+			s, err := json.MarshalIndent(block, "  ", "  ")
+			if nil != err {
+				exitwithstatus.Message("dump block JSON error: %s\n", err)
+			}
+
+			fmt.Fprintf(fd, "  %s,\n", s)
+		}
+		fmt.Fprintf(fd, "{}]\n")
+		fd.Close()
 
 	case "save-blocks", "save":
 		if len(arguments) < 1 {
-			fmt.Printf("missing file name argument\n")
-			exitwithstatus.Exit(1)
+			exitwithstatus.Message("missing file name argument\n")
 		}
 		filename := arguments[0]
 		if "" == filename {
-			fmt.Printf("missing file name\n")
-			exitwithstatus.Exit(1)
+			exitwithstatus.Message("missing file name\n")
 		}
 		err := saveBinaryBlocks(filename)
 		if nil != err {
-			fmt.Printf("failed writing: %q  error: %s\n", filename, err)
-			exitwithstatus.Exit(1)
+			exitwithstatus.Message("failed writing: %q  error: %s\n", filename, err)
 		}
 
 	case "load-blocks", "load":
 		if len(arguments) < 1 {
-			fmt.Printf("missing file name argument\n")
-			exitwithstatus.Exit(1)
+			exitwithstatus.Message("missing file name argument\n")
 		}
 		filename := arguments[0]
 		if "" == filename {
-			fmt.Printf("missing file name\n")
-			exitwithstatus.Exit(1)
+			exitwithstatus.Message("missing file name\n")
 		}
 		err := restoreBinaryBlocks(filename)
 		if nil != err {
-			fmt.Printf("failed writing: %q  error: %s\n", filename, err)
-			exitwithstatus.Exit(1)
+			exitwithstatus.Message("failed writing: %q  error: %s\n", filename, err)
 		}
 
 	case "delete-down", "dd":
 		// delete blocks down to a given block number
 		if len(arguments) < 1 {
-			fmt.Printf("missing block number argument\n")
-			exitwithstatus.Exit(1)
+			exitwithstatus.Message("missing block number argument\n")
 		}
 
 		n, err := strconv.ParseUint(arguments[0], 10, 64)
 		if nil != err {
-			fmt.Printf("error in block number: %s\n", err)
-			exitwithstatus.Exit(1)
+			exitwithstatus.Message("error in block number: %s\n", err)
 		}
 		if n < 2 {
-			fmt.Printf("error: invalid block number: %d mus be greater than 1\n", n)
-			exitwithstatus.Exit(1)
+			exitwithstatus.Message("error: invalid block number: %d must be greater than 1\n", n)
 		}
 		err = block.DeleteDownToBlock(n)
 		if nil != err {
-			fmt.Printf("block delete error: %s\n", err)
-			exitwithstatus.Exit(1)
+			exitwithstatus.Message("block delete error: %s\n", err)
 		}
 		fmt.Printf("reduced height to: %d\n", block.GetHeight())
 
 	default:
-		fmt.Printf("error: no such command: %s\n", command)
-		exitwithstatus.Exit(1)
+		exitwithstatus.Message("error: no such command: %s\n", command)
 
 	}
 
@@ -351,32 +369,28 @@ func dnsTXT(log *logger.L, options *Configuration) {
 
 	keypair, err := tls.LoadX509KeyPair(rpc.Certificate, rpc.PrivateKey)
 	if nil != err {
-		fmt.Printf("error: cannot certificate: %q  error: %s\n", rpc.Certificate, err)
-		exitwithstatus.Exit(1)
+		exitwithstatus.Message("error: cannot certificate: %q  error: %s\n", rpc.Certificate, err)
 	}
 
 	fingerprint := CertificateFingerprint(keypair.Certificate[0])
 
 	rpcIP4, rpcIP6, rpcPort := getFirstConnections(rpc.Announce)
 	if 0 == rpcPort {
-		fmt.Printf("error: cannot determine rpc port\n")
-		exitwithstatus.Exit(1)
+		exitwithstatus.Message("error: cannot determine rpc port\n")
 	}
 
 	peering := options.Peering
 
 	publicKey, err := zmqutil.ReadPublicKeyFile(peering.PublicKey)
 	if nil != err {
-		fmt.Printf("error: cannot read public key: %q  error: %s\n", peering.PublicKey, err)
-		exitwithstatus.Exit(1)
+		exitwithstatus.Message("error: cannot read public key: %q  error: %s\n", peering.PublicKey, err)
 	}
 
 	peeringAnnounce := options.Peering.Announce
 
 	listenIP4, listenIP6, listenPort := getFirstConnections(peeringAnnounce)
 	if 0 == listenPort {
-		fmt.Printf("error: cannot determine listen port\n")
-		exitwithstatus.Exit(1)
+		exitwithstatus.Message("error: cannot determine listen port\n")
 	}
 
 	IPs := ""
@@ -413,8 +427,7 @@ scan_connections:
 		}
 		v6, IP, port, err := splitConnection(c)
 		if nil != err {
-			fmt.Printf("error: cannot decode[%d]: %q  error: %s\n", i, c, err)
-			exitwithstatus.Exit(1)
+			exitwithstatus.Message("error: cannot decode[%d]: %q  error: %s\n", i, c, err)
 		}
 		if v6 {
 			if "" == IP6 {
