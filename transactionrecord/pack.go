@@ -346,7 +346,7 @@ func (transfer *BlockOwnerTransfer) Pack(address *account.Account) (Packed, erro
 func CheckPayments(version uint64, testnet bool, payments currency.Map) error {
 	// validate version
 	if version < 1 || version >= uint64(len(versions)) {
-		return fault.ErrInvalidCurrencyAddress
+		return fault.ErrInvalidPaymentVersion
 	}
 
 	cs := currency.MakeSet()

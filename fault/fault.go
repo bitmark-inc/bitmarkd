@@ -55,6 +55,7 @@ var (
 	ErrInvalidLitecoinAddress                = InvalidError("invalid litecoin address")
 	ErrInvalidNonce                          = InvalidError("invalid nonce")
 	ErrInvalidOwnerOrRegistrant              = InvalidError("invalid owner or registrant")
+	ErrInvalidPaymentVersion                 = InvalidError("invalid Payment version")
 	ErrInvalidPeerResponse                   = InvalidError("invalid peer response")
 	ErrInvalidPortNumber                     = InvalidError("invalid port number")
 	ErrInvalidPrivateKey                     = InvalidError("invalid private key")

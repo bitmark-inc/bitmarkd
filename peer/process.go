@@ -232,17 +232,23 @@ func processTransfer(packed []byte) error {
 		return err
 	}
 
+	duplicate := false
+
 	// ensure that only countersigned transfers are allowed
-	tx, ok := transaction.(*transactionrecord.BitmarkTransferCountersigned)
-	if !ok {
+	switch tx := transaction.(type) {
+	case *transactionrecord.BitmarkTransferCountersigned:
+		_, duplicate, err = reservoir.StoreTransfer(tx)
+
+	case *transactionrecord.BlockOwnerTransfer:
+		_, duplicate, err = reservoir.StoreTransfer(tx)
+
+	default: // no others are allowed
 		return fault.ErrTransactionIsNotATransfer
 	}
 
-	_, duplicate, err := reservoir.StoreTransfer(tx)
 	if nil != err {
 		return err
 	}
-
 	if duplicate {
 		return fault.ErrTransactionAlreadyExists
 	}

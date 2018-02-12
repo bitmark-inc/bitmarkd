@@ -100,6 +100,11 @@ func StoreIncoming(packedBlock []byte) error {
 				if nil != err {
 					return err
 				}
+
+				if !ownership.CurrentlyOwns(linkOwner, link) {
+					return fault.ErrDoubleTransferAttempt
+				}
+
 				txs[i].linkOwner = linkOwner
 
 			case *transactionrecord.BlockFoundation:
@@ -114,6 +119,9 @@ func StoreIncoming(packedBlock []byte) error {
 				_, err = tx.Pack(linkOwner)
 				if nil != err {
 					return err
+				}
+				if !ownership.CurrentlyOwns(linkOwner, link) {
+					return fault.ErrDoubleTransferAttempt
 				}
 
 				// get the block number that is being transferred by this record
@@ -254,8 +262,11 @@ func StoreIncoming(packedBlock []byte) error {
 				// packing was checked earlier, an error here is memory corruption
 				logger.Panicf("pack, should not error: %s", err)
 			}
+
+			storage.Pool.Transactions.Put(item.txId[:], blockNumberKey, item.packed)
 			storage.Pool.BlockOwnerPayment.Put(item.previousBlockNumberKey, p)
 			storage.Pool.BlockOwnerTxIndex.Put(item.txId[:], blockNumberKey)
+			ownership.Transfer(link, item.txId, header.Number, item.linkOwner, tx.Owner)
 
 		default:
 			globalData.log.Criticalf("unhandled transaction: %v", tx)

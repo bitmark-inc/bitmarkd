@@ -69,12 +69,14 @@ func Transfer(previousTxId merkle.Digest, transferTxId merkle.Digest, transferBl
 	dKey := append(currentOwner.Bytes(), previousTxId[:]...)
 	dCount := storage.Pool.OwnerDigest.Get(dKey)
 	if nil == dCount {
-		logger.Criticalf("TransferOwnership: dKey: %x", dKey)
-		logger.Criticalf("TransferOwnership: block number: %d", transferBlockNumber)
-		logger.Criticalf("TransferOwnership: previous tx id: %#v", previousTxId)
-		logger.Criticalf("TransferOwnership: transfer tx id: %#v", transferTxId)
-		logger.Criticalf("TransferOwnership: current owner: %x  %v", currentOwner.Bytes(), currentOwner)
-		logger.Criticalf("TransferOwnership: new     owner: %x  %v", newOwner.Bytes(), newOwner)
+		logger.Criticalf("ownership.Transfer: dKey: %x", dKey)
+		logger.Criticalf("ownership.Transfer: block number: %d", transferBlockNumber)
+		logger.Criticalf("ownership.Transfer: previous tx id: %#v", previousTxId)
+		logger.Criticalf("ownership.Transfer: transfer tx id: %#v", transferTxId)
+		logger.Criticalf("ownership.Transfer: current owner: %x  %v", currentOwner.Bytes(), currentOwner)
+		if nil != newOwner {
+			logger.Criticalf("ownership.Transfer: new     owner: %x  %v", newOwner.Bytes(), newOwner)
+		}
 
 		// ow, err := ListBitmarksFor(currentOwner, 0, 999)
 		// if nil != err {
@@ -83,14 +85,15 @@ func Transfer(previousTxId merkle.Digest, transferTxId merkle.Digest, transferBl
 		// 	logger.Criticalf("lbf: %#v", ow)
 		// }
 
-		logger.Panic("TransferOwnership: OwnerDigest database corrupt")
+		logger.Panic("ownership.Transfer: OwnerDigest database corrupt")
 	}
 
 	// delete the current owners records
 	oKey := append(currentOwner.Bytes(), dCount...)
 	ownerData := storage.Pool.Ownership.Get(oKey)
 	if nil == ownerData {
-		logger.Panic("TransferOwnership: Ownership database corrupt")
+		logger.Criticalf("ownership.Transfer: no ownerData for key: %x", oKey)
+		logger.Panic("ownership.Transfer: Ownership database corrupt")
 	}
 	storage.Pool.Ownership.Delete(oKey)
 	storage.Pool.OwnerDigest.Delete(dKey)
@@ -123,7 +126,7 @@ func create(txId merkle.Digest, ownerData []byte, owner *account.Account) {
 	// write the new owner
 	oKey := append(owner.Bytes(), count...)
 
-	// txId ++ last transfer block number ++ issue txId ++ issue block number ++ asset index
+	// flag ++ txId ++ last transfer block number ++ issue txId ++ issue block number ++ AssetIndex/BlockNumber
 	storage.Pool.Ownership.Put(oKey, ownerData)
 
 	// write new digest record
@@ -188,7 +191,7 @@ func OwnerOf(txId merkle.Digest) *account.Account {
 	}
 
 	transaction, _, err := transactionrecord.Packed(packed).Unpack(mode.IsTesting())
-	logger.PanicIfError("block.OwnerOf", err)
+	logger.PanicIfError("ownership.OwnerOf", err)
 
 	switch tx := transaction.(type) {
 	case *transactionrecord.BitmarkIssue:
@@ -210,4 +213,10 @@ func OwnerOf(txId merkle.Digest) *account.Account {
 		logger.Panicf("block.OwnerOf: incorrect transaction: %v", transaction)
 		return nil
 	}
+}
+
+// find owner currently owns this transaction id
+func CurrentlyOwns(owner *account.Account, txId merkle.Digest) bool {
+	dKey := append(owner.Bytes(), txId[:]...)
+	return nil != storage.Pool.OwnerDigest.Get(dKey)
 }

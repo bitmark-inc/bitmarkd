@@ -5,7 +5,6 @@
 package proof
 
 import (
-	"bytes"
 	"crypto/rand"
 	"encoding/binary"
 	"encoding/hex"
@@ -149,19 +148,6 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 		} else {
 			return fault.ErrInvalidProofSigningKey
 		}
-		rand := bytes.NewBuffer(databytes)
-		publicKey, privateKey, err := ed25519.GenerateKey(rand)
-		if nil != err {
-			log.Errorf("public key generation  error: %s", err)
-			return err
-		}
-		pub.owner = &account.Account{
-			AccountInterface: &account.ED25519Account{
-				Test:      mode.IsTesting(),
-				PublicKey: publicKey,
-			},
-		}
-		pub.privateKey = privateKey
 	}
 
 	// read the keys
@@ -258,7 +244,7 @@ func (pub *publisher) process() {
 	}
 
 	blockFoundation := &transactionrecord.BlockFoundation{
-		Version:  1,
+		Version:  1, // needs to mack currency list
 		Payments: p,
 		Owner:    pub.owner,
 		Nonce:    1234,
@@ -309,7 +295,7 @@ func (pub *publisher) process() {
 				seenAsset[tx.AssetIndex] = struct{}{}
 			}
 
-		case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
+		case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned, *transactionrecord.BlockOwnerTransfer:
 			// ok
 
 		default: // all other types cannot occur here

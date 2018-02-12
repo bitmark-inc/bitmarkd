@@ -10,6 +10,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/ownership"
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/storage"
@@ -58,7 +59,7 @@ func (bitmark *Bitmark) Transfer(transfer *transactionrecord.BitmarkTransferCoun
 	txId := stored.TxId
 	packedTransfer := stored.Packed
 
-	log.Infof("id: %v", txId)
+	log.Debugf("id: %v", txId)
 	reply.TxId = txId
 	reply.PayId = payId
 	reply.Payments = make(map[string]transactionrecord.PaymentAlternative)
@@ -79,6 +80,10 @@ func (bitmark *Bitmark) Transfer(transfer *transactionrecord.BitmarkTransferCoun
 // Trace the history of a property
 // -------------------------------
 
+const (
+	maximumProvenanceCount = 200
+)
+
 type ProvenanceArguments struct {
 	TxId  merkle.Digest `json:"txId"`
 	Count int           `json:"count"`
@@ -90,7 +95,7 @@ type ProvenanceRecord struct {
 	IsOwner    bool        `json:"isOwner"`
 	TxId       interface{} `json:"txId,omitempty"`
 	InBlock    uint64      `json:"inBlock"`
-	AssetIndex interface{} `json:"index,omitempty"`
+	AssetIndex interface{} `json:"assetIndex,omitempty"`
 	Data       interface{} `json:"data"`
 }
 
@@ -112,6 +117,9 @@ func (bitmark *Bitmark) Provenance(arguments *ProvenanceArguments, reply *Proven
 
 	if count <= 0 {
 		return fault.ErrInvalidCount
+	}
+	if count > maximumProvenanceCount {
+		count = maximumProvenanceCount
 	}
 
 	provenance := make([]ProvenanceRecord, 0, count)
@@ -145,10 +153,7 @@ loop:
 
 		case *transactionrecord.OldBaseData:
 			if 0 == i {
-				dKey := append(tx.Owner.Bytes(), id[:]...)
-				if nil != storage.Pool.OwnerDigest.Get(dKey) {
-					h.IsOwner = true
-				}
+				h.IsOwner = ownership.CurrentlyOwns(tx.Owner, id)
 			}
 
 			root := BlockRoot{
@@ -172,10 +177,7 @@ loop:
 
 		case *transactionrecord.BlockFoundation:
 			if 0 == i {
-				dKey := append(tx.Owner.Bytes(), id[:]...)
-				if nil != storage.Pool.OwnerDigest.Get(dKey) {
-					h.IsOwner = true
-				}
+				h.IsOwner = ownership.CurrentlyOwns(tx.Owner, id)
 			}
 
 			root := BlockRoot{}
@@ -197,10 +199,7 @@ loop:
 
 		case *transactionrecord.BitmarkIssue:
 			if 0 == i {
-				dKey := append(tx.Owner.Bytes(), id[:]...)
-				if nil != storage.Pool.OwnerDigest.Get(dKey) {
-					h.IsOwner = true
-				}
+				h.IsOwner = ownership.CurrentlyOwns(tx.Owner, id)
 			}
 			provenance = append(provenance, h)
 
@@ -225,15 +224,10 @@ loop:
 			break loop
 
 		case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned, *transactionrecord.BlockOwnerTransfer:
-			provenance = append(provenance, h)
-
 			tr := tx.(transactionrecord.BitmarkTransfer)
 
 			if 0 == i {
-				dKey := append(tr.GetOwner().Bytes(), id[:]...)
-				if nil != storage.Pool.OwnerDigest.Get(dKey) {
-					h.IsOwner = true
-				}
+				h.IsOwner = ownership.CurrentlyOwns(tr.GetOwner(), id)
 			}
 
 			provenance = append(provenance, h)

@@ -26,6 +26,10 @@ type Owner struct {
 // Owner bitmarks
 // --------------
 
+const (
+	maximumBitmarksCount = 200
+)
+
 type OwnerBitmarksArguments struct {
 	Owner *account.Account `json:"owner"`        // base58
 	Start uint64           `json:"start,string"` // first record number
@@ -43,7 +47,7 @@ type BitmarksRecord struct {
 	Record     string      `json:"record"`
 	TxId       interface{} `json:"txId,omitempty"`
 	InBlock    uint64      `json:inBlock"`
-	AssetIndex interface{} `json:"index,omitempty"`
+	AssetIndex interface{} `json:"assetIndex,omitempty"`
 	Data       interface{} `json:"data"`
 }
 
@@ -55,16 +59,20 @@ func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitm
 	log := owner.log
 	log.Infof("Owner.Bitmarks: %+v", arguments)
 
-	if arguments.Count <= 0 || arguments.Count > 100 {
+	count := arguments.Count
+	if count <= 0 {
 		return fault.ErrInvalidCount
 	}
+	if count > maximumBitmarksCount {
+		count = maximumBitmarksCount
+	}
 
-	ownershipData, err := ownership.ListBitmarksFor(arguments.Owner, arguments.Start, arguments.Count)
+	ownershipData, err := ownership.ListBitmarksFor(arguments.Owner, arguments.Start, count)
 	if nil != err {
 		return err
 	}
 
-	log.Infof("ownership: %+v", ownershipData)
+	log.Debugf("ownership: %+v", ownershipData)
 
 	// extract unique TxIds
 	//   issues TxId == IssueTxId
@@ -77,9 +85,19 @@ func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitm
 		txIds[r.IssueTxId] = struct{}{}
 		switch r.Item {
 		case ownership.OwnedAsset:
-			assetIndexes[r.AssetIndex] = struct{}{}
+			ai := r.AssetIndex
+			if nil == ai {
+				log.Criticalf("asset index is nil: %+v", r)
+				logger.Panicf("asset index is nil: %+v", r)
+			}
+			assetIndexes[*r.AssetIndex] = struct{}{}
 		case ownership.OwnedBlock:
+			if nil == r.BlockNumber {
+				log.Criticalf("block number is nil: %+v", r)
+				logger.Panicf("blockNumber is nil: %+v", r)
+			}
 		default:
+			log.Criticalf("unsupported item type: %d", r.Item)
 			logger.Panicf("unsupported item type: %d", r.Item)
 		}
 		current = r.N
@@ -89,7 +107,7 @@ func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitm
 
 	for txId := range txIds {
 
-		log.Infof("txId: %v", txId)
+		log.Debugf("txId: %v", txId)
 
 		inBlockBuffer, transaction := storage.Pool.Transactions.GetSplit2(txId[:], 8)
 		if nil == transaction {
@@ -105,6 +123,7 @@ func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitm
 
 		record, ok := transactionrecord.RecordName(tx)
 		if !ok {
+			log.Errorf("problem tx: %+v", tx)
 			return fault.ErrLinkToInvalidOrUnconfirmedTransaction
 		}
 		textTxId, err := txId.MarshalText()
@@ -123,7 +142,7 @@ func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitm
 asset_loop:
 	for assetIndex := range assetIndexes {
 
-		log.Infof("assetIndex: %v", assetIndex)
+		log.Debugf("assetIndex: %v", assetIndex)
 
 		var nnn transactionrecord.AssetIndex
 		if nnn == assetIndex {
