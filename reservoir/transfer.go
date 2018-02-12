@@ -37,7 +37,7 @@ func StoreTransfer(transfer transactionrecord.BitmarkTransfer) (*TransferInfo, b
 	link := transfer.GetLink()
 	if txId == link {
 		// reject any transaction that links to itself
-		// this should never occur, but protect against this situuation
+		// this should never occur, but protect against this situation
 		return nil, false, fault.ErrTransactionLinksToSelf
 	}
 
