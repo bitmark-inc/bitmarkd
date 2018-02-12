@@ -46,7 +46,7 @@ type OwnerBitmarksReply struct {
 type BitmarksRecord struct {
 	Record     string      `json:"record"`
 	TxId       interface{} `json:"txId,omitempty"`
-	InBlock    uint64      `json:inBlock"`
+	InBlock    uint64      `json:"inBlock"`
 	AssetIndex interface{} `json:"assetIndex,omitempty"`
 	Data       interface{} `json:"data"`
 }

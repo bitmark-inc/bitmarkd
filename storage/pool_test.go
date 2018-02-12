@@ -206,7 +206,7 @@ func doWriteRead(t *testing.T) {
 
 	key := rb(127)
 
-	finish := time.After(90 * time.Second)
+	finish := time.After(5 * time.Second)
 	stop := make(chan struct{})
 
 	for j := 0; j < 10; j += 1 {

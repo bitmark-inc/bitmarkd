@@ -19,11 +19,11 @@ import (
 // test the packing/unpacking of base record
 //
 // ensures that pack->unpack returns the same original value
-func TestPackBlockOwnerIssue(t *testing.T) {
+func TestPackBlockFoundation(t *testing.T) {
 
 	proofedbyAccount := makeAccount(proofedby.publicKey)
 
-	r := transactionrecord.BlockOwnerIssue{
+	r := transactionrecord.BlockFoundation{
 		Version: 1,
 		Payments: currency.Map{
 			currency.Bitcoin:  "mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn",
@@ -83,8 +83,8 @@ func TestPackBlockOwnerIssue(t *testing.T) {
 	}
 
 	// check the record type
-	if transactionrecord.BlockOwnerIssueTag != packed.Type() {
-		t.Fatalf("pack record type: %x  expected: %x", packed.Type(), transactionrecord.BlockOwnerIssueTag)
+	if transactionrecord.BlockFoundationTag != packed.Type() {
+		t.Fatalf("pack record type: %x  expected: %x", packed.Type(), transactionrecord.BlockFoundationTag)
 	}
 
 	t.Logf("Packed length: %d bytes", len(packed))
@@ -107,29 +107,29 @@ func TestPackBlockOwnerIssue(t *testing.T) {
 		t.Errorf("did not unpack all data: only used: %d of: %d bytes", n, len(packed))
 	}
 
-	blockOwnerIssue, ok := unpacked.(*transactionrecord.BlockOwnerIssue)
+	blockFoundation, ok := unpacked.(*transactionrecord.BlockFoundation)
 	if !ok {
-		t.Fatalf("did not unpack to BlockOwnerIssue")
+		t.Fatalf("did not unpack to BlockFoundation")
 	}
 
 	// display a JSON version for information
 	item := struct {
 		TxId            merkle.Digest
-		BlockOwnerIssue *transactionrecord.BlockOwnerIssue
+		BlockFoundation *transactionrecord.BlockFoundation
 	}{
 		TxId:            txId,
-		BlockOwnerIssue: blockOwnerIssue,
+		BlockFoundation: blockFoundation,
 	}
 	b, err := json.MarshalIndent(item, "", "  ")
 	if nil != err {
 		t.Fatalf("json error: %s", err)
 	}
 
-	t.Logf("BlockOwnerIssue: JSON: %s", b)
+	t.Logf("BlockFoundation: JSON: %s", b)
 
 	// check that structure is preserved through Pack/Unpack
 	// note reg is a pointer here
-	if !reflect.DeepEqual(r, *blockOwnerIssue) {
-		t.Errorf("different, original: %v  recovered: %v", r, *blockOwnerIssue)
+	if !reflect.DeepEqual(r, *blockFoundation) {
+		t.Errorf("different, original: %v  recovered: %v", r, *blockFoundation)
 	}
 }
