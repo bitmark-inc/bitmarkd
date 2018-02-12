@@ -1,0 +1,169 @@
+// Copyright (c) 2014-2018 Bitmark Inc.
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
+package rpccalls
+
+import (
+	"encoding/hex"
+	"github.com/bitmark-inc/bitmarkd/currency"
+	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/keypair"
+	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/bitmark-inc/bitmarkd/pay"
+	"github.com/bitmark-inc/bitmarkd/rpc"
+	"github.com/bitmark-inc/bitmarkd/transactionrecord"
+	"golang.org/x/crypto/ed25519"
+)
+
+var (
+	ErrMakeBlockTransferFail  = fault.ProcessError("make block transfer failed")
+	ErrNotBlockTransferRecord = fault.InvalidError("not block transfer record")
+)
+
+type BlockTransferData struct {
+	Payments currency.Map
+	Owner    *keypair.KeyPair
+	NewOwner *keypair.KeyPair
+	TxId     string
+}
+
+type BlockTransferCountersignData struct {
+	BlockTransfer string
+	NewOwner      *keypair.KeyPair
+}
+
+// JSON data to output after blockTransfer completes
+type BlockTransferReply struct {
+	BlockTransferId merkle.Digest                                   `json:"blockTransferId"`
+	PayId           pay.PayId                                       `json:"payId"`
+	Payments        map[string]transactionrecord.PaymentAlternative `json:"payments"`
+	Commands        map[string]string                               `json:"commands,omitempty"`
+}
+
+type BlockTransferSingleSignedReply struct {
+	Identity      string `json:"identity"`
+	BlockTransfer string `json:"blockTransfer"`
+}
+
+func (client *Client) SingleSignedBlockTransfer(blockTransferConfig *BlockTransferData) (*BlockTransferSingleSignedReply, error) {
+
+	var link merkle.Digest
+	err := link.UnmarshalText([]byte(blockTransferConfig.TxId))
+	if nil != err {
+		return nil, err
+	}
+
+	packed, blockTransfer, err := makeBlockTransferOneSignature(client.testnet, link, blockTransferConfig.Payments, blockTransferConfig.Owner, blockTransferConfig.NewOwner)
+	if nil != err {
+		return nil, err
+	}
+	if nil == blockTransfer {
+		return nil, ErrMakeBlockTransferFail
+	}
+
+	client.printJson("BlockTransfer Request", blockTransfer)
+
+	response := BlockTransferSingleSignedReply{
+		Identity:      blockTransfer.GetOwner().String(),
+		BlockTransfer: hex.EncodeToString(packed),
+	}
+
+	return &response, nil
+}
+
+func (client *Client) CountersignBlockTransfer(countersignConfig *BlockTransferCountersignData) (*BlockTransferReply, error) {
+
+	b, err := hex.DecodeString(countersignConfig.BlockTransfer)
+	if nil != err {
+		return nil, err
+	}
+
+	r, _, err := transactionrecord.Packed(b).Unpack(client.testnet)
+	if nil != err {
+		return nil, err
+	}
+
+	blockTransfer := &transactionrecord.BlockOwnerTransfer{}
+
+	switch tx := r.(type) {
+	case *transactionrecord.BlockOwnerTransfer:
+		blockTransfer.Link = tx.Link
+		blockTransfer.Version = tx.Version
+		blockTransfer.Payments = tx.Payments
+		blockTransfer.Owner = tx.Owner
+		blockTransfer.Signature = tx.Signature
+	default:
+		return nil, ErrNotBlockTransferRecord
+	}
+	// attach signature
+	signature := ed25519.Sign(countersignConfig.NewOwner.PrivateKey, b)
+	blockTransfer.Countersignature = signature[:]
+
+	client.printJson("BlockTransfer Request", blockTransfer)
+
+	var reply rpc.BlockOwnerTransferReply
+	err = client.client.Call("BlockOwner.Transfer", blockTransfer, &reply)
+	if err != nil {
+		return nil, err
+	}
+
+	tpid, err := reply.PayId.MarshalText()
+	if nil != err {
+		return nil, err
+	}
+
+	commands := make(map[string]string)
+	for _, payment := range reply.Payments {
+		currency := payment[0].Currency
+		commands[currency.String()] = paymentCommand(client.testnet, currency, string(tpid), payment)
+	}
+
+	client.printJson("BlockTransfer Reply", reply)
+
+	// make response
+	response := BlockTransferReply{
+		BlockTransferId: reply.TxId,
+		PayId:           reply.PayId,
+		Payments:        reply.Payments,
+		Commands:        commands,
+	}
+
+	return &response, nil
+}
+
+func makeBlockTransferOneSignature(testnet bool, link merkle.Digest, payments currency.Map, owner *keypair.KeyPair, newOwner *keypair.KeyPair) ([]byte, *transactionrecord.BlockOwnerTransfer, error) {
+
+	newOwnerAddress := makeAddress(newOwner, testnet)
+	r := transactionrecord.BlockOwnerTransfer{
+		Link:             link,
+		Version:          1,
+		Payments:         payments,
+		Owner:            newOwnerAddress,
+		Signature:        nil,
+		Countersignature: nil,
+	}
+
+	ownerAddress := makeAddress(owner, testnet)
+
+	// pack without signature
+	packed, err := r.Pack(ownerAddress)
+	if nil == err {
+		return nil, nil, ErrMakeBlockTransferFail
+	} else if fault.ErrInvalidSignature != err {
+		return nil, nil, err
+	}
+
+	// attach signature
+	signature := ed25519.Sign(owner.PrivateKey, packed)
+	r.Signature = signature[:]
+
+	// include first signature by packing again
+	packed, err = r.Pack(ownerAddress)
+	if nil == err {
+		return nil, nil, ErrMakeBlockTransferFail
+	} else if fault.ErrInvalidSignature != err {
+		return nil, nil, err
+	}
+	return packed, &r, nil
+}

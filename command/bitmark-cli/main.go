@@ -181,6 +181,47 @@ func main() {
 			Action: runCountersign,
 		},
 		{
+			Name:      "blocktransfer",
+			Usage:     "transfer a bitmark to another account",
+			ArgsUsage: "\n   (* = required)",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "txid, t",
+					Value: "",
+					Usage: "*transaction id to transfer `TXID`",
+				},
+				cli.StringFlag{
+					Name:  "receiver, r",
+					Value: "",
+					Usage: "*identity name to receive the block `ACCOUNT`",
+				},
+				cli.StringFlag{
+					Name:  "bitcoin, b",
+					Value: "",
+					Usage: "*address receive the bitcoin payment `ACCOUNT`",
+				},
+				cli.StringFlag{
+					Name:  "litecoin, l",
+					Value: "",
+					Usage: "*address to receive the litecoin payment `ACCOUNT`",
+				},
+			},
+			Action: runBlockTransfer,
+		},
+		{
+			Name:      "blockcountersign",
+			Usage:     "countersign transfer a bitmark to current account",
+			ArgsUsage: "\n   (* = required)",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "transfer, t",
+					Value: "",
+					Usage: "*sender signed transfer `HEX` code",
+				},
+			},
+			Action: runBlockCountersign,
+		},
+		{
 			Name:      "provenance",
 			Usage:     "list provenance of a bitmark",
 			ArgsUsage: "\n   (* = required)",

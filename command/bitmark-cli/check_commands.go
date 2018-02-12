@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
+	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"os"
 	"strconv"
@@ -21,6 +22,7 @@ var (
 	ErrRequiredAssetName        = fault.InvalidError("asset name is required")
 	ErrRequiredConfigFile       = fault.InvalidError("config file is required")
 	ErrRequiredConnect          = fault.InvalidError("connect is required")
+	ErrRequiredCurrencyAddress  = fault.InvalidError("currency address is required")
 	ErrRequiredDescription      = fault.InvalidError("description is required")
 	ErrRequiredFileName         = fault.InvalidError("file name is required")
 	ErrRequiredIdentity         = fault.InvalidError("identity is required")
@@ -208,6 +210,15 @@ func checkTransferTo(to string) (string, error) {
 		return "", ErrRequiredTransferTo
 	}
 	return to, nil
+}
+
+// coin address to is required field
+func checkCoinAddress(c currency.Currency, address string, testnet bool) (string, error) {
+	if "" == address {
+		return "", ErrRequiredCurrencyAddress
+	}
+	err := c.ValidateAddress(address, testnet)
+	return address, err
 }
 
 // pay id is required field
