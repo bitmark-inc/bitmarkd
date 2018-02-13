@@ -244,7 +244,7 @@ func (pub *publisher) process() {
 	}
 
 	blockFoundation := &transactionrecord.BlockFoundation{
-		Version:  1, // needs to mack currency list
+		Version:  transactionrecord.FoundationVersion,
 		Payments: p,
 		Owner:    pub.owner,
 		Nonce:    1234,

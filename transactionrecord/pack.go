@@ -20,6 +20,11 @@ var versions = []currency.Set{
 	currency.MakeSet(currency.Bitcoin, currency.Litecoin), // 1
 }
 
+// currently supported block foundation version (used by proofer)
+const (
+	FoundationVersion = 1
+)
+
 // pack BaseData
 //
 // Pack Varint64(tag) followed by fields in order as struct above with
