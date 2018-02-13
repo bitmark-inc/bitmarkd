@@ -82,9 +82,11 @@ outer_loop:
 
 			case *transactionrecord.BitmarkIssue:
 				txId := packedTransaction.MakeLink()
-				storage.Pool.Transactions.Delete(txId[:])
 				reservoir.DeleteByTxId(txId)
-				ownership.Transfer(txId, txId, 0, tx.Owner, nil)
+				if storage.Pool.Transactions.Has(txId[:]) {
+					storage.Pool.Transactions.Delete(txId[:])
+					ownership.Transfer(txId, txId, 0, tx.Owner, nil)
+				}
 
 			case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
 				tr := tx.(transactionrecord.BitmarkTransfer)

@@ -24,6 +24,7 @@ var (
 	ErrBitcoinAddressForWrongNetwork         = InvalidError("bitcoin address for wrong network")
 	ErrBitcoinAddressIsNotSupported          = InvalidError("bitcoin address is not supported")
 	ErrBlockNotFound                         = NotFoundError("block not found")
+	ErrBlockVersionMustNotDecrease           = InvalidError("block version must not decrease")
 	ErrCannotDecodeAccount                   = RecordError("cannot decode account")
 	ErrCannotDecodePrivateKey                = RecordError("cannot decode private key")
 	ErrCannotDecodeSeed                      = RecordError("cannot decode seed")

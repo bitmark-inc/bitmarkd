@@ -44,6 +44,20 @@ func StoreIncoming(packedBlock []byte) error {
 		return fault.ErrPreviousBlockDigestDoesNotMatch
 	}
 
+	// check version
+	if header.Version < 1 {
+		return fault.ErrInvalidBlockHeader
+	}
+
+	// block version must be the same or higher
+	if globalData.previousVersion > header.Version {
+		return fault.ErrBlockVersionMustNotDecrease
+	}
+
+	// to overcome problem in V1 header blocks
+	suppressDuplicateRecordChecks := header.Version == 1
+
+	// extract the transaction data
 	data := packedBlock[blockrecord.TotalBlockSize:]
 
 	type txn struct {
@@ -67,6 +81,7 @@ func StoreIncoming(packedBlock []byte) error {
 			if nil != err {
 				return err
 			}
+			txId := merkle.NewDigest(data[:n])
 
 			// repack records to check signature is valid
 			switch tx := transaction.(type) {
@@ -82,12 +97,20 @@ func StoreIncoming(packedBlock []byte) error {
 				if nil != err {
 					return err
 				}
+				assetIndex := tx.AssetIndex()
+				if !suppressDuplicateRecordChecks && storage.Pool.Assets.Has(assetIndex[:]) {
+					return fault.ErrTransactionAlreadyExists
+				}
 
 			case *transactionrecord.BitmarkIssue:
 				_, err := tx.Pack(tx.Owner)
 				if nil != err {
 					return err
 				}
+				if !suppressDuplicateRecordChecks && storage.Pool.Transactions.Has(txId[:]) {
+					return fault.ErrTransactionAlreadyExists
+				}
+
 			case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
 				tr := tx.(transactionrecord.BitmarkTransfer)
 				link := tr.GetLink()
@@ -144,7 +167,6 @@ func StoreIncoming(packedBlock []byte) error {
 				logger.Panicf("unhandled transaction: %v", tx)
 			}
 
-			txId := merkle.NewDigest(data[:n])
 			txs[i].txId = txId
 			txs[i].packed = transactionrecord.Packed(data[:n])
 			txs[i].unpacked = transaction
@@ -222,13 +244,17 @@ func StoreIncoming(packedBlock []byte) error {
 
 		case *transactionrecord.AssetData:
 			assetIndex := tx.AssetIndex()
-			asset.Delete(assetIndex)
-			storage.Pool.Assets.Put(assetIndex[:], item.packed)
+			asset.Delete(assetIndex) // delete from pending cache
+			if !storage.Pool.Assets.Has(assetIndex[:]) {
+				storage.Pool.Assets.Put(assetIndex[:], item.packed)
+			}
 
 		case *transactionrecord.BitmarkIssue:
-			reservoir.DeleteByTxId(item.txId)
-			storage.Pool.Transactions.Put(item.txId[:], blockNumberKey, item.packed)
-			ownership.CreateAsset(item.txId, header.Number, tx.AssetIndex, tx.Owner)
+			reservoir.DeleteByTxId(item.txId) // delete from pending cache
+			if !storage.Pool.Transactions.Has(item.txId[:]) {
+				storage.Pool.Transactions.Put(item.txId[:], blockNumberKey, item.packed)
+				ownership.CreateAsset(item.txId, header.Number, tx.AssetIndex, tx.Owner)
+			}
 
 		case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
 			tr := tx.(transactionrecord.BitmarkTransfer)
@@ -303,6 +329,7 @@ func storeAndUpdate(header *blockrecord.Header, digest blockdigest.Digest, packe
 	}
 
 	globalData.previousBlock = digest
+	globalData.previousVersion = header.Version
 	globalData.height = header.Number
 
 	blockring.Put(header.Number, digest, packedBlock)

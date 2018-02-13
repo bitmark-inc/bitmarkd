@@ -16,9 +16,9 @@ import (
 type PackedHeader []byte
 type PackedBlock []byte
 
-// block version
+// currently supported block version (used by proofer)
 const (
-	Version = 1
+	Version = 2
 )
 
 // maximum transactions in a block

@@ -27,8 +27,9 @@ type blockData struct {
 
 	log *logger.L
 
-	height        uint64             // this is the current block Height
-	previousBlock blockdigest.Digest // and its digest
+	height          uint64             // this is the current block Height
+	previousBlock   blockdigest.Digest // and its digest
+	previousVersion uint16             // plus its version
 
 	blk blockstore // for sequencing block storage
 
@@ -65,12 +66,14 @@ func Initialise() error {
 	// initialise block height and initial previous block digest
 	globalData.height = genesis.BlockNumber
 	globalData.previousBlock = genesis.LiveGenesisDigest
+	globalData.previousVersion = 1
 	if mode.IsTesting() {
 		globalData.previousBlock = genesis.TestGenesisDigest
 	}
 
 	log.Infof("block height: %d", globalData.height)
 	log.Infof("previous block: %v", globalData.previousBlock)
+	log.Infof("previous version: %d", globalData.previousVersion)
 
 	// fill ring with default values
 	if err := fillRingBuffer(log); nil != err {
@@ -136,6 +139,7 @@ func fillRingBuffer(log *logger.L) error {
 			log.Criticalf("failed to unpack block: %d from storage  error: %s", binary.BigEndian.Uint64(last.Key), err)
 			return err
 		}
+		globalData.previousVersion = header.Version
 		globalData.previousBlock = packedHeader.Digest()
 		globalData.height = header.Number // highest block number in database
 
