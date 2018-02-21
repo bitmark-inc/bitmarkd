@@ -99,10 +99,6 @@ type ProvenanceRecord struct {
 	Data       interface{} `json:"data"`
 }
 
-type BlockRoot struct {
-	Number uint64 `json:"number"`
-}
-
 type ProvenanceReply struct {
 	Data []ProvenanceRecord `json:"data"`
 }
@@ -156,22 +152,6 @@ loop:
 				h.IsOwner = ownership.CurrentlyOwns(tx.Owner, id)
 			}
 
-			root := BlockRoot{
-				Number: inBlock,
-			}
-			buffer := storage.Pool.BlockOwnerTxIndex.Get(id[:])
-			if nil != buffer {
-				root.Number = binary.BigEndian.Uint64(buffer)
-			}
-
-			hRoot := ProvenanceRecord{
-				Record:     "Block",
-				IsOwner:    false,
-				TxId:       nil,
-				AssetIndex: nil,
-				Data:       root,
-			}
-			provenance = append(provenance, hRoot)
 			provenance = append(provenance, h)
 			break loop
 
@@ -180,20 +160,6 @@ loop:
 				h.IsOwner = ownership.CurrentlyOwns(tx.Owner, id)
 			}
 
-			root := BlockRoot{}
-			buffer := storage.Pool.BlockOwnerTxIndex.Get(id[:])
-			if nil != buffer {
-				root.Number = binary.BigEndian.Uint64(buffer)
-			}
-
-			hRoot := ProvenanceRecord{
-				Record:     "Block",
-				IsOwner:    false,
-				TxId:       nil,
-				AssetIndex: nil,
-				Data:       root,
-			}
-			provenance = append(provenance, hRoot)
 			provenance = append(provenance, h)
 			break loop
 
