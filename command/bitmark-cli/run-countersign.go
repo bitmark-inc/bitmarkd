@@ -30,7 +30,7 @@ func runCountersign(c *cli.Context) error {
 
 	if m.verbose {
 		fmt.Fprintf(m.e, "tx: %s\n", hex)
-		fmt.Fprintf(m.e, "receiver: %s\n", to)
+		fmt.Fprintf(m.e, "receiver: %s\n", to.Name)
 	}
 
 	var newOwnerKeyPair *keypair.KeyPair
