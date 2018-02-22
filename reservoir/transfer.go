@@ -53,8 +53,14 @@ func StoreTransfer(transfer transactionrecord.BitmarkTransfer) (*TransferInfo, b
 		Payments: payments,
 	}
 
-	// if already seen just return pay id
-	if _, ok := cache.Pool.UnverifiedTxEntries.Get(payId.String()); ok {
+	// if already seen just return pay id and previous payments if present
+	if val, ok := cache.Pool.UnverifiedTxEntries.Get(payId.String()); ok {
+		entry := val.(*unverifiedItem)
+		if nil != entry.payments {
+			result.Payments = entry.payments
+		} else {
+			//log.Warnf("failed to get current paymentdata for: %s  payid: %s", txID, payId)
+		}
 		return result, true, nil
 	}
 
