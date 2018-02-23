@@ -13,6 +13,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
+	"github.com/bitmark-inc/logger"
 )
 
 // result returned by store transfer
@@ -59,7 +60,8 @@ func StoreTransfer(transfer transactionrecord.BitmarkTransfer) (*TransferInfo, b
 		if nil != entry.payments {
 			result.Payments = entry.payments
 		} else {
-			//log.Warnf("failed to get current paymentdata for: %s  payid: %s", txID, payId)
+			// this would mean that reservoir data is corrupt
+			logger.Panicf("StoreTransfer: failed to get current payment data for: %s  payid: %s", txId, payId)
 		}
 		return result, true, nil
 	}
