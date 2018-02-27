@@ -107,7 +107,7 @@ func (conn *connector) initialise(privateKey []byte, publicKey []byte, connect [
 		}
 
 		conn.staticClients[i] = client
-		globalData.connectorClients = append(globalData.connectorClients, client) // ***** FIX THIS: remove?
+		globalData.connectorClients = append(globalData.connectorClients, client)
 
 		err = client.Connect(address, serverPublicKey)
 		if nil != err {
@@ -130,7 +130,7 @@ func (conn *connector) initialise(privateKey []byte, publicKey []byte, connect [
 		// create list of all dynamic clients
 		conn.dynamicClients.PushBack(client)
 
-		globalData.connectorClients = append(globalData.connectorClients, client) // ***** FIX THIS: remove?
+		globalData.connectorClients = append(globalData.connectorClients, client)
 	}
 
 	// start state machine
