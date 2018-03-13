@@ -59,7 +59,9 @@ func New(privateKey []byte, publicKey []byte, timeout time.Duration) (*Upstream,
 }
 
 func (u *Upstream) Destroy() {
-	close(u.shutdown)
+	if nil != u {
+		close(u.shutdown)
+	}
 }
 
 // check the current destination
@@ -203,7 +205,7 @@ loop:
 				if fault.ErrNotConnected == err {
 					log.Infof("register: %s", err)
 					u.Unlock()
-					continue loop // try again late
+					continue loop // try again later
 				} else if nil != err {
 					log.Errorf("register: error: %s", err)
 					err := u.client.Reconnect()
