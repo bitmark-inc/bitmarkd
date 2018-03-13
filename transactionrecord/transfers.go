@@ -6,6 +6,7 @@ package transactionrecord
 
 import (
 	"github.com/bitmark-inc/bitmarkd/account"
+	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 )
 
@@ -21,6 +22,10 @@ func (transfer *BitmarkTransferUnratified) GetPayment() *Payment {
 
 func (transfer *BitmarkTransferUnratified) GetOwner() *account.Account {
 	return transfer.Owner
+}
+
+func (transfer *BitmarkTransferUnratified) GetCurrencies() currency.Map {
+	return nil
 }
 
 func (transfer *BitmarkTransferUnratified) GetSignature() account.Signature {
@@ -45,6 +50,10 @@ func (transfer *BitmarkTransferCountersigned) GetOwner() *account.Account {
 	return transfer.Owner
 }
 
+func (transfer *BitmarkTransferCountersigned) GetCurrencies() currency.Map {
+	return nil
+}
+
 func (transfer *BitmarkTransferCountersigned) GetSignature() account.Signature {
 	return transfer.Signature
 }
@@ -65,6 +74,10 @@ func (transfer *BlockOwnerTransfer) GetPayment() *Payment {
 
 func (transfer *BlockOwnerTransfer) GetOwner() *account.Account {
 	return transfer.Owner
+}
+
+func (transfer *BlockOwnerTransfer) GetCurrencies() currency.Map {
+	return transfer.Payments
 }
 
 func (transfer *BlockOwnerTransfer) GetSignature() account.Signature {

@@ -100,6 +100,7 @@ type BitmarkTransfer interface {
 	GetLink() merkle.Digest
 	GetPayment() *Payment
 	GetOwner() *account.Account
+	GetCurrencies() currency.Map
 	GetSignature() account.Signature
 	GetCountersignature() account.Signature
 }
