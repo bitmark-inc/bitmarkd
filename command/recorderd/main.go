@@ -79,6 +79,7 @@ func main() {
 	log := logger.New("main")
 	defer log.Info("shutting down…")
 	log.Info("starting…")
+	log.Infof("version: %s", version)
 	log.Debugf("masterConfiguration: %v", masterConfiguration)
 
 	// ------------------
