@@ -2,11 +2,23 @@
 # scan go files in rpc/ and print Class.Method for all client APIs
 
 awk '
-/^func[[:space:]][(][[:alpha:]]+/ {
+/^func[[:space:]][(][[:alpha:]]+.*[[:space:]]error[[:space:]]/ {
   split($4, fn, "[(]")    # expect: Method(arguments
   split($3, type, "[*)]") # expect: *TYPE)
   if (3 == length(type) && 2 == length(fn)) {
-    print type[2] "." fn[1]
+    if ("InternalConnection" != type[2]) {
+      print type[2] "." fn[1]
+    }
   }
 }
+
+/^func[[:space:]][(][[:alpha:]]+[[:space:]]+[*]httpHandler/ {
+  split($4, fn, "[(]")    # expect: Method(arguments
+  split($3, type, "[*)]") # expect: *TYPE)
+  if (3 == length(type) && 2 == length(fn)) {
+    print "https://.../" fn[1]
+  }
+}
+
+
 ' rpc/*.go | sort
