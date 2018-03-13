@@ -5,6 +5,7 @@
 package currency_test
 
 import (
+	"encoding/json"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"testing"
@@ -17,18 +18,21 @@ func TestMapPack(t *testing.T) {
 	testData := []struct {
 		m currency.Map
 		s currency.Set
+		j string
 	}{
 		{
 			m: currency.Map{
 				currency.Bitcoin: "mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn",
 			},
 			s: currency.MakeSet(currency.Bitcoin),
+			j: `{"BTC":"mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn"}`,
 		},
 		{
 			m: currency.Map{
 				currency.Litecoin: "mmCKZS7toE69QgXNs1JZcjW6LFj8LfUbz6",
 			},
 			s: currency.MakeSet(currency.Litecoin),
+			j: `{"LTC":"mmCKZS7toE69QgXNs1JZcjW6LFj8LfUbz6"}`,
 		},
 		{
 			m: currency.Map{
@@ -36,6 +40,7 @@ func TestMapPack(t *testing.T) {
 				currency.Litecoin: "mmCKZS7toE69QgXNs1JZcjW6LFj8LfUbz6",
 			},
 			s: currency.MakeSet(currency.Bitcoin, currency.Litecoin),
+			j: `{"BTC":"mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn","LTC":"mmCKZS7toE69QgXNs1JZcjW6LFj8LfUbz6"}`,
 		},
 		{
 			m: currency.Map{
@@ -43,6 +48,7 @@ func TestMapPack(t *testing.T) {
 				currency.Bitcoin:  "mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn",
 			},
 			s: currency.MakeSet(currency.Bitcoin, currency.Litecoin),
+			j: `{"BTC":"mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn","LTC":"mmCKZS7toE69QgXNs1JZcjW6LFj8LfUbz6"}`,
 		},
 	}
 
@@ -64,7 +70,15 @@ func TestMapPack(t *testing.T) {
 			}
 		}
 		if item.s != cs {
-			t.Logf("%d: actual set: %v  expected: %v", i, cs, item.s)
+			t.Errorf("%d: actual set: %v  expected: %v", i, cs, item.s)
+		}
+
+		j, err := json.Marshal(item.m)
+		if nil != err {
+			t.Fatalf("%d: marshal JSON error: %s", i, err)
+		}
+		if string(j) != item.j {
+			t.Errorf("%d: actual: `%s`  expected: %s", i, j, item.j)
 		}
 	}
 }
