@@ -65,16 +65,24 @@ client_rpc {
 https_rpc {
   maximum_connections = 50
 
-  # POST /bitmarkd/rpc     (json body as client rpc)
-  # GET  /bitmarkd/info    (same as Node.Info but for curl)
-  # GET  /bitmarkd/local/* (protected)
+  # POST /bitmarkd/rpc          (unrestricted: json body as client rpc)
+  # GET  /bitmarkd/details      (protected: more data than Node.Info))
+  # GET  /bitmarkd/peers        (protected: list of all peers and their public key)
+  # GET  /bitmarkd/connections  (protected: list of all outgoing peer connections)
+
   listen = 0.0.0.0:2131
   listen = "[::]:2131"
 
-  # IPs that can access the /bitmarkd/local/* APIs
+  # IPs that can access the /bitmarkd/* GET APIs
   # default is deny
-  local_allow = 127.0.0.1
-  local_allow = "[::1]"
+  allow {
+    details = 127.0.0.1
+    details = "[::1]"
+    connections = 127.0.0.1
+    connections = "[::1]"
+    peers = 127.0.0.1
+    peers = "[::1]"
+  }
 
   # this example shares keys with client rpc
   certificate = rpc.crt

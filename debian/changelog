@@ -1,6 +1,12 @@
 bitmarkd (7.0-1) unstable; urgency=medium
 
   * new block issue/transfer system
+  * publish is no longer primary mechanism for block broadcast
+    because is seems to have reconnection problems, now only for
+    local services and can be turned off if not needed
+  * info RPCs reduced to minimum and more details are only available over
+    https GET to make it easy to build monitoring scripts with curl and jq
+  * many bug fixes - see git log for more details
 
  -- Christopher Hall <hsw@bitmark.com>  Fri, 19 Jan 2018 09:39:48 +0000
 
