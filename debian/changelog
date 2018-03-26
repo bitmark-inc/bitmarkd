@@ -1,3 +1,9 @@
+bitmarkd (7.2-1) unstable; urgency=medium
+
+  * log fork protection limit
+
+ -- Christopher Hall <hsw@bitmark.com>  Mon, 26 Mar 2018 06:46:48 +0000
+
 bitmarkd (7.1-1) unstable; urgency=medium
 
   * bring back the single signature transfer
