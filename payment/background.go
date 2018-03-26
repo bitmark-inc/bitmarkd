@@ -17,7 +17,7 @@ import (
 const (
 	discovererStopSignal = "inproc://discoverer-stop-signal"
 
-	blockchainCheckIntervel = 60 * time.Second
+	blockchainCheckInterval = 60 * time.Second
 )
 
 // discoverer listens to discovery proxy to get the possible txs
@@ -190,7 +190,7 @@ loop:
 		case <-shutdown:
 			break loop
 
-		case <-time.After(blockchainCheckIntervel):
+		case <-time.After(blockchainCheckInterval):
 			log.Info("checking…")
 			var wg sync.WaitGroup
 			for _, handler := range globalData.handlers {
