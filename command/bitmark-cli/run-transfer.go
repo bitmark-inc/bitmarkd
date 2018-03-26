@@ -106,12 +106,22 @@ func runTransfer(c *cli.Context) error {
 		TxId:     txId,
 	}
 
-	response, err := client.SingleSignedTransfer(transferConfig)
-	if nil != err {
-		return err
+	if c.Bool("unratified") {
+
+		response, err := client.Transfer(transferConfig)
+		if nil != err {
+			return err
+		}
+
+		printJson(m.w, response)
+
+	} else {
+		response, err := client.SingleSignedTransfer(transferConfig)
+		if nil != err {
+			return err
+		}
+
+		printJson(m.w, response)
 	}
-
-	printJson(m.w, response)
-
 	return nil
 }
