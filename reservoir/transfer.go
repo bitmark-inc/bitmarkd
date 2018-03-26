@@ -160,7 +160,7 @@ func verifyTransfer(newTransfer transactionrecord.BitmarkTransfer) (*verifiedInf
 		}
 
 	case *transactionrecord.BitmarkTransferCountersigned:
-		// do not permit transfer downgrade
+		// ensure link to correct transfer type
 		switch newTransfer.(type) {
 		case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
 			currentOwner = tx.Owner
