@@ -25,7 +25,7 @@ const (
 	connectorTimeout      = 60 * time.Second // time out for connections
 	samplelingLimit       = 10               // number of cycles to be 1 block out of sync before resync
 	fetchBlocksPerCycle   = 100              // number of blocks to fetch in one set
-	forkProtection        = 10               // fail to fork if height difference is greater than this
+	forkProtection        = 60               // fail to fork if height difference is greater than this
 	minimumClients        = 3                // do not proceed unless this many clients are connected
 	maximumDynamicClients = 10               // total number of dynamic clients
 )
@@ -279,6 +279,7 @@ func (conn *connector) runStateMachine() bool {
 					break check_digests
 				} else if d == digest {
 					if height-h >= forkProtection {
+						log.Errorf("fork protection at: %d - %d >= %d", height, h, forkProtection)
 						conn.state = cStateHighestBlock
 						break check_digests
 					}
