@@ -232,13 +232,12 @@ func processTransfer(packed []byte) error {
 		return err
 	}
 
-	if !transaction.IsTransfer() {
+	transfer, ok := transaction.(transactionrecord.BitmarkTransfer)
+	if !ok {
 		return fault.ErrTransactionIsNotATransfer
 	}
 
-	tx := transaction.(transactionrecord.BitmarkTransfer)
-
-	_, duplicate, err := reservoir.StoreTransfer(tx)
+	_, duplicate, err := reservoir.StoreTransfer(transfer)
 	if nil != err {
 		return err
 	}

@@ -49,12 +49,11 @@ func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransferCou
 		return fault.ErrWrongNetworkForPublicKey
 	}
 
-	// ***** FIX THIS: remove this later
-	// ***** FIX THIS: this is to support unratified transfers
+	// for unratified transfers
 	if 0 == len(arguments.Countersignature) {
 		transfer = &transactionrecord.BitmarkTransferUnratified{
 			Link:      arguments.Link,
-			Payment:   arguments.Payment,
+			Escrow:    arguments.Escrow,
 			Owner:     arguments.Owner,
 			Signature: arguments.Signature,
 		}
