@@ -2,6 +2,7 @@ bitmarkd (7.3-1) unstable; urgency=medium
 
   * async retrieval of past currency transactions
   * trigger retrieval on discovery subscription reconnect
+  * allow publish to be disabled by having no broadcast configuration items
 
  -- Christopher Hall <hsw@bitmark.com>  Wed, 28 Mar 2018 01:52:00 +0000
 

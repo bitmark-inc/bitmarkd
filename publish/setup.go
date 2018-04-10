@@ -54,6 +54,11 @@ func Initialise(configuration *Configuration, version string) error {
 	globalData.log = logger.New("publish")
 	globalData.log.Info("starting…")
 
+	if 0 == len(configuration.Broadcast) {
+		globalData.log.Info("no broadcasts - disabling")
+		return nil
+	}
+
 	// read the keys
 	privateKey, err := zmqutil.ReadPrivateKeyFile(configuration.PrivateKey)
 	if nil != err {
