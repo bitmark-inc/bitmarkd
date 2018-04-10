@@ -21,10 +21,11 @@ import (
 
 // various timeouts
 const (
-	cycleInterval         = 15 * time.Second // pause to limit bandwidth
+	//cycleInterval         = 15 * time.Second // pause to limit bandwidth
+	cycleInterval         = 1 * time.Second  // pause to limit bandwidth
 	connectorTimeout      = 60 * time.Second // time out for connections
 	samplelingLimit       = 10               // number of cycles to be 1 block out of sync before resync
-	fetchBlocksPerCycle   = 100              // number of blocks to fetch in one set
+	fetchBlocksPerCycle   = 200              // number of blocks to fetch in one set
 	forkProtection        = 60               // fail to fork if height difference is greater than this
 	minimumClients        = 3                // do not proceed unless this many clients are connected
 	maximumDynamicClients = 10               // total number of dynamic clients

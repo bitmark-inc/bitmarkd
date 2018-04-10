@@ -15,22 +15,23 @@ import (
 )
 
 const (
-	discovererStopSignal = "inproc://discoverer-stop-signal"
+	discovererStopSignal    = "inproc://discoverer-stop-signal"
+	discovererMonitorSignal = "inproc://discoverer-monitor-signal"
 
 	blockchainCheckInterval = 60 * time.Second
 )
 
 // discoverer listens to discovery proxy to get the possible txs
 type discoverer struct {
-	log  *logger.L
-	push *zmq.Socket
-	pull *zmq.Socket
-	sub  *zmq.Socket
-	req  *zmq.Socket
+	log    *logger.L
+	push   *zmq.Socket
+	pull   *zmq.Socket
+	sub    *zmq.Socket
+	subMon *zmq.Socket
+	req    *zmq.Socket
 }
 
 func newDiscoverer(subHostPort, reqHostPort string) (*discoverer, error) {
-
 	log := logger.New("discoverer")
 
 	subConnection, err := util.NewConnection(subHostPort)
@@ -50,6 +51,11 @@ func newDiscoverer(subHostPort, reqHostPort string) (*discoverer, error) {
 	}
 
 	sub, err := zmq.NewSocket(zmq.SUB)
+	if err != nil {
+		return nil, err
+	}
+
+	subMon, err := zmqutil.NewMonitor(sub, discovererMonitorSignal, zmq.EVENT_CONNECTED)
 	if err != nil {
 		return nil, err
 	}
@@ -87,11 +93,12 @@ func newDiscoverer(subHostPort, reqHostPort string) (*discoverer, error) {
 	log.Infof("connect to: %q  IPv6: %t", reqAddr, reqIPv6)
 
 	disc := &discoverer{
-		log:  log,
-		push: push,
-		pull: pull,
-		sub:  sub,
-		req:  req,
+		log:    log,
+		push:   push,
+		pull:   pull,
+		sub:    sub,
+		subMon: subMon,
+		req:    req,
 	}
 	return disc, nil
 }
@@ -100,11 +107,25 @@ func (d *discoverer) Run(args interface{}, shutdown <-chan struct{}) {
 
 	d.log.Info("starting…")
 
-	d.retrievePastTxs()
+	trigger := make(chan struct{}, 1)
+	done := make(chan struct{})
 
-	go func() {
+	go func(run <-chan struct{}, stop <-chan struct{}) {
+	loop:
+		for {
+			select {
+			case <-run:
+				d.retrievePastTxs()
+			case <-stop:
+				break loop
+			}
+		}
+	}(trigger, done)
+
+	go func(retrieve chan<- struct{}) {
 		poller := zmq.NewPoller()
 		poller.Add(d.sub, zmq.POLLIN)
+		poller.Add(d.subMon, zmq.POLLIN)
 		poller.Add(d.pull, zmq.POLLIN)
 
 	loop:
@@ -120,11 +141,19 @@ func (d *discoverer) Run(args interface{}, shutdown <-chan struct{}) {
 						break loop
 					}
 					break loop
-
+				case d.subMon:
+					ev, addr, v, err := d.subMon.RecvEvent(0)
+					if err != nil {
+						d.log.Errorf("receive event error: %s", err)
+						continue loop
+					}
+					d.log.Infof("event: %q  address: %q  value: %d", ev, addr, v)
+					retrieve <- struct{}{}
 				default:
 					msg, err := s.RecvMessageBytes(0)
 					if err != nil {
 						d.log.Errorf("sub receive error: %s", err)
+						continue loop
 					}
 
 					d.assignHandler(msg)
@@ -136,15 +165,16 @@ func (d *discoverer) Run(args interface{}, shutdown <-chan struct{}) {
 		d.sub.Close()
 
 		d.log.Info("stopped")
-	}()
+	}(trigger)
 
 	d.log.Info("started")
 
 	<-shutdown
-
+	close(done)
 	d.push.SendMessage("stop")
 	d.push.Close()
 	d.req.Close()
+	close(trigger)
 }
 
 func (d *discoverer) retrievePastTxs() {
