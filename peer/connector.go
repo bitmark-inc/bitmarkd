@@ -21,8 +21,7 @@ import (
 
 // various timeouts
 const (
-	//cycleInterval         = 15 * time.Second // pause to limit bandwidth
-	cycleInterval         = 1 * time.Second  // pause to limit bandwidth
+	cycleInterval         = 15 * time.Second // pause to limit bandwidth
 	connectorTimeout      = 60 * time.Second // time out for connections
 	samplelingLimit       = 10               // number of cycles to be 1 block out of sync before resync
 	fetchBlocksPerCycle   = 200              // number of blocks to fetch in one set

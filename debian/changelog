@@ -1,3 +1,9 @@
+bitmarkd (7.4-1) unstable; urgency=medium
+
+  * put cycle interval back to 15 sec
+
+ -- Christopher Hall <hsw@bitmark.com>  Thu, 12 Apr 2018 08:35:36 +0000
+
 bitmarkd (7.3-1) unstable; urgency=medium
 
   * async retrieval of past currency transactions
