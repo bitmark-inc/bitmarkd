@@ -238,9 +238,6 @@ loop:
 }
 
 func register(client *zmqutil.Client, log *logger.L) error {
-	return nil
-}
-func xregister(client *zmqutil.Client, log *logger.L) error {
 
 	log.Debugf("register: client: %s", client)
 
@@ -314,9 +311,6 @@ func getHeight(client *zmqutil.Client, log *logger.L) (uint64, error) {
 }
 
 func push(client *zmqutil.Client, log *logger.L, item *messagebus.Message) error {
-	return nil
-}
-func xpush(client *zmqutil.Client, log *logger.L, item *messagebus.Message) error {
 
 	log.Debugf("push: client: %s  %q %x", client, item.Command, item.Parameters)
 
