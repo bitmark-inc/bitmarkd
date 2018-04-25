@@ -34,9 +34,9 @@ const (
 	defaultCertificateFile     = "rpc.crt"
 
 	defaultLevelDBDirectory = "data"
-	defaultBitmarkDatabase  = chain.Bitmark + ".leveldb"
-	defaultTestingDatabase  = chain.Testing + ".leveldb"
-	defaultLocalDatabase    = chain.Local + ".leveldb"
+	defaultBitmarkDatabase  = chain.Bitmark
+	defaultTestingDatabase  = chain.Testing
+	defaultLocalDatabase    = chain.Local
 
 	defaultLogDirectory = "log"
 	defaultLogFile      = "bitmarkd.log"

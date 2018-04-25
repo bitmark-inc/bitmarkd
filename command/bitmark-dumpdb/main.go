@@ -11,6 +11,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/bitmark-inc/getoptions"
+	"github.com/bitmark-inc/logger"
 	"os"
 	"reflect"
 	"strconv"
@@ -116,8 +117,25 @@ func main() {
 		}
 	}
 
+	logging := logger.Configuration{
+		Directory: ".",
+		File:      "bitmark-dumpdb.log",
+		Size:      1048576,
+		Count:     10,
+		Console:   true,
+		Levels: map[string]string{
+			logger.DefaultTag: "critical",
+		},
+	}
+
+	// start logging
+	if err = logger.Initialise(logging); nil != err {
+		exitwithstatus.Message("%s: logger setup failed with error: %s", program, err)
+	}
+	defer logger.Finalise()
+
 	// start of main processing
-	storage.Initialise(filename)
+	storage.Initialise(filename, storage.ReadOnly)
 	defer storage.Finalise()
 
 	// this will be a struct type

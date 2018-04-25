@@ -8,7 +8,6 @@ import (
 	"encoding/binary"
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/asset"
-	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/blockring"
 	"github.com/bitmark-inc/bitmarkd/currency"
@@ -313,16 +312,6 @@ func StoreIncoming(packedBlock []byte) error {
 
 	ownership.CreateBlock(foundationTxId, header.Number, blockOwner)
 
-	// finish be storing the block header
-	storeAndUpdate(header, digest, packedBlock)
-
-	return nil
-}
-
-// store the block and update block data
-// hold lock before calling this
-func storeAndUpdate(header *blockrecord.Header, digest blockdigest.Digest, packedBlock []byte) {
-
 	expectedBlockNumber := globalData.height + 1
 	if expectedBlockNumber != header.Number {
 		logger.Panicf("block.Store: out of sequence block: actual: %d  expected: %d", header.Number, expectedBlockNumber)
@@ -332,6 +321,12 @@ func storeAndUpdate(header *blockrecord.Header, digest blockdigest.Digest, packe
 	globalData.previousVersion = header.Version
 	globalData.height = header.Number
 
+	// return early if rebuilding
+	if globalData.rebuild {
+		globalData.log.Warnf("rebuilt block: %d", globalData.height)
+		return nil
+	}
+
 	blockring.Put(header.Number, digest, packedBlock)
 
 	// finally store the block
@@ -339,4 +334,6 @@ func storeAndUpdate(header *blockrecord.Header, digest blockdigest.Digest, packe
 	binary.BigEndian.PutUint64(blockNumber, header.Number)
 
 	storage.Pool.Blocks.Put(blockNumber, packedBlock)
+
+	return nil
 }

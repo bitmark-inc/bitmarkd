@@ -84,7 +84,7 @@ func main() {
 
 	// start logging
 	if err = logger.Initialise(masterConfiguration.Logging); nil != err {
-		exitwithstatus.Message("%s: logger setup failed with error: %s", err)
+		exitwithstatus.Message("%s: logger setup failed with error: %s", program, err)
 	}
 	defer logger.Finalise()
 
@@ -152,12 +152,22 @@ func main() {
 
 	// start the data storage
 	log.Info("initialise storage")
-	err = storage.Initialise(masterConfiguration.Database.Name)
+	reindexRequired, err := storage.Initialise(masterConfiguration.Database.Name, storage.ReadWrite)
 	if nil != err {
 		log.Criticalf("storage initialise error: %s", err)
 		exitwithstatus.Message("storage initialise error: %s", err)
 	}
 	defer storage.Finalise()
+	if reindexRequired {
+		log.Warn("database reindex required")
+	}
+
+	err = cache.Initialise()
+	if nil != err {
+		log.Criticalf("cache initialise error: %s", err)
+		exitwithstatus.Message("cache initialise error: %s", err)
+	}
+	defer cache.Finalise()
 
 	// start the reservoir (verified transaction data cache)
 	log.Info("initialise reservoir")
@@ -187,19 +197,22 @@ func main() {
 
 	// block data storage - depends on storage and mode
 	log.Info("initialise block")
-	err = block.Initialise()
+	err = block.Initialise(reindexRequired)
 	if nil != err {
 		log.Criticalf("block initialise error: %s", err)
 		exitwithstatus.Message("block initialise error: %s", err)
 	}
 	defer block.Finalise()
 
-	err = cache.Initialise()
-	if nil != err {
-		log.Criticalf("cache initialise error: %s", err)
-		exitwithstatus.Message("cache initialise error: %s", err)
+	// if reindexing was done
+	if reindexRequired {
+		err = storage.ReindexDone()
+		if nil != err {
+			log.Criticalf("index regeneration error: %s", err)
+			exitwithstatus.Message("index regeneration error: %s", err)
+		}
+		log.Warn("index was regenerated")
 	}
-	defer cache.Finalise()
 
 	// these commands are allowed to access the internal database
 	if len(arguments) > 0 && processDataCommand(log, arguments, masterConfiguration) {

@@ -71,7 +71,7 @@ func main() {
 
 	// start logging
 	if err = logger.Initialise(masterConfiguration.Logging); nil != err {
-		exitwithstatus.Message("%s: logger setup failed with error: %s", err)
+		exitwithstatus.Message("%s: logger setup failed with error: %s", program, err)
 	}
 	defer logger.Finalise()
 

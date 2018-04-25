@@ -30,8 +30,8 @@ type blockData struct {
 	height          uint64             // this is the current block Height
 	previousBlock   blockdigest.Digest // and its digest
 	previousVersion uint16             // plus its version
-
-	blk blockstore // for sequencing block storage
+	rebuild         bool               // set if all indexes are being rebuild
+	blk             blockstore         // for sequencing block storage
 
 	// for background
 	background *background.T
@@ -44,7 +44,7 @@ type blockData struct {
 var globalData blockData
 
 // setup the current block data
-func Initialise() error {
+func Initialise(recover bool) error {
 	globalData.Lock()
 	defer globalData.Unlock()
 
@@ -59,11 +59,11 @@ func Initialise() error {
 
 	// check storage is initialised
 	if nil == storage.Pool.Blocks {
-		log.Critical("storage pool is not initialise")
+		log.Critical("storage pool is not initialised")
 		return fault.ErrNotInitialised
 	}
 
-	// initialise block height and initial previous block digest
+	// initialise block height and initialise previous block digest
 	globalData.height = genesis.BlockNumber
 	globalData.previousBlock = genesis.LiveGenesisDigest
 	globalData.previousVersion = 1
@@ -74,6 +74,22 @@ func Initialise() error {
 	log.Infof("block height: %d", globalData.height)
 	log.Infof("previous block: %v", globalData.previousBlock)
 	log.Infof("previous version: %d", globalData.previousVersion)
+
+	if recover {
+		log.Warn("start index rebuild…")
+		globalData.rebuild = true
+		globalData.Unlock()
+		err := doRecovery()
+		globalData.Lock()
+		if nil != err {
+			log.Criticalf("index rebuild error: %s", err)
+			return err
+		}
+		log.Warn("inddex rebuild completed")
+	}
+
+	// ensure not in rebuild mode
+	globalData.rebuild = false
 
 	// fill ring with default values
 	if err := fillRingBuffer(log); nil != err {

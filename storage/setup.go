@@ -5,12 +5,14 @@
 package storage
 
 import (
-	"bytes"
+	"encoding/binary"
 	"fmt"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 	"github.com/syndtr/goleveldb/leveldb"
-	"github.com/syndtr/goleveldb/leveldb/util"
+	ldb_util "github.com/syndtr/goleveldb/leveldb/util"
+	"os"
 	"reflect"
 	"sync"
 )
@@ -23,23 +25,24 @@ type Element struct {
 
 // a pool handle
 type PoolHandle struct {
-	prefix byte
-	limit  []byte
+	prefix   byte
+	limit    []byte
+	database *leveldb.DB
 }
 
 // exported storage pools
 //
 // note all must be exported (i.e. initial capital) or initialisation will panic
 type pools struct {
-	Blocks            *PoolHandle `prefix:"B"`
-	BlockOwnerPayment *PoolHandle `prefix:"H"`
-	BlockOwnerTxIndex *PoolHandle `prefix:"I"`
-	Assets            *PoolHandle `prefix:"A"`
-	Transactions      *PoolHandle `prefix:"T"`
-	OwnerCount        *PoolHandle `prefix:"N"`
-	Ownership         *PoolHandle `prefix:"K"`
-	OwnerDigest       *PoolHandle `prefix:"D"`
-	TestData          *PoolHandle `prefix:"Z"`
+	Blocks            *PoolHandle `prefix:"B" database:"blocks"`
+	BlockOwnerPayment *PoolHandle `prefix:"H" database:"index"`
+	BlockOwnerTxIndex *PoolHandle `prefix:"I" database:"index"`
+	Assets            *PoolHandle `prefix:"A" database:"index"`
+	Transactions      *PoolHandle `prefix:"T" database:"index"`
+	OwnerCount        *PoolHandle `prefix:"N" database:"index"`
+	Ownership         *PoolHandle `prefix:"K" database:"index"`
+	OwnerDigest       *PoolHandle `prefix:"D" database:"index"`
+	TestData          *PoolHandle `prefix:"Z" database:"index"`
 }
 
 // the instance
@@ -47,44 +50,159 @@ var Pool pools
 
 // for database version
 var versionKey = []byte{0x00, 'V', 'E', 'R', 'S', 'I', 'O', 'N'}
-var currentVersion = []byte{0x00, 0x00, 0x00, 0x03}
+
+const (
+	currentVersion = 0x100 // WAS: []byte{0x00, 0x00, 0x00, 0x03}
+)
 
 // holds the database handle
 var poolData struct {
 	sync.RWMutex
-	database *leveldb.DB
+	dbBlocks *leveldb.DB
+	dbIndex  *leveldb.DB
 }
+
+const (
+	ReadOnly  = true
+	ReadWrite = false
+)
 
 // open up the database connection
 //
-// this must be called before any pool.New() is created
-func Initialise(database string) error {
+// this must be called before any pool is accessed
+func Initialise(database string, readOnly bool) (bool, error) {
 	poolData.Lock()
 	defer poolData.Unlock()
 
-	if nil != poolData.database {
-		return fault.ErrAlreadyInitialised
+	ok := false
+	mustReindex := false
+
+	if nil != poolData.dbBlocks {
+		return mustReindex, fault.ErrAlreadyInitialised
 	}
 
-	db, err := leveldb.RecoverFile(database, nil)
-	// db, err := leveldb.OpenFile(database, nil)
-	if nil != err {
-		return err
-	}
-
-	poolData.database = db
-
-	// ensure that the database is compatible
-	versionValue, err := poolData.database.Get(versionKey, nil)
-	if leveldb.ErrNotFound == err {
-		err = poolData.database.Put(versionKey, currentVersion, nil)
-		if nil != err {
-			return err
+	defer func() {
+		if !ok {
+			dbClose()
 		}
-	} else if nil != err {
-		return err
-	} else if !bytes.Equal(versionValue, currentVersion) {
-		return fmt.Errorf("incompatible database version: expected: 0x%x  actual: 0x%x", currentVersion, versionValue)
+	}()
+
+	legacyDatabase := database + ".leveldb"
+
+	blocksDatabase := database + "-blocks.leveldb"
+	indexDatabase := database + "-index.leveldb"
+
+	db, blocksVersion, err := getDB(blocksDatabase)
+	if nil != err {
+		return mustReindex, err
+	}
+	poolData.dbBlocks = db
+
+	// ensure no database downgrade
+	if blocksVersion > currentVersion {
+		logger.Criticalf("block database version: %d > current version: %d", blocksVersion, currentVersion)
+		return mustReindex, fmt.Errorf("block database version: %d > current version: %d", blocksVersion, currentVersion)
+	}
+
+	db, indexVersion, err := getDB(indexDatabase)
+	if nil != err {
+		return mustReindex, err
+	}
+	poolData.dbIndex = db
+
+	// ensure no database downgrade
+	if indexVersion > currentVersion {
+		logger.Criticalf("index database version: %d > current version: %d", indexVersion, currentVersion)
+		return mustReindex, fmt.Errorf("index database version: %d > current version: %d", indexVersion, currentVersion)
+	}
+
+	// prevent readOnly from modifying the database
+	if readOnly && (blocksVersion != currentVersion || indexVersion != currentVersion) {
+		logger.Criticalf("database is inconsistent: blocks: %d  index: %d  current: %d", blocksVersion, indexVersion, currentVersion)
+		return mustReindex, fmt.Errorf("database is inconsistent: blocks: %d  index: %d  current: %d", blocksVersion, indexVersion, currentVersion)
+	}
+
+	if 0 < blocksVersion && blocksVersion < currentVersion {
+
+		// fail if block database is too old
+		// this will be replaced by the appropriate migration code
+		// if the format of blocks needs to be changed in the future
+
+		logger.Criticalf("no migration for block database version: %d", blocksVersion)
+		logger.Criticalf("block database version: %d < current version: %d", blocksVersion, currentVersion)
+		return mustReindex, fmt.Errorf("block database version: %d < current version: %d", blocksVersion, currentVersion)
+
+	} else if 0 == blocksVersion && util.EnsureFileExists(legacyDatabase) {
+
+		mustReindex = true
+		logger.Critical("legacy migration starting…")
+		// have a legacy database and the blocks database was newly created or empty
+		mustReindex := true
+		dbLegacy, err := leveldb.RecoverFile(legacyDatabase, nil)
+		if nil != err {
+			return mustReindex, err
+		}
+
+		allBlocksRange := ldb_util.Range{
+			Start: []byte{'B'}, // Start of key range, included in the range
+			Limit: []byte{'C'}, // Limit of key range, excluded from the range
+		}
+		iter := dbLegacy.NewIterator(&allBlocksRange, nil)
+	copy_blocks:
+		for iter.Next() {
+			key := iter.Key()
+			value := iter.Value()
+
+			err = poolData.dbBlocks.Put(key, value, nil)
+			if nil != err {
+				logger.Criticalf("copy block key: %x  error: %s", key, err)
+				break copy_blocks // not return to ensure iter is released
+			}
+		}
+		iter.Release()
+		if nil == err { // only check iter error if all "Put"s above return nil
+			err = iter.Error()
+		}
+		if err != nil {
+			// either put error or iter error
+			return mustReindex, err
+		}
+		err = putVersion(poolData.dbBlocks, currentVersion)
+		if err != nil {
+			return mustReindex, err
+		}
+	} else if 0 == blocksVersion {
+
+		// database was empty so tag as current version
+		err = putVersion(poolData.dbBlocks, currentVersion)
+		if err != nil {
+			return mustReindex, err
+		}
+	}
+
+	// see if index need to be created or deleted and re-created
+	if mustReindex || indexVersion < currentVersion {
+
+		mustReindex = true
+
+		// close out current index
+		poolData.dbIndex.Close()
+		poolData.dbIndex = nil
+
+		logger.Criticalf("drop index database: %s", indexDatabase)
+
+		// erase the index completely
+		err = os.RemoveAll(indexDatabase)
+		if nil != err {
+			return mustReindex, err
+		}
+
+		// generate an empty index database
+		poolData.dbIndex, _, err = getDB(indexDatabase)
+		if nil != err {
+			return mustReindex, err
+		}
+
 	}
 
 	// this will be a struct type
@@ -100,7 +218,7 @@ func Initialise(database string) error {
 
 		prefixTag := fieldInfo.Tag.Get("prefix")
 		if 1 != len(prefixTag) {
-			return fmt.Errorf("pool: %v  has invalid prefix: %q", fieldInfo, prefixTag)
+			return mustReindex, fmt.Errorf("pool: %v  has invalid prefix: %q", fieldInfo, prefixTag)
 		}
 
 		prefix := prefixTag[0]
@@ -109,16 +227,40 @@ func Initialise(database string) error {
 			limit = []byte{prefix + 1}
 		}
 
+		db := poolData.dbIndex
+		switch dbName := fieldInfo.Tag.Get("database"); dbName {
+		case "blocks":
+			db = poolData.dbBlocks
+		case "index":
+			db = poolData.dbIndex
+		default:
+			return mustReindex, fmt.Errorf("pool: %v  has invalid database: %q", fieldInfo, dbName)
+		}
+
 		p := &PoolHandle{
-			prefix: prefix,
-			limit:  limit,
+			prefix:   prefix,
+			limit:    limit,
+			database: db,
 		}
 		newPool := reflect.ValueOf(p)
 
 		poolValue.Field(i).Set(newPool)
 	}
 
-	return nil
+	ok = true // prevent db close
+	return mustReindex, nil
+}
+
+func dbClose() {
+	if nil != poolData.dbIndex {
+		poolData.dbIndex.Close()
+		poolData.dbIndex = nil
+	}
+	if nil != poolData.dbBlocks {
+		poolData.dbBlocks.Close()
+		poolData.dbBlocks = nil
+	}
+
 }
 
 // close the database connection
@@ -126,15 +268,14 @@ func Finalise() {
 	poolData.Lock()
 	defer poolData.Unlock()
 
-	// no need to stop if already stopped
-	if nil == poolData.database {
-		return
-	}
+	dbClose()
+}
 
-	poolData.database.Close()
-	poolData.database = nil
-
-	return
+// called at the end of reindex
+func ReindexDone() error {
+	poolData.Lock()
+	defer poolData.Unlock()
+	return putVersion(poolData.dbIndex, currentVersion)
 }
 
 // prepend the prefix onto the key
@@ -148,18 +289,19 @@ func (p *PoolHandle) prefixKey(key []byte) []byte {
 func (p *PoolHandle) Put(key []byte, value []byte, extra ...[]byte) {
 	poolData.RLock()
 	defer poolData.RUnlock()
-	if nil == poolData.database {
+	if nil == p.database {
+		logger.Panic("pool.Put nil database")
 		return
 	}
 	if 0 == len(extra) {
-		err := poolData.database.Put(p.prefixKey(key), value, nil)
+		err := p.database.Put(p.prefixKey(key), value, nil)
 		logger.PanicIfError("pool.Put (single)", err)
 	} else {
 		data := value
 		for _, d := range extra {
 			data = append(data, d...)
 		}
-		err := poolData.database.Put(p.prefixKey(key), data, nil)
+		err := p.database.Put(p.prefixKey(key), data, nil)
 		logger.PanicIfError("pool.Put (multiple)", err)
 	}
 }
@@ -168,7 +310,7 @@ func (p *PoolHandle) Put(key []byte, value []byte, extra ...[]byte) {
 func (p *PoolHandle) Delete(key []byte) {
 	poolData.RLock()
 	defer poolData.RUnlock()
-	err := poolData.database.Delete(p.prefixKey(key), nil)
+	err := p.database.Delete(p.prefixKey(key), nil)
 	logger.PanicIfError("pool.Delete", err)
 }
 
@@ -178,10 +320,10 @@ func (p *PoolHandle) Delete(key []byte) {
 func (p *PoolHandle) Get(key []byte) []byte {
 	poolData.RLock()
 	defer poolData.RUnlock()
-	if nil == poolData.database {
+	if nil == p.database {
 		return nil
 	}
-	value, err := poolData.database.Get(p.prefixKey(key), nil)
+	value, err := p.database.Get(p.prefixKey(key), nil)
 	if leveldb.ErrNotFound == err {
 		return nil
 	}
@@ -204,28 +346,28 @@ func (p *PoolHandle) GetSplit2(key []byte, firstLength int) ([]byte, []byte) {
 func (p *PoolHandle) Has(key []byte) bool {
 	poolData.RLock()
 	defer poolData.RUnlock()
-	if nil == poolData.database {
+	if nil == p.database {
 		return false
 	}
-	value, err := poolData.database.Has(p.prefixKey(key), nil)
+	value, err := p.database.Has(p.prefixKey(key), nil)
 	logger.PanicIfError("pool.Has", err)
 	return value
 }
 
 // get the last element in a pool
 func (p *PoolHandle) LastElement() (Element, bool) {
-	maxRange := util.Range{
+	maxRange := ldb_util.Range{
 		Start: []byte{p.prefix}, // Start of key range, included in the range
 		Limit: p.limit,          // Limit of key range, excluded from the range
 	}
 
 	poolData.RLock()
 	defer poolData.RUnlock()
-	if nil == poolData.database {
+	if nil == p.database {
 		return Element{}, false
 	}
 
-	iter := poolData.database.NewIterator(&maxRange, nil)
+	iter := p.database.NewIterator(&maxRange, nil)
 
 	found := false
 	result := Element{}
@@ -250,4 +392,35 @@ func (p *PoolHandle) LastElement() (Element, bool) {
 	err := iter.Error()
 	logger.PanicIfError("pool.LastElement", err)
 	return result, found
+}
+
+func getDB(name string) (*leveldb.DB, int, error) {
+	db, err := leveldb.RecoverFile(name, nil)
+	if nil != err {
+		return nil, 0, err
+	}
+
+	versionValue, err := db.Get(versionKey, nil)
+	if leveldb.ErrNotFound == err {
+		return db, 0, nil
+	} else if nil != err {
+		db.Close()
+		return nil, 0, err
+	}
+
+	if 4 != len(versionValue) {
+		db.Close()
+		return nil, 0, fmt.Errorf("incompatible database version length: expected: %d  actual: %d", 4, len(versionValue))
+	}
+
+	version := int(binary.BigEndian.Uint32(versionValue))
+	return db, version, nil
+}
+
+func putVersion(db *leveldb.DB, version int) error {
+
+	currentVersion := make([]byte, 4)
+	binary.BigEndian.PutUint32(currentVersion, uint32(version))
+
+	return db.Put(versionKey, currentVersion, nil)
 }

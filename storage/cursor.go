@@ -45,13 +45,11 @@ func (cursor *FetchCursor) Fetch(count int) ([]Element, error) {
 		return nil, fault.ErrInvalidCount
 	}
 
-	poolData.RLock()
-	defer poolData.RUnlock()
-	if nil == poolData.database {
+	if nil == cursor.pool.database {
 		return nil, nil
 	}
 
-	iter := poolData.database.NewIterator(&cursor.maxRange, nil)
+	iter := cursor.pool.database.NewIterator(&cursor.maxRange, nil)
 
 	results := make([]Element, 0, count)
 	n := 0
@@ -92,4 +90,43 @@ iterating:
 		copy(cursor.maxRange.Start[1:], b.SetBytes(results[n-1].Key).Add(&b, one).Bytes())
 	}
 	return results, err
+}
+
+// map a function over all elements in the range
+func (cursor *FetchCursor) Map(f func(key []byte, value []byte) error) error {
+	if nil == cursor {
+		return fault.ErrInvalidCursor
+	}
+
+	if nil == cursor.pool.database {
+		return nil
+	}
+
+	iter := cursor.pool.database.NewIterator(&cursor.maxRange, nil)
+
+	var err error
+iterating:
+	for iter.Next() {
+
+		// contents of the returned slice must not be modified, and are
+		// only valid until the next call to Next
+		key := iter.Key()
+		value := iter.Value()
+
+		dataKey := make([]byte, len(key)-1) // strip the prefix
+		copy(dataKey, key[1:])              // ...
+
+		dataValue := make([]byte, len(value))
+		copy(dataValue, value)
+
+		err = f(dataKey, dataValue)
+		if nil != err {
+			break iterating
+		}
+	}
+	iter.Release()
+	if nil == err {
+		err = iter.Error()
+	}
+	return err
 }
