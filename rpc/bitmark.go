@@ -5,7 +5,6 @@
 package rpc
 
 import (
-	"encoding/binary"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
@@ -134,7 +133,7 @@ func (bitmark *Bitmark) Provenance(arguments *ProvenanceArguments, reply *Proven
 loop:
 	for i := 0; i < count; i += 1 {
 
-		inBlockBuffer, packed := storage.Pool.Transactions.GetSplit2(id[:], 8)
+		inBlock, packed := storage.Pool.Transactions.GetNB(id[:])
 		if nil == packed {
 			break loop
 		}
@@ -143,8 +142,6 @@ loop:
 		if nil != err {
 			break loop
 		}
-
-		inBlock := binary.BigEndian.Uint64(inBlockBuffer)
 
 		record, _ := transactionrecord.RecordName(transaction)
 		h := ProvenanceRecord{

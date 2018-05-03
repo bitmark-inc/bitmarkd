@@ -17,28 +17,37 @@ import (
 
 // test database file
 const (
-	databaseFileName = "test.leveldb"
+	testingDirName   = "testing"
+	databaseFileName = testingDirName + "/test"
 )
 
 // common test setup routines
 
 // remove all files created by test
 func removeFiles() {
-	os.RemoveAll(databaseFileName)
-	os.RemoveAll("test.log")
+	os.RemoveAll(testingDirName)
 }
 
 // configure for testing
 func setup(t *testing.T, theChain ...string) {
 
 	removeFiles()
+	os.Mkdir(testingDirName, 0700)
 
-	logger.Initialise(logger.Configuration{
-		Directory: ".",
-		File:      "test.log",
-		Size:      50000,
+	logging := logger.Configuration{
+		Directory: testingDirName,
+		File:      "testing.log",
+		Size:      1048576,
 		Count:     10,
-	})
+		Console:   false,
+		Levels: map[string]string{
+			logger.DefaultTag: "critical",
+		},
+	}
+	// start logging
+	if err := logger.Initialise(logging); nil != err {
+		panic("logger setup failed: " + err.Error())
+	}
 
 	if len(theChain) >= 1 {
 		mode.Initialise(theChain[0])
@@ -46,13 +55,20 @@ func setup(t *testing.T, theChain ...string) {
 		mode.Initialise(chain.Bitmark)
 	}
 
-	err := storage.Initialise(databaseFileName)
+	// open database
+	mustReindex, err := storage.Initialise(databaseFileName, false)
 	if nil != err {
 		t.Fatalf("storage initialise error: %s", err)
 	}
+	if mustReindex {
+		err := storage.ReindexDone()
+		if nil != err {
+			t.Fatalf("storage reindex done error: %s", err)
+		}
+	}
 
-	// need to initialise block befor any tests can be performed
-	err = block.Initialise()
+	// need to initialise block before any tests can be performed
+	err = block.Initialise(false)
 	if nil != err {
 		t.Fatalf("block initialise error: %s", err)
 	}

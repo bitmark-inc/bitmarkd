@@ -125,7 +125,7 @@ type verifiedInfo struct {
 func verifyTransfer(newTransfer transactionrecord.BitmarkTransfer) (*verifiedInfo, bool, error) {
 
 	// find the current owner via the link
-	_, previousPacked := storage.Pool.Transactions.GetSplit2(newTransfer.GetLink().Bytes(), 8)
+	_, previousPacked := storage.Pool.Transactions.GetNB(newTransfer.GetLink().Bytes())
 	if nil == previousPacked {
 		return nil, false, fault.ErrLinkToInvalidOrUnconfirmedTransaction
 	}

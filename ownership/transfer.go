@@ -185,7 +185,7 @@ func CreateBlock(issueTxId merkle.Digest, blockNumber uint64, newOwner *account.
 // find the owner of a specific transaction
 func OwnerOf(txId merkle.Digest) *account.Account {
 
-	_, packed := storage.Pool.Transactions.GetSplit2(txId[:], 8) // drop block number
+	_, packed := storage.Pool.Transactions.GetNB(txId[:]) // drop block number
 	if nil == packed {
 		return nil
 	}

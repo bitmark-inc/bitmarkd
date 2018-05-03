@@ -5,7 +5,6 @@
 package rpc
 
 import (
-	"encoding/binary"
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
@@ -109,12 +108,10 @@ func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitm
 
 		log.Debugf("txId: %v", txId)
 
-		inBlockBuffer, transaction := storage.Pool.Transactions.GetSplit2(txId[:], 8)
+		inBlock, transaction := storage.Pool.Transactions.GetNB(txId[:])
 		if nil == transaction {
 			return fault.ErrLinkToInvalidOrUnconfirmedTransaction
 		}
-
-		inBlock := binary.BigEndian.Uint64(inBlockBuffer)
 
 		tx, _, err := transactionrecord.Packed(transaction).Unpack(mode.IsTesting())
 		if nil != err {

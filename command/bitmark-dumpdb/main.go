@@ -145,25 +145,38 @@ func main() {
 	poolValue := reflect.ValueOf(storage.Pool)
 
 	// the handle
-	p := (*storage.PoolHandle)(nil)
+	//p := (*storage.PoolHandle)(nil)
 	// write access to p as a Value
-	pvalue := reflect.ValueOf(&p).Elem()
+	//pvalue := reflect.ValueOf(&p).Elem()
 
 	// scan each field to locate tag
+	var p reflect.Value
 	for i := 0; i < poolType.NumField(); i += 1 {
 		fieldInfo := poolType.Field(i)
 		prefixTag := fieldInfo.Tag.Get("prefix")
 		if tag == prefixTag {
-			pvalue.Set(poolValue.Field(i))
+			//pvalue.Set(poolValue.Field(i))
+			p = poolValue.Field(i)
 		}
 
 	}
-	if nil == p {
+	if p.IsNil() {
 		exitwithstatus.Message("%s: no pool corresponding to: %q\n", program, tag)
 	}
 
 	// dump the items as hex
-	cursor := p.NewFetchCursor()
+	cf := p.MethodByName("NewFetchCursor")
+	if !cf.IsValid() {
+		exitwithstatus.Message("%s: no curors access corresponding to: %q\n", program, tag)
+	}
+
+	//cursor := p.NewFetchCursor()
+
+	cursor := (*storage.FetchCursor)(nil)
+	// write access to p as a Value
+	cValue := reflect.ValueOf(&cursor).Elem()
+	cValue.Set(cf.Call(nil)[0])
+
 	if len(prefix) > 0 {
 		cursor.Seek(prefix)
 	}
@@ -221,7 +234,12 @@ print_loop:
 				switch strings.ToLower(response) {
 
 				case "y", "yes":
-					p.Delete(e.Key)
+					//p.Delete(e.Key)
+					deleteRecord := p.MethodByName("Delete")
+					if !deleteRecord.IsValid() {
+						exitwithstatus.Message("%s: no Delete method corresponding to: %q\n", program, tag)
+					}
+					deleteRecord.Call([]reflect.Value{reflect.ValueOf(e.Key)})
 					fmt.Printf("%d: %s***DELETED: %s%x%s\n", i, cd3, cd4, e.Key, ce)
 					break delete_loop
 

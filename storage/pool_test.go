@@ -56,7 +56,7 @@ func TestPool(t *testing.T) {
 
 	// check that restarting database keeps data
 	storage.Finalise()
-	storage.Initialise(databaseFileName)
+	storage.Initialise(databaseFileName, false)
 	checkAgain(t, false)
 }
 

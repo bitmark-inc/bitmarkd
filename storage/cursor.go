@@ -28,6 +28,11 @@ func (p *PoolHandle) NewFetchCursor() *FetchCursor {
 	}
 }
 
+// initialise a cursor to the start of a key range
+func (p *PoolNB) NewFetchCursor() *FetchCursor {
+	return p.pool.NewFetchCursor()
+}
+
 func (cursor *FetchCursor) Seek(key []byte) *FetchCursor {
 	cursor.maxRange.Start = cursor.pool.prefixKey(key)
 	return cursor
