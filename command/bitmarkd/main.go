@@ -169,15 +169,6 @@ func main() {
 	}
 	defer cache.Finalise()
 
-	// start the reservoir (verified transaction data cache)
-	log.Info("initialise reservoir")
-	err = reservoir.Initialise(masterConfiguration.ReservoirDataFile)
-	if nil != err {
-		log.Criticalf("reservoir initialise error: %s", err)
-		exitwithstatus.Message("reservoir initialise error: %s", err)
-	}
-	defer reservoir.Finalise()
-
 	// start asset cache
 	err = asset.Initialise()
 	if nil != err {
@@ -185,6 +176,15 @@ func main() {
 		exitwithstatus.Message("asset initialise error: %s", err)
 	}
 	defer asset.Finalise()
+
+	// start the reservoir (verified transaction data cache)
+	log.Info("initialise reservoir")
+	err = reservoir.Initialise(masterConfiguration.ReservoirFile)
+	if nil != err {
+		log.Criticalf("reservoir initialise error: %s", err)
+		exitwithstatus.Message("reservoir initialise error: %s", err)
+	}
+	defer reservoir.Finalise()
 
 	// block hash ring buffer
 	log.Info("initialise blockring")

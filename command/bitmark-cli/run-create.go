@@ -47,6 +47,7 @@ func runCreate(c *cli.Context) error {
 		fmt.Fprintf(m.e, "assetName: %q\n", assetName)
 		fmt.Fprintf(m.e, "fingerprint: %q\n", fingerprint)
 		fmt.Fprintf(m.e, "metadata:\n")
+		fmt.Fprintf(m.e, "no-payment: %t\n", c.Bool("no-payment"))
 		splitMeta := strings.Split(metadata, "\u0000")
 		for i := 0; i < len(splitMeta); i += 2 {
 			fmt.Fprintf(m.e, "  %q: %q\n", splitMeta[i], splitMeta[i+1])
@@ -108,9 +109,10 @@ func runCreate(c *cli.Context) error {
 
 	// make Issues
 	issueConfig := &rpccalls.IssueData{
-		Issuer:     assetConfig.Registrant,
-		AssetIndex: assetIndex,
-		Quantity:   assetConfig.Quantity,
+		Issuer:        assetConfig.Registrant,
+		AssetIndex:    assetIndex,
+		Quantity:      assetConfig.Quantity,
+		PreferPayment: !c.Bool("no-payment"),
 	}
 	response, err := client.Issue(issueConfig)
 	if nil != err {

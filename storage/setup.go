@@ -24,7 +24,7 @@ type pools struct {
 	Blocks            *PoolHandle `prefix:"B" database:"blocks"`
 	BlockOwnerPayment *PoolHandle `prefix:"H" database:"index"`
 	BlockOwnerTxIndex *PoolHandle `prefix:"I" database:"index"`
-	Assets            *PoolHandle `prefix:"A" database:"index"`
+	Assets            *PoolNB     `prefix:"A" database:"index"`
 	Transactions      *PoolNB     `prefix:"T" database:"index"`
 	OwnerCount        *PoolHandle `prefix:"N" database:"index"`
 	Ownership         *PoolHandle `prefix:"K" database:"index"`

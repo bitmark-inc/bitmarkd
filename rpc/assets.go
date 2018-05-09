@@ -102,7 +102,7 @@ loop:
 		assetIndex := transactionrecord.NewAssetIndex([]byte(fingerprint))
 
 		confirmed := true
-		packedAsset := storage.Pool.Assets.Get(assetIndex[:])
+		_, packedAsset := storage.Pool.Assets.GetNB(assetIndex[:])
 		if nil == packedAsset {
 
 			confirmed = false

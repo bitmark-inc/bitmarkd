@@ -76,6 +76,8 @@ func StoreTransfer(transfer transactionrecord.BitmarkTransfer) (*TransferInfo, b
 		txIds:        []merkle.Digest{txId},
 		links:        []merkle.Digest{link},
 		transactions: [][]byte{packedTransfer},
+		assetIds:     nil,
+		nonce:        nil,
 	}
 
 	// already received the payment for the transfer

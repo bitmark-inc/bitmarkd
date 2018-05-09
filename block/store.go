@@ -245,7 +245,7 @@ func StoreIncoming(packedBlock []byte) error {
 			assetIndex := tx.AssetIndex()
 			asset.Delete(assetIndex) // delete from pending cache
 			if !storage.Pool.Assets.Has(assetIndex[:]) {
-				storage.Pool.Assets.Put(assetIndex[:], item.packed)
+				storage.Pool.Assets.Put(assetIndex[:], blockNumberKey, item.packed)
 			}
 
 		case *transactionrecord.BitmarkIssue:

@@ -146,6 +146,10 @@ func main() {
 					Value: "1",
 					Usage: " quantity to create `COUNT`",
 				},
+				cli.BoolFlag{
+					Name:  "no-payment, n",
+					Usage: "always use proof method",
+				},
 			},
 			Action: runCreate,
 		},

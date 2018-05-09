@@ -12,6 +12,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/cache"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/genesis"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/pay"
@@ -32,6 +33,7 @@ type IssueInfo struct {
 	Difficulty *difficulty.Difficulty
 	TxIds      []merkle.Digest
 	Packed     []byte
+	Payments   []transactionrecord.PaymentAlternative
 }
 
 // store packed record(s) in the Unverified table
@@ -41,7 +43,7 @@ type IssueInfo struct {
 // for duplicate to be true all transactions must all match exactly to a
 // previous set - this is to allow for multiple submission from client
 // without receiving a duplicate transaction error
-func StoreIssues(issues []*transactionrecord.BitmarkIssue, isVerified bool) (*IssueInfo, bool, error) {
+func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, error) {
 
 	count := len(issues)
 	if count > maximumIssues {
@@ -55,8 +57,9 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue, isVerified bool) (*Is
 
 	// all the tx id corresponding to separated
 	txIds := make([]merkle.Digest, count)
-	// all the assets id corresponding to separated
-	assetIds := make([]transactionrecord.AssetIndex, count)
+
+	// deduplicated list of assets
+	uniqueAssetIds := make(map[transactionrecord.AssetIndex]struct{})
 
 	// this flags already stored issues
 	// used to flag an error if pay id is different
@@ -100,26 +103,8 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue, isVerified bool) (*Is
 
 		// accumulate the data
 		txIds[i] = txId
-		assetIds[i] = issue.AssetIndex
+		uniqueAssetIds[issue.AssetIndex] = struct{}{}
 		separated[i] = packedIssue
-
-		// this length of the verified issues should be exactly one
-		// the verified issue will be stored directly
-		if len(issues) == 1 && !duplicate && isVerified {
-			transactions := [][]byte{packedIssue[:]}
-
-			v := &verifiedItem{
-				itemData: &itemData{
-					txIds:        txIds,
-					links:        nil,
-					assetIds:     assetIds,
-					transactions: transactions,
-				},
-				transaction: packedIssue,
-			}
-			cache.Pool.VerifiedTx.Put(txId.String(), v)
-			return nil, false, nil
-		}
 	}
 
 	// compute pay id
@@ -133,6 +118,7 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue, isVerified bool) (*Is
 		Difficulty: difficulty,
 		TxIds:      txIds,
 		Packed:     bytes.Join(separated, []byte{}),
+		Payments:   nil,
 	}
 
 	// if already seen just return pay id
@@ -150,6 +136,48 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue, isVerified bool) (*Is
 
 	globalData.log.Infof("creating pay id: %s", payId)
 
+	// check for single asset being issued
+	assetBlockNumber := uint64(0)
+scan_for_one_asset:
+	for _, issue := range issues {
+		bn, t := storage.Pool.Assets.GetNB(issue.AssetIndex[:])
+		if nil == t || 0 == bn {
+			assetBlockNumber = 0     // cannot determine a single payment block
+			break scan_for_one_asset // because of unconfirmed asset
+		} else if 0 == assetBlockNumber {
+			assetBlockNumber = bn // block number of asset
+		} else if assetBlockNumber != bn {
+			assetBlockNumber = 0     // cannot determin a single payment block
+			break scan_for_one_asset // because of multiple assets
+		}
+	}
+
+	if assetBlockNumber > genesis.BlockNumber { // avoid genesis block
+
+		blockNumberKey := make([]byte, 8)
+		binary.BigEndian.PutUint64(blockNumberKey, assetBlockNumber)
+
+		p := getPayment(blockNumberKey)
+		if nil == p { // would be an internal database error
+			globalData.log.Errorf("missing payment for asset id: %s", issues[0].AssetIndex)
+			return nil, false, fault.ErrAssetNotFound
+		}
+
+		result.Payments = make([]transactionrecord.PaymentAlternative, 0, len(p))
+		// multiply fees for each currency
+		for _, r := range p {
+			total := r.Amount * uint64(len(txIds))
+			pa := transactionrecord.PaymentAlternative{
+				&transactionrecord.Payment{
+					Currency: r.Currency,
+					Address:  r.Address,
+					Amount:   total,
+				},
+			}
+			result.Payments = append(result.Payments, pa)
+		}
+	}
+
 	// create index entries
 	for _, txId := range txIds {
 		cache.Pool.UnverifiedTxIndex.Put(txId.String(), payId)
@@ -160,14 +188,14 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue, isVerified bool) (*Is
 		itemData: &itemData{
 			txIds:        txIds,
 			links:        nil,
-			assetIds:     assetIds,
+			assetIds:     uniqueAssetIds,
 			transactions: separated,
+			nonce:        nil,
 		},
-		nonce:      nonce, // ***** FIX THIS: this value seems not used
+		//nonce:      nonce, // ***** FIX THIS: this value seems not used
 		difficulty: difficulty,
+		payments:   result.Payments,
 	}
-	//copy(entry.txIds, txIds)
-	//copy(entry.transactions, transactions)
 
 	cache.Pool.UnverifiedTxEntries.Put(payId.String(), entry)
 
@@ -178,16 +206,13 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue, isVerified bool) (*Is
 func TryProof(payId pay.PayId, clientNonce []byte) TrackingStatus {
 	val, ok := cache.Pool.UnverifiedTxEntries.Get(payId.String())
 
-	//	r, done, ok := get(payId)
 	if !ok {
 		globalData.log.Debugf("TryProof: issue item not found")
 		return TrackingNotFound
 	}
 
 	r := val.(*unverifiedItem)
-	// if done {
-	// 	return TrackingProcessed
-	// }
+
 	if nil == r.difficulty { // only payment tracking; proof not allowed
 		globalData.log.Debugf("TryProof: item with out a difficulty")
 		return TrackingInvalid
@@ -226,7 +251,7 @@ func TryProof(payId pay.PayId, clientNonce []byte) TrackingStatus {
 		// check difficulty and verify if ok
 		if bigDigest.Cmp(bigDifficulty) <= 0 {
 			globalData.log.Debugf("TryProof: success: pay id: %s", payId)
-			setVerified(payId, nil)
+			setVerified(payId, nil, clientNonce)
 			return TrackingAccepted
 		}
 	}

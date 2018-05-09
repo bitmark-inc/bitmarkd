@@ -36,14 +36,6 @@ type IssueStatus struct {
 	TxId merkle.Digest `json:"txId"`
 }
 
-type BitmarksIssueReply struct {
-	Issues     []IssueStatus      `json:"issues"`
-	PayId      pay.PayId          `json:"payId"`
-	PayNonce   reservoir.PayNonce `json:"payNonce"`
-	Difficulty string             `json:"difficulty"`
-	//PaymentAlternatives []block.MinerAddress `json:"paymentAlternatives"`// ***** FIX THIS: where to get addresses?
-}
-
 // Bitmarks create
 // --------------
 
@@ -53,13 +45,12 @@ type CreateArguments struct {
 }
 
 type CreateReply struct {
-	Assets     []AssetStatus      `json:"assets"`
-	Issues     []IssueStatus      `json:"issues"`
-	PayId      pay.PayId          `json:"payId"`
-	PayNonce   reservoir.PayNonce `json:"payNonce"`
-	Difficulty string             `json:"difficulty"`
-	//PaymentAlternatives []block.MinerAddress `json:"paymentAlternatives"`// ***** FIX THIS: where to get addresses?
-
+	Assets     []AssetStatus                                   `json:"assets"`
+	Issues     []IssueStatus                                   `json:"issues"`
+	PayId      pay.PayId                                       `json:"payId"`
+	PayNonce   reservoir.PayNonce                              `json:"payNonce"`
+	Difficulty string                                          `json:"difficulty"`
+	Payments   map[string]transactionrecord.PaymentAlternative `json:"payments,omitempty"`
 }
 
 func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply) error {
@@ -93,7 +84,7 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 	var stored *reservoir.IssueInfo
 	duplicate := false
 	if issueCount > 0 {
-		stored, duplicate, err = reservoir.StoreIssues(arguments.Issues, false)
+		stored, duplicate, err = reservoir.StoreIssues(arguments.Issues)
 		if nil != err {
 			return err
 		}
@@ -120,6 +111,14 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 		result.PayId = stored.Id
 		result.PayNonce = stored.Nonce
 		result.Difficulty = stored.Difficulty.GoString()
+		if nil != stored.Payments {
+			result.Payments = make(map[string]transactionrecord.PaymentAlternative)
+
+			for _, payment := range stored.Payments {
+				c := payment[0].Currency.String()
+				result.Payments[c] = payment
+			}
+		}
 
 		// announce transaction block to other peers
 		if !duplicate {

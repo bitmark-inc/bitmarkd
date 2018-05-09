@@ -21,16 +21,17 @@ import (
 
 type itemData struct {
 	txIds        []merkle.Digest
-	links        []merkle.Digest                // links[i] corresponds to txIds[i]
-	assetIds     []transactionrecord.AssetIndex // asset[i] index corresponds to txIds[i]
-	transactions [][]byte                       // transactions[i] corresponds to txIds[i]
+	links        []merkle.Digest                           // links[i] corresponds to txIds[i]
+	assetIds     map[transactionrecord.AssetIndex]struct{} // unique asset ids extracted from all issues, nil for transfers
+	transactions [][]byte                                  // transactions[i] corresponds to txIds[i]
+	nonce        []byte                                    // only issues, client nonce from successful try proof RPC
 }
 
 type unverifiedItem struct {
 	*itemData
-	nonce      PayNonce                               // only for issues
+	//payNonce      PayNonce                            // only for issues
 	difficulty *difficulty.Difficulty                 // only for issues
-	payments   []transactionrecord.PaymentAlternative // currently only for transfers
+	payments   []transactionrecord.PaymentAlternative // issue(s) for single asset or one transfer
 }
 
 type verifiedItem struct {
@@ -145,16 +146,22 @@ func TransactionStatus(txId merkle.Digest) TransactionState {
 }
 
 // move transaction(s) to verified cache
-func setVerified(payId pay.PayId, detail *PaymentDetail) bool {
+func setVerified(payId pay.PayId, detail *PaymentDetail, nonce []byte) bool {
 	val, ok := cache.Pool.UnverifiedTxEntries.Get(payId.String())
 	if ok {
 		entry := val.(*unverifiedItem)
 
 		if nil != detail {
 			globalData.log.Infof("detail: currency: %s, amounts: %#v", detail.Currency, detail.Amounts)
+		} else if nil != nonce && len(nonce) > 0 {
+			globalData.log.Infof("nonce: %x", nonce)
+		} else {
+			globalData.log.Warn("neither payment nor nonce provided")
+			return false
 		}
 
-		if nil != entry.payments {
+		// payment is preferred
+		if nil != detail && nil != entry.payments {
 			if !acceptablePayment(detail, entry.payments) {
 				globalData.log.Warnf("failed check for txid: %s  payid: %s", detail.TxID, payId)
 				return false
@@ -162,7 +169,7 @@ func setVerified(payId pay.PayId, detail *PaymentDetail) bool {
 			globalData.log.Infof("paid txid: %s  payid: %s", detail.TxID, payId)
 		}
 
-		var filter ProofFilter
+		entry.itemData.nonce = nonce
 
 		for i, txId := range entry.txIds {
 			v := &verifiedItem{
@@ -173,13 +180,11 @@ func setVerified(payId pay.PayId, detail *PaymentDetail) bool {
 			if nil != entry.links {
 				v.link = entry.links[i]
 			}
-			filter.Add(entry.transactions[i])
 
 			cache.Pool.VerifiedTx.Put(txId.String(), v)
 			cache.Pool.UnverifiedTxIndex.Delete(txId.String())
 		}
 
-		cache.Pool.ProofFilters.Put(payId.String(), filter)
 		cache.Pool.UnverifiedTxEntries.Delete(payId.String())
 	}
 
@@ -211,7 +216,7 @@ next_currency:
 func SetTransferVerified(payId pay.PayId, detail *PaymentDetail) {
 	globalData.log.Infof("txid: %s  payid: %s", detail.TxID, payId)
 
-	if !setVerified(payId, detail) {
+	if !setVerified(payId, detail, nil) {
 		globalData.log.Debugf("orphan payment: txid: %s  payid: %s", detail.TxID, payId)
 		cache.Pool.OrphanPayment.Put(payId.String(), detail)
 	}

@@ -15,7 +15,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
-	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 )
 
@@ -199,12 +198,7 @@ func processIssues(packed, verified []byte) error {
 		return fault.ErrMissingParameters
 	}
 
-	isVerified := false
-	if v, _ := util.FromVarint64(verified); v == 1 {
-		isVerified = true
-	}
-
-	_, duplicate, err := reservoir.StoreIssues(issues, isVerified)
+	_, duplicate, err := reservoir.StoreIssues(issues)
 	if nil != err {
 		return err
 	}

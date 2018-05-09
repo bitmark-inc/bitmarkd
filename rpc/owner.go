@@ -153,7 +153,7 @@ asset_loop:
 			continue asset_loop
 		}
 
-		transaction := storage.Pool.Assets.Get(assetIndex[:])
+		_, transaction := storage.Pool.Assets.GetNB(assetIndex[:])
 		if nil == transaction {
 			return fault.ErrAssetNotFound
 		}

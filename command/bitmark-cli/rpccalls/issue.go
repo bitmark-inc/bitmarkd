@@ -26,20 +26,23 @@ var (
 )
 
 type IssueData struct {
-	Issuer     *keypair.KeyPair
-	AssetIndex *transactionrecord.AssetIndex
-	Quantity   int
+	Issuer        *keypair.KeyPair
+	AssetIndex    *transactionrecord.AssetIndex
+	Quantity      int
+	PreferPayment bool
 }
 
 // JSON data to output after asset/issue/proof completes
 type IssueReply struct {
-	AssetId        transactionrecord.AssetIndex `json:"assetId"`
-	IssueIds       []merkle.Digest              `json:"issueIds"`
-	PayId          pay.PayId                    `json:"payId"`
-	PayNonce       reservoir.PayNonce           `json:"payNonce"`
-	Difficulty     string                       `json:"difficulty"`
-	SubmittedNonce string                       `json:"submittedNonce"`
-	ProofStatus    reservoir.TrackingStatus     `json:"proofStatus"`
+	AssetId        transactionrecord.AssetIndex                    `json:"assetId"`
+	IssueIds       []merkle.Digest                                 `json:"issueIds"`
+	PayId          pay.PayId                                       `json:"payId"`
+	PayNonce       reservoir.PayNonce                              `json:"payNonce"`
+	Difficulty     string                                          `json:"difficulty"`
+	SubmittedNonce string                                          `json:"submittedNonce"`
+	ProofStatus    reservoir.TrackingStatus                        `json:"proofStatus"`
+	Payments       map[string]transactionrecord.PaymentAlternative `json:"payments,omitempty"`
+	Commands       map[string]string                               `json:"commands,omitempty"`
 }
 
 func (client *Client) Issue(issueConfig *IssueData) (*IssueReply, error) {
@@ -71,22 +74,6 @@ func (client *Client) Issue(issueConfig *IssueData) (*IssueReply, error) {
 
 	client.printJson("Issue Reply", issuesReply)
 
-	// run proofer to generate local nonce
-	localNonce := makeProof(issuesReply.PayId, issuesReply.PayNonce, issuesReply.Difficulty, client.verbose, client.handle)
-	proofArgs := rpc.ProofArguments{
-		PayId: issuesReply.PayId,
-		Nonce: localNonce,
-	}
-
-	client.printJson("Proof Request", proofArgs)
-
-	var proofReply rpc.ProofReply
-	if err := client.client.Call("Bitmarks.Proof", &proofArgs, &proofReply); err != nil {
-		return nil, err
-	}
-
-	client.printJson("Proof Reply", proofReply)
-
 	// make response
 	response := IssueReply{
 		AssetId:        issues[0].AssetIndex, // Note: all issues are for the same asset
@@ -94,8 +81,45 @@ func (client *Client) Issue(issueConfig *IssueData) (*IssueReply, error) {
 		PayId:          issuesReply.PayId,
 		PayNonce:       issuesReply.PayNonce,
 		Difficulty:     issuesReply.Difficulty,
-		SubmittedNonce: proofArgs.Nonce,
-		ProofStatus:    proofReply.Status,
+		Payments:       issuesReply.Payments,
+		SubmittedNonce: "",
+	}
+
+	if issueConfig.PreferPayment && nil != issuesReply.Payments && len(issuesReply.Payments) > 0 {
+
+		tpid, err := issuesReply.PayId.MarshalText()
+		if nil != err {
+			return nil, err
+		}
+
+		commands := make(map[string]string)
+		for _, payment := range issuesReply.Payments {
+			currency := payment[0].Currency
+			commands[currency.String()] = paymentCommand(client.testnet, currency, string(tpid), payment)
+		}
+		response.Commands = commands
+
+	} else {
+
+		// run proofer to generate local nonce
+		localNonce := makeProof(issuesReply.PayId, issuesReply.PayNonce, issuesReply.Difficulty, client.verbose, client.handle)
+		proofArgs := rpc.ProofArguments{
+			PayId: issuesReply.PayId,
+			Nonce: localNonce,
+		}
+
+		client.printJson("Proof Request", proofArgs)
+
+		var proofReply rpc.ProofReply
+		if err := client.client.Call("Bitmarks.Proof", &proofArgs, &proofReply); err != nil {
+			return nil, err
+		}
+
+		client.printJson("Proof Reply", proofReply)
+
+		response.SubmittedNonce = proofArgs.Nonce
+		response.ProofStatus = proofReply.Status
+
 	}
 
 	for i := 0; i < len(issuesReply.Issues); i++ {

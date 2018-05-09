@@ -38,6 +38,14 @@ const (
 	defaultTestingDatabase  = chain.Testing
 	defaultLocalDatabase    = chain.Local
 
+	defaultBitmarkPeerFile = "peers-" + chain.Bitmark + ".json"
+	defaultTestingPeerFile = "peers-" + chain.Testing + ".json"
+	defaultLocalPeerFile   = "peers-" + chain.Local + ".json"
+
+	defaultBitmarkReservoirFile = "reservoir-" + chain.Bitmark + ".cache"
+	defaultTestingReservoirFile = "reservoir-" + chain.Testing + ".cache"
+	defaultLocalReservoirFile   = "reservoir-" + chain.Local + ".cache"
+
 	defaultLogDirectory = "log"
 	defaultLogFile      = "bitmarkd.log"
 	defaultLogCount     = 10          //  number of log files retained
@@ -78,8 +86,8 @@ type Configuration struct {
 	Nodes         string       `libucl:"nodes" json:"nodes"`
 	Database      DatabaseType `libucl:"database" json:"database"`
 
-	PeerFile          string `libucl:"peer_file" json:"peer_file"`
-	ReservoirDataFile string `libucl:"reservoir_file" json:"reservoir_file"`
+	PeerFile      string `libucl:"peer_file" json:"peer_file"`
+	ReservoirFile string `libucl:"reservoir_file" json:"reservoir_file"`
 
 	ClientRPC  rpc.RPCConfiguration   `libucl:"client_rpc" json:"client_rpc"`
 	HttpsRPC   rpc.HTTPSConfiguration `libucl:"https_rpc" json:"https_rpc"`
@@ -103,11 +111,11 @@ func getConfiguration(configurationFileName string, variables map[string]string)
 
 	options := &Configuration{
 
-		DataDirectory:     defaultDataDirectory,
-		PidFile:           "", // no PidFile by default
-		Chain:             chain.Bitmark,
-		PeerFile:          "peers.json",
-		ReservoirDataFile: "reservoir.json",
+		DataDirectory: defaultDataDirectory,
+		PidFile:       "", // no PidFile by default
+		Chain:         chain.Bitmark,
+		PeerFile:      defaultBitmarkPeerFile,
+		ReservoirFile: defaultBitmarkReservoirFile,
 
 		Database: DatabaseType{
 			Directory: defaultLevelDBDirectory,
@@ -173,8 +181,12 @@ func getConfiguration(configurationFileName string, variables map[string]string)
 			// already correct default
 		case chain.Testing:
 			options.Database.Name = defaultTestingDatabase
+			options.PeerFile = defaultTestingPeerFile
+			options.ReservoirFile = defaultTestingReservoirFile
 		case chain.Local:
 			options.Database.Name = defaultLocalDatabase
+			options.PeerFile = defaultLocalPeerFile
+			options.ReservoirFile = defaultLocalReservoirFile
 		default:
 			return nil, errors.New(fmt.Sprintf("Chain: %s no default database setting", options.Chain))
 		}
@@ -200,7 +212,7 @@ func getConfiguration(configurationFileName string, variables map[string]string)
 	// if not, assign them to the data directory
 	mustBeAbsolute := []*string{
 		&options.PeerFile,
-		&options.ReservoirDataFile,
+		&options.ReservoirFile,
 		&options.Database.Directory,
 		&options.ClientRPC.Certificate,
 		&options.ClientRPC.PrivateKey,

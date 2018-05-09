@@ -177,7 +177,7 @@ loop:
 			}
 			provenance = append(provenance, h)
 
-			packedAsset := storage.Pool.Assets.Get(tx.AssetIndex[:])
+			_, packedAsset := storage.Pool.Assets.GetNB(tx.AssetIndex[:])
 			if nil == packedAsset {
 				break loop
 			}

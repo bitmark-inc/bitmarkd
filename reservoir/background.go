@@ -5,14 +5,15 @@
 package reservoir
 
 import (
+	"bytes"
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/cache"
 	"github.com/bitmark-inc/bitmarkd/constants"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
-	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 	"time"
 )
@@ -64,51 +65,68 @@ func (r *rebroadcaster) process(globaldata *globalDataType) {
 	log := r.log
 	globalData.RLock()
 
-	packedAssets := []byte{}
-	packedIssues := [][]byte{}
-	packedTransfer := [][]byte{}
-
 	log.Info("Start rebroadcasting local transactions…")
+
+unverified_tx:
 	for _, val := range cache.Pool.UnverifiedTxEntries.Items() {
 		item := val.(*unverifiedItem)
 		if item.links != nil {
-			packedTransfer = append(packedTransfer, item.transactions[0])
-		}
-	}
-
-	hadAsset := make(map[transactionrecord.AssetIndex]struct{})
-verified_tx:
-	for _, val := range cache.Pool.VerifiedTx.Items() {
-		v := val.(*verifiedItem)
-		if v.itemData.links == nil {
-			packedIssue := transactionrecord.Packed(v.transaction)
-			assetId := v.itemData.assetIds[v.index]
-			if _, ok := hadAsset[assetId]; !ok {
+			messagebus.Bus.Broadcast.Send("transfer", item.transactions[0])
+		} else {
+			packedAssets := []byte{}
+			for assetId, _ := range item.itemData.assetIds {
 				packedAsset, err := fetchAsset(assetId)
 				if fault.ErrAssetNotFound == err {
 					// asset was confirmed in an earlier block
 				} else if err != nil {
-					log.Errorf("asset id[%d]: %s  error: %s", v.index, assetId, err)
+					log.Errorf("asset id: %s  error: %s", assetId, err)
+					continue unverified_tx // skip the corresponding issue since asset is corrupt
+				} else {
+					packedAssets = append(packedAssets, packedAsset...)
+				}
+			}
+			if len(packedAssets) > 0 {
+				messagebus.Bus.Broadcast.Send("assets", packedAssets)
+			}
+			messagebus.Bus.Broadcast.Send("issues", bytes.Join(item.itemData.transactions, []byte{}))
+		}
+	}
+
+verified_tx:
+	for _, val := range cache.Pool.VerifiedTx.Items() {
+		v := val.(*verifiedItem)
+
+		if nil != v.itemData.links { // single transfer
+
+			messagebus.Bus.Broadcast.Send("transfer", v.transaction)
+
+		} else if 0 == v.index {
+			// first of verified block so recreate whole issue block
+			// to get same pay id
+
+			packedAssets := []byte{}
+			for assetId, _ := range v.itemData.assetIds {
+				packedAsset, err := fetchAsset(assetId)
+				if fault.ErrAssetNotFound == err {
+					// asset was confirmed in an earlier block
+				} else if err != nil {
+					log.Errorf("asset id: %s  error: %s", assetId, err)
 					continue verified_tx // skip the corresponding issue since asset is corrupt
 				} else {
 					packedAssets = append(packedAssets, packedAsset...)
 				}
-				hadAsset[assetId] = struct{}{}
 			}
-			packedIssues = append(packedIssues, packedIssue)
-		} else {
-			packedTransfer = append(packedTransfer, v.transaction)
+			if len(packedAssets) > 0 {
+				messagebus.Bus.Broadcast.Send("assets", packedAssets)
+			}
+
+			messagebus.Bus.Broadcast.Send("issues", bytes.Join(v.itemData.transactions, []byte{}))
+
+			// recreate the proof message
+			payId := pay.NewPayId(v.itemData.transactions)
+			messagebus.Bus.Broadcast.Send("proof", append(payId[:], v.itemData.nonce...))
 		}
 	}
 
-	if len(packedAssets) != 0 {
-		messagebus.Bus.Broadcast.Send("assets", packedAssets)
-	}
-	for _, issue := range packedIssues {
-		messagebus.Bus.Broadcast.Send("issues", issue, util.ToVarint64(1))
-	}
-	for _, transfer := range packedTransfer {
-		messagebus.Bus.Broadcast.Send("transfer", transfer)
-	}
 	globalData.RUnlock()
 }
