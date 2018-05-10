@@ -13,8 +13,8 @@ import (
 	"testing"
 )
 
-// test invalid asset indexes
-func TestInvalidAssetIndexes(t *testing.T) {
+// test invalid asset identifiers
+func TestInvalidAssetIdentifiers(t *testing.T) {
 
 	invalid := []string{
 		"",
@@ -35,26 +35,26 @@ func TestInvalidAssetIndexes(t *testing.T) {
 		"4473fb34cc05ed9599K35a0098ce060dfa546f40932dd7b40d35f8fe5cd6a4ff26f3dbf8ffc86ee8eb6480facfd83f3e20d69bf1e764a59256cf79b89531de37", // invalid hex char K
 	}
 
-	for i, textAssetIndex := range invalid {
-		var link transactionrecord.AssetIndex
-		n, err := fmt.Sscan(textAssetIndex, &link)
-		if fault.ErrNotAssetIndex != err {
-			t.Errorf("%d: testing: %q", i, textAssetIndex)
-			t.Errorf("%d: expected ErrNotAssetIndex but got: %v", i, err)
+	for i, textAssetIdentifier := range invalid {
+		var link transactionrecord.AssetIdentifier
+		n, err := fmt.Sscan(textAssetIdentifier, &link)
+		if fault.ErrNotAssetIdentifier != err {
+			t.Errorf("%d: testing: %q", i, textAssetIdentifier)
+			t.Errorf("%d: expected ErrNotAssetIdentifier but got: %v", i, err)
 			return
 		}
 		if 0 != n {
-			t.Errorf("%d: testing: %q", i, textAssetIndex)
+			t.Errorf("%d: testing: %q", i, textAssetIdentifier)
 			t.Errorf("%d: hex to link scanned: %d  expected: 0", i, n)
 			return
 		}
 	}
 }
 
-// test asset index conversion
-func TestAssetIndex(t *testing.T) {
+// test asset id conversion
+func TestAssetIdentifier(t *testing.T) {
 
-	expectedAssetIndex := transactionrecord.AssetIndex{
+	expectedAssetIdentifier := transactionrecord.AssetIdentifier{
 		0x37, 0xde, 0x31, 0x95, 0xb8, 0x79, 0xcf, 0x56,
 		0x92, 0xa5, 0x64, 0xe7, 0xf1, 0x9b, 0xd6, 0x20,
 		0x3e, 0x3f, 0xd8, 0xcf, 0xfa, 0x80, 0x64, 0xeb,
@@ -65,21 +65,21 @@ func TestAssetIndex(t *testing.T) {
 		0x95, 0xed, 0x05, 0xcc, 0x34, 0xfb, 0x73, 0x44,
 	}
 
-	textAssetIndex := "37de3195b879cf5692a564e7f19bd6203e3fd8cffa8064ebe86ec8fff8dbf326ffa4d65cfef8350db4d72d93406f54fa0d06ce98005a939995ed05cc34fb7344"
+	textAssetIdentifier := "37de3195b879cf5692a564e7f19bd6203e3fd8cffa8064ebe86ec8fff8dbf326ffa4d65cfef8350db4d72d93406f54fa0d06ce98005a939995ed05cc34fb7344"
 
-	if fmt.Sprintf("%s", expectedAssetIndex) != textAssetIndex {
-		t.Errorf("asset index(%%s): %s  expected: %s", expectedAssetIndex, textAssetIndex)
+	if fmt.Sprintf("%s", expectedAssetIdentifier) != textAssetIdentifier {
+		t.Errorf("asset id(%%s): %s  expected: %s", expectedAssetIdentifier, textAssetIdentifier)
 	}
 
-	if fmt.Sprintf("%v", expectedAssetIndex) != textAssetIndex {
-		t.Errorf("asset index(%%v): %v  expected: %s", expectedAssetIndex, textAssetIndex)
+	if fmt.Sprintf("%v", expectedAssetIdentifier) != textAssetIdentifier {
+		t.Errorf("asset id(%%v): %v  expected: %s", expectedAssetIdentifier, textAssetIdentifier)
 	}
 
-	if fmt.Sprintf("%#v", expectedAssetIndex) != "<asset:"+textAssetIndex+">" {
-		t.Errorf("asset index(%%#v): %#v  expected: %s", expectedAssetIndex, "<asset:"+textAssetIndex+">")
+	if fmt.Sprintf("%#v", expectedAssetIdentifier) != "<asset:"+textAssetIdentifier+">" {
+		t.Errorf("asset id(%%#v): %#v  expected: %s", expectedAssetIdentifier, "<asset:"+textAssetIdentifier+">")
 	}
 
-	var asset transactionrecord.AssetIndex
+	var asset transactionrecord.AssetIdentifier
 	n, err := fmt.Sscan("37de3195b879cf5692a564e7f19bd6203e3fd8cffa8064ebe86ec8fff8dbf326ffa4d65cfef8350db4d72d93406f54fa0d06ce98005a939995ed05cc34fb7344", &asset)
 	if nil != err {
 		t.Fatalf("hex to link error: %s", err)
@@ -88,16 +88,16 @@ func TestAssetIndex(t *testing.T) {
 		t.Fatalf("hex to link scanned: %d  expected: 1", n)
 	}
 
-	if asset != expectedAssetIndex {
-		t.Errorf("asset: %#v  expected: %#v", asset, expectedAssetIndex)
-		t.Errorf("*** GENERATED asset:\n%s", util.FormatBytes("expectedAssetIndex", asset[:]))
+	if asset != expectedAssetIdentifier {
+		t.Errorf("asset: %#v  expected: %#v", asset, expectedAssetIdentifier)
+		t.Errorf("*** GENERATED asset:\n%s", util.FormatBytes("expectedAssetIdentifier", asset[:]))
 	}
 
 	// check JSON conversion
-	expectedJSON := `{"AssetIndex":"37de3195b879cf5692a564e7f19bd6203e3fd8cffa8064ebe86ec8fff8dbf326ffa4d65cfef8350db4d72d93406f54fa0d06ce98005a939995ed05cc34fb7344"}`
+	expectedJSON := `{"AssetIdentifier":"37de3195b879cf5692a564e7f19bd6203e3fd8cffa8064ebe86ec8fff8dbf326ffa4d65cfef8350db4d72d93406f54fa0d06ce98005a939995ed05cc34fb7344"}`
 
 	item := struct {
-		AssetIndex transactionrecord.AssetIndex
+		AssetIdentifier transactionrecord.AssetIdentifier
 	}{
 		asset,
 	}
@@ -112,23 +112,23 @@ func TestAssetIndex(t *testing.T) {
 
 	// test json unmarshal
 	var newItem struct {
-		AssetIndex transactionrecord.AssetIndex
+		AssetIdentifier transactionrecord.AssetIdentifier
 	}
 	err = json.Unmarshal([]byte(expectedJSON), &newItem)
 	if nil != err {
 		t.Fatalf("unmarshal json error: %s", err)
 	}
 
-	if newItem.AssetIndex != expectedAssetIndex {
-		t.Errorf("link: %#v  expected: %#v", newItem.AssetIndex, expectedAssetIndex)
+	if newItem.AssetIdentifier != expectedAssetIdentifier {
+		t.Errorf("link: %#v  expected: %#v", newItem.AssetIdentifier, expectedAssetIdentifier)
 	}
 
 }
 
-// test asset index bytes
-func TestAssetIndexFromBytes(t *testing.T) {
+// test asset id bytes
+func TestAssetIdentifierFromBytes(t *testing.T) {
 
-	expectedAssetIndex := transactionrecord.AssetIndex{
+	expectedAssetId := transactionrecord.AssetIdentifier{
 		0x37, 0xde, 0x31, 0x95, 0xb8, 0x79, 0xcf, 0x56,
 		0x92, 0xa5, 0x64, 0xe7, 0xf1, 0x9b, 0xd6, 0x20,
 		0x3e, 0x3f, 0xd8, 0xcf, 0xfa, 0x80, 0x64, 0xeb,
@@ -150,18 +150,18 @@ func TestAssetIndexFromBytes(t *testing.T) {
 		0x95, 0xed, 0x05, 0xcc, 0x34, 0xfb, 0x73, 0x44,
 	}
 
-	var assetIndex transactionrecord.AssetIndex
-	err := transactionrecord.AssetIndexFromBytes(&assetIndex, valid)
+	var assetId transactionrecord.AssetIdentifier
+	err := transactionrecord.AssetIdentifierFromBytes(&assetId, valid)
 	if nil != err {
-		t.Fatalf("AssetIndexFromBytes error: %s", err)
+		t.Fatalf("AssetIdentifierFromBytes error: %s", err)
 	}
 
-	if assetIndex != expectedAssetIndex {
-		t.Fatalf("assetIndex expected: %v  actual: %v", expectedAssetIndex, assetIndex)
+	if assetId != expectedAssetId {
+		t.Fatalf("assetIdentifier expected: %v  actual: %v", expectedAssetId, assetId)
 	}
 
-	err = transactionrecord.AssetIndexFromBytes(&assetIndex, valid[1:])
-	if fault.ErrNotAssetIndex != err {
-		t.Fatalf("AssetIndexFromBytes error: %s", err)
+	err = transactionrecord.AssetIdentifierFromBytes(&assetId, valid[1:])
+	if fault.ErrNotAssetIdentifier != err {
+		t.Fatalf("AssetIdentifierFromBytes error: %s", err)
 	}
 }

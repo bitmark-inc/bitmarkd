@@ -43,7 +43,7 @@ loop:
 	log.Info("stopped")
 }
 
-func fetchAsset(assetId transactionrecord.AssetIndex) ([]byte, error) {
+func fetchAsset(assetId transactionrecord.AssetIdentifier) ([]byte, error) {
 	packedAsset := asset.Get(assetId)
 	if nil == packedAsset {
 		return nil, fault.ErrAssetNotFound

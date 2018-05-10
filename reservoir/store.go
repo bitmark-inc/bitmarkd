@@ -162,7 +162,7 @@ restore_loop:
 }
 
 func backupAssets(f *os.File) error {
-	allAssets := make(map[transactionrecord.AssetIndex]struct{})
+	allAssets := make(map[transactionrecord.AssetIdentifier]struct{})
 
 	// extract all asset ids from unverified items
 	for _, val := range cache.Pool.UnverifiedTxEntries.Items() {

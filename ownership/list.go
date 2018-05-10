@@ -16,12 +16,12 @@ import (
 
 // type to represent an ownership record
 type Ownership struct {
-	N           uint64                        `json:"n,string"`
-	TxId        merkle.Digest                 `json:"txId"`
-	IssueTxId   merkle.Digest                 `json:"issue"`
-	Item        OwnedItem                     `json:"item"`
-	AssetIndex  *transactionrecord.AssetIndex `json:"assetIndex,omitempty"`
-	BlockNumber *uint64                       `json:"blockNumber,omitempty"`
+	N           uint64                             `json:"n,string"`
+	TxId        merkle.Digest                      `json:"txId"`
+	IssueTxId   merkle.Digest                      `json:"issue"`
+	Item        OwnedItem                          `json:"item"`
+	AssetId     *transactionrecord.AssetIdentifier `json:"assetId,omitempty"`
+	BlockNumber *uint64                            `json:"blockNumber,omitempty"`
 }
 
 // fetch a list of bitmarks for an owner
@@ -60,9 +60,9 @@ loop:
 
 		switch itemType := OwnedItem(item.Value[FlagByteStart]); itemType {
 		case OwnedAsset:
-			a := &transactionrecord.AssetIndex{}
-			transactionrecord.AssetIndexFromBytes(a, item.Value[AssetIndexStart:AssetIndexFinish])
-			record.AssetIndex = a
+			a := &transactionrecord.AssetIdentifier{}
+			transactionrecord.AssetIdentifierFromBytes(a, item.Value[AssetIdentifierStart:AssetIdentifierFinish])
+			record.AssetId = a
 			record.Item = itemType
 		case OwnedBlock:
 			b := binary.BigEndian.Uint64(item.Value[OwnedBlockNumberStart:OwnedBlockNumberFinish])

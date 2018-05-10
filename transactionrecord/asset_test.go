@@ -56,7 +56,7 @@ func TestPackAssetData(t *testing.T) {
 		0x71, 0xbc, 0x7c, 0x68, 0xbc, 0xc9, 0xce, 0x49,
 	}
 
-	expectedAssetIndex := transactionrecord.AssetIndex{
+	expectedAssetId := transactionrecord.AssetIdentifier{
 		0x59, 0xd0, 0x61, 0x55, 0xd2, 0x5d, 0xff, 0xdb,
 		0x98, 0x27, 0x29, 0xde, 0x8d, 0xce, 0x9d, 0x78,
 		0x55, 0xca, 0x09, 0x4d, 0x8b, 0xab, 0x81, 0x24,
@@ -106,12 +106,12 @@ func TestPackAssetData(t *testing.T) {
 		t.Errorf("*** GENERATED tx id:\n%s", util.FormatBytes("expectedTxId", txId[:]))
 	}
 
-	// check asset index
-	assetIndex := r.AssetIndex()
+	// check asset id
+	assetId := r.AssetId()
 
-	if assetIndex != expectedAssetIndex {
-		t.Errorf("pack asset index: %#v  expected: %#v", assetIndex, expectedAssetIndex)
-		t.Errorf("*** GENERATED asset index:\n%s", util.FormatBytes("expectedAssetIndex", assetIndex[:]))
+	if assetId != expectedAssetId {
+		t.Errorf("pack asset id: %#v  expected: %#v", assetId, expectedAssetId)
+		t.Errorf("*** GENERATED asset id:\n%s", util.FormatBytes("expectedAssetId", assetId[:]))
 	}
 
 	// test the unpacker
@@ -131,11 +131,11 @@ func TestPackAssetData(t *testing.T) {
 	// display a JSON version for information
 	item := struct {
 		TxId      merkle.Digest
-		Asset     transactionrecord.AssetIndex
+		Asset     transactionrecord.AssetIdentifier
 		AssetData *transactionrecord.AssetData
 	}{
 		TxId:      txId,
-		Asset:     assetIndex,
+		Asset:     assetId,
 		AssetData: reg,
 	}
 	b, err := json.MarshalIndent(item, "", "  ")
@@ -254,7 +254,7 @@ func TestPackAssetDataWithEmptyMetadata(t *testing.T) {
 		0x5d, 0xb9, 0x10, 0x08, 0x4f, 0x6b, 0xe9, 0xc1,
 	}
 
-	expectedAssetIndex := transactionrecord.AssetIndex{
+	expectedAssetId := transactionrecord.AssetIdentifier{
 		0x59, 0xd0, 0x61, 0x55, 0xd2, 0x5d, 0xff, 0xdb,
 		0x98, 0x27, 0x29, 0xde, 0x8d, 0xce, 0x9d, 0x78,
 		0x55, 0xca, 0x09, 0x4d, 0x8b, 0xab, 0x81, 0x24,
@@ -302,12 +302,12 @@ func TestPackAssetDataWithEmptyMetadata(t *testing.T) {
 		t.Errorf("*** GENERATED tx id:\n%s", util.FormatBytes("expectedTxId", txId[:]))
 	}
 
-	// check asset index
-	assetIndex := r.AssetIndex()
+	// check asset id
+	assetId := r.AssetId()
 
-	if assetIndex != expectedAssetIndex {
-		t.Errorf("pack asset index: %#v  expected: %#v", assetIndex, expectedAssetIndex)
-		t.Errorf("*** GENERATED asset index:\n%s", util.FormatBytes("expectedAssetIndex", assetIndex[:]))
+	if assetId != expectedAssetId {
+		t.Errorf("pack asset id: %#v  expected: %#v", assetId, expectedAssetId)
+		t.Errorf("*** GENERATED asset id:\n%s", util.FormatBytes("expectedAssetId", assetId[:]))
 	}
 
 	// test the unpacker

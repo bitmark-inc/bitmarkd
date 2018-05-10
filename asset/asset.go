@@ -33,7 +33,7 @@ type cacheData struct {
 // expiry background
 type expiryData struct {
 	log   *logger.L
-	queue chan transactionrecord.AssetIndex
+	queue chan transactionrecord.AssetIdentifier
 }
 
 // globals
@@ -42,7 +42,7 @@ type globalDataType struct {
 	log        *logger.L
 	expiry     expiryData
 	background *background.T
-	cache      map[transactionrecord.AssetIndex]*cacheData
+	cache      map[transactionrecord.AssetIdentifier]*cacheData
 }
 
 // gobal storage
@@ -55,9 +55,9 @@ func Initialise() error {
 
 	// for expiry requests, only a small queue should be sufficient
 	globalData.expiry.log = logger.New("asset-expiry")
-	globalData.expiry.queue = make(chan transactionrecord.AssetIndex, 10)
+	globalData.expiry.queue = make(chan transactionrecord.AssetIdentifier, 10)
 
-	globalData.cache = make(map[transactionrecord.AssetIndex]*cacheData)
+	globalData.cache = make(map[transactionrecord.AssetIdentifier]*cacheData)
 
 	// list of background processes to start
 	processes := background.Processes{
@@ -77,16 +77,16 @@ func Finalise() {
 }
 
 // cache an incoming asset
-func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIndex, transactionrecord.Packed, error) {
+func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIdentifier, transactionrecord.Packed, error) {
 	packedAsset, err := asset.Pack(asset.Registrant)
 	if nil != err {
 		return nil, nil, err
 	}
-	assetIndex := asset.AssetIndex()
+	assetId := asset.AssetId()
 
 	// already confirmed
-	if storage.Pool.Assets.Has(assetIndex[:]) {
-		return &assetIndex, nil, nil
+	if storage.Pool.Assets.Has(assetId[:]) {
+		return &assetId, nil, nil
 	}
 
 	// create a cache entry
@@ -101,8 +101,8 @@ func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIndex, t
 	// cache the record, will update partially expired item with new flag
 	// causing the expiry routine to allow an extra timeout period
 	globalData.Lock()
-	if r, ok := globalData.cache[assetIndex]; !ok {
-		globalData.cache[assetIndex] = d
+	if r, ok := globalData.cache[assetId]; !ok {
+		globalData.cache[assetId] = d
 	} else {
 		transaction, _, err := transactionrecord.Packed(r.packed).Unpack(mode.IsTesting())
 		logger.PanicIfError("asset: bad packed record", err)
@@ -131,31 +131,31 @@ func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIndex, t
 	}
 
 	// queue for expiry
-	globalData.expiry.queue <- assetIndex
+	globalData.expiry.queue <- assetId
 
 	// if packedAsset is not nil then should broadcast
-	return &assetIndex, packedAsset, nil
+	return &assetId, packedAsset, nil
 }
 
 // check if an asset exists
-func Exists(assetIndex transactionrecord.AssetIndex) bool {
+func Exists(assetId transactionrecord.AssetIdentifier) bool {
 
 	// already confirmed
-	if storage.Pool.Assets.Has(assetIndex[:]) {
+	if storage.Pool.Assets.Has(assetId[:]) {
 		return true
 	}
 
 	globalData.RLock()
-	_, ok := globalData.cache[assetIndex]
+	_, ok := globalData.cache[assetId]
 	globalData.RUnlock()
 	return ok
 }
 
 // get packed asset data from cache (nil if not present)
-func Get(assetIndex transactionrecord.AssetIndex) transactionrecord.Packed {
+func Get(assetId transactionrecord.AssetIdentifier) transactionrecord.Packed {
 
 	globalData.RLock()
-	item := globalData.cache[assetIndex]
+	item := globalData.cache[assetId]
 	globalData.RUnlock()
 	if nil == item {
 		return nil
@@ -164,24 +164,24 @@ func Get(assetIndex transactionrecord.AssetIndex) transactionrecord.Packed {
 }
 
 // remove an asset from the cache
-func Delete(assetIndex transactionrecord.AssetIndex) {
+func Delete(assetId transactionrecord.AssetIdentifier) {
 
 	globalData.Lock()
-	delete(globalData.cache, assetIndex)
+	delete(globalData.cache, assetId)
 	globalData.Unlock()
 }
 
 // mark a cached asset being verified
-func SetVerified(assetIndex transactionrecord.AssetIndex) {
+func SetVerified(assetId transactionrecord.AssetIdentifier) {
 
 	// already confirmed
-	if storage.Pool.Assets.Has(assetIndex[:]) {
+	if storage.Pool.Assets.Has(assetId[:]) {
 		return
 	}
 
 	// fetch the buffered data
 	globalData.RLock()
-	data, ok := globalData.cache[assetIndex]
+	data, ok := globalData.cache[assetId]
 	if ok {
 		// flag as verified
 		data.state = verifiedState
@@ -190,6 +190,6 @@ func SetVerified(assetIndex transactionrecord.AssetIndex) {
 
 	// fatal error if cache is missing
 	if !ok {
-		logger.Panicf("asset: Store: no cache for asset id: %v", assetIndex)
+		logger.Panicf("asset: Store: no cache for asset id: %v", assetId)
 	}
 }

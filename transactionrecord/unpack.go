@@ -128,15 +128,15 @@ func (record Packed) Unpack(testnet bool) (Transaction, int, error) {
 
 	case BitmarkIssueTag:
 
-		// asset index
-		assetIndexLength, assetIndexOffset := util.FromVarint64(record[n:])
-		n += assetIndexOffset
-		var assetIndex AssetIndex
-		err := AssetIndexFromBytes(&assetIndex, record[n:n+int(assetIndexLength)])
+		// asset id
+		assetIdentifierLength, assetIdentifierOffset := util.FromVarint64(record[n:])
+		n += assetIdentifierOffset
+		var assetId AssetIdentifier
+		err := AssetIdentifierFromBytes(&assetId, record[n:n+int(assetIdentifierLength)])
 		if nil != err {
 			return nil, 0, err
 		}
-		n += int(assetIndexLength)
+		n += int(assetIdentifierLength)
 
 		// owner public key
 		ownerLength, ownerOffset := util.FromVarint64(record[n:])
@@ -164,10 +164,10 @@ func (record Packed) Unpack(testnet bool) (Transaction, int, error) {
 		n += int(signatureLength)
 
 		r := &BitmarkIssue{
-			AssetIndex: assetIndex,
-			Owner:      owner,
-			Signature:  signature,
-			Nonce:      nonce,
+			AssetId:   assetId,
+			Owner:     owner,
+			Signature: signature,
+			Nonce:     nonce,
 		}
 		return r, n, nil
 

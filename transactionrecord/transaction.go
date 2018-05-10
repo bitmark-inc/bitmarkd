@@ -74,10 +74,10 @@ type AssetData struct {
 
 // the unpacked BitmarkIssue structure
 type BitmarkIssue struct {
-	AssetIndex AssetIndex        `json:"asset"`     // link to asset record
-	Owner      *account.Account  `json:"owner"`     // base58: the "destination" owner
-	Nonce      uint64            `json:"nonce"`     // to allow for multiple issues at the same time
-	Signature  account.Signature `json:"signature"` // hex: corresponds to owner in linked record
+	AssetId   AssetIdentifier   `json:"assetId"`   // link to asset record
+	Owner     *account.Account  `json:"owner"`     // base58: the "destination" owner
+	Nonce     uint64            `json:"nonce"`     // to allow for multiple issues at the same time
+	Signature account.Signature `json:"signature"` // hex: corresponds to owner in linked record
 }
 
 // optional payment record
@@ -180,9 +180,9 @@ func RecordName(record interface{}) (string, bool) {
 	}
 }
 
-// compute an asset index
-func (assetData *AssetData) AssetIndex() AssetIndex {
-	return NewAssetIndex([]byte(assetData.Fingerprint))
+// compute an asset id
+func (assetData *AssetData) AssetId() AssetIdentifier {
+	return NewAssetIdentifier([]byte(assetData.Fingerprint))
 }
 
 // Create an link for a packed record

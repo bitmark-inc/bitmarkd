@@ -13,8 +13,8 @@ import (
 
 // to control expiry
 type expiry struct {
-	assetIndex transactionrecord.AssetIndex // item to remove
-	expires    time.Time                    // remove the record after this time
+	assetId transactionrecord.AssetIdentifier // item to remove
+	expires time.Time                         // remove the record after this time
 }
 
 // expiry loop
@@ -30,11 +30,11 @@ loop:
 		select {
 		case <-shutdown:
 			break loop
-		case assetIndex := <-state.queue:
-			log.Infof("received: asset index: %s", assetIndex)
+		case assetId := <-state.queue:
+			log.Infof("received: asset id: %s", assetId)
 			l.PushBack(expiry{
-				assetIndex: assetIndex,
-				expires:    time.Now().Add(constants.AssetTimeout),
+				assetId: assetId,
+				expires: time.Now().Add(constants.AssetTimeout),
 			})
 		case <-delay:
 		inner_loop:
@@ -53,7 +53,7 @@ loop:
 				l.Remove(e)
 
 				globalData.Lock()
-				cache, ok := globalData.cache[item.assetIndex]
+				cache, ok := globalData.cache[item.assetId]
 				if ok {
 					switch cache.state {
 					case pendingState:
@@ -61,13 +61,13 @@ loop:
 						item.expires = time.Now().Add(constants.AssetTimeout)
 						l.PushBack(item)
 					case expiringState:
-						log.Infof("expired: asset index: %s", item.assetIndex)
-						delete(globalData.cache, item.assetIndex)
+						log.Infof("expired: asset id: %s", item.assetId)
+						delete(globalData.cache, item.assetId)
 					case verifiedState:
 						// the item just dropped from expiry queue
 						// but still exists in the map
 					default:
-						log.Criticalf("expired: invalid cache state: %d for: %s", cache.state, item.assetIndex)
+						log.Criticalf("expired: invalid cache state: %d for: %s", cache.state, item.assetId)
 					}
 				}
 				globalData.Unlock()

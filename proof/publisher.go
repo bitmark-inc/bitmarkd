@@ -216,7 +216,7 @@ func (pub *publisher) process() {
 		return
 	}
 
-	seenAsset := make(map[transactionrecord.AssetIndex]struct{})
+	seenAsset := make(map[transactionrecord.AssetIdentifier]struct{})
 
 	pooledTxIds, transactions, totalByteCount, err := reservoir.FetchVerified(blockrecord.MaximumTransactions)
 	if nil != err {
@@ -235,7 +235,7 @@ func (pub *publisher) process() {
 	txData := make([]byte, 0, totalByteCount)
 
 	// to accumulate new assets
-	assetIds := make([]transactionrecord.AssetIndex, 0, txCount)
+	assetIds := make([]transactionrecord.AssetIdentifier, 0, txCount)
 
 	// create record for each supported currency
 	p := make(currency.Map)
@@ -278,21 +278,21 @@ func (pub *publisher) process() {
 		switch tx := unpacked.(type) {
 		case *transactionrecord.BitmarkIssue:
 
-			if _, ok := seenAsset[tx.AssetIndex]; !ok {
-				if !storage.Pool.Assets.Has(tx.AssetIndex[:]) {
+			if _, ok := seenAsset[tx.AssetId]; !ok {
+				if !storage.Pool.Assets.Has(tx.AssetId[:]) {
 
-					packedAsset := asset.Get(tx.AssetIndex)
+					packedAsset := asset.Get(tx.AssetId)
 					if nil == packedAsset {
-						pub.log.Criticalf("missing asset: %v", tx.AssetIndex)
-						logger.Panicf("publisher missing asset: %v", tx.AssetIndex)
+						pub.log.Criticalf("missing asset: %v", tx.AssetId)
+						logger.Panicf("publisher missing asset: %v", tx.AssetId)
 					}
 					// add asset's transaction id to list
 					txId := merkle.NewDigest(packedAsset)
 					txIds = append(txIds, txId)
-					assetIds = append(assetIds, tx.AssetIndex)
+					assetIds = append(assetIds, tx.AssetId)
 					txData = append(txData, packedAsset...)
 				}
-				seenAsset[tx.AssetIndex] = struct{}{}
+				seenAsset[tx.AssetId] = struct{}{}
 			}
 
 		case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned, *transactionrecord.BlockOwnerTransfer:

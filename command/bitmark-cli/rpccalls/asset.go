@@ -25,9 +25,9 @@ type AssetData struct {
 }
 
 // build a properly signed asset
-func (client *Client) MakeAsset(assetConfig *AssetData) (*transactionrecord.AssetIndex, error) {
+func (client *Client) MakeAsset(assetConfig *AssetData) (*transactionrecord.AssetIdentifier, error) {
 
-	assetIndex := (*transactionrecord.AssetIndex)(nil)
+	assetId := (*transactionrecord.AssetIdentifier)(nil)
 
 	getArgs := rpc.AssetGetArguments{
 		Fingerprints: []string{assetConfig.Fingerprint},
@@ -58,16 +58,16 @@ func (client *Client) MakeAsset(assetConfig *AssetData) (*transactionrecord.Asse
 			return nil, ErrAssetRequestFail
 		}
 
-		buffer, ok := getReply.Assets[0].AssetIndex.(string)
+		buffer, ok := getReply.Assets[0].AssetId.(string)
 		if !ok {
 			return nil, ErrAssetRequestFail
 		}
-		var ai transactionrecord.AssetIndex
+		var ai transactionrecord.AssetIdentifier
 		err := ai.UnmarshalText([]byte(buffer))
 		if nil != err {
 			return nil, err
 		}
-		assetIndex = &ai
+		assetId = &ai
 
 	default:
 		if nil != getReply.Assets[0].Data {
@@ -77,8 +77,8 @@ func (client *Client) MakeAsset(assetConfig *AssetData) (*transactionrecord.Asse
 
 	client.printJson("Asset Get Reply", getReply)
 
-	if nil != assetIndex {
-		return assetIndex, nil
+	if nil != assetId {
+		return assetId, nil
 	}
 
 	registrantAddress := makeAddress(assetConfig.Registrant, client.testnet)
@@ -120,5 +120,5 @@ func (client *Client) MakeAsset(assetConfig *AssetData) (*transactionrecord.Asse
 
 	client.printJson("Asset Reply", reply)
 
-	return reply.Assets[0].AssetIndex, nil
+	return reply.Assets[0].AssetId, nil
 }

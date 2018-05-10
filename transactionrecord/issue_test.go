@@ -24,16 +24,16 @@ func TestPackBitmarkIssue(t *testing.T) {
 
 	issuerAccount := makeAccount(issuer.publicKey)
 
-	var asset transactionrecord.AssetIndex
-	_, err := fmt.Sscan("59d06155d25dffdb982729de8dce9d7855ca094d8bab8124b347c40668477056b3c27ccb7d71b54043d207ccd187642bf9c8466f9a8d0dbefb4c41633a7e39ef", &asset)
+	var assetId transactionrecord.AssetIdentifier
+	_, err := fmt.Sscan("59d06155d25dffdb982729de8dce9d7855ca094d8bab8124b347c40668477056b3c27ccb7d71b54043d207ccd187642bf9c8466f9a8d0dbefb4c41633a7e39ef", &assetId)
 	if nil != err {
-		t.Fatalf("hex to asset index error: %s", err)
+		t.Fatalf("hex to asset id error: %s", err)
 	}
 
 	r := transactionrecord.BitmarkIssue{
-		AssetIndex: asset,
-		Owner:      issuerAccount,
-		Nonce:      99,
+		AssetId: assetId,
+		Owner:   issuerAccount,
+		Nonce:   99,
 	}
 
 	expected := []byte{
@@ -137,18 +137,18 @@ func TestPackTenBitmarkIssues(t *testing.T) {
 
 	issuerAccount := makeAccount(issuer.publicKey)
 
-	var asset transactionrecord.AssetIndex
-	_, err := fmt.Sscan("59d06155d25dffdb982729de8dce9d7855ca094d8bab8124b347c40668477056b3c27ccb7d71b54043d207ccd187642bf9c8466f9a8d0dbefb4c41633a7e39ef", &asset)
+	var assetId transactionrecord.AssetIdentifier
+	_, err := fmt.Sscan("59d06155d25dffdb982729de8dce9d7855ca094d8bab8124b347c40668477056b3c27ccb7d71b54043d207ccd187642bf9c8466f9a8d0dbefb4c41633a7e39ef", &assetId)
 	if nil != err {
-		t.Fatalf("hex to asset index error: %s", err)
+		t.Fatalf("hex to asset id error: %s", err)
 	}
 
 	rs := make([]*transactionrecord.BitmarkIssue, 10)
 	for i := 0; i < len(rs); i += 1 {
 		r := &transactionrecord.BitmarkIssue{
-			AssetIndex: asset,
-			Owner:      issuerAccount,
-			Nonce:      uint64(i) + 1,
+			AssetId: assetId,
+			Owner:   issuerAccount,
+			Nonce:   uint64(i) + 1,
 		}
 		rs[i] = r
 

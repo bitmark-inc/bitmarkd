@@ -21,10 +21,10 @@ import (
 
 type itemData struct {
 	txIds        []merkle.Digest
-	links        []merkle.Digest                           // links[i] corresponds to txIds[i]
-	assetIds     map[transactionrecord.AssetIndex]struct{} // unique asset ids extracted from all issues, nil for transfers
-	transactions [][]byte                                  // transactions[i] corresponds to txIds[i]
-	nonce        []byte                                    // only issues, client nonce from successful try proof RPC
+	links        []merkle.Digest                                // links[i] corresponds to txIds[i]
+	assetIds     map[transactionrecord.AssetIdentifier]struct{} // unique asset ids extracted from all issues, nil for transfers
+	transactions [][]byte                                       // transactions[i] corresponds to txIds[i]
+	nonce        []byte                                         // only issues, client nonce from successful try proof RPC
 }
 
 type unverifiedItem struct {

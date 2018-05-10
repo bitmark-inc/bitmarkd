@@ -21,7 +21,7 @@ type PublishedItem struct {
 	Header   blockrecord.Header
 	TxZero   []byte
 	TxIds    []merkle.Digest
-	AssetIds []transactionrecord.AssetIndex
+	AssetIds []transactionrecord.AssetIdentifier
 }
 
 // received from the proofer

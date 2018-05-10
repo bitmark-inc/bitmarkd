@@ -43,11 +43,11 @@ type OwnerBitmarksReply struct {
 
 // can be any of the transaction records
 type BitmarksRecord struct {
-	Record     string      `json:"record"`
-	TxId       interface{} `json:"txId,omitempty"`
-	InBlock    uint64      `json:"inBlock"`
-	AssetIndex interface{} `json:"assetIndex,omitempty"`
-	Data       interface{} `json:"data"`
+	Record  string      `json:"record"`
+	TxId    interface{} `json:"txId,omitempty"`
+	InBlock uint64      `json:"inBlock"`
+	AssetId interface{} `json:"assetId,omitempty"`
+	Data    interface{} `json:"data"`
 }
 
 type BlockAsset struct {
@@ -77,19 +77,19 @@ func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitm
 	//   issues TxId == IssueTxId
 	//   assets could be duplicates
 	txIds := make(map[merkle.Digest]struct{})
-	assetIndexes := make(map[transactionrecord.AssetIndex]struct{})
+	assetIds := make(map[transactionrecord.AssetIdentifier]struct{})
 	current := uint64(0)
 	for _, r := range ownershipData {
 		txIds[r.TxId] = struct{}{}
 		txIds[r.IssueTxId] = struct{}{}
 		switch r.Item {
 		case ownership.OwnedAsset:
-			ai := r.AssetIndex
+			ai := r.AssetId
 			if nil == ai {
-				log.Criticalf("asset index is nil: %+v", r)
-				logger.Panicf("asset index is nil: %+v", r)
+				log.Criticalf("asset id is nil: %+v", r)
+				logger.Panicf("asset id is nil: %+v", r)
 			}
-			assetIndexes[*r.AssetIndex] = struct{}{}
+			assetIds[*r.AssetId] = struct{}{}
 		case ownership.OwnedBlock:
 			if nil == r.BlockNumber {
 				log.Criticalf("block number is nil: %+v", r)
@@ -137,15 +137,15 @@ func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitm
 	}
 
 asset_loop:
-	for assetIndex := range assetIndexes {
+	for assetId := range assetIds {
 
-		log.Debugf("assetIndex: %v", assetIndex)
+		log.Debugf("asset id: %v", assetId)
 
-		var nnn transactionrecord.AssetIndex
-		if nnn == assetIndex {
+		var nnn transactionrecord.AssetIdentifier
+		if nnn == assetId {
 			records["00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"] = BitmarksRecord{
 				Record: "Block",
-				//AssetIndex: assetIndex,
+				//AssetId: assetId,
 				Data: BlockAsset{
 					Number: 0,
 				},
@@ -153,7 +153,7 @@ asset_loop:
 			continue asset_loop
 		}
 
-		_, transaction := storage.Pool.Assets.GetNB(assetIndex[:])
+		_, transaction := storage.Pool.Assets.GetNB(assetId[:])
 		if nil == transaction {
 			return fault.ErrAssetNotFound
 		}
@@ -167,15 +167,15 @@ asset_loop:
 		if !ok {
 			return fault.ErrAssetNotFound
 		}
-		textAssetIndex, err := assetIndex.MarshalText()
+		textAssetId, err := assetId.MarshalText()
 		if nil != err {
 			return err
 		}
 
-		records[string(textAssetIndex)] = BitmarksRecord{
-			Record:     record,
-			AssetIndex: assetIndex,
-			Data:       tx,
+		records[string(textAssetId)] = BitmarksRecord{
+			Record:  record,
+			AssetId: assetId,
+			Data:    tx,
 		}
 	}
 

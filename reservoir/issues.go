@@ -59,7 +59,7 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, er
 	txIds := make([]merkle.Digest, count)
 
 	// deduplicated list of assets
-	uniqueAssetIds := make(map[transactionrecord.AssetIndex]struct{})
+	uniqueAssetIds := make(map[transactionrecord.AssetIdentifier]struct{})
 
 	// this flags already stored issues
 	// used to flag an error if pay id is different
@@ -79,7 +79,7 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, er
 			return nil, false, err
 		}
 
-		if !asset.Exists(issue.AssetIndex) {
+		if !asset.Exists(issue.AssetId) {
 			return nil, false, fault.ErrAssetNotFound
 		}
 
@@ -103,7 +103,7 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, er
 
 		// accumulate the data
 		txIds[i] = txId
-		uniqueAssetIds[issue.AssetIndex] = struct{}{}
+		uniqueAssetIds[issue.AssetId] = struct{}{}
 		separated[i] = packedIssue
 	}
 
@@ -140,7 +140,7 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, er
 	assetBlockNumber := uint64(0)
 scan_for_one_asset:
 	for _, issue := range issues {
-		bn, t := storage.Pool.Assets.GetNB(issue.AssetIndex[:])
+		bn, t := storage.Pool.Assets.GetNB(issue.AssetId[:])
 		if nil == t || 0 == bn {
 			assetBlockNumber = 0     // cannot determine a single payment block
 			break scan_for_one_asset // because of unconfirmed asset
@@ -159,7 +159,7 @@ scan_for_one_asset:
 
 		p := getPayment(blockNumberKey)
 		if nil == p { // would be an internal database error
-			globalData.log.Errorf("missing payment for asset id: %s", issues[0].AssetIndex)
+			globalData.log.Errorf("missing payment for asset id: %s", issues[0].AssetId)
 			return nil, false, fault.ErrAssetNotFound
 		}
 

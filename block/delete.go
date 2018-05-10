@@ -76,9 +76,9 @@ outer_loop:
 				// delete later
 
 			case *transactionrecord.AssetData:
-				assetIndex := tx.AssetIndex()
-				storage.Pool.Assets.Delete(assetIndex[:])
-				asset.Delete(assetIndex)
+				assetId := tx.AssetId()
+				storage.Pool.Assets.Delete(assetId[:])
+				asset.Delete(assetId)
 
 			case *transactionrecord.BitmarkIssue:
 				txId := packedTransaction.MakeLink()

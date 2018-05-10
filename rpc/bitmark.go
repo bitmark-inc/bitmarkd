@@ -101,12 +101,12 @@ type ProvenanceArguments struct {
 
 // can be any of the transaction records
 type ProvenanceRecord struct {
-	Record     string      `json:"record"`
-	IsOwner    bool        `json:"isOwner"`
-	TxId       interface{} `json:"txId,omitempty"`
-	InBlock    uint64      `json:"inBlock"`
-	AssetIndex interface{} `json:"assetIndex,omitempty"`
-	Data       interface{} `json:"data"`
+	Record  string      `json:"record"`
+	IsOwner bool        `json:"isOwner"`
+	TxId    interface{} `json:"txId,omitempty"`
+	InBlock uint64      `json:"inBlock"`
+	AssetId interface{} `json:"assetId,omitempty"`
+	Data    interface{} `json:"data"`
 }
 
 type ProvenanceReply struct {
@@ -145,12 +145,12 @@ loop:
 
 		record, _ := transactionrecord.RecordName(transaction)
 		h := ProvenanceRecord{
-			Record:     record,
-			IsOwner:    false,
-			TxId:       id,
-			InBlock:    inBlock,
-			AssetIndex: nil,
-			Data:       transaction,
+			Record:  record,
+			IsOwner: false,
+			TxId:    id,
+			InBlock: inBlock,
+			AssetId: nil,
+			Data:    transaction,
 		}
 
 		switch tx := transaction.(type) {
@@ -177,7 +177,7 @@ loop:
 			}
 			provenance = append(provenance, h)
 
-			_, packedAsset := storage.Pool.Assets.GetNB(tx.AssetIndex[:])
+			_, packedAsset := storage.Pool.Assets.GetNB(tx.AssetId[:])
 			if nil == packedAsset {
 				break loop
 			}
@@ -188,11 +188,11 @@ loop:
 
 			record, _ := transactionrecord.RecordName(assetTx)
 			h := ProvenanceRecord{
-				Record:     record,
-				IsOwner:    false,
-				TxId:       nil,
-				AssetIndex: tx.AssetIndex,
-				Data:       assetTx,
+				Record:  record,
+				IsOwner: false,
+				TxId:    nil,
+				AssetId: tx.AssetId,
+				Data:    assetTx,
 			}
 			provenance = append(provenance, h)
 			break loop

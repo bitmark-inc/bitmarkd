@@ -27,14 +27,14 @@ var (
 
 type IssueData struct {
 	Issuer        *keypair.KeyPair
-	AssetIndex    *transactionrecord.AssetIndex
+	AssetId       *transactionrecord.AssetIdentifier
 	Quantity      int
 	PreferPayment bool
 }
 
 // JSON data to output after asset/issue/proof completes
 type IssueReply struct {
-	AssetId        transactionrecord.AssetIndex                    `json:"assetId"`
+	AssetId        transactionrecord.AssetIdentifier               `json:"assetId"`
 	IssueIds       []merkle.Digest                                 `json:"issueIds"`
 	PayId          pay.PayId                                       `json:"payId"`
 	PayNonce       reservoir.PayNonce                              `json:"payNonce"`
@@ -76,7 +76,7 @@ func (client *Client) Issue(issueConfig *IssueData) (*IssueReply, error) {
 
 	// make response
 	response := IssueReply{
-		AssetId:        issues[0].AssetIndex, // Note: all issues are for the same asset
+		AssetId:        issues[0].AssetId, // Note: all issues are for the same asset
 		IssueIds:       make([]merkle.Digest, len(issues)),
 		PayId:          issuesReply.PayId,
 		PayNonce:       issuesReply.PayNonce,
@@ -135,10 +135,10 @@ func makeIssue(testnet bool, issueConfig *IssueData, nonce uint64) (*transaction
 	issuerAddress := makeAddress(issueConfig.Issuer, testnet)
 
 	r := transactionrecord.BitmarkIssue{
-		AssetIndex: *issueConfig.AssetIndex,
-		Owner:      issuerAddress,
-		Nonce:      nonce,
-		Signature:  nil,
+		AssetId:   *issueConfig.AssetId,
+		Owner:     issuerAddress,
+		Nonce:     nonce,
+		Signature: nil,
 	}
 
 	// pack without signature

@@ -17,7 +17,7 @@
 // 2. ++           = concatenation of byte data
 // 3. BN           = block number as 8 byte big endian (uint64)
 // 4. txId         = transaction digest as 32 byte SHA3-256(data)
-// 5. asset index  = fingerprint digest as 64 byte SHA3-512(data)
+// 5. asset id     = fingerprint digest as 64 byte SHA3-512(data)
 // 6. count        = successive index value as 8 byte big endian (uint64)
 // 7. owner        = bitmark account (32 byte public key)
 // 8. 00           = single byte values 00..ff
@@ -40,7 +40,7 @@
 //
 // Assets:
 //
-//   A ++ asset index      - confirmed asset
+//   A ++ asset id         - confirmed asset identifier
 //                           data: packed asset data
 //
 // Ownership:
@@ -48,7 +48,7 @@
 //   N ++ owner            - next count value to use for appending to owned items
 //                           data: count
 //   K ++ owner ++ count   - list of owned items
-//                           data: 00 ++ last transfer txId ++ last transfer BN ++ issue txId ++ issue BN ++ asset index
+//                           data: 00 ++ last transfer txId ++ last transfer BN ++ issue txId ++ issue BN ++ asset id
 //                           data: 01 ++ last transfer txId ++ last transfer BN ++ issue txId ++ issue BN ++ owned BN
 //   D ++ owner ++ txId    - position in list of owned items, for delete after transfer
 //                           data: count

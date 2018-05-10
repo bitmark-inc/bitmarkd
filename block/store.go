@@ -96,8 +96,8 @@ func StoreIncoming(packedBlock []byte) error {
 				if nil != err {
 					return err
 				}
-				assetIndex := tx.AssetIndex()
-				if !suppressDuplicateRecordChecks && storage.Pool.Assets.Has(assetIndex[:]) {
+				assetId := tx.AssetId()
+				if !suppressDuplicateRecordChecks && storage.Pool.Assets.Has(assetId[:]) {
 					return fault.ErrTransactionAlreadyExists
 				}
 
@@ -242,17 +242,17 @@ func StoreIncoming(packedBlock []byte) error {
 			logger.Panicf("should not occur: %+v", tx)
 
 		case *transactionrecord.AssetData:
-			assetIndex := tx.AssetIndex()
-			asset.Delete(assetIndex) // delete from pending cache
-			if !storage.Pool.Assets.Has(assetIndex[:]) {
-				storage.Pool.Assets.Put(assetIndex[:], blockNumberKey, item.packed)
+			assetId := tx.AssetId()
+			asset.Delete(assetId) // delete from pending cache
+			if !storage.Pool.Assets.Has(assetId[:]) {
+				storage.Pool.Assets.Put(assetId[:], blockNumberKey, item.packed)
 			}
 
 		case *transactionrecord.BitmarkIssue:
 			reservoir.DeleteByTxId(item.txId) // delete from pending cache
 			if !storage.Pool.Transactions.Has(item.txId[:]) {
 				storage.Pool.Transactions.Put(item.txId[:], blockNumberKey, item.packed)
-				ownership.CreateAsset(item.txId, header.Number, tx.AssetIndex, tx.Owner)
+				ownership.CreateAsset(item.txId, header.Number, tx.AssetId, tx.Owner)
 			}
 
 		case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:

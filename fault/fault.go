@@ -85,7 +85,7 @@ var (
 	ErrNoNewTransactions                     = InvalidError("no new transactions")
 	ErrNotAPayId                             = InvalidError("not a pay id")
 	ErrNotAPayNonce                          = InvalidError("not a pay nonce")
-	ErrNotAssetIndex                         = RecordError("not asset index")
+	ErrNotAssetIdentifier                    = RecordError("not asset id")
 	ErrNotAvailableDuringSynchronise         = InvalidError("not available during synchronise")
 	ErrNotConnected                          = NotFoundError("not connected")
 	ErrNotInitialised                        = NotFoundError("not initialised")

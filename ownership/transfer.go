@@ -20,7 +20,7 @@ import (
 //   N ++ owner            - next count value to use for appending to owned items
 //                           data: count
 //   K ++ owner ++ count   - list of owned items
-//                           data: 00 ++ last transfer txId ++ last transfer BN ++ issue txId ++ issue BN ++ asset index
+//                           data: 00 ++ last transfer txId ++ last transfer BN ++ issue txId ++ issue BN ++ asset id
 //                           data: 01 ++ last transfer txId ++ last transfer BN ++ issue txId ++ issue BN ++ owned BN
 //   D ++ owner ++ txId    - position in list of owned items, for delete after transfer
 
@@ -50,8 +50,8 @@ const (
 	IssueBlockNumberFinish = IssueBlockNumberStart + uint64ByteSize
 
 	// overlap flag==0x00
-	AssetIndexStart  = IssueBlockNumberFinish
-	AssetIndexFinish = AssetIndexStart + transactionrecord.AssetIndexLength
+	AssetIdentifierStart  = IssueBlockNumberFinish
+	AssetIdentifierFinish = AssetIdentifierStart + transactionrecord.AssetIdentifierLength
 
 	// overlap flag==0x01
 	OwnedBlockNumberStart  = IssueBlockNumberFinish
@@ -126,7 +126,7 @@ func create(txId merkle.Digest, ownerData []byte, owner *account.Account) {
 	// write the new owner
 	oKey := append(owner.Bytes(), count...)
 
-	// flag ++ txId ++ last transfer block number ++ issue txId ++ issue block number ++ AssetIndex/BlockNumber
+	// flag ++ txId ++ last transfer block number ++ issue txId ++ issue block number ++ AssetIdentifier/BlockNumber
 	storage.Pool.Ownership.Put(oKey, ownerData)
 
 	// write new digest record
@@ -134,7 +134,7 @@ func create(txId merkle.Digest, ownerData []byte, owner *account.Account) {
 	storage.Pool.OwnerDigest.Put(dKey, count)
 }
 
-func CreateAsset(issueTxId merkle.Digest, issueBlockNumber uint64, assetIndex transactionrecord.AssetIndex, newOwner *account.Account) {
+func CreateAsset(issueTxId merkle.Digest, issueBlockNumber uint64, assetId transactionrecord.AssetIdentifier, newOwner *account.Account) {
 	// ensure single threaded
 	toLock.Lock()
 	defer toLock.Unlock()
@@ -147,12 +147,12 @@ func CreateAsset(issueTxId merkle.Digest, issueBlockNumber uint64, assetIndex tr
 	//   flag = OwnedAsset
 	//   issue id ++ zero  block number  -- replaced by sucessive: transfer id ++ transfer block number
 	//   issue id ++ issue block number  -- will remain constant
-	//   asset index
+	//   asset id
 	newData := append([]byte{byte(OwnedAsset)}, issueTxId[:]...)
 	newData = append(newData, []byte{0, 0, 0, 0, 0, 0, 0, 0}...)
 	newData = append(newData, issueTxId[:]...)
 	newData = append(newData, blk...)
-	newData = append(newData, assetIndex[:]...)
+	newData = append(newData, assetId[:]...)
 
 	// store to database
 	create(issueTxId, newData, newOwner)

@@ -148,7 +148,7 @@ func (issue *BitmarkIssue) Pack(address *account.Account) (Packed, error) {
 
 	// concatenate bytes
 	message := createPacked(BitmarkIssueTag)
-	message.appendBytes(issue.AssetIndex[:])
+	message.appendBytes(issue.AssetId[:])
 	message.appendAccount(issue.Owner)
 	message.appendUint64(issue.Nonce)
 

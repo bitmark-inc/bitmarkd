@@ -27,8 +27,8 @@ const (
 // Assets registration
 // -------------------
 type AssetStatus struct {
-	AssetIndex *transactionrecord.AssetIndex `json:"index"`
-	Duplicate  bool                          `json:"duplicate"`
+	AssetId   *transactionrecord.AssetIdentifier `json:"id"`
+	Duplicate bool                               `json:"duplicate"`
 }
 
 type AssetsRegisterReply struct {
@@ -44,12 +44,12 @@ func assetRegister(assets []*transactionrecord.AssetData) ([]AssetStatus, []byte
 	packed := []byte{}
 	for i, argument := range assets {
 
-		index, packedAsset, err := asset.Cache(argument)
+		assetId, packedAsset, err := asset.Cache(argument)
 		if nil != err {
 			return nil, nil, err
 		}
 
-		assetStatus[i].AssetIndex = index
+		assetStatus[i].AssetId = assetId
 		if nil == packedAsset {
 			assetStatus[i].Duplicate = true
 		} else {
@@ -72,10 +72,10 @@ type AssetGetReply struct {
 }
 
 type AssetRecord struct {
-	Record     string      `json:"record"`
-	Confirmed  bool        `json:"confirmed"`
-	AssetIndex interface{} `json:"index,omitempty"`
-	Data       interface{} `json:"data"`
+	Record    string      `json:"record"`
+	Confirmed bool        `json:"confirmed"`
+	AssetId   interface{} `json:"id,omitempty"`
+	Data      interface{} `json:"data"`
 }
 
 func (assets *Assets) Get(arguments *AssetGetArguments, reply *AssetGetReply) error {
@@ -99,14 +99,14 @@ func (assets *Assets) Get(arguments *AssetGetArguments, reply *AssetGetReply) er
 loop:
 	for i, fingerprint := range arguments.Fingerprints {
 
-		assetIndex := transactionrecord.NewAssetIndex([]byte(fingerprint))
+		assetId := transactionrecord.NewAssetIdentifier([]byte(fingerprint))
 
 		confirmed := true
-		_, packedAsset := storage.Pool.Assets.GetNB(assetIndex[:])
+		_, packedAsset := storage.Pool.Assets.GetNB(assetId[:])
 		if nil == packedAsset {
 
 			confirmed = false
-			packedAsset = asset.Get(assetIndex)
+			packedAsset = asset.Get(assetId)
 			if nil == packedAsset {
 				continue loop
 			}
@@ -119,10 +119,10 @@ loop:
 
 		record, _ := transactionrecord.RecordName(assetTx)
 		a[i] = AssetRecord{
-			Record:     record,
-			Confirmed:  confirmed,
-			AssetIndex: assetIndex,
-			Data:       assetTx,
+			Record:    record,
+			Confirmed: confirmed,
+			AssetId:   assetId,
+			Data:      assetTx,
 		}
 	}
 
@@ -131,28 +131,28 @@ loop:
 	return nil
 }
 
-// // Asset index
+// // Asset identifier
 // // -----------
 
-// type AssetIndexesArguments struct {
-// 	Indexes []transaction.AssetIndex `json:"indexes"`
+// type AssetIdentifiersArguments struct {
+// 	Ids []transaction.AssetId `json:"ids"`
 // }
 
-// type AssetIndexesReply struct {
+// type AssetIdentifiersReply struct {
 // 	Assets []transaction.Decoded `json:"assets"`
 // }
 
-// func (assets *Assets) Index(arguments *AssetIndexesArguments, reply *AssetIndexesReply) error {
+// func (assets *Assets) Identifier(arguments *AssetIdentifieresArguments, reply *AssetIdentifieresReply) error {
 
 // 	// restrict arguments size to reasonable value
-// 	size := len(arguments.Indexes)
+// 	size := len(arguments.Ids)
 // 	if size > MaximumGetSize {
 // 		size = MaximumGetSize
 // 	}
 
 // 	txIds := make([]transaction.Link, size)
-// 	for i, assetIndex := range arguments.Indexes[:size] {
-// 		_, txId, found := assetIndex.Read()
+// 	for i, assetId := range arguments.Ids[:size] {
+// 		_, txId, found := assetId.Read()
 // 		if found {
 // 			txIds[i] = txId
 // 		}

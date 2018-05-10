@@ -102,7 +102,7 @@ func runCreate(c *cli.Context) error {
 		Registrant:  registrant,
 	}
 
-	assetIndex, err := client.MakeAsset(assetConfig)
+	assetId, err := client.MakeAsset(assetConfig)
 	if nil != err {
 		return err
 	}
@@ -110,7 +110,7 @@ func runCreate(c *cli.Context) error {
 	// make Issues
 	issueConfig := &rpccalls.IssueData{
 		Issuer:        assetConfig.Registrant,
-		AssetIndex:    assetIndex,
+		AssetId:       assetId,
 		Quantity:      assetConfig.Quantity,
 		PreferPayment: !c.Bool("no-payment"),
 	}
