@@ -50,16 +50,16 @@ func processSubscription(log *logger.L, command string, arguments [][]byte) {
 		}
 
 	case "issues":
-		if dataLength < 2 {
+		if dataLength < 1 {
 			log.Warnf("issues with too few data: %d items", dataLength)
 			return
 		}
-		log.Infof("received issues: %x, verified: %x", arguments[0], arguments[1])
-		err := processIssues(arguments[0], arguments[1])
+		log.Infof("received issues: %x", arguments[0])
+		err := processIssues(arguments[0])
 		if nil != err {
 			log.Warnf("failed issues: error: %s", err)
 		} else {
-			messagebus.Bus.Broadcast.Send("issues", arguments[0:2]...)
+			messagebus.Bus.Broadcast.Send("issues", arguments[0])
 		}
 
 	case "transfer":
@@ -165,7 +165,7 @@ func processAssets(packed []byte) error {
 }
 
 // un pack each issue and cache them
-func processIssues(packed, verified []byte) error {
+func processIssues(packed []byte) error {
 
 	if 0 == len(packed) {
 		return fault.ErrMissingParameters
