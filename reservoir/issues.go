@@ -178,11 +178,6 @@ scan_for_one_asset:
 		}
 	}
 
-	// create index entries
-	for _, txId := range txIds {
-		cache.Pool.UnverifiedTxIndex.Put(txId.String(), payId)
-	}
-
 	// save transactions
 	entry := &unverifiedItem{
 		itemData: &itemData{
@@ -197,6 +192,32 @@ scan_for_one_asset:
 		payments:   result.Payments,
 	}
 
+	// already received the payment for the issues
+	// approve the transfer immediately if payment is ok
+	if val, ok := cache.Pool.OrphanPayment.Get(payId.String()); ok {
+		detail := val.(*PaymentDetail)
+
+		if acceptablePayment(detail, result.Payments) {
+
+			for i, txId := range txIds {
+				cache.Pool.VerifiedTx.Put(
+					txId.String(),
+					&verifiedItem{
+						itemData:    entry.itemData,
+						transaction: separated[i],
+						index:       i,
+					},
+				)
+			}
+			cache.Pool.OrphanPayment.Delete(payId.String())
+			return result, false, nil
+		}
+	}
+
+	// create index entries
+	for _, txId := range txIds {
+		cache.Pool.UnverifiedTxIndex.Put(txId.String(), payId)
+	}
 	cache.Pool.UnverifiedTxEntries.Put(payId.String(), entry)
 
 	return result, false, nil
