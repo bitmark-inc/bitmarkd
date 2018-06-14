@@ -5,8 +5,9 @@
 package announce
 
 import (
-	"github.com/bitmark-inc/bitmarkd/fault"
 	"testing"
+
+	"github.com/bitmark-inc/bitmarkd/fault"
 )
 
 func TestValidTag(t *testing.T) {
@@ -29,6 +30,27 @@ func TestValidTag(t *testing.T) {
 		{
 			txt: "bitmark=v3 a=118.163.120.178;[2001:b030:2314:0200:4649:583d:0001:0120] r=33566 f=48137A7A76934CAFE7635C9AC05339C20F4C00A724D7FA1DC0DC3875476ED004 c=32136 p=202c14ec485c21d0d18e9dfd096bd760a558d5ee1139f8e4b2e15863433e7d51",
 			err: nil,
+		},
+
+		// corrupt record
+		{
+			txt: "bitmark=v3 a=",
+			err: fault.ErrInvalidDnsTxtRecord,
+		},
+
+		{
+			txt: "bitmark=v3 a= p=",
+			err: fault.ErrInvalidDnsTxtRecord,
+		},
+
+		{
+			txt: "bitmark=v3 a",
+			err: fault.ErrInvalidDnsTxtRecord,
+		},
+
+		{
+			txt: "bitmark=v3 a p",
+			err: fault.ErrInvalidDnsTxtRecord,
 		},
 
 		// check for missing items

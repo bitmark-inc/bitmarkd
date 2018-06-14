@@ -7,6 +7,7 @@ package litecoin
 import (
 	"bytes"
 	"crypto/sha256"
+
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 )

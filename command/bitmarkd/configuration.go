@@ -7,6 +7,10 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/configuration"
 	"github.com/bitmark-inc/bitmarkd/payment"
@@ -16,9 +20,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 // basic defaults (directories and files are relative to the "DataDirectory" from Configuration file)

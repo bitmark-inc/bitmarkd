@@ -8,6 +8,14 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"io"
+	"net/http"
+	"net/rpc"
+	"net/rpc/jsonrpc"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
@@ -17,13 +25,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
-	"io"
-	"net/http"
-	"net/rpc"
-	"net/rpc/jsonrpc"
-	"strconv"
-	"strings"
-	"time"
 )
 
 // defaults

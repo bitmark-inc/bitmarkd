@@ -6,8 +6,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/rpccalls"
+
 	"github.com/urfave/cli"
+
+	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/rpccalls"
 )
 
 func runTransactionStatus(c *cli.Context) error {

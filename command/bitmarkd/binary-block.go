@@ -7,12 +7,13 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
+	"io"
+	"os"
+
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/genesis"
 	"github.com/bitmark-inc/bitmarkd/storage"
-	"io"
-	"os"
 )
 
 // save blocks above genesis block to a file

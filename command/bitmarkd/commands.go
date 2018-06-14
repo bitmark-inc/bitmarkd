@@ -9,6 +9,14 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net"
+	"os"
+	"strconv"
+	"strings"
+
+	"golang.org/x/crypto/sha3"
+
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
@@ -16,12 +24,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/bitmark-inc/logger"
-	"golang.org/x/crypto/sha3"
-	"io/ioutil"
-	"net"
-	"os"
-	"strconv"
-	"strings"
 )
 
 // setup command handler

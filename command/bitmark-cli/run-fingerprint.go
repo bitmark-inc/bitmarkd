@@ -6,10 +6,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/urfave/cli"
-	"golang.org/x/crypto/sha3"
 	"io/ioutil"
 	"os"
+
+	"github.com/urfave/cli"
+	"golang.org/x/crypto/sha3"
 )
 
 // version byte prefix for fingerprint file

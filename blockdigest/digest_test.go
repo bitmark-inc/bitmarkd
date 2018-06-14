@@ -7,9 +7,10 @@ package blockdigest_test
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"math/big"
 	"testing"
+
+	"github.com/bitmark-inc/bitmarkd/blockdigest"
 )
 
 func TestScanFmt(t *testing.T) {

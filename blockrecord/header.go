@@ -6,24 +6,32 @@ package blockrecord
 
 import (
 	"encoding/binary"
+	"math/big"
+	"time"
+
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 )
 
+// use fix size array to simplify validation
+type PackedHeader [totalBlockSize]byte
+
 // packed records are just a byte slice
-type PackedHeader []byte
 type PackedBlock []byte
 
 // currently supported block version (used by proofer)
 const (
-	Version = 2
+	Version            = 2
+	MinimumVersion     = 1
+	MinimumBlockNumber = 2 // 1 => genesis block
 )
 
 // maximum transactions in a block
 // limited by uint16 field
 const (
+	MinimumTransactions = 2
 	MaximumTransactions = 10000
 )
 
@@ -50,8 +58,8 @@ const (
 	difficultyOffset       = timestampOffset + TimestampSize
 	nonceOffset            = difficultyOffset + DifficultySize
 
-	// the total size is exported
-	TotalBlockSize = nonceOffset + NonceSize // total bytes in the header
+	// to set size of header array
+	totalBlockSize = nonceOffset + NonceSize // total bytes in the header
 )
 
 // the unpacked header structure
@@ -67,24 +75,61 @@ type Header struct {
 	Nonce            NonceType              `json:"nonce"`
 }
 
-// create a new header with attached difficulty item
-func New() *Header {
-	return &Header{
-		Difficulty: difficulty.New(),
+// extract a header from the front of a []byte
+func ExtractHeader(block []byte) (*Header, blockdigest.Digest, []byte, error) {
+	if len(block) < totalBlockSize {
+		return nil, blockdigest.Digest{}, nil, fault.ErrInvalidBlockHeaderSize
 	}
+	packedHeader := PackedHeader{}
+	copy(packedHeader[:], block[:totalBlockSize])
+
+	header, err := packedHeader.Unpack()
+	if nil != err {
+		return nil, blockdigest.Digest{}, nil, err
+	}
+	digest := blockdigest.NewDigest(packedHeader[:])
+
+	blockDifficulty := header.Difficulty.BigInt()
+	currentDifficulty := difficulty.Current.BigInt()
+
+	n := big.NewInt(10) // range ± N%
+	l := big.NewInt(0)
+	h := big.NewInt(0)
+	h.Quo(currentDifficulty, n)
+	l.Sub(currentDifficulty, h) // current - N%
+	h.Add(currentDifficulty, h) // current + N%
+
+	if blockDifficulty.Cmp(l) < 0 || blockDifficulty.Cmp(h) > 0 || digest.Cmp(blockDifficulty) > 0 {
+		return nil, blockdigest.Digest{}, nil, fault.ErrInvalidBlockHeaderDifficulty
+	}
+
+	return header, digest, block[totalBlockSize:], nil
+
 }
 
 // turn a byte slice into a record
 func (record PackedHeader) Unpack() (*Header, error) {
-	if len(record) != TotalBlockSize {
-		return nil, fault.ErrInvalidBlockHeader
-	}
 
-	header := New()
+	header := &Header{
+		Difficulty: difficulty.New(),
+	}
 
 	header.Version = binary.LittleEndian.Uint16(record[versionOffset:])
 	header.TransactionCount = binary.LittleEndian.Uint16(record[transactionCountOffset:])
 	header.Number = binary.LittleEndian.Uint64(record[numberOffset:])
+
+	if 1 == header.Number && 1 == header.TransactionCount && 1 == header.Version {
+		// genesis block
+	} else {
+		// normal block
+		if header.Version < MinimumVersion || header.Number < MinimumBlockNumber {
+			return nil, fault.ErrInvalidBlockHeaderVersion
+		}
+
+		if header.TransactionCount < MinimumTransactions || header.TransactionCount > MaximumTransactions {
+			return nil, fault.ErrTransactionCountOutOfRange
+		}
+	}
 
 	err := blockdigest.DigestFromBytes(&header.PreviousBlock, record[previousBlockOffset:merkleRootOffset])
 	if nil != err {
@@ -97,6 +142,11 @@ func (record PackedHeader) Unpack() (*Header, error) {
 	}
 
 	header.Timestamp = binary.LittleEndian.Uint64(record[timestampOffset:difficultyOffset])
+
+	if header.Timestamp > uint64(time.Now().Add(5*time.Minute).Unix()) {
+		return nil, fault.ErrInvalidBlockHeaderTimestamp
+	}
+
 	header.Difficulty.SetBytes(record[difficultyOffset:nonceOffset])
 	header.Nonce = NonceType(binary.LittleEndian.Uint64(record[nonceOffset:]))
 
@@ -106,12 +156,14 @@ func (record PackedHeader) Unpack() (*Header, error) {
 // digest for a packed header
 // make sure to truncate bytes to correct length
 func (record PackedHeader) Digest() blockdigest.Digest {
-	return blockdigest.NewDigest(record[:TotalBlockSize])
+	//	return blockdigest.NewDigest(record[:TotalBlockSize])
+	return blockdigest.NewDigest(record[:])
 }
 
 // turn a record into an array of bytes
 func (header *Header) Pack() PackedHeader {
-	buffer := make([]byte, TotalBlockSize)
+	//buffer := make([]byte, TotalBlockSize)
+	buffer := PackedHeader{}
 
 	binary.LittleEndian.PutUint16(buffer[versionOffset:], header.Version)
 	binary.LittleEndian.PutUint16(buffer[transactionCountOffset:], header.TransactionCount)

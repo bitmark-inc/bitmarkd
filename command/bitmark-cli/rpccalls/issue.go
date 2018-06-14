@@ -8,6 +8,12 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"io"
+	"time"
+
+	"golang.org/x/crypto/ed25519"
+	"golang.org/x/crypto/sha3"
+
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/keypair"
 	"github.com/bitmark-inc/bitmarkd/merkle"
@@ -15,10 +21,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
-	"golang.org/x/crypto/ed25519"
-	"golang.org/x/crypto/sha3"
-	"io"
-	"time"
 )
 
 var (

@@ -5,11 +5,12 @@
 package publish
 
 import (
+	"sync"
+
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
-	"sync"
 )
 
 // a block of configuration data

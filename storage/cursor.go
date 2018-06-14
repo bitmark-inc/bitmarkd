@@ -5,9 +5,11 @@
 package storage
 
 import (
-	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/syndtr/goleveldb/leveldb/util"
 	"math/big"
+
+	"github.com/syndtr/goleveldb/leveldb/util"
+
+	"github.com/bitmark-inc/bitmarkd/fault"
 )
 
 // cursor structure

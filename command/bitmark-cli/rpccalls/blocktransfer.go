@@ -6,6 +6,9 @@ package rpccalls
 
 import (
 	"encoding/hex"
+
+	"golang.org/x/crypto/ed25519"
+
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/keypair"
@@ -13,7 +16,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
-	"golang.org/x/crypto/ed25519"
 )
 
 var (

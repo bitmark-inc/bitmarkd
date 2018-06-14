@@ -7,13 +7,15 @@ package transactionrecord_test
 import (
 	"bytes"
 	"encoding/json"
+	"reflect"
+	"testing"
+
+	"golang.org/x/crypto/ed25519"
+
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
-	"golang.org/x/crypto/ed25519"
-	"reflect"
-	"testing"
 )
 
 // test the packing/unpacking of base record
@@ -121,4 +123,5 @@ func TestPackBaseData(t *testing.T) {
 	if !reflect.DeepEqual(r, *baseData) {
 		t.Errorf("different, original: %v  recovered: %v", r, *baseData)
 	}
+	checkPackedData(t, "base data", packed)
 }

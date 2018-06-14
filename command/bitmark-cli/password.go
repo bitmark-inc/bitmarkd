@@ -6,11 +6,13 @@ package main
 
 import (
 	"fmt"
+	"os"
+
+	"golang.org/x/crypto/ssh/terminal"
+
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/keypair"
-	"golang.org/x/crypto/ssh/terminal"
-	"os"
 )
 
 var (

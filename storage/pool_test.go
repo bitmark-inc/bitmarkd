@@ -7,9 +7,10 @@ package storage_test
 import (
 	"bytes"
 	"crypto/rand"
-	"github.com/bitmark-inc/bitmarkd/storage"
 	"testing"
 	"time"
+
+	"github.com/bitmark-inc/bitmarkd/storage"
 )
 
 // helper to add to pool

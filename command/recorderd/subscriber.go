@@ -7,9 +7,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+
+	zmq "github.com/pebbe/zmq4"
+
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/logger"
-	zmq "github.com/pebbe/zmq4"
 )
 
 // sent by bitmarkd

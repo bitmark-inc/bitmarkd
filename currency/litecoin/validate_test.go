@@ -6,8 +6,9 @@ package litecoin_test
 
 import (
 	"encoding/hex"
-	"github.com/bitmark-inc/bitmarkd/currency/litecoin"
 	"testing"
+
+	"github.com/bitmark-inc/bitmarkd/currency/litecoin"
 )
 
 // for testing

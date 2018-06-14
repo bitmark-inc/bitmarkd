@@ -5,12 +5,13 @@
 package transactionrecord
 
 import (
+	"strings"
+	"unicode/utf8"
+
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
-	"strings"
-	"unicode/utf8"
 )
 
 // supported currency sets

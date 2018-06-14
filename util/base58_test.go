@@ -8,8 +8,9 @@ package util_test
 import (
 	"bytes"
 	"encoding/hex"
-	"github.com/bitmark-inc/bitmarkd/util"
 	"testing"
+
+	"github.com/bitmark-inc/bitmarkd/util"
 )
 
 var stringTests = []struct {

@@ -7,13 +7,15 @@ package transactionrecord_test
 import (
 	"bytes"
 	"encoding/json"
+	"reflect"
+	"testing"
+
+	"golang.org/x/crypto/ed25519"
+
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
-	"golang.org/x/crypto/ed25519"
-	"reflect"
-	"testing"
 )
 
 // test the packing/unpacking of registration record
@@ -329,4 +331,5 @@ func TestPackAssetDataWithEmptyMetadata(t *testing.T) {
 	if !reflect.DeepEqual(r, *reg) {
 		t.Fatalf("different, original: %v  recovered: %v", r, *reg)
 	}
+	checkPackedData(t, "asset", packed)
 }

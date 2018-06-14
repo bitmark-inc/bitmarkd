@@ -6,10 +6,11 @@ package cache
 
 import (
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/background"
 	"reflect"
 	"sync"
 	"time"
+
+	"github.com/bitmark-inc/bitmarkd/background"
 )
 
 type item struct {

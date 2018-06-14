@@ -5,9 +5,10 @@
 package background_test
 
 import (
-	"github.com/bitmark-inc/bitmarkd/background"
 	"testing"
 	"time"
+
+	"github.com/bitmark-inc/bitmarkd/background"
 )
 
 type bg1 struct {

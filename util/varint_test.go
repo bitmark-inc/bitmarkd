@@ -6,8 +6,9 @@ package util_test
 
 import (
 	"bytes"
-	"github.com/bitmark-inc/bitmarkd/util"
 	"testing"
+
+	"github.com/bitmark-inc/bitmarkd/util"
 )
 
 var varint64Tests = []struct {
@@ -29,6 +30,7 @@ var varint64Tests = []struct {
 	{0xffffffffffffffff, []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
 }
 
+// bad values are treated as zero
 var varint64TruncatedTests = [][]byte{
 	{},
 	{0x80},
@@ -67,10 +69,56 @@ func TestFromVarint64(t *testing.T) {
 		}
 	}
 
+	// expect result:0  and count:0
 	for i, item := range varint64TruncatedTests {
 		result, count := util.FromVarint64(item)
 		if 0 != result || 0 != count {
 			t.Errorf("%d: FromVarint64(%x) -> %d, %d  expected: 0, 0", i, item, result, count)
+		}
+	}
+}
+
+func TestClippedVarint64(t *testing.T) {
+
+	var testItems = []struct {
+		value   int
+		count   int
+		encoded []byte
+		minimum int
+		maximum int
+	}{
+		{0, 1, []byte{0x00}, 0, 1},
+		{1, 1, []byte{0x01}, 0, 1},
+		{127, 1, []byte{0x7f}, 1, 128},
+		{128, 2, []byte{0x80, 0x01}, 1, 128},
+		{0, 0, []byte{0x89, 0x01}, 1, 128},
+		{137, 2, []byte{0x89, 0x01}, 1, 256},
+		{255, 2, []byte{0xff, 0x01}, 1, 256},
+		{256, 2, []byte{0x80, 0x02}, 1, 256},
+		{0, 0, []byte{0x81, 0x02}, 1, 256},
+		{257, 2, []byte{0x81, 0x02}, 1, 1024},
+		{0, 0, []byte{0x81, 0x02}, 900, 1024},
+		{0, 0, []byte{0xff, 0x7f}, 1024, 8192},
+		{0, 0, []byte{0x80, 0x80, 0x01}, 1024, 8192},
+		{16383, 2, []byte{0xff, 0x7f}, 1024, 65535},
+		{16384, 3, []byte{0x80, 0x80, 0x01}, 1024, 65535},
+		{65535, 3, []byte{0xff, 0xff, 0x03}, 1024, 65535},
+		{0, 0, []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f}, 1024, 8192},
+		{0, 0, []byte{0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80}, 1024, 8192},
+		{0, 0, []byte{0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, 1024, 8192},
+		{0, 0, []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, 1024, 8192},
+	}
+
+	for i, item := range testItems {
+		// incorrect range give error
+		result0, count0 := util.ClippedVarint64(item.encoded, item.maximum, item.minimum)
+		if 0 != result0 || 0 != count0 {
+			t.Errorf("%d: ClipVarint64(%x) -> %d  expected: 0			", i, item.encoded, result0)
+		}
+
+		result1, count1 := util.ClippedVarint64(item.encoded, item.minimum, item.maximum)
+		if count1 != item.count || result1 != item.value {
+			t.Errorf("%d: ClipVarint64(%x) -> %d  count: %d  expected: %d  count: %d", i, item.encoded, result1, count1, item.value, item.count)
 		}
 	}
 }

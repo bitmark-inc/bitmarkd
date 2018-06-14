@@ -6,6 +6,7 @@ package block
 
 import (
 	"encoding/binary"
+
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/blockring"
@@ -59,5 +60,8 @@ func DigestForBlock(number uint64) (blockdigest.Digest, error) {
 	if nil == packed {
 		return blockdigest.Digest{}, fault.ErrBlockNotFound
 	}
-	return blockrecord.PackedHeader(packed).Digest(), nil
+
+	_, digest, _, err := blockrecord.ExtractHeader(packed)
+
+	return digest, err
 }

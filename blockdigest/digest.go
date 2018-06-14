@@ -7,10 +7,11 @@ package blockdigest
 import (
 	"encoding/hex"
 	"fmt"
+	"math/big"
+
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/go-argon2"
 	"github.com/bitmark-inc/logger"
-	"math/big"
 )
 
 // number of bytes in the digest

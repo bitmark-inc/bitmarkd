@@ -5,10 +5,11 @@
 package messagebus_test
 
 import (
-	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/bitmark-inc/bitmarkd/messagebus"
 )
 
 func TestQueue(t *testing.T) {

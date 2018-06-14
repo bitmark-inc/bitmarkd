@@ -6,6 +6,7 @@ package transactionrecord
 
 import (
 	"encoding/hex"
+
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/merkle"
@@ -147,7 +148,10 @@ type BlockOwnerTransfer struct {
 
 // determine the record type code
 func (record Packed) Type() TagType {
-	recordType, _ := util.FromVarint64(record)
+	recordType, n := util.FromVarint64(record)
+	if 0 == n {
+		return NullTag
+	}
 	return TagType(recordType)
 }
 

@@ -6,6 +6,8 @@ package reservoir
 
 import (
 	"bytes"
+	"time"
+
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/cache"
 	"github.com/bitmark-inc/bitmarkd/constants"
@@ -15,7 +17,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
-	"time"
 )
 
 type rebroadcaster struct {
@@ -74,7 +75,7 @@ unverified_tx:
 			messagebus.Bus.Broadcast.Send("transfer", item.transactions[0])
 		} else {
 			packedAssets := []byte{}
-			for assetId, _ := range item.itemData.assetIds {
+			for assetId := range item.itemData.assetIds {
 				packedAsset, err := fetchAsset(assetId)
 				if fault.ErrAssetNotFound == err {
 					// asset was confirmed in an earlier block
@@ -105,7 +106,7 @@ verified_tx:
 			// to get same pay id
 
 			packedAssets := []byte{}
-			for assetId, _ := range v.itemData.assetIds {
+			for assetId := range v.itemData.assetIds {
 				packedAsset, err := fetchAsset(assetId)
 				if fault.ErrAssetNotFound == err {
 					// asset was confirmed in an earlier block

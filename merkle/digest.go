@@ -7,8 +7,10 @@ package merkle
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/fault"
+
 	"golang.org/x/crypto/sha3"
+
+	"github.com/bitmark-inc/bitmarkd/fault"
 )
 
 // number of bytes in the digest

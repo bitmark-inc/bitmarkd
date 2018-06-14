@@ -6,9 +6,11 @@ package main
 
 import (
 	"encoding/hex"
+
+	"github.com/urfave/cli"
+
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
 	"github.com/bitmark-inc/bitmarkd/keypair"
-	"github.com/urfave/cli"
 )
 
 func runChangePassword(c *cli.Context) error {

@@ -6,6 +6,7 @@ package peer
 
 import (
 	"encoding/binary"
+
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -254,7 +255,7 @@ func processProof(packed []byte) error {
 	}
 
 	var payId pay.PayId
-	if len(packed) > payment.NonceLength+len(payId) {
+	if len(packed) != payment.NonceLength+len(payId) {
 		return fault.ErrInvalidNonce
 	}
 

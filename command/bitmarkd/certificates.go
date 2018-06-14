@@ -5,13 +5,15 @@
 package main
 
 import (
-	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/util"
-	"github.com/bitmark-inc/certgen"
-	"golang.org/x/crypto/sha3"
 	"io/ioutil"
 	"os"
 	"time"
+
+	"golang.org/x/crypto/sha3"
+
+	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/util"
+	"github.com/bitmark-inc/certgen"
 )
 
 // create a self-signed certificate

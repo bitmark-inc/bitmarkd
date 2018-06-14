@@ -6,18 +6,20 @@ package rpc
 
 import (
 	"crypto/tls"
-	"github.com/bitmark-inc/bitmarkd/announce"
-	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/util"
-	"github.com/bitmark-inc/listener"
-	"github.com/bitmark-inc/logger"
-	"golang.org/x/crypto/sha3"
 	"net"
 	"net/http"
 	"net/rpc"
 	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/crypto/sha3"
+
+	"github.com/bitmark-inc/bitmarkd/announce"
+	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/util"
+	"github.com/bitmark-inc/listener"
+	"github.com/bitmark-inc/logger"
 )
 
 type RPCConfiguration struct {

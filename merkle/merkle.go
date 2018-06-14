@@ -4,9 +4,7 @@
 
 package merkle
 
-import (
 //"github.com/bitmark-inc/bitmarkd/merkledigest"
-)
 
 // compute minimum merkle root from a set of transaction ids
 //

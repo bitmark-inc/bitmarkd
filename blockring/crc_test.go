@@ -5,9 +5,10 @@
 package blockring_test
 
 import (
+	"testing"
+
 	"github.com/bitmark-inc/bitmarkd/blockring"
 	"github.com/bitmark-inc/bitmarkd/genesis"
-	"testing"
 )
 
 func TestBitmarkCRC(t *testing.T) {

@@ -7,12 +7,14 @@ package main
 import (
 	"encoding/binary"
 	"encoding/json"
+	"sync/atomic"
+	"time"
+
+	zmq "github.com/pebbe/zmq4"
+
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/logger"
-	zmq "github.com/pebbe/zmq4"
-	"sync/atomic"
-	"time"
 )
 
 const (
@@ -171,7 +173,7 @@ func ProofThread(log *logger.L) error {
 				// adjust Nonce, and compute new digest
 				blk.Nonce += 1
 				packed := blk.Pack()
-				digest := blockdigest.NewDigest(packed)
+				digest := blockdigest.NewDigest(packed[:])
 
 				count += 1
 

@@ -10,12 +10,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"testing"
+
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/merkle"
-	"reflect"
-	"testing"
 )
 
 type recordsTestType struct {
@@ -161,7 +162,7 @@ func TestBlockDigestFromBlock(t *testing.T) {
 
 	p := h.Pack()
 
-	d := blockdigest.NewDigest(p)
+	d := blockdigest.NewDigest(p[:])
 
 	var expected blockdigest.Digest
 	n, err := fmt.Sscan(r.beExpectedDigest, &expected)
@@ -207,5 +208,18 @@ func TestBlockDigestFromBlock(t *testing.T) {
 
 	if !reflect.DeepEqual(uHeader, h) {
 		t.Fatalf("JSON mismatch: actual: %v  expected: %v", uHeader, h)
+	}
+
+	// check that truncated records give error
+	// note: this stops at 1 less than block header size
+	// so will never give a non-error response
+loop:
+	for i := 0; i < len(p); i += 1 {
+		// test the unpacker with bad records
+		h, _, _, err := blockrecord.ExtractHeader(p[:i])
+		if nil != err {
+			continue loop
+		}
+		t.Errorf("unpack: unexpected success: header[:%d]: %+v", i, h)
 	}
 }

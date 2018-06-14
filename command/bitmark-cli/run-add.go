@@ -6,9 +6,11 @@ package main
 
 import (
 	"fmt"
+
+	"github.com/urfave/cli"
+
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
-	"github.com/urfave/cli"
 )
 
 func runAdd(c *cli.Context) error {

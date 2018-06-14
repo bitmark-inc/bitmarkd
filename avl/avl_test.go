@@ -8,10 +8,11 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/avl"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/bitmark-inc/bitmarkd/avl"
 )
 
 //type stringItem string

@@ -6,10 +6,12 @@ package account
 
 import (
 	"bytes"
-	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/util"
+
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/sha3"
+
+	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/util"
 )
 
 // enumeration of supported key algorithms

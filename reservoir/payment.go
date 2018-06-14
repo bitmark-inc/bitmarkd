@@ -6,6 +6,7 @@ package reservoir
 
 import (
 	"bytes"
+
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/ownership"

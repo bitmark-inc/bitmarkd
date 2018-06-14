@@ -8,9 +8,10 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"testing"
+
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"testing"
 )
 
 // Test account functionality
@@ -41,6 +42,8 @@ var testInvalidAccountFromBase58 = []invalid{
 	{"anF8SWxSRY5vnN3Bbyz9buRYW1hfCAAZxfbv8Fw9SFXaktvLDj", fault.ErrChecksumMismatch},    // checksum mismatch
 	{"WjbRFkA9dhmMKnKTuufZ1sVD4E4H1NRnsmwjMKNHHRSCvDm5bXPV", fault.ErrInvalidKeyType},    // undefined key algorithm
 	{"YqVxD4vazrrnxnLH2MzCHJedPPz1VKHnKbVfya39nF96ABAYes", fault.ErrNotPublicKey},        // private key
+	{"anF8SWxSRY5vnN3Bbyz9buRYW1hfCAAZxfbv8Fw9SFXaktvLC", fault.ErrNotPublicKey},         // truncated
+	{"nF8SWxSRY5vnN3Bbyz9buRYW1hfCAAZxfbv8Fw9SFXaktvLCj", fault.ErrNotPublicKey},         // truncated
 }
 
 // show manually created accounts

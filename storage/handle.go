@@ -6,9 +6,11 @@ package storage
 
 import (
 	"encoding/binary"
-	"github.com/bitmark-inc/logger"
+
 	"github.com/syndtr/goleveldb/leveldb"
 	ldb_util "github.com/syndtr/goleveldb/leveldb/util"
+
+	"github.com/bitmark-inc/logger"
 )
 
 type PoolHandle struct {

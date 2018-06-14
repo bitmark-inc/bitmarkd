@@ -7,6 +7,10 @@ package genesis_test
 import (
 	"bytes"
 	"fmt"
+	"testing"
+	"time"
+	"unicode"
+
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
@@ -19,9 +23,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
-	"testing"
-	"time"
-	"unicode"
 )
 
 // some constants embedded into the genesis block
@@ -214,7 +215,7 @@ func checkAssembly(t *testing.T, title string, source SourceData, gDigest blockd
 
 	// pack the block
 	blk := blockrecord.PackedBlock(make([]byte, 0, blockSize))
-	blk = append(blk, header...)
+	blk = append(blk, header[:]...)
 	blk = append(blk, base...)
 
 	if !bytes.Equal(blk, gBlock) {
@@ -250,7 +251,7 @@ func checkAssembly(t *testing.T, title string, source SourceData, gDigest blockd
 	}
 
 	// unpack the block header
-	unpackedHeader, err := blockrecord.PackedHeader(blk[:blockrecord.TotalBlockSize]).Unpack()
+	unpackedHeader, _, _, err := blockrecord.ExtractHeader(blk)
 	if nil != err {
 		t.Fatalf("unpack block header failed: error: %s", err)
 	}

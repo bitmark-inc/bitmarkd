@@ -7,12 +7,14 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
-	"github.com/bitmark-inc/bitmarkd/keypair"
-	"github.com/urfave/cli"
-	"golang.org/x/crypto/ed25519"
 	"io/ioutil"
 	"os"
+
+	"github.com/urfave/cli"
+	"golang.org/x/crypto/ed25519"
+
+	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
+	"github.com/bitmark-inc/bitmarkd/keypair"
 )
 
 func runSign(c *cli.Context) error {
@@ -37,8 +39,8 @@ func runSign(c *cli.Context) error {
 	var ownerKeyPair *keypair.KeyPair
 
 	// get global password items
-	agent := c.GlobalString("agent")
-	clearCache := c.GlobalBool("clearCache")
+	agent := c.GlobalString("use-agent")
+	clearCache := c.GlobalBool("zero-agent-cache")
 	password := c.GlobalString("password")
 
 	// check owner password

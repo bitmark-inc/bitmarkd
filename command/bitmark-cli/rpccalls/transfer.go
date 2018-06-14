@@ -6,13 +6,15 @@ package rpccalls
 
 import (
 	"encoding/hex"
+
+	"golang.org/x/crypto/ed25519"
+
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/keypair"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
-	"golang.org/x/crypto/ed25519"
 )
 
 var (
@@ -125,7 +127,8 @@ func (client *Client) CountersignTransfer(countersignConfig *CountersignData) (*
 		return nil, err
 	}
 
-	r, _, err := transactionrecord.Packed(b).Unpack(client.testnet)
+	bCs := append(b, 0x01, 0x00) // one-byte countersignature to allow unpack to succeed
+	r, _, err := transactionrecord.Packed(bCs).Unpack(client.testnet)
 	if nil != err {
 		return nil, err
 	}

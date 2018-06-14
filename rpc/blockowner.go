@@ -6,6 +6,7 @@ package rpc
 
 import (
 	"encoding/binary"
+
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
@@ -49,14 +50,10 @@ func (bitmark *BlockOwner) TxIdForBlock(info *TxIdForBlockArguments, reply *TxId
 		return fault.ErrBlockNotFound
 	}
 
-	packedHeader := blockrecord.PackedHeader(packedBlock[:blockrecord.TotalBlockSize])
-	header, err := packedHeader.Unpack()
+	header, digest, _, err := blockrecord.ExtractHeader(packedBlock)
 	if nil != err {
 		return err
 	}
-
-	// block digest
-	digest := packedHeader.Digest()
 
 	reply.TxId = blockrecord.FoundationTxId(header, digest)
 

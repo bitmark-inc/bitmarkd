@@ -7,6 +7,10 @@ package payment
 import (
 	"encoding/hex"
 	"encoding/json"
+	"net/http"
+	"sync"
+	"time"
+
 	"github.com/bitmark-inc/bitmarkd/constants"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/currency/satoshi"
@@ -16,9 +20,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
-	"net/http"
-	"sync"
-	"time"
 )
 
 const (

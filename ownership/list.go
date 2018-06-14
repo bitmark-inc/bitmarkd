@@ -7,6 +7,7 @@ package ownership
 import (
 	"bytes"
 	"encoding/binary"
+
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/storage"
@@ -46,6 +47,9 @@ loop:
 	for _, item := range items {
 		n := len(item.Key)
 		split := n - uint64ByteSize
+		if split <= 0 {
+			logger.Panicf("split cannot be <= 0: %d", split)
+		}
 		itemOwner := item.Key[:n-uint64ByteSize]
 		if !bytes.Equal(ownerBytes, itemOwner) {
 			break loop

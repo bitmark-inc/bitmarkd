@@ -7,10 +7,11 @@ package transactionrecord_test
 import (
 	"encoding/json"
 	"fmt"
+	"testing"
+
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
-	"testing"
 )
 
 // test invalid asset identifiers

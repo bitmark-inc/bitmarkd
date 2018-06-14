@@ -8,6 +8,8 @@ import (
 	"bytes"
 	"container/list"
 	"encoding/hex"
+	"time"
+
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/genesis"
@@ -16,7 +18,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/peer/upstream"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
-	"time"
 )
 
 // various timeouts

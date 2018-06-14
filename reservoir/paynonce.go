@@ -7,9 +7,10 @@ package reservoir
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"hash/crc64"
+
 	"github.com/bitmark-inc/bitmarkd/blockring"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"hash/crc64"
 )
 
 // type to represent a payment nonce

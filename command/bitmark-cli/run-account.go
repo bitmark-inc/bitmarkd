@@ -6,8 +6,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/keypair"
+
 	"github.com/urfave/cli"
+
+	"github.com/bitmark-inc/bitmarkd/keypair"
 )
 
 func runAccount(c *cli.Context) error {

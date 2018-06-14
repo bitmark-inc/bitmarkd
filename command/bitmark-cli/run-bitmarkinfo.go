@@ -5,8 +5,9 @@
 package main
 
 import (
-	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/rpccalls"
 	"github.com/urfave/cli"
+
+	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/rpccalls"
 )
 
 func runBitmarkInfo(c *cli.Context) error {

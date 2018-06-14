@@ -7,12 +7,13 @@ package proof
 import (
 	"encoding/binary"
 	"fmt"
+	"sync"
+
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
-	"sync"
 )
 
 // to send to proofer
@@ -100,7 +101,7 @@ func matchToJobQueue(received *SubmittedItem) (success bool) {
 		if digest.Cmp(difficulty) > 0 {
 			return
 		}
-		packedBlock := ph //make([]byte,len(ph)+len(entry.item.Base)+len(entry.transactions))
+		packedBlock := ph[:] //make([]byte,len(ph)+len(entry.item.Base)+len(entry.transactions))
 		packedBlock = append(packedBlock, entry.item.TxZero...)
 		packedBlock = append(packedBlock, entry.transactions...)
 

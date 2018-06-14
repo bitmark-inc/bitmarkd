@@ -6,6 +6,7 @@ package main
 
 import (
 	"encoding/binary"
+
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -40,13 +41,11 @@ func dumpBlock(number uint64) (*blockResult, error) {
 		return nil, fault.ErrBlockNotFound
 	}
 
-	packedHeader := blockrecord.PackedHeader(packed[:blockrecord.TotalBlockSize])
-	header, err := packedHeader.Unpack()
+	header, digest, data, err := blockrecord.ExtractHeader(packed)
 	if nil != err {
 		return nil, err
 	}
 
-	data := packed[blockrecord.TotalBlockSize:]
 	txs := make([]transactionItem, header.TransactionCount)
 loop:
 	for i := 1; true; i += 1 {
@@ -68,7 +67,7 @@ loop:
 	}
 
 	result := &blockResult{
-		Digest:       packedHeader.Digest(),
+		Digest:       digest,
 		Header:       header,
 		Transactions: txs,
 	}

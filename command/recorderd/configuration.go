@@ -7,14 +7,15 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/chain"
-	"github.com/bitmark-inc/bitmarkd/configuration"
-	"github.com/bitmark-inc/bitmarkd/util"
-	"github.com/bitmark-inc/logger"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/bitmark-inc/bitmarkd/chain"
+	"github.com/bitmark-inc/bitmarkd/configuration"
+	"github.com/bitmark-inc/bitmarkd/util"
+	"github.com/bitmark-inc/logger"
 )
 
 // basic defaults (directories and files are relative to the "DataDirectory" from Configuration file)

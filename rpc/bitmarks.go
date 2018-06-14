@@ -6,6 +6,7 @@ package rpc
 
 import (
 	"encoding/hex"
+
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/messagebus"

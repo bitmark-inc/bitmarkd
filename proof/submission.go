@@ -6,10 +6,12 @@ package proof
 
 import (
 	"encoding/json"
+
+	zmq "github.com/pebbe/zmq4"
+
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
-	zmq "github.com/pebbe/zmq4"
 )
 
 const (

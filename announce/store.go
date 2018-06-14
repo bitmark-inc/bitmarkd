@@ -7,16 +7,17 @@ package announce
 import (
 	"encoding/hex"
 	"encoding/json"
-	"github.com/bitmark-inc/bitmarkd/util"
 	"os"
+
+	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/util"
 )
 
 // PeerItem is the basic structure for backup and restore peers
 type PeerItem struct {
-	PublicKey  []byte
-	Broadcasts []byte
-	Listeners  []byte
-	Timestamp  uint64
+	PublicKey []byte
+	Listeners []byte
+	Timestamp uint64
 }
 
 // MarshalText is the json marshal function for PeerItem
@@ -24,8 +25,6 @@ func (item PeerItem) MarshalText() ([]byte, error) {
 	b := []byte{}
 	b = append(b, util.ToVarint64(uint64(len(item.PublicKey)))...)
 	b = append(b, item.PublicKey...)
-	b = append(b, util.ToVarint64(uint64(len(item.Broadcasts)))...)
-	b = append(b, item.Broadcasts...)
 	b = append(b, util.ToVarint64(uint64(len(item.Listeners)))...)
 	b = append(b, item.Listeners...)
 	b = append(b, util.ToVarint64(uint64(item.Timestamp))...)
@@ -43,28 +42,33 @@ func (item *PeerItem) UnmarshalText(data []byte) error {
 		return err
 	}
 	n := 0
-	publicKeyLength, publicKeyOffset := util.FromVarint64(b[n:])
+
+	publicKeyLength, publicKeyOffset := util.ClippedVarint64(b[n:], 1, 8192)
+	if 0 == publicKeyOffset || 32 != publicKeyLength {
+		return fault.ErrNotPublicKey
+	}
 	publicKey := make([]byte, publicKeyLength)
 	n += publicKeyOffset
-	copy(publicKey, b[n:])
-	n += int(publicKeyLength)
+	copy(publicKey, b[n:n+publicKeyLength])
+	n += publicKeyLength
 
-	broadcastLength, broadcastOffset := util.FromVarint64(b[n:])
-	broadcast := make([]byte, broadcastLength)
-	n += broadcastOffset
-	copy(broadcast, b[n:])
-	n += int(broadcastLength)
+	listenerLength, listenerOffset := util.ClippedVarint64(b[n:], 1, 8192)
 
-	listenerLength, listenerOffset := util.FromVarint64(b[n:])
+	ll := listenerLength % 19
+	if 0 == listenerOffset || ll < 1 || ll > 2 {
+		return fault.ErrInvalidIPAddress
+	}
 	listener := make([]byte, listenerLength)
 	n += listenerOffset
-	copy(listener, b[n:])
-	n += int(listenerLength)
+	copy(listener, b[n:n+listenerLength])
+	n += listenerLength
 
-	timestamp, _ := util.FromVarint64(b[n:])
+	timestamp, timestampLength := util.FromVarint64(b[n:])
+	if 0 == timestampLength {
+		return fault.ErrInvalidTimestamp
+	}
 
 	item.PublicKey = publicKey
-	item.Broadcasts = broadcast
 	item.Listeners = listener
 	item.Timestamp = timestamp
 	return nil

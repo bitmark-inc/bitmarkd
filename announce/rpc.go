@@ -6,9 +6,10 @@ package announce
 
 import (
 	"bytes"
+	"time"
+
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
-	"time"
 )
 
 // set this node's rpc announcement data

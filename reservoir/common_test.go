@@ -5,14 +5,15 @@
 package reservoir_test
 
 import (
+	"os"
+	"testing"
+	"time"
+
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/logger"
-	"os"
-	"testing"
-	"time"
 )
 
 // test database file

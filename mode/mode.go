@@ -5,10 +5,11 @@
 package mode
 
 import (
+	"sync"
+
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/logger"
-	"sync"
 )
 
 // type to hold the mode

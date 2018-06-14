@@ -6,9 +6,10 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/bitmark-inc/logger"
 	"runtime"
 	"time"
+
+	"github.com/bitmark-inc/logger"
 )
 
 const (

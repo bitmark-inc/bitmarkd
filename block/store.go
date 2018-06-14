@@ -6,6 +6,7 @@ package block
 
 import (
 	"encoding/binary"
+
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
@@ -31,8 +32,7 @@ func StoreIncoming(packedBlock []byte) error {
 	reservoir.Disable()
 	defer reservoir.Enable()
 
-	packedHeader := blockrecord.PackedHeader(packedBlock[:blockrecord.TotalBlockSize])
-	header, err := packedHeader.Unpack()
+	header, digest, data, err := blockrecord.ExtractHeader(packedBlock)
 	if nil != err {
 		return err
 	}
@@ -45,7 +45,7 @@ func StoreIncoming(packedBlock []byte) error {
 
 	// check version
 	if header.Version < 1 {
-		return fault.ErrInvalidBlockHeader
+		return fault.ErrInvalidBlockHeaderVersion
 	}
 
 	// block version must be the same or higher
@@ -53,12 +53,30 @@ func StoreIncoming(packedBlock []byte) error {
 		return fault.ErrBlockVersionMustNotDecrease
 	}
 
+	// timestamp must be higher than previous
+	if globalData.previousTimestamp > header.Timestamp {
+		d := globalData.previousTimestamp - header.Timestamp
+		globalData.log.Errorf("prev: %d  next: %d  diff: %d  block: %d  version: %d", globalData.previousTimestamp, header.Timestamp, d, header.Number, header.Version)
+
+		// allow more tolerance for old blocks up to a few minutes back in time
+		fail := false
+		switch header.Version {
+		case 1:
+			fail = d > 240*60 // seconds
+		case 2:
+			fail = d > 10*60 // seconds
+		default:
+			fail = true
+		}
+		if fail {
+			return fault.ErrInvalidBlockHeaderTimestamp
+		}
+	}
+
 	// to overcome problem in V1 header blocks
 	suppressDuplicateRecordChecks := header.Version == 1
 
 	// extract the transaction data
-	data := packedBlock[blockrecord.TotalBlockSize:]
-
 	type txn struct {
 		txId                   merkle.Digest
 		packed                 transactionrecord.Packed
@@ -162,6 +180,7 @@ func StoreIncoming(packedBlock []byte) error {
 				txs[i].linkOwner = linkOwner
 
 			default:
+				// this will only occur if the above code is not in sync with transactionrecord/unpack.go
 				globalData.log.Criticalf("unhandled transaction: %v", tx)
 				logger.Panicf("unhandled transaction: %v", tx)
 			}
@@ -171,6 +190,11 @@ func StoreIncoming(packedBlock []byte) error {
 			txs[i].unpacked = transaction
 			txIds[i] = txId
 			data = data[n:]
+
+			// fail if extraneous data after final transaction
+			if i+1 == header.TransactionCount && len(data) > 0 {
+				return fault.ErrTransactionCountOutOfRange
+			}
 		}
 
 		// build the tree of transaction IDs
@@ -228,6 +252,10 @@ func StoreIncoming(packedBlock []byte) error {
 
 	default:
 		return fault.ErrMissingBlockOwner
+	}
+
+	if len(txs) < txStart {
+		return fault.ErrTransactionCountOutOfRange
 	}
 
 	// process the transactions into the database
@@ -302,9 +330,6 @@ func StoreIncoming(packedBlock []byte) error {
 	// payment data
 	storage.Pool.BlockOwnerPayment.Put(blockNumberKey, packedPayments)
 
-	// block digest
-	digest := packedHeader.Digest()
-
 	// create the foundation record
 	foundationTxId := blockrecord.FoundationTxId(header, digest)
 	storage.Pool.Transactions.Put(foundationTxId[:], blockNumberKey, packedFoundation)
@@ -319,6 +344,7 @@ func StoreIncoming(packedBlock []byte) error {
 
 	globalData.previousBlock = digest
 	globalData.previousVersion = header.Version
+	globalData.previousTimestamp = header.Timestamp
 	globalData.height = header.Number
 
 	// return early if rebuilding

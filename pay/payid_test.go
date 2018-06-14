@@ -6,8 +6,9 @@ package pay_test
 
 import (
 	"encoding/json"
-	"github.com/bitmark-inc/bitmarkd/pay"
 	"testing"
+
+	"github.com/bitmark-inc/bitmarkd/pay"
 )
 
 func TestPayId(t *testing.T) {

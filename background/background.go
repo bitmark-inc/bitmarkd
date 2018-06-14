@@ -4,8 +4,6 @@
 
 package background
 
-import ()
-
 // the shutdown and completed type for a background
 type shutdown struct {
 	shutdown chan struct{}

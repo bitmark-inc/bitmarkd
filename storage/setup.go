@@ -7,14 +7,16 @@ package storage
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/util"
-	"github.com/bitmark-inc/logger"
-	"github.com/syndtr/goleveldb/leveldb"
-	ldb_util "github.com/syndtr/goleveldb/leveldb/util"
 	"os"
 	"reflect"
 	"sync"
+
+	"github.com/syndtr/goleveldb/leveldb"
+	ldb_util "github.com/syndtr/goleveldb/leveldb/util"
+
+	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/util"
+	"github.com/bitmark-inc/logger"
 )
 
 // exported storage pools

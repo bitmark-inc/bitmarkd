@@ -6,8 +6,9 @@ package background_test
 
 import (
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/background"
 	"time"
+
+	"github.com/bitmark-inc/bitmarkd/background"
 )
 
 type theState struct {

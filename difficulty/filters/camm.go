@@ -6,8 +6,9 @@ package filters
 
 import (
 	"fmt"
-	"github.com/bitmark-inc/logger"
 	"sync"
+
+	"github.com/bitmark-inc/logger"
 )
 
 type Camm struct {

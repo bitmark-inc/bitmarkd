@@ -8,6 +8,8 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"sync"
+
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
@@ -18,7 +20,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
-	"sync"
 )
 
 // globals for background proccess
@@ -27,11 +28,12 @@ type blockData struct {
 
 	log *logger.L
 
-	height          uint64             // this is the current block Height
-	previousBlock   blockdigest.Digest // and its digest
-	previousVersion uint16             // plus its version
-	rebuild         bool               // set if all indexes are being rebuild
-	blk             blockstore         // for sequencing block storage
+	height            uint64             // this is the current block Height
+	previousBlock     blockdigest.Digest // and its digest
+	previousVersion   uint16             // plus its version
+	previousTimestamp uint64             // plus its timestamp
+	rebuild           bool               // set if all indexes are being rebuild
+	blk               blockstore         // for sequencing block storage
 
 	// for background
 	background *background.T
@@ -67,6 +69,7 @@ func Initialise(recover bool) error {
 	globalData.height = genesis.BlockNumber
 	globalData.previousBlock = genesis.LiveGenesisDigest
 	globalData.previousVersion = 1
+	globalData.previousTimestamp = 0
 	if mode.IsTesting() {
 		globalData.previousBlock = genesis.TestGenesisDigest
 	}
@@ -149,14 +152,14 @@ func fillRingBuffer(log *logger.L) error {
 	if last, ok := storage.Pool.Blocks.LastElement(); ok {
 
 		// get highest block
-		packedHeader := blockrecord.PackedHeader(last.Value[:blockrecord.TotalBlockSize])
-		header, err := packedHeader.Unpack()
+		header, digest, _, err := blockrecord.ExtractHeader(last.Value)
 		if nil != err {
 			log.Criticalf("failed to unpack block: %d from storage  error: %s", binary.BigEndian.Uint64(last.Key), err)
 			return err
 		}
 		globalData.previousVersion = header.Version
-		globalData.previousBlock = packedHeader.Digest()
+		globalData.previousBlock = digest
+		globalData.previousTimestamp = header.Timestamp
 		globalData.height = header.Number // highest block number in database
 
 		log.Infof("highest block from storage: %d", globalData.height)
@@ -186,9 +189,7 @@ func fillRingBuffer(log *logger.L) error {
 
 		for i, item := range items {
 
-			packedHeader := blockrecord.PackedHeader(item.Value[:blockrecord.TotalBlockSize])
-			digest := packedHeader.Digest()
-			header, err := packedHeader.Unpack()
+			header, digest, data, err := blockrecord.ExtractHeader(item.Value)
 			if nil != err {
 				log.Criticalf("failed to unpack block: %d from storage  error: %s", binary.BigEndian.Uint64(last.Key), err)
 				return err
@@ -208,7 +209,6 @@ func fillRingBuffer(log *logger.L) error {
 				// + begin debugging
 				//log.Infof("header: %#v", header)
 
-				data := item.Value[blockrecord.TotalBlockSize:]
 				txs := make([]interface{}, header.TransactionCount)
 			loop:
 				for i := 1; true; i += 1 {

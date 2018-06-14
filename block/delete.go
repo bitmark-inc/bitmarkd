@@ -6,6 +6,7 @@ package block
 
 import (
 	"encoding/binary"
+
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
@@ -38,8 +39,7 @@ func DeleteDownToBlock(finalBlockNumber uint64) error {
 
 outer_loop:
 	for {
-		packedHeader := blockrecord.PackedHeader(packedBlock[:blockrecord.TotalBlockSize])
-		header, err := packedHeader.Unpack()
+		header, digest, data, err := blockrecord.ExtractHeader(packedBlock)
 		if nil != err {
 			log.Criticalf("failed to unpack block: %d from storage  error: %s", binary.BigEndian.Uint64(last.Key), err)
 			return err
@@ -57,8 +57,7 @@ outer_loop:
 		// record block owner
 		var blockOwner *account.Account
 
-		// packed transactions
-		data := packedBlock[blockrecord.TotalBlockSize:]
+		// handle packed transactions
 	inner_loop:
 		for i := 1; true; i += 1 {
 			transaction, n, err := transactionrecord.Packed(data).Unpack(mode.IsTesting())
@@ -130,9 +129,6 @@ outer_loop:
 				break inner_loop
 			}
 		}
-
-		// block digest
-		digest := packedHeader.Digest()
 
 		// block number key for deletion
 		blockNumberKey := make([]byte, 8)

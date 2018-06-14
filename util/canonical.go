@@ -5,11 +5,12 @@
 package util
 
 import (
-	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/logger"
 	"net"
 	"strconv"
 	"strings"
+
+	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/logger"
 )
 
 // type to hold an IP and Port

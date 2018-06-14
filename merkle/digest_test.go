@@ -7,10 +7,11 @@ package merkle_test
 import (
 	"encoding/json"
 	"fmt"
+	"testing"
+
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/util"
-	"testing"
 )
 
 func TestScanFmt(t *testing.T) {

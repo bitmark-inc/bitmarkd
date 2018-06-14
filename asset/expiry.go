@@ -6,9 +6,10 @@ package asset
 
 import (
 	"container/list"
+	"time"
+
 	"github.com/bitmark-inc/bitmarkd/constants"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
-	"time"
 )
 
 // to control expiry

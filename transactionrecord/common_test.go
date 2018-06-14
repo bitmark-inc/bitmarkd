@@ -6,13 +6,16 @@ package transactionrecord_test
 
 import (
 	"crypto/rand"
-	"github.com/bitmark-inc/bitmarkd/account"
-	"github.com/bitmark-inc/bitmarkd/merkle"
-	"github.com/bitmark-inc/bitmarkd/util"
-	"github.com/bitmark-inc/logger"
-	"golang.org/x/crypto/ed25519"
 	"os"
 	"testing"
+
+	"golang.org/x/crypto/ed25519"
+
+	"github.com/bitmark-inc/bitmarkd/account"
+	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/bitmark-inc/bitmarkd/transactionrecord"
+	"github.com/bitmark-inc/bitmarkd/util"
+	"github.com/bitmark-inc/logger"
 )
 
 // remove all files created by test
@@ -176,4 +179,23 @@ func makeAccount(publicKey []byte) *account.Account {
 func merkleDigestFromLE(s string, link *merkle.Digest) error {
 	// convert little endian hex text into a digest
 	return link.UnmarshalText([]byte(s))
+}
+
+// try all length of incomplete record to ensure the case error
+func checkPackedData(t *testing.T, title string, packed transactionrecord.Packed) {
+
+loop:
+	for i := 0; i < len(packed); i += 1 {
+		// test the unpacker with bad records
+		// one less than whole record to avoid any success
+		//p := append(transactionrecord.Packed{}, packed[:i]...)
+		p := make(transactionrecord.Packed, i, i)
+		copy(p, packed[:i])
+		unpacked, n, err := p.Unpack(true)
+		if nil != err {
+			continue loop
+		}
+
+		t.Errorf("unpack[%d](%s): unexpected success: record[:%d]: %+v", i, title, n, unpacked)
+	}
 }

@@ -5,10 +5,11 @@
 package rpc
 
 import (
+	"time"
+
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/logger"
-	"time"
 )
 
 // Transaction is a rpc entry for transaction related functions

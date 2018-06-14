@@ -5,11 +5,12 @@
 package rpccalls
 
 import (
+	"golang.org/x/crypto/ed25519"
+
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/keypair"
 	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
-	"golang.org/x/crypto/ed25519"
 )
 
 var (

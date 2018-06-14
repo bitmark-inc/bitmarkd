@@ -5,10 +5,18 @@
 package zmqutil
 
 import (
+	"time"
+
+	zmq "github.com/pebbe/zmq4"
+
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
-	zmq "github.com/pebbe/zmq4"
-	"time"
+)
+
+// point at which to disconnect large message senders
+// current estimate of a block maximum is 2 MB
+const (
+	maximumPacketSize = 5000000 // 5 MB
 )
 
 // ***** FIX THIS: enabling this causes complete failure
@@ -178,6 +186,11 @@ func NewServerSocket(socketType zmq.Type, zapDomain string, privateKey []byte, p
 	// if nil != err {
 	// 	goto failure
 	// }
+
+	err = socket.SetMaxmsgsize(maximumPacketSize)
+	if nil != err {
+		goto failure
+	}
 
 	return socket, nil
 

@@ -6,10 +6,11 @@ package main
 
 import (
 	"errors"
-	"github.com/bitmark-inc/listener"
 	"net/rpc"
 	"net/rpc/jsonrpc"
 	"sync"
+
+	"github.com/bitmark-inc/listener"
 )
 
 // simple type with state

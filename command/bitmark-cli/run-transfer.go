@@ -7,10 +7,12 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
+
+	"github.com/urfave/cli"
+
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/rpccalls"
 	"github.com/bitmark-inc/bitmarkd/keypair"
-	"github.com/urfave/cli"
 )
 
 func runTransfer(c *cli.Context) error {
@@ -41,8 +43,8 @@ func runTransfer(c *cli.Context) error {
 	var ownerKeyPair *keypair.KeyPair
 
 	// get global password items
-	agent := c.GlobalString("agent")
-	clearCache := c.GlobalBool("clearCache")
+	agent := c.GlobalString("use-agent")
+	clearCache := c.GlobalBool("zero-agent-cache")
 	password := c.GlobalString("password")
 
 	// check owner password

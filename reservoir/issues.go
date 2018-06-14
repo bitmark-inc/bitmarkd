@@ -7,6 +7,10 @@ package reservoir
 import (
 	"bytes"
 	"encoding/binary"
+	"math/big"
+
+	"golang.org/x/crypto/sha3"
+
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/blockring"
 	"github.com/bitmark-inc/bitmarkd/cache"
@@ -18,8 +22,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
-	"golang.org/x/crypto/sha3"
-	"math/big"
 )
 
 const (

@@ -7,9 +7,10 @@ package currency_test
 import (
 	"encoding/json"
 	"fmt"
+	"testing"
+
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"testing"
 )
 
 type currencyTest struct {

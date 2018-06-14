@@ -6,6 +6,8 @@ package rpc
 
 import (
 	"encoding/hex"
+	"time"
+
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
@@ -14,7 +16,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/peer"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/logger"
-	"time"
 )
 
 type Node struct {

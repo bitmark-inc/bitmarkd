@@ -5,9 +5,10 @@
 package zmqutil
 
 import (
-	zmq "github.com/pebbe/zmq4"
 	"sync"
 	"time"
+
+	zmq "github.com/pebbe/zmq4"
 )
 
 // structure to hold a poller

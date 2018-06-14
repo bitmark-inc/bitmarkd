@@ -5,12 +5,13 @@
 package blockring
 
 import (
+	"sync"
+
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/genesis"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/logger"
-	"sync"
 )
 
 // internal constants

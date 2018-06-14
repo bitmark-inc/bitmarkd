@@ -8,14 +8,15 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io"
+	"os"
+
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/cache"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
-	"io"
-	"os"
 )
 
 var (
@@ -168,7 +169,7 @@ func backupAssets(f *os.File) error {
 	for _, val := range cache.Pool.UnverifiedTxEntries.Items() {
 		v := val.(*unverifiedItem)
 		if v.links == nil {
-			for assetId, _ := range v.itemData.assetIds {
+			for assetId := range v.itemData.assetIds {
 				allAssets[assetId] = struct{}{}
 			}
 		}
@@ -178,14 +179,14 @@ func backupAssets(f *os.File) error {
 	for _, val := range cache.Pool.VerifiedTx.Items() {
 		v := val.(*verifiedItem)
 		if v.links == nil && 0 == v.index { // only need to check assets on first record of block
-			for assetId, _ := range v.itemData.assetIds {
+			for assetId := range v.itemData.assetIds {
 				allAssets[assetId] = struct{}{}
 			}
 		}
 	}
 
 backup_loop:
-	for assetId, _ := range allAssets {
+	for assetId := range allAssets {
 		packedAsset, err := fetchAsset(assetId)
 		if nil != err {
 			globalData.log.Errorf("asset [%s]: error: %s", assetId, err)

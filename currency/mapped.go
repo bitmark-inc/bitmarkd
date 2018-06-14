@@ -62,6 +62,9 @@ func UnpackMap(buffer []byte, testnet bool) (Map, Set, error) {
 
 		// currency
 		c, currencyLength := util.FromVarint64(buffer[n:])
+		if 0 == currencyLength {
+			return nil, Set{}, fault.ErrInvalidCurrency
+		}
 		currency, err := FromUint64(c)
 		if nil != err {
 			return nil, Set{}, err
@@ -75,16 +78,14 @@ func UnpackMap(buffer []byte, testnet bool) (Map, Set, error) {
 
 		n += currencyLength
 
-		// paymentAddress
-		paymentAddressLength, paymentAddressOffset := util.FromVarint64(buffer[n:])
-		n += paymentAddressOffset
-
-		if paymentAddressLength > 255 {
+		// paymentAddress (limit address length)
+		paymentAddressLength, paymentAddressOffset := util.ClippedVarint64(buffer[n:], 1, 255)
+		if 0 == paymentAddressOffset {
 			return nil, Set{}, fault.ErrInvalidCount
 		}
+		n += paymentAddressOffset
 
-		l := int(paymentAddressLength)
-		paymentAddress := string(buffer[n : n+l])
+		paymentAddress := string(buffer[n : n+paymentAddressLength])
 		n += int(paymentAddressLength)
 
 		err = currency.ValidateAddress(paymentAddress, testnet)

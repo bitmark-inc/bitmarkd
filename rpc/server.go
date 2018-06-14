@@ -5,11 +5,12 @@
 package rpc
 
 import (
-	"github.com/bitmark-inc/bitmarkd/counter"
-	"github.com/bitmark-inc/logger"
 	"io"
 	"net/rpc"
 	"net/rpc/jsonrpc"
+
+	"github.com/bitmark-inc/bitmarkd/counter"
+	"github.com/bitmark-inc/logger"
 )
 
 // limit the number of gets

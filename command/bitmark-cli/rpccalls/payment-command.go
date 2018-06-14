@@ -6,9 +6,10 @@ package rpccalls
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
-	"strings"
 )
 
 // prefix for the payment command

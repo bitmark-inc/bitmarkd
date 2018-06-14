@@ -7,9 +7,10 @@ package announce
 import (
 	"bytes"
 	"encoding/binary"
+	"time"
+
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/logger"
-	"time"
 )
 
 const (
@@ -116,7 +117,7 @@ func determineConnections(log *logger.L) {
 		return
 	}
 	peer := n1.Value().(*peerEntry)
-	log.Infof("N1: peer: %x", peer)
+	log.Infof("N1: peer: %s", peer)
 	messagebus.Bus.Connector.Send("N1", peer.publicKey, peer.listeners)
 
 	// N2
@@ -138,7 +139,7 @@ func determineConnections(log *logger.L) {
 	}
 	if n3 != n1 {
 		peer := node.Value().(*peerEntry)
-		log.Infof("N3: peer: %x", peer)
+		log.Infof("N3: peer: %s", peer)
 		messagebus.Bus.Connector.Send("N3", peer.publicKey, peer.listeners)
 	}
 
@@ -171,21 +172,21 @@ func determineConnections(log *logger.L) {
 	if nil != x25 {
 		if x25 != n1 && x25 != n3 {
 			peer := x25.Value().(*peerEntry)
-			log.Infof("X25: peer: %x", peer)
+			log.Infof("X25: peer: %s", peer)
 			messagebus.Bus.Connector.Send("X25", peer.publicKey, peer.listeners)
 		}
 	}
 	if nil != x50 {
 		if x50 != n1 && x50 != n3 && x50 != x25 {
 			peer := x50.Value().(*peerEntry)
-			log.Infof("X50: peer: %x", peer)
+			log.Infof("X50: peer: %s", peer)
 			messagebus.Bus.Connector.Send("X50", peer.publicKey, peer.listeners)
 		}
 	}
 	if nil != x75 {
 		if x75 != n1 && x75 != n3 && x75 != x25 && x75 != x50 {
 			peer := x75.Value().(*peerEntry)
-			log.Infof("X75: peer: %x", peer)
+			log.Infof("X75: peer: %s", peer)
 			messagebus.Bus.Connector.Send("X75", peer.publicKey, peer.listeners)
 		}
 	}

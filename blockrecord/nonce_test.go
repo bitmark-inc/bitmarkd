@@ -6,8 +6,9 @@ package blockrecord_test
 
 import (
 	"encoding/json"
-	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"testing"
+
+	"github.com/bitmark-inc/bitmarkd/blockrecord"
 )
 
 // test JSON conversion

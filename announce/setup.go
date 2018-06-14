@@ -6,15 +6,16 @@ package announce
 
 import (
 	"encoding/hex"
+	"net"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/bitmark-inc/bitmarkd/avl"
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
-	"net"
-	"strings"
-	"sync"
-	"time"
 )
 
 // type of listener

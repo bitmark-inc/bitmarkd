@@ -6,9 +6,10 @@ package currency_test
 
 import (
 	"encoding/json"
+	"testing"
+
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"testing"
 )
 
 // test the currency.Map packer

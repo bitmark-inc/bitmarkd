@@ -6,10 +6,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
-	"github.com/urfave/cli"
 	"io"
 	"os"
+
+	"github.com/urfave/cli"
+
+	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 )
 
 type metadata struct {

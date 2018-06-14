@@ -5,9 +5,10 @@
 package configuration
 
 import (
+	"path/filepath"
+
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
 	"github.com/bitmark-inc/bitmarkd/configuration"
-	"path/filepath"
 )
 
 const (

@@ -6,8 +6,9 @@ package merkle_test
 
 import (
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/merkle"
 	"testing"
+
+	"github.com/bitmark-inc/bitmarkd/merkle"
 )
 
 // hex -> link

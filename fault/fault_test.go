@@ -5,8 +5,9 @@
 package fault_test
 
 import (
-	"github.com/bitmark-inc/bitmarkd/fault"
 	"testing"
+
+	"github.com/bitmark-inc/bitmarkd/fault"
 )
 
 var (

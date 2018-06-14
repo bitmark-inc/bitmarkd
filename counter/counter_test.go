@@ -5,8 +5,9 @@
 package counter_test
 
 import (
-	"github.com/bitmark-inc/bitmarkd/counter"
 	"testing"
+
+	"github.com/bitmark-inc/bitmarkd/counter"
 )
 
 // test incrementing/decrementing a counter

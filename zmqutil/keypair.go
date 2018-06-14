@@ -6,12 +6,14 @@ package zmqutil
 
 import (
 	"encoding/hex"
-	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/util"
-	zmq "github.com/pebbe/zmq4"
 	"io/ioutil"
 	"os"
 	"strings"
+
+	zmq "github.com/pebbe/zmq4"
+
+	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/util"
 )
 
 const (

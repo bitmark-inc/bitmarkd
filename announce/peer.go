@@ -8,10 +8,11 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"time"
+
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
-	"time"
 )
 
 type pubkey []byte
@@ -20,6 +21,10 @@ type peerEntry struct {
 	publicKey []byte
 	listeners []byte
 	timestamp time.Time
+}
+
+func (p peerEntry) String() string {
+	return fmt.Sprintf("PK:%x@%x-%v", p.publicKey, p.listeners, p.timestamp)
 }
 
 // called by the peering initialisation to set up this node's

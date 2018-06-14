@@ -5,10 +5,11 @@
 package storage_test
 
 import (
-	"github.com/bitmark-inc/bitmarkd/storage"
-	"github.com/bitmark-inc/logger"
 	"os"
 	"testing"
+
+	"github.com/bitmark-inc/bitmarkd/storage"
+	"github.com/bitmark-inc/logger"
 )
 
 // test database file

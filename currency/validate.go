@@ -5,11 +5,12 @@
 package currency
 
 import (
+	"unicode/utf8"
+
 	"github.com/bitmark-inc/bitmarkd/currency/bitcoin"
 	"github.com/bitmark-inc/bitmarkd/currency/litecoin"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/logger"
-	"unicode/utf8"
 )
 
 const (

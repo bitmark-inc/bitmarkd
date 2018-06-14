@@ -7,9 +7,10 @@ package difficulty_test
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"math"
 	"testing"
+
+	"github.com/bitmark-inc/bitmarkd/difficulty"
 )
 
 // test difficulty initiialisation

@@ -7,10 +7,12 @@ package keypair
 import (
 	"crypto/rand"
 	"encoding/hex"
+
+	"golang.org/x/crypto/sha3"
+
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
-	"golang.org/x/crypto/sha3"
 )
 
 var (

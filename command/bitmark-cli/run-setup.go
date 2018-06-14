@@ -6,11 +6,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
-	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
-	"github.com/urfave/cli"
 	"os"
 	"strings"
+
+	"github.com/urfave/cli"
+
+	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
+	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
 )
 
 func runSetup(c *cli.Context) error {

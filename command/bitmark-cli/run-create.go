@@ -6,11 +6,13 @@ package main
 
 import (
 	"fmt"
+	"strings"
+
+	"github.com/urfave/cli"
+
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/rpccalls"
 	"github.com/bitmark-inc/bitmarkd/keypair"
-	"github.com/urfave/cli"
-	"strings"
 )
 
 func runCreate(c *cli.Context) error {
@@ -58,8 +60,8 @@ func runCreate(c *cli.Context) error {
 	var registrant *keypair.KeyPair
 
 	// get global password items
-	agent := c.GlobalString("agent")
-	clearCache := c.GlobalBool("clearCache")
+	agent := c.GlobalString("use-agent")
+	clearCache := c.GlobalBool("zero-agent-cache")
 	password := c.GlobalString("password")
 
 	// check password

@@ -7,16 +7,17 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
+
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/bitmark-inc/getoptions"
 	"github.com/bitmark-inc/logger"
-	"os"
-	"os/signal"
-	"strings"
-	"syscall"
 )
 
 // set by the linker: go build -ldflags "-X main.version=M.N" ./...

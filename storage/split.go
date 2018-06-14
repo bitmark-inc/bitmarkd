@@ -6,6 +6,7 @@ package storage
 
 import (
 	"encoding/binary"
+
 	"github.com/bitmark-inc/logger"
 )
 

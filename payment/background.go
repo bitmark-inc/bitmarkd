@@ -5,13 +5,15 @@
 package payment
 
 import (
+	"sync"
+	"time"
+
+	zmq "github.com/pebbe/zmq4"
+
 	"github.com/bitmark-inc/bitmarkd/constants"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
-	zmq "github.com/pebbe/zmq4"
-	"sync"
-	"time"
 )
 
 const (
@@ -180,6 +182,7 @@ func (d *discoverer) Run(args interface{}, shutdown <-chan struct{}) {
 func (d *discoverer) retrievePastTxs() {
 	originTime := time.Now().Add(-constants.ReservoirTimeout)
 
+retrieve_loop:
 	for currency, handler := range globalData.handlers {
 		d.log.Infof("start to fetch possible %s txs since time at %d", currency, originTime.Unix())
 
@@ -187,8 +190,12 @@ func (d *discoverer) retrievePastTxs() {
 		msg, err := d.req.RecvMessageBytes(0)
 		if err != nil {
 			d.log.Errorf("failed to receive message: %v", err)
+			continue retrieve_loop
 		}
-
+		if len(msg) < 2 {
+			d.log.Errorf("truncated message: %v", msg)
+			continue retrieve_loop
+		}
 		handler.processPastTxs(msg[1])
 	}
 }

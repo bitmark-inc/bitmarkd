@@ -5,11 +5,12 @@
 package configuration
 
 import (
-	"github.com/bitmark-inc/bitmarkd/fault"
-	libucl "github.com/bitmark-inc/go-libucl"
 	"os"
 	"reflect"
 	"strings"
+
+	"github.com/bitmark-inc/bitmarkd/fault"
+	libucl "github.com/bitmark-inc/go-libucl"
 )
 
 // read a configuration file and parse using libucl

@@ -6,6 +6,8 @@ package reservoir
 
 import (
 	"fmt"
+	"sync"
+
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/cache"
 	"github.com/bitmark-inc/bitmarkd/currency"
@@ -16,7 +18,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
-	"sync"
 )
 
 type itemData struct {

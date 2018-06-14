@@ -8,13 +8,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"testing"
+
+	"golang.org/x/crypto/ed25519"
+
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
-	"golang.org/x/crypto/ed25519"
-	"reflect"
-	"testing"
 )
 
 // test the packing/unpacking of Bitmark issue record
@@ -127,6 +129,7 @@ func TestPackBitmarkIssue(t *testing.T) {
 	if !reflect.DeepEqual(r, *bmt) {
 		t.Fatalf("different, original: %v  recovered: %v", r, *bmt)
 	}
+	checkPackedData(t, "issue", packed)
 }
 
 // make 10 separate issues for testing

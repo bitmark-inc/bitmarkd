@@ -8,11 +8,12 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/bitmark-inc/exitwithstatus"
-	"github.com/bitmark-inc/getoptions"
 	"net/rpc"
 	"net/rpc/jsonrpc"
 	"os"
+
+	"github.com/bitmark-inc/exitwithstatus"
+	"github.com/bitmark-inc/getoptions"
 )
 
 type RPCEmptyArguments struct{}

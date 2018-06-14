@@ -8,14 +8,15 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/storage"
-	"github.com/bitmark-inc/exitwithstatus"
-	"github.com/bitmark-inc/getoptions"
-	"github.com/bitmark-inc/logger"
 	"os"
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/bitmark-inc/bitmarkd/storage"
+	"github.com/bitmark-inc/exitwithstatus"
+	"github.com/bitmark-inc/getoptions"
+	"github.com/bitmark-inc/logger"
 )
 
 // set by the linker: go build -ldflags "-X main.version=M.N" ./...

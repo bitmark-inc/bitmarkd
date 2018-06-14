@@ -8,11 +8,12 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/difficulty/filters"
-	"github.com/bitmark-inc/logger"
 	"math"
 	"math/big"
 	"sync"
+
+	"github.com/bitmark-inc/bitmarkd/difficulty/filters"
+	"github.com/bitmark-inc/logger"
 )
 
 // the default values

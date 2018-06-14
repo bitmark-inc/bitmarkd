@@ -8,12 +8,14 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/hex"
+	"sync"
+	"time"
+
+	zmq "github.com/pebbe/zmq4"
+
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
-	zmq "github.com/pebbe/zmq4"
-	"sync"
-	"time"
 )
 
 // structure to hold a client connection
@@ -198,6 +200,12 @@ func (client *Client) openSocket() error {
 	// if nil != err {
 	// 	goto failure
 	// }
+
+	// see socket.go for constants
+	err = socket.SetMaxmsgsize(maximumPacketSize)
+	if nil != err {
+		goto failure
+	}
 
 	// set IPv6 state before connect
 	err = socket.SetIpv6(client.v6)

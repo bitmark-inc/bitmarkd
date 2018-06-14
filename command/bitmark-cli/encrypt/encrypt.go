@@ -10,12 +10,14 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/hex"
+	"io"
+	"strings"
+
+	"golang.org/x/crypto/ed25519"
+
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/keypair"
 	"github.com/bitmark-inc/go-argon2"
-	"golang.org/x/crypto/ed25519"
-	"io"
-	"strings"
 )
 
 const (

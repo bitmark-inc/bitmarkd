@@ -6,8 +6,9 @@ package bitcoin_test
 
 import (
 	"encoding/hex"
-	"github.com/bitmark-inc/bitmarkd/currency/bitcoin"
 	"testing"
+
+	"github.com/bitmark-inc/bitmarkd/currency/bitcoin"
 )
 
 // for testing

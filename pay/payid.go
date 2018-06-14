@@ -6,8 +6,10 @@ package pay
 
 import (
 	"encoding/hex"
-	"github.com/bitmark-inc/bitmarkd/fault"
+
 	"golang.org/x/crypto/sha3"
+
+	"github.com/bitmark-inc/bitmarkd/fault"
 )
 
 // type to represent a payment identifier

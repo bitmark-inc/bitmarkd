@@ -6,10 +6,11 @@ package util_test
 
 import (
 	"encoding/hex"
-	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/util"
 	"strings"
 	"testing"
+
+	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/util"
 )
 
 // Test IP address detection

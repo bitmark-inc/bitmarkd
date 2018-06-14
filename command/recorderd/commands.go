@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/bitmark-inc/logger"

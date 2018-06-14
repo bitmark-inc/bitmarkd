@@ -6,16 +6,17 @@ package announce
 
 import (
 	"encoding/hex"
-	"github.com/bitmark-inc/bitmarkd/fault"
 	"net"
 	"strconv"
 	"strings"
+
+	"github.com/bitmark-inc/bitmarkd/fault"
 )
 
 // the tag to detect applicable TXT records from DNS
 var supportedTags = map[string]struct{}{
-	"bitmark=v2": struct{}{},
-	"bitmark=v3": struct{}{},
+	"bitmark=v2": {},
+	"bitmark=v3": {},
 }
 
 const (

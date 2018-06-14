@@ -6,10 +6,12 @@ package main
 
 import (
 	"encoding/hex"
+
+	"github.com/urfave/cli"
+
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
 	"github.com/bitmark-inc/bitmarkd/keypair"
-	"github.com/urfave/cli"
 )
 
 func runKeyPair(c *cli.Context) error {

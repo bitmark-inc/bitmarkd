@@ -6,13 +6,14 @@ package main
 
 import (
 	"encoding/hex"
+	"os"
+	"strconv"
+	"strings"
+
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"os"
-	"strconv"
-	"strings"
 )
 
 var (

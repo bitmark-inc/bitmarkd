@@ -77,3 +77,21 @@ loop:
 	}
 	return result
 }
+
+// return a positive clipped value as an int
+// any value outside the range minimum..maximum is an error
+func ClippedVarint64(buffer []byte, minimum int, maximum int) (int, int) {
+	if minimum < 0 || maximum < 0 || minimum >= maximum {
+		return 0, 0
+	}
+
+	value, count := FromVarint64(buffer)
+	if 0 == count {
+		return 0, 0
+	}
+	iValue := int(value)
+	if iValue < minimum || iValue > maximum {
+		return 0, 0
+	}
+	return iValue, count
+}
