@@ -424,7 +424,7 @@ extract_addresses:
 	}
 
 	if nil == address {
-		log.Errorf("reconnect: %s  error: no addresses found", serverPublicKey)
+		log.Errorf("reconnect: %x  error: no addresses found", serverPublicKey)
 		return fault.ErrAddressIsNil
 	}
 
