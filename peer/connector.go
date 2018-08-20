@@ -192,7 +192,8 @@ loop:
 		case <-shutdown:
 			break loop
 		case item := <-queue:
-			conn.log.Infof("received control: %s  public key: %x  connect: %x", item.Command, item.Parameters[0], item.Parameters[1])
+			c, _ := util.PackedConnection(item.Parameters[1]).Unpack()
+			conn.log.Infof("received control: %s  public key: %x  connect: %x %q", item.Command, item.Parameters[0], item.Parameters[1], c)
 			//connectToUpstream(conn.log, conn.clients, conn.dynamicStart, item.Command, item.Parameters[0], item.Parameters[1])
 			conn.connectUpstream(item.Command, item.Parameters[0], item.Parameters[1])
 
@@ -421,7 +422,7 @@ extract_addresses:
 		if n <= 0 {
 			break extract_addresses
 		}
-		log.Errorf("reconnect: %x (conn: %x)  error: address is nil", serverPublicKey, conn)
+		log.Errorf("reconnect: %x  conn: %q  error: address is nil", serverPublicKey, conn)
 	}
 
 	if nil == address {
