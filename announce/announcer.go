@@ -91,12 +91,13 @@ func (ann *announcer) process() {
 		messagebus.Bus.Broadcast.Send("peer", globalData.publicKey, globalData.listeners, timestamp)
 	}
 
+	expireRPC()
+	expirePeer(log)
+
 	if globalData.treeChanged {
 		determineConnections(log)
 		globalData.treeChanged = false
 	}
-	expireRPC()
-	expirePeer(log)
 }
 
 func determineConnections(log *logger.L) {
@@ -212,6 +213,7 @@ scan_nodes:
 		if peer.timestamp.Add(announceExpiry).Before(now) {
 			log.Info("expired")
 			globalData.peerTree.Delete(key)
+			globalData.treeChanged = true
 		}
 
 	}

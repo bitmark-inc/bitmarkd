@@ -63,6 +63,7 @@ func AddPeer(publicKey []byte, listeners []byte, timestamp uint64) bool {
 // internal add a peer announcement, hold lock before calling
 func addPeer(publicKey []byte, listeners []byte, timestamp uint64) bool {
 
+	// disallow future timestamps: require timestamp >= Now
 	ts := time.Now()
 	if timestamp != 0 && timestamp <= uint64(ts.Unix()) {
 		ts = time.Unix(int64(timestamp), 0)
@@ -78,25 +79,30 @@ func addPeer(publicKey []byte, listeners []byte, timestamp uint64) bool {
 		listeners: listeners,
 		timestamp: ts,
 	}
+
 	if node, _ := globalData.peerTree.Search(pubkey(publicKey)); nil != node {
 		peer := node.Value().(*peerEntry)
-		ts = peer.timestamp // preserve previous timestamp
+
+		if ts.Sub(peer.timestamp) < announceRebroadcast {
+			return false
+		}
 	}
+
+	// add or update the timestamp in the tree
 	recordAdded := globalData.peerTree.Insert(pubkey(publicKey), peer)
-	globalData.log.Debugf("number of nodes in the peer tree: %d", globalData.peerTree.Count())
+
+	globalData.log.Debugf("added: %t  nodes in the peer tree: %d", recordAdded, globalData.peerTree.Count())
 
 	// if adding this nodes data
 	if bytes.Equal(globalData.publicKey, publicKey) {
 		return false
 	}
 
-	// if new node or enough time has elapsed to make sure
-	// this is not an endless rebroadcast
-	if recordAdded || time.Since(ts) > announceRebroadcast {
+	if recordAdded {
 		globalData.treeChanged = true
-		return true
 	}
-	return false
+
+	return true
 }
 
 // fetch the data for the next node in the ring for a given public key
