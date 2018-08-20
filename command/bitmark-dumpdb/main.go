@@ -68,10 +68,6 @@ func main() {
 		exitwithstatus.Message("%s: version: %s", program, version)
 	}
 
-	if len(options["help"]) > 0 || 0 == len(arguments) || 1 != len(options["file"]) {
-		exitwithstatus.Message("usage: %s [--help] [--verbose] [--quiet] [--count=N] --file=FILE tag [key-prefix]", program)
-	}
-
 	if len(options["list"]) > 0 {
 
 		// this will be a struct type
@@ -84,6 +80,11 @@ func main() {
 			prefixTag := fieldInfo.Tag.Get("prefix")
 			fmt.Printf("       %s → %s\n", prefixTag, fieldInfo.Name)
 		}
+		return
+	}
+
+	if len(options["help"]) > 0 || 0 == len(arguments) || 1 != len(options["file"]) {
+		exitwithstatus.Message("usage: %s [--help] [--verbose] [--quiet] [--count=N] --file=FILE tag [key-prefix]", program)
 	}
 
 	// stop if prefix no longer matches
