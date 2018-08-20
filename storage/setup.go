@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/syndtr/goleveldb/leveldb"
+	ldb_opt "github.com/syndtr/goleveldb/leveldb/opt"
 	ldb_util "github.com/syndtr/goleveldb/leveldb/util"
 
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -81,7 +82,7 @@ func Initialise(database string, readOnly bool) (bool, error) {
 	blocksDatabase := database + "-blocks.leveldb"
 	indexDatabase := database + "-index.leveldb"
 
-	db, blocksVersion, err := getDB(blocksDatabase)
+	db, blocksVersion, err := getDB(blocksDatabase, readOnly)
 	if nil != err {
 		return mustReindex, err
 	}
@@ -93,7 +94,7 @@ func Initialise(database string, readOnly bool) (bool, error) {
 		return mustReindex, fmt.Errorf("block database version: %d > current version: %d", blocksVersion, currentVersion)
 	}
 
-	db, indexVersion, err := getDB(indexDatabase)
+	db, indexVersion, err := getDB(indexDatabase, readOnly)
 	if nil != err {
 		return mustReindex, err
 	}
@@ -187,7 +188,7 @@ func Initialise(database string, readOnly bool) (bool, error) {
 		}
 
 		// generate an empty index database
-		poolData.dbIndex, _, err = getDB(indexDatabase)
+		poolData.dbIndex, _, err = getDB(indexDatabase, readOnly)
 		if nil != err {
 			return mustReindex, err
 		}
@@ -276,8 +277,18 @@ func ReindexDone() error {
 	return putVersion(poolData.dbIndex, currentVersion)
 }
 
-func getDB(name string) (*leveldb.DB, int, error) {
-	db, err := leveldb.RecoverFile(name, nil)
+func getDB(name string, readOnly bool) (*leveldb.DB, int, error) {
+	var db *leveldb.DB
+	var err error
+	if readOnly {
+		opt := &ldb_opt.Options{
+			ErrorIfMissing: readOnly,
+			ReadOnly:       readOnly,
+		}
+		db, err = leveldb.OpenFile(name, opt)
+	} else {
+		db, err = leveldb.RecoverFile(name, nil)
+	}
 	if nil != err {
 		return nil, 0, err
 	}
