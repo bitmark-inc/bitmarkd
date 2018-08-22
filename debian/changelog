@@ -1,6 +1,12 @@
+bitmarkd (8.0beta5-1) unstable; urgency=medium
+
+  * nonce length checking
+
+ -- Christopher Hall <hsw@bitmark.com>  Wed, 22 Aug 2018 09:32:45 +0000
+
 bitmarkd (8.0beta4-1) unstable; urgency=medium
 
-  * new version from source version: 8.0beta4
+  * nil issue detection
 
  -- Christopher Hall <hsw@bitmark.com>  Wed, 22 Aug 2018 07:29:22 +0000
 

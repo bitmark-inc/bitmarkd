@@ -11,7 +11,8 @@ import (
 )
 
 const (
-	NonceLength           = 64 // hex bytes
+	MinimumNonceLength    = 8  // bytes
+	MaximumNonceLength    = 64 // bytes
 	requiredConfirmations = 3
 	maximumBlockRate      = 500.0 // blocks per second
 )

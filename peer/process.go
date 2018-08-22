@@ -255,7 +255,8 @@ func processProof(packed []byte) error {
 	}
 
 	var payId pay.PayId
-	if len(packed) != payment.NonceLength+len(payId) {
+	nonceLength := len(packed) - len(payId) // could be negative
+	if nonceLength < payment.MinimumNonceLength || nonceLength > payment.MaximumNonceLength {
 		return fault.ErrInvalidNonce
 	}
 

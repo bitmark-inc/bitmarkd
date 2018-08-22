@@ -154,7 +154,7 @@ func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) er
 
 	// arbitrary byte size limit
 	size := hex.DecodedLen(len(arguments.Nonce))
-	if size < 1 || size > payment.NonceLength {
+	if size < payment.MinimumNonceLength || size > payment.MaximumNonceLength {
 		return fault.ErrInvalidNonce
 	}
 
