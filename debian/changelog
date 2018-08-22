@@ -1,3 +1,9 @@
+bitmarkd (8.0beta4-1) unstable; urgency=medium
+
+  * new version from source version: 8.0beta4
+
+ -- Christopher Hall <hsw@bitmark.com>  Wed, 22 Aug 2018 07:29:22 +0000
+
 bitmarkd (8.0beta3-1) unstable; urgency=medium
 
   * code refactoring

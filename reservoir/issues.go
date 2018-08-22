@@ -71,6 +71,10 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, er
 	// verify each transaction
 	for i, issue := range issues {
 
+		if nil == issue || nil == issue.Owner {
+			return nil, false, fault.ErrInvalidItem
+		}
+
 		if issue.Owner.IsTesting() != mode.IsTesting() {
 			return nil, false, fault.ErrWrongNetworkForPublicKey
 		}
