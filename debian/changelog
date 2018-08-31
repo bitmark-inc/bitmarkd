@@ -1,3 +1,9 @@
+bitmarkd (8.0-1) unstable; urgency=medium
+
+  * release version 8.0
+
+ -- Christopher Hall <hsw@bitmark.com>  Fri, 31 Aug 2018 08:07:39 +0000
+
 bitmarkd (8.0beta5-1) unstable; urgency=medium
 
   * nonce length checking
