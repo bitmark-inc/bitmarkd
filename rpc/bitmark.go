@@ -40,6 +40,10 @@ func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransferCou
 
 	log.Infof("Bitmark.Transfer: %+v", transfer)
 
+	if nil == arguments || nil == arguments.Owner {
+		return fault.ErrInvalidItem
+	}
+
 	if !mode.Is(mode.Normal) {
 		return fault.ErrNotAvailableDuringSynchronise
 	}
