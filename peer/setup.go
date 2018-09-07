@@ -27,6 +27,7 @@ type Connection struct {
 // this is read from a libucl configuration file
 type Configuration struct {
 	DynamicConnections bool         `libucl:"dynamic_connections" json:"dynamic_connections"`
+	PreferIPv6         bool         `libucl:"prefer_ipv6" json:"prefer_ipv6"`
 	Listen             []string     `libucl:"listen" json:"listen"`
 	Announce           []string     `libucl:"announce" json:"announce"`
 	PrivateKey         string       `libucl:"private_key" json:"private_key"`
@@ -108,7 +109,7 @@ func Initialise(configuration *Configuration, version string) error {
 	if err := globalData.lstn.initialise(privateKey, publicKey, configuration.Listen, version); nil != err {
 		return err
 	}
-	if err := globalData.conn.initialise(privateKey, publicKey, configuration.Connect, configuration.DynamicConnections); nil != err {
+	if err := globalData.conn.initialise(privateKey, publicKey, configuration.Connect, configuration.DynamicConnections, configuration.PreferIPv6); nil != err {
 		return err
 	}
 

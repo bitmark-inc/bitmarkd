@@ -54,7 +54,7 @@ const (
 
 	defaultRPCClients = 10
 	defaultPeers      = 125
-	defaultMines      = 125
+	defaultProofers   = 125
 )
 
 // to hold log levels
@@ -138,8 +138,10 @@ func getConfiguration(configurationFileName string, variables map[string]string)
 
 		Peering: peer.Configuration{
 			//MaximumConnections: defaultPeers,
-			PublicKey:  defaultPeerPublicKeyFile,
-			PrivateKey: defaultPeerPrivateKeyFile,
+			DynamicConnections: true,
+			PreferIPv6:         true,
+			PublicKey:          defaultPeerPublicKeyFile,
+			PrivateKey:         defaultPeerPrivateKeyFile,
 		},
 
 		Publishing: publish.Configuration{

@@ -47,6 +47,8 @@ const (
 type connector struct {
 	log *logger.L
 
+	preferIPv6 bool
+
 	staticClients []*upstream.Upstream
 
 	dynamicClients list.List
@@ -60,10 +62,12 @@ type connector struct {
 }
 
 // initialise the connector
-func (conn *connector) initialise(privateKey []byte, publicKey []byte, connect []Connection, dynamicEnabled bool) error {
+func (conn *connector) initialise(privateKey []byte, publicKey []byte, connect []Connection, dynamicEnabled bool, preferIPv6 bool) error {
 
 	log := logger.New("connector")
 	conn.log = log
+
+	conn.preferIPv6 = preferIPv6
 
 	log.Info("initialising…")
 
@@ -403,32 +407,23 @@ func (conn *connector) connectUpstream(priority string, serverPublicKey []byte, 
 
 	log := conn.log
 
-	log.Infof("connect: %s to: %x @ %x", priority, serverPublicKey, addresses)
+	log.Debugf("connect: %s to: %x @ %x", priority, serverPublicKey, addresses)
 
 	// extract the first valid address
-	var address *util.Connection
+	connV4, connV6 := util.PackedConnection(addresses).Unpack46()
 
-extract_addresses:
-	for {
-		conn, n := util.PackedConnection(addresses).Unpack()
-		addresses = addresses[n:]
-
-		// ***** FIX THIS: could select for IPv4 or IPv6 here
-		// ***** FIX THIS: need to get preference e.g. if have IPv6 the prefer IPv6
-		if nil != conn {
-			address = conn
-			break extract_addresses
-		}
-		if n <= 0 {
-			break extract_addresses
-		}
-		log.Errorf("reconnect: %x  conn: %q  error: address is nil", serverPublicKey, conn)
-	}
-
-	if nil == address {
+	if nil == connV4 && nil == connV6 {
 		log.Errorf("reconnect: %x  error: no addresses found", serverPublicKey)
 		return fault.ErrAddressIsNil
 	}
+
+	// need to know if this node has IPv6
+	address := connV4
+	if nil != connV6 && conn.preferIPv6 {
+		address = connV6
+	}
+
+	log.Infof("connect: %s to: %x @ %s", priority, serverPublicKey, address)
 
 	// see if already connected to this node
 	alreadyConnected := false

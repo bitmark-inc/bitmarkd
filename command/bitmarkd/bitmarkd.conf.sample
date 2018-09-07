@@ -96,6 +96,9 @@ peering {
   # set to false to prevent additional connections
   dynamic_connections = true
 
+  # set to false to only use IPv4 for outgoing connections
+  prefer_ipv6 = true
+
   # for incoming peer connections
   listen = 0.0.0.0:2136
   listen = "[::]:2136"
