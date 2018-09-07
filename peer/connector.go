@@ -190,7 +190,7 @@ func (conn *connector) Run(args interface{}, shutdown <-chan struct{}) {
 loop:
 	for {
 		// wait for shutdown
-		log.Info("waiting…")
+		log.Debug("waiting…")
 
 		select {
 		case <-shutdown:

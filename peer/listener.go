@@ -8,6 +8,9 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+
+	zmq "github.com/pebbe/zmq4"
+
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -16,7 +19,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
-	zmq "github.com/pebbe/zmq4"
 )
 
 const (
@@ -118,7 +120,7 @@ func (lstn *listener) Run(args interface{}, shutdown <-chan struct{}) {
 	}()
 
 	// wait for shutdown
-	log.Info("waiting…")
+	log.Debug("waiting…")
 	<-shutdown
 	log.Info("initiate shutdown")
 	lstn.push.SendMessage("stop")

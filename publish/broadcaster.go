@@ -66,7 +66,7 @@ func (brdc *broadcaster) Run(args interface{}, shutdown <-chan struct{}) {
 
 loop:
 	for {
-		log.Info("waiting…")
+		log.Debug("waiting…")
 		select {
 		case <-shutdown:
 			break loop

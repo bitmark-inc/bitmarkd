@@ -234,7 +234,7 @@ loop:
 				wg.Add(1)
 				go handler.checkLatestBlock(&wg)
 			}
-			log.Info("waiting…")
+			log.Debug("waiting…")
 			wg.Wait()
 		}
 	}

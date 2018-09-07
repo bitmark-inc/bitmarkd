@@ -27,7 +27,7 @@ func (state *expiryData) Run(args interface{}, shutdown <-chan struct{}) {
 	delay := time.After(time.Minute)
 loop:
 	for {
-		log.Info("waiting…")
+		log.Debug("waiting…")
 		select {
 		case <-shutdown:
 			break loop

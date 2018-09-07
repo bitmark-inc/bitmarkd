@@ -26,7 +26,7 @@ type peerEntry struct {
 
 func (p peerEntry) String() string {
 	v4, v6 := util.PackedConnection(p.listeners).Unpack46()
-	return fmt.Sprintf("%x @ %q %q - %v", p.publicKey, v4, v6, p.timestamp)
+	return fmt.Sprintf("%x @ %q %q - %s", p.publicKey, v4, v6, p.timestamp.Format(timeFormat))
 }
 
 // called by the peering initialisation to set up this node's

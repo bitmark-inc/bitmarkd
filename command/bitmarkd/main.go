@@ -9,6 +9,10 @@ import (
 	"os"
 	"os/signal"
 
+	//"runtime/pprof"
+	"strings"
+	"syscall"
+
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/block"
@@ -27,9 +31,6 @@ import (
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/bitmark-inc/getoptions"
 	"github.com/bitmark-inc/logger"
-	//"runtime/pprof"
-	"strings"
-	"syscall"
 )
 
 // set by the linker: go build -ldflags "-X main.version=M.N" ./...

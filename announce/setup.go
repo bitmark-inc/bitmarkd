@@ -35,6 +35,9 @@ type rpcEntry struct {
 	local       bool                  // true => never expires
 }
 
+// format for timestamps
+const timeFormat = "2006-01-02 15:04:05"
+
 // globals for background proccess
 type announcerData struct {
 	sync.RWMutex // to allow locking

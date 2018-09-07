@@ -7,6 +7,11 @@ package upstream
 import (
 	"encoding/binary"
 	"fmt"
+	"sync"
+	"time"
+
+	zmq "github.com/pebbe/zmq4"
+
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/counter"
@@ -16,9 +21,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
-	zmq "github.com/pebbe/zmq4"
-	"sync"
-	"time"
 )
 
 const (
@@ -177,7 +179,7 @@ func upstreamRunner(u *Upstream, shutdown <-chan struct{}) {
 
 loop:
 	for {
-		log.Info("waiting…")
+		log.Debug("waiting…")
 
 		select {
 		case <-shutdown:

@@ -85,7 +85,7 @@ func (sub *submission) Run(args interface{}, shutdown <-chan struct{}) {
 		poller.Add(sub.pull, zmq.POLLIN)
 	loop:
 		for {
-			log.Info("waiting…")
+			log.Debug("waiting…")
 			sockets, _ := poller.Poll(-1)
 			for _, socket := range sockets {
 				switch s := socket.Socket; s {

@@ -47,7 +47,7 @@ func (ann *announcer) Run(args interface{}, shutdown <-chan struct{}) {
 	delay := time.After(announceInitial)
 loop:
 	for {
-		log.Info("waiting…")
+		log.Debug("waiting…")
 		select {
 		case <-shutdown:
 			break loop
@@ -209,7 +209,7 @@ scan_nodes:
 			continue scan_nodes
 		}
 
-		log.Infof("public key: %x timestamp: %v", peer.publicKey, peer.timestamp)
+		log.Infof("public key: %x timestamp: %s", peer.publicKey, peer.timestamp.Format(timeFormat))
 		if peer.timestamp.Add(announceExpiry).Before(now) {
 			log.Info("expired")
 			globalData.peerTree.Delete(key)
