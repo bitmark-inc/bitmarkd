@@ -178,3 +178,31 @@ func TestPackTenBitmarkIssues(t *testing.T) {
 
 	t.Logf("Bitmark Issue: JSON: %s", b)
 }
+
+// test the pack failure on trying to use the zero public key
+func TestPackBitmarkIssueWithZeroAccount(t *testing.T) {
+
+	issuerAccount := makeAccount(theZeroKey.publicKey)
+
+	var assetId transactionrecord.AssetIdentifier
+	_, err := fmt.Sscan("59d06155d25dffdb982729de8dce9d7855ca094d8bab8124b347c40668477056b3c27ccb7d71b54043d207ccd187642bf9c8466f9a8d0dbefb4c41633a7e39ef", &assetId)
+	if nil != err {
+		t.Fatalf("hex to asset id error: %s", err)
+	}
+
+	r := transactionrecord.BitmarkIssue{
+		AssetId:   assetId,
+		Owner:     issuerAccount,
+		Nonce:     99,
+		Signature: []byte{1, 2, 3, 4},
+	}
+
+	// test the packer
+	_, err = r.Pack(issuerAccount)
+	if nil == err {
+		t.Fatalf("pack should have failed")
+	}
+	if fault.ErrInvalidOwnerOrRegistrant != err {
+		t.Fatalf("unexpected pack error: %s", err)
+	}
+}

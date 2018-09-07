@@ -13,6 +13,7 @@ import (
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/bitmark-inc/bitmarkd/currency"
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
@@ -357,4 +358,143 @@ func TestPackBitmarkTransferThree(t *testing.T) {
 		t.Fatalf("different, original: %v  recovered: %v", r, *bmt)
 	}
 	checkPackedData(t, "transfer three", packed)
+}
+
+// test the packing/unpacking of Bitmark transfer record
+//
+// test transfer to destroyed
+// ensures that pack->unpack returns the same original value
+func TestPackBitmarkTransferDestroy(t *testing.T) {
+
+	ownerTwoAccount := makeAccount(ownerTwo.publicKey)
+	ownerDeletedAccount := makeAccount(theZeroKey.publicKey)
+
+	var link merkle.Digest
+	err := merkleDigestFromLE("14eb103a0c8fb22e50e73ae9b4ff88595b1cd5f60c4afb690d8fbd014c3ed091", &link)
+	if nil != err {
+		t.Fatalf("hex to link error: %s", err)
+	}
+
+	r := transactionrecord.BitmarkTransferUnratified{
+		Link:   link,
+		Escrow: nil,
+		Owner:  ownerDeletedAccount,
+	}
+
+	expected := []byte{
+		0x04, 0x20, 0x14, 0xeb, 0x10, 0x3a, 0x0c, 0x8f,
+		0xb2, 0x2e, 0x50, 0xe7, 0x3a, 0xe9, 0xb4, 0xff,
+		0x88, 0x59, 0x5b, 0x1c, 0xd5, 0xf6, 0x0c, 0x4a,
+		0xfb, 0x69, 0x0d, 0x8f, 0xbd, 0x01, 0x4c, 0x3e,
+		0xd0, 0x91, 0x00, 0x21, 0x13, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00,
+	}
+
+	expectedTxId := merkle.Digest{
+		0x0c, 0xde, 0x64, 0x8c, 0x3b, 0x13, 0xb2, 0x3e,
+		0x74, 0x01, 0x3c, 0xcf, 0x36, 0x94, 0x0b, 0xf2,
+		0x02, 0x9c, 0xfe, 0x5c, 0x4c, 0xbf, 0x1f, 0x9d,
+		0x72, 0xb7, 0x4e, 0x9f, 0x57, 0xaf, 0xac, 0xbf,
+	}
+
+	// manually sign the record and attach signature to "expected"
+	signature := ed25519.Sign(ownerTwo.privateKey, expected)
+	r.Signature = signature
+	l := util.ToVarint64(uint64(len(signature)))
+	expected = append(expected, l...)
+	expected = append(expected, signature...)
+
+	// test the packer
+	packed, err := r.Pack(ownerTwoAccount)
+	if nil != err {
+		if nil != packed {
+			t.Errorf("partial packed:\n%s", util.FormatBytes("expected", packed))
+		}
+		t.Errorf("pack error: %s", err)
+	}
+
+	// if either of above fail we will have the message _without_ a signature
+	if !bytes.Equal(packed, expected) {
+		t.Errorf("pack record: %x  expected: %x", packed, expected)
+		t.Errorf("*** GENERATED Packed:\n%s", util.FormatBytes("expected", packed))
+		t.Fatal("fatal error")
+	}
+
+	t.Logf("Packed length: %d bytes", len(packed))
+
+	// check txId
+	txId := packed.MakeLink()
+
+	if txId != expectedTxId {
+		t.Errorf("pack txId: %#v  expected: %x", txId, expectedTxId)
+		t.Errorf("*** GENERATED txId:\n%s", util.FormatBytes("expectedTxId", txId[:]))
+		t.Fatal("fatal error")
+	}
+
+	// test the unpacker
+	unpacked, n, err := packed.Unpack(true)
+	if nil != err {
+		t.Fatalf("unpack error: %s", err)
+	}
+	if len(packed) != n {
+		t.Errorf("did not unpack all data: only used: %d of: %d bytes", n, len(packed))
+	}
+
+	bmt, ok := unpacked.(*transactionrecord.BitmarkTransferUnratified)
+	if !ok {
+		t.Fatalf("did not unpack to BitmarkTransfer")
+	}
+
+	// display a JSON version for information
+	item := struct {
+		TxId            merkle.Digest
+		BitmarkTransfer *transactionrecord.BitmarkTransferUnratified
+	}{
+		txId,
+		bmt,
+	}
+	b, err := json.MarshalIndent(item, "", "  ")
+	if nil != err {
+		t.Fatalf("json error: %s", err)
+	}
+
+	t.Logf("Bitmark Transfer: JSON: %s", b)
+
+	// check that structure is preserved through Pack/Unpack
+	// note reg is a pointer here
+	if !reflect.DeepEqual(r, *bmt) {
+		t.Fatalf("different, original: %v  recovered: %v", r, *bmt)
+	}
+	checkPackedData(t, "transfer three", packed)
+}
+
+// test the pack failure on trying to use the zero public key
+func TestPackBitmarkTransferWithZeroAccount(t *testing.T) {
+
+	ownerDeletedAccount := makeAccount(theZeroKey.publicKey)
+	ownerOneAccount := makeAccount(ownerOne.publicKey)
+
+	var link merkle.Digest
+	err := merkleDigestFromLE("79a67be2b3d313bd490363fb0d27901c46ed53d3f7b21f60d48bc42439b06084", &link)
+	if nil != err {
+		t.Fatalf("hex to link error: %s", err)
+	}
+
+	r := transactionrecord.BitmarkTransferUnratified{
+		Link:      link,
+		Owner:     ownerOneAccount,
+		Signature: []byte{1, 2, 3, 4},
+	}
+
+	// test the packer
+	_, err = r.Pack(ownerDeletedAccount)
+	if nil == err {
+		t.Fatalf("pack should have failed")
+	}
+	if fault.ErrInvalidOwnerOrRegistrant != err {
+		t.Fatalf("unexpected pack error: %s", err)
+	}
 }

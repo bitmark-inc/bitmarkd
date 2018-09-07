@@ -13,6 +13,7 @@ import (
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/bitmark-inc/bitmarkd/currency"
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
@@ -23,7 +24,7 @@ import (
 // ensures that pack->unpack returns the same original value
 func TestPackBlockFoundation(t *testing.T) {
 
-	proofedbyAccount := makeAccount(proofedby.publicKey)
+	proofedByAccount := makeAccount(proofedBy.publicKey)
 
 	r := transactionrecord.BlockFoundation{
 		Version: 1,
@@ -31,7 +32,7 @@ func TestPackBlockFoundation(t *testing.T) {
 			currency.Bitcoin:  "mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn",
 			currency.Litecoin: "mmCKZS7toE69QgXNs1JZcjW6LFj8LfUbz6",
 		},
-		Owner: proofedbyAccount,
+		Owner: proofedByAccount,
 		Nonce: 0x12345678,
 	}
 
@@ -61,7 +62,7 @@ func TestPackBlockFoundation(t *testing.T) {
 	}
 
 	// manually sign the record and attach signature to "expected"
-	signature := ed25519.Sign(proofedby.privateKey, expected)
+	signature := ed25519.Sign(proofedBy.privateKey, expected)
 	r.Signature = signature
 	//t.Logf("signature: %#v", r.Signature)
 	l := util.ToVarint64(uint64(len(signature)))
@@ -69,7 +70,7 @@ func TestPackBlockFoundation(t *testing.T) {
 	expected = append(expected, signature...)
 
 	// test the packer
-	packed, err := r.Pack(proofedbyAccount)
+	packed, err := r.Pack(proofedByAccount)
 	if nil != err {
 		if nil != packed {
 			t.Errorf("partial packed:\n%s", util.FormatBytes("expected", packed))
@@ -135,4 +136,30 @@ func TestPackBlockFoundation(t *testing.T) {
 		t.Errorf("different, original: %v  recovered: %v", r, *blockFoundation)
 	}
 	checkPackedData(t, "block foundation", packed)
+}
+
+// test the pack failure on trying to use the zero public key
+func TestPackBlockFoundationWithZeroAccount(t *testing.T) {
+
+	proofedByAccount := makeAccount(theZeroKey.publicKey)
+
+	r := transactionrecord.BlockFoundation{
+		Version: 1,
+		Payments: currency.Map{
+			currency.Bitcoin:  "mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn",
+			currency.Litecoin: "mmCKZS7toE69QgXNs1JZcjW6LFj8LfUbz6",
+		},
+		Owner:     proofedByAccount,
+		Nonce:     0x12345678,
+		Signature: []byte{1, 2, 3, 4},
+	}
+
+	// test the packer
+	_, err := r.Pack(proofedByAccount)
+	if nil == err {
+		t.Fatalf("pack should have failed")
+	}
+	if fault.ErrInvalidOwnerOrRegistrant != err {
+		t.Fatalf("unexpected pack error: %s", err)
+	}
 }

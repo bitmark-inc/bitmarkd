@@ -428,3 +428,63 @@ func TestPackBitmarkTransferCountersignedFail(t *testing.T) {
 
 	t.Fatal("fatal error")
 }
+
+// test the pack failure on trying to use the zero public key
+func TestPackBitmarkTransferCountersignedFromZeroAccount(t *testing.T) {
+
+	ownerDeletedAccount := makeAccount(theZeroKey.publicKey)
+	ownerOneAccount := makeAccount(ownerOne.publicKey)
+
+	var link merkle.Digest
+	err := merkleDigestFromLE("14eb103a0c8fb22e50e73ae9b4ff88595b1cd5f60c4afb690d8fbd014c3ed091", &link)
+	if nil != err {
+		t.Fatalf("hex to link error: %s", err)
+	}
+
+	r := transactionrecord.BitmarkTransferCountersigned{
+		Link:             link,
+		Escrow:           nil,
+		Owner:            ownerOneAccount,
+		Signature:        []byte{1, 2, 3, 4},
+		Countersignature: []byte{1, 2, 3, 4},
+	}
+
+	// test the packer
+	_, err = r.Pack(ownerDeletedAccount)
+	if nil == err {
+		t.Fatalf("pack should have failed")
+	}
+	if fault.ErrInvalidOwnerOrRegistrant != err {
+		t.Fatalf("unexpected pack error: %s", err)
+	}
+}
+
+// test the pack failure on trying to use the zero public key
+func TestPackBitmarkTransferCountersignedToZeroAccount(t *testing.T) {
+
+	ownerOneAccount := makeAccount(ownerOne.publicKey)
+	ownerDeletedAccount := makeAccount(theZeroKey.publicKey)
+
+	var link merkle.Digest
+	err := merkleDigestFromLE("14eb103a0c8fb22e50e73ae9b4ff88595b1cd5f60c4afb690d8fbd014c3ed091", &link)
+	if nil != err {
+		t.Fatalf("hex to link error: %s", err)
+	}
+
+	r := transactionrecord.BitmarkTransferCountersigned{
+		Link:             link,
+		Escrow:           nil,
+		Owner:            ownerDeletedAccount,
+		Signature:        []byte{1, 2, 3, 4},
+		Countersignature: []byte{1, 2, 3, 4},
+	}
+
+	// test the packer
+	_, err = r.Pack(ownerOneAccount)
+	if nil == err {
+		t.Fatalf("pack should have failed")
+	}
+	if fault.ErrInvalidOwnerOrRegistrant != err {
+		t.Fatalf("unexpected pack error: %s", err)
+	}
+}

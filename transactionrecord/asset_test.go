@@ -333,3 +333,26 @@ func TestPackAssetDataWithEmptyMetadata(t *testing.T) {
 	}
 	checkPackedData(t, "asset", packed)
 }
+
+// test the pack failure on trying to use the zero public key
+func TestPackAssetDataWithZeroAccount(t *testing.T) {
+
+	registrantAccount := makeAccount(theZeroKey.publicKey)
+
+	r := transactionrecord.AssetData{
+		Name:        "Item's Name",
+		Fingerprint: "0123456789abcdef",
+		Metadata:    "description\x00Just the description",
+		Registrant:  registrantAccount,
+		Signature:   []byte{1, 2, 3, 4},
+	}
+
+	// test the packer
+	_, err := r.Pack(registrantAccount)
+	if nil == err {
+		t.Fatalf("pack should have failed")
+	}
+	if fault.ErrInvalidOwnerOrRegistrant != err {
+		t.Fatalf("unexpected pack error: %s", err)
+	}
+}

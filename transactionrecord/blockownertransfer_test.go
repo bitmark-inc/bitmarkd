@@ -13,6 +13,7 @@ import (
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/bitmark-inc/bitmarkd/currency"
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
@@ -23,7 +24,7 @@ import (
 // ensures that pack->unpack returns the same original value
 func TestPackBlockOwnerTransfer(t *testing.T) {
 
-	proofedbyAccount := makeAccount(proofedby.publicKey)
+	proofedByAccount := makeAccount(proofedBy.publicKey)
 	ownerOneAccount := makeAccount(ownerOne.publicKey)
 
 	var link merkle.Digest
@@ -70,7 +71,7 @@ func TestPackBlockOwnerTransfer(t *testing.T) {
 	}
 
 	// manually sign the record and attach signature to "expected"
-	signature := ed25519.Sign(proofedby.privateKey, expected)
+	signature := ed25519.Sign(proofedBy.privateKey, expected)
 	r.Signature = signature
 	l := util.ToVarint64(uint64(len(signature)))
 	expected = append(expected, l...)
@@ -84,7 +85,7 @@ func TestPackBlockOwnerTransfer(t *testing.T) {
 	expected = append(expected, signature...)
 
 	// test the packer
-	packed, err := r.Pack(proofedbyAccount)
+	packed, err := r.Pack(proofedByAccount)
 	if nil != err {
 		if nil != packed {
 			t.Errorf("partial packed:\n%s", util.FormatBytes("expected", packed))
@@ -150,4 +151,38 @@ func TestPackBlockOwnerTransfer(t *testing.T) {
 		t.Errorf("different, original: %v  recovered: %v", r, *blockOwnerTransfer)
 	}
 	checkPackedData(t, "block owner transfer", packed)
+}
+
+// test the pack failure on trying to use the zero public key
+func TestPackBlockOwnerTransferWithZeroAccount(t *testing.T) {
+
+	proofedByAccount := makeAccount(theZeroKey.publicKey)
+	ownerOneAccount := makeAccount(ownerOne.publicKey)
+
+	var link merkle.Digest
+	err := merkleDigestFromLE("11162a5683fbf8f73d940ddc71e5cdb426789e6c3e0dbf8573a1990924157cdd", &link)
+	if nil != err {
+		t.Fatalf("hex to link error: %s", err)
+	}
+
+	r := transactionrecord.BlockOwnerTransfer{
+		Link:    link,
+		Escrow:  nil,
+		Version: 1,
+		Payments: currency.Map{
+			currency.Bitcoin:  "mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn",
+			currency.Litecoin: "mmCKZS7toE69QgXNs1JZcjW6LFj8LfUbz6",
+		},
+		Owner:     ownerOneAccount,
+		Signature: []byte{1, 2, 3, 4},
+	}
+
+	// test the packer
+	_, err = r.Pack(proofedByAccount)
+	if nil == err {
+		t.Fatalf("pack should have failed")
+	}
+	if fault.ErrInvalidOwnerOrRegistrant != err {
+		t.Fatalf("unexpected pack error: %s", err)
+	}
 }

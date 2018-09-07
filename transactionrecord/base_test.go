@@ -13,6 +13,7 @@ import (
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/bitmark-inc/bitmarkd/currency"
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
@@ -23,12 +24,12 @@ import (
 // ensures that pack->unpack returns the same original value
 func TestPackBaseData(t *testing.T) {
 
-	proofedbyAccount := makeAccount(proofedby.publicKey)
+	proofedByAccount := makeAccount(proofedBy.publicKey)
 
 	r := transactionrecord.OldBaseData{
 		Currency:       currency.Bitcoin,
 		PaymentAddress: "mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn",
-		Owner:          proofedbyAccount,
+		Owner:          proofedByAccount,
 		Nonce:          0x12345678,
 	}
 
@@ -53,7 +54,7 @@ func TestPackBaseData(t *testing.T) {
 	}
 
 	// manually sign the record and attach signature to "expected"
-	signature := ed25519.Sign(proofedby.privateKey, expected)
+	signature := ed25519.Sign(proofedBy.privateKey, expected)
 	r.Signature = signature
 	//t.Logf("signature: %#v", r.Signature)
 	l := util.ToVarint64(uint64(len(signature)))
@@ -61,7 +62,7 @@ func TestPackBaseData(t *testing.T) {
 	expected = append(expected, signature...)
 
 	// test the packer
-	packed, err := r.Pack(proofedbyAccount)
+	packed, err := r.Pack(proofedByAccount)
 	if nil != err {
 		t.Fatalf("pack error: %s", err)
 	}
@@ -124,4 +125,27 @@ func TestPackBaseData(t *testing.T) {
 		t.Errorf("different, original: %v  recovered: %v", r, *baseData)
 	}
 	checkPackedData(t, "base data", packed)
+}
+
+// test the pack failure on trying to use the zero public key
+func TestPackBaseDataWithZeroAccount(t *testing.T) {
+
+	proofedByAccount := makeAccount(theZeroKey.publicKey)
+
+	r := transactionrecord.OldBaseData{
+		Currency:       currency.Bitcoin,
+		PaymentAddress: "mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn",
+		Owner:          proofedByAccount,
+		Nonce:          0x12345678,
+		Signature:      []byte{1, 2, 3, 4},
+	}
+
+	// test the packer
+	_, err := r.Pack(proofedByAccount)
+	if nil == err {
+		t.Fatalf("pack should have failed")
+	}
+	if fault.ErrInvalidOwnerOrRegistrant != err {
+		t.Fatalf("unexpected pack error: %s", err)
+	}
 }

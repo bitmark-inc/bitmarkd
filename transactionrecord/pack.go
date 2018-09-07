@@ -38,7 +38,8 @@ func (baseData *OldBaseData) Pack(address *account.Account) (Packed, error) {
 		return nil, fault.ErrSignatureTooLong
 	}
 
-	if nil == baseData.Owner || nil == address {
+	// prevent nil or zero account
+	if nil == baseData.Owner || nil == address || baseData.Owner.IsZero() || address.IsZero() {
 		return nil, fault.ErrInvalidOwnerOrRegistrant
 	}
 
@@ -77,7 +78,8 @@ func (assetData *AssetData) Pack(address *account.Account) (Packed, error) {
 	if len(assetData.Signature) > maxSignatureLength {
 		return nil, fault.ErrSignatureTooLong
 	}
-	if nil == assetData.Registrant || nil == address {
+	// prevent nil or zero account
+	if nil == assetData.Registrant || nil == address || assetData.Registrant.IsZero() || address.IsZero() {
 		return nil, fault.ErrInvalidOwnerOrRegistrant
 	}
 
@@ -143,7 +145,8 @@ func (issue *BitmarkIssue) Pack(address *account.Account) (Packed, error) {
 		return nil, fault.ErrSignatureTooLong
 	}
 
-	if nil == issue.Owner || nil == address {
+	// prevent nil or zero account
+	if nil == issue.Owner || nil == address || issue.Owner.IsZero() || address.IsZero() {
 		return nil, fault.ErrInvalidOwnerOrRegistrant
 	}
 
@@ -175,7 +178,12 @@ func (transfer *BitmarkTransferUnratified) Pack(address *account.Account) (Packe
 		return nil, fault.ErrSignatureTooLong
 	}
 
-	if nil == transfer.Owner || nil == address {
+	// Note: In this case Owner can be zero ⇒ bitmark is destroyed
+	//       and no further transfers are allowed.
+	//       theddress cannot be zero to prevent discovery of the
+	//       corresponding private key being able to transfer all
+	//       previously destroyed bitmarks to a new account.
+	if nil == transfer.Owner || nil == address || address.IsZero() {
 		return nil, fault.ErrInvalidOwnerOrRegistrant
 	}
 
@@ -216,7 +224,8 @@ func (transfer *BitmarkTransferCountersigned) Pack(address *account.Account) (Pa
 		return nil, fault.ErrSignatureTooLong
 	}
 
-	if nil == transfer.Owner || nil == address {
+	// Note: impossible to have 2 signature transfer to zero public key
+	if nil == transfer.Owner || nil == address || transfer.Owner.IsZero() || address.IsZero() {
 		return nil, fault.ErrInvalidOwnerOrRegistrant
 	}
 
@@ -256,38 +265,39 @@ func (transfer *BitmarkTransferCountersigned) Pack(address *account.Account) (Pa
 //
 // NOTE: returns the "unsigned" message on signature failure - for
 //       debugging/testing
-func (issue *BlockFoundation) Pack(address *account.Account) (Packed, error) {
-	if len(issue.Signature) > maxSignatureLength {
+func (foundation *BlockFoundation) Pack(address *account.Account) (Packed, error) {
+	if len(foundation.Signature) > maxSignatureLength {
 		return nil, fault.ErrSignatureTooLong
 	}
 
-	if nil == issue.Owner || nil == address {
+	// prevent nil or zero account
+	if nil == foundation.Owner || nil == address || foundation.Owner.IsZero() || address.IsZero() {
 		return nil, fault.ErrInvalidOwnerOrRegistrant
 	}
 
-	err := CheckPayments(issue.Version, address.IsTesting(), issue.Payments)
+	err := CheckPayments(foundation.Version, address.IsTesting(), foundation.Payments)
 	if nil != err {
 		return nil, err
 	}
-	packedPayments, err := issue.Payments.Pack(address.IsTesting())
+	packedPayments, err := foundation.Payments.Pack(address.IsTesting())
 	if nil != err {
 		return nil, err
 	}
 
 	// concatenate bytes
 	message := createPacked(BlockFoundationTag)
-	message.appendUint64(issue.Version)
+	message.appendUint64(foundation.Version)
 	message.appendBytes(packedPayments)
-	message.appendAccount(issue.Owner)
-	message.appendUint64(issue.Nonce)
+	message.appendAccount(foundation.Owner)
+	message.appendUint64(foundation.Nonce)
 
 	// signature
-	err = address.CheckSignature(message, issue.Signature)
+	err = address.CheckSignature(message, foundation.Signature)
 	if nil != err {
 		return message, err
 	}
 	// Signature Last
-	return *message.appendBytes(issue.Signature), nil
+	return *message.appendBytes(foundation.Signature), nil
 }
 
 // pack BlockOwnerTransfer
@@ -302,7 +312,8 @@ func (transfer *BlockOwnerTransfer) Pack(address *account.Account) (Packed, erro
 		return nil, fault.ErrSignatureTooLong
 	}
 
-	if nil == transfer.Owner || nil == address {
+	// prevent nil or zero account
+	if nil == transfer.Owner || nil == address || transfer.Owner.IsZero() || address.IsZero() {
 		return nil, fault.ErrInvalidOwnerOrRegistrant
 	}
 

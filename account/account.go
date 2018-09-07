@@ -50,6 +50,7 @@ type AccountInterface interface {
 	String() string
 	MarshalText() ([]byte, error)
 	IsTesting() bool
+	IsZero() bool
 }
 
 // for ed25519 signatures
@@ -258,6 +259,16 @@ func (account ED25519Account) IsTesting() bool {
 	return account.Test
 }
 
+// return whether the public key is all zero or not
+func (account ED25519Account) IsZero() bool {
+	for _, b := range account.PublicKey {
+		if 0 != b {
+			return false
+		}
+	}
+	return true
+}
+
 // Nothing
 // -------
 
@@ -301,4 +312,14 @@ func (account NothingAccount) MarshalText() ([]byte, error) {
 // return whether the public key is in test mode or not
 func (account NothingAccount) IsTesting() bool {
 	return account.Test
+}
+
+// return whether the public key is all zero or not
+func (account NothingAccount) IsZero() bool {
+	for _, b := range account.PublicKey {
+		if 0 != b {
+			return false
+		}
+	}
+	return true
 }

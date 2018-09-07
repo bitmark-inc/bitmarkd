@@ -19,16 +19,55 @@ import (
 type accountTest struct {
 	algorithm     int
 	testnet       bool
+	zero          bool
 	publicKey     []byte
 	base58Account string
 }
 
 // Valid account
 var testAccount = []accountTest{
-	{account.ED25519, false, decodeHex("60b3c6e20cfff7091a86488b1656b96ec0a2f69907e2c035175918f42c37d72e"), "anF8SWxSRY5vnN3Bbyz9buRYW1hfCAAZxfbv8Fw9SFXaktvLCj"},
-	{account.ED25519, true, decodeHex("731114267f15754a5fce4aaed8380b28aff25af7b378b011d92ef7b3f08910db"), "eopaSeB7uiSVMdAmTrijq3W2MCWA5KHZrZvm5QLFGRVd3oWNe2"},
-	{account.ED25519, true, decodeHex("cb6ff605f79deba3deb0c5122e40359a258481c151dffc176a2da5e8bc87cd2e"), "fUjtNvmUJn7yJ7PVP7NT2FZbKDrudFxLVBHkwLJFgKWmGsPNVi"},
-	{account.Nothing, false, decodeHex("12fa"), "3MvykBZzN"},
+	{
+		algorithm:     account.ED25519,
+		testnet:       false,
+		zero:          false,
+		publicKey:     decodeHex("60b3c6e20cfff7091a86488b1656b96ec0a2f69907e2c035175918f42c37d72e"),
+		base58Account: "anF8SWxSRY5vnN3Bbyz9buRYW1hfCAAZxfbv8Fw9SFXaktvLCj",
+	},
+	{
+		algorithm:     account.ED25519,
+		testnet:       true,
+		zero:          false,
+		publicKey:     decodeHex("731114267f15754a5fce4aaed8380b28aff25af7b378b011d92ef7b3f08910db"),
+		base58Account: "eopaSeB7uiSVMdAmTrijq3W2MCWA5KHZrZvm5QLFGRVd3oWNe2",
+	},
+	{
+		algorithm:     account.ED25519,
+		testnet:       true,
+		zero:          false,
+		publicKey:     decodeHex("cb6ff605f79deba3deb0c5122e40359a258481c151dffc176a2da5e8bc87cd2e"),
+		base58Account: "fUjtNvmUJn7yJ7PVP7NT2FZbKDrudFxLVBHkwLJFgKWmGsPNVi",
+	},
+	{
+		algorithm:     account.ED25519,
+		testnet:       true,
+		zero:          true,
+		publicKey:     decodeHex("0000000000000000000000000000000000000000000000000000000000000000"),
+		base58Account: "dw9MQXcC5rJZb3QE1nz86PiQAheMP1dx9M3dr52tT8NNs14m33",
+	},
+	{
+		algorithm:     account.Nothing,
+		testnet:       false,
+		zero:          false,
+		publicKey:     decodeHex("12fa"),
+		base58Account: "3MvykBZzN",
+	},
+	{
+		algorithm:     account.Nothing,
+		testnet:       false,
+		zero:          true,
+		publicKey:     decodeHex("0000"),
+		base58Account: "3CUwbPENE",
+	},
 }
 
 type invalid struct {
@@ -50,6 +89,7 @@ var testInvalidAccountFromBase58 = []invalid{
 // this has to be changed if account.go is modified
 // it is used to print the base58Account for testAccount above
 func TestValid(t *testing.T) {
+
 loop:
 	for index, test := range testAccount {
 		testnet := 0x00
@@ -69,6 +109,30 @@ loop:
 
 		if !bytes.Equal(buffer, account.Bytes()) {
 			t.Errorf("%d: account bytes: %x does not match: %x", index, account.Bytes(), buffer)
+		}
+
+		accountIsZero := true
+	check_for_zero:
+		for _, b := range account.PublicKeyBytes() {
+			if 0 != b {
+				accountIsZero = false
+				break check_for_zero
+			}
+		}
+		if test.zero {
+			if !accountIsZero {
+				t.Errorf("%d: account bytes: %x not zero, but should be zero", index, account.PublicKeyBytes())
+			}
+			if !account.IsZero() {
+				t.Errorf("%d: account.IsZero() incorrectly returned false", index)
+			}
+		} else {
+			if accountIsZero {
+				t.Errorf("%d: account bytes: %x are all zero, but should not be", index, account.PublicKeyBytes())
+			}
+			if account.IsZero() {
+				t.Errorf("%d: account.IsZero() incorrectly returned true", index)
+			}
 		}
 	}
 }
