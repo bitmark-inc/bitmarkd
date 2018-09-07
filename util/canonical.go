@@ -149,3 +149,33 @@ func (packed PackedConnection) Unpack() (*Connection, int) {
 	}
 	return c, int(n)
 }
+
+// unpack first IPv4 and first IPv6 plus Port
+func (packed PackedConnection) Unpack46() (*Connection, *Connection) {
+
+	// only expect two
+	ipv4_connection := (*Connection)(nil)
+	ipv6_connection := (*Connection)(nil)
+
+	for {
+		conn, n := packed.Unpack()
+		packed = packed[n:]
+
+		if nil == conn {
+			return ipv4_connection, ipv6_connection
+		}
+
+		if nil != conn.ip.To4() {
+			if nil == ipv4_connection {
+				ipv4_connection = conn
+			}
+		} else if nil == ipv6_connection {
+			ipv6_connection = conn
+		}
+
+		// if both kinds found
+		if nil != ipv4_connection && nil != ipv6_connection {
+			return ipv4_connection, ipv6_connection
+		}
+	}
+}

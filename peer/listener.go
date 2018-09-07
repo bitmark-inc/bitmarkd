@@ -8,9 +8,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-
-	zmq "github.com/pebbe/zmq4"
-
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -19,6 +16,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
+	zmq "github.com/pebbe/zmq4"
 )
 
 const (
@@ -155,7 +153,7 @@ func (lstn *listener) process(socket *zmq.Socket) {
 	fn := string(data[1])
 	parameters := data[2:]
 
-	log.Infof("received message: %q: %x", fn, parameters)
+	log.Debugf("received message: %q: %x", fn, parameters)
 
 	result := []byte{}
 

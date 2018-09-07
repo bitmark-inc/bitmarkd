@@ -12,6 +12,7 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 )
 
@@ -24,7 +25,8 @@ type peerEntry struct {
 }
 
 func (p peerEntry) String() string {
-	return fmt.Sprintf("PK:%x@%x-%v", p.publicKey, p.listeners, p.timestamp)
+	v4, v6 := util.PackedConnection(p.listeners).Unpack46()
+	return fmt.Sprintf("%x @ %q %q - %v", p.publicKey, v4, v6, p.timestamp)
 }
 
 // called by the peering initialisation to set up this node's

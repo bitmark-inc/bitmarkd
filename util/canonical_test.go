@@ -133,6 +133,8 @@ func TestCanonicalUnpack(t *testing.T) {
 	type item struct {
 		packed    util.PackedConnection
 		addresses []string
+		v4        string
+		v6        string
 	}
 
 	testData := []item{
@@ -142,6 +144,17 @@ func TestCanonicalUnpack(t *testing.T) {
 				"127.0.0.1:1234",
 				"[::1]:1234",
 			},
+			v4: "127.0.0.1:1234",
+			v6: "[::1]:1234",
+		},
+		{
+			packed: makePacked("1304d2000000000000000000000000000000011304d200000000000000000000ffff7f000001"),
+			addresses: []string{
+				"[::1]:1234",
+				"127.0.0.1:1234",
+			},
+			v4: "127.0.0.1:1234",
+			v6: "[::1]:1234",
 		},
 		{
 			packed: makePacked("1301bb2404680040080c0700000000000000661301bb2404680040080c070000000000000066"),
@@ -149,6 +162,8 @@ func TestCanonicalUnpack(t *testing.T) {
 				"[2404:6800:4008:c07::66]:443",
 				"[2404:6800:4008:c07::66]:443",
 			},
+			v4: "<nil>",
+			v6: "[2404:6800:4008:c07::66]:443",
 		},
 		{ // extraneous data
 			packed: makePacked("1301bb2404680040080c0700000000000000661301bb2404680040080c0700000000000000660000000000000000000000000000000000000000"),
@@ -156,14 +171,20 @@ func TestCanonicalUnpack(t *testing.T) {
 				"[2404:6800:4008:c07::66]:443",
 				"[2404:6800:4008:c07::66]:443",
 			},
+			v4: "<nil>",
+			v6: "[2404:6800:4008:c07::66]:443",
 		},
 		{ // bad data -> no items
 			packed:    makePacked("1401bb2404680040080c0700000000000000661001bb2404680040080c0700000000000000660000000000000000000000000000000000000000"),
 			addresses: []string{},
+			v4:        "<nil>",
+			v6:        "<nil>",
 		},
 		{ // bad data followed by good addresses -> consider as all bad
 			packed:    makePacked("01221304d200000000000000000000ffff7f0000011304d200000000000000000000000000000001"),
 			addresses: []string{},
+			v4:        "<nil>",
+			v6:        "<nil>",
 		},
 	}
 
@@ -171,6 +192,23 @@ func TestCanonicalUnpack(t *testing.T) {
 		p := data.packed
 		a := data.addresses
 		al := len(a)
+
+		v4, v6 := p.Unpack46()
+		v4s := "<nil>"
+		if nil != v4 {
+			v4s, _ = v4.CanonicalIPandPort("")
+		}
+		v6s := "<nil>"
+		if nil != v6 {
+			v6s, _ = v6.CanonicalIPandPort("")
+		}
+		if data.v4 != v4s {
+			t.Errorf("unpack46:[%d]: v4 actual: %q  expected: %q", i, v4s, data.v4)
+		}
+		if data.v6 != v6s {
+			t.Errorf("unpack66:[%d]: v6 actual: %q  expected: %q", i, v6s, data.v6)
+		}
+
 	inner:
 		for k := 0; k < 10; k += 1 {
 			l := len(p)

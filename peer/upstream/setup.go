@@ -7,11 +7,6 @@ package upstream
 import (
 	"encoding/binary"
 	"fmt"
-	"sync"
-	"time"
-
-	zmq "github.com/pebbe/zmq4"
-
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/counter"
@@ -21,6 +16,9 @@ import (
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
+	zmq "github.com/pebbe/zmq4"
+	"sync"
+	"time"
 )
 
 const (
@@ -173,7 +171,7 @@ func (u *Upstream) GetBlockData(blockNumber uint64) ([]byte, error) {
 func upstreamRunner(u *Upstream, shutdown <-chan struct{}) {
 	log := u.log
 
-	log.Info("starting…")
+	log.Debug("starting…")
 
 	queue := messagebus.Bus.Broadcast.Chan(queueSize)
 
@@ -186,7 +184,7 @@ loop:
 			break loop
 
 		case item := <-queue:
-			log.Infof("from queue: %q  %x", item.Command, item.Parameters)
+			log.Debugf("from queue: %q  %x", item.Command, item.Parameters)
 			if u.registered {
 				u.Lock()
 				err := push(u.client, u.log, &item)

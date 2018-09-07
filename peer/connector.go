@@ -193,7 +193,7 @@ loop:
 			break loop
 		case item := <-queue:
 			c, _ := util.PackedConnection(item.Parameters[1]).Unpack()
-			conn.log.Infof("received control: %s  public key: %x  connect: %x %q", item.Command, item.Parameters[0], item.Parameters[1], c)
+			conn.log.Debugf("received control: %s  public key: %x  connect: %x %q", item.Command, item.Parameters[0], item.Parameters[1], c)
 			//connectToUpstream(conn.log, conn.clients, conn.dynamicStart, item.Command, item.Parameters[0], item.Parameters[1])
 			conn.connectUpstream(item.Command, item.Parameters[0], item.Parameters[1])
 
@@ -241,7 +241,7 @@ func (conn *connector) runStateMachine() bool {
 		if clientCount >= minimumClients {
 			conn.state += 1
 		} else {
-			log.Warnf("can not reach the minimum client counts")
+			log.Warnf("connections: %d below minimum client count: %d", clientCount, minimumClients)
 			messagebus.Bus.Announce.Send("reconnect")
 		}
 		continueLooping = false
