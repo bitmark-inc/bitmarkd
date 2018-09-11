@@ -51,6 +51,23 @@ brew tap bitmark-inc/bitmark
 brew install zeromq41
 ~~~~
 
+On Ubuntu
+(tested dor distribution 18.04)
+
+1. Install following packages
+   `sudo apt install libargon2-0-dev autoconf libtool pkg-config uuid-dev libzmq3-dev`
+
+2. Compile and install ucl
+
+    ```
+    git clone https://github.com/vstakhov/libucl.git
+    cd libucl
+    ./autogen.sh
+    ./configure --enable-utils
+    make
+    make install
+    ```
+
 To compile simply:
 
 ~~~~~
