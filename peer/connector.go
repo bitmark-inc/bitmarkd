@@ -345,6 +345,18 @@ func (conn *connector) runStateMachine() bool {
 
 	case cStateSampling:
 		// check peers
+		clientCount := 0
+		conn.allClients(func(client *upstream.Upstream, e *list.Element) {
+			if client.IsOK() {
+
+				clientCount += 1
+			}
+		})
+
+		log.Infof("connections: %d", clientCount)
+		globalData.clientCount = clientCount
+
+		// check height
 		conn.height, conn.theClient = getHeight(conn)
 		height := block.GetHeight()
 
