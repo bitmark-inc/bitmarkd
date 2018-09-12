@@ -22,18 +22,23 @@ import (
 )
 
 const (
-	listenerZapDomain = "listen"
-	listenerSignal    = "inproc://bitmark-listener-signal"
+	listenerZapDomain         = "listen"
+	listenerSignal            = "inproc://bitmark-listener-signal"
+	listenerIPv4MonitorSignal = "inproc://listener-ipv4-monitor-signal"
+	listenerIPv6MonitorSignal = "inproc://listener-ipv6-monitor-signal"
 )
 
 type listener struct {
-	log     *logger.L
-	chain   string
-	version string      // server version
-	push    *zmq.Socket // signal send
-	pull    *zmq.Socket // signal receive
-	socket4 *zmq.Socket // IPv4 traffic
-	socket6 *zmq.Socket // IPv6 traffic
+	log         *logger.L
+	chain       string
+	version     string      // server version
+	push        *zmq.Socket // signal send
+	pull        *zmq.Socket // signal receive
+	socket4     *zmq.Socket // IPv4 traffic
+	socket6     *zmq.Socket // IPv6 traffic
+	monitor4    *zmq.Socket // IPv4 socket monitor
+	monitor6    *zmq.Socket // IPv6 socket monitor
+	connections uint64      // total incoming connections
 }
 
 // type to hold server info
@@ -52,6 +57,7 @@ func (lstn *listener) initialise(privateKey []byte, publicKey []byte, listen []s
 	lstn.chain = mode.ChainName()
 	lstn.log = log
 	lstn.version = version
+	lstn.connections = 0
 
 	log.Info("initialising…")
 
@@ -74,6 +80,20 @@ func (lstn *listener) initialise(privateKey []byte, publicKey []byte, listen []s
 		return err
 	}
 
+	if nil != lstn.socket4 {
+		lstn.monitor4, err = zmqutil.NewMonitor(lstn.socket4, listenerIPv4MonitorSignal, zmq.EVENT_ALL)
+		if nil != err {
+			return err
+		}
+	}
+
+	if nil != lstn.socket6 {
+		lstn.monitor6, err = zmqutil.NewMonitor(lstn.socket6, listenerIPv6MonitorSignal, zmq.EVENT_ALL)
+		if nil != err {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -88,9 +108,11 @@ func (lstn *listener) Run(args interface{}, shutdown <-chan struct{}) {
 		poller := zmq.NewPoller()
 		if nil != lstn.socket4 {
 			poller.Add(lstn.socket4, zmq.POLLIN)
+			poller.Add(lstn.monitor4, zmq.POLLIN)
 		}
 		if nil != lstn.socket6 {
 			poller.Add(lstn.socket6, zmq.POLLIN)
+			poller.Add(lstn.monitor6, zmq.POLLIN)
 		}
 		poller.Add(lstn.pull, zmq.POLLIN)
 	loop:
@@ -105,6 +127,10 @@ func (lstn *listener) Run(args interface{}, shutdown <-chan struct{}) {
 				case lstn.pull:
 					s.RecvMessageBytes(0)
 					break loop
+				case lstn.monitor4:
+					lstn.handleEvent(lstn.monitor4)
+				case lstn.monitor6:
+					lstn.handleEvent(lstn.monitor6)
 				}
 			}
 		}
@@ -255,6 +281,26 @@ func (lstn *listener) process(socket *zmq.Socket) {
 	logger.PanicIfError("Listener", err)
 
 	log.Infof("sent: %q  result: %x", fn, result)
+}
+
+// process the socket events
+func (lstn *listener) handleEvent(socket *zmq.Socket) {
+	ev, addr, v, err := socket.RecvEvent(0)
+	if nil != err {
+		lstn.log.Errorf("receive event error: %s", err)
+		return
+	}
+	lstn.log.Infof("event: %q  address: %q  value: %d", ev, addr, v)
+
+	switch ev {
+	case zmq.EVENT_ACCEPTED:
+		lstn.connections += 1
+	case zmq.EVENT_DISCONNECTED:
+		if lstn.connections > 0 {
+			lstn.connections -= 1
+		}
+	default:
+	}
 }
 
 // send an error packet

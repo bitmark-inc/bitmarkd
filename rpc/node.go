@@ -75,13 +75,12 @@ type Counters struct {
 }
 
 func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
-
-	l, r := peer.GetCounts()
+	incoming, outgoing := peer.GetCounts()
 	reply.Chain = mode.ChainName()
 	reply.Mode = mode.String()
 	reply.Blocks = block.GetHeight()
 	reply.RPCs = connectionCount.Uint64()
-	reply.Peers = l + r
+	reply.Peers = incoming + outgoing
 	reply.TransactionCounters.Pending, reply.TransactionCounters.Verified = reservoir.ReadCounters()
 	reply.Difficulty = difficulty.Current.Reciprocal()
 	reply.Version = node.version

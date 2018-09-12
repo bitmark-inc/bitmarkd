@@ -113,17 +113,23 @@ allow_access:
 		Local  uint64 `json:"local"`
 		Remote uint64 `json:"remote"`
 	}
+
+	type peerCounts struct {
+		Incoming uint64 `json:"incoming"`
+		Outgoing uint64 `json:"outgoing"`
+	}
+
 	type theReply struct {
-		Chain               string   `json:"chain"`
-		Mode                string   `json:"mode"`
-		Blocks              lrCount  `json:"blocks"`
-		RPCs                uint64   `json:"rpcs"`
-		Peers               lrCount  `json:"peers"`
-		TransactionCounters Counters `json:"transactionCounters"`
-		Difficulty          float64  `json:"difficulty"`
-		Version             string   `json:"version"`
-		Uptime              string   `json:"uptime"`
-		PublicKey           string   `json:"publicKey"`
+		Chain               string     `json:"chain"`
+		Mode                string     `json:"mode"`
+		Blocks              lrCount    `json:"blocks"`
+		RPCs                uint64     `json:"rpcs"`
+		Peers               peerCounts `json:"peers"`
+		TransactionCounters Counters   `json:"transactionCounters"`
+		Difficulty          float64    `json:"difficulty"`
+		Version             string     `json:"version"`
+		Uptime              string     `json:"uptime"`
+		PublicKey           string     `json:"publicKey"`
 	}
 
 	reply := theReply{
@@ -140,7 +146,7 @@ allow_access:
 		Uptime:     time.Since(s.start).String(),
 		PublicKey:  hex.EncodeToString(peer.PublicKey()),
 	}
-	reply.Peers.Local, reply.Peers.Remote = peer.GetCounts()
+	reply.Peers.Incoming, reply.Peers.Outgoing = peer.GetCounts()
 	reply.TransactionCounters.Pending, reply.TransactionCounters.Verified = reservoir.ReadCounters()
 
 	sendReply(w, reply)

@@ -184,9 +184,11 @@ func PublicKey() []byte {
 	return globalData.publicKey
 }
 
-// return connection counts
+// return connection counts:
+//   incoming - total peers connectng to all listeners
+//   outgoing - total outgoing connections
 func GetCounts() (uint64, uint64) {
-	return uint64(globalData.clientCount), 0 // ***** FIX THIS: need remote count i.e. number of connected listen sockets
+	return globalData.lstn.connections, uint64(globalData.clientCount)
 }
 
 // return global block height
