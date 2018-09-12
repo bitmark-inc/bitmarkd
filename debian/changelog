@@ -1,3 +1,12 @@
+bitmarkd (8.1-1) unstable; urgency=medium
+
+  * peer counts
+  * randomise connections
+  * move some detail logs to debug level
+  * prefer_ipv6 configuration
+
+ -- Christopher Hall <hsw@bitmark.com>  Wed, 12 Sep 2018 05:51:38 +0000
+
 bitmarkd (8.0-1) unstable; urgency=medium
 
   * release version 8.0
