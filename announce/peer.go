@@ -6,8 +6,10 @@ package announce
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -124,6 +126,37 @@ func GetNext(publicKey []byte) ([]byte, []byte, time.Time, error) {
 	}
 	peer := node.Value().(*peerEntry)
 	return peer.publicKey, peer.listeners, peer.timestamp, nil
+}
+
+// fetch the data for the random node in the ring not matching a given public key
+func GetRandom(publicKey []byte) ([]byte, []byte, time.Time, error) {
+	globalData.Lock()
+	defer globalData.Unlock()
+
+retry_loop:
+	for tries := 1; tries <= 5; tries += 1 {
+		max := big.NewInt(int64(globalData.peerTree.Count()))
+		r, err := rand.Int(rand.Reader, max)
+		if nil != err {
+			continue retry_loop
+		}
+
+		n := int(r.Int64()) // 0 … max-1
+
+		node := globalData.peerTree.Get(n)
+		if nil == node {
+			node = globalData.peerTree.First()
+		}
+		if nil == node {
+			break retry_loop
+		}
+		peer := node.Value().(*peerEntry)
+		if bytes.Equal(peer.publicKey, globalData.publicKey) || bytes.Equal(peer.publicKey, publicKey) {
+			continue retry_loop
+		}
+		return peer.publicKey, peer.listeners, peer.timestamp, nil
+	}
+	return nil, nil, time.Now(), fault.ErrInvalidPublicKey
 }
 
 // send a peer registration request to a client channel

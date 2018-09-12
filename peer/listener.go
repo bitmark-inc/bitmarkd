@@ -216,7 +216,7 @@ func (lstn *listener) process(socket *zmq.Socket) {
 
 		timestamp := binary.BigEndian.Uint64(parameters[3])
 		announce.AddPeer(parameters[1], parameters[2], timestamp) // publicKey, listeners, timestamp
-		publicKey, listeners, ts, err := announce.GetNext(parameters[1])
+		publicKey, listeners, ts, err := announce.GetRandom(parameters[1])
 		if nil != err {
 			listenerSendError(socket, err)
 			return
