@@ -277,18 +277,18 @@ func ReindexDone() error {
 	return putVersion(poolData.dbIndex, currentVersion)
 }
 
+// return:
+//   databse handle
+//   version number
 func getDB(name string, readOnly bool) (*leveldb.DB, int, error) {
-	var db *leveldb.DB
-	var err error
-	if readOnly {
-		opt := &ldb_opt.Options{
-			ErrorIfMissing: readOnly,
-			ReadOnly:       readOnly,
-		}
-		db, err = leveldb.OpenFile(name, opt)
-	} else {
-		db, err = leveldb.RecoverFile(name, nil)
+
+	opt := &ldb_opt.Options{
+		ErrorIfExist:   false,
+		ErrorIfMissing: readOnly,
+		ReadOnly:       readOnly,
 	}
+
+	db, err := leveldb.OpenFile(name, opt)
 	if nil != err {
 		return nil, 0, err
 	}
