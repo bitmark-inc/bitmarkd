@@ -1,3 +1,11 @@
+bitmarkd (8.2-1) unstable; urgency=medium
+
+  * fix connections counts
+  * fix formatting of DNS TXT record print
+  * do not recover DB, just normal open
+
+ -- Christopher Hall <hsw@bitmark.com>  Mon, 08 Oct 2018 02:53:10 +0000
+
 bitmarkd (8.1-1) unstable; urgency=medium
 
   * peer counts
