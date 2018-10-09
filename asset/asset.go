@@ -83,6 +83,13 @@ func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIdentifi
 	if nil != err {
 		return nil, nil, err
 	}
+
+	// ensure unpack consistency
+	_, _, err = transactionrecord.Packed(packedAsset).Unpack(mode.IsTesting())
+	if nil != err {
+		return nil, nil, err
+	}
+
 	assetId := asset.AssetId()
 
 	// already confirmed
