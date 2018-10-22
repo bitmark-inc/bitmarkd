@@ -41,7 +41,7 @@
 // Assets:
 //
 //   A ++ asset id         - confirmed asset identifier
-//                           data: packed asset data
+//                           data: BN ++ packed asset data
 //
 // Ownership:
 //
