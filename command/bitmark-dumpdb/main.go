@@ -137,7 +137,11 @@ func main() {
 	defer logger.Finalise()
 
 	// start of main processing
-	storage.Initialise(filename, storage.ReadOnly)
+	_, err = storage.Initialise(filename, storage.ReadOnly)
+	if nil != err {
+		exitwithstatus.Message("%s: storage setup failed with error: %s", program, err)
+	}
+
 	defer storage.Finalise()
 
 	// this will be a struct type
@@ -153,12 +157,14 @@ func main() {
 
 	// scan each field to locate tag
 	var p reflect.Value
+tag_scan:
 	for i := 0; i < poolType.NumField(); i += 1 {
 		fieldInfo := poolType.Field(i)
 		prefixTag := fieldInfo.Tag.Get("prefix")
 		if tag == prefixTag {
 			//pvalue.Set(poolValue.Field(i))
 			p = poolValue.Field(i)
+			break tag_scan
 		}
 
 	}
