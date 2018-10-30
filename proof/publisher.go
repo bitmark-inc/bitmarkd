@@ -220,7 +220,8 @@ func (pub *publisher) process() {
 
 	seenAsset := make(map[transactionrecord.AssetIdentifier]struct{})
 
-	pooledTxIds, transactions, totalByteCount, err := reservoir.FetchVerified(blockrecord.MaximumTransactions)
+	// note: fetch one less tx because of foundation record
+	pooledTxIds, transactions, totalByteCount, err := reservoir.FetchVerified(blockrecord.MaximumTransactions - 1)
 	if nil != err {
 		pub.log.Errorf("Error on Fetch: %v", err)
 		return
@@ -269,6 +270,7 @@ func (pub *publisher) process() {
 	txIds[0] = merkle.NewDigest(packedBI)
 
 	n := 0 // index for pooledTxIds
+loop:
 	for _, item := range transactions {
 		unpacked, _, err := transactionrecord.Packed(item).Unpack(mode.IsTesting())
 		if nil != err {
@@ -308,6 +310,12 @@ func (pub *publisher) process() {
 		// concatenate items
 		txIds = append(txIds, pooledTxIds[n])
 		txData = append(txData, item...)
+
+		// if assets were presentthen break early
+		if len(txIds) >= blockrecord.MaximumTransactions {
+			break loop
+		}
+
 		n += 1
 	}
 
