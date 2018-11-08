@@ -8,12 +8,13 @@ import (
 	"bytes"
 	"encoding/binary"
 	"math/big"
+	"time"
 
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/blockring"
-	"github.com/bitmark-inc/bitmarkd/cache"
+	"github.com/bitmark-inc/bitmarkd/constants"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/genesis"
@@ -24,21 +25,17 @@ import (
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 
-const (
-	MaximumIssues = 100 // allowed issues in a single submission
-)
-
 // result returned by store issues
 type IssueInfo struct {
+	TxIds      []merkle.Digest
+	Packed     []byte
 	Id         pay.PayId
 	Nonce      PayNonce
 	Difficulty *difficulty.Difficulty
-	TxIds      []merkle.Digest
-	Packed     []byte
 	Payments   []transactionrecord.PaymentAlternative
 }
 
-// store packed record(s) in the Unverified table
+// store packed record(s) in the pending table
 //
 // return payment id and a duplicate flag
 //
@@ -60,13 +57,17 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, er
 	// all the tx id corresponding to separated
 	txIds := make([]merkle.Digest, count)
 
-	// deduplicated list of assets
-	uniqueAssetIds := make(map[transactionrecord.AssetIdentifier]struct{})
+	// check if different assets
+	uniqueAssetId := issues[0].AssetId
+	unique := true
 
 	// this flags already stored issues
 	// used to flag an error if pay id is different
 	// as this would be an overlapping block of issues
 	duplicate := false
+
+	// only allow free issues if all nonces are zero
+	freeIssueAllowed := true
 
 	// verify each transaction
 	for i, issue := range issues {
@@ -77,6 +78,11 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, er
 
 		if issue.Owner.IsTesting() != mode.IsTesting() {
 			return nil, false, fault.ErrWrongNetworkForPublicKey
+		}
+
+		// all are free or all are non-free
+		if 0 != issue.Nonce {
+			freeIssueAllowed = false
 		}
 
 		// validate issue record
@@ -93,13 +99,17 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, er
 
 		// an unverified issue tag the block as possible duplicate
 		// (if pay id matched later)
-		if _, ok := cache.Pool.UnverifiedTxIndex.Get(txId.String()); ok {
+		globalData.RLock()
+		_, ok := globalData.pendingIndex[txId]
+		if ok {
 			// if duplicate, activate pay id check
 			duplicate = true
 		}
 
 		// a single verified issue fails the whole block
-		if _, ok := cache.Pool.VerifiedTx.Get(txId.String()); ok {
+		_, ok = globalData.verifiedIndex[txId]
+		globalData.RUnlock()
+		if ok {
 			return nil, false, fault.ErrTransactionAlreadyExists
 		}
 		// a single confirmed issue fails the whole block
@@ -109,29 +119,49 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, er
 
 		// accumulate the data
 		txIds[i] = txId
-		uniqueAssetIds[issue.AssetId] = struct{}{}
+		if uniqueAssetId != issue.AssetId {
+			unique = false
+		}
 		separated[i] = packedIssue
 	}
 
 	// compute pay id
 	payId := pay.NewPayId(separated)
-	nonce := NewPayNonce()
-	difficulty := ScaledDifficulty(count)
 
+	// compose new result
 	result := &IssueInfo{
-		Id:         payId,
-		Nonce:      nonce,
-		Difficulty: difficulty,
-		TxIds:      txIds,
-		Packed:     bytes.Join(separated, []byte{}),
+		Id:     payId,
+		TxIds:  txIds,
+		Packed: bytes.Join(separated, []byte{}),
+		//Nonce:      nil,
+		Difficulty: nil,
 		Payments:   nil,
 	}
 
-	// if already seen just return pay id
-	if _, ok := cache.Pool.UnverifiedTxEntries.Get(payId.String()); ok {
-		globalData.log.Debugf("duplicate pay id: %s", payId)
+	// check if already seen
+	globalData.RLock()
+	if entry, ok := globalData.pendingFreeIssues[payId]; ok {
+
+		globalData.log.Debugf("duplicate free issue pay id: %s", payId)
+
+		result.Nonce = entry.nonce
+		result.Difficulty = entry.difficulty
+
+		globalData.RUnlock()
+
 		return result, true, nil
 	}
+
+	if entry, ok := globalData.pendingPaidIssues[payId]; ok {
+
+		globalData.log.Debugf("duplicate free issue pay id: %s", payId)
+
+		result.Payments = entry.payments
+		globalData.RUnlock()
+
+		return result, true, nil
+	}
+	globalData.RUnlock()
 
 	// if duplicates were detected, but duplicates were present
 	// then it is an error
@@ -142,23 +172,22 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, er
 
 	globalData.log.Infof("creating pay id: %s", payId)
 
-	// check for single asset being issued
-	assetBlockNumber := uint64(0)
-scan_for_one_asset:
-	for _, issue := range issues {
-		bn, t := storage.Pool.Assets.GetNB(issue.AssetId[:])
-		if nil == t || 0 == bn {
-			assetBlockNumber = 0     // cannot determine a single payment block
-			break scan_for_one_asset // because of unconfirmed asset
-		} else if 0 == assetBlockNumber {
-			assetBlockNumber = bn // block number of asset
-		} else if assetBlockNumber != bn {
-			assetBlockNumber = 0     // cannot determin a single payment block
-			break scan_for_one_asset // because of multiple assets
-		}
-	}
+	if freeIssueAllowed {
+		result.Nonce = NewPayNonce()
+		result.Difficulty = ScaledDifficulty(count)
 
-	if assetBlockNumber > genesis.BlockNumber { // avoid genesis block
+	} else {
+		// check for single asset being issued (paid issues)
+		// fail if not a single confirmed asset
+		if !unique {
+			return nil, false, fault.ErrAssetNotFound
+		}
+
+		assetBlockNumber, t := storage.Pool.Assets.GetNB(uniqueAssetId[:])
+
+		if nil == t || assetBlockNumber <= genesis.BlockNumber {
+			return nil, false, fault.ErrAssetNotFound
+		}
 
 		blockNumberKey := make([]byte, 8)
 		binary.BigEndian.PutUint64(blockNumberKey, assetBlockNumber)
@@ -185,60 +214,81 @@ scan_for_one_asset:
 	}
 
 	// save transactions
-	entry := &unverifiedItem{
-		itemData: &itemData{
-			txIds:        txIds,
-			links:        nil,
-			assetIds:     uniqueAssetIds,
-			transactions: separated,
-			nonce:        nil,
-		},
-		//nonce:      nonce, // ***** FIX THIS: this value seems not used
-		difficulty: difficulty,
-		payments:   result.Payments,
+	txs := make([]*transactionData, len(txIds))
+	for i, txId := range txIds {
+		txs[i] = &transactionData{
+			txId:        txId,
+			transaction: issues[i],
+			packed:      separated[i],
+		}
 	}
+
+	entry := &issuePaymentData{
+		payId:     payId,
+		txs:       txs,
+		payments:  result.Payments,
+		expiresAt: time.Now().Add(constants.ReservoirTimeout),
+	}
+
+	// code below modifies maps
+	globalData.Lock()
+	defer globalData.Unlock()
 
 	// already received the payment for the issues
 	// approve the transfer immediately if payment is ok
-	if val, ok := cache.Pool.OrphanPayment.Get(payId.String()); ok {
-		detail := val.(*PaymentDetail)
-
+	detail, ok := globalData.orphanPayments[payId]
+	if ok {
 		if acceptablePayment(detail, result.Payments) {
-
-			for i, txId := range txIds {
-				cache.Pool.VerifiedTx.Put(
-					txId.String(),
-					&verifiedItem{
-						itemData:    entry.itemData,
-						transaction: separated[i],
-						index:       i,
-					},
-				)
+			for _, txId := range txIds {
+				globalData.verifiedIndex[txId] = payId
+				delete(globalData.pendingIndex, txId)
 			}
-			cache.Pool.OrphanPayment.Delete(payId.String())
+			globalData.verifiedPaidIssues[payId] = entry
+			//delete(globalData.pendingPaidIssues, payId) // not created
+			delete(globalData.orphanPayments, payId)
 			return result, false, nil
 		}
 	}
 
+	if freeIssueAllowed && globalData.pendingFreeCount+len(txs) > maximumPendingFreeIssues ||
+		!freeIssueAllowed && globalData.pendingPaidCount+len(txs) >= maximumPendingPaidIssues {
+		return nil, false, fault.ErrBufferCapacityLimit
+	}
+
 	// create index entries
 	for _, txId := range txIds {
-		cache.Pool.UnverifiedTxIndex.Put(txId.String(), payId)
+		globalData.pendingIndex[txId] = payId
 	}
-	cache.Pool.UnverifiedTxEntries.Put(payId.String(), entry)
+
+	if freeIssueAllowed {
+		globalData.pendingFreeIssues[payId] = &issueFreeData{
+			payId:      payId,
+			txs:        txs,
+			nonce:      result.Nonce,
+			difficulty: result.Difficulty,
+			expiresAt:  time.Now().Add(constants.ReservoirTimeout),
+		}
+		globalData.pendingFreeCount += len(txs)
+
+	} else {
+		globalData.pendingPaidIssues[payId] = entry
+		globalData.pendingPaidCount += len(txs)
+	}
 
 	return result, false, nil
 }
 
 // instead of paying, try a proof from the client nonce
 func TryProof(payId pay.PayId, clientNonce []byte) TrackingStatus {
-	val, ok := cache.Pool.UnverifiedTxEntries.Get(payId.String())
+
+	globalData.RLock()
+	r, ok := globalData.pendingFreeIssues[payId]
+	globalData.RUnlock()
 
 	if !ok {
 		globalData.log.Debugf("TryProof: issue item not found")
 		return TrackingNotFound
 	}
-
-	r := val.(*unverifiedItem)
 
 	if nil == r.difficulty { // only payment tracking; proof not allowed
 		globalData.log.Debugf("TryProof: item with out a difficulty")
@@ -278,9 +328,44 @@ func TryProof(payId pay.PayId, clientNonce []byte) TrackingStatus {
 		// check difficulty and verify if ok
 		if bigDigest.Cmp(bigDifficulty) <= 0 {
 			globalData.log.Debugf("TryProof: success: pay id: %s", payId)
-			setVerified(payId, nil, clientNonce)
+			verifyIssueByNonce(payId, clientNonce)
 			return TrackingAccepted
 		}
 	}
+
 	return TrackingInvalid
+}
+
+// move transaction(s) to verified cache
+func verifyIssueByNonce(payId pay.PayId, nonce []byte) bool {
+
+	if nil == nonce || 0 == len(nonce) {
+		globalData.log.Warn("nonce nil or empty")
+		return false
+	}
+	globalData.log.Infof("nonce: %x", nonce)
+
+	globalData.Lock()
+	defer globalData.Unlock()
+
+	entry, ok := globalData.pendingFreeIssues[payId]
+	if ok {
+
+		copy(entry.nonce[:], nonce[:])
+
+		// move each transaction to verified pool
+		for _, tx := range entry.txs {
+			delete(globalData.pendingIndex, tx.txId)
+			globalData.verifiedIndex[tx.txId] = payId
+		}
+
+		// remove the pending data
+		globalData.pendingFreeCount -= len(entry.txs)
+		delete(globalData.pendingFreeIssues, payId)
+
+		// add to verified
+		globalData.verifiedFreeIssues[payId] = entry
+	}
+
+	return ok
 }

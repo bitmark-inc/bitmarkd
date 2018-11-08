@@ -6,7 +6,6 @@ package reservoir
 
 import (
 	"github.com/bitmark-inc/bitmarkd/account"
-	"github.com/bitmark-inc/bitmarkd/cache"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/mode"
@@ -24,6 +23,14 @@ type TransferInfo struct {
 	Payments []transactionrecord.PaymentAlternative
 }
 
+// returned data from verifyTransfer
+type verifiedTransferInfo struct {
+	txId             merkle.Digest
+	packed           []byte
+	previousTransfer transactionrecord.BitmarkTransfer
+	ownerData        []byte
+}
+
 func StoreTransfer(transfer transactionrecord.BitmarkTransfer) (*TransferInfo, bool, error) {
 	verifyResult, duplicate, err := verifyTransfer(transfer)
 	if err != nil {
@@ -31,16 +38,10 @@ func StoreTransfer(transfer transactionrecord.BitmarkTransfer) (*TransferInfo, b
 	}
 
 	// compute pay id
-	packedTransfer := verifyResult.packedTransfer
+	packedTransfer := verifyResult.packed
 	payId := pay.NewPayId([][]byte{packedTransfer})
 
 	txId := verifyResult.txId
-	link := transfer.GetLink()
-	if txId == link {
-		// reject any transaction that links to itself
-		// this should never occur, but protect against this situation
-		return nil, false, fault.ErrTransactionLinksToSelf
-	}
 
 	previousTransfer := verifyResult.previousTransfer
 	ownerData := verifyResult.ownerData
@@ -55,8 +56,10 @@ func StoreTransfer(transfer transactionrecord.BitmarkTransfer) (*TransferInfo, b
 	}
 
 	// if already seen just return pay id and previous payments if present
-	if val, ok := cache.Pool.UnverifiedTxEntries.Get(payId.String()); ok {
-		entry := val.(*unverifiedItem)
+	globalData.RLock()
+	entry, ok := globalData.pendingTransactions[payId]
+	globalData.RUnlock()
+	if ok {
 		if nil != entry.payments {
 			result.Payments = entry.payments
 		} else {
@@ -72,62 +75,58 @@ func StoreTransfer(transfer transactionrecord.BitmarkTransfer) (*TransferInfo, b
 		return nil, true, fault.ErrTransactionAlreadyExists
 	}
 
-	transferredItem := &itemData{
-		txIds:        []merkle.Digest{txId},
-		links:        []merkle.Digest{link},
-		transactions: [][]byte{packedTransfer},
-		assetIds:     nil,
-		nonce:        nil,
+	transferredItem := &transactionData{
+		txId:        txId,
+		transaction: transfer,
+		packed:      packedTransfer,
 	}
 
 	// already received the payment for the transfer
 	// approve the transfer immediately if payment is ok
-	if val, ok := cache.Pool.OrphanPayment.Get(payId.String()); ok {
-		detail := val.(*PaymentDetail)
-
+	globalData.RLock()
+	detail, ok := globalData.orphanPayments[payId]
+	globalData.RUnlock()
+	if ok {
 		if acceptablePayment(detail, payments) {
-
-			cache.Pool.VerifiedTx.Put(
-				txId.String(),
-				&verifiedItem{
-					itemData:    transferredItem,
-					transaction: packedTransfer,
-					index:       0,
-				},
-			)
-			cache.Pool.OrphanPayment.Delete(payId.String())
+			globalData.Lock()
+			globalData.verifiedTransactions[payId] = transferredItem
+			globalData.inProgressLinks[transfer.GetLink()] = txId
+			delete(globalData.pendingTransactions, payId)
+			delete(globalData.pendingIndex, txId)
+			delete(globalData.orphanPayments, payId)
+			globalData.Unlock()
 			return result, false, nil
 		}
 	}
 
 	// waiting for the payment to come
-	cache.Pool.PendingTransfer.Put(link.String(), txId)
-	cache.Pool.UnverifiedTxIndex.Put(txId.String(), payId)
-	cache.Pool.UnverifiedTxEntries.Put(
-		payId.String(),
-		&unverifiedItem{
-			itemData: transferredItem,
-			payments: payments,
-		},
-	)
+	payment := &transactionPaymentData{
+		payId:    payId,
+		tx:       transferredItem,
+		payments: payments,
+	}
+
+	globalData.Lock()
+
+	if len(globalData.pendingTransactions) >= maximumPendingTransactions {
+		globalData.Unlock()
+		return nil, false, fault.ErrBufferCapacityLimit
+	}
+
+	globalData.pendingTransactions[payId] = payment
+	globalData.pendingIndex[txId] = payId
+	globalData.inProgressLinks[transfer.GetLink()] = txId
+	globalData.Unlock()
 
 	return result, false, nil
 }
 
-// returned data from verifyTransfer
-type verifiedInfo struct {
-	txId             merkle.Digest
-	packedTransfer   []byte
-	previousTransfer transactionrecord.BitmarkTransfer
-	ownerData        []byte
-}
-
 // verify that a transfer is ok
 // ensure lock is held before calling
-func verifyTransfer(newTransfer transactionrecord.BitmarkTransfer) (*verifiedInfo, bool, error) {
+func verifyTransfer(transfer transactionrecord.BitmarkTransfer) (*verifiedTransferInfo, bool, error) {
 
 	// find the current owner via the link
-	_, previousPacked := storage.Pool.Transactions.GetNB(newTransfer.GetLink().Bytes())
+	_, previousPacked := storage.Pool.Transactions.GetNB(transfer.GetLink().Bytes())
 	if nil == previousPacked {
 		return nil, false, fault.ErrLinkToInvalidOrUnconfirmedTransaction
 	}
@@ -144,7 +143,7 @@ func verifyTransfer(newTransfer transactionrecord.BitmarkTransfer) (*verifiedInf
 	switch tx := previousTransaction.(type) {
 	case *transactionrecord.BitmarkIssue:
 		// ensure link to correct transfer type
-		switch newTransfer.(type) {
+		switch transfer.(type) {
 		case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
 			currentOwner = tx.Owner
 		default:
@@ -153,7 +152,7 @@ func verifyTransfer(newTransfer transactionrecord.BitmarkTransfer) (*verifiedInf
 
 	case *transactionrecord.BitmarkTransferUnratified:
 		// ensure link to correct transfer type
-		switch newTransfer.(type) {
+		switch transfer.(type) {
 		case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
 			currentOwner = tx.Owner
 			previousTransfer = tx
@@ -163,7 +162,7 @@ func verifyTransfer(newTransfer transactionrecord.BitmarkTransfer) (*verifiedInf
 
 	case *transactionrecord.BitmarkTransferCountersigned:
 		// ensure link to correct transfer type
-		switch newTransfer.(type) {
+		switch transfer.(type) {
 		case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
 			currentOwner = tx.Owner
 			previousTransfer = tx
@@ -173,7 +172,7 @@ func verifyTransfer(newTransfer transactionrecord.BitmarkTransfer) (*verifiedInf
 
 	case *transactionrecord.OldBaseData:
 		// ensure link to correct transfer type
-		switch newTransfer.(type) {
+		switch transfer.(type) {
 		case *transactionrecord.BlockOwnerTransfer:
 			currentOwner = tx.Owner
 		default:
@@ -182,7 +181,7 @@ func verifyTransfer(newTransfer transactionrecord.BitmarkTransfer) (*verifiedInf
 
 	case *transactionrecord.BlockFoundation:
 		// ensure link to correct transfer type
-		switch newTransfer.(type) {
+		switch transfer.(type) {
 		case *transactionrecord.BlockOwnerTransfer:
 			currentOwner = tx.Owner
 		default:
@@ -191,7 +190,7 @@ func verifyTransfer(newTransfer transactionrecord.BitmarkTransfer) (*verifiedInf
 
 	case *transactionrecord.BlockOwnerTransfer:
 		// ensure link to correct transfer type
-		switch newTransfer.(type) {
+		switch transfer.(type) {
 		case *transactionrecord.BlockOwnerTransfer:
 			currentOwner = tx.Owner
 			previousTransfer = tx
@@ -204,29 +203,41 @@ func verifyTransfer(newTransfer transactionrecord.BitmarkTransfer) (*verifiedInf
 	}
 
 	// pack transfer and check signature
-	packedTransfer, err := newTransfer.Pack(currentOwner)
+	packedTransfer, err := transfer.Pack(currentOwner)
 	if nil != err {
 		return nil, false, err
 	}
 
 	// transfer identifier and check for duplicate
 	txId := packedTransfer.MakeLink()
+	link := transfer.GetLink()
+	if txId == link {
+		// reject any transaction that links to itself
+		// this should never occur, but protect against this situation
+		return nil, false, fault.ErrTransactionLinksToSelf
+	}
 
-	// check if this transfer was already received
-	_, okP := cache.Pool.PendingTransfer.Get(newTransfer.GetLink().String())
-	_, okU := cache.Pool.UnverifiedTxIndex.Get(txId.String())
-	duplicate := false
-	if okU && okP {
-		// if both then it is a possible duplicate
-		// (depends on later pay id check)
-		duplicate = true
-	} else if okU || okP {
+	// check for double spend
+	globalData.RLock()
+	linkTxId, okL := globalData.inProgressLinks[link]
+	_, okP := globalData.pendingIndex[txId]
+	_, okV := globalData.verifiedIndex[txId]
+	globalData.RUnlock()
+
+	if okL && linkTxId != txId {
 		// not an exact match - must be a double transfer
 		return nil, false, fault.ErrDoubleTransferAttempt
 	}
 
+	duplicate := false
+	if okP {
+		// if both then it is a possible duplicate
+		// (depends on later pay id check)
+		duplicate = true
+	}
+
 	// a single verified transfer fails the whole block
-	if _, ok := cache.Pool.VerifiedTx.Get(txId.String()); ok {
+	if okV {
 		return nil, false, fault.ErrTransactionAlreadyExists
 	}
 	// a single confirmed transfer fails the whole block
@@ -239,7 +250,7 @@ func verifyTransfer(newTransfer transactionrecord.BitmarkTransfer) (*verifiedInf
 
 	// get count for current owner record
 	// to make sure that the record has not already been transferred
-	dKey := append(currentOwner.Bytes(), newTransfer.GetLink().Bytes()...)
+	dKey := append(currentOwner.Bytes(), transfer.GetLink().Bytes()...)
 	// log.Infof("dKey: %x", dKey)
 	dCount := storage.Pool.OwnerDigest.Get(dKey)
 	if nil == dCount {
@@ -255,9 +266,9 @@ func verifyTransfer(newTransfer transactionrecord.BitmarkTransfer) (*verifiedInf
 	}
 	// log.Infof("ownerData: %x", ownerData)
 
-	result := &verifiedInfo{
+	result := &verifiedTransferInfo{
 		txId:             txId,
-		packedTransfer:   packedTransfer,
+		packed:           packedTransfer,
 		previousTransfer: previousTransfer,
 		ownerData:        ownerData,
 	}

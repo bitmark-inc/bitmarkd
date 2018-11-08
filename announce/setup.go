@@ -169,8 +169,6 @@ func Initialise(nodesDomain, peerFile string) error {
 
 // finialise - stop all background tasks
 func Finalise() error {
-	globalData.Lock()
-	defer globalData.Unlock()
 
 	if !globalData.initialised {
 		return fault.ErrNotInitialised

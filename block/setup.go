@@ -121,8 +121,6 @@ func Initialise(recover bool) error {
 
 // shudown the block system
 func Finalise() error {
-	globalData.Lock()
-	defer globalData.Unlock()
 
 	if !globalData.initialised {
 		return fault.ErrNotInitialised

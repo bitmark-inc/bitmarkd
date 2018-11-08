@@ -23,95 +23,122 @@ const (
 	maximum
 )
 
-var globals struct {
+var globalData struct {
 	sync.RWMutex
 	log     *logger.L
 	mode    Mode
 	testing bool
 	chain   string
+
+	// set once during initialise
+	initialised bool
 }
 
 // set up the mode system
 func Initialise(chainName string) error {
 
 	// ensure start up in resynchronise mode
-	globals.Lock()
-	defer globals.Unlock()
+	globalData.Lock()
+	defer globalData.Unlock()
 
-	globals.log = logger.New("mode")
-	globals.log.Info("starting…")
+	// no need to start if already started
+	if globalData.initialised {
+		return fault.ErrAlreadyInitialised
+	}
+
+	globalData.log = logger.New("mode")
+	globalData.log.Info("starting…")
 
 	// default settings
-	globals.chain = chainName
-	globals.testing = false
-	globals.mode = Resynchronise
+	globalData.chain = chainName
+	globalData.testing = false
+	globalData.mode = Resynchronise
 
 	// override for specific chain
 	switch chainName {
 	case chain.Bitmark:
 		// no change
 	case chain.Testing, chain.Local:
-		globals.testing = true
+		globalData.testing = true
 	default:
-		globals.log.Criticalf("mode cannot handle chain: '%s'", chainName)
+		globalData.log.Criticalf("mode cannot handle chain: '%s'", chainName)
 		return fault.ErrInvalidChain
 	}
+
+	// all data initialised
+	globalData.initialised = true
+
 	return nil
 }
 
 // shutdown mode handling
-func Finalise() {
+func Finalise() error {
+
+	if !globalData.initialised {
+		return fault.ErrNotInitialised
+	}
+
+	globalData.log.Info("shutting down…")
+	globalData.log.Flush()
+
 	Set(Stopped)
-	globals.log.Info("shutting down…")
+
+	// finally...
+	globalData.initialised = false
+
+	globalData.log.Info("finished")
+	globalData.log.Flush()
+
+	return nil
 }
 
 // change mode
 func Set(mode Mode) {
 
 	if mode >= Stopped && mode < maximum {
-		globals.Lock()
-		globals.mode = mode
-		globals.Unlock()
+		globalData.Lock()
+		globalData.mode = mode
+		globalData.Unlock()
 
-		globals.log.Infof("set: %s", mode)
+		globalData.log.Infof("set: %s", mode)
 	} else {
-		globals.log.Errorf("ignore invalid set: %d", mode)
+		globalData.log.Errorf("ignore invalid set: %d", mode)
 	}
 }
 
 // detect mode
 func Is(mode Mode) bool {
-	globals.RLock()
-	defer globals.RUnlock()
-	return mode == globals.mode
+	globalData.RLock()
+	defer globalData.RUnlock()
+	return mode == globalData.mode
 }
 
 // detect mode
 func IsNot(mode Mode) bool {
-	globals.RLock()
-	defer globals.RUnlock()
-	return mode != globals.mode
+	globalData.RLock()
+	defer globalData.RUnlock()
+	return mode != globalData.mode
 }
 
 // special for testing
 func IsTesting() bool {
-	globals.RLock()
-	defer globals.RUnlock()
-	return globals.testing
+	globalData.RLock()
+	defer globalData.RUnlock()
+	return globalData.testing
 }
 
 // name of the current chain
 func ChainName() string {
-	globals.RLock()
-	defer globals.RUnlock()
-	return globals.chain
+	globalData.RLock()
+	defer globalData.RUnlock()
+	return globalData.chain
 }
 
 // current mode represented as a string
 func String() string {
-	globals.RLock()
-	defer globals.RUnlock()
-	return globals.mode.String()
+	globalData.RLock()
+	defer globalData.RUnlock()
+	return globalData.mode.String()
 }
 
 // current mode rep[resented as a string

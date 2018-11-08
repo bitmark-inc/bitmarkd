@@ -29,10 +29,6 @@ type Bitmarks struct {
 	limiter *rate.Limiter
 }
 
-const (
-	maximumIssues = 100
-)
-
 // Bitmarks issue
 // --------------
 
@@ -53,7 +49,7 @@ type CreateReply struct {
 	Issues     []IssueStatus                                   `json:"issues"`
 	PayId      pay.PayId                                       `json:"payId"`
 	PayNonce   reservoir.PayNonce                              `json:"payNonce"`
-	Difficulty string                                          `json:"difficulty"`
+	Difficulty string                                          `json:"difficulty,omitempty"`
 	Payments   map[string]transactionrecord.PaymentAlternative `json:"payments,omitempty"`
 }
 
@@ -63,7 +59,7 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 	assetCount := len(arguments.Assets)
 	issueCount := len(arguments.Issues)
 
-	if assetCount > maximumIssues || issueCount > maximumIssues {
+	if assetCount > reservoir.MaximumIssues || issueCount > reservoir.MaximumIssues {
 		return fault.ErrTooManyItemsToProcess
 	} else if 0 == assetCount && 0 == issueCount {
 		return fault.ErrMissingParameters
@@ -122,7 +118,11 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 
 		result.PayId = stored.Id
 		result.PayNonce = stored.Nonce
-		result.Difficulty = stored.Difficulty.GoString()
+		if nil == stored.Difficulty {
+			result.Difficulty = "" // supress difficulty if not applicable
+		} else {
+			result.Difficulty = stored.Difficulty.GoString()
+		}
 		if nil != stored.Payments {
 			result.Payments = make(map[string]transactionrecord.PaymentAlternative)
 

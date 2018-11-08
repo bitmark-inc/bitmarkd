@@ -40,10 +40,14 @@ type expiryData struct {
 // globals
 type globalDataType struct {
 	sync.RWMutex
+
 	log        *logger.L
 	expiry     expiryData
 	background *background.T
 	cache      map[transactionrecord.AssetIdentifier]*cacheData
+
+	// set once during initialise
+	initialised bool
 }
 
 // gobal storage
@@ -51,6 +55,15 @@ var globalData globalDataType
 
 // initialise the asset cache
 func Initialise() error {
+
+	globalData.Lock()
+	defer globalData.Unlock()
+
+	// no need to start if already started
+	if globalData.initialised {
+		return fault.ErrAlreadyInitialised
+	}
+
 	globalData.log = logger.New("asset")
 	globalData.log.Info("starting…")
 
@@ -59,6 +72,12 @@ func Initialise() error {
 	globalData.expiry.queue = make(chan transactionrecord.AssetIdentifier, 10)
 
 	globalData.cache = make(map[transactionrecord.AssetIdentifier]*cacheData)
+
+	// all data initialised
+	globalData.initialised = true
+
+	// start background processes
+	globalData.log.Info("start background…")
 
 	// list of background processes to start
 	processes := background.Processes{
@@ -71,10 +90,25 @@ func Initialise() error {
 }
 
 // stop all background handlers
-func Finalise() {
+func Finalise() error {
+
+	if !globalData.initialised {
+		return fault.ErrNotInitialised
+	}
+
+	globalData.log.Info("shutting down…")
+	globalData.log.Flush()
 
 	// stop background
 	globalData.background.Stop()
+
+	// finally...
+	globalData.initialised = false
+
+	globalData.log.Info("finished")
+	globalData.log.Flush()
+
+	return nil
 }
 
 // cache an incoming asset
@@ -145,7 +179,7 @@ func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIdentifi
 	return &assetId, packedAsset, nil
 }
 
-// check if an asset exists
+// check if an asset is exist and is confirmed
 func Exists(assetId transactionrecord.AssetIdentifier) bool {
 
 	// already confirmed

@@ -17,7 +17,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockring"
-	"github.com/bitmark-inc/bitmarkd/cache"
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/payment"
@@ -169,13 +168,6 @@ func main() {
 		log.Warn("database reindex required")
 	}
 
-	err = cache.Initialise()
-	if nil != err {
-		log.Criticalf("cache initialise error: %s", err)
-		exitwithstatus.Message("cache initialise error: %s", err)
-	}
-	defer cache.Finalise()
-
 	// start asset cache
 	err = asset.Initialise()
 	if nil != err {
@@ -224,11 +216,6 @@ func main() {
 	// these commands are allowed to access the internal database
 	if len(arguments) > 0 && processDataCommand(log, arguments, masterConfiguration) {
 		return
-	}
-
-	err = reservoir.Store.Restore()
-	if nil != err {
-		log.Warnf("fail to recover reservoir data: %v", err)
 	}
 
 	// network announcements need to be before peer and rpc initialisation

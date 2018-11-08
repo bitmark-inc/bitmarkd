@@ -17,7 +17,6 @@ import (
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/bitmark-inc/bitmarkd/account"
-	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/currency"
@@ -28,7 +27,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
-	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
@@ -212,10 +210,8 @@ func (pub *publisher) process() {
 		return
 	}
 
-	seenAsset := make(map[transactionrecord.AssetIdentifier]struct{})
-
 	// note: fetch one less tx because of foundation record
-	pooledTxIds, transactions, totalByteCount, err := reservoir.FetchVerified(blockrecord.MaximumTransactions - 1)
+	pooledTxIds, transactions, err := reservoir.FetchVerified(blockrecord.MaximumTransactions - 1)
 	if nil != err {
 		pub.log.Errorf("Error on Fetch: %v", err)
 		return
@@ -227,12 +223,6 @@ func (pub *publisher) process() {
 		pub.log.Info("verified pool is empty")
 		return
 	}
-
-	// buffer to concatenate all transaction data
-	txData := make([]byte, 0, totalByteCount)
-
-	// to accumulate new assets
-	assetIds := make([]transactionrecord.AssetIdentifier, 0, txCount)
 
 	// create record for each supported currency
 	p := make(currency.Map)
@@ -262,56 +252,7 @@ func (pub *publisher) process() {
 	// the first two are base records
 	txIds := make([]merkle.Digest, 1, len(pooledTxIds)*2) // allow room for inserted assets & allocate base
 	txIds[0] = merkle.NewDigest(packedBI)
-
-	n := 0 // index for pooledTxIds
-loop:
-	for _, item := range transactions {
-		unpacked, _, err := transactionrecord.Packed(item).Unpack(mode.IsTesting())
-		if nil != err {
-			pub.log.Criticalf("unpack error: %s", err)
-			logger.Panicf("publisher extraction transactions error: %s", err)
-		}
-
-		// only issues and transfers are allowed here
-		switch tx := unpacked.(type) {
-		case *transactionrecord.BitmarkIssue:
-
-			if _, ok := seenAsset[tx.AssetId]; !ok {
-				if !storage.Pool.Assets.Has(tx.AssetId[:]) {
-
-					packedAsset := asset.Get(tx.AssetId)
-					if nil == packedAsset {
-						pub.log.Criticalf("missing asset: %v", tx.AssetId)
-						logger.Panicf("publisher missing asset: %v", tx.AssetId)
-					}
-					// add asset's transaction id to list
-					txId := merkle.NewDigest(packedAsset)
-					txIds = append(txIds, txId)
-					assetIds = append(assetIds, tx.AssetId)
-					txData = append(txData, packedAsset...)
-				}
-				seenAsset[tx.AssetId] = struct{}{}
-			}
-
-		case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned, *transactionrecord.BlockOwnerTransfer:
-			// ok
-
-		default: // all other types cannot occur here
-			pub.log.Criticalf("unxpected transaction: %v", unpacked)
-			logger.Panicf("publisher unxpected transaction: %v", unpacked)
-		}
-
-		// concatenate items
-		txIds = append(txIds, pooledTxIds[n])
-		txData = append(txData, item...)
-
-		// if assets were presentthen break early
-		if len(txIds) >= blockrecord.MaximumTransactions {
-			break loop
-		}
-
-		n += 1
-	}
+	txIds = append(txIds, pooledTxIds...)
 
 	// build the tree of transaction IDs
 	fullMerkleTree := merkle.FullMerkleTree(txIds)
@@ -342,9 +283,8 @@ loop:
 			Difficulty:       bits,
 			Nonce:            nonce,
 		},
-		TxZero:   packedBI,
-		TxIds:    txIds,
-		AssetIds: assetIds,
+		TxZero: packedBI,
+		TxIds:  txIds,
 	}
 
 	pub.log.Tracef("message: %v", message)
@@ -352,7 +292,7 @@ loop:
 	message.Header.PreviousBlock, message.Header.Number = block.Get()
 
 	// add job to the queue
-	enqueueToJobQueue(message, txData)
+	enqueueToJobQueue(message, transactions)
 
 	data, err := json.Marshal(message)
 	logger.PanicIfError("JSON encode error: %s", err)

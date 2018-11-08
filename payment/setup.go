@@ -5,8 +5,11 @@
 package payment
 
 import (
+	"sync"
+
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/currency"
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/logger"
 )
 
@@ -34,14 +37,27 @@ type currencyConfiguration struct {
 }
 
 type globalDataType struct {
+	sync.RWMutex // to allow locking
+
 	log        *logger.L
 	handlers   map[string]currencyHandler
 	background *background.T
+
+	// set once during initialise
+	initialised bool
 }
 
 var globalData globalDataType
 
 func Initialise(configuration *Configuration) error {
+	globalData.Lock()
+	defer globalData.Unlock()
+
+	// no need to start if already started
+	if globalData.initialised {
+		return fault.ErrAlreadyInitialised
+	}
+
 	globalData.log = logger.New("payment")
 	globalData.log.Info("starting…")
 
@@ -82,15 +98,31 @@ func Initialise(configuration *Configuration) error {
 		processes = append(processes, &checker{})
 	}
 
+	// all data initialised
+	globalData.initialised = true
+
+	// start background
 	globalData.background = background.Start(processes, globalData.log)
 
 	return nil
 }
 
-func Finalise() {
+func Finalise() error {
+	if !globalData.initialised {
+		return fault.ErrNotInitialised
+	}
+
 	globalData.log.Info("shutting down…")
+	globalData.log.Flush()
+
+	// stop background
 	globalData.background.Stop()
+
+	// finally...
+	globalData.initialised = false
 
 	globalData.log.Info("finished")
 	globalData.log.Flush()
+
+	return nil
 }

@@ -116,8 +116,6 @@ func Initialise(rpcConfiguration *RPCConfiguration, httpsConfiguration *HTTPSCon
 
 // finialise - stop all background tasks
 func Finalise() error {
-	globalData.Lock()
-	defer globalData.Unlock()
 
 	if !globalData.initialised {
 		return fault.ErrNotInitialised

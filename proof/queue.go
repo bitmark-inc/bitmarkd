@@ -13,16 +13,14 @@ import (
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/mode"
-	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 
 // to send to proofer
 type PublishedItem struct {
-	Job      string
-	Header   blockrecord.Header
-	TxZero   []byte
-	TxIds    []merkle.Digest
-	AssetIds []transactionrecord.AssetIdentifier
+	Job    string
+	Header blockrecord.Header
+	TxZero []byte
+	TxIds  []merkle.Digest
 }
 
 // received from the proofer

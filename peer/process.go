@@ -179,7 +179,7 @@ func processIssues(packed []byte) error {
 	packedIssues := transactionrecord.Packed(packed)
 	issueCount := 0 // for payment difficulty
 
-	issues := make([]*transactionrecord.BitmarkIssue, 0, 100)
+	issues := make([]*transactionrecord.BitmarkIssue, 0, reservoir.MaximumIssues)
 	for 0 != len(packedIssues) {
 		transaction, n, err := packedIssues.Unpack(mode.IsTesting())
 		if nil != err {

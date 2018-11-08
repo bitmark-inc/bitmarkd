@@ -259,15 +259,13 @@ func dbClose() {
 		poolData.dbBlocks.Close()
 		poolData.dbBlocks = nil
 	}
-
 }
 
 // close the database connection
 func Finalise() {
 	poolData.Lock()
-	defer poolData.Unlock()
-
 	dbClose()
+	poolData.Unlock()
 }
 
 // called at the end of reindex

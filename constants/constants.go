@@ -8,17 +8,17 @@ import (
 	"time"
 )
 
-// the time for a record to expire
+// the time for a pending record to expire
 const (
-	ReservoirTimeout = 72 * time.Hour
+	ReservoirTimeout = 45 * time.Minute
 )
 
 // the maximum time before unverified asset is expired
 const (
-	AssetTimeout = ReservoirTimeout + time.Hour
+	AssetTimeout = 3 * ReservoirTimeout / 2
 )
 
 // the time between rebroadcasts of unconfirmed transactions
 const (
-	RebroadcastInterval = 15 * time.Minute
+	RebroadcastInterval = 3 * ReservoirTimeout / 4
 )
