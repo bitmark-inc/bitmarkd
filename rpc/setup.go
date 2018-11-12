@@ -24,6 +24,7 @@ import (
 
 type RPCConfiguration struct {
 	MaximumConnections int      `libucl:"maximum_connections" json:"maximum_connections"`
+	Bandwidth          float64  `libucl:"bandwidth" json:"bandwidth"`
 	Listen             []string `libucl:"listen" json:"listen"`
 	Certificate        string   `libucl:"certificate" json:"certificate"`
 	PrivateKey         string   `libucl:"private_key" json:"private_key"`
@@ -118,6 +119,10 @@ func initialiseRPC(configuration *RPCConfiguration, version string) error {
 		log.Errorf("invalid %s maximum connection limit: %d", name, configuration.MaximumConnections)
 		return fault.ErrMissingParameters
 	}
+	if configuration.Bandwidth <= 1000000 { // fail if < 1Mbps
+		log.Errorf("invalid %s bandwidth: %d bps < 1Mbps", name, configuration.Bandwidth)
+		return fault.ErrMissingParameters
+	}
 
 	if 0 == len(configuration.Listen) {
 		log.Errorf("missing %s listen", name)
@@ -125,7 +130,7 @@ func initialiseRPC(configuration *RPCConfiguration, version string) error {
 	}
 
 	// create limiter
-	limiter := listener.NewLimiter(configuration.MaximumConnections)
+	limiter := listener.NewBandwidthLimiter(configuration.MaximumConnections, configuration.Bandwidth)
 
 	tlsConfiguration, fingerprint, err := getCertificate(log, name, configuration.Certificate, configuration.PrivateKey)
 	if nil != err {

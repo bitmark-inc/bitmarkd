@@ -52,9 +52,8 @@ const (
 	defaultLogCount     = 10          //  number of log files retained
 	defaultLogSize      = 1024 * 1024 // rotate when <logfile> exceeds this size
 
-	defaultRPCClients = 10
-	defaultPeers      = 125
-	defaultProofers   = 125
+	defaultRPCClients = 100          // maximum TCP connections
+	defaultBandwidth  = 25 * 1000000 // 25Mbps
 )
 
 // to hold log levels
@@ -125,6 +124,7 @@ func getConfiguration(configurationFileName string, variables map[string]string)
 
 		ClientRPC: rpc.RPCConfiguration{
 			MaximumConnections: defaultRPCClients,
+			Bandwidth:          defaultBandwidth,
 			Certificate:        defaultCertificateFile,
 			PrivateKey:         defaultKeyFile,
 		},
@@ -137,7 +137,6 @@ func getConfiguration(configurationFileName string, variables map[string]string)
 		},
 
 		Peering: peer.Configuration{
-			//MaximumConnections: defaultPeers,
 			DynamicConnections: true,
 			PreferIPv6:         true,
 			PublicKey:          defaultPeerPublicKeyFile,
@@ -150,7 +149,6 @@ func getConfiguration(configurationFileName string, variables map[string]string)
 		},
 
 		Proofing: proof.Configuration{
-			//MaximumConnections: defaultProofers,
 			PublicKey:  defaultProofPublicKeyFile,
 			PrivateKey: defaultProofPrivateKeyFile,
 			SigningKey: defaultProofSigningKeyFile,
