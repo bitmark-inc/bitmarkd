@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"net/rpc"
 	"net/rpc/jsonrpc"
-	"os"
 
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/bitmark-inc/getoptions"
@@ -39,11 +38,18 @@ func (r *RPCClient) GetNodeInfo() (json.RawMessage, error) {
 	return reply, err
 }
 
+// set by the linker: go build -ldflags "-X main.version=M.N" ./...
+var version string = "zero" // do not change this value
+
+// main program
 func main() {
 	defer exitwithstatus.Handler()
 
 	flags := []getoptions.Option{
 		{Long: "help", HasArg: getoptions.NO_ARGUMENT, Short: 'h'},
+		// {Long: "verbose", HasArg: getoptions.NO_ARGUMENT, Short: 'v'},
+		// {Long: "quiet", HasArg: getoptions.NO_ARGUMENT, Short: 'q'},
+		{Long: "version", HasArg: getoptions.NO_ARGUMENT, Short: 'V'},
 	}
 
 	program, options, arguments, err := getoptions.GetOS(flags)
@@ -51,14 +57,18 @@ func main() {
 		exitwithstatus.Message("option parse error: %s", err)
 	}
 
-	if len(options["help"]) > 0 {
-		exitwithstatus.Message("usage: %s [--help] [--info-type=TYPE] [host:port]", program)
+	if len(options["version"]) > 0 {
+		exitwithstatus.Message("%s: version: %s", program, version)
 	}
 
-	var hostPort string
-	if len(arguments) != 0 {
-		hostPort = arguments[0]
+	if len(options["help"]) > 0 || 0 == len(arguments) {
+		exitwithstatus.Message("usage: %s [--help] host:port", program)
 	}
+
+	if len(arguments) != 1 {
+		exitwithstatus.Message("%s: extraneous extra arguments", program)
+	}
+	hostPort := arguments[0]
 
 	// establish rpc connection over tls
 	conn, err := tls.Dial("tcp", hostPort, &tls.Config{
@@ -88,5 +98,4 @@ func main() {
 	}
 
 	fmt.Printf("%s", b)
-	os.Exit(0)
 }
