@@ -23,20 +23,20 @@ import (
 )
 
 type RPCConfiguration struct {
-	MaximumConnections int      `libucl:"maximum_connections" json:"maximum_connections"`
-	Bandwidth          float64  `libucl:"bandwidth" json:"bandwidth"`
-	Listen             []string `libucl:"listen" json:"listen"`
-	Certificate        string   `libucl:"certificate" json:"certificate"`
-	PrivateKey         string   `libucl:"private_key" json:"private_key"`
-	Announce           []string `libucl:"announce" json:"announce"`
+	MaximumConnections int      `gluamapper:"maximum_connections" json:"maximum_connections"`
+	Bandwidth          float64  `gluamapper:"bandwidth" json:"bandwidth"`
+	Listen             []string `gluamapper:"listen" json:"listen"`
+	Certificate        string   `gluamapper:"certificate" json:"certificate"`
+	PrivateKey         string   `gluamapper:"private_key" json:"private_key"`
+	Announce           []string `gluamapper:"announce" json:"announce"`
 }
 
 type HTTPSConfiguration struct {
-	MaximumConnections int                 `libucl:"maximum_connections" json:"maximum_connections"`
-	Listen             []string            `libucl:"listen" json:"listen"`
-	Certificate        string              `libucl:"certificate" json:"certificate"`
-	PrivateKey         string              `libucl:"private_key" json:"private_key"`
-	Allow              map[string][]string `libucl:"allow" json:"allow"`
+	MaximumConnections int                 `gluamapper:"maximum_connections" json:"maximum_connections"`
+	Listen             []string            `gluamapper:"listen" json:"listen"`
+	Certificate        string              `gluamapper:"certificate" json:"certificate"`
+	PrivateKey         string              `gluamapper:"private_key" json:"private_key"`
+	Allow              map[string][]string `gluamapper:"allow" json:"allow"`
 }
 
 // globals
@@ -240,19 +240,8 @@ func initialiseHTTPS(configuration *HTTPSConfiguration, version string) error {
 
 	for _, listen := range configuration.Listen {
 		log.Infof("starting server: %s on: %q", name, listen)
-		s := &http.Server{
-			Addr:           listen,
-			Handler:        mux,
-			ReadTimeout:    10 * time.Second,
-			WriteTimeout:   10 * time.Second,
-			MaxHeaderBytes: 1 << 20,
-			TLSConfig:      tlsConfiguration,
-		}
 
-		go func(s *http.Server) {
-			err := s.ListenAndServeTLS(configuration.Certificate, configuration.PrivateKey)
-			log.Errorf("server: %s on: %q  error: %s", name, s.Addr, err)
-		}(s)
+		go ListenAndServeTLSKeyPair(listen, mux, tlsConfiguration)
 	}
 
 	return nil
@@ -308,22 +297,10 @@ func createRPCServer(log *logger.L, version string) *rpc.Server {
 
 // Verify that a set of listener parameters are valid
 // and return the certificate
-func getCertificate(log *logger.L, name string, certificateFileName string, keyFileName string) (*tls.Config, [32]byte, error) {
-
+func getCertificate(log *logger.L, name, certificate, key string) (*tls.Config, [32]byte, error) {
 	var fingerprint [32]byte
 
-	if !util.EnsureFileExists(certificateFileName) {
-		log.Errorf("certificate: %q does not exist", certificateFileName)
-		return nil, fingerprint, fault.ErrCertificateFileNotFound
-	}
-
-	if !util.EnsureFileExists(keyFileName) {
-		log.Errorf("private key: %q does not exist", keyFileName)
-		return nil, fingerprint, fault.ErrKeyFileNotFound
-	}
-
-	// set up TLS
-	keyPair, err := tls.LoadX509KeyPair(certificateFileName, keyFileName)
+	keyPair, err := tls.X509KeyPair([]byte(certificate), []byte(key))
 	if err != nil {
 		log.Errorf("%s failed to load keypair: %v", name, err)
 		return nil, fingerprint, err
@@ -345,4 +322,40 @@ func getCertificate(log *logger.L, name string, certificateFileName string, keyF
 // FreeBSD: openssl x509 -outform DER -in bitmarkd-local-rpc.crt | sha3sum -a 256
 func CertificateFingerprint(certificate []byte) [32]byte {
 	return sha3.Sum256(certificate)
+}
+
+type tcpKeepAliveListener struct {
+	*net.TCPListener
+}
+
+func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
+	tc, err := ln.AcceptTCP()
+	if err != nil {
+		return
+	}
+	tc.SetKeepAlive(true)
+	tc.SetKeepAlivePeriod(3 * time.Minute)
+	return tc, nil
+}
+
+// start a HTTPS server using in-memory TLS KeyPair
+func ListenAndServeTLSKeyPair(addr string, handler http.Handler, cfg *tls.Config) error {
+	s := &http.Server{
+		Addr:           addr,
+		Handler:        handler,
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   10 * time.Second,
+		MaxHeaderBytes: 1 << 20,
+	}
+
+	cfg.NextProtos = []string{"http/1.1"}
+
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
+	}
+
+	tlsListener := tls.NewListener(tcpKeepAliveListener{ln.(*net.TCPListener)}, cfg)
+
+	return s.Serve(tlsListener)
 }

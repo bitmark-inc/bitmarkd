@@ -16,9 +16,9 @@ import (
 // a block of configuration data
 // this is read from a libucl configuration file
 type Configuration struct {
-	Broadcast  []string `libucl:"broadcast" json:"broadcast"`
-	PrivateKey string   `libucl:"private_key" json:"private_key"`
-	PublicKey  string   `libucl:"public_key" json:"public_key"`
+	Broadcast  []string `gluamapper:"broadcast" json:"broadcast"`
+	PrivateKey string   `gluamapper:"private_key" json:"private_key"`
+	PublicKey  string   `gluamapper:"public_key" json:"public_key"`
 }
 
 // globals for background proccess
@@ -61,12 +61,12 @@ func Initialise(configuration *Configuration, version string) error {
 	}
 
 	// read the keys
-	privateKey, err := zmqutil.ReadPrivateKeyFile(configuration.PrivateKey)
+	privateKey, err := zmqutil.ReadPrivateKey(configuration.PrivateKey)
 	if nil != err {
 		globalData.log.Errorf("read private key file: %q  error: %s", configuration.PrivateKey, err)
 		return err
 	}
-	publicKey, err := zmqutil.ReadPublicKeyFile(configuration.PublicKey)
+	publicKey, err := zmqutil.ReadPublicKey(configuration.PublicKey)
 	if nil != err {
 		globalData.log.Errorf("read public key file: %q  error: %s", configuration.PublicKey, err)
 		return err

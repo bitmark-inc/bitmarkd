@@ -26,14 +26,6 @@ import (
 const (
 	defaultDataDirectory = "" // this will error; use "." for the same directory as the config file
 
-	defaultPeerPublicKeyFile   = "peer.private"
-	defaultPeerPrivateKeyFile  = "peer.public"
-	defaultProofPublicKeyFile  = "proof.private"
-	defaultProofPrivateKeyFile = "proof.public"
-	defaultProofSigningKeyFile = "proof.sign"
-	defaultKeyFile             = "rpc.key"
-	defaultCertificateFile     = "rpc.crt"
-
 	defaultLevelDBDirectory = "data"
 	defaultBitmarkDatabase  = chain.Bitmark
 	defaultTestingDatabase  = chain.Testing
@@ -66,36 +58,28 @@ var (
 	}
 )
 
-type HTTPSType struct {
-	MaximumConnections int      `libucl:"maximum_connections" json:"maximum_connections"`
-	Listen             []string `libucl:"listen" json:"listen"`
-	StatusAllowIP      []string `libucl:"status_allow_ip" json:"status_allow_ip"`
-	Certificate        string   `libucl:"certificate" json:"certificate"`
-	PrivateKey         string   `libucl:"private_key" json:"private_key"`
-}
-
 type DatabaseType struct {
-	Directory string `libucl:"directory" json:"directory"`
-	Name      string `libucl:"name" json:"name"`
+	Directory string `gluamapper:"directory" json:"directory"`
+	Name      string `gluamapper:"name" json:"name"`
 }
 
 type Configuration struct {
-	DataDirectory string       `libucl:"data_directory" json:"data_directory"`
-	PidFile       string       `libucl:"pidfile" json:"pidfile"`
-	Chain         string       `libucl:"chain" json:"chain"`
-	Nodes         string       `libucl:"nodes" json:"nodes"`
-	Database      DatabaseType `libucl:"database" json:"database"`
+	DataDirectory string       `gluamapper:"data_directory" json:"data_directory"`
+	PidFile       string       `gluamapper:"pidfile" json:"pidfile"`
+	Chain         string       `gluamapper:"chain" json:"chain"`
+	Nodes         string       `gluamapper:"nodes" json:"nodes"`
+	Database      DatabaseType `gluamapper:"database" json:"database"`
 
-	PeerFile      string `libucl:"peer_file" json:"peer_file"`
-	ReservoirFile string `libucl:"reservoir_file" json:"reservoir_file"`
+	PeerFile      string `gluamapper:"peer_file" json:"peer_file"`
+	ReservoirFile string `gluamapper:"reservoir_file" json:"reservoir_file"`
 
-	ClientRPC  rpc.RPCConfiguration   `libucl:"client_rpc" json:"client_rpc"`
-	HttpsRPC   rpc.HTTPSConfiguration `libucl:"https_rpc" json:"https_rpc"`
-	Peering    peer.Configuration     `libucl:"peering" json:"peering"`
-	Publishing publish.Configuration  `libucl:"publishing" json:"publishing"`
-	Proofing   proof.Configuration    `libucl:"proofing" json:"proofing"`
-	Payment    payment.Configuration  `libucl:"payment" json:"payment"`
-	Logging    logger.Configuration   `libucl:"logging" json:"logging"`
+	ClientRPC  rpc.RPCConfiguration   `gluamapper:"client_rpc" json:"client_rpc"`
+	HttpsRPC   rpc.HTTPSConfiguration `gluamapper:"https_rpc" json:"https_rpc"`
+	Peering    peer.Configuration     `gluamapper:"peering" json:"peering"`
+	Publishing publish.Configuration  `gluamapper:"publishing" json:"publishing"`
+	Proofing   proof.Configuration    `gluamapper:"proofing" json:"proofing"`
+	Payment    payment.Configuration  `gluamapper:"payment" json:"payment"`
+	Logging    logger.Configuration   `gluamapper:"logging" json:"logging"`
 }
 
 // will read decode and verify the configuration
@@ -125,33 +109,16 @@ func getConfiguration(configurationFileName string, variables map[string]string)
 		ClientRPC: rpc.RPCConfiguration{
 			MaximumConnections: defaultRPCClients,
 			Bandwidth:          defaultBandwidth,
-			Certificate:        defaultCertificateFile,
-			PrivateKey:         defaultKeyFile,
 		},
 
 		// default: share config with normal RPC
 		HttpsRPC: rpc.HTTPSConfiguration{
 			MaximumConnections: defaultRPCClients,
-			Certificate:        defaultCertificateFile,
-			PrivateKey:         defaultKeyFile,
 		},
 
 		Peering: peer.Configuration{
 			DynamicConnections: true,
 			PreferIPv6:         true,
-			PublicKey:          defaultPeerPublicKeyFile,
-			PrivateKey:         defaultPeerPrivateKeyFile,
-		},
-
-		Publishing: publish.Configuration{
-			PublicKey:  defaultPeerPublicKeyFile,
-			PrivateKey: defaultPeerPrivateKeyFile,
-		},
-
-		Proofing: proof.Configuration{
-			PublicKey:  defaultProofPublicKeyFile,
-			PrivateKey: defaultProofPrivateKeyFile,
-			SigningKey: defaultProofSigningKeyFile,
 		},
 
 		Logging: logger.Configuration{
@@ -163,7 +130,7 @@ func getConfiguration(configurationFileName string, variables map[string]string)
 		},
 	}
 
-	if err := configuration.ParseConfigurationFile(configurationFileName, options, variables); err != nil {
+	if err := configuration.ParseConfigurationFile(configurationFileName, options); err != nil {
 		return nil, err
 	}
 
@@ -215,17 +182,6 @@ func getConfiguration(configurationFileName string, variables map[string]string)
 		&options.PeerFile,
 		&options.ReservoirFile,
 		&options.Database.Directory,
-		&options.ClientRPC.Certificate,
-		&options.ClientRPC.PrivateKey,
-		&options.HttpsRPC.Certificate,
-		&options.HttpsRPC.PrivateKey,
-		&options.Peering.PublicKey,
-		&options.Peering.PrivateKey,
-		&options.Publishing.PublicKey,
-		&options.Publishing.PrivateKey,
-		&options.Proofing.PublicKey,
-		&options.Proofing.PrivateKey,
-		&options.Proofing.SigningKey,
 		&options.Logging.Directory,
 	}
 	for _, f := range mustBeAbsolute {

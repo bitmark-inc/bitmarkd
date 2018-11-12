@@ -25,13 +25,9 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 
 	switch command {
 	case "generate-identity":
-		publicKeyFilename := options.Peering.PublicKey
-		privateKeyFilename := options.Peering.PrivateKey
+		publicKeyFilename := options.DataDirectory + "/recorderd.public"
+		privateKeyFilename := options.DataDirectory + "/recorderd.private"
 
-		if len(arguments) >= 1 && "" != arguments[0] {
-			publicKeyFilename = arguments[0] + ".public"
-			privateKeyFilename = arguments[0] + ".private"
-		}
 		err := zmqutil.MakeKeyPair(publicKeyFilename, privateKeyFilename)
 		if nil != err {
 			fmt.Printf("cannot generate private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)

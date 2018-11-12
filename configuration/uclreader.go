@@ -18,7 +18,7 @@ import (
 // note:
 //   all environment variables are added as ENV_xxx to the lib ucl variables table
 //
-func ParseConfigurationFile(fileName string, config interface{}, variables map[string]string) error {
+func ParseUCLConfigurationFile(fileName string, config interface{}, variables map[string]string) error {
 
 	// since interface{} is untyped, have to verify type compatibility at run-time
 	rv := reflect.ValueOf(config)

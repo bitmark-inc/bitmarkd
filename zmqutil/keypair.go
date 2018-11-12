@@ -55,9 +55,9 @@ func MakeKeyPair(publicKeyFileName string, privateKeyFileName string) error {
 	return nil
 }
 
-// read a public key from a file returning it as a 32 byte string
-func ReadPublicKeyFile(keyFileName string) ([]byte, error) {
-	data, private, err := ReadKeyFile(keyFileName)
+// read a public key from a string returning it as a 32 byte string
+func ReadPublicKey(key string) ([]byte, error) {
+	data, private, err := ParseKey(key)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -67,9 +67,9 @@ func ReadPublicKeyFile(keyFileName string) ([]byte, error) {
 	return data, err
 }
 
-// read a private key from a file returning it as a 32 byte string
-func ReadPrivateKeyFile(keyFileName string) ([]byte, error) {
-	data, private, err := ReadKeyFile(keyFileName)
+// read a private key from a string returning it as a 32 byte string
+func ReadPrivateKey(key string) ([]byte, error) {
+	data, private, err := ParseKey(key)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -79,16 +79,7 @@ func ReadPrivateKeyFile(keyFileName string) ([]byte, error) {
 	return data, err
 }
 
-// read a public key from a file returning it as a 32 byte string
-func ReadKeyFile(keyFileName string) ([]byte, bool, error) {
-	if !util.EnsureFileExists(keyFileName) {
-		return []byte{}, false, fault.ErrKeyFileNotFound
-	}
-	data, err := ioutil.ReadFile(keyFileName)
-	if err != nil {
-		return []byte{}, false, err
-	}
-
+func ParseKey(data string) ([]byte, bool, error) {
 	s := strings.TrimSpace(string(data))
 	if strings.HasPrefix(s, taggedPrivate) {
 		h, err := hex.DecodeString(s[len(taggedPrivate):])

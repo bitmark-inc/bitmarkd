@@ -22,9 +22,6 @@ import (
 const (
 	defaultDataDirectory = "" // this will error; use "." for the same directory as the config file
 
-	defaultPublicKeyFile  = "recorderd.private"
-	defaultPrivateKeyFile = "recorderd.public"
-
 	defaultLogDirectory = "log"
 	defaultLogFile      = "recorderd.log"
 	defaultLogCount     = 10          //  number of log files retained
@@ -43,16 +40,16 @@ var (
 
 // server public key identification in Z85 (ZeroMQ Base-85 Encoding) see: http://rfc.zeromq.org/spec:32
 type Connection struct {
-	PublicKey string `libucl:"public_key" json:"public_key"`
-	Blocks    string `libucl:"blocks" json:"blocks"`
-	Submit    string `libucl:"submit" json:"submit"`
+	PublicKey string `gluamapper:"public_key" json:"public_key"`
+	Blocks    string `gluamapper:"blocks" json:"blocks"`
+	Submit    string `gluamapper:"submit" json:"submit"`
 }
 
 //  client keys in Z85 (ZeroMQ Base-85 Encoding) see: http://rfc.zeromq.org/spec:32
 type PeerType struct {
-	PrivateKey string       `libucl:"private_key" json:"private_key"`
-	PublicKey  string       `libucl:"public_key" json:"public_key"`
-	Connect    []Connection `libucl:"connect" json:"connect"`
+	PrivateKey string       `gluamapper:"private_key" json:"private_key"`
+	PublicKey  string       `gluamapper:"public_key" json:"public_key"`
+	Connect    []Connection `gluamapper:"connect" json:"connect"`
 }
 
 // type PaymentType struct {
@@ -65,16 +62,16 @@ type PeerType struct {
 //	//Payment PaymentType `libucl:"payment" json:"payment"`
 
 type Configuration struct {
-	DataDirectory string               `libucl:"data_directory" json:"data_directory"`
-	PidFile       string               `libucl:"pidfile" json:"pidfile"`
-	Chain         string               `libucl:"chain" json:"chain"`
-	Threads       int                  `libucl:"threads" json:"threads"`
-	Peering       PeerType             `libucl:"peering" json:"peering"`
-	Logging       logger.Configuration `libucl:"logging" json:"logging"`
+	DataDirectory string               `gluamapper:"data_directory" json:"data_directory"`
+	PidFile       string               `gluamapper:"pidfile" json:"pidfile"`
+	Chain         string               `gluamapper:"chain" json:"chain"`
+	Threads       int                  `gluamapper:"threads" json:"threads"`
+	Peering       PeerType             `gluamapper:"peering" json:"peering"`
+	Logging       logger.Configuration `gluamapper:"logging" json:"logging"`
 }
 
 // will read decode and verify the configuration
-func getConfiguration(configurationFileName string, variables map[string]string) (*Configuration, error) {
+func getConfiguration(configurationFileName string) (*Configuration, error) {
 
 	configurationFileName, err := filepath.Abs(filepath.Clean(configurationFileName))
 	if nil != err {
@@ -102,7 +99,7 @@ func getConfiguration(configurationFileName string, variables map[string]string)
 		},
 	}
 
-	if err := configuration.ParseConfigurationFile(configurationFileName, options, variables); err != nil {
+	if err := configuration.ParseConfigurationFile(configurationFileName, options); err != nil {
 		return nil, err
 	}
 
@@ -137,8 +134,6 @@ func getConfiguration(configurationFileName string, variables map[string]string)
 	// force all relevant items to be absolute paths
 	// if not, assign them to the data directory
 	mustBeAbsolute := []*string{
-		&options.Peering.PublicKey,
-		&options.Peering.PrivateKey,
 		&options.Logging.Directory,
 	}
 	for _, f := range mustBeAbsolute {

@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/bitmark-inc/bitmarkd/mode"
@@ -34,7 +33,6 @@ func main() {
 		{Long: "quiet", HasArg: getoptions.NO_ARGUMENT, Short: 'q'},
 		{Long: "version", HasArg: getoptions.NO_ARGUMENT, Short: 'V'},
 		{Long: "config-file", HasArg: getoptions.REQUIRED_ARGUMENT, Short: 'c'},
-		{Long: "set", HasArg: getoptions.REQUIRED_ARGUMENT, Short: 's'},
 	}
 
 	program, options, arguments, err := getoptions.GetOS(flags)
@@ -54,18 +52,9 @@ func main() {
 		exitwithstatus.Message("%s: only one config-file option is required, %d were detected", program, len(options["config-file"]))
 	}
 
-	// extract command-line variables
-	variables := make(map[string]string)
-	for _, v := range options["set"] {
-		s := strings.SplitN(v, "=", 2)
-		if 2 == len(s) {
-			variables[s[0]] = s[1]
-		}
-	}
-
 	// read options and parse the configuration file
 	configurationFile := options["config-file"][0]
-	masterConfiguration, err := getConfiguration(configurationFile, variables)
+	masterConfiguration, err := getConfiguration(configurationFile)
 	if nil != err {
 		exitwithstatus.Message("%s: failed to read configuration from: %q  error: %s", program, configurationFile, err)
 	}
@@ -129,12 +118,12 @@ func main() {
 	if "" == masterConfiguration.Peering.PublicKey || "" == masterConfiguration.Peering.PrivateKey {
 		exitwithstatus.Message("%s: both peering Public and Private keys must be specified", program)
 	}
-	publicKey, err := zmqutil.ReadPublicKeyFile(masterConfiguration.Peering.PublicKey)
+	publicKey, err := zmqutil.ReadPublicKey(masterConfiguration.Peering.PublicKey)
 	if nil != err {
 		log.Criticalf("read error on: %s  error: %s", masterConfiguration.Peering.PublicKey, err)
 		exitwithstatus.Message("%s: failed reading Public Key: %q  error: %s", program, masterConfiguration.Peering.PublicKey, err)
 	}
-	privateKey, err := zmqutil.ReadPrivateKeyFile(masterConfiguration.Peering.PrivateKey)
+	privateKey, err := zmqutil.ReadPrivateKey(masterConfiguration.Peering.PrivateKey)
 	if nil != err {
 		log.Criticalf("read error on: %s  error: %s", masterConfiguration.Peering.PrivateKey, err)
 		exitwithstatus.Message("%s: failed reading Private Key: %q  error: %s", program, masterConfiguration.Peering.PrivateKey, err)

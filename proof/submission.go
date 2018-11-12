@@ -36,11 +36,11 @@ func (sub *submission) initialise(configuration *Configuration) error {
 	log.Info("initialising…")
 
 	// read the keys
-	privateKey, err := zmqutil.ReadPrivateKeyFile(configuration.PrivateKey)
+	privateKey, err := zmqutil.ReadPrivateKey(configuration.PrivateKey)
 	if nil != err {
 		return err
 	}
-	publicKey, err := zmqutil.ReadPublicKeyFile(configuration.PublicKey)
+	publicKey, err := zmqutil.ReadPublicKey(configuration.PublicKey)
 	if nil != err {
 		return err
 	}

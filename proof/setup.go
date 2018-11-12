@@ -16,12 +16,12 @@ import (
 // a block of configuration data
 // this is read from a libucl configuration file
 type Configuration struct {
-	Publish     []string          `libucl:"publish" json:"publish"`
-	Submit      []string          `libucl:"submit" json:"submit"`
-	PrivateKey  string            `libucl:"private_key" json:"private_key"`
-	PublicKey   string            `libucl:"public_key" json:"public_key"`
-	SigningKey  string            `libucl:"signing_key" json:"signing_key"`
-	PaymentAddr map[string]string `libucl:"payment_address" json:"payment_address"`
+	Publish     []string          `gluamapper:"publish" json:"publish"`
+	Submit      []string          `gluamapper:"submit" json:"submit"`
+	PrivateKey  string            `gluamapper:"private_key" json:"private_key"`
+	PublicKey   string            `gluamapper:"public_key" json:"public_key"`
+	SigningKey  string            `gluamapper:"signing_key" json:"signing_key"`
+	PaymentAddr map[string]string `gluamapper:"payment_address" json:"payment_address"`
 }
 
 // globals for background proccess

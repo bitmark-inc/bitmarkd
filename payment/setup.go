@@ -18,19 +18,19 @@ const (
 )
 
 type Configuration struct {
-	UseDiscovery bool                    `libucl:"use_discovery" hcl:"use_discovery" json:"use_discovery"`
-	Discovery    *discoveryConfiguration `libucl:"discovery" hcl:"discovery" json:"discovery"`
-	Bitcoin      *currencyConfiguration  `libucl:"bitcoin" hcl:"bitcoin" json:"bitcoin"`
-	Litecoin     *currencyConfiguration  `libucl:"litecoin" hcl:"litecoin" json:"litecoin"`
+	UseDiscovery bool                    `gluamapper:"use_discovery" hcl:"use_discovery" json:"use_discovery"`
+	Discovery    *discoveryConfiguration `gluamapper:"discovery" hcl:"discovery" json:"discovery"`
+	Bitcoin      *currencyConfiguration  `gluamapper:"bitcoin" hcl:"bitcoin" json:"bitcoin"`
+	Litecoin     *currencyConfiguration  `gluamapper:"litecoin" hcl:"litecoin" json:"litecoin"`
 }
 
 type discoveryConfiguration struct {
-	ReqEndpoint string `libucl:"req_endpoint" hcl:"req_endpoint" json:"req_endpoint"`
-	SubEndpoint string `libucl:"sub_endpoint" hcl:"sub_endpoint" json:"sub_endpoint"`
+	ReqEndpoint string `gluamapper:"req_endpoint" hcl:"req_endpoint" json:"req_endpoint"`
+	SubEndpoint string `gluamapper:"sub_endpoint" hcl:"sub_endpoint" json:"sub_endpoint"`
 }
 
 type currencyConfiguration struct {
-	URL string `libucl:"url" json:"url"`
+	URL string `gluamapper:"url" json:"url"`
 }
 
 type globalDataType struct {

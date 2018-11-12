@@ -383,7 +383,7 @@ func dnsTXT(log *logger.L, options *Configuration) {
 
 	peering := options.Peering
 
-	publicKey, err := zmqutil.ReadPublicKeyFile(peering.PublicKey)
+	publicKey, err := zmqutil.ReadPublicKey(peering.PublicKey)
 	if nil != err {
 		exitwithstatus.Message("error: cannot read public key: %q  error: %s\n", peering.PublicKey, err)
 	}

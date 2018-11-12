@@ -19,26 +19,26 @@ import (
 // hardwired connections
 // this is read from a libucl configuration file
 type Connection struct {
-	PublicKey string `libucl:"public_key" json:"public_key"`
-	Address   string `libucl:"address" json:"address"`
+	PublicKey string `gluamapper:"public_key" json:"public_key"`
+	Address   string `gluamapper:"address" json:"address"`
 }
 
 // a block of configuration data
 // this is read from a libucl configuration file
 type Configuration struct {
-	DynamicConnections bool         `libucl:"dynamic_connections" json:"dynamic_connections"`
-	PreferIPv6         bool         `libucl:"prefer_ipv6" json:"prefer_ipv6"`
-	Listen             []string     `libucl:"listen" json:"listen"`
-	Announce           []string     `libucl:"announce" json:"announce"`
-	PrivateKey         string       `libucl:"private_key" json:"private_key"`
-	PublicKey          string       `libucl:"public_key" json:"public_key"`
-	Connect            []Connection `libucl:"connect" json:"connect,omitempty"`
+	DynamicConnections bool         `gluamapper:"dynamic_connections" json:"dynamic_connections"`
+	PreferIPv6         bool         `gluamapper:"prefer_ipv6" json:"prefer_ipv6"`
+	Listen             []string     `gluamapper:"listen" json:"listen"`
+	Announce           []string     `gluamapper:"announce" json:"announce"`
+	PrivateKey         string       `gluamapper:"private_key" json:"private_key"`
+	PublicKey          string       `gluamapper:"public_key" json:"public_key"`
+	Connect            []Connection `gluamapper:"connect" json:"connect,omitempty"`
 }
 
 type PublishConfiguration struct {
-	Broadcast  []string `libucl:"broadcast" json:"broadcast"`
-	PrivateKey string   `libucl:"private_key" json:"private_key"`
-	PublicKey  string   `libucl:"public_key" json:"public_key"`
+	Broadcast  []string `gluamapper:"broadcast" json:"broadcast"`
+	PrivateKey string   `gluamapper:"private_key" json:"private_key"`
+	PublicKey  string   `gluamapper:"public_key" json:"public_key"`
 }
 
 // globals for background proccess
@@ -82,12 +82,12 @@ func Initialise(configuration *Configuration, version string) error {
 	globalData.log.Info("starting…")
 
 	// read the keys
-	privateKey, err := zmqutil.ReadPrivateKeyFile(configuration.PrivateKey)
+	privateKey, err := zmqutil.ReadPrivateKey(configuration.PrivateKey)
 	if nil != err {
 		globalData.log.Errorf("read private key file: %q  error: %s", configuration.PrivateKey, err)
 		return err
 	}
-	publicKey, err := zmqutil.ReadPublicKeyFile(configuration.PublicKey)
+	publicKey, err := zmqutil.ReadPublicKey(configuration.PublicKey)
 	if nil != err {
 		globalData.log.Errorf("read public key file: %q  error: %s", configuration.PublicKey, err)
 		return err

@@ -70,7 +70,7 @@ func GetConfiguration(configurationFileName string, variables map[string]string)
 	}
 
 	options := &Configuration{}
-	if err := configuration.ParseConfigurationFile(configurationFileName, options, variables); err != nil {
+	if err := configuration.ParseUCLConfigurationFile(configurationFileName, options, variables); err != nil {
 		return nil, err
 	}
 
@@ -85,7 +85,7 @@ func GetInfoConfiguration(configurationFileName string, variables map[string]str
 	}
 
 	options := &InfoConfiguration{}
-	if err := configuration.ParseConfigurationFile(configurationFileName, options, variables); err != nil {
+	if err := configuration.ParseUCLConfigurationFile(configurationFileName, options, variables); err != nil {
 		return nil, err
 	}
 

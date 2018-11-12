@@ -10,7 +10,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"strings"
 	"time"
 
@@ -124,41 +123,36 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 		pub.paymentAddress[paymentCurrency] = currencyAddress
 	}
 
-	if databytes, err := ioutil.ReadFile(configuration.SigningKey); err != nil {
-		return err
-	} else {
-		s := strings.TrimSpace(string(databytes))
-
-		if strings.HasPrefix(s, taggedSeed) {
-			privateKey, err := account.PrivateKeyFromBase58Seed(s[len(taggedSeed):])
-			if nil != err {
-				return err
-			}
-			pub.privateKey = privateKey.PrivateKeyBytes()
-			pub.owner = privateKey.Account()
-		} else if strings.HasPrefix(s, taggedPrivate) {
-			b, err := hex.DecodeString(s[len(taggedPrivate):])
-			if err != nil {
-				return err
-			}
-			privateKey, err := account.PrivateKeyFromBytes(b)
-			if nil != err {
-				return err
-			}
-			pub.privateKey = privateKey.PrivateKeyBytes()
-			pub.owner = privateKey.Account()
-		} else {
-			return fault.ErrInvalidProofSigningKey
+	s := strings.TrimSpace(configuration.SigningKey)
+	if strings.HasPrefix(s, taggedSeed) {
+		privateKey, err := account.PrivateKeyFromBase58Seed(s[len(taggedSeed):])
+		if nil != err {
+			return err
 		}
+		pub.privateKey = privateKey.PrivateKeyBytes()
+		pub.owner = privateKey.Account()
+	} else if strings.HasPrefix(s, taggedPrivate) {
+		b, err := hex.DecodeString(s[len(taggedPrivate):])
+		if err != nil {
+			return err
+		}
+		privateKey, err := account.PrivateKeyFromBytes(b)
+		if nil != err {
+			return err
+		}
+		pub.privateKey = privateKey.PrivateKeyBytes()
+		pub.owner = privateKey.Account()
+	} else {
+		return fault.ErrInvalidProofSigningKey
 	}
 
 	// read the keys
-	privateKey, err := zmqutil.ReadPrivateKeyFile(configuration.PrivateKey)
+	privateKey, err := zmqutil.ReadPrivateKey(configuration.PrivateKey)
 	if nil != err {
 		log.Errorf("read private key file: %q  error: %s", configuration.PrivateKey, err)
 		return err
 	}
-	publicKey, err := zmqutil.ReadPublicKeyFile(configuration.PublicKey)
+	publicKey, err := zmqutil.ReadPublicKey(configuration.PublicKey)
 	if nil != err {
 		log.Errorf("read public key file: %q  error: %s", configuration.PublicKey, err)
 		return err
