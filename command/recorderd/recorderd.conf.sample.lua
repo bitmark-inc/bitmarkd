@@ -15,8 +15,8 @@ end
 -- as the data directory.  Use ${CURDIR} for working directory.
 -- all keys and logs are relative to this directory
 -- unless the are overridden with absolute paths.
---data_directory = "."
---data_directory = "${CURDIR}"
+--M.data_directory = "."
+--M.data_directory = "${CURDIR}"
 M.data_directory = "/var/lib/recorderd"
 
 -- optional pid file if not absolute path then is created relative to
@@ -25,8 +25,8 @@ M.data_directory = "/var/lib/recorderd"
 
 -- select the chain of the network for peer connections
 -- cross chain networking connects will not work
---chain = bitmark
---chain = testing
+--M.chain = bitmark
+--M.chain = testing
 M.chain = "local"
 
 -- number of background hashing threads

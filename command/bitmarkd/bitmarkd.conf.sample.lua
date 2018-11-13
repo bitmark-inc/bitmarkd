@@ -2,7 +2,8 @@ local M = {}
 
 local public_ip = {}
 
--- helper functions
+-- Read the file named by `name` under the specified data directory
+-- `M.data_directory` and return the contents.
 function read_file(name)
     local f, err = io.open(M.data_directory .. "/" .. name, "r")
     if f == nil then
@@ -13,6 +14,10 @@ function read_file(name)
     return r
 end
 
+-- Let the node announce itself (ip:port) to the network.
+-- The ip should be provided using environment variables
+-- either PUBLIC_IPV4 or PUBLIC_IPV6, or both
+-- depends on the public IP addresses of the node.
 function announce_self(port)
     local announcements = {}
     for k, v in pairs(public_ip) do
@@ -21,7 +26,7 @@ function announce_self(port)
     return announcements
 end
 
---  set public ip
+--  set the public ip
 local public_ipv4 = os.getenv("PUBLIC_IPV4")
 if public_ipv4 ~= nil then 
     public_ip[#public_ip+1] = public_ipv4
@@ -36,8 +41,8 @@ end
 -- as the data directory.  Use ${CURDIR} for working directory.
 -- all certificates, logs and LevelDB files are relative to this directory
 -- unless the are overridden with absolute paths.
---config.data_directory = "."
---config.data_directory = "${CURDIR}"
+--M.data_directory = "."
+--M.data_directory = "${CURDIR}"
 M.data_directory = "/var/lib/bitmarkd"
 
 
@@ -47,8 +52,8 @@ M.data_directory = "/var/lib/bitmarkd"
     
 -- select the chain of the network for peer connections
 -- cross chain networking connects will not work
---config.chain = bitmark
---config.chain = testing
+--M.chain = bitmark
+--M.chain = testing
 M.chain = "local"
     
 -- select the default node configuration
@@ -222,8 +227,8 @@ M.logging = {
     size = 1048576,
     count = 100,
   
-    -- set to yes to log to console
-    console = no,
+    -- set to true to log to console
+    console = true,
   
     -- set the logging level for various modules
     -- modules not overridden with get the value from DEFAULT
