@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -26,10 +27,22 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
+const (
+	peerPublicKeyFilename  = "peer.public"
+	peerPrivateKeyFilename = "peer.private"
+
+	rpcCertificateKeyFilename = "rpc.crt"
+	rpcPrivateKeyFilename     = "rpc.key"
+
+	proofPublicKeyFilename  = "proof.public"
+	proofPrivateKeyFilename = "proof.private"
+	proofSigningKeyFilename = "proof.sign"
+)
+
 // setup command handler
 // commands that run to create key and certificate files
 // these commands cannot access any internal database or states
-func processSetupCommand(log *logger.L, arguments []string, options *Configuration) bool {
+func processSetupCommand(arguments []string) bool {
 
 	command := "help"
 	if len(arguments) > 0 {
@@ -39,27 +52,21 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 
 	switch command {
 	case "gen-peer-identity", "peer":
-		publicKeyFilename := options.Peering.PublicKey
-		privateKeyFilename := options.Peering.PrivateKey
-
-		if len(arguments) >= 1 && "" != arguments[0] {
-			publicKeyFilename = arguments[0] + ".public"
-			privateKeyFilename = arguments[0] + ".private"
-		}
+		dir := getWorkingDirectory(arguments)
+		publicKeyFilename := filepath.Join(dir, peerPublicKeyFilename)
+		privateKeyFilename := filepath.Join(dir, peerPrivateKeyFilename)
 		err := zmqutil.MakeKeyPair(publicKeyFilename, privateKeyFilename)
 		if nil != err {
 			fmt.Printf("cannot generate private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
-			log.Criticalf("cannot generate private key: %q and public key: %q", privateKeyFilename, publicKeyFilename)
 			fmt.Printf("error generating server key pair: %s\n", err)
-			log.Criticalf("error generating server key pair: %s", err)
 			exitwithstatus.Exit(1)
 		}
 		fmt.Printf("generated private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
-		log.Infof("generated private key: %q and public key: %q", privateKeyFilename, publicKeyFilename)
 
 	case "gen-rpc-cert", "rpc":
-		certificateFilename := options.ClientRPC.Certificate
-		privateKeyFilename := options.ClientRPC.PrivateKey
+		dir := getWorkingDirectory(arguments)
+		certificateFilename := filepath.Join(dir, rpcCertificateKeyFilename)
+		privateKeyFilename := filepath.Join(dir, rpcPrivateKeyFilename)
 		addresses := []string{}
 		if len(arguments) >= 2 {
 			for _, a := range arguments[1:] {
@@ -68,37 +75,23 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 				}
 			}
 		}
-		if len(arguments) >= 1 && "" != arguments[0] {
-			certificateFilename = arguments[0] + ".crt"
-			privateKeyFilename = arguments[0] + ".key"
-		}
 		err := makeSelfSignedCertificate("rpc", certificateFilename, privateKeyFilename, 0 != len(addresses), addresses)
 		if nil != err {
 			fmt.Printf("cannot generate RPC key: %q and certificate: %q\n", privateKeyFilename, certificateFilename)
-			log.Criticalf("cannot generate RPC key: %q and certificate: %q", privateKeyFilename, certificateFilename)
 			fmt.Printf("error generating RPC key/certificate: %s\n", err)
-			log.Criticalf("error generating RPC key/certificate: %s", err)
 			exitwithstatus.Exit(1)
 		}
 		fmt.Printf("generated RPC key: %q and certificate: %q\n", privateKeyFilename, certificateFilename)
-		log.Infof("generated RPC key: %q and certificate: %q", privateKeyFilename, certificateFilename)
 
 	case "gen-proof-identity", "proof":
-		publicKeyFilename := options.Proofing.PublicKey
-		privateKeyFilename := options.Proofing.PrivateKey
-		signingKeyFilename := options.Proofing.SigningKey
-
-		if len(arguments) >= 1 && "" != arguments[0] {
-			publicKeyFilename = arguments[0] + ".public"
-			privateKeyFilename = arguments[0] + ".private"
-			signingKeyFilename = arguments[0] + ".sign"
-		}
+		dir := getWorkingDirectory(arguments)
+		publicKeyFilename := filepath.Join(dir, proofPublicKeyFilename)
+		privateKeyFilename := filepath.Join(dir, proofPrivateKeyFilename)
+		signingKeyFilename := filepath.Join(dir, proofSigningKeyFilename)
 		err := zmqutil.MakeKeyPair(publicKeyFilename, privateKeyFilename)
 		if nil != err {
 			fmt.Printf("cannot generate private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
-			log.Criticalf("cannot generate private key: %q and public key: %q", privateKeyFilename, publicKeyFilename)
 			fmt.Printf("error generating server key pair: %s\n", err)
-			log.Criticalf("error generating server key pair: %s", err)
 			exitwithstatus.Exit(1)
 		}
 
@@ -106,7 +99,6 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 		seedCore := make([]byte, 32)
 		if _, err := rand.Read(seedCore); err != nil {
 			fmt.Printf("error generating signing core error: %s\n", err)
-			log.Criticalf("error generating signing core error: %s", err)
 			exitwithstatus.Exit(1)
 		}
 		seed := []byte{0x5a, 0xfe, 0x01, 0x00} // header + network(live)
@@ -120,17 +112,14 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 		data := "SEED:" + util.ToBase58(seed) + "\n"
 		if err = ioutil.WriteFile(signingKeyFilename, []byte(data), 0600); err != nil {
 			fmt.Printf("error writing signing key file error: %s\n", err)
-			log.Criticalf("error writing signing key file error: %s", err)
 			exitwithstatus.Exit(1)
 		}
 
 		fmt.Printf("generated private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
-		log.Infof("generated private key: %q and public key: %q", privateKeyFilename, publicKeyFilename)
 		fmt.Printf("generated signing key: %q\n", signingKeyFilename)
-		log.Infof("generated signing key: %q", signingKeyFilename)
 
 	case "dns-txt", "txt":
-		dnsTXT(log, options)
+		return false // defer processing until configuration is read
 
 	case "start", "run":
 		return false // continue processing
@@ -151,43 +140,43 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 		}
 
 		fmt.Printf("supported commands:\n\n")
-		fmt.Printf("  help                   (h)       - display this message\n\n")
+		fmt.Printf("  help                       (h)      - display this message\n\n")
 
-		fmt.Printf("  gen-peer-identity      (peer)    - create private key in: %q\n", options.Peering.PrivateKey)
-		fmt.Printf("                                     and the public key in: %q\n", options.Peering.PublicKey)
+		fmt.Printf("  gen-peer-identity [DIR]    (peer)   - create private key in: %q\n", "DIR/"+peerPrivateKeyFilename)
+		fmt.Printf("                                        and the public key in: %q\n", "DIR/"+peerPublicKeyFilename)
 		fmt.Printf("\n")
 
-		fmt.Printf("  gen-rpc-cert           (rpc)     - create private key in:  %q\n", options.ClientRPC.PrivateKey)
-		fmt.Printf("                                     and the certificate in: %q\n", options.ClientRPC.Certificate)
+		fmt.Printf("  gen-rpc-cert [DIR]         (rpc)    - create private key in:  %q\n", "DIR/"+rpcPrivateKeyFilename)
+		fmt.Printf("                                        and the certificate in: %q\n", "DIR/"+rpcCertificateKeyFilename)
 		fmt.Printf("\n")
 
-		fmt.Printf("  gen-rpc-cert PREFIX IPs...       - create private key in: '<PREFIX>.key'\n")
-		fmt.Printf("                                     and the certificate in '<PREFIX>.crt'\n")
+		fmt.Printf("  gen-rpc-cert [DIR] [IPs...]         - create private key in:  %q\n", "DIR/"+rpcPrivateKeyFilename)
+		fmt.Printf("                                        and the certificate in: %q\n", "DIR/"+rpcCertificateKeyFilename)
 		fmt.Printf("\n")
 
-		fmt.Printf("  gen-proof-identity     (proof)   - create private key in: %q\n", options.Proofing.PrivateKey)
-		fmt.Printf("                                     the public key in:     %q\n", options.Proofing.PublicKey)
-		fmt.Printf("                                     and signing key in:    %q\n", options.Proofing.SigningKey)
+		fmt.Printf("  gen-proof-identity [DIR]   (proof)  - create private key in: %q\n", "DIR/"+proofPrivateKeyFilename)
+		fmt.Printf("                                        the public key in:     %q\n", "DIR/"+proofPublicKeyFilename)
+		fmt.Printf("                                        and signing key in:    %q\n", "DIR/"+proofSigningKeyFilename)
 		fmt.Printf("\n")
 
-		fmt.Printf("  dns-txt                (txt)     - display the data to put in a dbs TXT record\n")
+		fmt.Printf("  dns-txt                    (txt)    - display the data to put in a dbs TXT record\n")
 		fmt.Printf("\n")
 
-		fmt.Printf("  start                  (run)     - just run the program, same as no arguments\n")
-		fmt.Printf("                                     for convienience when passing script arguments\n")
+		fmt.Printf("  start                      (run)    - just run the program, same as no arguments\n")
+		fmt.Printf("                                        for convienience when passing script arguments\n")
 		fmt.Printf("\n")
 
-		fmt.Printf("  block S [E [FILE]]     (b)       - dump block(s) as a JSON structures to stdout/file\n")
+		fmt.Printf("  block S [E [FILE]]         (b)      - dump block(s) as a JSON structures to stdout/file\n")
 		fmt.Printf("\n")
 
-		fmt.Printf("  save-blocks FILE       (save)    - dump all blocks to a file\n")
+		fmt.Printf("  save-blocks FILE           (save)   - dump all blocks to a file\n")
 		fmt.Printf("\n")
 
-		fmt.Printf("  load-blocks FILE       (load)    - restore all blocks from a file\n")
-		fmt.Printf("                                     only runs if database is deleted first\n")
+		fmt.Printf("  load-blocks FILE           (load)   - restore all blocks from a file\n")
+		fmt.Printf("                                        only runs if database is deleted first\n")
 		fmt.Printf("\n")
 
-		fmt.Printf("  delete-down NUMBER     (dd)      - delete blocks in descending order\n")
+		fmt.Printf("  delete-down NUMBER         (dd)     - delete blocks in descending order\n")
 		fmt.Printf("\n")
 
 		//fmt.Printf("  block-times FILE BEGIN END       - write time and difficulty to text file for a range of blocks\n")
@@ -353,6 +342,9 @@ func processDataCommand(log *logger.L, arguments []string, options *Configuratio
 		}
 		fmt.Printf("reduced height to: %d\n", block.GetHeight())
 
+	case "dns-txt", "txt":
+		dnsTXT(log, options)
+
 	default:
 		exitwithstatus.Message("error: no such command: %s\n", command)
 
@@ -369,8 +361,8 @@ func dnsTXT(log *logger.L, options *Configuration) {
 
 	rpc := options.ClientRPC
 
-	keypair, err := tls.LoadX509KeyPair(rpc.Certificate, rpc.PrivateKey)
-	if nil != err {
+	keypair, err := tls.X509KeyPair([]byte(rpc.Certificate), []byte(rpc.PrivateKey))
+	if err != nil {
 		exitwithstatus.Message("error: cannot certificate: %q  error: %s\n", rpc.Certificate, err)
 	}
 
@@ -474,4 +466,14 @@ func splitConnection(hostPort string) (bool, string, int, error) {
 		return false, IP.String(), numericPort, nil
 	}
 	return true, "[" + IP.String() + "]", numericPort, nil
+}
+
+// get the working directoy; if not set in the arguments
+// it's set to the current directory
+func getWorkingDirectory(arguments []string) string {
+	dir := "."
+	if len(arguments) >= 1 {
+		dir = filepath.Dir(arguments[0])
+	}
+	return dir
 }

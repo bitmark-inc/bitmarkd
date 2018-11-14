@@ -47,7 +47,6 @@ func main() {
 		{Long: "quiet", HasArg: getoptions.NO_ARGUMENT, Short: 'q'},
 		{Long: "version", HasArg: getoptions.NO_ARGUMENT, Short: 'V'},
 		{Long: "config-file", HasArg: getoptions.REQUIRED_ARGUMENT, Short: 'c'},
-		{Long: "set", HasArg: getoptions.REQUIRED_ARGUMENT, Short: 's'},
 		{Long: "memory-stats", HasArg: getoptions.NO_ARGUMENT, Short: 'm'},
 	}
 
@@ -61,7 +60,14 @@ func main() {
 	}
 
 	if len(options["help"]) > 0 {
-		exitwithstatus.Message("usage: %s [--help] [--verbose] [--quiet] --config-file=FILE --set=VAR=VALUE [[command|help] arguments...]", program)
+		exitwithstatus.Message("usage: %s [--help] [--verbose] [--quiet] --config-file=FILE [[command|help] arguments...]", program)
+	}
+
+	// command processing - need lock so do not affect an already running process
+	// these commands don't require the configuration and
+	// process data needed for initial setup
+	if len(arguments) > 0 && processSetupCommand(arguments) {
+		return
 	}
 
 	if 1 != len(options["config-file"]) {
@@ -79,7 +85,7 @@ func main() {
 
 	// read options and parse the configuration file
 	configurationFile := options["config-file"][0]
-	masterConfiguration, err := getConfiguration(configurationFile, variables)
+	masterConfiguration, err := getConfiguration(configurationFile)
 	if nil != err {
 		exitwithstatus.Message("%s: failed to read configuration from: %q  error: %s", program, configurationFile, err)
 	}
@@ -123,12 +129,6 @@ func main() {
 		exitwithstatus.Message("mode initialise error: %s", err)
 	}
 	defer mode.Finalise()
-
-	// command processing - need lock so do not affect an already running process
-	// these commands process data needed for initial setup
-	if len(arguments) > 0 && processSetupCommand(log, arguments, masterConfiguration) {
-		return
-	}
 
 	// // if requested start profiling
 	// if "" != masterConfiguration.ProfileFile {

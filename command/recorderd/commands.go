@@ -6,16 +6,21 @@ package main
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/exitwithstatus"
-	"github.com/bitmark-inc/logger"
+)
+
+const (
+	peerPublicKeyFilename  = "peer.public"
+	peerPrivateKeyFilename = "peer.private"
 )
 
 // setup command handler
 // commands that run to create key and certificate files
 // these commands cannot access any internal database or states
-func processSetupCommand(log *logger.L, arguments []string, options *Configuration) {
+func processSetupCommand(arguments []string) {
 
 	command := "help"
 	if len(arguments) > 0 {
@@ -25,19 +30,17 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 
 	switch command {
 	case "generate-identity":
-		publicKeyFilename := options.DataDirectory + "/recorderd.public"
-		privateKeyFilename := options.DataDirectory + "/recorderd.private"
+		dir := getWorkingDirectory(arguments)
+		publicKeyFilename := filepath.Join(dir, peerPublicKeyFilename)
+		privateKeyFilename := filepath.Join(dir, peerPrivateKeyFilename)
 
 		err := zmqutil.MakeKeyPair(publicKeyFilename, privateKeyFilename)
 		if nil != err {
 			fmt.Printf("cannot generate private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
-			log.Criticalf("cannot generate private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
 			fmt.Printf("error generating server key pair: %v\n", err)
-			log.Criticalf("error generating server key pair: %v\n", err)
 			exitwithstatus.Exit(1)
 		}
 		fmt.Printf("generated private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
-		log.Infof("generated private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
 
 	default:
 		switch command {
@@ -51,10 +54,20 @@ func processSetupCommand(log *logger.L, arguments []string, options *Configurati
 		fmt.Printf("supported commands:\n\n")
 		fmt.Printf("  help                             - display this message\n\n")
 
-		fmt.Printf("  generate-identity                - create private key in: %q\n", options.Peering.PrivateKey)
-		fmt.Printf("                                     and the public key in: %q\n", options.Peering.PublicKey)
+		fmt.Printf("  generate-identity [DIR]          - create private key in: %q\n", "DIR/"+peerPrivateKeyFilename)
+		fmt.Printf("                                     and the public key in: %q\n", "DIR/"+peerPublicKeyFilename)
 		fmt.Printf("\n")
 
 		exitwithstatus.Exit(1)
 	}
+}
+
+// get the working directoy; if not set in the arguments
+// it's set to the current directory
+func getWorkingDirectory(arguments []string) string {
+	dir := "."
+	if len(arguments) >= 1 {
+		dir = filepath.Dir(arguments[0])
+	}
+	return dir
 }

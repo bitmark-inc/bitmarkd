@@ -45,7 +45,15 @@ func main() {
 	}
 
 	if len(options["help"]) > 0 {
-		exitwithstatus.Message("usage: %s [--help] [--verbose] [--quiet] --config-file=FILE --set=VAR=VALUE [[command|help] arguments...]", program)
+		exitwithstatus.Message("usage: %s [--help] [--verbose] [--quiet] --config-file=FILE [[command|help] arguments...]", program)
+	}
+
+	// command processing - need lock so do not affect an already running process
+	// these commands don't require the configuration and
+	// process data needed for initial setup
+	if len(arguments) > 0 {
+		processSetupCommand(arguments)
+		return
 	}
 
 	if 1 != len(options["config-file"]) {
@@ -89,13 +97,6 @@ func main() {
 		fmt.Fprintf(lockFile, "%d\n", os.Getpid())
 		lockFile.Close()
 		defer os.Remove(masterConfiguration.PidFile)
-	}
-
-	// command processing - need lock so do not affect an already running process
-	// these commands process data needed for initial setup
-	if len(arguments) > 0 {
-		processSetupCommand(log, arguments, masterConfiguration)
-		return
 	}
 
 	// // if requested start profiling
