@@ -115,7 +115,7 @@ func main() {
 	if len(arguments) > 1 {
 		prefix, err = hex.DecodeString(arguments[1])
 		if nil != err {
-			exitwithstatus.Message("%s: convert prefix error: %s\n", program, err)
+			exitwithstatus.Message("%s: convert prefix error: %s", program, err)
 		}
 	}
 
@@ -169,13 +169,13 @@ tag_scan:
 
 	}
 	if p.IsNil() {
-		exitwithstatus.Message("%s: no pool corresponding to: %q\n", program, tag)
+		exitwithstatus.Message("%s: no pool corresponding to: %q", program, tag)
 	}
 
 	// dump the items as hex
 	cf := p.MethodByName("NewFetchCursor")
 	if !cf.IsValid() {
-		exitwithstatus.Message("%s: no curors access corresponding to: %q\n", program, tag)
+		exitwithstatus.Message("%s: no cursor access corresponding to: %q", program, tag)
 	}
 
 	//cursor := p.NewFetchCursor()
@@ -191,7 +191,7 @@ tag_scan:
 
 	data, err := cursor.Fetch(count)
 	if nil != err {
-		exitwithstatus.Message("%s: error on Fetch: %s\n", program, err)
+		exitwithstatus.Message("%s: error on Fetch: %s", program, err)
 	}
 
 	l := len(prefix)
@@ -235,7 +235,7 @@ print_loop:
 				buffer := make([]byte, 100)
 				n, err := os.Stdin.Read(buffer)
 				if nil != err {
-					exitwithstatus.Message("%s: error on Stdin.Read: %e\n", program, err)
+					exitwithstatus.Message("%s: error on Stdin.Read: %e", program, err)
 				}
 
 				response := strings.TrimSpace(string(buffer[:n]))
@@ -245,7 +245,7 @@ print_loop:
 					//p.Delete(e.Key)
 					deleteRecord := p.MethodByName("Delete")
 					if !deleteRecord.IsValid() {
-						exitwithstatus.Message("%s: no Delete method corresponding to: %q\n", program, tag)
+						exitwithstatus.Message("%s: no Delete method corresponding to: %q", program, tag)
 					}
 					deleteRecord.Call([]reflect.Value{reflect.ValueOf(e.Key)})
 					fmt.Printf("%d: %s***DELETED: %s%x%s\n", i, cd3, cd4, e.Key, ce)
