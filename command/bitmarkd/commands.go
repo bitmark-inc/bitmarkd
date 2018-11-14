@@ -188,7 +188,7 @@ func processSetupCommand(arguments []string) bool {
 
 // configuration file enquiry commands
 // have configuration file read and decoded, but nothing else
-func processConfigCommand(arguments []string) bool {
+func processConfigCommand(arguments []string, options *Configuration) bool {
 
 	command := "help"
 	if len(arguments) > 0 {

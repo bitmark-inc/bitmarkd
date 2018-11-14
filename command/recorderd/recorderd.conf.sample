@@ -1,3 +1,5 @@
+-- recorderd.conf  -*- mode: lua -*-
+
 local M = {}
 
 -- helper functions
@@ -11,13 +13,10 @@ function read_file(name)
     return r
 end
 
--- "." is a special case - it uses the path from the configuration file
--- as the data directory.  Use ${CURDIR} for working directory.
--- all keys and logs are relative to this directory
--- unless the are overridden with absolute paths.
---M.data_directory = "."
---M.data_directory = "${CURDIR}"
-M.data_directory = "/var/lib/recorderd"
+-- set the directory for data and log files
+--M.data_directory = arg[0]:match("(.*/)")  -- dir from configuration file
+--M.data_directory = "."                    -- current directory
+M.data_directory = "/var/lib/recorderd"   -- absolute path
 
 -- optional pid file if not absolute path then is created relative to
 -- the data directory
@@ -25,8 +24,8 @@ M.data_directory = "/var/lib/recorderd"
 
 -- select the chain of the network for peer connections
 -- cross chain networking connects will not work
---M.chain = bitmark
---M.chain = testing
+--M.chain = "bitmark"
+--M.chain = "testing"
 M.chain = "local"
 
 -- number of background hashing threads
@@ -69,4 +68,5 @@ M.logging = {
     }
 }
 
+-- return the complete configuration
 return M

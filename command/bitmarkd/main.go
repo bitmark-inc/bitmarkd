@@ -91,7 +91,7 @@ func main() {
 
 	// these commands require the configuration and
 	// perform enquires on the configuration
-	if len(arguments) > 0 && processConfigCommand(arguments) {
+	if len(arguments) > 0 && processConfigCommand(arguments, masterConfiguration) {
 		return
 	}
 

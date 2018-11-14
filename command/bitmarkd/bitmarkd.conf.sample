@@ -84,7 +84,7 @@ M.client_rpc = {
     -- if using firewall port forwarding use the firewall external IP:port
     announce = {
         -- "a.b.c.d:2130",
-        -- "[x::y:z]:2130"
+        -- "[x::y:z]:2130",
 
         -- only used if PUBLIC_IPV[46] variables are set
         announce_self(2130)
@@ -152,7 +152,7 @@ M.peering = {
     -- if using firewall port forwarding use the firewall external IP:port
     announce = {
         -- "a.b.c.d:2136",
-        -- "[x::y:z]:2136"
+        -- "[x::y:z]:2136",
 
         -- only used if PUBLIC_IPV[46] variables are set
         announce_self(2136)
