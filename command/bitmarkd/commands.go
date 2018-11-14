@@ -186,6 +186,29 @@ func processSetupCommand(arguments []string) bool {
 	return true
 }
 
+// configuration file enquiry commands
+// have configuration file read and decoded, but nothing else
+func processConfigCommand(arguments []string) bool {
+
+	command := "help"
+	if len(arguments) > 0 {
+		command = arguments[0]
+		arguments = arguments[1:]
+	}
+
+	switch command {
+
+	case "dns-txt", "txt":
+		dnsTXT(options)
+
+	default: // unknown commands fall through to data command
+		return false
+	}
+
+	// indicate processing complete and perform normal exit from main
+	return true
+}
+
 // data command handler
 // the internal block and transaction pools are enabled so these commands can
 // access and/or change these databases
@@ -303,9 +326,6 @@ func processDataCommand(log *logger.L, arguments []string, options *Configuratio
 		}
 		fmt.Printf("reduced height to: %d\n", block.GetHeight())
 
-	case "dns-txt", "txt":
-		dnsTXT(log, options)
-
 	default:
 		exitwithstatus.Message("error: no such command: %s", command)
 
@@ -316,7 +336,7 @@ func processDataCommand(log *logger.L, arguments []string, options *Configuratio
 }
 
 // print out the DNS TXT record
-func dnsTXT(log *logger.L, options *Configuration) {
+func dnsTXT(options *Configuration) {
 	//   <TAG> a=<IPv4;IPv6> c=<PEER-PORT> r=<RPC-PORT> f=<SHA3-256(cert)> p=<PUBLIC-KEY>
 	const txtRecord = `TXT "bitmark=v3 a=%s c=%d r=%d f=%x p=%x"` + "\n"
 
@@ -328,6 +348,10 @@ func dnsTXT(log *logger.L, options *Configuration) {
 	}
 
 	fingerprint := CertificateFingerprint(keypair.Certificate[0])
+
+	if 0 == len(rpc.Announce) {
+		exitwithstatus.Message("error: no rpc announce fields given")
+	}
 
 	rpcIP4, rpcIP6, rpcPort := getFirstConnections(rpc.Announce)
 	if 0 == rpcPort {
@@ -341,9 +365,11 @@ func dnsTXT(log *logger.L, options *Configuration) {
 		exitwithstatus.Message("error: cannot read public key: %q  error: %s", peering.PublicKey, err)
 	}
 
-	peeringAnnounce := options.Peering.Announce
+	if 0 == len(peering.Announce) {
+		exitwithstatus.Message("error: no rpc announce fields given")
+	}
 
-	listenIP4, listenIP6, listenPort := getFirstConnections(peeringAnnounce)
+	listenIP4, listenIP6, listenPort := getFirstConnections(peering.Announce)
 	if 0 == listenPort {
 		exitwithstatus.Message("error: cannot determine listen port")
 	}
@@ -371,6 +397,7 @@ func dnsTXT(log *logger.L, options *Configuration) {
 
 // extract first IP4 and/or IP6 connection
 func getFirstConnections(connections []string) (string, string, int) {
+
 	initialPort := 0
 	IP4 := ""
 	IP6 := ""

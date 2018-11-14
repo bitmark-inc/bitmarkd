@@ -63,8 +63,7 @@ func main() {
 		exitwithstatus.Message("usage: %s [--help] [--verbose] [--quiet] --config-file=FILE [[command|help] arguments...]", program)
 	}
 
-	// command processing - need lock so do not affect an already running process
-	// these commands don't require the configuration and
+	// these commands do not require the configuration and
 	// process data needed for initial setup
 	if len(arguments) > 0 && processSetupCommand(arguments) {
 		return
@@ -88,6 +87,12 @@ func main() {
 	masterConfiguration, err := getConfiguration(configurationFile)
 	if nil != err {
 		exitwithstatus.Message("%s: failed to read configuration from: %q  error: %s", program, configurationFile, err)
+	}
+
+	// these commands require the configuration and
+	// perform enquires on the configuration
+	if len(arguments) > 0 && processConfigCommand(arguments) {
+		return
 	}
 
 	// start logging

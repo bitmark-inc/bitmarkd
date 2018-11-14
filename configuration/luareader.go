@@ -11,6 +11,13 @@ func ParseConfigurationFile(fileName string, config interface{}) error {
 
 	L.OpenLibs()
 
+	// create the global "arg" table
+	// arg[0] = config file
+	arg := &lua.LTable{}
+	arg.Insert(0, lua.LString(fileName))
+	L.SetGlobal("arg", arg)
+
+	// execute configuration
 	if err := L.DoFile(fileName); err != nil {
 		return err
 	}
