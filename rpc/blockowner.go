@@ -7,6 +7,8 @@ package rpc
 import (
 	"encoding/binary"
 
+	"golang.org/x/time/rate"
+
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
@@ -23,7 +25,8 @@ import (
 // -----------
 
 type BlockOwner struct {
-	log *logger.L
+	log     *logger.L
+	limiter *rate.Limiter
 }
 
 // get the id for a given block number
@@ -38,6 +41,10 @@ type TxIdForBlockReply struct {
 }
 
 func (bitmark *BlockOwner) TxIdForBlock(info *TxIdForBlockArguments, reply *TxIdForBlockReply) error {
+
+	if err := rateLimit(bitmark.limiter); nil != err {
+		return err
+	}
 
 	log := bitmark.log
 
@@ -70,6 +77,10 @@ type BlockOwnerTransferReply struct {
 }
 
 func (bitmark *BlockOwner) Transfer(transfer *transactionrecord.BlockOwnerTransfer, reply *BlockOwnerTransferReply) error {
+
+	if err := rateLimit(bitmark.limiter); nil != err {
+		return err
+	}
 
 	log := bitmark.log
 

@@ -7,6 +7,8 @@ package rpc
 import (
 	"time"
 
+	"golang.org/x/time/rate"
+
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/logger"
@@ -14,8 +16,9 @@ import (
 
 // Transaction is a rpc entry for transaction related functions
 type Transaction struct {
-	log   *logger.L
-	start time.Time
+	log     *logger.L
+	limiter *rate.Limiter
+	start   time.Time
 }
 
 // TransactionArguments is the arguments for statuc rpc request
@@ -30,6 +33,11 @@ type TransactionStatusReply struct {
 
 // Status is an rpc api for query transaction status
 func (t *Transaction) Status(arguments *TransactionArguments, reply *TransactionStatusReply) error {
+
+	if err := rateLimit(t.limiter); nil != err {
+		return err
+	}
+
 	reply.Status = reservoir.TransactionStatus(arguments.TxId).String()
 	return nil
 }

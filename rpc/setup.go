@@ -14,9 +14,11 @@ import (
 	"time"
 
 	"golang.org/x/crypto/sha3"
+	"golang.org/x/time/rate"
 
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/listener"
 	"github.com/bitmark-inc/logger"
@@ -38,6 +40,31 @@ type HTTPSConfiguration struct {
 	PrivateKey         string              `gluamapper:"private_key" json:"private_key"`
 	Allow              map[string][]string `gluamapper:"allow" json:"allow"`
 }
+
+// rate limiting (requests per second)
+// burst limit   (total items in one request)
+const (
+	rateLimitAssets = 200
+	rateBurstAssets = 100
+
+	rateLimitBitmark = 200
+	rateBurstBitmark = 100
+
+	rateLimitBitmarks = 200
+	rateBurstBitmarks = reservoir.MaximumIssues
+
+	rateLimitOwner = 200
+	rateBurstOwner = 100
+
+	rateLimitNode = 200
+	rateBurstNode = 100
+
+	rateLimitTransaction = 200
+	rateBurstTransaction = 100
+
+	rateLimitBlockOwner = 200
+	rateBurstBlockOwner = 100
+)
 
 // globals
 type rpcData struct {
@@ -252,34 +279,41 @@ func createRPCServer(log *logger.L, version string) *rpc.Server {
 	start := time.Now().UTC()
 
 	assets := &Assets{
-		log: log,
+		log:     log,
+		limiter: rate.NewLimiter(rateLimitAssets, rateBurstAssets),
 	}
 
 	bitmark := &Bitmark{
-		log: log,
+		log:     log,
+		limiter: rate.NewLimiter(rateLimitBitmark, rateBurstBitmark),
 	}
 
 	bitmarks := &Bitmarks{
-		log: log,
+		log:     log,
+		limiter: rate.NewLimiter(rateLimitBitmarks, rateBurstBitmarks),
 	}
 
 	owner := &Owner{
-		log: log,
+		log:     log,
+		limiter: rate.NewLimiter(rateLimitOwner, rateBurstOwner),
 	}
 
 	node := &Node{
 		log:     log,
+		limiter: rate.NewLimiter(rateLimitNode, rateBurstNode),
 		start:   start,
 		version: version,
 	}
 
 	transaction := &Transaction{
-		log:   log,
-		start: start,
+		log:     log,
+		limiter: rate.NewLimiter(rateLimitTransaction, rateBurstTransaction),
+		start:   start,
 	}
 
 	blockOwner := &BlockOwner{
-		log: log,
+		log:     log,
+		limiter: rate.NewLimiter(rateLimitBlockOwner, rateBurstBlockOwner),
 	}
 
 	server := rpc.NewServer()

@@ -8,10 +8,11 @@ import (
 	"encoding/hex"
 	"time"
 
+	"golang.org/x/time/rate"
+
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
-	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/peer"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
@@ -20,9 +21,13 @@ import (
 
 type Node struct {
 	log     *logger.L
+	limiter *rate.Limiter
 	start   time.Time
 	version string
 }
+
+// limit for count
+const maximumNodeList = 100
 
 // list the RPC services available in the network
 
@@ -37,9 +42,11 @@ type NodeReply struct {
 }
 
 func (node *Node) List(arguments *NodeArguments, reply *NodeReply) error {
-	if arguments.Count <= 0 || arguments.Count > 100 {
-		return fault.ErrInvalidCount
+
+	if err := rateLimitN(node.limiter, arguments.Count, maximumNodeList); nil != err {
+		return err
 	}
+
 	nodes, nextStart, err := announce.FetchRPCs(arguments.Start, arguments.Count)
 	if nil != err {
 		return err
@@ -75,6 +82,11 @@ type Counters struct {
 }
 
 func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
+
+	if err := rateLimit(node.limiter); nil != err {
+		return err
+	}
+
 	incoming, outgoing := peer.GetCounts()
 	reply.Chain = mode.ChainName()
 	reply.Mode = mode.String()

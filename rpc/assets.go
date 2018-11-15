@@ -5,6 +5,8 @@
 package rpc
 
 import (
+	"golang.org/x/time/rate"
+
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
@@ -17,7 +19,8 @@ import (
 // ------=----
 
 type Assets struct {
-	log *logger.L
+	log     *logger.L
+	limiter *rate.Limiter
 }
 
 const (
@@ -83,10 +86,8 @@ func (assets *Assets) Get(arguments *AssetGetArguments, reply *AssetGetReply) er
 	log := assets.log
 	count := len(arguments.Fingerprints)
 
-	if count > maximumAssets {
-		return fault.ErrTooManyItemsToProcess
-	} else if 0 == count {
-		return fault.ErrMissingParameters
+	if err := rateLimitN(assets.limiter, count, maximumAssets); nil != err {
+		return err
 	}
 
 	if !mode.Is(mode.Normal) {

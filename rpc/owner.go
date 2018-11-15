@@ -5,6 +5,8 @@
 package rpc
 
 import (
+	"golang.org/x/time/rate"
+
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
@@ -19,14 +21,15 @@ import (
 // -------
 
 type Owner struct {
-	log *logger.L
+	log     *logger.L
+	limiter *rate.Limiter
 }
 
 // Owner bitmarks
 // --------------
 
 const (
-	maximumBitmarksCount = 200
+	maximumBitmarksCount = 100
 )
 
 type OwnerBitmarksArguments struct {
@@ -55,18 +58,15 @@ type BlockAsset struct {
 }
 
 func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitmarksReply) error {
+
+	if err := rateLimitN(owner.limiter, arguments.Count, maximumBitmarksCount); nil != err {
+		return err
+	}
+
 	log := owner.log
 	log.Infof("Owner.Bitmarks: %+v", arguments)
 
-	count := arguments.Count
-	if count <= 0 {
-		return fault.ErrInvalidCount
-	}
-	if count > maximumBitmarksCount {
-		count = maximumBitmarksCount
-	}
-
-	ownershipData, err := ownership.ListBitmarksFor(arguments.Owner, arguments.Start, count)
+	ownershipData, err := ownership.ListBitmarksFor(arguments.Owner, arguments.Start, arguments.Count)
 	if nil != err {
 		return err
 	}

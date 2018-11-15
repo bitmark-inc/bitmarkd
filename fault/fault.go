@@ -102,6 +102,7 @@ var (
 	ErrPayIdAlreadyUsed                      = InvalidError("payId already used")
 	ErrPaymentAddressTooLong                 = LengthError("payment address too long")
 	ErrPreviousBlockDigestDoesNotMatch       = InvalidError("previous block digest does not match")
+	ErrRateLimiting                          = LengthError("rate limiting")
 	ErrReceiptTooLong                        = LengthError("receipt too long")
 	ErrSignatureTooLong                      = LengthError("signature too long")
 	ErrTooManyItemsToProcess                 = LengthError("too many items to process")

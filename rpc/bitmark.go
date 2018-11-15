@@ -5,6 +5,8 @@
 package rpc
 
 import (
+	"golang.org/x/time/rate"
+
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
@@ -21,7 +23,8 @@ import (
 // -------
 
 type Bitmark struct {
-	log *logger.L
+	log     *logger.L
+	limiter *rate.Limiter
 }
 
 // Bitmark transfer
@@ -34,6 +37,10 @@ type BitmarkTransferReply struct {
 }
 
 func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransferCountersigned, reply *BitmarkTransferReply) error {
+
+	if err := rateLimit(bitmark.limiter); nil != err {
+		return err
+	}
 
 	log := bitmark.log
 	transfer := transactionrecord.BitmarkTransfer(arguments)
@@ -95,7 +102,7 @@ func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransferCou
 // -------------------------------
 
 const (
-	maximumProvenanceCount = 200
+	maximumProvenanceCount = 100
 )
 
 type ProvenanceArguments struct {
@@ -118,19 +125,17 @@ type ProvenanceReply struct {
 }
 
 func (bitmark *Bitmark) Provenance(arguments *ProvenanceArguments, reply *ProvenanceReply) error {
+
+	if err := rateLimitN(bitmark.limiter, arguments.Count, maximumProvenanceCount); nil != err {
+		return err
+	}
+
 	log := bitmark.log
 
 	log.Infof("Bitmark.Provenance: %+v", arguments)
 
 	count := arguments.Count
 	id := arguments.TxId
-
-	if count <= 0 {
-		return fault.ErrInvalidCount
-	}
-	if count > maximumProvenanceCount {
-		count = maximumProvenanceCount
-	}
 
 	provenance := make([]ProvenanceRecord, 0, count)
 

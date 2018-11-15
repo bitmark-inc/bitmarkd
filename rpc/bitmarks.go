@@ -7,6 +7,8 @@ package rpc
 import (
 	"encoding/hex"
 
+	"golang.org/x/time/rate"
+
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
@@ -23,7 +25,8 @@ import (
 // --------
 
 type Bitmarks struct {
-	log *logger.L
+	log     *logger.L
+	limiter *rate.Limiter
 }
 
 const (
@@ -64,6 +67,14 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 		return fault.ErrTooManyItemsToProcess
 	} else if 0 == assetCount && 0 == issueCount {
 		return fault.ErrMissingParameters
+	}
+
+	count := assetCount + issueCount
+	if count > reservoir.MaximumIssues {
+		count = reservoir.MaximumIssues
+	}
+	if err := rateLimitN(bitmarks.limiter, count, reservoir.MaximumIssues); nil != err {
+		return err
 	}
 
 	if !mode.Is(mode.Normal) {
@@ -145,6 +156,10 @@ type ProofReply struct {
 }
 
 func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) error {
+
+	if err := rateLimit(bitmarks.limiter); nil != err {
+		return err
+	}
 
 	log := bitmarks.log
 
