@@ -110,6 +110,15 @@ bitmarkd --config-file="${HOME}/.config/bitmarkd/bitmarkd.conf" start
 
 Note that a similar process is needed for the prooferd (mining subsystem)
 
+# Prebuilt Binary
+
+* Flatpak
+
+    Please refer to [wiki](https://github.com/bitmark-inc/bitmarkd/wiki/Instruction-for-Flatpak-Prebuilt)
+
+* Docker
+
+    Please refer to [bitmark-node](https://github.com/bitmark-inc/bitmark-node)
 
 # Coding
 
