@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	maximumIssues = 100 // allowed issues in a single submission
+	MaximumIssues = 100 // allowed issues in a single submission
 )
 
 // result returned by store issues
@@ -48,7 +48,7 @@ type IssueInfo struct {
 func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, error) {
 
 	count := len(issues)
-	if count > maximumIssues {
+	if count > MaximumIssues {
 		return nil, false, fault.ErrTooManyItemsToProcess
 	} else if 0 == count {
 		return nil, false, fault.ErrMissingParameters
