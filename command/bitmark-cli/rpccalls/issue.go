@@ -28,10 +28,10 @@ var (
 )
 
 type IssueData struct {
-	Issuer        *keypair.KeyPair
-	AssetId       *transactionrecord.AssetIdentifier
-	Quantity      int
-	PreferPayment bool
+	Issuer    *keypair.KeyPair
+	AssetId   *transactionrecord.AssetIdentifier
+	Quantity  int
+	FreeIssue bool
 }
 
 // JSON data to output after asset/issue/proof completes
@@ -49,7 +49,15 @@ type IssueReply struct {
 
 func (client *Client) Issue(issueConfig *IssueData) (*IssueReply, error) {
 
+	if issueConfig.FreeIssue && 1 != issueConfig.Quantity {
+		return nil, fmt.Errorf("quantity: %d > 1 is not allowed for free", issueConfig.Quantity)
+	}
+
 	nonce := time.Now().UTC().Unix() * 1000
+	if issueConfig.FreeIssue {
+		nonce = 0 // only the zero nonce is allowed for free issue
+	}
+
 	issues := make([]*transactionrecord.BitmarkIssue, issueConfig.Quantity)
 	for i := 0; i < len(issues); i += 1 {
 		issue, err := makeIssue(client.testnet, issueConfig, uint64(nonce)+uint64(i))
@@ -87,7 +95,7 @@ func (client *Client) Issue(issueConfig *IssueData) (*IssueReply, error) {
 		SubmittedNonce: "",
 	}
 
-	if issueConfig.PreferPayment && nil != issuesReply.Payments && len(issuesReply.Payments) > 0 {
+	if nil != issuesReply.Payments && len(issuesReply.Payments) > 0 {
 
 		tpid, err := issuesReply.PayId.MarshalText()
 		if nil != err {

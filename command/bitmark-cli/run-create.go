@@ -49,7 +49,6 @@ func runCreate(c *cli.Context) error {
 		fmt.Fprintf(m.e, "assetName: %q\n", assetName)
 		fmt.Fprintf(m.e, "fingerprint: %q\n", fingerprint)
 		fmt.Fprintf(m.e, "metadata:\n")
-		fmt.Fprintf(m.e, "no-payment: %t\n", c.Bool("no-payment"))
 		splitMeta := strings.Split(metadata, "\u0000")
 		for i := 0; i < len(splitMeta); i += 2 {
 			fmt.Fprintf(m.e, "  %q: %q\n", splitMeta[i], splitMeta[i+1])
@@ -104,19 +103,26 @@ func runCreate(c *cli.Context) error {
 		Registrant:  registrant,
 	}
 
-	assetId, err := client.MakeAsset(assetConfig)
+	assetResult, err := client.MakeAsset(assetConfig)
 	if nil != err {
 		return err
 	}
 
 	// make Issues
 	issueConfig := &rpccalls.IssueData{
-		Issuer:        assetConfig.Registrant,
-		AssetId:       assetId,
-		Quantity:      assetConfig.Quantity,
-		PreferPayment: !c.Bool("no-payment"),
+		Issuer:    assetConfig.Registrant,
+		AssetId:   assetResult.AssetId,
+		Quantity:  assetConfig.Quantity,
+		FreeIssue: 1 == assetConfig.Quantity,
 	}
+
 	response, err := client.Issue(issueConfig)
+	if issueConfig.FreeIssue && nil != err && strings.Contains(err.Error(), "transaction already exists") {
+		// if free issue was already done, try again asking for payment
+		issueConfig.FreeIssue = false
+		response, err = client.Issue(issueConfig)
+	}
+
 	if nil != err {
 		return err
 	}
