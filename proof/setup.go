@@ -14,7 +14,7 @@ import (
 
 // server identification in Z85 (ZeroMQ Base-85 Encoding) see: http://rfc.zeromq.org/spec:32
 // a block of configuration data
-// this is read from a libucl configuration file
+// this is read from the configuration file
 type Configuration struct {
 	Publish     []string          `gluamapper:"publish" json:"publish"`
 	Submit      []string          `gluamapper:"submit" json:"submit"`

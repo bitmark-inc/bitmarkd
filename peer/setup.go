@@ -17,14 +17,14 @@ import (
 )
 
 // hardwired connections
-// this is read from a libucl configuration file
+// this is read from the configuration file
 type Connection struct {
 	PublicKey string `gluamapper:"public_key" json:"public_key"`
 	Address   string `gluamapper:"address" json:"address"`
 }
 
 // a block of configuration data
-// this is read from a libucl configuration file
+// this is read from the configuration file
 type Configuration struct {
 	DynamicConnections bool         `gluamapper:"dynamic_connections" json:"dynamic_connections"`
 	PreferIPv6         bool         `gluamapper:"prefer_ipv6" json:"prefer_ipv6"`

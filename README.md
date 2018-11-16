@@ -6,7 +6,7 @@ Prerequisites
 
 * Install the go language package for your system
 * Configure environment variables for go system
-* install the ZMQ4, UCL, Argon2 libraries
+* install the ZMQ4 and Argon2 libraries
 
 For shell add the following to the shell's profile
 (remark the `export CC=clang` if you wish to use gcc)
@@ -26,25 +26,15 @@ fi
 unset gobin
 ~~~~~
 
-On FreeBSD/PC-BSD
+On FreeBSD
 
 ~~~~~
-pkg install libzmq4 libargon2 libucl
+pkg install libzmq4 libargon2
 ~~~~~
 
-On a Debian like system
-(as of Ubuntu 14.04 this only has V3, so need to search for PPA)
-
-~~~~~
-apt-get install libzmq4-dev
-# lib ucl and argon2 need to be manually installed
-# see the Makefile in c-libraries to set up local static copies
-~~~~~
-
-On a macosx
+On  MacOSX
 (be sure that homebrew is installed correctly)
 ~~~~
-brew install libucl
 brew install argon2
 
 brew tap bitmark-inc/bitmark
@@ -54,25 +44,12 @@ brew install zeromq41
 On Ubuntu
 (tested dor distribution 18.04)
 
-1. Install following packages
-   `sudo apt install libargon2-0-dev autoconf libtool pkg-config uuid-dev libzmq3-dev`
-
-2. Compile and install ucl
-
-    ```
-    git clone https://github.com/vstakhov/libucl.git
-    cd libucl
-    ./autogen.sh
-    ./configure --enable-utils
-    make
-    make install
-    ```
+Install following packages
+   `sudo apt install libargon2-0-dev uuid-dev libzmq3-dev`
 
 To compile simply:
 
 ~~~~~
-go get github.com/bitmark-inc/go-libucl
-go get github.com/bitmark-inc/go-argon2
 go get github.com/bitmark-inc/bitmarkd
 go install -v github.com/bitmark-inc/bitmarkd/command/bitmarkd
 ~~~~~

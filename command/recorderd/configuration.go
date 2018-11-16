@@ -54,12 +54,12 @@ type PeerType struct {
 
 // type PaymentType struct {
 //      Account     ???? // separate private key field??
-// 	Currency    string `libucl:"currency" json:"currency"`
-// 	Address     string `libucl:"address" json:"address"`
-// 	//Fee       string `libucl:"fee" json:"fee"` // ***** FIX THIS: can miner set its fee(s)
+// 	Currency    string `gluamapper:"currency" json:"currency"`
+// 	Address     string `gluamapper:"address" json:"address"`
+// 	//Fee       string `gluamapper:"fee" json:"fee"` // ***** FIX THIS: can miner set its fee(s)
 // }
 //  add to configuration:
-//	//Payment PaymentType `libucl:"payment" json:"payment"`
+//	//Payment PaymentType `gluamapper:"payment" json:"payment"`
 
 type Configuration struct {
 	DataDirectory string               `gluamapper:"data_directory" json:"data_directory"`

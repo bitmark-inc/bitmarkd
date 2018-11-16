@@ -14,7 +14,7 @@ import (
 )
 
 // a block of configuration data
-// this is read from a libucl configuration file
+// this is read from the configuration file
 type Configuration struct {
 	Broadcast  []string `gluamapper:"broadcast" json:"broadcast"`
 	PrivateKey string   `gluamapper:"private_key" json:"private_key"`
