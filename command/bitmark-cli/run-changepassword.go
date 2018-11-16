@@ -58,12 +58,12 @@ func runChangePassword(c *cli.Context) error {
 	if nil != err {
 		return err
 	}
-	if encrypted.PublicKey != identity.Public_key {
+	if encrypted.PublicKey != identity.PublicKey {
 		return err
 	}
 	identity.Seed = encrypted.EncryptedSeed
-	identity.Private_key = encrypted.EncryptedPrivateKey
-	identity.Private_key_config = *privateKeyConfig
+	identity.PrivateKey = encrypted.EncryptedPrivateKey
+	identity.PrivateKeyConfig = *privateKeyConfig
 
 	m.save = true
 	return nil

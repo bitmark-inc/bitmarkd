@@ -7,7 +7,7 @@ package main
 import (
 	"fmt"
 	"os"
-	"strings"
+	"path"
 
 	"github.com/urfave/cli"
 
@@ -24,9 +24,11 @@ func runSetup(c *cli.Context) error {
 		return err
 	}
 
-	network, err := checkNetwork(c.String("network"))
-	if nil != err {
-		return err
+	testnet := c.Bool("testnet")
+	livenet := c.Bool("livenet")
+
+	if testnet == livenet {
+		return fmt.Errorf("only one of testnet/livenet can be set")
 	}
 
 	connect, err := checkConnect(c.String("connect"))
@@ -47,31 +49,30 @@ func runSetup(c *cli.Context) error {
 
 	if m.verbose {
 		fmt.Fprintf(m.e, "config: %s\n", m.file)
-		fmt.Fprintf(m.e, "network: %s\n", network)
+		fmt.Fprintf(m.e, "testnet: %s\n", testnet)
+		fmt.Fprintf(m.e, "livenet: %s\n", livenet)
 		fmt.Fprintf(m.e, "connect: %s\n", connect)
 		fmt.Fprintf(m.e, "identity: %s\n", name)
 		fmt.Fprintf(m.e, "description: %s\n", description)
 	}
 
 	// Create the folder hierarchy for configuration if not existing
-	folderIndex := strings.LastIndex(m.file, "/")
-	if folderIndex >= 0 {
-		configDir := m.file[:folderIndex]
-		if !ensureFileExists(configDir) {
-			if err := os.MkdirAll(configDir, 0755); nil != err {
-				return err
-			}
+	configDir := path.Dir(m.file)
+	d, err := checkFileExists(configDir)
+	if nil != err {
+		if err := os.MkdirAll(configDir, 0750); nil != err {
+			return err
 		}
-	}
-	configData := &configuration.Configuration{
-		Default_identity: name,
-		Network:          network,
-		Connect:          connect,
-		Identity:         make([]encrypt.IdentityType, 0),
+	} else if !d {
+		return fmt.Errorf("path: %q is not a directory", configDir)
 	}
 
-	// flag to indicate testnet keys
-	testnet := "bitmark" != configData.Network
+	configData := &configuration.Configuration{
+		DefaultIdentity: name,
+		TestNet:         testnet,
+		Connect:         connect,
+		Identities:      make([]encrypt.IdentityType, 0),
+	}
 
 	err = addIdentity(configData, name, description, privateKey, c.GlobalString("password"), testnet)
 	if nil != err {

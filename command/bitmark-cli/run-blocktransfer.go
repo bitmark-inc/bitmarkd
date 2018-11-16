@@ -95,7 +95,7 @@ func runBlockTransfer(c *cli.Context) error {
 	newPublicKey, err := hex.DecodeString(to)
 	if nil != err {
 
-		newOwnerKeyPair, err = encrypt.PublicKeyFromIdentity(to, m.config.Identity)
+		newOwnerKeyPair, err = encrypt.PublicKeyFromIdentity(to, m.config.Identities)
 		if nil != err {
 			return err
 		}

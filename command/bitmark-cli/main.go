@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 
 	"github.com/urfave/cli"
 
@@ -15,14 +16,13 @@ import (
 )
 
 type metadata struct {
-	file      string
-	config    *configuration.Configuration
-	save      bool
-	testnet   bool
-	verbose   bool
-	variables map[string]string
-	e         io.Writer
-	w         io.Writer
+	file    string
+	config  *configuration.Configuration
+	save    bool
+	testnet bool
+	verbose bool
+	e       io.Writer
+	w       io.Writer
 }
 
 // set by the linker: go build -ldflags "-X main.version=M.N" ./...
@@ -47,7 +47,12 @@ func main() {
 		cli.StringFlag{
 			Name:  "config, c",
 			Value: "",
-			Usage: "bitmark-cli configuration `DIRECTORY`",
+			Usage: "bitmark-cli configuration `FILE`",
+		},
+		cli.StringFlag{
+			Name:  "network, n",
+			Value: "",
+			Usage: " bitmark|testing|local. Connect to bitmark `NETWORK`",
 		},
 		cli.StringFlag{
 			Name:  "identity, i",
@@ -80,15 +85,18 @@ func main() {
 		{
 			Name:      "setup",
 			Usage:     "Initialise bitmark-cli configuration",
-			ArgsUsage: "\n   (* = required)",
+			ArgsUsage: "\n   (* = required, + = select one)",
 			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "network, n",
-					Value: "testing",
-					Usage: " bitmark|testing|local. Connect to bitmark `NETWORK`",
+				cli.BoolFlag{
+					Name:  "testnet, t",
+					Usage: "+setup for test network",
+				},
+				cli.BoolFlag{
+					Name:  "livenet, l",
+					Usage: "+setup for live network",
 				},
 				cli.StringFlag{
-					Name:  "connect, x",
+					Name:  "connect, c",
 					Value: "",
 					Usage: "*bitmarkd host/IP and port, `HOST:PORT`",
 				},
@@ -344,30 +352,49 @@ func main() {
 			return nil
 		}
 
+		// only want one of these
 		file := c.GlobalString("config")
+		network := c.GlobalString("network")
+		if "" == file && "" == network {
+			return fmt.Errorf("either config or network must be set")
+		}
+		if "" != file && "" != network {
+			return fmt.Errorf("do not set both config and network")
+		}
 		if "" == file {
-			return ErrRequiredConfigFile
+
+			p := os.Getenv("XDG_CONFIG_HOME")
+			if "" == p {
+				return fmt.Errorf("XDG_CONFIG_HOME environment is not set")
+			}
+			dir, err := checkFileExists(p)
+			if nil != err {
+				return err
+			}
+			if !dir {
+				return fmt.Errorf("not a directory: %q", p)
+			}
+			file = path.Join(p, app.Name, network+"-"+app.Name+".json")
 		}
 
-		// expand ${HOME} etc.
-		file = os.ExpandEnv(file)
+		// try to access file in: XDG_CONFIG_HOME
 
-		// config file macros - currently empty
-		variables := make(map[string]string)
+		if verbose {
+			fmt.Fprintf(e, "file: %q\n", file)
+		}
 
 		if "setup" == command {
 			// do not run setup if there is an existing configuration
-			if ensureFileExists(file) {
+			if _, err := checkFileExists(file); nil == err {
 				return fmt.Errorf("not overwriting existing configuration: %q", file)
 			}
 
 			c.App.Metadata["config"] = &metadata{
-				file:      file,
-				save:      false,
-				variables: variables,
-				verbose:   verbose,
-				e:         e,
-				w:         w,
+				file:    file,
+				save:    false,
+				verbose: verbose,
+				e:       e,
+				w:       w,
 			}
 
 		} else {
@@ -376,7 +403,7 @@ func main() {
 				fmt.Fprintf(e, "reading config file: %s\n", file)
 			}
 
-			configuration, err := configuration.GetConfiguration(file, variables)
+			configuration, err := configuration.GetConfiguration(file)
 			if nil != err {
 				return err
 			}
@@ -384,7 +411,7 @@ func main() {
 			c.App.Metadata["config"] = &metadata{
 				file:    file,
 				config:  configuration,
-				testnet: "bitmark" != configuration.Network,
+				testnet: configuration.TestNet,
 				save:    false,
 				verbose: verbose,
 				e:       e,

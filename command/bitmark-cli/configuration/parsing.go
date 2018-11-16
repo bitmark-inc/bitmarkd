@@ -5,10 +5,12 @@
 package configuration
 
 import (
+	"encoding/json"
+	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
-	"github.com/bitmark-inc/bitmarkd/configuration"
 )
 
 const (
@@ -16,78 +18,88 @@ const (
 )
 
 type Configuration struct {
-	Default_identity string                 `libucl:"default_identity" json:"default_identity"`
-	Network          string                 `libucl:"network" json:"network"`
-	Connect          string                 `libucl:"connect" json:"connect"`
-	Identity         []encrypt.IdentityType `libucl:"identity" json:"identity"`
+	DefaultIdentity string                 `json:"default_identity"`
+	TestNet         bool                   `json:"testnet"`
+	Connect         string                 `json:"connect"`
+	Identities      []encrypt.IdentityType `json:"identities"`
 }
-
-// form of configuration in the config file
-// used by write.go
-const configurationTemplate = `# bitmark-cli.conf -*- mode: libucl -*-
-
-default_identity = "{{.Default_identity}}"
-
-network = "{{.Network}}"
-connect = "{{.Connect}}"
-
-{{range .Identity}}
-identity {
-  name = "{{.Name}}"
-  description = "{{.Description}}"
-  public_key = "{{.Public_key}}"
-  private_key = "{{.Private_key}}"
-  seed = "{{.Seed}}"
-  private_key_config {
-    salt = "{{.Private_key_config.Salt}}"
-  }
-}
-{{end}}
-`
 
 // restricted access to data (excludes private items)
 
 type InfoIdentityType struct {
-	Name        string `libucl:"name" json:"name"`
-	Description string `libucl:"description" json:"description"`
-	Public_key  string `libucl:"public_key" json:"public_key"`
-	Account     string `libucl:"account" json:"account"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	PublicKey   string `json:"public_key"`
+	Account     string `json:"account"`
 }
 
+// restricted view of configuration
+
 type InfoConfiguration struct {
-	Default_identity string             `libucl:"default_identity" json:"default_identity"`
-	Network          string             `libucl:"network" json:"network"`
-	Connect          string             `libucl:"connect" json:"connect"`
-	Identity         []InfoIdentityType `libucl:"identity" json:"identity"`
+	DefaultIdentity string             `json:"default_identity"`
+	TestNet         bool               `json:"testnet"`
+	Connect         string             `json:"connect"`
+	Identities      []InfoIdentityType `json:"identities"`
+}
+
+func (s *InfoConfiguration) Len() int {
+	return len(s.Identities)
+}
+
+func (s *InfoConfiguration) Swap(i, j int) {
+	s.Identities[i], s.Identities[j] = s.Identities[j], s.Identities[i]
+}
+
+func (s *InfoConfiguration) Less(i int, j int) bool {
+	return s.Identities[i].Name < s.Identities[j].Name
 }
 
 // full access to data (includes private data)
-func GetConfiguration(configurationFileName string, variables map[string]string) (*Configuration, error) {
+func GetConfiguration(filename string) (*Configuration, error) {
 
-	configurationFileName, err := filepath.Abs(filepath.Clean(configurationFileName))
+	options := &Configuration{}
+
+	err := readConfiguration(filename, options)
 	if nil != err {
 		return nil, err
 	}
-
-	options := &Configuration{}
-	if err := configuration.ParseUCLConfigurationFile(configurationFileName, options, variables); err != nil {
-		return nil, err
-	}
-
 	return options, nil
 }
 
 // restricted access to data (excludes private items)
-func GetInfoConfiguration(configurationFileName string, variables map[string]string) (*InfoConfiguration, error) {
-	configurationFileName, err := filepath.Abs(filepath.Clean(configurationFileName))
+func GetInfoConfiguration(filename string) (*InfoConfiguration, error) {
+
+	options := &InfoConfiguration{}
+
+	err := readConfiguration(filename, options)
 	if nil != err {
 		return nil, err
 	}
 
-	options := &InfoConfiguration{}
-	if err := configuration.ParseUCLConfigurationFile(configurationFileName, options, variables); err != nil {
-		return nil, err
-	}
+	sort.Sort(options)
 
 	return options, nil
+}
+
+// generic JSON decoder
+func readConfiguration(filename string, options interface{}) error {
+
+	filename, err := filepath.Abs(filepath.Clean(filename))
+	if nil != err {
+		return err
+	}
+
+	f, err := os.Open(filename)
+	if nil != err {
+		return err
+	}
+	defer f.Close()
+
+	dec := json.NewDecoder(f)
+	err = dec.Decode(options)
+	if nil != err {
+		return err
+	}
+
+	return nil
 }

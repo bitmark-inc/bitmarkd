@@ -18,14 +18,14 @@ func runInfo(c *cli.Context) error {
 
 	m := c.App.Metadata["config"].(*metadata)
 
-	infoConfig, err := configuration.GetInfoConfiguration(m.file, m.variables)
+	infoConfig, err := configuration.GetInfoConfiguration(m.file)
 	if nil != err {
 		return err
 	}
 
 	// add base58 Bitmark Account to output structure
-	for i, id := range infoConfig.Identity {
-		pub, err := hex.DecodeString(id.Public_key)
+	for i, id := range infoConfig.Identities {
+		pub, err := hex.DecodeString(id.PublicKey)
 		if nil != err {
 			return err
 		}
@@ -40,7 +40,7 @@ func runInfo(c *cli.Context) error {
 				PublicKey: keyPair.PublicKey[:],
 			},
 		}
-		infoConfig.Identity[i].Account = a.String()
+		infoConfig.Identities[i].Account = a.String()
 
 	}
 

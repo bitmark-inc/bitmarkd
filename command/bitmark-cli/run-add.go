@@ -50,7 +50,7 @@ func runAdd(c *cli.Context) error {
 
 func addIdentity(configs *configuration.Configuration, name string, description string, privateKeyStr string, password string, testnet bool) error {
 
-	for _, identity := range configs.Identity {
+	for _, identity := range configs.Identities {
 		if name == identity.Name {
 			return fmt.Errorf("identity: %q already exists", name)
 		}
@@ -71,14 +71,14 @@ func addIdentity(configs *configuration.Configuration, name string, description 
 	}
 
 	identity := encrypt.IdentityType{
-		Name:               name,
-		Description:        description,
-		Public_key:         encrypted.PublicKey,
-		Seed:               encrypted.EncryptedSeed,
-		Private_key:        encrypted.EncryptedPrivateKey,
-		Private_key_config: *privateKeyConfig,
+		Name:             name,
+		Description:      description,
+		PublicKey:        encrypted.PublicKey,
+		Seed:             encrypted.EncryptedSeed,
+		PrivateKey:       encrypted.EncryptedPrivateKey,
+		PrivateKeyConfig: *privateKeyConfig,
 	}
-	configs.Identity = append(configs.Identity, identity)
+	configs.Identities = append(configs.Identities, identity)
 
 	return nil
 }

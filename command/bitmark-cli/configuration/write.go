@@ -5,10 +5,10 @@
 package configuration
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
-	"text/template"
 )
 
 func Save(filename string, configuration *Configuration) error {
@@ -18,18 +18,21 @@ func Save(filename string, configuration *Configuration) error {
 
 	os.Remove(tempFile)
 
-	file, err := os.Create(tempFile)
+	f, err := os.Create(tempFile)
 	if nil != err {
 		fmt.Printf("Create file fail: %s\n", err)
 		return err
 	}
 
-	configurationTemplate := template.Must(template.New("config").Parse(configurationTemplate))
-	err = configurationTemplate.Execute(file, configuration)
+	enc := json.NewEncoder(f)
+	enc.SetIndent("", "  ")
+	err = enc.Encode(configuration)
 	if nil != err {
-		fmt.Printf("write config file error: %s\n", err)
+		f.Close()
 		return err
 	}
+
+	f.Close()
 
 	err = os.Remove(previousFile)
 	if nil != err && !strings.Contains(err.Error(), "no such file") {

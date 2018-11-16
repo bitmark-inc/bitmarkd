@@ -21,7 +21,6 @@ var (
 	ErrRequiredAssetFingerprint = fault.InvalidError("asset fingerprint is required")
 	ErrRequiredAssetMetadata    = fault.InvalidError("asset metadata is required")
 	ErrRequiredAssetName        = fault.InvalidError("asset name is required")
-	ErrRequiredConfigFile       = fault.InvalidError("config file is required")
 	ErrRequiredConnect          = fault.InvalidError("connect is required")
 	ErrRequiredCurrencyAddress  = fault.InvalidError("currency address is required")
 	ErrRequiredDescription      = fault.InvalidError("description is required")
@@ -199,7 +198,7 @@ func checkTransferTx(txId string) (string, error) {
 
 func checkTransferFrom(from string, config *configuration.Configuration) (*encrypt.IdentityType, error) {
 	if "" == from {
-		from = config.Default_identity
+		from = config.DefaultIdentity
 	}
 
 	return getIdentity(from, config)
@@ -252,9 +251,9 @@ func checkRecordCount(count string) (int, error) {
 // note: this returns apointer to tha actial config.Identity[i]
 //       so permanent modifications can be made to the identity
 func getIdentity(name string, config *configuration.Configuration) (*encrypt.IdentityType, error) {
-	for i, identity := range config.Identity {
+	for i, identity := range config.Identities {
 		if name == identity.Name {
-			return &config.Identity[i], nil
+			return &config.Identities[i], nil
 		}
 	}
 
@@ -262,7 +261,10 @@ func getIdentity(name string, config *configuration.Configuration) (*encrypt.Ide
 }
 
 // check if file exists
-func ensureFileExists(name string) bool {
-	_, err := os.Stat(name)
-	return nil == err
+func checkFileExists(name string) (bool, error) {
+	s, err := os.Stat(name)
+	if nil != err {
+		return false, err
+	}
+	return s.IsDir(), nil
 }

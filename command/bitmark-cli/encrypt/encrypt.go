@@ -36,16 +36,16 @@ var (
 
 // full access to data (includes private data)
 type IdentityType struct {
-	Name               string           `libucl:"name" json:"name"`
-	Description        string           `libucl:"description" json:"description"`
-	Public_key         string           `libucl:"public_key" json:"public_key"`
-	Private_key        string           `libucl:"private_key" json:"private_key"`
-	Seed               string           `libucl:"seed" json:"seed"`
-	Private_key_config PrivateKeyConfig `libucl:"private_key_config" json:"private_key_config"`
+	Name             string         `json:"name"`
+	Description      string         `json:"description"`
+	PublicKey        string         `json:"public_key"`
+	PrivateKey       string         `json:"private_key"`
+	Seed             string         `json:"seed"`
+	PrivateKeyConfig PrivateKeySalt `json:"private_key_config"`
 }
 
-type PrivateKeyConfig struct {
-	Salt string `libucl:"salt" json:"salt"`
+type PrivateKeySalt struct {
+	Salt string `json:"salt"`
 }
 
 // return of makeKeyPair
@@ -60,7 +60,7 @@ type EncryptedKeyPair struct {
 //       * 64 bytes  =  [32 byte private key][32 byte public key]
 //       * 32 bytes  =  [32 byte private key]
 //       * "SEED:<base58 encoded seed>"
-func MakeKeyPair(privateKeyStr string, password string, test bool) (*EncryptedKeyPair, *PrivateKeyConfig, error) {
+func MakeKeyPair(privateKeyStr string, password string, test bool) (*EncryptedKeyPair, *PrivateKeySalt, error) {
 	var publicKey, privateKey []byte
 	var seed string
 	var err error
@@ -149,7 +149,7 @@ func MakeKeyPair(privateKeyStr string, password string, test bool) (*EncryptedKe
 		EncryptedSeed:       hex.EncodeToString(encryptedSeed),
 	}
 
-	privateKeyConfig := &PrivateKeyConfig{
+	privateKeyConfig := &PrivateKeySalt{
 		Salt: salt.String(),
 	}
 
@@ -289,14 +289,14 @@ func checkSignature(publicKey []byte, privateKey []byte) bool {
 
 func VerifyPassword(password string, identity *IdentityType) (*keypair.KeyPair, error) {
 	salt := new(Salt)
-	salt.UnmarshalText([]byte(identity.Private_key_config.Salt))
+	salt.UnmarshalText([]byte(identity.PrivateKeyConfig.Salt))
 
 	key, err := generateKey(password, salt)
 	if nil != err {
 		return nil, err
 	}
 
-	ciphertext, err := hex.DecodeString(identity.Private_key)
+	ciphertext, err := hex.DecodeString(identity.PrivateKey)
 	if nil != err {
 		return nil, err
 	}
@@ -306,7 +306,7 @@ func VerifyPassword(password string, identity *IdentityType) (*keypair.KeyPair, 
 		return nil, err
 	}
 
-	publicKey, err := hex.DecodeString(identity.Public_key)
+	publicKey, err := hex.DecodeString(identity.PublicKey)
 	if nil != err {
 		return nil, err
 	}
@@ -340,7 +340,7 @@ loop:
 		if name != identity.Name {
 			continue loop
 		}
-		publicKey, err := hex.DecodeString(identity.Public_key)
+		publicKey, err := hex.DecodeString(identity.PublicKey)
 		if nil != err {
 			return nil, err
 		}
