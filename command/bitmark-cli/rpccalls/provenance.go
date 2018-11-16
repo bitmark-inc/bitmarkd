@@ -10,11 +10,21 @@ import (
 )
 
 type ProvenanceData struct {
-	TxId  string
-	Count int
+	TxId       string
+	Count      int
+	Identities map[string]string
 }
 
-func (client *Client) GetProvenance(provenanceConfig *ProvenanceData) (*rpc.ProvenanceReply, error) {
+type ProvenanceReply struct {
+	Data []provenanceItem `json:"data"`
+}
+
+type provenanceItem struct {
+	rpc.ProvenanceRecord
+	Identity string `json:"_IDENTITY"`
+}
+
+func (client *Client) GetProvenance(provenanceConfig *ProvenanceData) (*ProvenanceReply, error) {
 
 	var txId merkle.Digest
 	if err := txId.UnmarshalText([]byte(provenanceConfig.TxId)); nil != err {
@@ -36,5 +46,22 @@ func (client *Client) GetProvenance(provenanceConfig *ProvenanceData) (*rpc.Prov
 
 	client.printJson("Provenance Reply", reply)
 
-	return &reply, nil
+	r := &ProvenanceReply{
+		Data: make([]provenanceItem, len(reply.Data)),
+	}
+
+	for i, d := range reply.Data {
+		r.Data[i].ProvenanceRecord = d
+
+		m := d.Data.(map[string]interface{})
+		owner := m["owner"]
+		if nil == owner {
+			owner = m["registrant"]
+		}
+		if s, ok := owner.(string); ok {
+			r.Data[i].Identity = provenanceConfig.Identities[s]
+		}
+	}
+
+	return r, nil
 }
