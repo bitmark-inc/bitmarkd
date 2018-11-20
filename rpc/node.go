@@ -11,7 +11,7 @@ import (
 	"golang.org/x/time/rate"
 
 	"github.com/bitmark-inc/bitmarkd/announce"
-	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/peer"
@@ -90,7 +90,7 @@ func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 	incoming, outgoing := peer.GetCounts()
 	reply.Chain = mode.ChainName()
 	reply.Mode = mode.String()
-	reply.Blocks = block.GetHeight()
+	reply.Blocks = blockheader.Height()
 	reply.RPCs = connectionCount.Uint64()
 	reply.Peers = incoming + outgoing
 	reply.TransactionCounters.Pending, reply.TransactionCounters.Verified = reservoir.ReadCounters()

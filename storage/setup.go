@@ -13,10 +13,8 @@ import (
 
 	"github.com/syndtr/goleveldb/leveldb"
 	ldb_opt "github.com/syndtr/goleveldb/leveldb/opt"
-	ldb_util "github.com/syndtr/goleveldb/leveldb/util"
 
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 )
 
@@ -29,9 +27,12 @@ type pools struct {
 	BlockOwnerTxIndex *PoolHandle `prefix:"I" database:"index"`
 	Assets            *PoolNB     `prefix:"A" database:"index"`
 	Transactions      *PoolNB     `prefix:"T" database:"index"`
-	OwnerCount        *PoolHandle `prefix:"N" database:"index"`
-	Ownership         *PoolHandle `prefix:"K" database:"index"`
-	OwnerDigest       *PoolHandle `prefix:"D" database:"index"`
+	OwnerNextCount    *PoolHandle `prefix:"N" database:"index"`
+	OwnerList         *PoolHandle `prefix:"L" database:"index"`
+	OwnerTxIndex      *PoolHandle `prefix:"D" database:"index"`
+	OwnerData         *PoolHandle `prefix:"O" database:"index"`
+	Shares            *PoolHandle `prefix:"F" database:"index"`
+	ShareQuantity     *PoolHandle `prefix:"Q" database:"index"`
 	TestData          *PoolHandle `prefix:"Z" database:"index"`
 }
 
@@ -42,7 +43,7 @@ var Pool pools
 var versionKey = []byte{0x00, 'V', 'E', 'R', 'S', 'I', 'O', 'N'}
 
 const (
-	currentVersion = 0x100 // WAS: []byte{0x00, 0x00, 0x00, 0x03}
+	currentVersion = 0x200
 )
 
 // holds the database handle
@@ -76,8 +77,6 @@ func Initialise(database string, readOnly bool) (bool, error) {
 			dbClose()
 		}
 	}()
-
-	legacyDatabase := database + ".leveldb"
 
 	blocksDatabase := database + "-blocks.leveldb"
 	indexDatabase := database + "-index.leveldb"
@@ -122,45 +121,6 @@ func Initialise(database string, readOnly bool) (bool, error) {
 		logger.Criticalf("block database version: %d < current version: %d", blocksVersion, currentVersion)
 		return mustReindex, fmt.Errorf("block database version: %d < current version: %d", blocksVersion, currentVersion)
 
-	} else if 0 == blocksVersion && util.EnsureFileExists(legacyDatabase) {
-
-		mustReindex = true
-		logger.Critical("legacy migration starting…")
-		// have a legacy database and the blocks database was newly created or empty
-		mustReindex := true
-		dbLegacy, err := leveldb.RecoverFile(legacyDatabase, nil)
-		if nil != err {
-			return mustReindex, err
-		}
-
-		allBlocksRange := ldb_util.Range{
-			Start: []byte{'B'}, // Start of key range, included in the range
-			Limit: []byte{'C'}, // Limit of key range, excluded from the range
-		}
-		iter := dbLegacy.NewIterator(&allBlocksRange, nil)
-	copy_blocks:
-		for iter.Next() {
-			key := iter.Key()
-			value := iter.Value()
-
-			err = poolData.dbBlocks.Put(key, value, nil)
-			if nil != err {
-				logger.Criticalf("copy block key: %x  error: %s", key, err)
-				break copy_blocks // not return to ensure iter is released
-			}
-		}
-		iter.Release()
-		if nil == err { // only check iter error if all "Put"s above return nil
-			err = iter.Error()
-		}
-		if err != nil {
-			// either put error or iter error
-			return mustReindex, err
-		}
-		err = putVersion(poolData.dbBlocks, currentVersion)
-		if err != nil {
-			return mustReindex, err
-		}
 	} else if 0 == blocksVersion {
 
 		// database was empty so tag as current version
@@ -198,7 +158,7 @@ func Initialise(database string, readOnly bool) (bool, error) {
 	// this will be a struct type
 	poolType := reflect.TypeOf(Pool)
 
-	// get write acces by using pointer + Elem()
+	// get write access by using pointer + Elem()
 	poolValue := reflect.ValueOf(&Pool).Elem()
 
 	// scan each field

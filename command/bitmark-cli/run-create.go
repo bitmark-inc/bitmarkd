@@ -39,9 +39,9 @@ func runCreate(c *cli.Context) error {
 		return err
 	}
 
-	quantity, err := checkAssetQuantity(c.String("quantity"))
-	if nil != err {
-		return err
+	quantity := c.Int("quantity")
+	if quantity <= 0 {
+		return fmt.Errorf("invalid quantity: %d", quantity)
 	}
 
 	if m.verbose {

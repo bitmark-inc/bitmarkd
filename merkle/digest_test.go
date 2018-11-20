@@ -86,9 +86,9 @@ func TestInvalidLinks(t *testing.T) {
 
 	invalid := []string{
 		"",
-		"4b",  // one byte
-		"4bf", // odd number of chars
-		"4bf8131ca2a32eadc097e14b48",                                         // truncated
+		"4b",                         // one byte
+		"4bf",                        // odd number of chars
+		"4bf8131ca2a32eadc097e14b48", // truncated
 		"4bf8131ca2a32eadc097e14b48ecc7c87288a7b6b79757c8290834bacfda16a",    // just one char short
 		"4bf8131ca2a32eadc097e14b48ecc7c87288a7b6b79757c8290834bacfda16aa6",  // just one char over
 		"4bf8131ca2a32eadc097e14b48ecc7c87288a7b6b79757c8290834bacfda16aa68", // just one byte over

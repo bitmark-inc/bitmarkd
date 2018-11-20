@@ -14,28 +14,31 @@ import (
 	"github.com/bitmark-inc/bitmarkd/keypair"
 )
 
-func runBlockCountersign(c *cli.Context) error {
+func runShare(c *cli.Context) error {
 
 	m := c.App.Metadata["config"].(*metadata)
 
-	hex, err := checkTransferTx(c.String("transfer"))
+	from, err := checkIdentity(c.GlobalString("identity"), m.config)
 	if nil != err {
 		return err
 	}
 
-	// this command is run by the receiver so from is used
-	// to get default identity
-	to, err := checkTransferFrom(c.GlobalString("identity"), m.config)
+	txId, err := checkTxId(c.String("txid"))
 	if nil != err {
 		return err
+	}
+
+	quantity := c.Int("quantity")
+	if quantity <= 0 {
+		return fmt.Errorf("invalid quantity: %d", quantity)
 	}
 
 	if m.verbose {
-		fmt.Fprintf(m.e, "tx: %s\n", hex)
-		fmt.Fprintf(m.e, "receiver: %s\n", to.Name)
+		fmt.Fprintf(m.e, "txid: %s\n", txId)
+		fmt.Fprintf(m.e, "quantity: %d\n", quantity)
 	}
 
-	var newOwnerKeyPair *keypair.KeyPair
+	var ownerKeyPair *keypair.KeyPair
 
 	// get global password items
 	agent := c.GlobalString("use-agent")
@@ -44,28 +47,28 @@ func runBlockCountersign(c *cli.Context) error {
 
 	// check owner password
 	if "" != agent {
-		password, err := passwordFromAgent(to.Name, "Transfer Bitmark", agent, clearCache)
+		password, err := passwordFromAgent(from.Name, "Create Shareal Bitmark", agent, clearCache)
 		if nil != err {
 			return err
 		}
-		newOwnerKeyPair, err = encrypt.VerifyPassword(password, to)
+		ownerKeyPair, err = encrypt.VerifyPassword(password, from)
 		if nil != err {
 			return err
 		}
 	} else if "" != password {
-		newOwnerKeyPair, err = encrypt.VerifyPassword(password, to)
+		ownerKeyPair, err = encrypt.VerifyPassword(password, from)
 		if nil != err {
 			return err
 		}
 	} else {
-		newOwnerKeyPair, err = promptAndCheckPassword(to)
+		ownerKeyPair, err = promptAndCheckPassword(from)
 		if nil != err {
 			return err
 		}
 
 	}
 	// just in case some internal breakage
-	if nil == newOwnerKeyPair {
+	if nil == ownerKeyPair {
 		return ErrNilKeyPair
 	}
 
@@ -75,17 +78,18 @@ func runBlockCountersign(c *cli.Context) error {
 	}
 	defer client.Close()
 
-	countersignConfig := &rpccalls.BlockTransferCountersignData{
-		BlockTransfer: hex,
-		NewOwner:      newOwnerKeyPair,
+	// make Share
+	shareConfig := &rpccalls.ShareData{
+		Owner:    ownerKeyPair,
+		TxId:     txId,
+		Quantity: uint64(quantity),
 	}
 
-	response, err := client.CountersignBlockTransfer(countersignConfig)
+	response, err := client.Share(shareConfig)
 	if nil != err {
 		return err
 	}
 
 	printJson(m.w, response)
-
 	return nil
 }

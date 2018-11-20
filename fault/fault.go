@@ -14,6 +14,7 @@ type LengthError GenericError
 type NotFoundError GenericError
 type ProcessError GenericError
 type RecordError GenericError
+type ValueError GenericError
 
 // common errors - keep in alphabetic order
 var (
@@ -26,9 +27,11 @@ var (
 	ErrBlockNotFound                         = NotFoundError("block not found")
 	ErrBlockVersionMustNotDecrease           = InvalidError("block version must not decrease")
 	ErrBufferCapacityLimit                   = LengthError("buffer capacity limit")
+	ErrCannotConvertSharesBackToAssets       = InvalidError("cannot convert shares back to assets")
 	ErrCannotDecodeAccount                   = RecordError("cannot decode account")
 	ErrCannotDecodePrivateKey                = RecordError("cannot decode private key")
 	ErrCannotDecodeSeed                      = RecordError("cannot decode seed")
+	ErrCanOnlyConvertAssetsToShares          = InvalidError("can only convert assets to shares")
 	ErrCertificateFileAlreadyExists          = ExistsError("certificate file already exists")
 	ErrCertificateFileNotFound               = NotFoundError("cerfificate file not found")
 	ErrChecksumMismatch                      = ProcessError("checksum mismatch")
@@ -39,6 +42,7 @@ var (
 	ErrFingerprintTooShort                   = LengthError("fingerprint too short")
 	ErrIncorrectChain                        = InvalidError("incorrect chain")
 	ErrInitialisationFailed                  = InvalidError("initialisation failed")
+	ErrInsufficientShares                    = InvalidError("insufficient shares")
 	ErrInvalidBitcoinAddress                 = InvalidError("invalid bitcoin address")
 	ErrInvalidBlockHeaderDifficulty          = InvalidError("invalid block header difficulty")
 	ErrInvalidBlockHeaderSize                = InvalidError("invalid block header size")
@@ -83,6 +87,7 @@ var (
 	ErrMetadataIsNotMap                      = InvalidError("metadata is not map")
 	ErrMetadataTooLong                       = LengthError("metadata too long")
 	ErrMissingBlockOwner                     = LengthError("missing block owner")
+	ErrMissingOwnerData                      = NotFoundError("missing owner data")
 	ErrMissingParameters                     = LengthError("missing parameters")
 	ErrNameTooLong                           = LengthError("name too long")
 	ErrNameTooShort                          = LengthError("name too short")
@@ -95,8 +100,10 @@ var (
 	ErrNotConnected                          = NotFoundError("not connected")
 	ErrNotInitialised                        = NotFoundError("not initialised")
 	ErrNotLink                               = RecordError("not link")
+	ErrNotOwnedItem                          = InvalidError("not owned item")
 	ErrNotPrivateKey                         = RecordError("not private key")
 	ErrNotPublicKey                          = RecordError("not public key")
+	ErrNotOwnerDataPack                      = RecordError("not owner data pack")
 	ErrNotTransactionPack                    = RecordError("not transaction pack")
 	ErrOutOfPlaceBaseData                    = InvalidError("out of place base data")
 	ErrOutOfPlaceBlockOwnerIssue             = InvalidError("out of place block owner issue")
@@ -105,7 +112,10 @@ var (
 	ErrPreviousBlockDigestDoesNotMatch       = InvalidError("previous block digest does not match")
 	ErrRateLimiting                          = LengthError("rate limiting")
 	ErrReceiptTooLong                        = LengthError("receipt too long")
+	ErrRecordHasExpired                      = InvalidError("record has expired")
 	ErrSignatureTooLong                      = LengthError("signature too long")
+	ErrShareIdsCannotBeIdentical             = ValueError("share ids cannot be identical")
+	ErrShareQuantityTooSmall                 = ValueError("share quantity too small")
 	ErrTooManyItemsToProcess                 = LengthError("too many items to process")
 	ErrTransactionCountOutOfRange            = LengthError("transaction count out of range")
 	ErrTransactionAlreadyExists              = ExistsError("transaction already exists")
@@ -128,6 +138,7 @@ func (e LengthError) Error() string   { return string(e) }
 func (e NotFoundError) Error() string { return string(e) }
 func (e ProcessError) Error() string  { return string(e) }
 func (e RecordError) Error() string   { return string(e) }
+func (e ValueError) Error() string    { return string(e) }
 
 // determine the class of an error
 func IsErrExists(e error) bool   { _, ok := e.(ExistsError); return ok }
@@ -136,3 +147,4 @@ func IsErrLength(e error) bool   { _, ok := e.(LengthError); return ok }
 func IsErrNotFound(e error) bool { _, ok := e.(NotFoundError); return ok }
 func IsErrProcess(e error) bool  { _, ok := e.(ProcessError); return ok }
 func IsErrRecord(e error) bool   { _, ok := e.(RecordError); return ok }
+func IsErrValue(e error) bool    { _, ok := e.(ValueError); return ok }

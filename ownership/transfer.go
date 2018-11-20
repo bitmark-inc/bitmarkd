@@ -16,59 +16,43 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-// from storage/doc.go:
-//
-//   N ++ owner            - next count value to use for appending to owned items
-//                           data: count
-//   K ++ owner ++ count   - list of owned items
-//                           data: 00 ++ last transfer txId ++ last transfer BN ++ issue txId ++ issue BN ++ asset id
-//                           data: 01 ++ last transfer txId ++ last transfer BN ++ issue txId ++ issue BN ++ owned BN
-//   D ++ owner ++ txId    - position in list of owned items, for delete after transfer
-
 // to ensure synchronised ownership updates
 var toLock sync.Mutex
 
-const (
-	oneByteSize    = 1
-	uint64ByteSize = 8
-)
-
-// structure of the ownership record
-const (
-	FlagByteStart  = 0
-	FlagByteFinish = FlagByteStart + oneByteSize
-
-	TxIdStart  = FlagByteFinish
-	TxIdFinish = TxIdStart + merkle.DigestLength
-
-	TransferBlockNumberStart  = TxIdFinish
-	TransferBlockNumberFinish = TransferBlockNumberStart + uint64ByteSize
-
-	IssueTxIdStart  = TransferBlockNumberFinish
-	IssueTxIdFinish = IssueTxIdStart + merkle.DigestLength
-
-	IssueBlockNumberStart  = IssueTxIdFinish
-	IssueBlockNumberFinish = IssueBlockNumberStart + uint64ByteSize
-
-	// overlap flag==0x00
-	AssetIdentifierStart  = IssueBlockNumberFinish
-	AssetIdentifierFinish = AssetIdentifierStart + transactionrecord.AssetIdentifierLength
-
-	// overlap flag==0x01
-	OwnedBlockNumberStart  = IssueBlockNumberFinish
-	OwnedBlockNumberFinish = OwnedBlockNumberStart + uint64ByteSize
-)
+// from storage/setup.go:
+//
+// Ownership:
+//   OwnerNextCount  BN   - next count value to use for appending to owned items
+//   OwnerList       txId - list of owned items
+//   OwnerTxIndex    BN   - position in list of owned items, for delete after transfer
 
 // need to have a lock
+func Share(previousTxId merkle.Digest, transferTxId merkle.Digest, transferBlockNumber uint64, currentOwner *account.Account, balance uint64) {
+
+	// ensure single threaded
+	toLock.Lock()
+	defer toLock.Unlock()
+
+	// delete current ownership
+	transfer(previousTxId, transferTxId, transferBlockNumber, currentOwner, nil, balance)
+}
+
 func Transfer(previousTxId merkle.Digest, transferTxId merkle.Digest, transferBlockNumber uint64, currentOwner *account.Account, newOwner *account.Account) {
 
 	// ensure single threaded
 	toLock.Lock()
 	defer toLock.Unlock()
 
+	transfer(previousTxId, transferTxId, transferBlockNumber, currentOwner, newOwner, 0)
+}
+
+// need to hold the lock before calling this
+func transfer(previousTxId merkle.Digest, transferTxId merkle.Digest, transferBlockNumber uint64,
+	currentOwner *account.Account, newOwner *account.Account, quantity uint64) {
+
 	// get count for current owner record
 	dKey := append(currentOwner.Bytes(), previousTxId[:]...)
-	dCount := storage.Pool.OwnerDigest.Get(dKey)
+	dCount := storage.Pool.OwnerTxIndex.Get(dKey)
 	if nil == dCount {
 		logger.Criticalf("ownership.Transfer: dKey: %x", dKey)
 		logger.Criticalf("ownership.Transfer: block number: %d", transferBlockNumber)
@@ -86,53 +70,132 @@ func Transfer(previousTxId merkle.Digest, transferTxId merkle.Digest, transferBl
 		// 	logger.Criticalf("lbf: %#v", ow)
 		// }
 
-		logger.Panic("ownership.Transfer: OwnerDigest database corrupt")
+		logger.Panic("ownership.Transfer: OwnerTxIndex database corrupt")
 	}
 
 	// delete the current owners records
-	oKey := append(currentOwner.Bytes(), dCount...)
-	ownerData := storage.Pool.Ownership.Get(oKey)
-	if nil == ownerData {
-		logger.Criticalf("ownership.Transfer: no ownerData for key: %x", oKey)
+	ownerData, err := GetOwnerData(previousTxId)
+	if nil != err {
+		logger.Criticalf("ownership.Transfer: invalid owner data for tx id: %s  error: %s", previousTxId, err)
 		logger.Panic("ownership.Transfer: Ownership database corrupt")
 	}
-	storage.Pool.Ownership.Delete(oKey)
-	storage.Pool.OwnerDigest.Delete(dKey)
+
+	oKey := append(currentOwner.Bytes(), dCount...)
+	storage.Pool.OwnerList.Delete(oKey)
+	storage.Pool.OwnerTxIndex.Delete(dKey)
+
+	// and the old owner data
+	storage.Pool.OwnerData.Delete(previousTxId[:])
 
 	// if no new owner only above delete was needed
-	if nil == newOwner {
+	if nil == newOwner && 0 == quantity {
 		return
 	}
 
-	copy(ownerData[TxIdStart:TxIdFinish], transferTxId[:])
-	binary.BigEndian.PutUint64(ownerData[TransferBlockNumberStart:TransferBlockNumberFinish], transferBlockNumber)
-	create(transferTxId, ownerData, newOwner)
+	switch ownerData := ownerData.(type) {
+
+	case *AssetOwnerData:
+
+		// create a share - only from an asset
+		if 0 != quantity {
+
+			// convert initial quantity to 8 byte big endian
+			quantityBytes := make([]byte, 8)
+			binary.BigEndian.PutUint64(quantityBytes, quantity)
+
+			// the ID of the share is the issue id of the bitmark
+			shareId := ownerData.issueTxId
+
+			// the total quantity of this type of share
+			shareData := append(quantityBytes, transferTxId[:]...)
+			storage.Pool.Shares.Put(shareId[:], shareData)
+
+			// initially total quantity goes to the creator
+			fKey := append(currentOwner.Bytes(), shareId[:]...)
+			storage.Pool.ShareQuantity.Put(fKey, quantityBytes)
+
+			// convert to share and update
+			newOwnerData := ShareOwnerData{
+				transferBlockNumber: transferBlockNumber,
+				issueTxId:           ownerData.issueTxId,
+				issueBlockNumber:    ownerData.issueBlockNumber,
+				assetId:             ownerData.assetId,
+			}
+			create(transferTxId, newOwnerData, currentOwner)
+			return
+		}
+
+		// otherwise create new ownership record
+		ownerData.transferBlockNumber = transferBlockNumber
+		create(transferTxId, ownerData, newOwner)
+
+	case *BlockOwnerData:
+		// create a share - only from an asset
+		if 0 != quantity {
+
+			// panic if not an asset (this should have been checked earlier)
+			logger.Criticalf("ownership.Transfer: ownerData for key: %x is not an asset", oKey)
+			logger.Panic("ownership.Transfer: Ownership database corrupt")
+		}
+
+		// otherwise create new ownership record
+		ownerData.transferBlockNumber = transferBlockNumber
+		create(transferTxId, ownerData, newOwner)
+
+	case *ShareOwnerData:
+
+		// create a share - only from an asset
+		if 0 != quantity {
+
+			// panic if not an asset (this should have been checked earlier)
+			logger.Criticalf("ownership.Transfer: ownerData for key: %x is not an asset", oKey)
+			logger.Panic("ownership.Transfer: Ownership database corrupt")
+		}
+
+		// Note: only called on delete (block/store.go prevents share back to asset)
+
+		// convert to transfer and update
+		newOwnerData := AssetOwnerData{
+			transferBlockNumber: transferBlockNumber,
+			issueTxId:           ownerData.issueTxId,
+			issueBlockNumber:    ownerData.issueBlockNumber,
+			assetId:             ownerData.assetId,
+		}
+		create(transferTxId, newOwnerData, currentOwner)
+
+	default:
+		// panic if not an asset (this should have been checked earlier)
+		logger.Criticalf("ownership.Transfer: unhandled owner data type: %+v", ownerData)
+		logger.Panic("ownership.Transfer: missing owner data handler")
+	}
 }
 
 // internal creation routine, must be called with lock held
-func create(txId merkle.Digest, ownerData []byte, owner *account.Account) {
+// adds items to owner's list of properties and stores the owner data
+func create(txId merkle.Digest, ownerData OwnerData, owner *account.Account) {
 
-	// increment the count for new owner
+	// increment the count for owner
 	nKey := owner.Bytes()
-	count := storage.Pool.OwnerCount.Get(nKey)
+	count := storage.Pool.OwnerNextCount.Get(nKey)
 	if nil == count {
 		count = []byte{0, 0, 0, 0, 0, 0, 0, 0}
 	} else if uint64ByteSize != len(count) {
-		logger.Panic("CreateOwnership: OwnerCount database corrupt")
+		logger.Panic("OwnerNextCount database corrupt")
 	}
 	newCount := make([]byte, uint64ByteSize)
 	binary.BigEndian.PutUint64(newCount, binary.BigEndian.Uint64(count)+1)
-	storage.Pool.OwnerCount.Put(nKey, newCount)
+	storage.Pool.OwnerNextCount.Put(nKey, newCount)
 
-	// write the new owner
+	// write to the owner list
 	oKey := append(owner.Bytes(), count...)
+	storage.Pool.OwnerList.Put(oKey, txId[:])
 
-	// flag ++ txId ++ last transfer block number ++ issue txId ++ issue block number ++ AssetIdentifier/BlockNumber
-	storage.Pool.Ownership.Put(oKey, ownerData)
-
-	// write new digest record
+	// write new index record
 	dKey := append(owner.Bytes(), txId[:]...)
-	storage.Pool.OwnerDigest.Put(dKey, count)
+	storage.Pool.OwnerTxIndex.Put(dKey, count)
+
+	// save owner data record
+	storage.Pool.OwnerData.Put(txId[:], ownerData.Pack())
 }
 
 func CreateAsset(issueTxId merkle.Digest, issueBlockNumber uint64, assetId transactionrecord.AssetIdentifier, newOwner *account.Account) {
@@ -140,20 +203,12 @@ func CreateAsset(issueTxId merkle.Digest, issueBlockNumber uint64, assetId trans
 	toLock.Lock()
 	defer toLock.Unlock()
 
-	// 8 byte block number
-	blk := make([]byte, uint64ByteSize)
-	binary.BigEndian.PutUint64(blk, issueBlockNumber)
-
-	// create a new owner data value:
-	//   flag = OwnedAsset
-	//   issue id ++ zero  block number  -- replaced by sucessive: transfer id ++ transfer block number
-	//   issue id ++ issue block number  -- will remain constant
-	//   asset id
-	newData := append([]byte{byte(OwnedAsset)}, issueTxId[:]...)
-	newData = append(newData, []byte{0, 0, 0, 0, 0, 0, 0, 0}...)
-	newData = append(newData, issueTxId[:]...)
-	newData = append(newData, blk...)
-	newData = append(newData, assetId[:]...)
+	newData := &AssetOwnerData{
+		transferBlockNumber: issueBlockNumber,
+		issueTxId:           issueTxId,
+		issueBlockNumber:    issueBlockNumber,
+		assetId:             assetId,
+	}
 
 	// store to database
 	create(issueTxId, newData, newOwner)
@@ -164,31 +219,22 @@ func CreateBlock(issueTxId merkle.Digest, blockNumber uint64, newOwner *account.
 	toLock.Lock()
 	defer toLock.Unlock()
 
-	// 8 byte block number
-	blk := make([]byte, uint64ByteSize)
-	binary.BigEndian.PutUint64(blk, blockNumber)
-
-	// create a new owner data value:
-	//   flag = OwnedBlock
-	//   issue id ++ zero  block number  -- replaced by sucessive: transfer id ++ transfer block number
-	//   issue id ++ issue block number  -- will remain constant
-	//   block number
-	newData := append([]byte{byte(OwnedBlock)}, issueTxId[:]...)
-	newData = append(newData, []byte{0, 0, 0, 0, 0, 0, 0, 0}...)
-	newData = append(newData, issueTxId[:]...)
-	newData = append(newData, blk...)
-	newData = append(newData, blk...)
+	newData := &BlockOwnerData{
+		transferBlockNumber: blockNumber,
+		issueTxId:           issueTxId,
+		issueBlockNumber:    blockNumber,
+	}
 
 	// store to database
 	create(issueTxId, newData, newOwner)
 }
 
 // find the owner of a specific transaction
-func OwnerOf(txId merkle.Digest) *account.Account {
+func OwnerOf(txId merkle.Digest) (uint64, *account.Account) {
 
-	_, packed := storage.Pool.Transactions.GetNB(txId[:]) // drop block number
+	blockNumber, packed := storage.Pool.Transactions.GetNB(txId[:])
 	if nil == packed {
-		return nil
+		return 0, nil
 	}
 
 	transaction, _, err := transactionrecord.Packed(packed).Unpack(mode.IsTesting())
@@ -196,28 +242,28 @@ func OwnerOf(txId merkle.Digest) *account.Account {
 
 	switch tx := transaction.(type) {
 	case *transactionrecord.BitmarkIssue:
-		return tx.Owner
+		return blockNumber, tx.Owner
 
 	case *transactionrecord.BitmarkTransferUnratified:
-		return tx.Owner
+		return blockNumber, tx.Owner
 
 	case *transactionrecord.BitmarkTransferCountersigned:
-		return tx.Owner
+		return blockNumber, tx.Owner
 
 	case *transactionrecord.BlockFoundation:
-		return tx.Owner
+		return blockNumber, tx.Owner
 
 	case *transactionrecord.BlockOwnerTransfer:
-		return tx.Owner
+		return blockNumber, tx.Owner
 
 	default:
 		logger.Panicf("block.OwnerOf: incorrect transaction: %v", transaction)
-		return nil
+		return 0, nil
 	}
 }
 
-// find owner currently owns this transaction id
+// check owner currently owns this transaction id
 func CurrentlyOwns(owner *account.Account, txId merkle.Digest) bool {
 	dKey := append(owner.Bytes(), txId[:]...)
-	return nil != storage.Pool.OwnerDigest.Get(dKey)
+	return storage.Pool.OwnerTxIndex.Has(dKey)
 }

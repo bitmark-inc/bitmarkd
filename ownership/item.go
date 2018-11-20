@@ -5,6 +5,8 @@
 package ownership
 
 import (
+	"strings"
+
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/logger"
 )
@@ -16,6 +18,7 @@ type OwnedItem byte
 const (
 	OwnedAsset OwnedItem = iota
 	OwnedBlock OwnedItem = iota
+	OwnedShare OwnedItem = iota
 )
 
 // internal conversion
@@ -25,12 +28,14 @@ func toString(item OwnedItem) ([]byte, error) {
 		return []byte("Asset"), nil
 	case OwnedBlock:
 		return []byte("Block"), nil
+	case OwnedShare:
+		return []byte("Share"), nil
 	default:
 		return []byte{}, fault.ErrInvalidItem
 	}
 }
 
-// convert a currency to its string symbol
+// convert a owned item to its string symbol
 func (item OwnedItem) String() string {
 	s, err := toString(item)
 	if nil != err {
@@ -39,11 +44,26 @@ func (item OwnedItem) String() string {
 	return string(s)
 }
 
-// convert item to  text
+// convert item to text
 func (item OwnedItem) MarshalText() ([]byte, error) {
 	s, err := toString(item)
 	if nil != err {
-		logger.Panicf("invalid item enumeration: %d", item)
+		return nil, err
 	}
 	return s, nil
+}
+
+// convert test to Item
+func (item *OwnedItem) UnmarshalText(s []byte) error {
+	switch strings.ToLower(string(s)) {
+	case "asset":
+		*item = OwnedAsset
+	case "block":
+		*item = OwnedBlock
+	case "share":
+		*item = OwnedShare
+	default:
+		return fault.ErrNotOwnedItem
+	}
+	return nil
 }

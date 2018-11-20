@@ -19,6 +19,7 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
@@ -324,7 +325,7 @@ func processDataCommand(log *logger.L, arguments []string, options *Configuratio
 		if nil != err {
 			exitwithstatus.Message("block delete error: %s", err)
 		}
-		fmt.Printf("reduced height to: %d\n", block.GetHeight())
+		fmt.Printf("reduced height to: %d\n", blockheader.Height())
 
 	default:
 		exitwithstatus.Message("error: no such command: %s", command)

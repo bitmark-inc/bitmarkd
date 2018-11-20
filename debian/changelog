@@ -1,3 +1,10 @@
+bitmarkd (0.10.0-1) unstable; urgency=medium
+
+  * prototype of share transactions
+  * consider this as unstable and expect breaking changes on 0.10.x
+
+ -- Christopher Hall <hsw@bitmark.com>  Thu, 13 Dec 2018 07:07:35 +0000
+
 bitmarkd (0.9.1-1) unstable; urgency=medium
 
   * new transaction memory pool

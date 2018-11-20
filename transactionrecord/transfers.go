@@ -33,7 +33,7 @@ func (transfer *BitmarkTransferUnratified) GetSignature() account.Signature {
 }
 
 func (transfer *BitmarkTransferUnratified) GetCountersignature() account.Signature {
-	return account.Signature{}
+	return nil
 }
 
 // for countersigned
@@ -86,4 +86,30 @@ func (transfer *BlockOwnerTransfer) GetSignature() account.Signature {
 
 func (transfer *BlockOwnerTransfer) GetCountersignature() account.Signature {
 	return transfer.Countersignature
+}
+
+// for share
+
+func (share *BitmarkShare) GetLink() merkle.Digest {
+	return share.Link
+}
+
+func (share *BitmarkShare) GetPayment() *Payment {
+	return nil
+}
+
+func (share *BitmarkShare) GetOwner() *account.Account {
+	return nil
+}
+
+func (share *BitmarkShare) GetCurrencies() currency.Map {
+	return nil
+}
+
+func (share *BitmarkShare) GetSignature() account.Signature {
+	return share.Signature
+}
+
+func (share *BitmarkShare) GetCountersignature() account.Signature {
+	return nil
 }

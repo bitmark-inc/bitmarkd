@@ -178,6 +178,24 @@ func TestValidate(t *testing.T) {
 			addrBytes: "674b274f2be5747793d2529972d964f1cfe9f985",
 			valid:     true,
 		},
+		{ // OLD:
+			address: "2N2CSQaHQRzunj5SM9ZBwAPfJ3t85FMSze3A",
+			//version:   litecoin.TestnetScript,
+			//addrBytes: "2c7e3f628cd8c2028a7865e01ab8656f61da80913727ab467729",
+			//valid:     true,
+		},
+		{ // NEW:
+			address:   "QVZCXJGg21qpDd7CBHyBUMjV2WX5BJgkT6",
+			version:   litecoin.TestnetScript2,
+			addrBytes: "62323f26365818cd158b2f6edde30148f9077a66",
+			valid:     true,
+		},
+		{
+			address:   "Qb7NQ3PjhvVBLJYTzTc834txdokHmHfLiS",
+			version:   litecoin.TestnetScript2,
+			addrBytes: "9f206df4a0fb27ff6614309c26e46ae9457a030e",
+			valid:     true,
+		},
 		{
 			address: "LgcotVvFQgGHygDWCkkyqVgyctGTe3pH4G",
 		},
@@ -188,47 +206,6 @@ func TestValidate(t *testing.T) {
 			address: "2iKcv8HMvVtbHVEmfPPp52AMbjLQqgvbFYt",
 		},
 	}
-
-	/*
-
-			{
-				address:   "mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn",
-				version:   litecoin.Testnet,
-				addrBytes: "243f1394f44554f4ce3fd68649c19adc483ce924",
-				valid:     true,
-			},
-			{
-				address:   "2MzQwSSnBHWHqSAqtTVQ6v47XtaisrJa1Vc",
-				version:   litecoin.TestnetScript,
-				addrBytes: "4e9f39ca4688ff102128ea4ccda34105324305b0",
-				valid:     true,
-			},
-			{
-				address:   "17VZNX1SN5NtKa8UQFxwQbFeFc3iqRYhem",
-				version:   litecoin.Livenet,
-				addrBytes: "47376c6f537d62177a2c41c4ca9b45829ab99083",
-				valid:     true,
-			},
-			{
-				address:   "3EktnHQD7RiAE6uzMj2ZifT9YgRrkSgzQX",
-				version:   litecoin.LivenetScript,
-				addrBytes: "8f55563b9a19f321c211e9b9f38cdf686ea07845",
-				valid:     true,
-			},
-			{
-				address:   "3EktnHQD7RiAE6uzMj2ZifT9YgRrkSgzQZ",
-				version:   litecoin.LivenetScript,
-				addrBytes: "0000000000000000000000000000000000000000",
-				valid:     false,
-			},
-			{
-				address:   "mipcBbFg9gMiCh81Kj9tqqdgoZub1ZJRfn",
-				version:   litecoin.Testnet,
-				addrBytes: "0000000000000000000000000000000000000000",
-				valid:     false,
-			},
-		}
-	*/
 
 	for i, item := range addresses {
 		actualVersion, actualBytes, err := litecoin.ValidateAddress(item.address)
@@ -247,7 +224,7 @@ func TestValidate(t *testing.T) {
 			copy(expectedBytes[:], eb)
 
 			if actualVersion != item.version {
-				t.Errorf("%d: version mismatch actual: %d expected: %d", i, actualVersion, item.version)
+				t.Errorf("%d: version mismatch actual: %d expected: %d", i, actualVersion, int(item.version))
 			}
 			if actualBytes != expectedBytes {
 				t.Errorf("%d: bytes mismatch actual: %x expected: %x", i, actualBytes, expectedBytes)

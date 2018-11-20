@@ -13,6 +13,11 @@ const (
 	ReservoirTimeout = 45 * time.Minute
 )
 
+// the time for looking back at old payments when starting up
+const (
+	OldPaymentTime = 24 * time.Hour
+)
+
 // the maximum time before unverified asset is expired
 const (
 	AssetTimeout = 3 * ReservoirTimeout / 2

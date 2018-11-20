@@ -11,7 +11,7 @@ import (
 	"sync"
 
 	"github.com/bitmark-inc/bitmarkd/background"
-	"github.com/bitmark-inc/bitmarkd/blockdigest"
+	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/blockring"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -22,18 +22,14 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-// globals for background proccess
+// globals for background process
 type blockData struct {
 	sync.RWMutex // to allow locking
 
 	log *logger.L
 
-	height            uint64             // this is the current block Height
-	previousBlock     blockdigest.Digest // and its digest
-	previousVersion   uint16             // plus its version
-	previousTimestamp uint64             // plus its timestamp
-	rebuild           bool               // set if all indexes are being rebuild
-	blk               blockstore         // for sequencing block storage
+	rebuild bool       // set if all indexes are being rebuild
+	blk     blockstore // for sequencing block storage
 
 	// for background
 	background *background.T
@@ -65,19 +61,6 @@ func Initialise(recover bool) error {
 		return fault.ErrNotInitialised
 	}
 
-	// initialise block height and initialise previous block digest
-	globalData.height = genesis.BlockNumber
-	globalData.previousBlock = genesis.LiveGenesisDigest
-	globalData.previousVersion = 1
-	globalData.previousTimestamp = 0
-	if mode.IsTesting() {
-		globalData.previousBlock = genesis.TestGenesisDigest
-	}
-
-	log.Infof("block height: %d", globalData.height)
-	log.Infof("previous block: %v", globalData.previousBlock)
-	log.Infof("previous version: %d", globalData.previousVersion)
-
 	if recover {
 		log.Warn("start index rebuild…")
 		globalData.rebuild = true
@@ -88,7 +71,7 @@ func Initialise(recover bool) error {
 			log.Criticalf("index rebuild error: %s", err)
 			return err
 		}
-		log.Warn("inddex rebuild completed")
+		log.Warn("index rebuild completed")
 	}
 
 	// ensure not in rebuild mode
@@ -119,7 +102,7 @@ func Initialise(recover bool) error {
 	return nil
 }
 
-// shudown the block system
+// shutdown the block system
 func Finalise() error {
 
 	if !globalData.initialised {
@@ -155,17 +138,16 @@ func fillRingBuffer(log *logger.L) error {
 			log.Criticalf("failed to unpack block: %d from storage  error: %s", binary.BigEndian.Uint64(last.Key), err)
 			return err
 		}
-		globalData.previousVersion = header.Version
-		globalData.previousBlock = digest
-		globalData.previousTimestamp = header.Timestamp
-		globalData.height = header.Number // highest block number in database
 
-		log.Infof("highest block from storage: %d", globalData.height)
+		height := header.Number
+		blockheader.Set(height, digest, header.Version, header.Timestamp)
+
+		log.Infof("highest block from storage: %d", height)
 
 		// determine the start point for fetching last few blocks
 		n := genesis.BlockNumber + 1 // first real block (genesis block is not in db)
-		if globalData.height > blockring.Size+1 {
-			n = globalData.height - blockring.Size + 1
+		if height > blockring.Size+1 {
+			n = height - blockring.Size + 1
 		}
 		if n <= genesis.BlockNumber { // check just in case above calculation is wrong
 			log.Criticalf("value of n < 2: %d", n)

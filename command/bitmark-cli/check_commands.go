@@ -31,7 +31,7 @@ var (
 	ErrRequiredReceipt          = fault.InvalidError("receipt id is required")
 	ErrRequiredTransferTo       = fault.InvalidError("transfer to is required")
 	ErrRequiredTransferTx       = fault.InvalidError("transaction hex data is required")
-	ErrRequiredTransferTxId     = fault.InvalidError("transaction id is required")
+	ErrRequiredTxId             = fault.InvalidError("transaction id is required")
 )
 
 // identity is required, but not check the config file
@@ -50,24 +50,6 @@ func checkFileName(fileName string) (string, error) {
 	}
 
 	return fileName, nil
-}
-
-func checkNetwork(network string) (string, error) {
-	switch network {
-	case "":
-		network = configuration.DefaultNetwork
-	case "bitmark", "live", "production":
-		network = "bitmark"
-	case "testing", "test":
-		network = "testing"
-	case "dev", "development", "devel":
-		network = "development"
-	case "local":
-		network = "local"
-	default:
-		return "", ErrInvalidNetwork
-	}
-	return network, nil
 }
 
 // connect is required.
@@ -169,21 +151,16 @@ func checkAssetMetadata(meta string) (string, error) {
 	return meta, nil
 }
 
-func checkAssetQuantity(quantity string) (int, error) {
-	if "" == quantity {
-		return 1, nil
+// txid is required field ensure 32 hex bytes
+func checkTxId(txId string) (string, error) {
+	if 64 != len(txId) {
+		return "", ErrRequiredTxId
 	}
+	_, err := hex.DecodeString(txId)
+	if nil != err {
+		return "", err
 
-	i, err := strconv.Atoi(quantity)
-	return i, err
-}
-
-// transfer txid is required field
-func checkTransferTxId(txId string) (string, error) {
-	if "" == txId {
-		return "", ErrRequiredTransferTxId
 	}
-
 	return txId, nil
 }
 
@@ -237,15 +214,6 @@ func checkReceipt(receipt string) (string, error) {
 	}
 
 	return receipt, nil
-}
-
-func checkRecordCount(count string) (int, error) {
-	if "" == count {
-		return 20, nil
-	}
-
-	i, err := strconv.Atoi(count)
-	return i, err
 }
 
 // note: this returns apointer to tha actial config.Identity[i]

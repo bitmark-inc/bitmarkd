@@ -16,7 +16,7 @@ func runTransactionStatus(c *cli.Context) error {
 
 	m := c.App.Metadata["config"].(*metadata)
 
-	txId, err := checkTransferTxId(c.String("txid"))
+	txId, err := checkTxId(c.String("txid"))
 	if nil != err {
 		return err
 	}

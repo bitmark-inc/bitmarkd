@@ -11,6 +11,7 @@ import (
 	"os"
 
 	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/genesis"
 	"github.com/bitmark-inc/bitmarkd/storage"
@@ -30,7 +31,7 @@ func saveBinaryBlocks(filename string) error {
 
 	started := false
 
-	if block.GetHeight() <= genesis.BlockNumber {
+	if blockheader.Height() <= genesis.BlockNumber {
 		return fmt.Errorf("nothing to save")
 	}
 
@@ -98,13 +99,13 @@ func restoreBinaryBlocks(filename string) error {
 	}
 	defer fh.Close()
 
-	if block.GetHeight() > genesis.BlockNumber {
+	if blockheader.Height() > genesis.BlockNumber {
 		return fmt.Errorf("not overwriting existing data")
 	}
 
 loop:
 	for {
-		n := block.GetHeight()
+		n := blockheader.Height()
 		if n%100 == 0 {
 			fmt.Printf("%d", n)
 		} else {

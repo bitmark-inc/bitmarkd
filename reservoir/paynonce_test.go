@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 )
@@ -56,7 +56,7 @@ func TestNewPayNonceBitmark(t *testing.T) {
 	setup(t)
 	defer teardown(t)
 
-	d, n := block.Get()
+	d, n := blockheader.GetNew()
 	t.Logf("block: %d  %#v", n, d)
 
 	nonce := reservoir.NewPayNonce()
@@ -83,7 +83,7 @@ func TestNewPayNonceTesting(t *testing.T) {
 	setup(t, chain.Testing)
 	defer teardown(t)
 
-	d, n := block.Get()
+	d, n := blockheader.GetNew()
 	t.Logf("block: %d  %#v", n, d)
 
 	nonce := reservoir.NewPayNonce()

@@ -71,6 +71,12 @@ type PaymentDetail struct {
 	Amounts  map[string]uint64 // address(Base58) → value(Satoshis)
 }
 
+// track the shares
+type spendKey struct {
+	owner [64]byte
+	share merkle.Digest
+}
+
 type globalDataType struct {
 	sync.RWMutex
 
@@ -104,6 +110,9 @@ type globalDataType struct {
 	// payments that are valid but have no pending record
 	// ***** FIX THIS: need to expire
 	orphanPayments map[pay.PayId]*PaymentDetail
+
+	// tracking the shares
+	spend map[spendKey]uint64
 
 	// set once during initialise
 	initialised bool
@@ -141,6 +150,8 @@ func Initialise(reservoirDataFile string) error {
 	globalData.pendingPaidCount = 0
 
 	globalData.orphanPayments = make(map[pay.PayId]*PaymentDetail)
+
+	globalData.spend = make(map[spendKey]uint64)
 
 	globalData.filename = reservoirDataFile
 
@@ -303,12 +314,11 @@ func setVerified(payId pay.PayId, detail *PaymentDetail) bool {
 
 // check that the incoming payment details match the stored payments records
 func acceptablePayment(detail *PaymentDetail, payments []transactionrecord.PaymentAlternative) bool {
+
 next_currency:
 	for _, p := range payments {
 		acceptable := true
-		globalData.log.Infof("sv: payment: %#v", p)
 		for _, item := range p {
-			globalData.log.Infof("sv: item: %#v", item)
 			if item.Currency != detail.Currency {
 				continue next_currency
 			}
@@ -349,10 +359,16 @@ func Enable() {
 	globalData.Unlock()
 }
 
-func enabled() bool {
-	globalData.RLock()
-	defer globalData.RUnlock()
-	return globalData.enabled
+// reset spend map
+func ClearSpend() {
+	globalData.Lock()
+	defer globalData.Unlock()
+
+	if globalData.enabled {
+		logger.Panic("reservoir clear spend when not locked")
+	}
+
+	globalData.spend = make(map[spendKey]uint64)
 }
 
 // before calling Enable may need to run rescan to drop any
@@ -360,6 +376,9 @@ func enabled() bool {
 func Rescan() {
 	globalData.Lock()
 	defer globalData.Unlock()
+
+	//empty the spend map
+	globalData.spend = make(map[spendKey]uint64)
 
 	// pending
 
@@ -409,19 +428,19 @@ func rescanItem(item *transactionData) {
 
 	case *transactionrecord.BitmarkIssue:
 		if storage.Pool.Transactions.Has(txId[:]) {
-			DeleteByTxId(txId)
+			internalDeleteByTxId(txId)
 		}
 
 	case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
 		tr := tx.(transactionrecord.BitmarkTransfer)
 		link := tr.GetLink()
-		linkOwner := ownership.OwnerOf(link)
+		_, linkOwner := ownership.OwnerOf(link)
 		if nil == linkOwner {
 			logger.Criticalf("missing transaction record for link: %v refererenced by tx: %+v", link, tx)
 			logger.Panic("Transactions database is corrupt")
 		}
 		if !ownership.CurrentlyOwns(linkOwner, link) {
-			DeleteByTxId(txId)
+			internalDeleteByTxId(txId)
 		}
 
 	case *transactionrecord.BlockFoundation:
@@ -429,9 +448,40 @@ func rescanItem(item *transactionData) {
 
 	case *transactionrecord.BlockOwnerTransfer:
 		link := tx.Link
-		linkOwner := ownership.OwnerOf(link)
+		_, linkOwner := ownership.OwnerOf(link)
 		if !ownership.CurrentlyOwns(linkOwner, link) {
-			DeleteByTxId(txId)
+			internalDeleteByTxId(txId)
+		}
+
+	case *transactionrecord.BitmarkShare:
+		link := tx.Link
+		_, linkOwner := ownership.OwnerOf(link)
+		if nil == linkOwner {
+			logger.Criticalf("missing transaction record for link: %v refererenced by tx: %+v", link, tx)
+			logger.Panic("Transactions database is corrupt")
+		}
+		if !ownership.CurrentlyOwns(linkOwner, link) {
+			internalDeleteByTxId(txId)
+		}
+
+	case *transactionrecord.ShareGrant:
+		_, err := CheckGrantBalance(tx)
+		if nil != err {
+			internalDeleteByTxId(txId)
+		} else {
+			k := makeSpendKey(tx.Owner, tx.ShareId)
+			globalData.spend[k] += tx.Quantity
+		}
+
+	case *transactionrecord.ShareSwap:
+		_, _, err := CheckSwapBalances(tx)
+		if nil != err {
+			internalDeleteByTxId(txId)
+		} else {
+			k := makeSpendKey(tx.OwnerOne, tx.ShareIdOne)
+			globalData.spend[k] += tx.QuantityOne
+			k = makeSpendKey(tx.OwnerTwo, tx.ShareIdTwo)
+			globalData.spend[k] += tx.QuantityTwo
 		}
 
 	default:
@@ -443,9 +493,18 @@ func rescanItem(item *transactionData) {
 // remove a record using a transaction id
 // note, remove one issue in a block removes the whole issue block
 func DeleteByTxId(txId merkle.Digest) {
-	if enabled() {
+	globalData.Lock()
+	defer globalData.Unlock()
+
+	if globalData.enabled {
 		logger.Panic("reservoir delete tx id when not locked")
 	}
+
+	internalDeleteByTxId(txId)
+}
+
+// non-locking version of above
+func internalDeleteByTxId(txId merkle.Digest) {
 	if payId, ok := globalData.pendingIndex[txId]; ok {
 		internalDelete(payId)
 	}
@@ -456,7 +515,10 @@ func DeleteByTxId(txId merkle.Digest) {
 
 // remove a record using a link id
 func DeleteByLink(link merkle.Digest) {
-	if enabled() {
+	globalData.Lock()
+	defer globalData.Unlock()
+
+	if globalData.enabled {
 		logger.Panic("reservoir delete link when not locked")
 	}
 	if txId, ok := globalData.inProgressLinks[link]; ok {

@@ -5,16 +5,14 @@
 package rpccalls
 
 import (
+	"fmt"
+
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/keypair"
 	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
-)
-
-var (
-	ErrAssetRequestFail = fault.ProcessError("send asset request failed")
 )
 
 type AssetData struct {
@@ -47,26 +45,26 @@ func (client *Client) MakeAsset(assetConfig *AssetData) (*AssetResult, error) {
 	}
 
 	if 1 != len(getReply.Assets) {
-		return nil, ErrAssetRequestFail
+		return nil, fmt.Errorf("multple asset response")
 	}
 
 	switch getReply.Assets[0].Record {
 	case "AssetData":
 		ar, ok := getReply.Assets[0].Data.(map[string]interface{})
 		if !ok {
-			return nil, ErrAssetRequestFail
+			return nil, fmt.Errorf("missing asset data")
 		}
 
 		if ar["metadata"] != assetConfig.Metadata {
-			return nil, ErrAssetRequestFail
+			return nil, fmt.Errorf("mismatched asset metadata")
 		}
 		if ar["name"] != assetConfig.Name {
-			return nil, ErrAssetRequestFail
+			return nil, fmt.Errorf("mismatched asset name")
 		}
 
 		buffer, ok := getReply.Assets[0].AssetId.(string)
 		if !ok {
-			return nil, ErrAssetRequestFail
+			return nil, fmt.Errorf("missing asset id")
 		}
 
 		ai := &transactionrecord.AssetIdentifier{}
@@ -79,7 +77,7 @@ func (client *Client) MakeAsset(assetConfig *AssetData) (*AssetResult, error) {
 
 	default:
 		if nil != getReply.Assets[0].Data {
-			return nil, ErrAssetRequestFail
+			return nil, fmt.Errorf("non-asset response")
 		}
 	}
 

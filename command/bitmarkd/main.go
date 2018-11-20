@@ -10,12 +10,12 @@ import (
 	"os/signal"
 
 	//"runtime/pprof"
-	"strings"
 	"syscall"
 
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/blockring"
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/mode"
@@ -70,15 +70,6 @@ func main() {
 
 	if 1 != len(options["config-file"]) {
 		exitwithstatus.Message("%s: only one config-file option is required, %d were detected", program, len(options["config-file"]))
-	}
-
-	// extract command-line variables
-	variables := make(map[string]string)
-	for _, v := range options["set"] {
-		s := strings.SplitN(v, "=", 2)
-		if 2 == len(s) {
-			variables[s[0]] = s[1]
-		}
 	}
 
 	// read options and parse the configuration file
@@ -184,6 +175,15 @@ func main() {
 		exitwithstatus.Message("reservoir initialise error: %s", err)
 	}
 	defer reservoir.Finalise()
+
+	// block header data
+	log.Info("initialise blockheader")
+	err = blockheader.Initialise()
+	if nil != err {
+		log.Criticalf("blockheader initialise error: %s", err)
+		exitwithstatus.Message("blockheader initialise error: %s", err)
+	}
+	defer blockring.Finalise()
 
 	// block hash ring buffer
 	log.Info("initialise blockring")

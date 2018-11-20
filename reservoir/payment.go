@@ -6,10 +6,10 @@ package reservoir
 
 import (
 	"bytes"
+	"encoding/binary"
 
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/mode"
-	"github.com/bitmark-inc/bitmarkd/ownership"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
@@ -20,10 +20,13 @@ import (
 type PaymentSegment [currency.Count]*transactionrecord.Payment
 
 // get payment record from a specific block given the blocks 8 byte big endian key
-func getPayments(ownerData []byte, previousTransfer transactionrecord.BitmarkTransfer) []transactionrecord.PaymentAlternative {
+func getPayments(transferBlockNumber uint64, issueBlockNumber uint64, previousTransfer transactionrecord.BitmarkTransfer) []transactionrecord.PaymentAlternative {
 
-	tKey := ownerData[ownership.TransferBlockNumberStart:ownership.TransferBlockNumberFinish]
-	iKey := ownerData[ownership.IssueBlockNumberStart:ownership.IssueBlockNumberFinish]
+	tKey := make([]byte, 8)
+	binary.BigEndian.PutUint64(tKey, transferBlockNumber)
+
+	iKey := make([]byte, 8)
+	binary.BigEndian.PutUint64(iKey, issueBlockNumber)
 
 	// block owner (from issue) payment
 	// 0: issue block owner

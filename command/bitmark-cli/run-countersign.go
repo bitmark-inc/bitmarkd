@@ -18,7 +18,7 @@ func runCountersign(c *cli.Context) error {
 
 	m := c.App.Metadata["config"].(*metadata)
 
-	hex, err := checkTransferTx(c.String("transfer"))
+	hex, err := checkTransferTx(c.String("transaction"))
 	if nil != err {
 		return err
 	}
@@ -76,11 +76,11 @@ func runCountersign(c *cli.Context) error {
 	defer client.Close()
 
 	countersignConfig := &rpccalls.CountersignData{
-		Transfer: hex,
-		NewOwner: newOwnerKeyPair,
+		Transaction: hex,
+		NewOwner:    newOwnerKeyPair,
 	}
 
-	response, err := client.CountersignTransfer(countersignConfig)
+	response, err := client.Countersign(countersignConfig)
 	if nil != err {
 		return err
 	}

@@ -15,7 +15,7 @@ import (
 // to hold the type of the address
 type Version byte
 
-// to hold thefixed-length address bytes
+// to hold the fixed-length address bytes
 type AddressBytes [20]byte
 
 // from: https://en.bitcoin.it/wiki/List_of_address_prefixes
@@ -25,6 +25,7 @@ const (
 	LivenetScript2 Version = 50
 	Testnet        Version = 111
 	TestnetScript  Version = 196
+	TestnetScript2 Version = 58
 	vNull          Version = 0xff
 )
 
@@ -50,7 +51,8 @@ func ValidateAddress(address string) (Version, AddressBytes, error) {
 	}
 
 	switch Version(addr[0]) {
-	case Livenet, LivenetScript, LivenetScript2, Testnet, TestnetScript:
+	case Livenet, LivenetScript, LivenetScript2, Testnet, TestnetScript, TestnetScript2:
+		// OK
 	default:
 		return vNull, addressBytes, fault.ErrInvalidLitecoinAddress
 	}
@@ -63,7 +65,7 @@ func ValidateAddress(address string) (Version, AddressBytes, error) {
 // detect if version is a testnet value
 func IsTestnet(version Version) bool {
 	switch version {
-	case Testnet, TestnetScript:
+	case Testnet, TestnetScript, TestnetScript2:
 		return true
 	default:
 		return false

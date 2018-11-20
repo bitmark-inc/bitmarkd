@@ -17,7 +17,7 @@ import (
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/bitmark-inc/bitmarkd/account"
-	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/currency/bitcoin"
@@ -289,7 +289,7 @@ func (pub *publisher) process() {
 
 	pub.log.Tracef("message: %v", message)
 
-	message.Header.PreviousBlock, message.Header.Number = block.Get()
+	message.Header.PreviousBlock, message.Header.Number = blockheader.GetNew()
 
 	// add job to the queue
 	enqueueToJobQueue(message, transactions)

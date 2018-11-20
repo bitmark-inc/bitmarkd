@@ -13,6 +13,7 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/storage"
@@ -192,13 +193,13 @@ func (lstn *listener) process(socket *zmq.Socket) {
 			Version: lstn.version,
 			Chain:   mode.ChainName(),
 			Normal:  mode.Is(mode.Normal),
-			Height:  block.GetHeight(),
+			Height:  blockheader.Height(),
 		}
 		result, err = json.Marshal(info)
 		logger.PanicIfError("JSON encode error: %s", err)
 
 	case "N": // get block number
-		blockNumber := block.GetHeight()
+		blockNumber := blockheader.Height()
 		result = make([]byte, 8)
 		binary.BigEndian.PutUint64(result, blockNumber)
 

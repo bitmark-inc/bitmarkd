@@ -32,6 +32,11 @@ func TestConvert(t *testing.T) {
 			testnet: true,
 		},
 		{
+			btc:     "2N1jDsGRZPMATmQYXPH7Q5QeCFqk46eTyDA",
+			ltc:     "2N1jDsGRZPMATmQYXPH7Q5QeCFqk46eTyDA",
+			testnet: true,
+		},
+		{
 			btc: "17VZNX1SN5NtKa8UQFxwQbFeFc3iqRYhem",
 			ltc: "LRiWdjKGSjcwaNpdaPxEgcKQTpQzuT5g6d",
 		},

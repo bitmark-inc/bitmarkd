@@ -9,6 +9,7 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/asset"
+	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/blockring"
 	"github.com/bitmark-inc/bitmarkd/currency"
@@ -32,14 +33,19 @@ func StoreIncoming(packedBlock []byte) error {
 	reservoir.Disable()
 	defer reservoir.Enable()
 
+	reservoir.ClearSpend()
+
 	header, digest, data, err := blockrecord.ExtractHeader(packedBlock)
 	if nil != err {
 		return err
 	}
-	blockNumberKey := make([]byte, 8)
-	binary.BigEndian.PutUint64(blockNumberKey, header.Number)
+	thisBlockNumberKey := make([]byte, 8)
+	binary.BigEndian.PutUint64(thisBlockNumberKey, header.Number)
 
-	if globalData.previousBlock != header.PreviousBlock {
+	// get current block header
+	height, previousBlock, previousVersion, previousTimestamp := blockheader.Get()
+
+	if previousBlock != header.PreviousBlock {
 		return fault.ErrPreviousBlockDigestDoesNotMatch
 	}
 
@@ -49,14 +55,14 @@ func StoreIncoming(packedBlock []byte) error {
 	}
 
 	// block version must be the same or higher
-	if globalData.previousVersion > header.Version {
+	if previousVersion > header.Version {
 		return fault.ErrBlockVersionMustNotDecrease
 	}
 
 	// timestamp must be higher than previous
-	if globalData.previousTimestamp > header.Timestamp {
-		d := globalData.previousTimestamp - header.Timestamp
-		globalData.log.Errorf("prev: %d  next: %d  diff: %d  block: %d  version: %d", globalData.previousTimestamp, header.Timestamp, d, header.Number, header.Version)
+	if previousTimestamp > header.Timestamp {
+		d := previousTimestamp - header.Timestamp
+		globalData.log.Errorf("prev: %d  next: %d  diff: %d  block: %d  version: %d", previousTimestamp, header.Timestamp, d, header.Number, header.Version)
 
 		// allow more tolerance for old blocks up to a few minutes back in time
 		fail := false
@@ -78,11 +84,11 @@ func StoreIncoming(packedBlock []byte) error {
 
 	// extract the transaction data
 	type txn struct {
-		txId                   merkle.Digest
-		packed                 transactionrecord.Packed
-		unpacked               transactionrecord.Transaction
-		linkOwner              *account.Account
-		previousBlockNumberKey []byte
+		txId           merkle.Digest
+		packed         transactionrecord.Packed
+		unpacked       transactionrecord.Transaction
+		linkOwner      *account.Account
+		blockNumberKey []byte
 	}
 
 	txs := make([]txn, header.TransactionCount)
@@ -131,7 +137,7 @@ func StoreIncoming(packedBlock []byte) error {
 			case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
 				tr := tx.(transactionrecord.BitmarkTransfer)
 				link := tr.GetLink()
-				linkOwner := ownership.OwnerOf(link)
+				_, linkOwner := ownership.OwnerOf(link)
 				if nil == linkOwner {
 					logger.Criticalf("missing transaction record for link: %v refererenced by tx: %+v", link, tx)
 					logger.Panic("Transactions database is corrupt")
@@ -145,6 +151,15 @@ func StoreIncoming(packedBlock []byte) error {
 					return fault.ErrDoubleTransferAttempt
 				}
 
+				ownerData, err := ownership.GetOwnerData(link)
+				if nil != err {
+					return fault.ErrDoubleTransferAttempt
+				}
+				_, ok := ownerData.(*ownership.ShareOwnerData)
+				if ok {
+					return fault.ErrCannotConvertSharesBackToAssets
+				}
+
 				txs[i].linkOwner = linkOwner
 
 			case *transactionrecord.BlockFoundation:
@@ -155,7 +170,7 @@ func StoreIncoming(packedBlock []byte) error {
 
 			case *transactionrecord.BlockOwnerTransfer:
 				link := tx.Link
-				linkOwner := ownership.OwnerOf(link)
+				_, linkOwner := ownership.OwnerOf(link)
 				_, err = tx.Pack(linkOwner)
 				if nil != err {
 					return err
@@ -165,8 +180,8 @@ func StoreIncoming(packedBlock []byte) error {
 				}
 
 				// get the block number that is being transferred by this record
-				n := storage.Pool.BlockOwnerTxIndex.Get(link[:])
-				if nil == n {
+				thisBN := storage.Pool.BlockOwnerTxIndex.Get(link[:])
+				if nil == thisBN {
 					globalData.log.Criticalf("missing BlockOwnerTxIndex: %v", link)
 					logger.Panicf("missing BlockOwnerTxIndex: %v", link)
 				}
@@ -176,8 +191,51 @@ func StoreIncoming(packedBlock []byte) error {
 					return err
 				}
 
-				txs[i].previousBlockNumberKey = n
+				txs[i].blockNumberKey = thisBN
 				txs[i].linkOwner = linkOwner
+
+			case *transactionrecord.BitmarkShare:
+				link := tx.Link
+				_, linkOwner := ownership.OwnerOf(link)
+				if nil == linkOwner {
+					logger.Criticalf("missing transaction record for link: %v refererenced by tx: %+v", link, tx)
+					logger.Panic("Transactions database is corrupt")
+				}
+				_, err := tx.Pack(linkOwner)
+				if nil != err {
+					return err
+				}
+
+				ownerData, err := ownership.GetOwnerData(link)
+				if nil != err {
+					return fault.ErrDoubleTransferAttempt
+				}
+				_, ok := ownerData.(*ownership.AssetOwnerData)
+				if !ok {
+					return fault.ErrCanOnlyConvertAssetsToShares
+				}
+
+				txs[i].linkOwner = linkOwner
+
+			case *transactionrecord.ShareGrant:
+				_, err := tx.Pack(tx.Owner)
+				if nil != err {
+					return err
+				}
+				_, err = reservoir.CheckGrantBalance(tx)
+				if nil != err {
+					return err
+				}
+
+			case *transactionrecord.ShareSwap:
+				_, err := tx.Pack(tx.OwnerOne)
+				if nil != err {
+					return err
+				}
+				_, _, err = reservoir.CheckSwapBalances(tx)
+				if nil != err {
+					return err
+				}
 
 			default:
 				// this will only occur if the above code is not in sync with transactionrecord/unpack.go
@@ -267,19 +325,20 @@ func StoreIncoming(packedBlock []byte) error {
 		switch tx := item.unpacked.(type) {
 
 		case *transactionrecord.OldBaseData:
+			// already processed
 			logger.Panicf("should not occur: %+v", tx)
 
 		case *transactionrecord.AssetData:
 			assetId := tx.AssetId()
 			asset.Delete(assetId) // delete from pending cache
 			if !storage.Pool.Assets.Has(assetId[:]) {
-				storage.Pool.Assets.Put(assetId[:], blockNumberKey, item.packed)
+				storage.Pool.Assets.Put(assetId[:], thisBlockNumberKey, item.packed)
 			}
 
 		case *transactionrecord.BitmarkIssue:
 			reservoir.DeleteByTxId(item.txId) // delete from pending cache
 			if !storage.Pool.Transactions.Has(item.txId[:]) {
-				storage.Pool.Transactions.Put(item.txId[:], blockNumberKey, item.packed)
+				storage.Pool.Transactions.Put(item.txId[:], thisBlockNumberKey, item.packed)
 				ownership.CreateAsset(item.txId, header.Number, tx.AssetId, tx.Owner)
 			}
 
@@ -294,10 +353,11 @@ func StoreIncoming(packedBlock []byte) error {
 			// to prevent the possibility of a double-spend
 			reservoir.DeleteByLink(link)
 
-			storage.Pool.Transactions.Put(item.txId[:], blockNumberKey, item.packed)
+			storage.Pool.Transactions.Put(item.txId[:], thisBlockNumberKey, item.packed)
 			ownership.Transfer(link, item.txId, header.Number, item.linkOwner, tr.GetOwner())
 
 		case *transactionrecord.BlockFoundation:
+			// already processed
 			logger.Panicf("should not occur: %+v", tx)
 
 		case *transactionrecord.BlockOwnerTransfer:
@@ -310,16 +370,114 @@ func StoreIncoming(packedBlock []byte) error {
 			// to prevent the possibility of a double-spend
 			reservoir.DeleteByLink(link)
 
-			p, err := tx.Payments.Pack(mode.IsTesting())
+			// payments for the block being transferred
+			// not to be confused with this block's packed payments
+			pkPayments, err := tx.Payments.Pack(mode.IsTesting())
 			if nil != err {
 				// packing was checked earlier, an error here is memory corruption
 				logger.Panicf("pack, should not error: %s", err)
 			}
 
-			storage.Pool.Transactions.Put(item.txId[:], blockNumberKey, item.packed)
-			storage.Pool.BlockOwnerPayment.Put(item.previousBlockNumberKey, p)
-			storage.Pool.BlockOwnerTxIndex.Put(item.txId[:], blockNumberKey)
+			storage.Pool.Transactions.Put(item.txId[:], thisBlockNumberKey, item.packed)
+			storage.Pool.BlockOwnerPayment.Put(item.blockNumberKey, pkPayments)
+			storage.Pool.BlockOwnerTxIndex.Put(item.txId[:], item.blockNumberKey)
+			storage.Pool.BlockOwnerTxIndex.Delete(link[:])
 			ownership.Transfer(link, item.txId, header.Number, item.linkOwner, tx.Owner)
+
+		case *transactionrecord.BitmarkShare:
+
+			reservoir.DeleteByTxId(item.txId)
+			link := tx.Link
+
+			// when deleting a pending it is possible that the tx id
+			// it was holding was different to this tx id
+			// i.e. it is a duplicate so it also must be removed
+			// to prevent the possibility of a double-spend
+			reservoir.DeleteByLink(link)
+
+			storage.Pool.Transactions.Put(item.txId[:], thisBlockNumberKey, item.packed)
+			ownership.Share(link, item.txId, header.Number, item.linkOwner, tx.Quantity)
+
+		case *transactionrecord.ShareGrant:
+
+			reservoir.DeleteByTxId(item.txId)
+
+			oKey := append(tx.Owner.Bytes(), tx.ShareId[:]...)
+			rKey := append(tx.Recipient.Bytes(), tx.ShareId[:]...)
+
+			oAccountBalance, ok := storage.Pool.ShareQuantity.GetN(oKey)
+			if !ok {
+				// check was earlier
+				logger.Panic("read owner balance should not fail")
+			}
+
+			// if record does not exists the balance is zero
+			rAccountBalance, _ := storage.Pool.ShareQuantity.GetN(rKey)
+
+			// owner, share → recipient
+			oAccountBalance -= tx.Quantity
+			rAccountBalance += tx.Quantity
+
+			// update balances
+			if 0 == oAccountBalance {
+				storage.Pool.ShareQuantity.Delete(oKey)
+			} else {
+				storage.Pool.ShareQuantity.PutN(oKey, oAccountBalance)
+			}
+			storage.Pool.ShareQuantity.PutN(rKey, rAccountBalance)
+
+			storage.Pool.Transactions.Put(item.txId[:], thisBlockNumberKey, item.packed)
+
+		case *transactionrecord.ShareSwap:
+
+			reservoir.DeleteByTxId(item.txId)
+
+			ownerOneShareOneKey := append(tx.OwnerOne.Bytes(), tx.ShareIdOne[:]...)
+			ownerOneShareTwoKey := append(tx.OwnerOne.Bytes(), tx.ShareIdTwo[:]...)
+			ownerTwoShareOneKey := append(tx.OwnerTwo.Bytes(), tx.ShareIdOne[:]...)
+			ownerTwoShareTwoKey := append(tx.OwnerTwo.Bytes(), tx.ShareIdTwo[:]...)
+
+			ownerOneShareOneAccountBalance, ok := storage.Pool.ShareQuantity.GetN(ownerOneShareOneKey)
+			if !ok {
+				// check was earlier
+				logger.Panic("read owner one share one balance should not fail")
+			}
+
+			ownerTwoShareTwoAccountBalance, ok := storage.Pool.ShareQuantity.GetN(ownerTwoShareTwoKey)
+			if !ok {
+				// check was earlier
+				logger.Panic("read owner two share two balance should not fail")
+			}
+
+			// if record does not exist the balance is zero
+			ownerOneShareTwoAccountBalance, ok := storage.Pool.ShareQuantity.GetN(ownerOneShareTwoKey)
+			ownerTwoShareOneAccountBalance, ok := storage.Pool.ShareQuantity.GetN(ownerTwoShareOneKey)
+
+			// owner 1, share 1 → owner 2
+			ownerOneShareOneAccountBalance -= tx.QuantityOne
+			ownerTwoShareOneAccountBalance += tx.QuantityOne
+
+			// owner 2, share 2 → owner 1
+			ownerTwoShareTwoAccountBalance -= tx.QuantityTwo
+			ownerOneShareTwoAccountBalance += tx.QuantityTwo
+
+			// update database share one
+			if 0 == ownerOneShareOneAccountBalance {
+				storage.Pool.ShareQuantity.Delete(ownerOneShareOneKey)
+			} else {
+				storage.Pool.ShareQuantity.PutN(ownerOneShareOneKey, ownerOneShareOneAccountBalance)
+			}
+			storage.Pool.ShareQuantity.PutN(ownerTwoShareOneKey, ownerTwoShareOneAccountBalance)
+
+			// update database share two
+			if 0 == ownerTwoShareTwoAccountBalance {
+				storage.Pool.ShareQuantity.Delete(ownerTwoShareTwoKey)
+			} else {
+				storage.Pool.ShareQuantity.PutN(ownerTwoShareTwoKey, ownerTwoShareTwoAccountBalance)
+			}
+			storage.Pool.ShareQuantity.PutN(ownerOneShareTwoKey, ownerOneShareTwoAccountBalance)
+
+			storage.Pool.Transactions.Put(item.txId[:], thisBlockNumberKey, item.packed)
 
 		default:
 			globalData.log.Criticalf("unhandled transaction: %v", tx)
@@ -328,28 +486,27 @@ func StoreIncoming(packedBlock []byte) error {
 	}
 
 	// payment data
-	storage.Pool.BlockOwnerPayment.Put(blockNumberKey, packedPayments)
+	storage.Pool.BlockOwnerPayment.Put(thisBlockNumberKey, packedPayments)
 
 	// create the foundation record
 	foundationTxId := blockrecord.FoundationTxId(header, digest)
-	storage.Pool.Transactions.Put(foundationTxId[:], blockNumberKey, packedFoundation)
-	storage.Pool.BlockOwnerTxIndex.Put(foundationTxId[:], blockNumberKey)
+	storage.Pool.Transactions.Put(foundationTxId[:], thisBlockNumberKey, packedFoundation)
+
+	// current owner: either foundation or block owner transfer: tx id → owned block
+	storage.Pool.BlockOwnerTxIndex.Put(foundationTxId[:], thisBlockNumberKey)
 
 	ownership.CreateBlock(foundationTxId, header.Number, blockOwner)
 
-	expectedBlockNumber := globalData.height + 1
+	expectedBlockNumber := height + 1
 	if expectedBlockNumber != header.Number {
 		logger.Panicf("block.Store: out of sequence block: actual: %d  expected: %d", header.Number, expectedBlockNumber)
 	}
 
-	globalData.previousBlock = digest
-	globalData.previousVersion = header.Version
-	globalData.previousTimestamp = header.Timestamp
-	globalData.height = header.Number
+	blockheader.Set(header.Number, digest, header.Version, header.Timestamp)
 
-	// return early if rebuilding
+	// return early if rebuilding, otherwise store and update DB
 	if globalData.rebuild {
-		globalData.log.Warnf("rebuilt block: %d", globalData.height)
+		globalData.log.Warnf("rebuilt block: %d", header.Number)
 		return nil
 	}
 
@@ -360,6 +517,10 @@ func StoreIncoming(packedBlock []byte) error {
 	binary.BigEndian.PutUint64(blockNumber, header.Number)
 
 	storage.Pool.Blocks.Put(blockNumber, packedBlock)
+	globalData.log.Infof("stored block: %d", header.Number)
+
+	// rescan reservoir to drop any invalid transactions
+	reservoir.Rescan()
 
 	return nil
 }

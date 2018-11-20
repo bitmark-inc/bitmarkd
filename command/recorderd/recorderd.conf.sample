@@ -57,7 +57,7 @@ M.logging = {
     -- modules not overridden with get the value from DEFAULT
     -- the default value for DEFAULT is "critical"
     levels = {
-        DEFAULT = "debug",
+        DEFAULT = "info",
         -- DEFAULT = "debug",
 
         -- data

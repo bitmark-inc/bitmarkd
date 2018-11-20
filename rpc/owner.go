@@ -95,6 +95,13 @@ func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitm
 				log.Criticalf("block number is nil: %+v", r)
 				logger.Panicf("blockNumber is nil: %+v", r)
 			}
+		case ownership.OwnedShare:
+			ai := r.AssetId
+			if nil == ai {
+				log.Criticalf("asset id is nil: %+v", r)
+				logger.Panicf("asset id is nil: %+v", r)
+			}
+			assetIds[*r.AssetId] = struct{}{}
 		default:
 			log.Criticalf("unsupported item type: %d", r.Item)
 			logger.Panicf("unsupported item type: %d", r.Item)
@@ -153,7 +160,7 @@ asset_loop:
 			continue asset_loop
 		}
 
-		_, transaction := storage.Pool.Assets.GetNB(assetId[:])
+		inBlock, transaction := storage.Pool.Assets.GetNB(assetId[:])
 		if nil == transaction {
 			return fault.ErrAssetNotFound
 		}
@@ -174,6 +181,7 @@ asset_loop:
 
 		records[string(textAssetId)] = BitmarksRecord{
 			Record:  record,
+			InBlock: inBlock,
 			AssetId: assetId,
 			Data:    tx,
 		}

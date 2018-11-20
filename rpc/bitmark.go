@@ -31,9 +31,10 @@ type Bitmark struct {
 // ----------------
 
 type BitmarkTransferReply struct {
-	TxId     merkle.Digest                                   `json:"txId"`
-	PayId    pay.PayId                                       `json:"payId"`
-	Payments map[string]transactionrecord.PaymentAlternative `json:"payments"`
+	TxId      merkle.Digest                                   `json:"txId"`
+	BitmarkId merkle.Digest                                   `json:"bitmarkId"`
+	PayId     pay.PayId                                       `json:"payId"`
+	Payments  map[string]transactionrecord.PaymentAlternative `json:"payments"`
 }
 
 func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransferCountersigned, reply *BitmarkTransferReply) error {
@@ -78,10 +79,12 @@ func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransferCou
 	// only first result needs to be considered
 	payId := stored.Id
 	txId := stored.TxId
+	bitmarkId := stored.IssueTxId
 	packedTransfer := stored.Packed
 
 	log.Debugf("id: %v", txId)
 	reply.TxId = txId
+	reply.BitmarkId = bitmarkId
 	reply.PayId = payId
 	reply.Payments = make(map[string]transactionrecord.PaymentAlternative)
 
@@ -186,7 +189,7 @@ loop:
 			}
 			provenance = append(provenance, h)
 
-			_, packedAsset := storage.Pool.Assets.GetNB(tx.AssetId[:])
+			inBlock, packedAsset := storage.Pool.Assets.GetNB(tx.AssetId[:])
 			if nil == packedAsset {
 				break loop
 			}
@@ -200,6 +203,7 @@ loop:
 				Record:  record,
 				IsOwner: false,
 				TxId:    nil,
+				InBlock: inBlock,
 				AssetId: tx.AssetId,
 				Data:    assetTx,
 			}
@@ -215,6 +219,11 @@ loop:
 
 			provenance = append(provenance, h)
 			id = tr.GetLink()
+
+		case *transactionrecord.BitmarkShare:
+			h.IsOwner = true // share terminates a provenance chain so will always be owner
+			provenance = append(provenance, h)
+			id = tx.Link
 
 		default:
 			break loop

@@ -180,11 +180,11 @@ func (d *discoverer) Run(args interface{}, shutdown <-chan struct{}) {
 }
 
 func (d *discoverer) retrievePastTxs() {
-	originTime := time.Now().Add(-constants.ReservoirTimeout)
+	originTime := time.Now().Add(-constants.OldPaymentTime)
 
 retrieve_loop:
 	for currency, handler := range globalData.handlers {
-		d.log.Infof("start to fetch possible %s txs since time at %d", currency, originTime.Unix())
+		d.log.Infof("fetch possible %s txs from: %d (%v)", currency, originTime.Unix(), originTime)
 
 		d.req.SendMessage(currency, originTime.Unix())
 		msg, err := d.req.RecvMessageBytes(0)

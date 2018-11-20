@@ -49,7 +49,6 @@ func newFreeIssueIter() *freeIssueIter {
 		<-control
 		iter.run = false
 		close(data)
-		globalData.log.Warn("*********************************************** F")
 	}(data, control)
 
 	return iter
@@ -98,7 +97,6 @@ func newPaidIssueIter() *paidIssueIter {
 		<-control
 		iter.run = false
 		close(data)
-		globalData.log.Warn("*********************************************** P")
 	}(data, control)
 
 	return iter
@@ -147,7 +145,6 @@ func newTransactionIter() *transactionIter {
 		<-control
 		iter.run = false
 		close(data)
-		globalData.log.Warn("*********************************************** T")
 	}(data, control)
 
 	return iter
@@ -235,9 +232,9 @@ func FetchVerified(count int) ([]merkle.Digest, []byte, error) {
 		}
 	}
 
-	if enabled() {
-		globalData.RLock()
-		defer globalData.RUnlock()
+	globalData.RLock()
+	defer globalData.RUnlock()
+	if globalData.enabled {
 
 		//----------------------------------------------------------------------------------------
 		log := globalData.log

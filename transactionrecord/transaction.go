@@ -26,10 +26,13 @@ const (
 	BaseDataTag                     = TagType(iota) // OBSOLETE: block owner
 	AssetDataTag                    = TagType(iota) // create asset
 	BitmarkIssueTag                 = TagType(iota) // issue asset
-	BitmarkTransferUnratifiedTag    = TagType(iota) // OBSOLETE: transfer
-	BitmarkTransferCountersignedTag = TagType(iota) // transfer
+	BitmarkTransferUnratifiedTag    = TagType(iota) // single signed transfer
+	BitmarkTransferCountersignedTag = TagType(iota) // two signature transfer
 	BlockFoundationTag              = TagType(iota) // block owner
 	BlockOwnerTransferTag           = TagType(iota) // block owner transfer
+	BitmarkShareTag                 = TagType(iota) // convert bitmark to a quantity of shares
+	ShareGrantTag                   = TagType(iota) // grant some value to another account
+	ShareSwapTag                    = TagType(iota) // atomically swap shares between accounts
 
 	// this item must be last
 	InvalidTag = TagType(iota)
@@ -130,7 +133,7 @@ type BlockFoundation struct {
 	Payments  currency.Map      `json:"payments"`     // contents depend on version
 	Owner     *account.Account  `json:"owner"`        // base58
 	Nonce     uint64            `json:"nonce,string"` // unsigned 0..N
-	Signature account.Signature `json:"signature,"`   // hex
+	Signature account.Signature `json:"signature"`    // hex
 }
 
 // the unpacked Block Owner Transfer Data structure
@@ -142,7 +145,38 @@ type BlockOwnerTransfer struct {
 	Version          uint64            `json:"version"`          // reflects combination of supported currencies
 	Payments         currency.Map      `json:"payments"`         // require length and contents depend on version
 	Owner            *account.Account  `json:"owner"`            // base58
-	Signature        account.Signature `json:"signature,"`       // hex
+	Signature        account.Signature `json:"signature"`        // hex
+	Countersignature account.Signature `json:"countersignature"` // hex: corresponds to owner in this record
+}
+
+// turn a bitmark provenance chain into a fungible share
+type BitmarkShare struct {
+	Link      merkle.Digest     `json:"link"`      // previous record
+	Quantity  uint64            `json:"quantity"`  // initial balance quantity
+	Signature account.Signature `json:"signature"` // hex
+}
+
+// grant some shares to another (one way transfer)
+type ShareGrant struct {
+	ShareId          merkle.Digest     `json:"shareId"`          // share = issue id
+	Quantity         uint64            `json:"quantity"`         // shares to transfer > 0
+	Owner            *account.Account  `json:"owner"`            // base58
+	Recipient        *account.Account  `json:"recipient"`        // base58
+	BeforeBlock      uint64            `json:"beforeBlock"`      // expires when chain height > before block
+	Signature        account.Signature `json:"signature"`        // hex
+	Countersignature account.Signature `json:"countersignature"` // hex: corresponds to owner in this record
+}
+
+// swap some shares to another (two way transfer)
+type ShareSwap struct {
+	ShareIdOne       merkle.Digest     `json:"shareIdOne"`       // share = issue id
+	QuantityOne      uint64            `json:"quantityOne"`      // shares to transfer > 0
+	OwnerOne         *account.Account  `json:"ownerOne"`         // base58
+	ShareIdTwo       merkle.Digest     `json:"shareIdTwo"`       // share = issue id
+	QuantityTwo      uint64            `json:"quantityTwo"`      // shares to transfer > 0
+	OwnerTwo         *account.Account  `json:"ownerTwo"`         // base58
+	BeforeBlock      uint64            `json:"beforeBlock"`      // expires when chain height > before block
+	Signature        account.Signature `json:"signature"`        // hex
 	Countersignature account.Signature `json:"countersignature"` // hex: corresponds to owner in this record
 }
 
@@ -179,6 +213,15 @@ func RecordName(record interface{}) (string, bool) {
 	case *BlockOwnerTransfer, BlockOwnerTransfer:
 		return "BlockOwnerTransfer", true
 
+	case *BitmarkShare, BitmarkShare:
+		return "ShareBalance", true
+
+	case *ShareGrant, ShareGrant:
+		return "ShareGrant", true
+
+	case *ShareSwap, ShareSwap:
+		return "ShareSwap", true
+
 	default:
 		return "*unknown*", false
 	}
@@ -209,5 +252,3 @@ func (p *Packed) UnmarshalText(s []byte) error {
 	_, err := hex.Decode(*p, s)
 	return err
 }
-
-// to detect record types

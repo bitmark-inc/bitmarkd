@@ -93,13 +93,12 @@ outer_loop:
 				storage.Pool.Transactions.Delete(txId[:])
 				reservoir.DeleteByTxId(txId)
 				link := tr.GetLink()
-				linkOwner := ownership.OwnerOf(link)
+				blockNumber, linkOwner := ownership.OwnerOf(link)
 				if nil == linkOwner {
 					log.Criticalf("missing transaction record for: %v", link)
 					logger.Panic("Transactions database is corrupt")
 				}
-				// just use zero here, as the fork restore should overwrite with new chain, including updated block number
-				ownership.Transfer(txId, link, 0, tr.GetOwner(), linkOwner)
+				ownership.Transfer(txId, link, blockNumber, tr.GetOwner(), linkOwner)
 
 			case *transactionrecord.BlockFoundation:
 				if nil == blockOwner {
@@ -109,16 +108,188 @@ outer_loop:
 
 			case *transactionrecord.BlockOwnerTransfer:
 				txId := packedTransaction.MakeLink()
-				key := txId[:]
-				storage.Pool.Transactions.Delete(key)
+				storage.Pool.Transactions.Delete(txId[:])
 				reservoir.DeleteByTxId(txId)
-				linkOwner := ownership.OwnerOf(tx.Link)
+				blockNumber, linkOwner := ownership.OwnerOf(tx.Link)
 				if nil == linkOwner {
 					log.Criticalf("missing transaction record for: %v", tx.Link)
 					logger.Panic("Transactions database is corrupt")
 				}
-				// just use zero here, as the fork restore should overwrite with new chain, including updated block number
-				ownership.Transfer(txId, tx.Link, 0, tx.Owner, linkOwner)
+				ownerdata, err := ownership.GetOwnerDataB(txId[:])
+				if nil != err {
+					log.Criticalf("missing ownership for: %s", txId)
+					logger.Panic("Ownership database is corrupt")
+				}
+				blockOwnerdata, ok := ownerdata.(*ownership.BlockOwnerData)
+				if !ok {
+					log.Criticalf("expected block ownership but read: %+v", ownerdata)
+					logger.Panic("Ownership database is corrupt")
+				}
+
+				ownership.Transfer(txId, tx.Link, blockNumber, tx.Owner, linkOwner)
+
+				blockNumberKey := make([]byte, 8)
+				binary.BigEndian.PutUint64(blockNumberKey, blockOwnerdata.IssueBlockNumber())
+
+				// put block ownership back
+				_, previous := storage.Pool.Transactions.GetNB(tx.Link[:])
+
+				blockTransaction, _, err := transactionrecord.Packed(previous).Unpack(mode.IsTesting())
+				if nil != err {
+					logger.Criticalf("invalid error: %s", txId, err)
+					logger.Panic("Transaction database is corrupt")
+				}
+				switch prevTx := blockTransaction.(type) {
+				case *transactionrecord.BlockFoundation:
+					err := transactionrecord.CheckPayments(prevTx.Version, mode.IsTesting(), prevTx.Payments)
+					if nil != err {
+						logger.Criticalf("invalid tx id: %s  error: %s", txId, err)
+						logger.Panic("Transaction database is corrupt")
+					}
+					packedPayments, err := prevTx.Payments.Pack(mode.IsTesting())
+					if nil != err {
+						logger.Criticalf("invalid tx id: %s  error: %s", txId, err)
+						logger.Panic("Transaction database is corrupt")
+					}
+					// payment data
+					storage.Pool.BlockOwnerPayment.Put(blockNumberKey, packedPayments)
+					storage.Pool.BlockOwnerTxIndex.Put(tx.Link[:], blockNumberKey)
+					storage.Pool.BlockOwnerTxIndex.Delete(txId[:])
+
+				case *transactionrecord.BlockOwnerTransfer:
+					err := transactionrecord.CheckPayments(prevTx.Version, mode.IsTesting(), prevTx.Payments)
+					if nil != err {
+						logger.Criticalf("invalid tx id: %s  error: %s", txId, err)
+						logger.Panic("Transaction database is corrupt")
+					}
+					packedPayments, err := prevTx.Payments.Pack(mode.IsTesting())
+					if nil != err {
+						logger.Criticalf("invalid tx id: %s  error: %s", txId, err)
+						logger.Panic("Transaction database is corrupt")
+					}
+					// payment data
+					storage.Pool.BlockOwnerPayment.Put(blockNumberKey, packedPayments)
+					storage.Pool.BlockOwnerTxIndex.Put(tx.Link[:], blockNumberKey)
+					storage.Pool.BlockOwnerTxIndex.Delete(txId[:])
+
+				default:
+					logger.Criticalf("invalid block transfer link: %+v", prevTx)
+					logger.Panic("Transaction database is corrupt")
+				}
+
+			case *transactionrecord.BitmarkShare:
+				txId := packedTransaction.MakeLink()
+				blockNumber, linkOwner := ownership.OwnerOf(tx.Link)
+				if nil == linkOwner {
+					log.Criticalf("missing transaction record for: %v", tx.Link)
+					logger.Panic("Transactions database is corrupt")
+				}
+
+				ownerData, err := ownership.GetOwnerData(txId)
+				if nil != err {
+					logger.Criticalf("invalid ownerData for tx id: %s", txId)
+					logger.Panic("Ownership database is corrupt")
+				}
+				shareData, ok := ownerData.(*ownership.ShareOwnerData)
+				if !ok {
+					logger.Criticalf("invalid ownerData: %+v for tx id: %s", ownerData, txId)
+					logger.Panic("Ownership database is corrupt")
+				}
+
+				storage.Pool.Transactions.Delete(txId[:])
+				reservoir.DeleteByTxId(txId)
+
+				shareId := shareData.IssueTxId()
+
+				fKey := append(linkOwner.Bytes(), shareId[:]...)
+				storage.Pool.Shares.Delete(shareId[:])
+				storage.Pool.ShareQuantity.Delete(fKey)
+
+				ownership.Transfer(txId, tx.Link, blockNumber, linkOwner, linkOwner)
+
+			case *transactionrecord.ShareGrant:
+
+				txId := packedTransaction.MakeLink()
+
+				storage.Pool.Transactions.Delete(txId[:])
+				reservoir.DeleteByTxId(txId)
+
+				oKey := append(tx.Owner.Bytes(), tx.ShareId[:]...)
+				rKey := append(tx.Recipient.Bytes(), tx.ShareId[:]...)
+
+				// this could be zero
+				oAccountBalance, _ := storage.Pool.ShareQuantity.GetN(oKey)
+
+				// this cannot be zero
+				rAccountBalance, ok := storage.Pool.ShareQuantity.GetN(rKey)
+				if !ok {
+					log.Criticalf("missing balance record for: %v share id: %x", tx.Recipient, tx.ShareId)
+					logger.Panic("ShareQuantity database is corrupt")
+				}
+
+				// owner, share ← recipient
+				rAccountBalance -= tx.Quantity
+				oAccountBalance += tx.Quantity
+
+				// update balances
+				if 0 == rAccountBalance {
+					storage.Pool.ShareQuantity.Delete(rKey)
+				} else {
+					storage.Pool.ShareQuantity.PutN(rKey, rAccountBalance)
+				}
+				storage.Pool.ShareQuantity.PutN(oKey, oAccountBalance)
+
+			case *transactionrecord.ShareSwap:
+
+				txId := packedTransaction.MakeLink()
+
+				storage.Pool.Transactions.Delete(txId[:])
+				reservoir.DeleteByTxId(txId)
+
+				ownerOneShareOneKey := append(tx.OwnerOne.Bytes(), tx.ShareIdOne[:]...)
+				ownerOneShareTwoKey := append(tx.OwnerOne.Bytes(), tx.ShareIdTwo[:]...)
+				ownerTwoShareOneKey := append(tx.OwnerTwo.Bytes(), tx.ShareIdOne[:]...)
+				ownerTwoShareTwoKey := append(tx.OwnerTwo.Bytes(), tx.ShareIdTwo[:]...)
+
+				// either of these balances could be zero
+				ownerOneShareOneAccountBalance, _ := storage.Pool.ShareQuantity.GetN(ownerOneShareOneKey)
+				ownerTwoShareTwoAccountBalance, _ := storage.Pool.ShareQuantity.GetN(ownerTwoShareTwoKey)
+
+				// these balances cannot be zero
+				ownerOneShareTwoAccountBalance, ok := storage.Pool.ShareQuantity.GetN(ownerOneShareTwoKey)
+				if !ok {
+					log.Criticalf("missing balance record for owner 1: %v share id 2: %x", tx.OwnerOne, tx.ShareIdTwo)
+					logger.Panic("ShareQuantity database is corrupt")
+				}
+				ownerTwoShareOneAccountBalance, ok := storage.Pool.ShareQuantity.GetN(ownerTwoShareOneKey)
+				if !ok {
+					log.Criticalf("missing balance record for owner 2: %v share id 1: %x", tx.OwnerTwo, tx.ShareIdOne)
+					logger.Panic("ShareQuantity database is corrupt")
+				}
+
+				// owner 1, share 1 ← owner 2
+				ownerTwoShareOneAccountBalance -= tx.QuantityOne
+				ownerOneShareOneAccountBalance += tx.QuantityOne
+
+				// owner 2, share 2 ← owner 1
+				ownerOneShareTwoAccountBalance -= tx.QuantityTwo
+				ownerTwoShareTwoAccountBalance += tx.QuantityTwo
+
+				// update database share one
+				if 0 == ownerTwoShareOneAccountBalance {
+					storage.Pool.ShareQuantity.Delete(ownerTwoShareOneKey)
+				} else {
+					storage.Pool.ShareQuantity.PutN(ownerTwoShareOneKey, ownerTwoShareOneAccountBalance)
+				}
+				storage.Pool.ShareQuantity.PutN(ownerOneShareOneKey, ownerOneShareOneAccountBalance)
+
+				// update database share two
+				if 0 == ownerOneShareTwoAccountBalance {
+					storage.Pool.ShareQuantity.Delete(ownerOneShareTwoKey)
+				} else {
+					storage.Pool.ShareQuantity.PutN(ownerOneShareTwoKey, ownerOneShareTwoAccountBalance)
+				}
+				storage.Pool.ShareQuantity.PutN(ownerTwoShareTwoKey, ownerTwoShareTwoAccountBalance)
 
 			default:
 				logger.Panicf("unexpected transaction: %v", transaction)
@@ -144,6 +315,7 @@ outer_loop:
 		}
 		// remove remaining block data
 		storage.Pool.BlockOwnerTxIndex.Delete(foundationTxId[:])
+		storage.Pool.BlockOwnerPayment.Delete(blockNumberKey)
 		storage.Pool.Blocks.Delete(blockNumberKey)
 
 		// fetch previous block number

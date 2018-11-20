@@ -1,0 +1,676 @@
+#!/bin/sh
+# tests:
+#   issue → countersigned → unratified
+#   share → grant → swap
+#   block transfer
+#   paid issue → countersigned
+
+# users
+#   local-bitmark-cli.json need these names defined)
+#   node_N must be the accounts of the bitmarkds
+user_1=first
+user_2=second
+user_3=node-1
+user_4=node-2
+user_5=node-3
+user_6=node-4
+
+# first asset
+asset_name_1='first test asset'
+asset_meta_1='desc\u0000description of asset one'
+asset_fp_1='01abf3455d5af8dbbec222bb79ea4b2abb88589c39da5bbe312f6ddd5b0875a7b954a2684df16dcd9e7b7881d1b6e03d9e18cb69c42a8f8f28502c9c5fd8efa585'
+
+# second asset
+asset_name_2='second test asset'
+asset_meta_2='desc\u0000description of asset two'
+asset_fp_2='017df4886c8352a566b9695b3acae38fc544c3d721d59825e074450d5d30999fc9beea1e1740a40c147626eec670c97fef87c4d936802ca9a4b7c9cc3bef3c30a4'
+
+# regtest addresses for block owner transfer + private keys
+btc_1='2N5yyS646Kts3i6u9tRzyWkW5g619bkJ3CP'  # priv='cMyE7Fh5Nvkx2GZQpq6KpCBQzz7Soj1fn1HMjHiUA2WRLyzP2VL8'
+ltc_1='Qby5deiUsVkp8PJHrfnFrWuQfYfheTquYM'   # priv='cSQE4ESDyYgY7tZ12ECd4MrwpVtM3XoitZtRtYG1CRY1A3ihbDcW'
+
+btc_2="2N95f5yThatYUrwMnAqoxXL5UNs8HYmeinL"  # priv='cTPAdf5MNmc8Fycf9NSkzRQjXJYbTnUhNeXbvVXtWbytsTFbzEaw'
+ltc_2="Qb7NQ3PjhvVBLJYTzTc834txdokHmHfLiS"   # priv='cN9tHtJSz35wyHh4XFot7iKpeLmUqApMQcT2dkFHxF1Rxtarm6Pw'
+
+
+# BTC or LTC - set in NEW-CHAIN
+currency=LTC
+
+# verbose output
+verbose=yes
+
+# required programs
+programs='jq bitmark-cli bitmark-wallet run-bitcoin run-litecoin'
+
+# usage message
+USAGE() {
+  if [ -n "${1}" ]
+     then
+       printf 'error:'
+       printf -- "$@"
+       printf '\n'
+  fi
+cat <<EOF
+usage: $(basename "${0}") command
+    new [btc|ltc]    - build block chain from zero (only once)
+    issue [btc|ltc]  - issue more assest and transfer some
+    bt [btc|ltc]     - transfer block ownership
+    balance          - list balance records
+    ownership        - list ownership records
+    show             - list all
+EOF
+
+  exit 1
+}
+
+ERROR() {
+  printf 'error:'
+  printf -- "$@"
+  printf '\n'
+  exit 1
+}
+
+VERBOSE() {
+  [ X"${verbose}" = X"yes" ] || return
+  printf -- "$@"
+  printf '\n'
+}
+
+SET-CURRENCY() {
+  case "${1}" in
+    ([bB][tT][cC])
+      currency=BTC
+      ;;
+    ([lL][tT][cC])
+      currency=LTC
+      ;;
+    (*)
+      ERROR 'invalid currency: %s' "${1}"
+      ;;
+  esac
+}
+
+# global result value
+r=''
+
+CLI() {
+  local user verbose check
+  verbose=no
+  check=yes
+  while :
+  do
+    case "${1}" in
+      (-v)
+        verbose=yes
+        shift
+        ;;
+      (-n)
+        check=no
+        shift
+        ;;
+      (*)
+        break
+        ;;
+      esac
+  done
+  user="${1}"; shift
+  [ X"${verbose}" = X"yes" ] && printf '\033[1;33mCLI[%s]: \033[1;31m%s\033[0m\n' "${user}" "$*"
+  r=$(bitmark-cli -i "${user}" -p 1234567890 -n local "$@")
+  if [ X"${check}" = X"yes" -a $? -ne 0 ]
+  then
+    [ -n "${r}" ] && ERROR 'failed: stdout:\n%s' "${r}"
+    ERROR 'failed: stdout empty'
+  fi
+}
+
+PRETTY() {
+  if [ $# -eq 0 ]
+  then
+    printf '%s' "${r}" | jq .
+  else
+    printf '%s' "${r}" | jq "$@"
+  fi
+}
+
+READY() {
+  local s mode
+  s=0
+  printf 'waiting for sync -'
+  while :
+  do
+    CLI -n "${user_1}" bitmarkInfo 2> /dev/null
+    mode=$(GET .mode)
+    [ X"${mode}" = X"Normal" ] && break
+    SPINNER 1
+  done
+  printf '\bOK\n'
+  SET chain .chain  blocks .blocks  version .version  uptime .uptime
+}
+
+BITMARKD() {
+  READY
+  printf 'chain: %s  blocks: %s  version: %s  uptime: %s\n\n' "${chain}" "${blocks}" "${version}" "${uptime}"
+}
+
+WAIT() {
+  local txid n status
+  txid="${1}"; shift
+
+  n=-1
+  printf '\033[1;36mwaiting for: \033[1;35m%s\033[0m -' "${txid}"
+  while :
+  do
+    CLI "${user_1}" status -t "${txid}"
+    status=$(GET .status)
+    [ X"${status}" = X"Confirmed" ] && break
+    [ X"${status}" = X"Verified" ] && n=1
+    SPINNER "${n}"
+  done
+  printf '\b\033[1;32mOK\033[0m\n\n'
+}
+
+SPINNER() {
+  local s n i
+  n="${1}"
+  s=0
+  for i in 1 2 3 4 5 6 7 8
+  do
+    sleep 0.15
+    case "${s}" in
+      (0)
+        printf -- '\b—'
+        ;;
+      (1)
+        printf -- '\b\\'
+        ;;
+      (2)
+        printf -- '\b|'
+        ;;
+      (3)
+        printf -- '\b/'
+        ;;
+    esac
+    s=$(( s + n ))
+    [ ${s} -lt 0 ] && s=3
+    [ ${s} -gt 3 ] && s=0
+  done
+}
+
+GET() {
+  printf '%s' "${r}" | jq --raw-output "${1}"
+}
+
+# assign global vars
+# pairs of: global-var jq-expression ...
+SET() {
+  local var val jq_expr
+  [ $(( $# % 2 )) -ne 0 ] && ERROR 'SET with odd parameters: %s' "$#"
+  while [ $# -ge 2 ]
+  do
+    var="${1}"; shift
+    jq_expr="${1}"; shift
+    val=$(GET "${jq_expr}")
+    eval ${var}=\"\${val}\"
+  done
+}
+
+PAY() {
+  txid="${1}"; shift
+  pay="${1}"; shift
+
+  sleep 1
+  CLI "${user_1}" status -t "${txid}"
+  status=$(GET .status)
+
+  if [ X"${status}" = X"Pending" ]
+  then
+    eval env WALLET_PASSWORD='1234567890' ${pay} | jq .
+    printf '\n'
+    eval GEN-${currency}
+  fi
+  WAIT "${txid}"
+}
+
+GEN-BTC() {
+  run-bitcoin generate 1
+}
+
+GEN-LTC() {
+  run-litecoin generate 1
+}
+
+SHOW-BALANCE() {
+  local q i user
+  q='
+def s($f): ("          "+($f|tostring))[-10:] + " ";
+def n($f): (($f|tostring)+"          ")[:10] + " ";
+.balances | reduce .[] as $item (
+  ""; . + n($name) + $item.shareId + " " + s($item.confirmed) + s($item.spend) + s($item.available) + "\n")'
+
+  printf -- 'Identity   Share Id                                                          Confirmed      Spend  Available\n'
+  printf -- '========== ================================================================ ========== ========== ==========\n'
+
+  i=1
+  while :
+  do
+    eval user=\"\${user_${i}}\"
+    [ -z "${user}" ] && break
+    CLI "${user_1}" balance -o "${user}"
+    PRETTY --join-output --arg name "${user}" "${q}"
+    i=$(( i + 1 ))
+  done
+
+  printf '\n'
+}
+
+SHOW-OWNERSHIP() {
+  local q i user
+  q='
+def s($f): ("          "+($f|tostring))[-10:] + " ";
+def n($f): (($f|tostring)+"          ")[:10] + " ";
+.tx as $tx |
+(.data | reduce .[] as $item (
+  ""; . + n($name) + n($item.item) + $item.txId + " " +
+  if "Block" == $item.item
+    then
+      if $item.blockNumber == $tx[$item.txId].inBlock
+        then "           BLOCK:" + s($item.blockNumber)
+        else  s($tx[$item.txId].inBlock) + "BLOCK:" + s($item.blockNumber)
+      end
+    else s($tx[$item.txId].inBlock) + $tx[$item.assetId].data.name
+  end +
+  "\n"))'
+
+  printf -- 'Identity   Record     Transaction Id                                                   In Block   Name\n'
+  printf -- '========== ========== ================================================================ ========== ====================\n'
+
+  i=1
+  while :
+  do
+    eval user=\"\${user_${i}}\"
+    [ -z "${user}" ] && break
+    CLI "${user_1}" owned -c 100 -o "${user}"
+    PRETTY --join-output --arg name "${user}" "${q}"
+    i=$(( i + 1 ))
+  done
+
+  printf '\n'
+}
+
+OWNER-OF-BLOCK() {
+  local block_number q i user txid
+  block_number="${1}"; shift
+  [ -z "${block_number}" ] && block_number=2
+  [ "${block_number}" -lt 2 ] && block_number=2
+
+  q='
+.data | reduce .[] as $item (
+  ""; . + if "Block"==$item.item and ($block_number|tonumber)==$item.blockNumber then $item.txId else "" end)'
+
+  block_owner=''
+
+  i=1
+  while :
+  do
+    eval user=\"\${user_${i}}\"
+    [ -z "${user}" ] && break
+    CLI "${user_1}" owned -c 100 -o "${user}"
+    txid=$(PRETTY --join-output --arg name "${user}" --arg block_number "${block_number}" "${q}")
+    if [ -n "${txid}" ]
+    then
+      block_owner="${user}"
+      block_txid="${txid}"
+      break
+    fi
+    i=$(( i + 1 ))
+  done
+  [ -z "${block_owner}" ] && ERROR 'cannot find owner of block: %d' "${block_number}"
+  [ -z "${block_txid}" ] && ERROR 'cannot tx id of block: %d' "${block_number}"
+}
+
+
+# ------------------------------------------------------------------------------------------
+
+NEW-CHAIN() {
+
+  BITMARKD
+  if [ "${blocks}" != 1 ]
+  then
+    ERROR 'need empty block chain, not height: %s' "${blocks}"
+  fi
+
+  # ------------------------------------------------------------------------------------------
+  # Issue
+  # ------------------------------------------------------------------------------------------
+
+  CLI -v "${user_1}" create -a "${asset_name_1}" -m "${asset_meta_1}" -f "${asset_fp_1}" -q 1
+  SET issue_id '.issueIds[0]'
+  VERBOSE 'issue_id: %s' "${issue_id}"
+
+  WAIT "${issue_id}"
+
+  # ------------------------------------------------------------------------------------------
+  # Countersigned transfer
+  # ------------------------------------------------------------------------------------------
+
+  CLI -v "${user_1}" transfer -r "${user_2}" -t "${issue_id}"
+  SET transfer .transfer
+  VERBOSE 'transfer: %s' "${transfer}"
+
+  CLI -v "${user_2}" countersign -t "${transfer}"
+  SET txid .transferId  pay .commands.${currency}
+  VERBOSE 'tx id: %s' "${txid}"
+  VERBOSE 'pay: %s' "${pay}"
+
+  PAY "${txid}" "${pay}"
+
+  SHOW-OWNERSHIP
+
+  # ------------------------------------------------------------------------------------------
+  # Unratified transfer
+  # ------------------------------------------------------------------------------------------
+
+  CLI -v "${user_2}" transfer -r "${user_1}" -t "${txid}" -u
+  SET txid .transferId  pay .commands.${currency}
+  VERBOSE 'tx id: %s' "${txid}"
+  VERBOSE 'pay: %s' "${pay}"
+
+  PAY "${txid}" "${pay}"
+
+  # ------------------------------------------------------------------------------------------
+  # Share
+  # ------------------------------------------------------------------------------------------
+
+  CLI -v "${user_1}" share -q 1000 -t "${txid}"
+  SET txid .txId  share_1_id .shareId  pay .commands.${currency}
+  VERBOSE 'tx id: %s' "${txid}"
+  VERBOSE 'share id: %s' "${share_1_id}"
+  VERBOSE 'pay: %s' "${pay}"
+
+  PAY "${txid}" "${pay}"
+
+  # ------------------------------------------------------------------------------------------
+  # Provenance
+  # ------------------------------------------------------------------------------------------
+
+  CLI -v "${user_1}" provenance -t "${txid}"
+  PRETTY
+
+  # ------------------------------------------------------------------------------------------
+
+  SHOW-OWNERSHIP
+  SHOW-BALANCE
+
+  # ------------------------------------------------------------------------------------------
+  # Grant
+  # ------------------------------------------------------------------------------------------
+
+  CLI -v "${user_1}" grant -r "${user_2}" -q 50 -s "${share_1_id}"
+  SET grant .grant
+  VERBOSE 'grant: %s' "${grant}"
+
+  CLI -v "${user_2}" countersign -t "${grant}"
+  SET txid .grantId  pay .commands.${currency}
+  VERBOSE 'tx id: %s' "${txid}"
+  VERBOSE 'pay: %s' "${pay}"
+
+  PAY "${txid}" "${pay}"
+
+  # ------------------------------------------------------------------------------------------
+
+  SHOW-BALANCE
+
+  # ------------------------------------------------------------------------------------------
+  # Issue 2
+  # ------------------------------------------------------------------------------------------
+
+  CLI -v "${user_2}" create -a "${asset_name_2}" -m "${asset_meta_2}" -f "${asset_fp_2}" -q 1
+  SET issue_id '.issueIds[0]'
+  VERBOSE 'issue: %s' "${issue_id}"
+
+  WAIT "${issue_id}"
+  SHOW-OWNERSHIP
+
+  # ------------------------------------------------------------------------------------------
+  # Share
+  # ------------------------------------------------------------------------------------------
+
+  CLI -v "${user_2}" share -q 5000000 -t "${issue_id}"
+  SET txid .txId  share_2_id .shareId  pay .commands.${currency}
+  VERBOSE 'tx id: %s' "${txid}"
+  VERBOSE 'share 2 id: %s' "${share_2_id}"
+  VERBOSE 'pay: %s' "${pay}"
+
+  PAY "${txid}" "${pay}"
+
+  # ------------------------------------------------------------------------------------------
+
+  SHOW-OWNERSHIP
+  SHOW-BALANCE
+
+  # ------------------------------------------------------------------------------------------
+  # Swap
+  # ------------------------------------------------------------------------------------------
+
+  CLI -v "${user_2}" swap -s "${share_2_id}" -q 743548 -r "${user_1}" -S "${share_1_id}" -Q 123
+  SET swap .swap
+  VERBOSE 'swap: %s' "${swap}"
+
+  CLI -v "${user_1}" countersign -t "${swap}"
+  SET txid .swapId  pay .commands.${currency}
+  VERBOSE 'tx id: %s' "${txid}"
+  VERBOSE 'pay: %s' "${pay}"
+
+  PAY "${txid}" "${pay}"
+
+  SHOW-BALANCE
+
+  # ------------------------------------------------------------------------------------------
+  # transfer some block to new owners
+  # ------------------------------------------------------------------------------------------
+
+  DO-BLOCKS
+
+  # ------------------------------------------------------------------------------------------
+  # multiple issues
+  # ------------------------------------------------------------------------------------------
+
+  DO-ISSUES
+
+  # ------------------------------------------------------------------------------------------
+}
+
+DO-ISSUES() {
+
+  BITMARKD
+  if [ "${blocks}" -le 1 ]
+  then
+    ERROR 'need longer block chain, not height: %s' "${blocks}"
+  fi
+
+  ISSUE-NN 10 4 2 1 2
+  ISSUE-NN 10 6 1 2 1
+}
+
+ISSUE-NN() {
+  local qty tr asset name meta fp user_x user_y n
+
+  qty="${1}" ; shift
+  tr="${1}" ; shift
+  asset="${1}" ; shift
+  user_x="${1}" ; shift
+  user_y="${1}" ; shift
+
+  [ -z "${qty}" -o -z "${tr}" -o -z "${asset}" -o -z "${user_x}" -o -z "${user_y}" ] && ERROR 'ISSUE-TEN: parameters cannot be empty'
+  [ "${qty}" -lt "${tr}" ] && ERROR 'ISSUE-TEN: qty: %d < tranfer: %d' "${qty}" "${tr}"
+
+  eval name=\"\${asset_name_${asset}}\"
+  eval meta=\"\${asset_meta_${asset}}\"
+  eval fp=\"\${asset_fp_${asset}}\"
+
+  [ -z "${name}" -o -z "${meta}" -o -z "${fp}" ] && ERROR 'ISSUE-TEN: asset cannot be empty'
+
+  eval user_x=\"\${user_${user_x}}\"
+  eval user_y=\"\${user_${user_y}}\"
+
+  [ -z "${user_x}" -o -z "${user_y}" ] && ERROR 'ISSUE-TEN: users cannot be empty'
+  [ X"${user_x}" = X"${user_y}" ] && ERROR 'ISSUE-TEN: userss cannot be identical'
+
+  # ------------------------------------------------------------------------------------------
+  # multiple issues
+  # ------------------------------------------------------------------------------------------
+
+  CLI -v "${user_x}" create -a "${name}" -m "${meta}" -f "${fp}" -q "${qty}"
+  SET issue_id '.issueIds[0]'  pay .commands.${currency}
+  VERBOSE 'issue_id: %s' "${issue_id}"
+
+  n=0
+  while [ ${n} -lt ${tr} ]
+  do
+    n=$(( n + 1 ))
+    eval SET issue_id_${n} '.issueIds['"${n}"']'
+  done
+
+  PAY "${issue_id}" "${pay}"
+
+  SHOW-OWNERSHIP
+
+  # ------------------------------------------------------------------------------------------
+  # Countersigned transfer
+  # ------------------------------------------------------------------------------------------
+
+  n=0
+  while [ ${n} -lt ${tr} ]
+  do
+    n=$(( n + 1 ))
+    eval issue_id=\"\${issue_id_${n}}\"
+
+    CLI -v "${user_x}" transfer -r "${user_y}" -t "${issue_id}"
+    SET transfer .transfer
+    VERBOSE 'transfer: %s' "${transfer}"
+
+    CLI -v "${user_y}" countersign -t "${transfer}"
+    SET txid .transferId  pay .commands.${currency}
+    VERBOSE 'tx id: %s' "${txid}"
+    VERBOSE 'pay: %s' "${pay}"
+
+    PAY "${txid}" "${pay}"
+
+  done
+
+  SHOW-OWNERSHIP
+
+  # ------------------------------------------------------------------------------------------
+}
+
+DO-BLOCKS() {
+
+  BITMARKD
+  if [ "${blocks}" -le 1 ]
+  then
+    ERROR 'need longer block chain, not height: %s' "${blocks}"
+  fi
+
+  # ------------------------------------------------------------------------------------------
+  # Block Ownership Transfers
+  # ------------------------------------------------------------------------------------------
+
+  BLOCK-TRANSFER 2 "${user_1}" "${btc_1}" "${ltc_1}"
+  BLOCK-TRANSFER 3 "${user_1}" "${btc_1}" "${ltc_1}"
+  BLOCK-TRANSFER 4 "${user_2}" "${btc_2}" "${ltc_2}"
+  BLOCK-TRANSFER 5 "${user_2}" "${btc_2}" "${ltc_2}"
+
+  # secon transfer
+  BLOCK-TRANSFER 3 "${user_2}" "${btc_2}" "${ltc_2}"
+  BLOCK-TRANSFER 5 "${user_1}" "${btc_1}" "${ltc_1}"
+
+  # ------------------------------------------------------------------------------------------
+
+  SHOW-OWNERSHIP
+
+  # ------------------------------------------------------------------------------------------
+}
+
+BLOCK-TRANSFER() {
+  local n to_user btc_address ltc_address
+  n="${1}"; shift
+  to_user="${1}"; shift
+  btc_address="${1}"; shift
+  ltc_address="${1}"; shift
+
+
+  # ------------------------------------------------------------------------------------------
+  # Find owner
+  # ------------------------------------------------------------------------------------------
+
+  OWNER-OF-BLOCK "${n}"
+
+  # ------------------------------------------------------------------------------------------
+  # block owner transfer
+  # ------------------------------------------------------------------------------------------
+
+  CLI -v "${block_owner}" blocktransfer -t "${block_txid}" -r "${to_user}" -b "${btc_address}" -l "${ltc_address}"
+  SET block_transfer .blockTransfer
+  VERBOSE 'blocktransfer: %s' "${block_transfer}"
+
+  CLI -v "${to_user}" countersign -t "${block_transfer}"
+  SET txid .blockTransferId  pay .commands.${currency}
+  VERBOSE 'tx id: %s' "${txid}"
+  VERBOSE 'pay: %s' "${pay}"
+
+  PAY "${txid}" "${pay}"
+
+  # ------------------------------------------------------------------------------------------
+  # Provenance
+  # ------------------------------------------------------------------------------------------
+
+  CLI -v "${to_user}" provenance -t "${txid}"
+  PRETTY
+
+  # ------------------------------------------------------------------------------------------
+}
+
+
+# ------------------------------------------------------------------------------------------
+# Main Program
+# ------------------------------------------------------------------------------------------
+
+# check programs are available
+for p in ${programs}
+do
+  x=$(which "${p}")
+  [ $? -ne 0 ] && ERROR 'program: "%s" is not on the path' "${p}"
+  [ -x "${x}" ] || ERROR 'program: "%s" (%s) is not executable' "${p}" "${x}"
+done
+
+# decode command
+case "${1}" in
+  (new)
+    SET-CURRENCY "${2}"
+    NEW-CHAIN
+    ;;
+  (bt)
+    SET-CURRENCY "${2}"
+    DO-BLOCKS
+    ;;
+  (issue)
+    SET-CURRENCY "${2}"
+    DO-ISSUES
+    ;;
+  (balance)
+    BITMARKD
+    SHOW-BALANCE
+    ;;
+  (ownership)
+    BITMARKD
+    SHOW-OWNERSHIP
+    ;;
+  (show)
+    BITMARKD
+    SHOW-OWNERSHIP
+    SHOW-BALANCE
+    ;;
+  (*)
+    USAGE 'invalid argument: %s' "${1}"
+    ;;
+esac

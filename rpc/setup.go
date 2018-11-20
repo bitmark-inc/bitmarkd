@@ -64,6 +64,9 @@ const (
 
 	rateLimitBlockOwner = 200
 	rateBurstBlockOwner = 100
+
+	rateLimitShare = 200
+	rateBurstShare = 100
 )
 
 // globals
@@ -314,6 +317,11 @@ func createRPCServer(log *logger.L, version string) *rpc.Server {
 		limiter: rate.NewLimiter(rateLimitBlockOwner, rateBurstBlockOwner),
 	}
 
+	share := &Share{
+		log:     log,
+		limiter: rate.NewLimiter(rateLimitShare, rateBurstShare),
+	}
+
 	server := rpc.NewServer()
 
 	server.Register(assets)
@@ -323,6 +331,7 @@ func createRPCServer(log *logger.L, version string) *rpc.Server {
 	server.Register(node)
 	server.Register(transaction)
 	server.Register(blockOwner)
+	server.Register(share)
 
 	return server
 }

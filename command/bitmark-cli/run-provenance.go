@@ -19,14 +19,14 @@ func runProvenance(c *cli.Context) error {
 
 	m := c.App.Metadata["config"].(*metadata)
 
-	txId, err := checkTransferTxId(c.String("txid"))
+	txId, err := checkTxId(c.String("txid"))
 	if nil != err {
 		return err
 	}
 
-	count, err := checkRecordCount(c.String("count"))
-	if nil != err {
-		return err
+	count := c.Int("count")
+	if count <= 0 {
+		return fmt.Errorf("invalid count: %d", count)
 	}
 
 	if m.verbose {

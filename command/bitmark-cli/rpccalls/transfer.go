@@ -28,7 +28,7 @@ type TransferData struct {
 	TxId     string
 }
 
-type CountersignData struct {
+type TransferCountersignData struct {
 	Transfer string
 	NewOwner *keypair.KeyPair
 }
@@ -36,12 +36,13 @@ type CountersignData struct {
 // JSON data to output after transfer completes
 type TransferReply struct {
 	TransferId merkle.Digest                                   `json:"transferId"`
+	BitmarkId  merkle.Digest                                   `json:"bitmarkId"`
 	PayId      pay.PayId                                       `json:"payId"`
 	Payments   map[string]transactionrecord.PaymentAlternative `json:"payments"`
 	Commands   map[string]string                               `json:"commands,omitempty"`
 }
 
-type SingleSignedReply struct {
+type TransferSingleSignedReply struct {
 	Identity string `json:"identity"`
 	Transfer string `json:"transfer"`
 }
@@ -94,7 +95,7 @@ func (client *Client) Transfer(transferConfig *TransferData) (*TransferReply, er
 	return &response, nil
 }
 
-func (client *Client) SingleSignedTransfer(transferConfig *TransferData) (*SingleSignedReply, error) {
+func (client *Client) SingleSignedTransfer(transferConfig *TransferData) (*TransferSingleSignedReply, error) {
 
 	var link merkle.Digest
 	err := link.UnmarshalText([]byte(transferConfig.TxId))
@@ -112,7 +113,7 @@ func (client *Client) SingleSignedTransfer(transferConfig *TransferData) (*Singl
 
 	client.printJson("Transfer Request", transfer)
 
-	response := SingleSignedReply{
+	response := TransferSingleSignedReply{
 		Identity: transfer.GetOwner().String(),
 		Transfer: hex.EncodeToString(packed),
 	}
@@ -120,38 +121,13 @@ func (client *Client) SingleSignedTransfer(transferConfig *TransferData) (*Singl
 	return &response, nil
 }
 
-func (client *Client) CountersignTransfer(countersignConfig *CountersignData) (*TransferReply, error) {
-
-	b, err := hex.DecodeString(countersignConfig.Transfer)
-	if nil != err {
-		return nil, err
-	}
-
-	bCs := append(b, 0x01, 0x00) // one-byte countersignature to allow unpack to succeed
-	r, _, err := transactionrecord.Packed(bCs).Unpack(client.testnet)
-	if nil != err {
-		return nil, err
-	}
-
-	transfer := &transactionrecord.BitmarkTransferCountersigned{}
-
-	switch tx := r.(type) {
-	case *transactionrecord.BitmarkTransferCountersigned:
-		transfer.Link = tx.Link
-		transfer.Owner = tx.Owner
-		transfer.Signature = tx.Signature
-	default:
-		return nil, ErrNotTransferRecord
-	}
-	// attach signature
-	signature := ed25519.Sign(countersignConfig.NewOwner.PrivateKey, b)
-	transfer.Countersignature = signature[:]
+func (client *Client) CountersignTransfer(transfer *transactionrecord.BitmarkTransferCountersigned) (*TransferReply, error) {
 
 	client.printJson("Transfer Request", transfer)
 
 	var reply rpc.BitmarkTransferReply
-	err = client.client.Call("Bitmark.Transfer", transfer, &reply)
-	if err != nil {
+	err := client.client.Call("Bitmark.Transfer", transfer, &reply)
+	if nil != err {
 		return nil, err
 	}
 

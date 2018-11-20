@@ -30,11 +30,6 @@ type BlockTransferData struct {
 	TxId     string
 }
 
-type BlockTransferCountersignData struct {
-	BlockTransfer string
-	NewOwner      *keypair.KeyPair
-}
-
 // JSON data to output after blockTransfer completes
 type BlockTransferReply struct {
 	BlockTransferId merkle.Digest                                   `json:"blockTransferId"`
@@ -74,39 +69,11 @@ func (client *Client) SingleSignedBlockTransfer(blockTransferConfig *BlockTransf
 	return &response, nil
 }
 
-func (client *Client) CountersignBlockTransfer(countersignConfig *BlockTransferCountersignData) (*BlockTransferReply, error) {
-
-	b, err := hex.DecodeString(countersignConfig.BlockTransfer)
-	if nil != err {
-		return nil, err
-	}
-
-	r, _, err := transactionrecord.Packed(b).Unpack(client.testnet)
-	if nil != err {
-		return nil, err
-	}
-
-	blockTransfer := &transactionrecord.BlockOwnerTransfer{}
-
-	switch tx := r.(type) {
-	case *transactionrecord.BlockOwnerTransfer:
-		blockTransfer.Link = tx.Link
-		blockTransfer.Version = tx.Version
-		blockTransfer.Payments = tx.Payments
-		blockTransfer.Owner = tx.Owner
-		blockTransfer.Signature = tx.Signature
-	default:
-		return nil, ErrNotBlockTransferRecord
-	}
-	// attach signature
-	signature := ed25519.Sign(countersignConfig.NewOwner.PrivateKey, b)
-	blockTransfer.Countersignature = signature[:]
-
-	client.printJson("BlockTransfer Request", blockTransfer)
+func (client *Client) CountersignBlockTransfer(blockTransfer *transactionrecord.BlockOwnerTransfer) (*BlockTransferReply, error) {
 
 	var reply rpc.BlockOwnerTransferReply
-	err = client.client.Call("BlockOwner.Transfer", blockTransfer, &reply)
-	if err != nil {
+	err := client.client.Call("BlockOwner.Transfer", blockTransfer, &reply)
+	if nil != err {
 		return nil, err
 	}
 

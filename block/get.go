@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
+	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/blockring"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -15,23 +16,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/storage"
 )
-
-// get block data for initialising a new block
-// returns: previous block digest and the number for the new block
-func Get() (blockdigest.Digest, uint64) {
-	globalData.Lock()
-	defer globalData.Unlock()
-	nextBlockNumber := globalData.height + 1
-	return globalData.previousBlock, nextBlockNumber
-}
-
-// get the current height
-func GetHeight() uint64 {
-	globalData.Lock()
-	height := globalData.height
-	globalData.Unlock()
-	return height
-}
 
 func DigestForBlock(number uint64) (blockdigest.Digest, error) {
 	globalData.Lock()
@@ -46,7 +30,7 @@ func DigestForBlock(number uint64) (blockdigest.Digest, error) {
 	}
 
 	// check if in the cache
-	if number > genesis.BlockNumber && number <= globalData.height {
+	if number > genesis.BlockNumber && number <= blockheader.Height() {
 		d := blockring.DigestForBlock(number)
 		if nil != d {
 			return *d, nil

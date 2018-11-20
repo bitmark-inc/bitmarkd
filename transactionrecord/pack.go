@@ -17,7 +17,7 @@ import (
 // supported currency sets
 // code here will support all versions
 var versions = []currency.Set{
-	currency.MakeSet(),                                    // 0
+	currency.MakeSet(), // 0
 	currency.MakeSet(currency.Bitcoin, currency.Litecoin), // 1
 }
 
@@ -312,6 +312,10 @@ func (transfer *BlockOwnerTransfer) Pack(address *account.Account) (Packed, erro
 		return nil, fault.ErrSignatureTooLong
 	}
 
+	if len(transfer.Countersignature) > maxSignatureLength {
+		return nil, fault.ErrSignatureTooLong
+	}
+
 	// prevent nil or zero account
 	if nil == transfer.Owner || nil == address || transfer.Owner.IsZero() || address.IsZero() {
 		return nil, fault.ErrInvalidOwnerOrRegistrant
@@ -354,6 +358,155 @@ func (transfer *BlockOwnerTransfer) Pack(address *account.Account) (Packed, erro
 
 	// Countersignature Last
 	return *message.appendBytes(transfer.Countersignature), nil
+}
+
+// pack BitmarkShare
+//
+// Pack Varint64(tag) followed by fields in order as struct above with
+// signature last
+//
+// NOTE: returns the "unsigned" message on signature failure - for
+//       debugging/testing
+func (share *BitmarkShare) Pack(address *account.Account) (Packed, error) {
+	if len(share.Signature) > maxSignatureLength {
+		return nil, fault.ErrSignatureTooLong
+	}
+
+	// prevent nil or zero account
+	if nil == address || address.IsZero() {
+		return nil, fault.ErrInvalidOwnerOrRegistrant
+	}
+
+	// ensure minimum share quantity
+	if share.Quantity < 1 {
+		return nil, fault.ErrShareQuantityTooSmall
+	}
+
+	// concatenate bytes
+	message := createPacked(BitmarkShareTag)
+	message.appendBytes(share.Link[:])
+	message.appendUint64(share.Quantity)
+
+	// signature
+	err := address.CheckSignature(message, share.Signature)
+	if nil != err {
+		return message, err
+	}
+	// Signature Last
+	return *message.appendBytes(share.Signature), nil
+}
+
+// pack ShareGrant
+//
+// Pack Varint64(tag) followed by fields in order as struct above with
+// signature last
+//
+// NOTE: returns the "unsigned" message on signature failure - for
+//       debugging/testing
+// NOTE: in this case address _MUST_ point to the record.Owner
+func (grant *ShareGrant) Pack(address *account.Account) (Packed, error) {
+	if len(grant.Signature) > maxSignatureLength {
+		return nil, fault.ErrSignatureTooLong
+	}
+
+	if len(grant.Countersignature) > maxSignatureLength {
+		return nil, fault.ErrSignatureTooLong
+	}
+
+	// prevent nil or zero account
+	if nil == grant.Owner || nil == grant.Recipient ||
+		grant.Owner.IsZero() || grant.Recipient.IsZero() ||
+		address != grant.Owner {
+		return nil, fault.ErrInvalidOwnerOrRegistrant
+	}
+
+	// ensure minimum share quantity
+	if grant.Quantity < 1 {
+		return nil, fault.ErrShareQuantityTooSmall
+	}
+
+	// concatenate bytes
+	message := createPacked(ShareGrantTag)
+	message.appendBytes(grant.ShareId[:])
+	message.appendUint64(grant.Quantity)
+	message.appendAccount(grant.Owner)
+	message.appendAccount(grant.Recipient)
+	message.appendUint64(grant.BeforeBlock)
+
+	// signature
+	err := grant.Owner.CheckSignature(message, grant.Signature)
+	if nil != err {
+		return message, err
+	}
+	message.appendBytes(grant.Signature)
+
+	err = grant.Recipient.CheckSignature(message, grant.Countersignature)
+	if nil != err {
+		return message, err
+	}
+
+	// Countersignature Last
+	return *message.appendBytes(grant.Countersignature), nil
+}
+
+// pack ShareSwap
+//
+// Pack Varint64(tag) followed by fields in order as struct above with
+// signature last
+//
+// NOTE: returns the "unsigned" message on signature failure - for
+//       debugging/testing
+// NOTE: in this case address _MUST_ point to the record.OwnerOne
+func (swap *ShareSwap) Pack(address *account.Account) (Packed, error) {
+	if len(swap.Signature) > maxSignatureLength {
+		return nil, fault.ErrSignatureTooLong
+	}
+
+	if len(swap.Countersignature) > maxSignatureLength {
+		return nil, fault.ErrSignatureTooLong
+	}
+
+	// prevent nil or zero account
+	if nil == swap.OwnerOne || nil == swap.OwnerTwo ||
+		swap.OwnerOne.IsZero() || swap.OwnerTwo.IsZero() ||
+		address != swap.OwnerOne {
+		return nil, fault.ErrInvalidOwnerOrRegistrant
+	}
+
+	// ensure shares are different
+	if swap.ShareIdOne == swap.ShareIdTwo {
+		return nil, fault.ErrShareIdsCannotBeIdentical
+	}
+
+	// ensure minimum share quantity
+	if swap.QuantityOne < 1 || swap.QuantityTwo < 1 {
+		return nil, fault.ErrShareQuantityTooSmall
+	}
+
+	// concatenate bytes
+	message := createPacked(ShareSwapTag)
+	message.appendBytes(swap.ShareIdOne[:])
+	message.appendUint64(swap.QuantityOne)
+	message.appendAccount(swap.OwnerOne)
+	message.appendBytes(swap.ShareIdTwo[:])
+	message.appendUint64(swap.QuantityTwo)
+	message.appendAccount(swap.OwnerTwo)
+	message.appendUint64(swap.BeforeBlock)
+
+	// signature
+	err := swap.OwnerOne.CheckSignature(message, swap.Signature)
+	if nil != err {
+		return message, err
+	}
+	message.appendBytes(swap.Signature)
+
+	err = swap.OwnerTwo.CheckSignature(message, swap.Countersignature)
+	if nil != err {
+		return message, err
+	}
+
+	// Countersignature Last
+	return *message.appendBytes(swap.Countersignature), nil
 }
 
 // internal routines below here

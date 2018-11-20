@@ -34,8 +34,9 @@ func ListBitmarksFor(owner *account.Account, start uint64, count int) ([]Ownersh
 	ownerBytes := owner.Bytes()
 	prefix := append(ownerBytes, startBytes...)
 
-	cursor := storage.Pool.Ownership.NewFetchCursor().Seek(prefix)
+	cursor := storage.Pool.OwnerList.NewFetchCursor().Seek(prefix)
 
+	// owner ⧺ count → txId
 	items, err := cursor.Fetch(count)
 	if nil != err {
 		return nil, err
@@ -59,19 +60,29 @@ loop:
 			N: binary.BigEndian.Uint64(item.Key[split:]),
 		}
 
-		merkle.DigestFromBytes(&record.TxId, item.Value[TxIdStart:TxIdFinish])
-		merkle.DigestFromBytes(&record.IssueTxId, item.Value[IssueTxIdStart:IssueTxIdFinish])
+		merkle.DigestFromBytes(&record.TxId, item.Value)
 
-		switch itemType := OwnedItem(item.Value[FlagByteStart]); itemType {
-		case OwnedAsset:
-			a := &transactionrecord.AssetIdentifier{}
-			transactionrecord.AssetIdentifierFromBytes(a, item.Value[AssetIdentifierStart:AssetIdentifierFinish])
-			record.AssetId = a
-			record.Item = itemType
-		case OwnedBlock:
-			b := binary.BigEndian.Uint64(item.Value[OwnedBlockNumberStart:OwnedBlockNumberFinish])
-			record.BlockNumber = &b
-			record.Item = itemType
+		ownerData, err := GetOwnerData(record.TxId)
+		if nil != err {
+			return nil, err
+		}
+
+		switch od := ownerData.(type) {
+		case *AssetOwnerData:
+			record.Item = OwnedAsset
+			record.IssueTxId = od.issueTxId
+			record.AssetId = &od.assetId
+
+		case *BlockOwnerData:
+			record.Item = OwnedBlock
+			record.IssueTxId = od.issueTxId
+			record.BlockNumber = &od.issueBlockNumber
+
+		case *ShareOwnerData:
+			record.Item = OwnedShare
+			record.IssueTxId = od.issueTxId
+			record.AssetId = &od.assetId
+
 		default:
 			logger.Panicf("unsupported item type: %d", item)
 		}

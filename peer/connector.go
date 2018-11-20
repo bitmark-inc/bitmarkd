@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/genesis"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
@@ -260,7 +261,7 @@ func (conn *connector) runStateMachine() bool {
 		log.Infof("highest block number: %d", conn.height)
 
 	case cStateForkDetect:
-		height := block.GetHeight()
+		height := blockheader.Height()
 		if conn.height <= height {
 			conn.state = cStateRebuild
 		} else {
@@ -358,7 +359,7 @@ func (conn *connector) runStateMachine() bool {
 
 		// check height
 		conn.height, conn.theClient = getHeight(conn)
-		height := block.GetHeight()
+		height := blockheader.Height()
 
 		log.Infof("height  remote: %d  local: %d", conn.height, height)
 

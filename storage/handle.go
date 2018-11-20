@@ -44,6 +44,13 @@ func (p *PoolHandle) Put(key []byte, value []byte) {
 	logger.PanicIfError("pool.Put", err)
 }
 
+// store a uint8 as an 8 byte sequence
+func (p *PoolHandle) PutN(key []byte, value uint64) {
+	buffer := make([]byte, 8)
+	binary.BigEndian.PutUint64(buffer, value)
+	p.Put(key, buffer)
+}
+
 // remove a key from the database
 func (p *PoolHandle) Delete(key []byte) {
 	poolData.RLock()

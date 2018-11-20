@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/announce"
-	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/peer"
@@ -136,7 +136,7 @@ allow_access:
 		Chain: mode.ChainName(),
 		Mode:  mode.String(),
 		Blocks: lrCount{
-			Local:  block.GetHeight(),
+			Local:  blockheader.Height(),
 			Remote: peer.BlockHeight(),
 		},
 		RPCs: connectionCount.Uint64(),

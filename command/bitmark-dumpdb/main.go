@@ -22,12 +22,6 @@ import (
 // set by the linker: go build -ldflags "-X main.version=M.N" ./...
 var version string = "zero" // do not change this value
 
-// tags for the signing key data
-const (
-	taggedSeed    = "SEED:"    // followed by base58 encoded seed as produced by desktop/cli client
-	taggedPrivate = "PRIVATE:" // followed by 64 bytes of hex Ed25519 private key
-)
-
 // colours
 const (
 	keyColour1  = "\033[1;36m"
@@ -55,6 +49,7 @@ func main() {
 		{Long: "delete", HasArg: getoptions.NO_ARGUMENT, Short: 'd'},
 		{Long: "early", HasArg: getoptions.NO_ARGUMENT, Short: 'e'},
 		{Long: "colour", HasArg: getoptions.NO_ARGUMENT, Short: 'g'},
+		{Long: "ascii", HasArg: getoptions.NO_ARGUMENT, Short: 'a'},
 		{Long: "file", HasArg: getoptions.REQUIRED_ARGUMENT, Short: 'f'},
 		{Long: "count", HasArg: getoptions.REQUIRED_ARGUMENT, Short: 'c'},
 	}
@@ -84,13 +79,14 @@ func main() {
 	}
 
 	if len(options["help"]) > 0 || 0 == len(arguments) || 1 != len(options["file"]) {
-		exitwithstatus.Message("usage: %s [--help] [--verbose] [--quiet] [--count=N] --file=FILE tag [key-prefix]", program)
+		exitwithstatus.Message("usage: %s [--help] [--verbose] [--quiet] [--count=N] --file=FILE tag [--list] [key-prefix]", program)
 	}
 
 	// stop if prefix no longer matches
 	earlyStop := len(options["early"]) > 0
 
 	colour := len(options["colour"]) > 0
+	ascii := len(options["ascii"]) > 0
 	delete := len(options["delete"]) > 0
 	verbose := len(options["verbose"]) > 0
 
@@ -226,7 +222,14 @@ print_loop:
 		}
 
 		fmt.Printf("%d: %sKey: %s%x%s\n", i, ck1, ck2, e.Key, ce)
-		fmt.Printf("%d: %sVal: %s%x%s\n", i, cv1, cv2, e.Value, ce)
+		if ascii {
+			prefix := fmt.Sprintf("%d: %sVal: %s", i, cv1, cv2)
+			suffix := fmt.Sprintf("%s", ce)
+			hexDump(prefix, suffix, e.Value)
+
+		} else {
+			fmt.Printf("%d: %sVal: %s%x%s\n", i, cv1, cv2, e.Value, ce)
+		}
 		if delete {
 		delete_loop:
 			for {
@@ -264,5 +267,40 @@ print_loop:
 				}
 			}
 		}
+	}
+}
+
+// dump hex data on stdout
+func hexDump(prefix string, suffix string, data []byte) {
+	address := 0
+	const bytesPerLine = 32
+	for i := 0; i < len(data); i += bytesPerLine {
+		fmt.Printf("%s%04x  ", prefix, address)
+		address += bytesPerLine
+		for j := 0; j < bytesPerLine; j += 1 {
+			if bytesPerLine/2 == j {
+				fmt.Printf(" ")
+			}
+			if i+j < len(data) {
+				fmt.Printf("%02x ", data[i+j])
+			} else {
+				fmt.Printf("   ")
+			}
+		}
+		fmt.Printf(" |")
+	ascii_loop:
+		for j := 0; j < bytesPerLine; j += 1 {
+			if i+j < len(data) {
+				c := data[i+j]
+				if c < 32 || c >= 127 {
+					c = '.'
+				}
+				fmt.Printf("%c", c)
+
+			} else {
+				break ascii_loop
+			}
+		}
+		fmt.Printf("|%s\n", suffix)
 	}
 }

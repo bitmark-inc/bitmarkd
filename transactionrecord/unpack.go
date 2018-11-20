@@ -506,6 +506,247 @@ unpack_switch:
 		}
 		return r, n, nil
 
+	case BitmarkShareTag:
+
+		// link
+		linkLength, linkOffset := util.ClippedVarint64(record[n:], 1, 8192)
+		if 0 == linkOffset {
+			break unpack_switch
+		}
+		n += linkOffset
+		var link merkle.Digest
+		err := merkle.DigestFromBytes(&link, record[n:n+linkLength])
+		if nil != err {
+			return nil, 0, err
+		}
+		n += linkLength
+
+		// total number of shares to issue
+		quantity, quantityLength := util.FromVarint64(record[n:])
+		if 0 == quantityLength {
+			break unpack_switch
+		}
+		n += quantityLength
+
+		// signature
+		signatureLength, signatureOffset := util.ClippedVarint64(record[n:], 1, 8192)
+		if 0 == signatureOffset {
+			break unpack_switch
+		}
+		signature := make(account.Signature, signatureLength)
+		n += signatureOffset
+		copy(signature, record[n:n+signatureLength])
+		n += signatureLength
+
+		r := &BitmarkShare{
+			Link:      link,
+			Quantity:  quantity,
+			Signature: signature,
+		}
+		return r, n, nil
+
+	case ShareGrantTag:
+
+		// share id
+		shareIdLength, shareIdOffset := util.ClippedVarint64(record[n:], 1, 8192)
+		if 0 == shareIdOffset {
+			break unpack_switch
+		}
+		n += shareIdOffset
+		var shareId merkle.Digest
+		err := merkle.DigestFromBytes(&shareId, record[n:n+shareIdLength])
+		if nil != err {
+			return nil, 0, err
+		}
+		n += shareIdLength
+
+		// number of shares to transfer
+		quantity, quantityLength := util.FromVarint64(record[n:])
+		if 0 == quantityLength {
+			break unpack_switch
+		}
+		n += quantityLength
+
+		// owner public key
+		ownerLength, ownerOffset := util.ClippedVarint64(record[n:], 1, 8192)
+		if 0 == ownerOffset {
+			break unpack_switch
+		}
+		n += ownerOffset
+		owner, err := account.AccountFromBytes(record[n : n+ownerLength])
+		if nil != err {
+			return nil, 0, err
+		}
+		if owner.IsTesting() != testnet {
+			return nil, 0, fault.ErrWrongNetworkForPublicKey
+		}
+		n += ownerLength
+
+		// recipient public key
+		recipientLength, recipientOffset := util.ClippedVarint64(record[n:], 1, 8192)
+		if 0 == recipientOffset {
+			break unpack_switch
+		}
+		n += recipientOffset
+		recipient, err := account.AccountFromBytes(record[n : n+recipientLength])
+		if nil != err {
+			return nil, 0, err
+		}
+		if recipient.IsTesting() != testnet {
+			return nil, 0, fault.ErrWrongNetworkForPublicKey
+		}
+		n += recipientLength
+
+		// time limit
+		beforeBlock, beforeBlockLength := util.FromVarint64(record[n:])
+		if 0 == beforeBlockLength {
+			break unpack_switch
+		}
+		n += beforeBlockLength
+
+		// signature
+		signatureLength, signatureOffset := util.ClippedVarint64(record[n:], 1, 8192)
+		if 0 == signatureOffset {
+			break unpack_switch
+		}
+		signature := make(account.Signature, signatureLength)
+		n += signatureOffset
+		copy(signature, record[n:n+signatureLength])
+		n += signatureLength
+
+		// countersignature
+		countersignatureLength, countersignatureOffset := util.ClippedVarint64(record[n:], 1, 8192)
+		if 0 == countersignatureOffset {
+			break unpack_switch
+		}
+		countersignature := make(account.Signature, countersignatureLength)
+		n += countersignatureOffset
+		copy(countersignature, record[n:n+countersignatureLength])
+		n += countersignatureLength
+
+		r := &ShareGrant{
+			ShareId:          shareId,
+			Quantity:         quantity,
+			Owner:            owner,
+			Recipient:        recipient,
+			BeforeBlock:      beforeBlock,
+			Signature:        signature,
+			Countersignature: countersignature,
+		}
+		return r, n, nil
+
+	case ShareSwapTag:
+
+		// share one
+		shareIdOneLength, shareIdOneOffset := util.ClippedVarint64(record[n:], 1, 8192)
+		if 0 == shareIdOneOffset {
+			break unpack_switch
+		}
+		n += shareIdOneOffset
+		var shareIdOne merkle.Digest
+		err := merkle.DigestFromBytes(&shareIdOne, record[n:n+shareIdOneLength])
+		if nil != err {
+			return nil, 0, err
+		}
+		n += shareIdOneLength
+
+		// number of shares to transfer
+		quantityOne, quantityOneLength := util.FromVarint64(record[n:])
+		if 0 == quantityOneLength {
+			break unpack_switch
+		}
+		n += quantityOneLength
+
+		// owner one public key
+		ownerOneLength, ownerOneOffset := util.ClippedVarint64(record[n:], 1, 8192)
+		if 0 == ownerOneOffset {
+			break unpack_switch
+		}
+		n += ownerOneOffset
+		ownerOne, err := account.AccountFromBytes(record[n : n+ownerOneLength])
+		if nil != err {
+			return nil, 0, err
+		}
+		if ownerOne.IsTesting() != testnet {
+			return nil, 0, fault.ErrWrongNetworkForPublicKey
+		}
+		n += ownerOneLength
+
+		// share two
+		shareIdTwoLength, shareIdTwoOffset := util.ClippedVarint64(record[n:], 1, 8192)
+		if 0 == shareIdTwoOffset {
+			break unpack_switch
+		}
+		n += shareIdTwoOffset
+		var shareIdTwo merkle.Digest
+		err = merkle.DigestFromBytes(&shareIdTwo, record[n:n+shareIdTwoLength])
+		if nil != err {
+			return nil, 0, err
+		}
+		n += shareIdTwoLength
+
+		// number of shares to transfer
+		quantityTwo, quantityTwoLength := util.FromVarint64(record[n:])
+		if 0 == quantityTwoLength {
+			break unpack_switch
+		}
+		n += quantityTwoLength
+
+		// owner two public key
+		ownerTwoLength, ownerTwoOffset := util.ClippedVarint64(record[n:], 1, 8192)
+		if 0 == ownerTwoOffset {
+			break unpack_switch
+		}
+		n += ownerTwoOffset
+		ownerTwo, err := account.AccountFromBytes(record[n : n+ownerTwoLength])
+		if nil != err {
+			return nil, 0, err
+		}
+		if ownerTwo.IsTesting() != testnet {
+			return nil, 0, fault.ErrWrongNetworkForPublicKey
+		}
+		n += ownerTwoLength
+
+		// time limit
+		beforeBlock, beforeBlockLength := util.FromVarint64(record[n:])
+		if 0 == beforeBlockLength {
+			break unpack_switch
+		}
+		n += beforeBlockLength
+
+		// signature
+		signatureLength, signatureOffset := util.ClippedVarint64(record[n:], 1, 8192)
+		if 0 == signatureOffset {
+			break unpack_switch
+		}
+		signature := make(account.Signature, signatureLength)
+		n += signatureOffset
+		copy(signature, record[n:n+signatureLength])
+		n += signatureLength
+
+		// countersignature
+		countersignatureLength, countersignatureOffset := util.ClippedVarint64(record[n:], 1, 8192)
+		if 0 == countersignatureOffset {
+			break unpack_switch
+		}
+		countersignature := make(account.Signature, countersignatureLength)
+		n += countersignatureOffset
+		copy(countersignature, record[n:n+countersignatureLength])
+		n += countersignatureLength
+
+		r := &ShareSwap{
+			ShareIdOne:       shareIdOne,
+			QuantityOne:      quantityOne,
+			OwnerOne:         ownerOne,
+			ShareIdTwo:       shareIdTwo,
+			QuantityTwo:      quantityTwo,
+			OwnerTwo:         ownerTwo,
+			BeforeBlock:      beforeBlock,
+			Signature:        signature,
+			Countersignature: countersignature,
+		}
+		return r, n, nil
+
 	default: // also NullTag
 	}
 	return nil, 0, fault.ErrNotTransactionPack

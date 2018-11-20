@@ -151,9 +151,9 @@ func main() {
 					Value: "",
 					Usage: "*asset fingerprint `STRING`",
 				},
-				cli.StringFlag{
+				cli.IntFlag{
 					Name:  "quantity, q",
-					Value: "1",
+					Value: 1,
 					Usage: " quantity to create `COUNT`",
 				},
 			},
@@ -183,11 +183,11 @@ func main() {
 		},
 		{
 			Name:      "countersign",
-			Usage:     "countersign transfer a bitmark to current account",
+			Usage:     "countersign a transaction using current identity",
 			ArgsUsage: "\n   (* = required)",
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:  "transfer, t",
+					Name:  "transaction, t",
 					Value: "",
 					Usage: "*sender signed transfer `HEX` code",
 				},
@@ -223,19 +223,6 @@ func main() {
 			Action: runBlockTransfer,
 		},
 		{
-			Name:      "blockcountersign",
-			Usage:     "countersign transfer a bitmark to current account",
-			ArgsUsage: "\n   (* = required)",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "transfer, t",
-					Value: "",
-					Usage: "*sender signed transfer `HEX` code",
-				},
-			},
-			Action: runBlockCountersign,
-		},
-		{
 			Name:      "provenance",
 			Usage:     "list provenance of a bitmark",
 			ArgsUsage: "\n   (* = required)",
@@ -245,13 +232,143 @@ func main() {
 					Value: "",
 					Usage: "*transaction id to list provenance `TXID`",
 				},
-				cli.StringFlag{
+				cli.IntFlag{
 					Name:  "count, c",
-					Value: "20",
+					Value: 20,
 					Usage: " maximum records to output `COUNT`",
 				},
 			},
 			Action: runProvenance,
+		},
+		{
+			Name:      "owned",
+			Usage:     "list bitmarks owned",
+			ArgsUsage: "\n   (* = required)",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "owner, o",
+					Value: "",
+					Usage: " identity name `ACCOUNT` default is global identity",
+				},
+				cli.Uint64Flag{
+					Name:  "start, s",
+					Value: 0,
+					Usage: " start point `COUNT`",
+				},
+				cli.IntFlag{
+					Name:  "count, c",
+					Value: 20,
+					Usage: " maximum records to output `COUNT`",
+				},
+			},
+			Action: runOwned,
+		},
+		{
+			Name:      "share",
+			Usage:     "convert a bitmark into a share",
+			ArgsUsage: "\n   (* = required)",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "txid, t",
+					Value: "",
+					Usage: "*transaction id to convert `TXID`",
+				},
+				cli.IntFlag{
+					Name:  "quantity, q",
+					Value: 0,
+					Usage: "*quantity to create `NUMBER`",
+				},
+			},
+			Action: runShare,
+		},
+		{
+			Name:      "grant",
+			Usage:     "grant some shares of a bitmark to a receiver",
+			ArgsUsage: "\n   (* = required)",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "receiver, r",
+					Value: "",
+					Usage: "*identity name to receive the block `ACCOUNT`",
+				},
+				cli.StringFlag{
+					Name:  "share-id, s",
+					Value: "",
+					Usage: "*transaction id of share `SHARE_ID`",
+				},
+				cli.Uint64Flag{
+					Name:  "quantity, q",
+					Value: 1,
+					Usage: " quantity to grant `NUMBER`",
+				},
+				cli.Uint64Flag{
+					Name:  "before-block, b",
+					Value: 0,
+					Usage: " must confirm before this block `NUMBER`",
+				},
+			},
+			Action: runGrant,
+		},
+		{
+			Name:      "swap",
+			Usage:     "swap some shares of a bitmark to a receiver",
+			ArgsUsage: "\n   (* = required)",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "receiver, r",
+					Value: "",
+					Usage: "*identity name to receive the block `ACCOUNT`",
+				},
+				cli.StringFlag{
+					Name:  "share-id-one, s",
+					Value: "",
+					Usage: "*transaction id of share one `SHARE_ID`",
+				},
+				cli.Uint64Flag{
+					Name:  "quantity-one, q",
+					Value: 1,
+					Usage: " quantity of share one `NUMBER`",
+				},
+				cli.StringFlag{
+					Name:  "share-id-two, S",
+					Value: "",
+					Usage: "*transaction id of share two `SHARE_ID`",
+				},
+				cli.Uint64Flag{
+					Name:  "quantity-two, Q",
+					Value: 1,
+					Usage: " quantity of share two `NUMBER`",
+				},
+				cli.Uint64Flag{
+					Name:  "before-block, b",
+					Value: 0,
+					Usage: " must confirm before this block `NUMBER`",
+				},
+			},
+			Action: runSwap,
+		},
+		{
+			Name:      "balance",
+			Usage:     "display balance of some shares",
+			ArgsUsage: "\n   (* = required)",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "owner, o",
+					Value: "",
+					Usage: " identity name `ACCOUNT` default is global identity",
+				},
+				cli.StringFlag{
+					Name:  "share-id, s",
+					Value: "",
+					Usage: " starting from share `SHARE_ID`",
+				},
+				cli.IntFlag{
+					Name:  "count, c",
+					Value: 20,
+					Usage: " maximum records to output `COUNT`",
+				},
+			},
+			Action: runBalance,
 		},
 		{
 			Name:      "status",

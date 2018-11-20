@@ -227,15 +227,31 @@ func processTransfer(packed []byte) error {
 		return err
 	}
 
+	duplicate := false
+
 	transfer, ok := transaction.(transactionrecord.BitmarkTransfer)
-	if !ok {
-		return fault.ErrTransactionIsNotATransfer
+	if ok {
+
+		_, duplicate, err = reservoir.StoreTransfer(transfer)
+
+	} else {
+		switch tx := transaction.(type) {
+
+		case *transactionrecord.ShareGrant:
+			_, duplicate, err = reservoir.StoreGrant(tx)
+
+		case *transactionrecord.ShareSwap:
+			_, duplicate, err = reservoir.StoreSwap(tx)
+
+		default:
+			return fault.ErrTransactionIsNotATransfer
+		}
 	}
 
-	_, duplicate, err := reservoir.StoreTransfer(transfer)
 	if nil != err {
 		return err
 	}
+
 	if duplicate {
 		return fault.ErrTransactionAlreadyExists
 	}

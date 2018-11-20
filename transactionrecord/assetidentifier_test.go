@@ -19,8 +19,8 @@ func TestInvalidAssetIdentifiers(t *testing.T) {
 
 	invalid := []string{
 		"",
-		"4b",  // one byte
-		"4bf", // odd number of chars
+		"4b",                         // one byte
+		"4bf",                        // odd number of chars
 		"4473fb34cc05ed9599935a0098", // truncated
 		"4473fb34cc05ed9599935a0098ce060dfa546f40932dd7b40d35f8fe5cd6a4ff26f3dbf8ffc86ee8eb6480facfd83f3e20d69bf1e764a59256cf79b89531de3",    // just one short
 		"4473fb34cc05ed9599935a0098ce060dfa546f40932dd7b40d35f8fe5cd6a4ff26f3dbf8ffc86ee8eb6480facfd83f3e20d69bf1e764a59256cf79b89531de379",  // just one char over
