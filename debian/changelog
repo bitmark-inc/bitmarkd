@@ -1,3 +1,12 @@
+bitmarkd (0.9.1-1) unstable; urgency=medium
+
+  * new transaction memory pool
+  * only 1 free issue then all subsequent re-issues must be paid
+  * cli tries free issue (nonce=zero) then retries if duplicate
+    transaction
+
+ -- Christopher Hall <hsw@bitmark.com>  Fri, 16 Nov 2018 02:44:33 +0000
+
 bitmarkd (0.9.0-1) unstable; urgency=medium
 
   * convert to module: Note that the old two number versions are
