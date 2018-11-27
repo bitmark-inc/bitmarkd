@@ -49,8 +49,8 @@ func runSetup(c *cli.Context) error {
 
 	if m.verbose {
 		fmt.Fprintf(m.e, "config: %s\n", m.file)
-		fmt.Fprintf(m.e, "testnet: %s\n", testnet)
-		fmt.Fprintf(m.e, "livenet: %s\n", livenet)
+		fmt.Fprintf(m.e, "testnet: %t\n", testnet)
+		fmt.Fprintf(m.e, "livenet: %t\n", livenet)
 		fmt.Fprintf(m.e, "connect: %s\n", connect)
 		fmt.Fprintf(m.e, "identity: %s\n", name)
 		fmt.Fprintf(m.e, "description: %s\n", description)
