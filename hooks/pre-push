@@ -1,0 +1,45 @@
+#!/bin/sh
+
+ERROR_CODE=1
+SUCCESS_CODE=0
+
+# text color
+RED='\033[0;31m'
+NC='\033[0m'
+
+# make sure environment are set
+if [ -z "$GOPATH" ]; then
+    printf '\nError: environment variable $GOPATH is empty\n'
+    exit $ERROR_CODE
+fi
+
+# sonarqube (optional) only runs when it's available
+# to use on mac, install program by `brew install sonarqube sonar-scanner`
+# then start sonarqube on command line by `sonar console`
+if [ $(command -v sonar) ] && [ $(command -v sonar-scanner) ]; then
+   sonar_console_status=$(sonar status | grep 'not running')
+   if [ -z "$sonar_console_status" ]; then
+      sonar-scanner
+   fi
+fi
+
+# go tool vet currently runs without blocking pushing behavior
+# show messages to developer to decide take any action or not
+printf "\nStart go tool vet (optional to pass)...\n"
+vet_flags="-all=true"
+go tool vet $vet_flags .
+
+printf '\n'
+
+# run tests
+printf "\nRunning test cases...\n"
+go test $(go list ./... | grep -v /vendor/)
+
+if [ $? -ne 0 ]; then
+   printf "\n${RED}Some test cases fail, please try to fix it before keep going...${NC}\n" 
+   exit $ERROR_CODE
+fi
+
+printf "\nFinish running test cases...\n"
+
+exit $SUCCESS_CODE

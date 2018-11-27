@@ -99,6 +99,25 @@ Note that a similar process is needed for the prooferd (mining subsystem)
 
 # Coding
 
+* setup git hooks
+  
+  Link git hooks directory, run command `./scripts/setup-hook.sh` at root of bitmarkd 
+  directory. Currently it provides checkings for two stages:
+  
+  1. Before commit (`pre-commt`)
+
+	Runs `go lint` for every modified file(s). It shows suggestions but not
+    necessary to follow. 
+
+  2. Before push to remote (`pre-push`)
+  
+  	Runs `go test` for whole directory except `vendor` one. It is
+    mandatory to pass this check because generally, new modifications should not
+    break existing logic/behavior.
+    
+    Other optional actions are `sonaqube` and `go tool vet`. These two are
+    optional to follow since static code analysis just provide some advice.
+  
 * all variables are camel case i.e. no underscores
 * labels are all lowercase with '_' between words
 * imports and one single block

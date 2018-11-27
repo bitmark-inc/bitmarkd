@@ -1,0 +1,33 @@
+#!/bin/sh
+
+ERROR_CODE=1
+SUCCESS_CODE=0
+
+printf '\nRunning golint...\n'
+
+# check if program `golint` exist
+if [ -z "$(which golint)" ]; then
+    printf '\nError: golint not found, run: go get github.com/golang/lint/golint\n'
+    exit $SUCCESS_CODE
+fi
+
+# find modified files
+gofiles=$(git diff --cached --name-only --diff-filter=ACM | grep '\.go$')
+
+# run golint for each modified file
+for gofile in $gofiles
+do
+    lint_result=$(golint $gofile)
+    err_count=$(echo $lint_result | wc -l | tr -d '[:space:]')
+
+    if [ "$err_count" = "0" ]; then
+        printf "\n$err_count suggestion(s) for $gofile"
+        printf "\t$lint_result"
+    fi
+done
+
+printf '\nFinish code lint...\n'
+
+# currently, always return success no matter when lint result is
+# [ -z "$errors" ] && exit $SUCCESS_CODE
+exit $SUCCESS_CODE
