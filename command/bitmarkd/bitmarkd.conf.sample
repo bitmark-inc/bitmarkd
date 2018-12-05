@@ -242,7 +242,7 @@ M.logging = {
     count = 100,
 
     -- set to true to log to console
-    console = true,
+    console = false,
 
     -- set the logging level for various modules
     -- modules not overridden with get the value from DEFAULT
