@@ -139,7 +139,7 @@ func determineConnections(log *logger.L) {
 		return // tree still too small
 	}
 	if n3 != n1 {
-		peer := node.Value().(*peerEntry)
+		peer := n3.Value().(*peerEntry)
 		log.Infof("N3: peer: %s", peer)
 		messagebus.Bus.Connector.Send("N3", peer.publicKey, peer.listeners)
 	}
