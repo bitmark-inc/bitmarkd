@@ -54,7 +54,7 @@ func (item *PeerItem) UnmarshalText(data []byte) error {
 
 	listenerLength, listenerOffset := util.ClippedVarint64(b[n:], 1, 8192)
 
-	ll := listenerLength % 19
+	ll := listenerLength / 19
 	if 0 == listenerOffset || ll < 1 || ll > 2 {
 		return fault.ErrInvalidIPAddress
 	}
