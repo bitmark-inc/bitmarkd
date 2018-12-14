@@ -9,6 +9,7 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/asset"
+	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/ownership"
@@ -47,6 +48,9 @@ outer_loop:
 
 		// finished
 		if header.Number < finalBlockNumber {
+
+			blockheader.Set(header.Number, digest, header.Version, header.Timestamp)
+
 			log.Infof("finish: _NOT_ Deleting: %d", header.Number)
 			fillRingBuffer(log)
 			return nil
@@ -323,6 +327,8 @@ outer_loop:
 		packedBlock = storage.Pool.Blocks.Get(blockNumberKey)
 
 		if nil == packedBlock {
+			// all blocks deleted
+			blockheader.SetGenesis()
 			break outer_loop
 		}
 

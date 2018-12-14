@@ -46,14 +46,7 @@ func Initialise() error {
 	globalData.log = log
 	log.Info("starting…")
 
-	// initialise block height and initialise previous block digest
-	globalData.height = genesis.BlockNumber
-	globalData.previousBlock = genesis.LiveGenesisDigest
-	globalData.previousVersion = 1
-	globalData.previousTimestamp = 0
-	if mode.IsTesting() {
-		globalData.previousBlock = genesis.TestGenesisDigest
-	}
+	setGenesis()
 
 	log.Infof("block height: %d", globalData.height)
 	log.Infof("previous block: %v", globalData.previousBlock)
@@ -82,6 +75,24 @@ func Finalise() error {
 	globalData.log.Flush()
 
 	return nil
+}
+
+// reset the block data
+func SetGenesis() {
+	globalData.Lock()
+	setGenesis()
+	globalData.Unlock()
+}
+
+// internal: must hold lock
+func setGenesis() {
+	globalData.height = genesis.BlockNumber
+	globalData.previousBlock = genesis.LiveGenesisDigest
+	globalData.previousVersion = 1
+	globalData.previousTimestamp = 0
+	if mode.IsTesting() {
+		globalData.previousBlock = genesis.TestGenesisDigest
+	}
 }
 
 // set all data
