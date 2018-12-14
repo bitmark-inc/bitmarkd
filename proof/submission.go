@@ -20,11 +20,11 @@ const (
 )
 
 type submission struct {
-	log     *logger.L
-	push    *zmq.Socket
-	pull    *zmq.Socket
-	socket4 *zmq.Socket
-	socket6 *zmq.Socket
+	log        *logger.L
+	sigSend    *zmq.Socket // signal send
+	sigReceive *zmq.Socket // signal receive
+	socket4    *zmq.Socket
+	socket6    *zmq.Socket
 }
 
 // initialise the submission
@@ -48,7 +48,7 @@ func (sub *submission) initialise(configuration *Configuration) error {
 	log.Tracef("server private: %x", privateKey)
 
 	// signalling channel
-	sub.push, sub.pull, err = zmqutil.NewSignalPair(submissionSignal)
+	sub.sigReceive, sub.sigSend, err = zmqutil.NewSignalPair(submissionSignal)
 	if nil != err {
 		return err
 	}
@@ -82,14 +82,14 @@ func (sub *submission) Run(args interface{}, shutdown <-chan struct{}) {
 		if nil != sub.socket6 {
 			poller.Add(sub.socket6, zmq.POLLIN)
 		}
-		poller.Add(sub.pull, zmq.POLLIN)
+		poller.Add(sub.sigReceive, zmq.POLLIN)
 	loop:
 		for {
 			log.Debug("waiting…")
 			sockets, _ := poller.Poll(-1)
 			for _, socket := range sockets {
 				switch s := socket.Socket; s {
-				case sub.pull:
+				case sub.sigReceive:
 					s.Recv(0)
 					break loop
 				default:
@@ -97,7 +97,7 @@ func (sub *submission) Run(args interface{}, shutdown <-chan struct{}) {
 				}
 			}
 		}
-		sub.pull.Close()
+		sub.sigReceive.Close()
 		if nil != sub.socket4 {
 			sub.socket4.Close()
 		}
@@ -108,8 +108,8 @@ func (sub *submission) Run(args interface{}, shutdown <-chan struct{}) {
 
 	// wait for shutdown
 	<-shutdown
-	sub.push.SendMessage("stop")
-	sub.push.Close()
+	sub.sigSend.SendMessage("stop")
+	sub.sigSend.Close()
 }
 
 // process the request and return response to prooferd

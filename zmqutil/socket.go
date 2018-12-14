@@ -27,37 +27,36 @@ const (
 // 	heartbeatTTL      = 60 * time.Second
 // )
 
-// return a pair of connected push/pull sockets
+// return a pair of connected PAIR sockets
 // for shutdown signalling
-func NewSignalPair(signal string) (*zmq.Socket, *zmq.Socket, error) {
+func NewSignalPair(signal string) (reciever *zmq.Socket, sender *zmq.Socket, err error) {
 
-	// send half of signalling channel
-	push, err := zmq.NewSocket(zmq.PUSH)
+	// PAIR server, half of signalling channel
+	reciever, err = zmq.NewSocket(zmq.PAIR)
 	if nil != err {
 		return nil, nil, err
 	}
-	push.SetLinger(0)
-	err = push.Bind(signal)
+	reciever.SetLinger(0)
+	err = reciever.Bind(signal)
 	if nil != err {
-		push.Close()
-		return nil, nil, err
-	}
-
-	// receive half of signalling channel
-	pull, err := zmq.NewSocket(zmq.PULL)
-	if nil != err {
-		push.Close()
-		return nil, nil, err
-	}
-	pull.SetLinger(0)
-	err = pull.Connect(signal)
-	if nil != err {
-		push.Close()
-		pull.Close()
+		reciever.Close()
 		return nil, nil, err
 	}
 
-	return push, pull, nil
+	// PAIR Client, half of signalling channel
+	sender, err = zmq.NewSocket(zmq.PAIR)
+	if nil != err {
+		sender.Close()
+		return nil, nil, err
+	}
+	sender.SetLinger(0)
+	err = sender.Connect(signal)
+	if nil != err {
+		sender.Close()
+		return nil, nil, err
+	}
+
+	return reciever, sender, nil
 }
 
 // bind a list of addresses

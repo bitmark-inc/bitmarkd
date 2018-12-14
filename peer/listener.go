@@ -33,8 +33,8 @@ type listener struct {
 	log         *logger.L
 	chain       string
 	version     string      // server version
-	push        *zmq.Socket // signal send
-	pull        *zmq.Socket // signal receive
+	sigSend     *zmq.Socket // signal send
+	sigReceive  *zmq.Socket // signal receive
 	socket4     *zmq.Socket // IPv4 traffic
 	socket6     *zmq.Socket // IPv6 traffic
 	monitor4    *zmq.Socket // IPv4 socket monitor
@@ -69,7 +69,7 @@ func (lstn *listener) initialise(privateKey []byte, publicKey []byte, listen []s
 	}
 
 	// signalling channel
-	lstn.push, lstn.pull, err = zmqutil.NewSignalPair(listenerSignal)
+	lstn.sigReceive, lstn.sigSend, err = zmqutil.NewSignalPair(listenerSignal)
 	if nil != err {
 		return err
 	}
@@ -115,7 +115,7 @@ func (lstn *listener) Run(args interface{}, shutdown <-chan struct{}) {
 			poller.Add(lstn.socket6, zmq.POLLIN)
 			poller.Add(lstn.monitor6, zmq.POLLIN)
 		}
-		poller.Add(lstn.pull, zmq.POLLIN)
+		poller.Add(lstn.sigReceive, zmq.POLLIN)
 	loop:
 		for {
 			sockets, _ := poller.Poll(-1)
@@ -125,7 +125,7 @@ func (lstn *listener) Run(args interface{}, shutdown <-chan struct{}) {
 					lstn.process(lstn.socket4)
 				case lstn.socket6:
 					lstn.process(lstn.socket6)
-				case lstn.pull:
+				case lstn.sigReceive:
 					s.RecvMessageBytes(0)
 					break loop
 				case lstn.monitor4:
@@ -136,7 +136,7 @@ func (lstn *listener) Run(args interface{}, shutdown <-chan struct{}) {
 			}
 		}
 		log.Info("shutting down")
-		lstn.pull.Close()
+		lstn.sigReceive.Close()
 		if nil != lstn.socket4 {
 			lstn.socket4.Close()
 		}
@@ -150,8 +150,8 @@ func (lstn *listener) Run(args interface{}, shutdown <-chan struct{}) {
 	log.Debug("waiting…")
 	<-shutdown
 	log.Info("initiate shutdown")
-	lstn.push.SendMessage("stop")
-	lstn.push.Close()
+	lstn.sigSend.SendMessage("stop")
+	lstn.sigSend.Close()
 }
 
 // process the listen and return response to client

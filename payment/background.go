@@ -25,12 +25,12 @@ const (
 
 // discoverer listens to discovery proxy to get the possible txs
 type discoverer struct {
-	log    *logger.L
-	push   *zmq.Socket
-	pull   *zmq.Socket
-	sub    *zmq.Socket
-	subMon *zmq.Socket
-	req    *zmq.Socket
+	log        *logger.L
+	sigSend    *zmq.Socket // signal send
+	sigReceive *zmq.Socket // signal receive
+	sub        *zmq.Socket
+	subMon     *zmq.Socket
+	req        *zmq.Socket
 }
 
 func newDiscoverer(subHostPort, reqHostPort string) (*discoverer, error) {
@@ -47,7 +47,7 @@ func newDiscoverer(subHostPort, reqHostPort string) (*discoverer, error) {
 		return nil, err
 	}
 
-	push, pull, err := zmqutil.NewSignalPair(discovererStopSignal)
+	receive, send, err := zmqutil.NewSignalPair(discovererStopSignal)
 	if err != nil {
 		return nil, err
 	}
@@ -95,12 +95,12 @@ func newDiscoverer(subHostPort, reqHostPort string) (*discoverer, error) {
 	log.Infof("connect to: %q  IPv6: %t", reqAddr, reqIPv6)
 
 	disc := &discoverer{
-		log:    log,
-		push:   push,
-		pull:   pull,
-		sub:    sub,
-		subMon: subMon,
-		req:    req,
+		log:        log,
+		sigSend:    send,
+		sigReceive: receive,
+		sub:        sub,
+		subMon:     subMon,
+		req:        req,
 	}
 	return disc, nil
 }
@@ -128,7 +128,7 @@ func (d *discoverer) Run(args interface{}, shutdown <-chan struct{}) {
 		poller := zmq.NewPoller()
 		poller.Add(d.sub, zmq.POLLIN)
 		poller.Add(d.subMon, zmq.POLLIN)
-		poller.Add(d.pull, zmq.POLLIN)
+		poller.Add(d.sigReceive, zmq.POLLIN)
 
 	loop:
 		for {
@@ -137,9 +137,9 @@ func (d *discoverer) Run(args interface{}, shutdown <-chan struct{}) {
 			// TODO: add hearbeat
 			for _, p := range polled {
 				switch s := p.Socket; s {
-				case d.pull:
+				case d.sigReceive:
 					if _, err := s.RecvMessageBytes(0); err != nil {
-						d.log.Errorf("pull receive error: %s", err)
+						d.log.Errorf("sig receive error: %s", err)
 						break loop
 					}
 					break loop
@@ -163,18 +163,16 @@ func (d *discoverer) Run(args interface{}, shutdown <-chan struct{}) {
 			}
 		}
 
-		d.pull.Close()
+		d.sigReceive.Close()
 		d.sub.Close()
 
 		d.log.Info("stopped")
 	}(trigger)
 
-	d.log.Info("started")
-
 	<-shutdown
 	close(done)
-	d.push.SendMessage("stop")
-	d.push.Close()
+	d.sigSend.SendMessage("stop")
+	d.sigSend.Close()
 	d.req.Close()
 	close(trigger)
 }
