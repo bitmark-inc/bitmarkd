@@ -179,6 +179,29 @@ func (conn *connector) destroy() {
 	})
 }
 
+//Printout all default: "info", availible: "debug", "info" , "warn" ,"error", "critical"
+func (conn *connector) PrintConnectors(logLevel string) {
+	counter := 0
+	log := conn.log
+	conn.allClients(func(client *upstream.Upstream, e *list.Element) {
+		counter = counter + 1
+		switch logLevel {
+		case "debug":
+			log.Debugf("Print upstream%d:%s", counter, client.GetClient().DebugInfo())
+		case "info":
+			log.Infof("Print upstream%d:%s", counter, client.GetClient().DebugInfo())
+		case "warn":
+			log.Warnf("Print upstream%d:%s", counter, client.GetClient().DebugInfo())
+		case "error":
+			log.Errorf("Print upstream%d:%s", counter, client.GetClient().DebugInfo())
+		case "critical":
+			log.Criticalf("Print upstream%d:%s", counter, client.GetClient().DebugInfo())
+		default:
+			log.Infof("Print upstream%d:%s", counter, client.GetClient().DebugInfo())
+		}
+	})
+}
+
 // various RPC calls to upstream connections
 func (conn *connector) Run(args interface{}, shutdown <-chan struct{}) {
 

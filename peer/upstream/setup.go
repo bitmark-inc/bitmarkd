@@ -96,6 +96,9 @@ func (u *Upstream) Connect(address *util.Connection, serverPublicKey []byte) err
 	u.Unlock()
 	return err
 }
+func (u *Upstream) GetClient() *zmqutil.Client {
+	return u.client
+}
 
 // fetch height from last polled value
 func (u *Upstream) GetHeight() uint64 {
