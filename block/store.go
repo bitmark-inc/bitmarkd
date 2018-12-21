@@ -93,7 +93,8 @@ func StoreIncoming(packedBlock []byte) error {
 
 	txs := make([]txn, header.TransactionCount)
 
-	// transaction validator
+	// transaction validation (must return error and not panic)
+	// ========================================================
 	{
 		// this is to double check the merkle root
 		txIds := make([]merkle.Digest, header.TransactionCount)
@@ -139,8 +140,7 @@ func StoreIncoming(packedBlock []byte) error {
 				link := tr.GetLink()
 				_, linkOwner := ownership.OwnerOf(link)
 				if nil == linkOwner {
-					logger.Criticalf("missing transaction record for link: %v refererenced by tx: %+v", link, tx)
-					logger.Panic("Transactions database is corrupt")
+					return fault.ErrLinkToInvalidOrUnconfirmedTransaction
 				}
 				_, err := tx.Pack(linkOwner)
 				if nil != err {
@@ -182,8 +182,7 @@ func StoreIncoming(packedBlock []byte) error {
 				// get the block number that is being transferred by this record
 				thisBN := storage.Pool.BlockOwnerTxIndex.Get(link[:])
 				if nil == thisBN {
-					globalData.log.Criticalf("missing BlockOwnerTxIndex: %v", link)
-					logger.Panicf("missing BlockOwnerTxIndex: %v", link)
+					return fault.ErrLinkToInvalidOrUnconfirmedTransaction
 				}
 
 				err = transactionrecord.CheckPayments(tx.Version, mode.IsTesting(), tx.Payments)
@@ -198,8 +197,7 @@ func StoreIncoming(packedBlock []byte) error {
 				link := tx.Link
 				_, linkOwner := ownership.OwnerOf(link)
 				if nil == linkOwner {
-					logger.Criticalf("missing transaction record for link: %v refererenced by tx: %+v", link, tx)
-					logger.Panic("Transactions database is corrupt")
+					return fault.ErrLinkToInvalidOrUnconfirmedTransaction
 				}
 				_, err := tx.Pack(linkOwner)
 				if nil != err {
@@ -238,9 +236,12 @@ func StoreIncoming(packedBlock []byte) error {
 				}
 
 			default:
-				// this will only occur if the above code is not in sync with transactionrecord/unpack.go
-				globalData.log.Criticalf("unhandled transaction: %v", tx)
-				logger.Panicf("unhandled transaction: %v", tx)
+				// occurs if the above code is not in sync with transactionrecord/unpack.go
+				// i.e. one or more case blocks are missing
+				//      above _MUST_ code all transaction types
+				// (this is the only panic condition in the validation code)
+				globalData.log.Errorf("unhandled transaction: %v", tx)
+				logger.Panicf("block/store: unhandled transaction: %v", tx)
 			}
 
 			txs[i].txId = txId
@@ -262,7 +263,11 @@ func StoreIncoming(packedBlock []byte) error {
 		if merkleRoot != header.MerkleRoot {
 			return fault.ErrMerkleRootDoesNotMatch
 		}
-	}
+
+	} // end of validation
+
+	// update database code, errors can cause panic
+	// ============================================
 
 	// create the ownership record
 	var packedPayments []byte
