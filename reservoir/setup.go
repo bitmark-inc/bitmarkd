@@ -421,9 +421,11 @@ func rescanItem(item *transactionData) {
 	switch tx := item.transaction.(type) {
 
 	case *transactionrecord.OldBaseData:
+		// should never be in the memory pool - so panic
 		logger.Panic("reservoir: rescan found: OldBaseData")
 
 	case *transactionrecord.AssetData:
+		// should never be in the memory pool - so panic
 		logger.Panic("reservoir: rescan found: AssetData")
 
 	case *transactionrecord.BitmarkIssue:
@@ -435,32 +437,25 @@ func rescanItem(item *transactionData) {
 		tr := tx.(transactionrecord.BitmarkTransfer)
 		link := tr.GetLink()
 		_, linkOwner := ownership.OwnerOf(link)
-		if nil == linkOwner {
-			logger.Criticalf("missing transaction record for link: %v refererenced by tx: %+v", link, tx)
-			logger.Panic("Transactions database is corrupt")
-		}
-		if !ownership.CurrentlyOwns(linkOwner, link) {
+		if nil == linkOwner || !ownership.CurrentlyOwns(linkOwner, link) {
 			internalDeleteByTxId(txId)
 		}
 
 	case *transactionrecord.BlockFoundation:
+		// should never be in the memory pool - so panic
 		logger.Panic("reservoir: rescan found: BlockFoundation")
 
 	case *transactionrecord.BlockOwnerTransfer:
 		link := tx.Link
 		_, linkOwner := ownership.OwnerOf(link)
-		if !ownership.CurrentlyOwns(linkOwner, link) {
+		if nil == linkOwner || !ownership.CurrentlyOwns(linkOwner, link) {
 			internalDeleteByTxId(txId)
 		}
 
 	case *transactionrecord.BitmarkShare:
 		link := tx.Link
 		_, linkOwner := ownership.OwnerOf(link)
-		if nil == linkOwner {
-			logger.Criticalf("missing transaction record for link: %v refererenced by tx: %+v", link, tx)
-			logger.Panic("Transactions database is corrupt")
-		}
-		if !ownership.CurrentlyOwns(linkOwner, link) {
+		if nil == linkOwner || !ownership.CurrentlyOwns(linkOwner, link) {
 			internalDeleteByTxId(txId)
 		}
 
@@ -485,6 +480,7 @@ func rescanItem(item *transactionData) {
 		}
 
 	default:
+		// undefined data in the memory pool - so panic
 		globalData.log.Criticalf("reservoir rescan unhandled transaction: %v", tx)
 		logger.Panicf("unhandled transaction: %v", tx)
 	}

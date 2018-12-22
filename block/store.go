@@ -24,8 +24,15 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
+type rescanType bool
+
+const (
+	RescanVerified   rescanType = true
+	NoRescanVerified rescanType = true
+)
+
 // store an incoming block checking to make sure it is valid first
-func StoreIncoming(packedBlock []byte) error {
+func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -525,7 +532,9 @@ func StoreIncoming(packedBlock []byte) error {
 	globalData.log.Infof("stored block: %d", header.Number)
 
 	// rescan reservoir to drop any invalid transactions
-	reservoir.Rescan()
+	if performRescan {
+		reservoir.Rescan()
+	}
 
 	return nil
 }

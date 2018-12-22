@@ -325,7 +325,7 @@ func (conn *connector) runStateMachine() bool {
 				break fetch_blocks
 			}
 			log.Debugf("store block number: %d", conn.startBlockNumber)
-			err = block.StoreIncoming(packedBlock)
+			err = block.StoreIncoming(packedBlock, block.NoRescanVerified)
 			if nil != err {
 				log.Errorf("store block number: %d  error: %s", conn.startBlockNumber, err)
 				conn.state = cStateHighestBlock // retry
