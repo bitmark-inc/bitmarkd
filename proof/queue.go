@@ -35,10 +35,15 @@ type entryType struct {
 	transactions []byte
 }
 
+// size of queue
+const (
+	queueSize = 32
+)
+
 // the queue
 type jobQueueType struct {
 	sync.RWMutex // to allow locking
-	entries      map[string]*entryType
+	entries      [queueSize]*entryType
 	count        uint16
 	clear        bool
 }
@@ -50,7 +55,9 @@ var jobQueue jobQueueType
 func initialiseJobQueue() {
 	jobQueue.Lock()
 	defer jobQueue.Unlock()
-	jobQueue.entries = make(map[string]*entryType)
+	for i := range jobQueue.entries {
+		jobQueue.entries[i] = nil
+	}
 	jobQueue.clear = false
 }
 
@@ -58,9 +65,9 @@ func initialiseJobQueue() {
 func enqueueToJobQueue(item *PublishedItem, txdata []byte) {
 	jobQueue.Lock()
 	jobQueue.count += 1 // wraps (uint16)
-	job := fmt.Sprintf("%04x", jobQueue.count)
-	item.Job = job
-	jobQueue.entries[job] = &entryType{
+	item.Job = fmt.Sprintf("%04x", jobQueue.count)
+	n := jobQueue.count % queueSize
+	jobQueue.entries[n] = &entryType{
 		item:         item,
 		transactions: txdata,
 	}
@@ -73,8 +80,16 @@ func matchToJobQueue(received *SubmittedItem) (success bool) {
 
 	job := received.Job
 
-	entry, ok := jobQueue.entries[job]
-	if !ok {
+	var entry *entryType
+search:
+	for _, e := range jobQueue.entries {
+		if nil != e && nil != e.item && e.item.Job == job {
+			entry = e
+			break search
+		}
+	}
+
+	if nil == entry {
 		return
 	}
 
@@ -110,7 +125,9 @@ func matchToJobQueue(received *SubmittedItem) (success bool) {
 
 cleanup:
 	// erase the queue
-	jobQueue.entries = make(map[string]*entryType)
+	for i := range jobQueue.entries {
+		jobQueue.entries[i] = nil
+	}
 	jobQueue.clear = true
 
 	return
