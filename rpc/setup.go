@@ -158,7 +158,7 @@ func initialiseRPC(configuration *RPCConfiguration, version string) error {
 	}
 
 	// create limiter
-	limiter := listener.NewBandwidthLimiter(configuration.MaximumConnections, configuration.Bandwidth)
+	limiter := listener.NewLimiter(configuration.MaximumConnections)
 
 	tlsConfiguration, fingerprint, err := getCertificate(log, name, configuration.Certificate, configuration.PrivateKey)
 	if nil != err {
