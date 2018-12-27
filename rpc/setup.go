@@ -231,22 +231,16 @@ func initialiseHTTPS(configuration *HTTPSConfiguration, version string) error {
 	log.Infof("%s: SHA3-256 fingerprint: %x", name, fingerprint)
 
 	// create access control and format strings to match http.Request.RemoteAddr
-	local := make(map[string]map[string]struct{})
+	local := make(map[string][]*net.IPNet)
 	for path, addresses := range configuration.Allow {
-		set := make(map[string]struct{})
+		set := make([]*net.IPNet, len(addresses))
 		local[path] = set
-	local_loop:
-		for _, ip := range addresses {
-			ip := net.ParseIP(strings.Trim(ip, " "))
-			if nil == ip {
-				continue local_loop
+		for i, ip := range addresses {
+			_, cidr, err := net.ParseCIDR(strings.Trim(ip, " "))
+			if nil != err {
+				return err
 			}
-			if nil != ip.To4() {
-				set[ip.String()] = struct{}{}
-			} else {
-
-				set["["+ip.String()+"]"] = struct{}{}
-			}
+			set[i] = cidr
 		}
 	}
 

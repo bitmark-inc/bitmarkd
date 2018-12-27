@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
+	"net"
 	"net/http"
 	"net/rpc"
 	"net/rpc/jsonrpc"
@@ -55,7 +56,7 @@ type httpHandler struct {
 	server  *rpc.Server
 	start   time.Time
 	version string
-	allow   map[string]map[string]struct{}
+	allow   map[string][]*net.IPNet
 }
 
 // this matches anything not matched and returns error
@@ -86,6 +87,37 @@ func (s *httpHandler) rpc(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// check if remote address is allowed
+func (s *httpHandler) isAllowed(api string, r *http.Request) bool {
+	last := strings.LastIndex(r.RemoteAddr, ":")
+	if last <= 0 {
+		return false
+	}
+
+	cidr, ok := s.allow[api]
+	if !ok {
+		return false
+	}
+
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if nil != err {
+		return false
+	}
+
+	addr := net.ParseIP(host)
+	if nil == addr {
+		return false
+	}
+
+	for _, n := range cidr {
+		if n.Contains(addr) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // to allow a GET for the same response and Node.Info RPC
 func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 	if http.MethodGet != r.Method {
@@ -93,18 +125,11 @@ func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	last := strings.LastIndex(r.RemoteAddr, ":")
-	if last >= 0 {
-		addr := r.RemoteAddr[:last]
-		if _, ok := s.allow["details"][addr]; ok {
-			goto allow_access
-		}
+	if !s.isAllowed("details", r) {
+		s.log.Warnf("Deny access: %q", r.RemoteAddr)
+		sendForbidden(w)
+		return
 	}
-	s.log.Warnf("Deny access: %q", r.RemoteAddr)
-	sendForbidden(w)
-	return // *IMPORTANT*
-
-allow_access:
 
 	connectionCount.Increment()
 	defer connectionCount.Decrement()
@@ -158,18 +183,11 @@ func (s *httpHandler) connections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	last := strings.LastIndex(r.RemoteAddr, ":")
-	if last >= 0 {
-		addr := r.RemoteAddr[:last]
-		if _, ok := s.allow["connections"][addr]; ok {
-			goto allow_access
-		}
+	if !s.isAllowed("connections", r) {
+		s.log.Warnf("Deny access: %q", r.RemoteAddr)
+		sendForbidden(w)
+		return
 	}
-	s.log.Warnf("Deny access: %q", r.RemoteAddr)
-	sendForbidden(w)
-	return // *IMPORTANT*
-
-allow_access:
 
 	connectionCount.Increment()
 	defer connectionCount.Decrement()
@@ -204,18 +222,11 @@ func (s *httpHandler) peers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	last := strings.LastIndex(r.RemoteAddr, ":")
-	if last >= 0 {
-		addr := r.RemoteAddr[:last]
-		if _, ok := s.allow["peers"][addr]; ok {
-			goto allow_access
-		}
+	if !s.isAllowed("peers", r) {
+		s.log.Warnf("Deny access: %q", r.RemoteAddr)
+		sendForbidden(w)
+		return
 	}
-	s.log.Warnf("Deny access: %q", r.RemoteAddr)
-	sendForbidden(w)
-	return // *IMPORTANT*
-
-allow_access:
 
 	connectionCount.Increment()
 	defer connectionCount.Decrement()

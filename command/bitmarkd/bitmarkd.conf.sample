@@ -111,20 +111,20 @@ M.https_rpc = {
         "[::]:2131"
     },
 
-    -- IPs that can access the /bitmarkd/* GET APIs
+    -- IP networks in CIDR form that can access the /bitmarkd/* GET APIs
     -- default is deny
     allow = {
         details = {
-            "127.0.0.1",
-            "[::1]",
+            "127.0.0.0/8",
+            "::1/128",
         },
         connections = {
-            "127.0.0.1",
-            "[::1]",
+            "127.0.0.0/8",
+            "::1/128",
         },
         peers = {
-            "127.0.0.1",
-            "[::1]",
+            "127.0.0.0/8",
+            "::1/128",
         }
     },
 
