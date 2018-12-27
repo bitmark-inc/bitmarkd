@@ -11,7 +11,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
-	"github.com/bitmark-inc/bitmarkd/blockring"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/currency/litecoin"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -521,8 +520,6 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 		globalData.log.Warnf("rebuilt block: %d", header.Number)
 		return nil
 	}
-
-	blockring.Put(header.Number, digest, packedBlock)
 
 	// finally store the block
 	blockNumber := make([]byte, 8)

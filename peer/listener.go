@@ -12,7 +12,6 @@ import (
 	zmq "github.com/pebbe/zmq4"
 
 	"github.com/bitmark-inc/bitmarkd/announce"
-	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
@@ -220,7 +219,7 @@ func (lstn *listener) process(socket *zmq.Socket) {
 			err = fault.ErrMissingParameters
 		} else if 8 == len(parameters[0]) {
 			number := binary.BigEndian.Uint64(parameters[0])
-			d, e := block.DigestForBlock(number)
+			d, e := blockheader.DigestForBlock(number)
 			if nil == e {
 				result = d[:]
 			} else {
