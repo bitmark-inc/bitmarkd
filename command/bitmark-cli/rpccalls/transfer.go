@@ -87,6 +87,7 @@ func (client *Client) Transfer(transferConfig *TransferData) (*TransferReply, er
 	// make response
 	response := TransferReply{
 		TransferId: reply.TxId,
+		BitmarkId:  reply.BitmarkId,
 		PayId:      reply.PayId,
 		Payments:   reply.Payments,
 		Commands:   commands,
@@ -147,6 +148,7 @@ func (client *Client) CountersignTransfer(transfer *transactionrecord.BitmarkTra
 	// make response
 	response := TransferReply{
 		TransferId: reply.TxId,
+		BitmarkId:  reply.BitmarkId,
 		PayId:      reply.PayId,
 		Payments:   reply.Payments,
 		Commands:   commands,
