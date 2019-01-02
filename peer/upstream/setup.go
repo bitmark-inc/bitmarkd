@@ -209,7 +209,7 @@ loop:
 					u.Unlock()
 					continue loop // try again later
 				} else if nil != err {
-					log.Errorf("register: error: %s", err)
+					log.Warnf("register: error: %s", err)
 					err := u.client.Reconnect()
 					if nil != err {
 						log.Errorf("register: reconnect error: %s", err)
