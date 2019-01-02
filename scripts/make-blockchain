@@ -314,14 +314,20 @@ OWNER-OF-BLOCK() {
   do
     eval user=\"\${user_${i}}\"
     [ -z "${user}" ] && break
-    CLI "${user_1}" owned -c 100 -o "${user}"
-    txid=$(PRETTY --join-output --arg name "${user}" --arg block_number "${block_number}" "${q}")
-    if [ -n "${txid}" ]
-    then
-      block_owner="${user}"
-      block_txid="${txid}"
-      break
-    fi
+    next='0'
+    while :
+    do
+      CLI "${user_1}" owned -c 100 -s "${next}" -o "${user}"
+      SET next '.next'
+      [ X"${next}" = X"0" ] && break
+      txid=$(PRETTY --join-output --arg name "${user}" --arg block_number "${block_number}" "${q}")
+      if [ -n "${txid}" ]
+      then
+        block_owner="${user}"
+        block_txid="${txid}"
+        break
+      fi
+    done
     i=$(( i + 1 ))
   done
   [ -z "${block_owner}" ] && ERROR 'cannot find owner of block: %d' "${block_number}"
