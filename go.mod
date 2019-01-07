@@ -4,7 +4,7 @@ require (
 	github.com/bitmark-inc/certgen v0.1.1
 	github.com/bitmark-inc/exitwithstatus v0.1.2
 	github.com/bitmark-inc/getoptions v0.1.1
-	github.com/bitmark-inc/go-argon2 v0.0.0-20180614084934-b806dddc1b18
+	github.com/bitmark-inc/go-argon2 v0.1.4
 	github.com/bitmark-inc/listener v0.2.0
 	github.com/bitmark-inc/logger v0.3.4
 	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db // indirect
