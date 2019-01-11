@@ -6,6 +6,8 @@ github.com/bitmark-inc/getoptions v0.1.1 h1:jFau6OG1oUzdj0BCgFGmHveoxTTSyCoL3MXz
 github.com/bitmark-inc/getoptions v0.1.1/go.mod h1:++zQVcw89sB6Lah2SJae420l+xKtRGkdKTxqLLeEhS4=
 github.com/bitmark-inc/go-argon2 v0.0.0-20180614084934-b806dddc1b18 h1:yf0bKEjgP4hYNogIoZrjXxlKvvp1LB075ANYz08VFvA=
 github.com/bitmark-inc/go-argon2 v0.0.0-20180614084934-b806dddc1b18/go.mod h1:JCGWJcdBJX4f398Djr9kUf91W8OB6ixTUG+OQwJsbs4=
+github.com/bitmark-inc/go-argon2 v0.1.4 h1:MzyNi02WEAkUOMomqhQf/RDe7OTH0iH/sgN5IDEM980=
+github.com/bitmark-inc/go-argon2 v0.1.4/go.mod h1:JCGWJcdBJX4f398Djr9kUf91W8OB6ixTUG+OQwJsbs4=
 github.com/bitmark-inc/listener v0.2.0 h1:u/pHT1dPtFwyVa1gZn1GzY+n0l+4a3GDAcCAy4jLHUw=
 github.com/bitmark-inc/listener v0.2.0/go.mod h1:20TEA1V1rHgEkxQXw2MUVXtc+IUM0QSaBrTjzJRTAmg=
 github.com/bitmark-inc/logger v0.3.4 h1:e7980AjquNdW1/d2IqTbf6Kz1I9rjzMfslGKr5D5lPc=

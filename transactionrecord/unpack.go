@@ -103,6 +103,10 @@ unpack_switch:
 			Nonce:          nonce,
 			Signature:      signature,
 		}
+		err = r.check(testnet)
+		if nil != err {
+			return nil, 0, err
+		}
 		return r, n, nil
 
 	case AssetDataTag:
@@ -169,6 +173,10 @@ unpack_switch:
 			Registrant:  registrant,
 			Signature:   signature,
 		}
+		err = r.check(testnet)
+		if nil != err {
+			return nil, 0, err
+		}
 		return r, n, nil
 
 	case BitmarkIssueTag:
@@ -224,6 +232,10 @@ unpack_switch:
 			Signature: signature,
 			Nonce:     nonce,
 		}
+		err = r.check(testnet)
+		if nil != err {
+			return nil, 0, err
+		}
 		return r, n, nil
 
 	case BitmarkTransferUnratifiedTag:
@@ -277,6 +289,10 @@ unpack_switch:
 			Escrow:    escrow,
 			Owner:     owner,
 			Signature: signature,
+		}
+		err = r.check(testnet)
+		if nil != err {
+			return nil, 0, err
 		}
 		return r, n, nil
 
@@ -342,6 +358,10 @@ unpack_switch:
 			Owner:            owner,
 			Signature:        signature,
 			Countersignature: countersignature,
+		}
+		err = r.check(testnet)
+		if nil != err {
+			return nil, 0, err
 		}
 		return r, n, nil
 
@@ -410,6 +430,10 @@ unpack_switch:
 			Payments:  payments,
 			Nonce:     nonce,
 			Signature: signature,
+		}
+		err = r.check(testnet)
+		if nil != err {
+			return nil, 0, err
 		}
 		return r, n, nil
 
@@ -504,6 +528,10 @@ unpack_switch:
 			Signature:        signature,
 			Countersignature: countersignature,
 		}
+		err = r.check(testnet)
+		if nil != err {
+			return nil, 0, err
+		}
 		return r, n, nil
 
 	case BitmarkShareTag:
@@ -542,6 +570,10 @@ unpack_switch:
 			Link:      link,
 			Quantity:  quantity,
 			Signature: signature,
+		}
+		err = r.check(testnet)
+		if nil != err {
+			return nil, 0, err
 		}
 		return r, n, nil
 
@@ -632,6 +664,10 @@ unpack_switch:
 			BeforeBlock:      beforeBlock,
 			Signature:        signature,
 			Countersignature: countersignature,
+		}
+		err = r.check(testnet)
+		if nil != err {
+			return nil, 0, err
 		}
 		return r, n, nil
 
@@ -744,6 +780,10 @@ unpack_switch:
 			BeforeBlock:      beforeBlock,
 			Signature:        signature,
 			Countersignature: countersignature,
+		}
+		err = r.check(testnet)
+		if nil != err {
+			return nil, 0, err
 		}
 		return r, n, nil
 

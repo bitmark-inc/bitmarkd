@@ -296,7 +296,7 @@ func (conn *connector) runStateMachine() bool {
 			// check digests of descending blocks (to detect a fork)
 		check_digests:
 			for h := height; h > genesis.BlockNumber; h -= 1 {
-				digest, err := block.DigestForBlock(h)
+				digest, err := blockheader.DigestForBlock(h)
 				if nil != err {
 					log.Infof("block number: %d  local digest error: %s", h, err)
 					conn.state = cStateHighestBlock // retry
@@ -348,7 +348,7 @@ func (conn *connector) runStateMachine() bool {
 				break fetch_blocks
 			}
 			log.Debugf("store block number: %d", conn.startBlockNumber)
-			err = block.StoreIncoming(packedBlock)
+			err = block.StoreIncoming(packedBlock, block.NoRescanVerified)
 			if nil != err {
 				log.Errorf("store block number: %d  error: %s", conn.startBlockNumber, err)
 				conn.state = cStateHighestBlock // retry

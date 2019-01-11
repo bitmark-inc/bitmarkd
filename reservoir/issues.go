@@ -13,7 +13,7 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bitmark-inc/bitmarkd/asset"
-	"github.com/bitmark-inc/bitmarkd/blockring"
+	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/constants"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -300,14 +300,14 @@ func TryProof(payId pay.PayId, clientNonce []byte) TrackingStatus {
 
 	globalData.log.Infof("TryProof: difficulty: 0x%064x", bigDifficulty)
 
-	var payNonce [8]byte
 	// compute hash with all possible payNonces
 	h := sha3.New256()
-	iterator := blockring.NewRingReader()
-	i := 0 // ***** FIX THIS: debug
-	for iterator.Next() {
-		crc := iterator.GetCRC()
-		binary.BigEndian.PutUint64(payNonce[:], crc)
+
+	height := blockheader.Height()
+	for i := uint64(0); i < 20; i += 1 {
+
+		payNonce := PayNonceFromBlock(height - i)
+
 		globalData.log.Debugf("TryProof: payNonce[%d]: %x", i, payNonce)
 
 		i += 1 // ***** FIX THIS: debug

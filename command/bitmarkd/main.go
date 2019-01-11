@@ -16,7 +16,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
-	"github.com/bitmark-inc/bitmarkd/blockring"
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/payment"
@@ -183,16 +182,7 @@ func main() {
 		log.Criticalf("blockheader initialise error: %s", err)
 		exitwithstatus.Message("blockheader initialise error: %s", err)
 	}
-	defer blockring.Finalise()
-
-	// block hash ring buffer
-	log.Info("initialise blockring")
-	err = blockring.Initialise()
-	if nil != err {
-		log.Criticalf("blockring initialise error: %s", err)
-		exitwithstatus.Message("blockring initialise error: %s", err)
-	}
-	defer blockring.Finalise()
+	defer blockheader.Finalise()
 
 	// block data storage - depends on storage and mode
 	log.Info("initialise block")

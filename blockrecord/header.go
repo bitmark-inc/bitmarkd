@@ -156,7 +156,6 @@ func (record PackedHeader) Unpack() (*Header, error) {
 // digest for a packed header
 // make sure to truncate bytes to correct length
 func (record PackedHeader) Digest() blockdigest.Digest {
-	//	return blockdigest.NewDigest(record[:TotalBlockSize])
 	return blockdigest.NewDigest(record[:])
 }
 

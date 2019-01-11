@@ -52,7 +52,6 @@ outer_loop:
 			blockheader.Set(header.Number, digest, header.Version, header.Timestamp)
 
 			log.Infof("finish: _NOT_ Deleting: %d", header.Number)
-			fillRingBuffer(log)
 			return nil
 		}
 

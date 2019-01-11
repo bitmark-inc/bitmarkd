@@ -5,11 +5,9 @@
 package reservoir
 
 import (
-	"encoding/binary"
 	"encoding/hex"
-	"hash/crc64"
 
-	"github.com/bitmark-inc/bitmarkd/blockring"
+	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/fault"
 )
 
@@ -17,15 +15,22 @@ import (
 // Note: no reversal is required for this
 type PayNonce [8]byte
 
-var table = crc64.MakeTable(crc64.ECMA)
-
 // create a random pay nonce
 func NewPayNonce() PayNonce {
-
-	crc := blockring.GetLatestCRC()
-
+	_, digest, _, _ := blockheader.Get()
 	nonce := PayNonce{}
-	binary.BigEndian.PutUint64(nonce[:], crc)
+	copy(nonce[:], digest[:])
+	return nonce
+}
+
+// get a previous paynonce
+func PayNonceFromBlock(number uint64) PayNonce {
+	nonce := PayNonce{}
+	digest, err := blockheader.DigestForBlock(number)
+	if nil != err {
+		return nonce
+	}
+	copy(nonce[:], digest[:])
 	return nonce
 }
 

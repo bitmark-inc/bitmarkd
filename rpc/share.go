@@ -140,7 +140,7 @@ func (share *Share) Balance(arguments *ShareBalanceArguments, reply *ShareBalanc
 
 type ShareGrantReply struct {
 	Remaining uint64                                          `json:"remaining"`
-	TxId      merkle.Digest                                   `json:"share"`
+	TxId      merkle.Digest                                   `json:"txId"`
 	PayId     pay.PayId                                       `json:"payId"`
 	Payments  map[string]transactionrecord.PaymentAlternative `json:"payments"`
 }
@@ -211,7 +211,7 @@ func (share *Share) Grant(arguments *transactionrecord.ShareGrant, reply *ShareG
 type ShareSwapReply struct {
 	RemainingOne uint64                                          `json:"remainingOne"`
 	RemainingTwo uint64                                          `json:"remainingTwo"`
-	TxId         merkle.Digest                                   `json:"share"`
+	TxId         merkle.Digest                                   `json:"txId"`
 	PayId        pay.PayId                                       `json:"payId"`
 	Payments     map[string]transactionrecord.PaymentAlternative `json:"payments"`
 }
