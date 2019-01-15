@@ -499,17 +499,18 @@ func (client *Client) BasicInfo() string {
 }
 
 // Return ServerPublicKey
-func (client *Client) GetServerPublickKey() []byte {
+func (client *Client) GetServerPublicKey() []byte {
 	return client.serverPublicKey
 }
 
 // Clear Server fields for reusing the client
-func (client *Client) ClearServer() error {
+func (client *Client) ResetServer() error {
 	err := client.closeSocket()
 	if nil != err {
 		return err
 	}
 	client.serverPublicKey = make([]byte, publicKeySize)
 	client.address = ""
+	client.v6 = false
 	return nil
 }

@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"container/list"
 	"encoding/hex"
+	"fmt"
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/block"
@@ -178,27 +179,15 @@ func (conn *connector) destroy() {
 	})
 }
 
-//Printout all default: "info", availible: "debug", "info" , "warn" ,"error", "critical"
-func (conn *connector) PrintConnectors(logLevel, prefix string) {
+// Print all upstream connectors default: "debug", availible: "debug", "info" , "warn" , used for debug
+func (conn *connector) PrintUpstreams(prefix string) string {
 	counter := 0
-	log := conn.log
+	upstreams := ""
 	conn.allClients(func(client *upstream.Upstream, e *list.Element) {
 		counter = counter + 1
-		switch logLevel {
-		case "debug":
-			log.Debugf("%sPrint upstream%d:%s", prefix, counter, client.GetClient().BasicInfo())
-		case "info":
-			log.Infof("%sPrint upstream%d:%s", prefix, counter, client.GetClient().BasicInfo())
-		case "warn":
-			log.Warnf("%sPrint upstream%d:%s", prefix, counter, client.GetClient().BasicInfo())
-		case "error":
-			log.Errorf("%sPrint upstream%d:%s", prefix, counter, client.GetClient().BasicInfo())
-		case "critical":
-			log.Criticalf("%sPrint upstream%d:%s", prefix, counter, client.GetClient().BasicInfo())
-		default:
-			log.Infof("%sPrint upstream%d:%s", prefix, counter, client.GetClient().BasicInfo())
-		}
+		upstreams = fmt.Sprintf("%s%supstream%d:%s\n", upstreams, prefix, counter, client.GetClient().BasicInfo())
 	})
+	return upstreams
 }
 
 // various RPC calls to upstream connections
@@ -223,7 +212,7 @@ loop:
 			conn.log.Debugf("received control: %s  public key: %x  connect: %x %q", item.Command, item.Parameters[0], item.Parameters[1], c)
 			//connectToUpstream(conn.log, conn.clients, conn.dynamicStart, item.Command, item.Parameters[0], item.Parameters[1])
 			switch item.Command {
-			case "@D": //Internal Command: Delete an peer
+			case "@D": // internal command: delete an peer
 				conn.releseServerKey(item.Parameters[0])
 				conn.log.Infof("connector Recieve publickServerKey:%s", item.Parameters[0])
 			default:
@@ -501,11 +490,11 @@ func (conn *connector) connectUpstream(priority string, serverPublicKey []byte, 
 func (conn *connector) releseServerKey(serverPublicKey []byte) error {
 	log := conn.log
 	conn.searchClients(func(client *upstream.Upstream, e *list.Element) bool {
-		if bytes.Equal(serverPublicKey, client.GetClient().GetServerPublickKey()) {
+		if bytes.Equal(serverPublicKey, client.GetClient().GetServerPublicKey()) {
 			if e == nil { // static Clients
-				log.Infof("Refuse to delete static peer: %x", serverPublicKey)
+				log.Infof("refuse to delete static peer: %x", serverPublicKey)
 			} else { // dynamic Clients
-				client.ClearServer()
+				client.ResetServer()
 				log.Infof("peer: %x is released in upstream", serverPublicKey)
 				return true
 			}

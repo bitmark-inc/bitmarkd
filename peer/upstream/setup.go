@@ -67,8 +67,8 @@ func (u *Upstream) Destroy() {
 }
 
 //Clear Server side info of Zmq client for reusing the upstream
-func (u *Upstream) ClearServer() {
-	u.GetClient().ClearServer()
+func (u *Upstream) ResetServer() {
+	u.GetClient().ResetServer()
 	u.registered = false
 	u.blockHeight = 0
 }
@@ -221,7 +221,7 @@ loop:
 					u.Unlock()
 					continue loop // try again later
 				} else if nil != err {
-					log.Warnf("register: serverKey: %x register error: %s  ", u.GetClient().GetServerPublickKey(), err)
+					log.Warnf("register: serverKey: %x register error: %s  ", u.GetClient().GetServerPublicKey(), err)
 					err := u.client.Reconnect()
 					if nil != err {
 						log.Errorf("register: reconnect error: %s", err)
