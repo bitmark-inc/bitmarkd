@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	peerPublicKeyFilename  = "peer.public"
-	peerPrivateKeyFilename = "peer.private"
+	peerPublicKeyFilename  = "recorderd.public"
+	peerPrivateKeyFilename = "recorder.private"
 )
 
 // setup command handler
