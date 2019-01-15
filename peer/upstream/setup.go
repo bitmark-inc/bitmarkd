@@ -66,6 +66,13 @@ func (u *Upstream) Destroy() {
 	}
 }
 
+//Clear Server side info of Zmq client for reusing the upstream
+func (u *Upstream) ClearServer() {
+	u.GetClient().ClearServer()
+	u.registered = false
+	u.blockHeight = 0
+}
+
 // check the current destination
 //
 // does not mean actually connected, as could be in a timeout and
@@ -190,6 +197,7 @@ loop:
 
 		case item := <-queue:
 			log.Debugf("from queue: %q  %x", item.Command, item.Parameters)
+
 			if u.registered {
 				u.Lock()
 				err := push(u.client, u.log, &item)
@@ -200,6 +208,7 @@ loop:
 						log.Errorf("push: reconnect error: %s", err)
 					}
 				}
+
 				u.Unlock()
 			}
 
@@ -212,7 +221,7 @@ loop:
 					u.Unlock()
 					continue loop // try again later
 				} else if nil != err {
-					log.Warnf("register: error: %s", err)
+					log.Warnf("register: serverKey: %x register error: %s  ", u.GetClient().GetServerPublickKey(), err)
 					err := u.client.Reconnect()
 					if nil != err {
 						log.Errorf("register: reconnect error: %s", err)

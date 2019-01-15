@@ -208,12 +208,12 @@ scan_nodes:
 		if bytes.Equal(globalData.publicKey, peer.publicKey) {
 			continue scan_nodes
 		}
-
-		log.Infof("public key: %x timestamp: %s", peer.publicKey, peer.timestamp.Format(timeFormat))
+		log.Debugf("public key: %x timestamp: %s", peer.publicKey, peer.timestamp.Format(timeFormat))
 		if peer.timestamp.Add(announceExpiry).Before(now) {
-			log.Info("expired")
 			globalData.peerTree.Delete(key)
 			globalData.treeChanged = true
+			messagebus.Bus.Connector.Send("@D", peer.publicKey, peer.listeners) //@D means: @->Internal Command, D->delete
+			log.Infof("Peer Expired! public key: %x timestamp: %s is removed", peer.publicKey, peer.timestamp.Format(timeFormat))
 		}
 
 	}

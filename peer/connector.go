@@ -46,8 +46,7 @@ const (
 )
 
 type connector struct {
-	log *logger.L
-
+	log        *logger.L
 	preferIPv6 bool
 
 	staticClients []*upstream.Upstream
@@ -180,24 +179,24 @@ func (conn *connector) destroy() {
 }
 
 //Printout all default: "info", availible: "debug", "info" , "warn" ,"error", "critical"
-func (conn *connector) PrintConnectors(logLevel string) {
+func (conn *connector) PrintConnectors(logLevel, prefix string) {
 	counter := 0
 	log := conn.log
 	conn.allClients(func(client *upstream.Upstream, e *list.Element) {
 		counter = counter + 1
 		switch logLevel {
 		case "debug":
-			log.Debugf("Print upstream%d:%s", counter, client.GetClient().DebugInfo())
+			log.Debugf("%sPrint upstream%d:%s", prefix, counter, client.GetClient().BasicInfo())
 		case "info":
-			log.Infof("Print upstream%d:%s", counter, client.GetClient().DebugInfo())
+			log.Infof("%sPrint upstream%d:%s", prefix, counter, client.GetClient().BasicInfo())
 		case "warn":
-			log.Warnf("Print upstream%d:%s", counter, client.GetClient().DebugInfo())
+			log.Warnf("%sPrint upstream%d:%s", prefix, counter, client.GetClient().BasicInfo())
 		case "error":
-			log.Errorf("Print upstream%d:%s", counter, client.GetClient().DebugInfo())
+			log.Errorf("%sPrint upstream%d:%s", prefix, counter, client.GetClient().BasicInfo())
 		case "critical":
-			log.Criticalf("Print upstream%d:%s", counter, client.GetClient().DebugInfo())
+			log.Criticalf("%sPrint upstream%d:%s", prefix, counter, client.GetClient().BasicInfo())
 		default:
-			log.Infof("Print upstream%d:%s", counter, client.GetClient().DebugInfo())
+			log.Infof("%sPrint upstream%d:%s", prefix, counter, client.GetClient().BasicInfo())
 		}
 	})
 }
@@ -223,8 +222,13 @@ loop:
 			c, _ := util.PackedConnection(item.Parameters[1]).Unpack()
 			conn.log.Debugf("received control: %s  public key: %x  connect: %x %q", item.Command, item.Parameters[0], item.Parameters[1], c)
 			//connectToUpstream(conn.log, conn.clients, conn.dynamicStart, item.Command, item.Parameters[0], item.Parameters[1])
-			conn.connectUpstream(item.Command, item.Parameters[0], item.Parameters[1])
-
+			switch item.Command {
+			case "@D": //Internal Command: Delete an peer
+				conn.releseServerKey(item.Parameters[0])
+				conn.log.Infof("connector Recieve publickServerKey:%s", item.Parameters[0])
+			default:
+				conn.connectUpstream(item.Command, item.Parameters[0], item.Parameters[1])
+			}
 		case <-time.After(cycleInterval):
 			conn.process()
 		}
@@ -492,4 +496,21 @@ func (conn *connector) connectUpstream(priority string, serverPublicKey []byte, 
 	}
 
 	return err
+}
+
+func (conn *connector) releseServerKey(serverPublicKey []byte) error {
+	log := conn.log
+	conn.searchClients(func(client *upstream.Upstream, e *list.Element) bool {
+		if bytes.Equal(serverPublicKey, client.GetClient().GetServerPublickKey()) {
+			if e == nil { // static Clients
+				log.Infof("Refuse to delete static peer: %x", serverPublicKey)
+			} else { // dynamic Clients
+				client.ClearServer()
+				log.Infof("peer: %x is released in upstream", serverPublicKey)
+				return true
+			}
+		}
+		return false
+	})
+	return nil
 }

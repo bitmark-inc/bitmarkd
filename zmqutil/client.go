@@ -491,9 +491,25 @@ func ClientFromSocket(socket *zmq.Socket) *Client {
 }
 
 // Return a basic information string for debug
-func (client *Client) DebugInfo() string {
+func (client *Client) BasicInfo() string {
 	s := fmt.Sprintf("serverPublicKey:%x address:%s publicKey:%x  prefix:%s v6:%v socketType:%d ts:%v timeout duration:%s",
 		client.serverPublicKey, client.address, client.publicKey, client.prefix, client.v6, client.socketType, client.timestamp, client.timeout.String())
 
 	return s
+}
+
+// Return ServerPublicKey
+func (client *Client) GetServerPublickKey() []byte {
+	return client.serverPublicKey
+}
+
+// Clear Server fields for reusing the client
+func (client *Client) ClearServer() error {
+	err := client.closeSocket()
+	if nil != err {
+		return err
+	}
+	client.serverPublicKey = make([]byte, publicKeySize)
+	client.address = ""
+	return nil
 }
