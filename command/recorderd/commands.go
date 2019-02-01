@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	peerPublicKeyFilename  = "recorderd.public"
-	peerPrivateKeyFilename = "recorder.private"
+	recorderdPublicKeyFilename  = "recorderd.public"
+	recorderdPrivateKeyFilename = "recorderd.private"
 )
 
 // setup command handler
@@ -30,9 +30,8 @@ func processSetupCommand(arguments []string) {
 
 	switch command {
 	case "generate-identity":
-		dir := getWorkingDirectory(arguments)
-		publicKeyFilename := filepath.Join(dir, peerPublicKeyFilename)
-		privateKeyFilename := filepath.Join(dir, peerPrivateKeyFilename)
+		publicKeyFilename := getFilenameWithDirectory(arguments, recorderdPublicKeyFilename)
+		privateKeyFilename := getFilenameWithDirectory(arguments, recorderdPrivateKeyFilename)
 
 		err := zmqutil.MakeKeyPair(publicKeyFilename, privateKeyFilename)
 		if nil != err {
@@ -54,20 +53,21 @@ func processSetupCommand(arguments []string) {
 		fmt.Printf("supported commands:\n\n")
 		fmt.Printf("  help                             - display this message\n\n")
 
-		fmt.Printf("  generate-identity [DIR]          - create private key in: %q\n", "DIR/"+peerPrivateKeyFilename)
-		fmt.Printf("                                     and the public key in: %q\n", "DIR/"+peerPublicKeyFilename)
+		fmt.Printf("  generate-identity [DIR]          - create private key in: %q\n", "DIR/"+recorderdPrivateKeyFilename)
+		fmt.Printf("                                     and the public key in: %q\n", "DIR/"+recorderdPublicKeyFilename)
 		fmt.Printf("\n")
 
 		exitwithstatus.Exit(1)
 	}
 }
 
-// get the working directoy; if not set in the arguments
+// get the working directory; if not set in the arguments
 // it's set to the current directory
-func getWorkingDirectory(arguments []string) string {
+func getFilenameWithDirectory(arguments []string, name string) string {
 	dir := "."
 	if len(arguments) >= 1 {
-		dir = filepath.Dir(arguments[0])
+		dir = arguments[0]
 	}
-	return dir
+
+	return filepath.Join(dir, name)
 }

@@ -53,9 +53,8 @@ func processSetupCommand(arguments []string) bool {
 
 	switch command {
 	case "gen-peer-identity", "peer":
-		dir := getWorkingDirectory(arguments)
-		publicKeyFilename := filepath.Join(dir, peerPublicKeyFilename)
-		privateKeyFilename := filepath.Join(dir, peerPrivateKeyFilename)
+		publicKeyFilename := getFilenameWithDirectory(arguments, peerPublicKeyFilename)
+		privateKeyFilename := getFilenameWithDirectory(arguments, peerPrivateKeyFilename)
 		err := zmqutil.MakeKeyPair(publicKeyFilename, privateKeyFilename)
 		if nil != err {
 			fmt.Printf("cannot generate private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
@@ -65,9 +64,8 @@ func processSetupCommand(arguments []string) bool {
 		fmt.Printf("generated private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
 
 	case "gen-rpc-cert", "rpc":
-		dir := getWorkingDirectory(arguments)
-		certificateFilename := filepath.Join(dir, rpcCertificateKeyFilename)
-		privateKeyFilename := filepath.Join(dir, rpcPrivateKeyFilename)
+		certificateFilename := getFilenameWithDirectory(arguments, rpcCertificateKeyFilename)
+		privateKeyFilename := getFilenameWithDirectory(arguments, rpcPrivateKeyFilename)
 		addresses := []string{}
 		if len(arguments) >= 2 {
 			for _, a := range arguments[1:] {
@@ -85,10 +83,9 @@ func processSetupCommand(arguments []string) bool {
 		fmt.Printf("generated RPC key: %q and certificate: %q\n", privateKeyFilename, certificateFilename)
 
 	case "gen-proof-identity", "proof":
-		dir := getWorkingDirectory(arguments)
-		publicKeyFilename := filepath.Join(dir, proofPublicKeyFilename)
-		privateKeyFilename := filepath.Join(dir, proofPrivateKeyFilename)
-		signingKeyFilename := filepath.Join(dir, proofSigningKeyFilename)
+		publicKeyFilename := getFilenameWithDirectory(arguments, proofPublicKeyFilename)
+		privateKeyFilename := getFilenameWithDirectory(arguments, proofPrivateKeyFilename)
+		signingKeyFilename := getFilenameWithDirectory(arguments, proofSigningKeyFilename)
 		err := zmqutil.MakeKeyPair(publicKeyFilename, privateKeyFilename)
 		if nil != err {
 			fmt.Printf("cannot generate private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
@@ -457,12 +454,13 @@ func splitConnection(hostPort string) (bool, string, int, error) {
 	return true, "[" + IP.String() + "]", numericPort, nil
 }
 
-// get the working directoy; if not set in the arguments
+// get the working directory; if not set in the arguments
 // it's set to the current directory
-func getWorkingDirectory(arguments []string) string {
+func getFilenameWithDirectory(arguments []string, name string) string {
 	dir := "."
 	if len(arguments) >= 1 {
-		dir = filepath.Dir(arguments[0])
+		dir = arguments[0]
 	}
-	return dir
+
+	return filepath.Join(dir, name)
 }
