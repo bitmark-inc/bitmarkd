@@ -1,3 +1,10 @@
+bitmarkd (0.10.2-1) unstable; urgency=medium
+
+  * cli option for determining if nonce==zero is issued
+  * minor corrections
+
+ -- Christopher Hall <hsw@bitmark.com>  Wed, 27 Feb 2019 10:35:56 +0000
+
 bitmarkd (0.10.1-1) unstable; urgency=medium
 
   * refactor record checks
