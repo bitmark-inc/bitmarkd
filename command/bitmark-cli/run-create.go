@@ -6,13 +6,11 @@ package main
 
 import (
 	"fmt"
-	"strings"
-
-	"github.com/urfave/cli"
-
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/rpccalls"
 	"github.com/bitmark-inc/bitmarkd/keypair"
+	"github.com/urfave/cli"
+	"strings"
 )
 
 func runCreate(c *cli.Context) error {
@@ -42,6 +40,11 @@ func runCreate(c *cli.Context) error {
 	quantity := c.Int("quantity")
 	if quantity <= 0 {
 		return fmt.Errorf("invalid quantity: %d", quantity)
+	}
+
+	zeroNonceOnly := c.Bool("zero")
+	if zeroNonceOnly && quantity != 1 {
+		return fmt.Errorf("invalid free-issue quantity: %d only 1 is allowed", quantity)
 	}
 
 	if m.verbose {
@@ -119,6 +122,9 @@ func runCreate(c *cli.Context) error {
 	response, err := client.Issue(issueConfig)
 	if issueConfig.FreeIssue && nil != err && strings.Contains(err.Error(), "transaction already exists") {
 		// if free issue was already done, try again asking for payment
+		if zeroNonceOnly {
+			return err
+		}
 		issueConfig.FreeIssue = false
 		response, err = client.Issue(issueConfig)
 	}

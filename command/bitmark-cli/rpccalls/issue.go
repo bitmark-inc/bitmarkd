@@ -8,12 +8,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"io"
-	"time"
-
-	"golang.org/x/crypto/ed25519"
-	"golang.org/x/crypto/sha3"
-
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/keypair"
 	"github.com/bitmark-inc/bitmarkd/merkle"
@@ -21,6 +15,10 @@ import (
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
+	"golang.org/x/crypto/ed25519"
+	"golang.org/x/crypto/sha3"
+	"io"
+	"time"
 )
 
 var (
@@ -79,6 +77,17 @@ func (client *Client) Issue(issueConfig *IssueData) (*IssueReply, error) {
 
 	var issuesReply rpc.CreateReply
 	if err := client.client.Call("Bitmarks.Create", issuesArgs, &issuesReply); err != nil {
+		if fault.ErrTransactionAlreadyExists.Error() == err.Error() && issueConfig.FreeIssue {
+			// only for the single free issue nonce must be zero
+			txId, err := makeIssueTxId(client.testnet, issueConfig, 0)
+			if nil != err {
+				return nil, err
+			}
+			r := &IssueReply{
+				IssueIds: []merkle.Digest{*txId},
+			}
+			return r, nil
+		}
 		return nil, err
 	}
 
@@ -141,6 +150,16 @@ func (client *Client) Issue(issueConfig *IssueData) (*IssueReply, error) {
 
 // build a properly signed issues
 func makeIssue(testnet bool, issueConfig *IssueData, nonce uint64) (*transactionrecord.BitmarkIssue, error) {
+	_, issue, err := internalMakeIssue(testnet, issueConfig, nonce, false)
+	return issue, err
+}
+
+func makeIssueTxId(testnet bool, issueConfig *IssueData, nonce uint64) (*merkle.Digest, error) {
+	digest, _, err := internalMakeIssue(testnet, issueConfig, nonce, true)
+	return digest, err
+}
+
+func internalMakeIssue(testnet bool, issueConfig *IssueData, nonce uint64, generateDigest bool) (*merkle.Digest, *transactionrecord.BitmarkIssue, error) {
 
 	issuerAddress := makeAddress(issueConfig.Issuer, testnet)
 
@@ -154,9 +173,9 @@ func makeIssue(testnet bool, issueConfig *IssueData, nonce uint64) (*transaction
 	// pack without signature
 	packed, err := r.Pack(issuerAddress)
 	if nil == err {
-		return nil, ErrMakeTransferFail
+		return nil, nil, ErrMakeTransferFail
 	} else if fault.ErrInvalidSignature != err {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// manually sign the record and attach signature
@@ -164,11 +183,15 @@ func makeIssue(testnet bool, issueConfig *IssueData, nonce uint64) (*transaction
 	r.Signature = signature[:]
 
 	// check that signature is correct by packing again
-	_, err = r.Pack(issuerAddress)
+	pkFull, err := r.Pack(issuerAddress)
 	if nil != err {
-		return nil, err
+		return nil, nil, err
 	}
-	return &r, nil
+	if generateDigest {
+		digest := merkle.NewDigest(pkFull)
+		return &digest, &r, nil
+	}
+	return nil, &r, nil
 }
 
 // determine the nonce as a hex string

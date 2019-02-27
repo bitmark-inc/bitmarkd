@@ -6,13 +6,11 @@ package main
 
 import (
 	"fmt"
+	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
+	"github.com/urfave/cli"
 	"io"
 	"os"
 	"path"
-
-	"github.com/urfave/cli"
-
-	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 )
 
 type metadata struct {
@@ -150,6 +148,10 @@ func main() {
 					Name:  "fingerprint, f",
 					Value: "",
 					Usage: "*asset fingerprint `STRING`",
+				},
+				cli.BoolFlag{
+					Name:  "zero, z",
+					Usage: " only try to issue the free zero nonce",
 				},
 				cli.IntFlag{
 					Name:  "quantity, q",
