@@ -7,11 +7,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-
-	zmq "github.com/pebbe/zmq4"
-
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/logger"
+	zmq "github.com/pebbe/zmq4"
 )
 
 // sent by bitmarkd
@@ -64,7 +62,7 @@ func Subscribe(i int, connectTo string, v6 bool, serverPublicKey []byte, publicK
 		socket.Close()
 	}
 
-	// to submitt hashing requests
+	// to submit hashing requests
 	proof, err := zmq.NewSocket(zmq.PUSH)
 	if nil != err {
 		socket.Close()
