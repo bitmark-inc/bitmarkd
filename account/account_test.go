@@ -8,10 +8,9 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"testing"
-
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"testing"
 )
 
 // Test account functionality
@@ -53,6 +52,13 @@ var testAccount = []accountTest{
 		zero:          true,
 		publicKey:     decodeHex("0000000000000000000000000000000000000000000000000000000000000000"),
 		base58Account: "dw9MQXcC5rJZb3QE1nz86PiQAheMP1dx9M3dr52tT8NNs14m33",
+	},
+	{
+		algorithm:     account.ED25519,
+		testnet:       false,
+		zero:          true,
+		publicKey:     decodeHex("0000000000000000000000000000000000000000000000000000000000000000"),
+		base58Account: "a3ezwdYVEVrHwszQrYzDTCAZwUD3yKtNsCq9YhEu97bPaGAKy1",
 	},
 	{
 		algorithm:     account.Nothing,
@@ -145,6 +151,9 @@ loop:
 		if nil != err {
 			t.Errorf("%d: from base58 error: %s", index, err)
 			continue loop
+		}
+		if acc.IsTesting() != test.testnet {
+			t.Errorf("%d: from base58 testnet: %t  expected: %t", index, acc.IsTesting(), test.testnet)
 		}
 		if acc.KeyType() != test.algorithm {
 			t.Errorf("%d: from base58 type: %d  expected: %d", index, acc.KeyType(), test.algorithm)
