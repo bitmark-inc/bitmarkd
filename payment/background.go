@@ -149,7 +149,7 @@ func (d *discoverer) Run(args interface{}, shutdown <-chan struct{}) {
 						d.log.Errorf("receive event error: %s", err)
 						continue loop
 					}
-					d.log.Infof("event: %q  address: %q  value: %d", ev, addr, v)
+					d.log.Debugf("event: %q  address: %q  value: %d", ev, addr, v)
 					retrieve <- struct{}{}
 				default:
 					msg, err := s.RecvMessageBytes(0)
