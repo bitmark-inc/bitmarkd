@@ -290,7 +290,7 @@ func (lstn *listener) handleEvent(socket *zmq.Socket) {
 		lstn.log.Errorf("receive event error: %s", err)
 		return
 	}
-	lstn.log.Infof("event: %q  address: %q  value: %d", ev, addr, v)
+	lstn.log.Debugf("event: %q  address: %q  value: %d", ev, addr, v)
 
 	switch ev {
 	case zmq.EVENT_ACCEPTED:
