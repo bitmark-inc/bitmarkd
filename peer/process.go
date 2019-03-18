@@ -6,7 +6,6 @@ package peer
 
 import (
 	"encoding/binary"
-
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -94,6 +93,10 @@ func processSubscription(log *logger.L, command string, arguments [][]byte) {
 			log.Warnf("rpc with too few data: %d items", dataLength)
 			return
 		}
+		if 8 != len(arguments[2]) {
+			log.Warn("rpc with invalid timestamp")
+			return
+		}
 		timestamp := binary.BigEndian.Uint64(arguments[2])
 		log.Infof("received rpc: fingerprint: %x  rpc: %x  timestamp: %d", arguments[0], arguments[1], timestamp)
 		if announce.AddRPC(arguments[0], arguments[1], timestamp) {
@@ -103,6 +106,10 @@ func processSubscription(log *logger.L, command string, arguments [][]byte) {
 	case "peer":
 		if dataLength < 3 {
 			log.Warnf("peer with too few data: %d items", dataLength)
+			return
+		}
+		if 8 != len(arguments[2]) {
+			log.Warn("peer with invalid timestamp")
 			return
 		}
 		timestamp := binary.BigEndian.Uint64(arguments[2])

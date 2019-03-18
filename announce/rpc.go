@@ -6,10 +6,9 @@ package announce
 
 import (
 	"bytes"
-	"time"
-
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
+	"time"
 )
 
 // set this node's rpc announcement data
@@ -58,6 +57,8 @@ func addRPC(fingerprint fingerprintType, rpcs []byte, timestamp uint64, local bo
 	if !ok {
 
 		ts := time.Now()
+
+		// disallow future timestamps: require timestamp ≤ Now
 		if timestamp != 0 && timestamp <= uint64(ts.Unix()) {
 			ts = time.Unix(int64(timestamp), 0)
 		}

@@ -40,6 +40,7 @@ var (
 	ErrDoubleTransferAttempt                 = InvalidError("double transfer attempt")
 	ErrFingerprintTooLong                    = LengthError("fingerprint too long")
 	ErrFingerprintTooShort                   = LengthError("fingerprint too short")
+	ErrHeightOutOfSequence                   = InvalidError("height out of sequence")
 	ErrIncorrectChain                        = InvalidError("incorrect chain")
 	ErrInitialisationFailed                  = InvalidError("initialisation failed")
 	ErrInsufficientShares                    = InvalidError("insufficient shares")

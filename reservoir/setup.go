@@ -5,9 +5,6 @@
 package reservoir
 
 import (
-	"sync"
-	"time"
-
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/currency"
@@ -19,6 +16,8 @@ import (
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
+	"sync"
+	"time"
 )
 
 // various limiting constants
@@ -271,7 +270,7 @@ func setVerified(payId pay.PayId, detail *PaymentDetail) bool {
 	// single transaction
 	if entry, ok := globalData.pendingTransactions[payId]; ok {
 		if !acceptablePayment(detail, entry.payments) {
-			globalData.log.Warnf("failed check for txid: %s  payid: %s", detail.TxID, payId)
+			globalData.log.Warnf("single transaction failed check for txid: %s  payid: %s", detail.TxID, payId)
 			return false
 		}
 		globalData.log.Infof("paid txid: %s  payid: %s", detail.TxID, payId)
@@ -290,7 +289,7 @@ func setVerified(payId pay.PayId, detail *PaymentDetail) bool {
 	// issue block
 	if entry, ok := globalData.pendingPaidIssues[payId]; ok {
 		if !acceptablePayment(detail, entry.payments) {
-			globalData.log.Warnf("failed check for txid: %s  payid: %s", detail.TxID, payId)
+			globalData.log.Warnf("issue block failed check for txid: %s  payid: %s", detail.TxID, payId)
 			return false
 		}
 		globalData.log.Infof("paid txid: %s  payid: %s", detail.TxID, payId)

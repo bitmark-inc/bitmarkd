@@ -6,7 +6,6 @@ package block
 
 import (
 	"encoding/binary"
-
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
@@ -53,6 +52,9 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 
 	if previousBlock != header.PreviousBlock {
 		return fault.ErrPreviousBlockDigestDoesNotMatch
+	}
+	if height+1 != header.Number {
+		return fault.ErrHeightOutOfSequence
 	}
 
 	// check version
@@ -105,6 +107,8 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 		// this is to double check the merkle root
 		txIds := make([]merkle.Digest, header.TransactionCount)
 
+		localAssets := make(map[transactionrecord.AssetIdentifier]struct{})
+
 		// check all transactions are valid
 		for i := uint16(0); i < header.TransactionCount; i += 1 {
 			transaction, n, err := transactionrecord.Packed(data).Unpack(mode.IsTesting())
@@ -131,6 +135,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 				if !suppressDuplicateRecordChecks && storage.Pool.Assets.Has(assetId[:]) {
 					return fault.ErrTransactionAlreadyExists
 				}
+				localAssets[assetId] = struct{}{}
 
 			case *transactionrecord.BitmarkIssue:
 				_, err := tx.Pack(tx.Owner)
@@ -139,6 +144,11 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 				}
 				if !suppressDuplicateRecordChecks && storage.Pool.Transactions.Has(txId[:]) {
 					return fault.ErrTransactionAlreadyExists
+				}
+				if _, ok := localAssets[tx.AssetId]; !ok {
+					if !storage.Pool.Assets.Has(tx.AssetId[:]) {
+						return fault.ErrAssetNotFound
+					}
 				}
 
 			case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:

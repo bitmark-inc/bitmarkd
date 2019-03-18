@@ -9,13 +9,12 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
-	"math/big"
-	"time"
-
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
+	"math/big"
+	"time"
 )
 
 type pubkey []byte
@@ -67,7 +66,7 @@ func AddPeer(publicKey []byte, listeners []byte, timestamp uint64) bool {
 // internal add a peer announcement, hold lock before calling
 func addPeer(publicKey []byte, listeners []byte, timestamp uint64) bool {
 
-	// disallow future timestamps: require timestamp >= Now
+	// disallow future timestamps: require timestamp ≤ Now
 	ts := time.Now()
 	if timestamp != 0 && timestamp <= uint64(ts.Unix()) {
 		ts = time.Unix(int64(timestamp), 0)
