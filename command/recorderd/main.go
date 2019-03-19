@@ -22,13 +22,6 @@ import (
 // set by the linker: go build -ldflags "-X main.version=M.N" ./...
 var version string = "zero" // do not change this value
 
-type recorderdData struct {
-	log *logger.L
-}
-
-// global data
-var globalData recorderdData
-
 // main program
 func main() {
 	// ensure exit handler is first
@@ -106,8 +99,7 @@ func main() {
 	reader.updatePeriodic()
 
 	// create a logger channel for the main program
-	globalData.log = logger.New("main")
-	log := globalData.log
+	log := logger.New("main")
 	defer log.Info("shutting down…")
 	log.Info("starting…")
 	log.Infof("version: %s", version)
