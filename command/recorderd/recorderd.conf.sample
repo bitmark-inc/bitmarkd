@@ -28,9 +28,24 @@ M.data_directory = "/var/lib/recorderd"   -- absolute path
 --M.chain = "testing"
 M.chain = "local"
 
--- number of background hashing threads
--- default: number of CPUs
---M.threads = 4
+-- maximum percentage of cpu computation power used for hashing
+-- counts in terms of total cpu cores, e.g. 50% of 8 cpu cores will be 4 threads utilized
+-- default: 50
+-- M.max_cpu_usage = 30
+
+-- scheulde time recorderd runs
+-- time is denoted by hour:minute, hour is denoted in 24-hour clock format
+-- multiple time segment is separated by comma, e.g. "13:00-14:05, 15:20-16:34"
+-- empty string means running all day
+M.calendar = {
+   sunday    = "",
+   monday    = "",
+   tuesday   = "",
+   wednesday = "",
+   thursday  = "",
+   friday    = "",
+   saturday  = ""
+}
 
 -- connect to bitmarkd
 M.peering = {
