@@ -68,7 +68,6 @@ func mockConfiguration(maxCpuUsage int) *Configuration {
 		DataDirectory: "test",
 		PidFile:       "test",
 		Chain:         "test",
-		Threads:       1,
 		MaxCPUUsage:   maxCpuUsage,
 		Peering:       PeerType{},
 		Logging:       logging,

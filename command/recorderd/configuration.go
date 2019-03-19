@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/bitmark-inc/bitmarkd/chain"
@@ -45,11 +44,21 @@ type Connection struct {
 	Submit    string `gluamapper:"submit" json:"submit"`
 }
 
-//  client keys in Z85 (ZeroMQ Base-85 Encoding) see: http://rfc.zeromq.org/spec:32
 type PeerType struct {
+	//  client keys in Z85 (ZeroMQ Base-85 Encoding) see: http://rfc.zeromq.org/spec:32
 	PrivateKey string       `gluamapper:"private_key" json:"private_key"`
 	PublicKey  string       `gluamapper:"public_key" json:"public_key"`
 	Connect    []Connection `gluamapper:"connect" json:"connect"`
+}
+
+type ConfigCalendar struct {
+	Monday    string `gluamapper:"monday" json:"monday"`
+	Tuesday   string `gluamapper:"tuesday" json:"tuesday"`
+	Wednesday string `gluamapper:"wednesday" json:"wednesday"`
+	Thursday  string `gluamapper:"thursday" json:"thursday"`
+	Friday    string `gluamapper:"friday" json:"friday"`
+	Saturday  string `gluamapper:"saturday" json:"saturday"`
+	Sunday    string `gluamapper:"sunday" json:"sunday"`
 }
 
 // type PaymentType struct {
@@ -65,7 +74,8 @@ type Configuration struct {
 	DataDirectory string               `gluamapper:"data_directory" json:"data_directory"`
 	PidFile       string               `gluamapper:"pidfile" json:"pidfile"`
 	Chain         string               `gluamapper:"chain" json:"chain"`
-	Threads       int                  `gluamapper:"threads" json:"threads"`
+	MaxCPUUsage   int                  `gluamapper:"max_cpu_usage" json:"max_cpu_usage`
+	Calendar      ConfigCalendar       `gluamapper:"calendar" json:"calendar"`
 	Peering       PeerType             `gluamapper:"peering" json:"peering"`
 	Logging       logger.Configuration `gluamapper:"logging" json:"logging"`
 }
@@ -86,7 +96,8 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 		DataDirectory: defaultDataDirectory,
 		PidFile:       "", // no PidFile by default
 		Chain:         chain.Bitmark,
-		Threads:       0,
+		MaxCPUUsage:   50,
+		Calendar:      ConfigCalendar{},
 
 		Peering: PeerType{},
 
@@ -111,9 +122,8 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 		return nil, errors.New(fmt.Sprintf("Chain: %q is not supported", options.Chain))
 	}
 
-	// if threads invalid set number of CPUs
-	if options.Threads <= 0 {
-		options.Threads = runtime.NumCPU()
+	if options.MaxCPUUsage <= 0 || options.MaxCPUUsage > 100 {
+		options.MaxCPUUsage = 50
 	}
 
 	// ensure absolute data directory
@@ -180,4 +190,8 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 
 	// done
 	return options, nil
+}
+
+func (c *Configuration) maxCPUUsage() int {
+	return c.MaxCPUUsage
 }

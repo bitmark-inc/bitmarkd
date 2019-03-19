@@ -22,6 +22,13 @@ import (
 // set by the linker: go build -ldflags "-X main.version=M.N" ./...
 var version string = "zero" // do not change this value
 
+type recorderdData struct {
+	log *logger.L
+}
+
+// global data
+var globalData recorderdData
+
 // main program
 func main() {
 	// ensure exit handler is first
@@ -60,11 +67,24 @@ func main() {
 		exitwithstatus.Message("%s: only one config-file option is required, %d were detected", program, len(options["config-file"]))
 	}
 
+	reader := newConfigReader()
+
 	// read options and parse the configuration file
 	configurationFile := options["config-file"][0]
-	masterConfiguration, err := getConfiguration(configurationFile)
+	reader.initialise(configurationFile)
+
+	rescheduleChannel := make(chan struct{})
+	calendar := newJobCalendar(rescheduleChannel)
+	reader.setCalendar(calendar)
+
+	err = reader.refresh()
 	if nil != err {
 		exitwithstatus.Message("%s: failed to read configuration from: %q  error: %s", program, configurationFile, err)
+	}
+
+	masterConfiguration, err := reader.getConfig()
+	if nil != err {
+		exitwithstatus.Message("%s: configuration is not found", program)
 	}
 
 	// start logging
@@ -73,8 +93,21 @@ func main() {
 	}
 	defer logger.Finalise()
 
+	configLogger := logger.New(ReaderLoggerPrefix)
+	err = reader.setLog(configLogger)
+	if nil != err {
+		exitwithstatus.Message("%s: new logger '%s' failed with error: %s", program, ReaderLoggerPrefix, err)
+	}
+
+	calendarLogger := logger.New(JobCalendarPrefix)
+	calendar.setLog(calendarLogger)
+
+	// config update periodic
+	reader.updatePeriodic()
+
 	// create a logger channel for the main program
-	log := logger.New("main")
+	globalData.log = logger.New("main")
+	log := globalData.log
 	defer log.Info("shutting down…")
 	log.Info("starting…")
 	log.Infof("version: %s", version)
@@ -144,20 +177,12 @@ func main() {
 	ProofProxy()
 	SubmitQueue()
 
+	proofer := newProofer(logger.New(ProoferLoggerPrefix), reader)
+	reader.setProofer(proofer)
 	// start background processes
 	// these will has blocks, changing nonce to meet difficulty
 	// then submit a block to the right bitmarkd for verification
-	for i := 1; i <= masterConfiguration.Threads; i += 1 {
-		prflog := logger.New(fmt.Sprintf("proofer-%d", i))
-		err := ProofThread(prflog)
-		if nil != err {
-			log.Criticalf("proof[%d]: error: %s", i, err)
-			exitwithstatus.Message("%s: proof[%d]: error: %s", program, i, err)
-		}
-	}
-
-	//proofer.Initialise(masterConfiguration.Threads, prflog)
-	//defer proofer.Finalise()
+	proofer.startHashing()
 
 	// initialise encryption
 	err = zmqutil.StartAuthentication()
@@ -165,6 +190,14 @@ func main() {
 		log.Criticalf("zmq.AuthStart(): error: %s", err)
 		exitwithstatus.Message("%s: zmq.AuthStart() error: %s", program, err)
 	}
+	managerLogger := logger.New(JobManagerPrefix)
+	jobManager := newJobManager(
+		calendar,
+		proofer,
+		rescheduleChannel,
+		managerLogger,
+	)
+	jobManager.Start()
 
 	clientCount := 0
 	// start up bitmarkd clients these subscribe to bitmarkd
@@ -202,7 +235,7 @@ connection_setup:
 		}
 
 		slog := logger.New(fmt.Sprintf("subscriber-%d", i))
-		err = Subscribe(i, blocksAddress, blocksv6, serverPublicKey, publicKey, privateKey, slog)
+		err = Subscribe(i, blocksAddress, blocksv6, serverPublicKey, publicKey, privateKey, slog, proofer)
 		if nil != err {
 			log.Warnf("subscribe: %d failed error: %s", i, err)
 			continue connection_setup
