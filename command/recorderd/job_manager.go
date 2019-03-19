@@ -160,9 +160,5 @@ func (j *JobManagerData) rescheduleStopEvent() {
 }
 
 func (j *JobManagerData) timeDurationFromSrc2Dest(src time.Time, dest time.Time) time.Duration {
-	d := dest.Sub(src)
-	j.log.Debugf("source time %s, destination time: %s, duration %.1f minutes",
-		src.String(), dest.String(), d.Minutes(),
-	)
-	return d
+	return dest.Sub(src)
 }
