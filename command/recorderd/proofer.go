@@ -49,10 +49,10 @@ type ProoferData struct {
 	log               *logger.L
 	workingNow        bool
 	cpuCount          int
-	reader            *ConfigReader
+	reader            ConfigReader
 }
 
-func newProofer(log *logger.L, reader *ConfigReader) Proofer {
+func newProofer(log *logger.L, reader ConfigReader) Proofer {
 	cpuCount := runtime.NumCPU()
 	return &ProoferData{
 		log:         log,

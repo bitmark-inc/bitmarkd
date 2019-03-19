@@ -17,7 +17,7 @@ const (
 	defaultCPUUsage  = 30
 )
 
-var reader *ConfigReader
+var reader *ConfigReaderData
 var logging logger.Configuration
 
 var testLevelMap = map[string]string{
@@ -28,7 +28,7 @@ var testLevelMap = map[string]string{
 func setupReader(t *testing.T) {
 	removeLogFiles()
 	setupLogger(t)
-	reader = &ConfigReader{
+	reader = &ConfigReaderData{
 		proofer: &FakeProofer{},
 	}
 	reader.initialise("test")
