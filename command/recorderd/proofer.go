@@ -7,6 +7,10 @@ package main
 import (
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
+	"math"
+	"runtime"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -14,15 +18,130 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
+	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/bitmark-inc/logger"
 )
 
 const (
-	proofRequest = "inproc://blocks.request"  // to fair-queue block requests
-	dispatch     = "inproc://blocks.dispatch" // proofer fetches from here
+	proofRequest        = "inproc://blocks.request"  // to fair-queue block requests
+	dispatch            = "inproc://blocks.dispatch" // proofer fetches from here
+	errorProoferID      = -1
+	ProoferLoggerPrefix = "proofer"
 )
 
-var proofQueueDepth uint64
+var (
+	proofQueueDepth uint64
+)
+
+type Proofer interface {
+	startHashing()
+	stopHashing()
+	isWorking() bool
+	refresh()
+}
+
+type ProoferData struct {
+	sync.RWMutex
+	activeThreadCount uint32
+	prevThreadCount   uint32
+	proofIDs          []bool
+	stopChannel       chan struct{}
+	log               *logger.L
+	workingNow        bool
+	cpuCount          int
+	reader            *ConfigReader
+}
+
+func newProofer(log *logger.L, reader *ConfigReader) Proofer {
+	cpuCount := runtime.NumCPU()
+	return &ProoferData{
+		log:         log,
+		proofIDs:    make([]bool, cpuCount),
+		stopChannel: make(chan struct{}, cpuCount),
+		cpuCount:    cpuCount,
+		workingNow:  true,
+		reader:      reader,
+	}
+}
+
+func (p *ProoferData) startHashing() {
+	p.log.Infof("receive start hashing request, current active thread %d",
+		p.activeThread())
+	p.setWorking(true)
+	if p.activeThread() < 1 {
+		p.createProofer(p.reader.optimalThreadCount())
+	}
+}
+
+func (p *ProoferData) stopHashing() {
+	p.log.Infof("receive stop hashing request, current active thread %d",
+		p.activeThread())
+	p.setWorking(false)
+	p.deleteProofer(int32(p.activeThread()))
+}
+
+func (p *ProoferData) deleteProofer(count int32) {
+	p.log.Infof("delete %d goroutine from hashing", count)
+	for i := int32(0); i < count; i++ {
+		p.log.Debug("send signal to stop channel")
+		p.stopChannel <- struct{}{}
+	}
+}
+
+func (p *ProoferData) isWorking() bool {
+	return p.workingNow
+}
+
+func (p *ProoferData) setWorking(working bool) {
+	p.workingNow = working
+}
+
+func (p *ProoferData) refresh() {
+	if !p.changed() || !p.isWorking() {
+		return
+	}
+
+	increment := p.differenceToTargetThreadCount(
+		p.reader.optimalThreadCount(),
+		p.activeThread(),
+	)
+
+	p.log.Infof("refresh settings, active goroutine %d, need to increase %d",
+		p.activeThread(), increment)
+
+	if increment > 0 {
+		p.createProofer(uint32(increment))
+		return
+	}
+	p.deleteProofer(-increment)
+}
+
+func (p *ProoferData) changed() bool {
+	return p.prevThreadCount != p.reader.optimalThreadCount()
+}
+
+func (p *ProoferData) activeThreadIncrement(threadNum uint32) {
+	p.Lock()
+	defer p.Unlock()
+
+	p.activeThreadCount++
+	p.proofIDs[threadNum] = true
+}
+
+func (p *ProoferData) activeThreadDecrement(threadNum uint32) {
+	p.Lock()
+	defer p.Unlock()
+
+	p.activeThreadCount--
+	p.proofIDs[threadNum] = false
+}
+
+func (p *ProoferData) activeThread() uint32 {
+	p.Lock()
+	defer p.Unlock()
+
+	return p.activeThreadCount
+}
 
 func ProofQueueIncrement() {
 	atomic.AddUint64(&proofQueueDepth, 1)
@@ -62,7 +181,7 @@ func proofForwarder() error {
 	}
 	defer out.Close()
 
-	out.SetLinger(0)
+	_ = out.SetLinger(0)
 	err = out.Bind(dispatch)
 	if nil != err {
 		return err
@@ -73,10 +192,61 @@ func proofForwarder() error {
 	return zmq.Proxy(in, out, nil)
 }
 
-// proof thread thread
-func ProofThread(log *logger.L) error {
+func (p *ProoferData) nextProoferID() (int, error) {
+	var idx int
+	found := false
 
-	log.Info("starting…")
+	for k, v := range p.proofIDs {
+		if !v {
+			idx = k
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return errorProoferID, fmt.Errorf("all proofer are used, abort")
+	}
+	return idx, nil
+}
+
+func (p *ProoferData) createProofer(threadCount uint32) {
+	p.log.Infof("increase %d goroutine for hashing", threadCount)
+	for i := uint32(0); i < threadCount; i++ {
+		proofID, err := p.nextProoferID()
+		if nil != err {
+			return
+		}
+		prflog := logger.New(fmt.Sprintf("proofer-%d", proofID))
+		prflog.Infof("add new goroutine (%d out of this round increament %d)",
+			i+1, threadCount)
+		err = p.ProofThread(prflog, uint32(proofID))
+		if nil != err {
+			prflog.Criticalf("proof[%d]: error: %s", proofID, err)
+			exitwithstatus.Message("proofer: proof[%d]: error: %s", proofID, err)
+		}
+	}
+}
+
+func (p *ProoferData) differenceToTargetThreadCount(
+	targetThreadCount,
+	currentThreadCount uint32,
+) int32 {
+	difference := int32(targetThreadCount) - int32(currentThreadCount)
+
+	if math.Abs(float64(difference)) < math.Abs(float64(p.cpuCount)) {
+		return int32(difference)
+	}
+
+	if targetThreadCount > currentThreadCount {
+		return int32(p.cpuCount)
+	}
+	return int32(-p.cpuCount + 1)
+}
+
+func (p *ProoferData) ProofThread(log *logger.L, threadNum uint32) error {
+
+	log.Infof("starting goroutine %d…", threadNum)
 
 	// block request channel
 	request, err := zmq.NewSocket(zmq.PULL)
@@ -118,9 +288,12 @@ func ProofThread(log *logger.L) error {
 	poller := zmq.NewPoller()
 	poller.Add(request, zmq.POLLIN)
 
+	p.activeThreadIncrement(threadNum)
+
 	// background process
 	go func() {
 		defer request.Close()
+		defer p.activeThreadDecrement(threadNum)
 
 	receiver:
 		for {
@@ -155,11 +328,13 @@ func ProofThread(log *logger.L) error {
 			count := 0
 			blk := item.Header
 		nonceLoop:
-			for i := 0; true; i += 1 {
-
+			for i := 0; true; i++ {
 				select {
 				case <-timeout:
 					break nonceLoop
+				case <-p.stopChannel:
+					log.Infof("proofer %d receive stop event, terminate", threadNum)
+					break receiver
 				default:
 					readyList, _ := poller.Poll(0) // time.Millisecond)
 					//log.Infof("ready list: %v", readyList)
@@ -171,11 +346,11 @@ func ProofThread(log *logger.L) error {
 				}
 
 				// adjust Nonce, and compute new digest
-				blk.Nonce += 1
+				blk.Nonce++
 				packed := blk.Pack()
 				digest := blockdigest.NewDigest(packed[:])
 
-				count += 1
+				count++
 
 				if 0 == i%10 {
 					log.Infof("nonce[%d]: 0x%08x", i, blk.Nonce)
@@ -208,5 +383,6 @@ func ProofThread(log *logger.L) error {
 			log.Infof("hash rate: %f H/min", rate)
 		}
 	}()
+
 	return nil
 }
