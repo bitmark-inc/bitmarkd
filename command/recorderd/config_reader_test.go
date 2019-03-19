@@ -28,7 +28,9 @@ var testLevelMap = map[string]string{
 func setupReader(t *testing.T) {
 	removeLogFiles()
 	setupLogger(t)
-	reader = &ConfigReader{}
+	reader = &ConfigReader{
+		proofer: &FakeProofer{},
+	}
 	reader.initialise("test")
 	_ = reader.setLog(logger.New("test"))
 }
