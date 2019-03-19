@@ -92,6 +92,8 @@ func setupProoferInterface() Proofer {
 func TestWaitNextHashingStartEvent(t *testing.T) {
 	j := setupTestJobManager()
 	defer teardownManager()
+
+	j.initialized = true
 	hashingCalled = false
 	j.wg.Add(1)
 	go j.waitNextHasingStartEvent(defaultDelay)
@@ -107,6 +109,8 @@ func TestWaitNextHashingStartEvent(t *testing.T) {
 func TestWaitNextHashingStopEvent(t *testing.T) {
 	j := setupTestJobManager()
 	defer teardownManager()
+
+	j.initialized = true
 	hashingCalled = false
 	j.wg.Add(1)
 	go j.waitNextHasingStopEvent(defaultDelay)

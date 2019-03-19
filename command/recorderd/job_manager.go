@@ -73,12 +73,12 @@ func (j *JobManagerData) waitNextHasingStartEvent(duration time.Duration) {
 			j.proofer.startHashing()
 			now := time.Now()
 			intf := j.calendar.pickNextStartEvent(now)
+			j.calendar.rescheduleStartEventsPrior(now)
 
 			if nil == intf {
-				return
+				intf = j.calendar.pickNextStartEvent(now)
 			}
 
-			j.calendar.rescheduleStartEventsPrior(now)
 			nextEvent := intf.(time.Time)
 			d = j.timeDurationFromSrc2Dest(now, nextEvent)
 			j.log.Infof("next start event at %s, duration: %.1f minutes",
@@ -103,12 +103,12 @@ func (j *JobManagerData) waitNextHasingStopEvent(duration time.Duration) {
 			j.proofer.stopHashing()
 			now := time.Now()
 			intf := j.calendar.pickNextStopEvent(now)
+			j.calendar.rescheduleStopEventsPrior(now)
 
 			if nil == intf {
-				return
+				intf = j.calendar.pickNextStopEvent(now)
 			}
 
-			j.calendar.rescheduleStopEventsPrior(now)
 			nextEvent := intf.(time.Time)
 			d = j.timeDurationFromSrc2Dest(now, nextEvent)
 			j.log.Infof("next stop event: %s, duration: %.1f minutes",

@@ -97,6 +97,7 @@ func (p *ProoferData) setWorking(working bool) {
 }
 
 func (p *ProoferData) refresh() {
+	p.log.Debugf("goroutine active count: %d, target count: %d", p.activeThread(), p.reader.optimalThreadCount())
 	if !p.changed() || !p.isWorking() {
 		return
 	}
