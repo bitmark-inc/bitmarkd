@@ -7,6 +7,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
@@ -20,7 +21,16 @@ type PublishedItem struct {
 }
 
 // subscriber thread
-func Subscribe(i int, connectTo string, v6 bool, serverPublicKey []byte, publicKey []byte, privateKey []byte, log *logger.L) error {
+func Subscribe(
+	i int,
+	connectTo string,
+	v6 bool,
+	serverPublicKey []byte,
+	publicKey []byte,
+	privateKey []byte,
+	log *logger.L,
+	proofer Proofer,
+) error {
 
 	log.Info("starting…")
 
@@ -95,6 +105,12 @@ func Subscribe(i int, connectTo string, v6 bool, serverPublicKey []byte, publicK
 			err = json.Unmarshal([]byte(data), &item)
 			log.Infof("received : %v", item)
 
+			// prevent keep queuing and run out of memory
+			if !proofer.isWorking() {
+				log.Infof("Rest time, discard request")
+				continue
+			}
+
 			// initial try just forward block
 			_, err = proof.Send(mySubmitterIdentity, zmq.SNDMORE)
 			logger.PanicIfError("subscriber sending 1", err)
@@ -102,6 +118,7 @@ func Subscribe(i int, connectTo string, v6 bool, serverPublicKey []byte, publicK
 			logger.PanicIfError("subscriber sending 2", err)
 			ProofQueueIncrement()
 			log.Infof("queue depth: %d", proofQueueDepth)
+
 		}
 	}()
 	return nil
