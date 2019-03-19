@@ -115,7 +115,10 @@ func (c *ConfigReader) update(newConfiguration *Configuration) {
 	c.currentConfiguration = newConfiguration
 	c.threadCount = c.optimalThreadCount()
 	if c.initialized {
-		c.log.Debugf("Updating configuration, target thread count %d", c.threadCount)
+		c.log.Debugf("Updating configuration, target thread count %d, working: %t",
+			c.threadCount,
+			c.proofer.isWorking(),
+		)
 	}
 }
 
