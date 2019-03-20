@@ -105,7 +105,7 @@ func Subscribe(
 			err = json.Unmarshal([]byte(data), &item)
 			log.Infof("received : %v", item)
 
-			// prevent keep queuing and run out of memory
+			// prevent queuing outdated request
 			if !proofer.isWorking() {
 				log.Infof("Rest time, discard request")
 				continue
