@@ -27,6 +27,7 @@ var (
 )
 
 func setupTestCalendar() *JobCalendarData {
+	setupTestCalendarLogger()
 	channel = make(chan struct{})
 	now := time.Now()
 	j := &JobCalendarData{
@@ -45,9 +46,8 @@ func setupTestCalendar() *JobCalendarData {
 		},
 		rawData:           ConfigCalendar{},
 		rescheduleChannel: channel,
+		log:               logger.New("test"),
 	}
-	setupTestCalendarLogger()
-	j.setLog(logger.New("test"))
 	return j
 }
 
@@ -570,6 +570,11 @@ func TestRescheduleStartEventsPrior(t *testing.T) {
 			now,
 			[]time.Time{nextWeekOneMinuteBefore, nextWeekFiveMinuteBefore},
 		},
+		{
+			[]time.Time{oneMinuteBefore, now, fiveMinuteAfter},
+			now,
+			[]time.Time{fiveMinuteAfter, nextWeekOneMinuteBefore, nextWeek},
+		},
 	}
 
 	for i, s := range fixture {
@@ -617,6 +622,11 @@ func TestRescheduleStopEventsPrior(t *testing.T) {
 			[]time.Time{oneMinuteBefore, fiveMinuteBefore},
 			now,
 			[]time.Time{nextWeekOneMinuteBefore, nextWeekFiveMinuteBefore},
+		},
+		{
+			[]time.Time{oneMinuteBefore, now, fiveMinuteAfter},
+			now,
+			[]time.Time{fiveMinuteAfter, nextWeekOneMinuteBefore, nextWeek},
 		},
 	}
 
@@ -1214,7 +1224,8 @@ func TestPickInitialiseStopEvent(t *testing.T) {
 }
 
 func TestIsValidPeriod(t *testing.T) {
-	j := &JobCalendarData{}
+	j := setupTestCalendar()
+	defer teardownCalendar()
 	fixture := []struct {
 		period   string
 		expected bool

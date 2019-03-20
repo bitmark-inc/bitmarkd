@@ -241,17 +241,18 @@ func (j *JobCalendarData) pickNextStopEvent(event time.Time) interface{} {
 }
 
 func (j *JobCalendarData) rescheduleStartEventsPrior(event time.Time) {
-	if 0 == len(j.flattenEvents.start) {
+	if 0 == len(j.flattenEvents.start) || j.flattenEvents.start[0].After(event) {
 		return
 	}
 	times := j.flattenEvents.start
 	newSlices := make([]time.Time, 0, len(times))
 	schedules := make([]time.Time, 0, len(times))
-	for _, t := range times {
-		if t.After(event) {
-			newSlices = append(newSlices, t)
-		} else {
+	for i, t := range times {
+		if t.Before(event) || t.Equal(event) {
 			schedules = append(schedules, t.Add(oneWeekDuration))
+		} else {
+			newSlices = append(newSlices, times[i:]...)
+			break
 		}
 	}
 	newSlices = append(newSlices, schedules...)
@@ -259,17 +260,18 @@ func (j *JobCalendarData) rescheduleStartEventsPrior(event time.Time) {
 }
 
 func (j *JobCalendarData) rescheduleStopEventsPrior(event time.Time) {
-	if 0 == len(j.flattenEvents.stop) {
+	if 0 == len(j.flattenEvents.stop) || j.flattenEvents.stop[0].After(event) {
 		return
 	}
 	times := j.flattenEvents.stop
 	newSlices := make([]time.Time, 0, len(times))
 	schedules := make([]time.Time, 0, len(times))
-	for _, t := range times {
-		if t.After(event) {
-			newSlices = append(newSlices, t)
-		} else {
+	for i, t := range times {
+		if t.Before(event) || t.Equal(event) {
 			schedules = append(schedules, t.Add(oneWeekDuration))
+		} else {
+			newSlices = append(newSlices, times[i:]...)
+			break
 		}
 	}
 	newSlices = append(newSlices, schedules...)
