@@ -410,15 +410,18 @@ func containsLetter(s string) bool {
 func (j *JobCalendarData) isValidPeriod(str string) bool {
 	s := strings.Split(str, clockSeparator)
 	if len(s) != 2 {
+		j.log.Errorf("invalid caledar string %s, contains too many clock string", str)
 		return false
 	}
 	t1 := strings.Trim(s[0], spaceChar)
 	t2 := strings.Trim(s[1], spaceChar)
 	if t1 == t2 {
+		j.log.Errorf("invalid caledar string %s, 2 clock strings equal", str)
 		return false
 	}
 
 	if containsLetter(t1) || containsLetter(t2) {
+		j.log.Errorf("invalid caledar string %s, contains letter", str)
 		return false
 	}
 
