@@ -9,14 +9,12 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"sync"
-	"time"
-
-	zmq "github.com/pebbe/zmq4"
-
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
+	zmq "github.com/pebbe/zmq4"
+	"sync"
+	"time"
 )
 
 // structure to hold a client connection
@@ -351,7 +349,7 @@ func (client *Client) Send(items ...interface{}) error {
 	client.Lock()
 	defer client.Unlock()
 
-	if "" == client.address {
+	if nil == client.socket || "" == client.address {
 		return fault.ErrNotConnected
 	}
 
@@ -436,7 +434,7 @@ func (client *Client) Receive(flags zmq.Flag) ([][]byte, error) {
 	client.Lock()
 	defer client.Unlock()
 
-	if "" == client.address {
+	if nil == client.socket || "" == client.address {
 		return nil, fault.ErrNotConnected
 	}
 	data, err := client.socket.RecvMessageBytes(flags)
