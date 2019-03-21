@@ -19,7 +19,7 @@ type ConfigReader interface {
 	refresh() error
 	getConfig() (*Configuration, error)
 	setLog(*logger.L) error
-	updatePeriodic()
+	updatePeriodically()
 	setProofer(Proofer)
 }
 
@@ -67,7 +67,7 @@ func (c *ConfigReaderData) setProofer(proofer Proofer) {
 	c.proofer = proofer
 }
 
-func (c *ConfigReaderData) updatePeriodic() {
+func (c *ConfigReaderData) updatePeriodically() {
 	c.log.Info("star to update config perioditically")
 	go func() {
 		for {
