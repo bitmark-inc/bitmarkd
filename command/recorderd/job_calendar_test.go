@@ -712,11 +712,9 @@ func TestNotifyJobManager(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		select {
-		case <-j.rescheduleChannel:
-			received = true
-			wg.Done()
-		}
+		<-channel
+		received = true
+		wg.Done()
 	}()
 
 	j.notifyJobManager()
