@@ -16,7 +16,7 @@ const (
 )
 
 type JobManagerChannel struct {
-	rescheduleChannel chan struct{}
+	rescheduleChannel <-chan struct{}
 	startEventChannel chan struct{}
 	stopEventChannel  chan struct{}
 }
@@ -30,7 +30,7 @@ type JobManagerData struct {
 	wg          sync.WaitGroup
 }
 
-func newJobManager(calendar JobCalendar, proofer Proofer, rescheduleChannel chan struct{}, logger *logger.L) JobManager {
+func newJobManager(calendar JobCalendar, proofer Proofer, rescheduleChannel <-chan struct{}, logger *logger.L) JobManager {
 	return &JobManagerData{
 		calendar: calendar,
 		proofer:  proofer,

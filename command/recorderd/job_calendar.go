@@ -57,7 +57,7 @@ type JobCalendarData struct {
 	flattenEvents     FlattenEvents
 	events            map[time.Weekday][]SingleEvent
 	rawData           ConfigCalendar
-	rescheduleChannel chan struct{}
+	rescheduleChannel chan<- struct{}
 	log               *logger.L
 }
 
@@ -65,7 +65,7 @@ type TimeData struct {
 	hour, minute uint32
 }
 
-func newJobCalendar(channel chan struct{}) JobCalendar {
+func newJobCalendar(channel chan<- struct{}) JobCalendar {
 	return &JobCalendarData{
 		flattenEvents: FlattenEvents{
 			start: []time.Time{},
