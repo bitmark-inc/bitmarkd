@@ -96,7 +96,7 @@ func main() {
 	calendar.setLog(calendarLogger)
 
 	// config update periodic
-	reader.updatePeriodic()
+	reader.updatePeriodically()
 
 	// create a logger channel for the main program
 	log := logger.New("main")
