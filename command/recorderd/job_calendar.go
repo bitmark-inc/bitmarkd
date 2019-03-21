@@ -291,19 +291,22 @@ func (j *JobCalendarData) weekDayCurrent2Target(current time.Weekday, target tim
 }
 
 func (j *JobCalendarData) parseClockStr(clock string) (TimeData, error) {
-	arr := strings.Split(clock, ":")
-	hourStr := strings.Trim(arr[0], spaceChar)
-	minuteStr := strings.Trim(arr[1], spaceChar)
-	hour, err := j.convertStr2Hour(hourStr)
-	if err != nil {
-		return TimeData{}, nil
-	}
-	minute, err := j.convertStr2Minute(minuteStr)
-	if err != nil {
-		return TimeData{}, nil
+	if clock == "24:00" || clock == "24:0" {
+		return TimeData{
+			hour:   uint32(24),
+			minute: uint32(0),
+		}, nil
 	}
 
-	return TimeData{hour: hour, minute: minute}, nil
+	t, err := time.Parse("15:04", clock)
+	if nil != err {
+		fmt.Printf("err: %s\n", err.Error())
+		return TimeData{}, err
+	}
+	return TimeData{
+		hour:   uint32(t.Hour()),
+		minute: uint32(t.Minute()),
+	}, nil
 }
 
 func (j *JobCalendarData) convertStr2Hour(str string) (uint32, error) {
@@ -333,7 +336,8 @@ func (j *JobCalendarData) convertStr2NumberWithLimit(str string, numRange Number
 // period: 2:12 - 3:14
 // clock: 2:12
 func (j *JobCalendarData) parseTimePeriod(period string) (TimeData, TimeData, error) {
-	clocks := strings.Split(period, clockSeparator)
+	str := strings.ReplaceAll(period, spaceChar, "")
+	clocks := strings.Split(str, clockSeparator)
 	if len(clocks) > 2 {
 		return TimeData{}, TimeData{}, fmt.Errorf(defaultTimePeriodErrorMsg)
 	}
@@ -443,19 +447,25 @@ func (j *JobCalendarData) scheduleEvents(day time.Weekday, clock string) {
 		}
 		t1, t2, err := j.parseTimePeriod(period)
 		if nil != err {
+			j.log.Errorf("error parse time period %s, error: %s", period, err)
 			continue
 		}
 		events = append(events, SingleEvent{
 			start: j.timeByWeekdayAndOffset(day, t1),
 			stop:  j.timeByWeekdayAndOffset(day, t2),
 		})
-		flattenEvents.start = append(flattenEvents.start,
-			j.timeByWeekdayAndOffset(day, t1))
-		flattenEvents.stop = append(flattenEvents.stop,
-			j.timeByWeekdayAndOffset(day, t2))
+		flattenEvents.start = append(
+			flattenEvents.start,
+			j.timeByWeekdayAndOffset(day, t1),
+		)
+		flattenEvents.stop = append(
+			flattenEvents.stop,
+			j.timeByWeekdayAndOffset(day, t2),
+		)
 	}
 
 	if 0 == len(flattenEvents.start) {
+		j.log.Debugf("empty flatten start event, add start event to day start")
 		j.scheduleStartEventWhenDayBegin(day)
 		return
 	}

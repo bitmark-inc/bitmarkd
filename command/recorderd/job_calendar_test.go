@@ -149,30 +149,6 @@ func TestWeekDayCurrent2Target(t *testing.T) {
 	}
 }
 
-func TestParseTimeStrCorrect(t *testing.T) {
-	j := &JobCalendarData{}
-	expects := []struct {
-		clockStr string
-		expected TimeData
-		err      error
-	}{
-		{"01:23", TimeData{hour: 1, minute: 23}, nil},
-		{"23:00", TimeData{hour: 23, minute: 0}, nil},
-	}
-
-	for _, s := range expects {
-		data, err := j.parseClockStr(s.clockStr)
-		if s.err != err {
-			t.Errorf("error parse time %s, expect error %v but get %v",
-				s.clockStr, s.err, err)
-		}
-		if data.hour != s.expected.hour || data.minute != s.expected.minute {
-			t.Errorf("error parse time %s, expect hour %d, minute %d but get hour: %d, minute %d",
-				s.clockStr, s.expected.hour, s.expected.minute, data.hour, data.minute)
-		}
-	}
-}
-
 func TestConvertStr2NumberWithLimit(t *testing.T) {
 	j := &JobCalendarData{}
 	timeErr := fmt.Errorf(defaultTimeStrErrorMsg)
@@ -201,23 +177,27 @@ func TestConvertStr2NumberWithLimit(t *testing.T) {
 	}
 }
 
-func TestParseClockStrError(t *testing.T) {
+func TestParseClockStr(t *testing.T) {
 	j := &JobCalendarData{}
-	timeErr := fmt.Errorf("Out of range")
+	e := "Error"
 	expects := []struct {
 		clockStr string
 		expected TimeData
-		err      error
+		err      interface{}
 	}{
-		{"-2:05", TimeData{hour: 0, minute: 0}, timeErr},
-		{"5:-3", TimeData{hour: 0, minute: 0}, timeErr},
-		{"25:05", TimeData{hour: 0, minute: 0}, timeErr},
-		{"14:78", TimeData{hour: 0, minute: 0}, timeErr},
+		{"-2:05", TimeData{hour: 0, minute: 0}, e},
+		{"5:-3", TimeData{hour: 0, minute: 0}, e},
+		{"25:05", TimeData{hour: 0, minute: 0}, e},
+		{"14:78", TimeData{hour: 0, minute: 0}, e},
+		{"24:12", TimeData{hour: 0, minute: 0}, e},
+		{"01:23", TimeData{hour: 1, minute: 23}, nil},
+		{"23:47", TimeData{hour: 23, minute: 47}, nil},
+		{"24:00", TimeData{hour: 24, minute: 0}, nil},
 	}
 
 	for _, s := range expects {
 		_, err := j.parseClockStr(s.clockStr)
-		if err != nil && s.err.Error() != err.Error() {
+		if err != nil && s.err == nil {
 			t.Errorf("error convert string %s to hour, expect error %s but get %s",
 				s.clockStr, s.err, err)
 		}
