@@ -100,16 +100,16 @@ func Subscribe(
 			logger.PanicIfError("subscriber", err)
 			log.Infof("received data: %s", data)
 
-			// ***** FIX THIS: just debugging? or really split block into multiple nonce ranges
-			var item PublishedItem
-			err = json.Unmarshal([]byte(data), &item)
-			log.Infof("received : %v", item)
-
 			// prevent queuing outdated request
 			if !proofer.isWorking() {
 				log.Infof("Rest time, discard request")
 				continue
 			}
+
+			// ***** FIX THIS: just debugging? or really split block into multiple nonce ranges
+			var item PublishedItem
+			err = json.Unmarshal([]byte(data), &item)
+			log.Infof("received : %v", item)
 
 			// initial try just forward block
 			_, err = proof.Send(mySubmitterIdentity, zmq.SNDMORE)
