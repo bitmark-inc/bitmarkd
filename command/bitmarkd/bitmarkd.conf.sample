@@ -192,7 +192,7 @@ M.proofing = {
 
     public_key = read_file("proof.public"),
     private_key = read_file("proof.private"),
-    signing_key = read_file("proof.sign"),
+    signing_key = read_file(M.chain == "bitmark" and 'proof.live' or 'proof.test'),
 
     -- payments for future transfers
     -- private keys are just samples for testing

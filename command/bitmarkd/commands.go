@@ -21,7 +21,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/exitwithstatus"
@@ -35,9 +34,10 @@ const (
 	rpcCertificateKeyFilename = "rpc.crt"
 	rpcPrivateKeyFilename     = "rpc.key"
 
-	proofPublicKeyFilename  = "proof.public"
-	proofPrivateKeyFilename = "proof.private"
-	proofSigningKeyFilename = "proof.sign"
+	proofPublicKeyFilename      = "proof.public"
+	proofPrivateKeyFilename     = "proof.private"
+	proofLiveSigningKeyFilename = "proof.live"
+	proofTestSigningKeyFilename = "proof.test"
 )
 
 // setup command handler
@@ -85,7 +85,8 @@ func processSetupCommand(arguments []string) bool {
 	case "gen-proof-identity", "proof":
 		publicKeyFilename := getFilenameWithDirectory(arguments, proofPublicKeyFilename)
 		privateKeyFilename := getFilenameWithDirectory(arguments, proofPrivateKeyFilename)
-		signingKeyFilename := getFilenameWithDirectory(arguments, proofSigningKeyFilename)
+		liveSigningKeyFilename := getFilenameWithDirectory(arguments, proofLiveSigningKeyFilename)
+		testSigningKeyFilename := getFilenameWithDirectory(arguments, proofTestSigningKeyFilename)
 		err := zmqutil.MakeKeyPair(publicKeyFilename, privateKeyFilename)
 		if nil != err {
 			fmt.Printf("cannot generate private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
@@ -93,28 +94,19 @@ func processSetupCommand(arguments []string) bool {
 			exitwithstatus.Exit(1)
 		}
 
-		// new random seed for signing base record
-		seedCore := make([]byte, 32)
-		if _, err := rand.Read(seedCore); err != nil {
-			fmt.Printf("error generating signing core error: %s\n", err)
+		if err := makeSigningKey(false, liveSigningKeyFilename); err != nil {
+			fmt.Printf("cannot generate the signing key for livenet: %q\n", liveSigningKeyFilename)
+			fmt.Printf("error generatingthe signing key for livenet: %s\n", err)
 			exitwithstatus.Exit(1)
 		}
-		seed := []byte{0x5a, 0xfe, 0x01, 0x00} // header + network(live)
-		if mode.IsTesting() {
-			seed[3] = 0x01 // change network to testing
-		}
-		seed = append(seed, seedCore...)
-		checksum := sha3.Sum256(seed)
-		seed = append(seed, checksum[:4]...)
-
-		data := "SEED:" + util.ToBase58(seed) + "\n"
-		if err = ioutil.WriteFile(signingKeyFilename, []byte(data), 0600); err != nil {
-			fmt.Printf("error writing signing key file error: %s\n", err)
+		if err := makeSigningKey(true, testSigningKeyFilename); err != nil {
+			fmt.Printf("cannot generate the signing key for testnet: %q\n", testSigningKeyFilename)
+			fmt.Printf("error generatingthe signing key for testnet: %s\n", err)
 			exitwithstatus.Exit(1)
 		}
 
 		fmt.Printf("generated private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
-		fmt.Printf("generated signing key: %q\n", signingKeyFilename)
+		fmt.Printf("generated signing keys: %q and %q\n", liveSigningKeyFilename, testSigningKeyFilename)
 
 	case "dns-txt", "txt":
 		return false // defer processing until configuration is read
@@ -154,7 +146,7 @@ func processSetupCommand(arguments []string) bool {
 
 		fmt.Printf("  gen-proof-identity [DIR]   (proof)  - create private key in: %q\n", "DIR/"+proofPrivateKeyFilename)
 		fmt.Printf("                                        the public key in:     %q\n", "DIR/"+proofPublicKeyFilename)
-		fmt.Printf("                                        and signing key in:    %q\n", "DIR/"+proofSigningKeyFilename)
+		fmt.Printf("                                        and sigening keys in:  %q & %q\n", "DIR/"+proofLiveSigningKeyFilename, "DIR/"+proofTestSigningKeyFilename)
 		fmt.Printf("\n")
 
 		fmt.Printf("  dns-txt                    (txt)    - display the data to put in a dbs TXT record\n")
@@ -463,4 +455,25 @@ func getFilenameWithDirectory(arguments []string, name string) string {
 	}
 
 	return filepath.Join(dir, name)
+}
+
+func makeSigningKey(test bool, fileName string) error {
+	seedCore := make([]byte, 32)
+	if _, err := rand.Read(seedCore); err != nil {
+		return fmt.Errorf("error generating signing core error: %s\n", err)
+	}
+	seed := []byte{0x5a, 0xfe, 0x01, 0x00} // header + network(live)
+	if test {
+		seed[3] = 0x01 // change network to testing
+	}
+	seed = append(seed, seedCore...)
+	checksum := sha3.Sum256(seed)
+	seed = append(seed, checksum[:4]...)
+
+	data := "SEED:" + util.ToBase58(seed) + "\n"
+	if err := ioutil.WriteFile(fileName, []byte(data), 0600); err != nil {
+		return fmt.Errorf("error writing signing key file error: %s\n", err)
+	}
+
+	return nil
 }
