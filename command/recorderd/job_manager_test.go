@@ -52,6 +52,9 @@ func (c *FakeCalendar) refresh(ConfigCalendar)               {}
 func (c *FakeCalendar) rescheduleStartEventsPrior(time.Time) {}
 func (c *FakeCalendar) rescheduleStopEventsPrior(time.Time)  {}
 func (c *FakeCalendar) setLog(*logger.L)                     {}
+func (c *FakeCalendar) runForever() bool {
+	return true
+}
 
 func setupTestJobManager() *JobManagerData {
 	p := setupProoferInterface()

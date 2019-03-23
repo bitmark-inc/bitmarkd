@@ -34,6 +34,7 @@ type JobCalendar interface {
 	refresh(calendar ConfigCalendar)
 	rescheduleStartEventsPrior(event time.Time)
 	rescheduleStopEventsPrior(event time.Time)
+	runForever() bool
 	setLog(l *logger.L)
 }
 
@@ -108,8 +109,14 @@ func (j *JobCalendarData) setLog(l *logger.L) {
 	j.log = l
 }
 
+func (j *JobCalendarData) runForever() bool {
+	return 0 == len(j.flattenEvents.stop)
+}
+
 func (j *JobCalendarData) refresh(calendar ConfigCalendar) {
+	j.log.Debug("refresh calendar")
 	if !j.isSameCalendar(calendar) {
+		j.log.Debug("calendar is changed")
 		j.setNewCalendar(calendar)
 		j.resetEvents()
 		j.parseRawData(calendar)
@@ -198,6 +205,10 @@ func isTimeDataFirstEarlierThanSecond(first TimeData, second TimeData) bool {
 func (j *JobCalendarData) isTimeBooked(event time.Time) bool {
 	weekDay := event.Weekday()
 	events := j.events[weekDay]
+	j.printEvents()
+	if events[0].stop.IsZero() {
+		return true
+	}
 	for _, t := range events {
 		afterOrEqualToStartTime := t.start.Before(event) || t.start.Equal(event)
 		beforeOrEqualToEndTime := t.stop.After(event) || t.stop.Equal(event)
@@ -477,7 +488,7 @@ func (j *JobCalendarData) scheduleEvents(day time.Weekday, clock string) {
 
 func (j *JobCalendarData) scheduleStartEventWhenDayBegin(day time.Weekday) {
 	flattenEvent := j.timeOfWeekdayStartFromBeginning(day)
-	j.flattenEvents.start = append(j.flattenEvents.start, flattenEvent.start...)
+	j.flattenEvents.start = append(j.flattenEvents.start, flattenEvent.start[0])
 	j.events[day] = []SingleEvent{
 		SingleEvent{start: flattenEvent.start[0]},
 	}
@@ -515,11 +526,18 @@ func (j *JobCalendarData) printEvents() {
 		)
 		j.log.Debugf("%d events on %s", len(j.events[d]), d.String())
 		for _, e := range j.events[d] {
-			j.log.Debugf("%s: start: %s, end: %s",
-				d.String(),
-				e.start,
-				e.stop,
-			)
+			if e.stop.IsZero() {
+				j.log.Debugf("%s: start: %s",
+					d.String(),
+					e.start,
+				)
+			} else {
+				j.log.Debugf("%s: start: %s, end: %s",
+					d.String(),
+					e.start,
+					e.stop,
+				)
+			}
 		}
 	}
 }
