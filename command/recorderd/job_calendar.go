@@ -205,10 +205,6 @@ func isTimeDataFirstEarlierThanSecond(first TimeData, second TimeData) bool {
 func (j *JobCalendarData) isTimeBooked(event time.Time) bool {
 	weekDay := event.Weekday()
 	events := j.events[weekDay]
-	j.printEvents()
-	if events[0].stop.IsZero() {
-		return true
-	}
 	for _, t := range events {
 		afterOrEqualToStartTime := t.start.Before(event) || t.start.Equal(event)
 		beforeOrEqualToEndTime := t.stop.After(event) || t.stop.Equal(event)
