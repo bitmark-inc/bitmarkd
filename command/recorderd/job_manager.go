@@ -54,6 +54,9 @@ func (j *JobManagerData) waitForRefresh() {
 				j.resetAllEvent()
 			} else {
 				j.initialized = true
+				now := time.Now()
+				j.calendar.rescheduleStartEventsPrior(now)
+				j.calendar.rescheduleStopEventsPrior(now)
 			}
 			j.reschedule()
 		}
@@ -149,13 +152,14 @@ func (j *JobManagerData) rescheduleStartEvent() {
 }
 
 func (j *JobManagerData) rescheduleStopEvent() {
-	now := time.Now()
-	intf := j.calendar.pickInitialiseStopEvent(now)
-	if nil == intf {
+	if j.calendar.runForever() {
 		return
 	}
+	now := time.Now()
+	intf := j.calendar.pickInitialiseStopEvent(now)
 	nextEvent := intf.(time.Time)
 	duration := nextEvent.Sub(now)
+
 	go j.waitNextHasingStopEvent(duration)
 }
 

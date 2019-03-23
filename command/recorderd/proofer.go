@@ -97,7 +97,10 @@ func (p *ProoferData) setWorking(working bool) {
 }
 
 func (p *ProoferData) refresh() {
-	p.log.Debugf("goroutine active count: %d, target count: %d", p.activeThread(), p.reader.optimalThreadCount())
+	p.log.Debugf("goroutine active count: %d, target count: %d",
+		p.activeThread(),
+		p.reader.optimalThreadCount(),
+	)
 	if !p.changed() || !p.isWorking() {
 		return
 	}
@@ -107,7 +110,7 @@ func (p *ProoferData) refresh() {
 		p.activeThread(),
 	)
 
-	p.log.Infof("refresh settings, active goroutine %d, need to increase %d",
+	p.log.Infof("refresh settings, active goroutine %d, increase %d goroutine from hashing",
 		p.activeThread(), increment)
 
 	if increment > 0 {

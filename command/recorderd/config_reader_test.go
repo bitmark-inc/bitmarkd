@@ -43,12 +43,10 @@ func teardown() {
 
 func removeTestFiles() {
 	logFilePath := path.Join(logDirectory, logFileName)
-	testFilePath := path.Join(logDirectory, testFileName)
 	os.Remove(logFilePath)
 	for i := 0; i <= logNumberOfFiles; i += 1 {
 		os.Remove(logFilePath + "." + strconv.Itoa(i))
 	}
-	os.Remove(testFilePath)
 	os.Remove(logDirectory)
 }
 
