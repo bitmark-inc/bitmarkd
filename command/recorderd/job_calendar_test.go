@@ -178,7 +178,9 @@ func TestConvertStr2NumberWithLimit(t *testing.T) {
 }
 
 func TestParseClockStr(t *testing.T) {
-	j := &JobCalendarData{}
+	j := setupTestCalendar()
+	defer teardown()
+
 	e := "Error"
 	expects := []struct {
 		clockStr string
