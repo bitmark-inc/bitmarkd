@@ -30,7 +30,7 @@ func teardownProofer(p *ProoferData, threadCount uint32) {
 		p.activeThreadDecrement(i)
 	}
 	logger.Finalise()
-	removeLogFiles()
+	removeTestFiles()
 }
 
 func TestActiveThreadCount(t *testing.T) {
