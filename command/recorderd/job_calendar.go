@@ -300,7 +300,7 @@ func (j *JobCalendarData) parseClockStr(clock string) (TimeData, error) {
 
 	t, err := time.Parse("15:04", clock)
 	if nil != err {
-		fmt.Printf("err: %s\n", err.Error())
+		j.log.Errorf("%s\n", err.Error())
 		return TimeData{}, err
 	}
 	return TimeData{
