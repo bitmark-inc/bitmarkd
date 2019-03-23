@@ -17,7 +17,6 @@ const (
 	defaultCPUUsage  = 30
 )
 
-var reader *ConfigReaderData
 var logging logger.Configuration
 
 var testLevelMap = map[string]string{
@@ -25,27 +24,31 @@ var testLevelMap = map[string]string{
 	"aux":  "warn",
 }
 
-func setupReader(t *testing.T) {
-	removeLogFiles()
+func setupReader(t *testing.T) *ConfigReaderData {
+	removeTestFiles()
 	setupLogger(t)
-	reader = &ConfigReaderData{
+	reader := &ConfigReaderData{
 		proofer: &FakeProofer{},
 	}
 	reader.initialise("test")
 	_ = reader.setLog(logger.New("test"))
+
+	return reader
 }
 
 func teardown() {
 	logger.Finalise()
-	removeLogFiles()
+	removeTestFiles()
 }
 
-func removeLogFiles() {
-	pathName := path.Join(logDirectory, logFileName)
-	os.Remove(pathName)
+func removeTestFiles() {
+	logFilePath := path.Join(logDirectory, logFileName)
+	testFilePath := path.Join(logDirectory, testFileName)
+	os.Remove(logFilePath)
 	for i := 0; i <= logNumberOfFiles; i += 1 {
-		os.Remove(pathName + "." + strconv.Itoa(i))
+		os.Remove(logFilePath + "." + strconv.Itoa(i))
 	}
+	os.Remove(testFilePath)
 	os.Remove(logDirectory)
 }
 
@@ -77,7 +80,7 @@ func mockConfiguration(maxCpuUsage int) *Configuration {
 }
 
 func TestGetConfig(t *testing.T) {
-	setupReader(t)
+	reader := setupReader(t)
 	defer teardown()
 
 	oldConfig, _ := reader.getConfig()
@@ -94,7 +97,7 @@ func TestGetConfig(t *testing.T) {
 }
 
 func TestUpdateConfiguraion(t *testing.T) {
-	setupReader(t)
+	reader := setupReader(t)
 	defer teardown()
 
 	newConfiguration := mockConfiguration(defaultCPUUsage)
@@ -106,7 +109,7 @@ func TestUpdateConfiguraion(t *testing.T) {
 }
 
 func TestUpdateThreadCount(t *testing.T) {
-	setupReader(t)
+	reader := setupReader(t)
 	defer teardown()
 
 	totalCPU := uint32(10)
@@ -121,7 +124,7 @@ func TestUpdateThreadCount(t *testing.T) {
 }
 
 func TestOptimalThreadCount(t *testing.T) {
-	setupReader(t)
+	reader := setupReader(t)
 	defer teardown()
 
 	expected := []struct {

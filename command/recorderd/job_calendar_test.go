@@ -59,7 +59,7 @@ func setupTestCalendarLogger() {
 
 func teardownCalendar() {
 	logger.Finalise()
-	removeLogFiles()
+	removeTestFiles()
 }
 
 func stringifyTime(t time.Time) string {

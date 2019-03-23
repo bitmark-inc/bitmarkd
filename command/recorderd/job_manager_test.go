@@ -81,7 +81,7 @@ func setupTestManagerLogger() {
 
 func teardownManager() {
 	logger.Finalise()
-	removeLogFiles()
+	removeTestFiles()
 }
 
 func setupProoferInterface() Proofer {
