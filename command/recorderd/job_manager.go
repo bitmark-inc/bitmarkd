@@ -55,8 +55,8 @@ func (j *JobManagerData) waitForRefresh() {
 			} else {
 				j.initialized = true
 				now := time.Now()
-				j.calendar.rescheduleStartEventsPrior(now)
-				j.calendar.rescheduleStopEventsPrior(now)
+				j.calendar.RescheduleStartEventsPrior(now)
+				j.calendar.RescheduleStopEventsPrior(now)
 			}
 			j.reschedule()
 		}
@@ -73,13 +73,13 @@ func (j *JobManagerData) waitNextHasingStartEvent(duration time.Duration) {
 		select {
 		case <-time.After(d):
 			j.log.Debugf("start hashing")
-			j.proofer.startHashing()
+			j.proofer.StartHashing()
 			now := time.Now()
-			intf := j.calendar.pickNextStartEvent(now)
-			j.calendar.rescheduleStartEventsPrior(now)
+			intf := j.calendar.PickNextStartEvent(now)
+			j.calendar.RescheduleStartEventsPrior(now)
 
 			if nil == intf {
-				intf = j.calendar.pickNextStartEvent(now)
+				intf = j.calendar.PickNextStartEvent(now)
 			}
 
 			nextEvent := intf.(time.Time)
@@ -103,13 +103,13 @@ func (j *JobManagerData) waitNextHasingStopEvent(duration time.Duration) {
 		select {
 		case <-time.After(d):
 			j.log.Debug("stop hashing")
-			j.proofer.stopHashing()
+			j.proofer.StopHashing()
 			now := time.Now()
-			intf := j.calendar.pickNextStopEvent(now)
-			j.calendar.rescheduleStopEventsPrior(now)
+			intf := j.calendar.PickNextStopEvent(now)
+			j.calendar.RescheduleStopEventsPrior(now)
 
 			if nil == intf {
-				intf = j.calendar.pickNextStopEvent(now)
+				intf = j.calendar.PickNextStopEvent(now)
 			}
 
 			nextEvent := intf.(time.Time)
@@ -145,18 +145,18 @@ func (j *JobManagerData) reschedule() {
 
 func (j *JobManagerData) rescheduleStartEvent() {
 	now := time.Now()
-	intf := j.calendar.pickInitialiseStartEvent(now)
+	intf := j.calendar.PickInitialiseStartEvent(now)
 	nextEvent := intf.(time.Time)
 	duration := nextEvent.Sub(now)
 	go j.waitNextHasingStartEvent(duration)
 }
 
 func (j *JobManagerData) rescheduleStopEvent() {
-	if j.calendar.runForever() {
+	if j.calendar.RunForever() {
 		return
 	}
 	now := time.Now()
-	intf := j.calendar.pickInitialiseStopEvent(now)
+	intf := j.calendar.PickInitialiseStopEvent(now)
 	nextEvent := intf.(time.Time)
 	duration := nextEvent.Sub(now)
 

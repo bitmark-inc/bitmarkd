@@ -64,18 +64,18 @@ func main() {
 
 	// read options and parse the configuration file
 	configurationFile := options["config-file"][0]
-	reader.initialise(configurationFile)
+	reader.Initialise(configurationFile)
 
 	rescheduleChannel := make(chan struct{})
 	calendar := newJobCalendar(rescheduleChannel)
-	reader.setCalendar(calendar)
+	reader.SetCalendar(calendar)
 
-	err = reader.refresh()
+	err = reader.Refresh()
 	if nil != err {
 		exitwithstatus.Message("%s: failed to read configuration from: %q  error: %s", program, configurationFile, err)
 	}
 
-	masterConfiguration, err := reader.getConfig()
+	masterConfiguration, _, err := reader.GetConfig()
 	if nil != err {
 		exitwithstatus.Message("%s: configuration is not found", program)
 	}
@@ -87,16 +87,13 @@ func main() {
 	defer logger.Finalise()
 
 	configLogger := logger.New(ReaderLoggerPrefix)
-	err = reader.setLog(configLogger)
+	err = reader.SetLog(configLogger)
 	if nil != err {
 		exitwithstatus.Message("%s: new logger '%s' failed with error: %s", program, ReaderLoggerPrefix, err)
 	}
 
 	calendarLogger := logger.New(JobCalendarPrefix)
-	calendar.setLog(calendarLogger)
-
-	// config update periodic
-	reader.updatePeriodically()
+	calendar.SetLog(calendarLogger)
 
 	// create a logger channel for the main program
 	log := logger.New("main")
@@ -170,11 +167,11 @@ func main() {
 	SubmitQueue()
 
 	proofer := newProofer(logger.New(ProoferLoggerPrefix), reader)
-	reader.setProofer(proofer)
+	reader.SetProofer(proofer)
 	// start background processes
 	// these will has blocks, changing nonce to meet difficulty
 	// then submit a block to the right bitmarkd for verification
-	proofer.startHashing()
+	proofer.StartHashing()
 
 	// initialise encryption
 	err = zmqutil.StartAuthentication()
@@ -190,6 +187,9 @@ func main() {
 		managerLogger,
 	)
 	jobManager.Start()
+
+	reader.FirstTimeRun()
+	reader.UpdatePeriodically()
 
 	clientCount := 0
 	// start up bitmarkd clients these subscribe to bitmarkd

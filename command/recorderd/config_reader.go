@@ -13,14 +13,15 @@ import (
 )
 
 type ConfigReader interface {
-	initialise(string)
-	optimalThreadCount() uint32
-	setCalendar(JobCalendar)
-	refresh() error
-	getConfig() (*Configuration, error)
-	setLog(*logger.L) error
-	updatePeriodically()
-	setProofer(Proofer)
+	Initialise(string)
+	OptimalThreadCount() uint32
+	SetCalendar(JobCalendar)
+	Refresh() error
+	GetConfig() (*Configuration, string, error)
+	SetLog(*logger.L) error
+	UpdatePeriodically()
+	FirstTimeRun()
+	SetProofer(Proofer)
 }
 
 const (
@@ -55,25 +56,34 @@ func newConfigReader() ConfigReader {
 }
 
 // configuration needs read first to know logger file location
-func (c *ConfigReaderData) initialise(fileName string) {
+func (c *ConfigReaderData) Initialise(fileName string) {
 	c.fileName = fileName
 }
 
-func (c *ConfigReaderData) setCalendar(calendar JobCalendar) {
+func (c *ConfigReaderData) SetCalendar(calendar JobCalendar) {
 	c.calendar = calendar
 }
 
-func (c *ConfigReaderData) setProofer(proofer Proofer) {
+func (c *ConfigReaderData) SetProofer(proofer Proofer) {
 	c.proofer = proofer
 }
 
-func (c *ConfigReaderData) updatePeriodically() {
+func (c *ConfigReaderData) FirstTimeRun() {
+	err := c.Refresh()
+	if nil != err {
+		return
+	}
+	c.notify()
+}
+
+func (c *ConfigReaderData) UpdatePeriodically() {
 	c.log.Info("star to update config perioditically")
+
 	go func() {
 		for {
 			select {
 			case <-time.After(c.refreshByMinute):
-				err := c.refresh()
+				err := c.Refresh()
 				if nil != err {
 					c.log.Errorf("failed to read configuration from :%s error %s",
 						c.fileName, err)
@@ -84,7 +94,7 @@ func (c *ConfigReaderData) updatePeriodically() {
 	}()
 }
 
-func (c *ConfigReaderData) refresh() error {
+func (c *ConfigReaderData) Refresh() error {
 	configuration, err := c.parse()
 	if nil != err {
 		return err
@@ -94,8 +104,8 @@ func (c *ConfigReaderData) refresh() error {
 }
 
 func (c *ConfigReaderData) notify() {
-	c.calendar.refresh(c.currentConfiguration.Calendar)
-	c.proofer.refresh()
+	c.calendar.Refresh(c.currentConfiguration.Calendar)
+	c.proofer.Refresh()
 }
 
 func (c *ConfigReaderData) parse() (*Configuration, error) {
@@ -106,14 +116,14 @@ func (c *ConfigReaderData) parse() (*Configuration, error) {
 	return configuration, nil
 }
 
-func (c *ConfigReaderData) getConfig() (*Configuration, error) {
+func (c *ConfigReaderData) GetConfig() (*Configuration, string, error) {
 	if nil == c.currentConfiguration {
-		return nil, fmt.Errorf("configuration is empty")
+		return nil, "", fmt.Errorf("configuration is empty")
 	}
-	return c.currentConfiguration, nil
+	return c.currentConfiguration, c.fileName, nil
 }
 
-func (c *ConfigReaderData) setLog(log *logger.L) error {
+func (c *ConfigReaderData) SetLog(log *logger.L) error {
 	if nil == log {
 		return fmt.Errorf("logger %v is nil", log)
 	}
@@ -124,11 +134,11 @@ func (c *ConfigReaderData) setLog(log *logger.L) error {
 
 func (c *ConfigReaderData) update(newConfiguration *Configuration) {
 	c.currentConfiguration = newConfiguration
-	c.threadCount = c.optimalThreadCount()
+	c.threadCount = c.OptimalThreadCount()
 	if c.initialized {
 		c.log.Debugf("Updating configuration, target thread count %d, working: %t",
 			c.threadCount,
-			c.proofer.isWorking(),
+			c.proofer.IsWorking(),
 		)
 	}
 }
@@ -143,7 +153,7 @@ func (c *ConfigReaderData) cpuCount() uint32 {
 	return totalCPUCount
 }
 
-func (c *ConfigReaderData) optimalThreadCount() uint32 {
+func (c *ConfigReaderData) OptimalThreadCount() uint32 {
 	if !c.initialized {
 		return uint32(minThreadCount)
 	}

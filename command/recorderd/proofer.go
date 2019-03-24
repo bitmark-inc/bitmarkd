@@ -34,10 +34,10 @@ var (
 )
 
 type Proofer interface {
-	startHashing()
-	stopHashing()
-	isWorking() bool
-	refresh()
+	StartHashing()
+	StopHashing()
+	IsWorking() bool
+	Refresh()
 }
 
 type ProoferData struct {
@@ -64,16 +64,16 @@ func newProofer(log *logger.L, reader ConfigReader) Proofer {
 	}
 }
 
-func (p *ProoferData) startHashing() {
+func (p *ProoferData) StartHashing() {
 	p.log.Infof("receive start hashing request, current active thread %d",
 		p.activeThread())
 	p.setWorking(true)
 	if p.activeThread() < 1 {
-		p.createProofer(p.reader.optimalThreadCount())
+		p.createProofer(p.reader.OptimalThreadCount())
 	}
 }
 
-func (p *ProoferData) stopHashing() {
+func (p *ProoferData) StopHashing() {
 	p.log.Infof("receive stop hashing request, current active thread %d",
 		p.activeThread())
 	p.setWorking(false)
@@ -88,7 +88,7 @@ func (p *ProoferData) deleteProofer(count int32) {
 	}
 }
 
-func (p *ProoferData) isWorking() bool {
+func (p *ProoferData) IsWorking() bool {
 	return p.workingNow
 }
 
@@ -96,17 +96,17 @@ func (p *ProoferData) setWorking(working bool) {
 	p.workingNow = working
 }
 
-func (p *ProoferData) refresh() {
+func (p *ProoferData) Refresh() {
 	p.log.Debugf("goroutine active count: %d, target count: %d",
 		p.activeThread(),
-		p.reader.optimalThreadCount(),
+		p.reader.OptimalThreadCount(),
 	)
-	if !p.changed() || !p.isWorking() {
+	if !p.changed() || !p.IsWorking() {
 		return
 	}
 
 	increment := p.differenceToTargetThreadCount(
-		p.reader.optimalThreadCount(),
+		p.reader.OptimalThreadCount(),
 		p.activeThread(),
 	)
 
@@ -121,7 +121,7 @@ func (p *ProoferData) refresh() {
 }
 
 func (p *ProoferData) changed() bool {
-	return p.prevThreadCount != p.reader.optimalThreadCount()
+	return p.prevThreadCount != p.reader.OptimalThreadCount()
 }
 
 func (p *ProoferData) activeThreadIncrement(threadNum uint32) {
