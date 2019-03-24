@@ -1353,3 +1353,37 @@ func TestRemoveRedundantStopEvent(t *testing.T) {
 		}
 	}
 }
+
+func TestRunForever(t *testing.T) {
+	j := setupTestCalendar()
+	defer teardownCalendar()
+
+	now := time.Now()
+	fixture := []struct {
+		flattenEvents FlattenEvents
+		expected      bool
+	}{
+		{
+			FlattenEvents{
+				start: []time.Time{now},
+				stop:  []time.Time{},
+			},
+			true,
+		},
+		{
+			FlattenEvents{
+				start: []time.Time{now},
+				stop:  []time.Time{now},
+			},
+			false,
+		},
+	}
+
+	for i, s := range fixture {
+		j.flattenEvents = s.flattenEvents
+		actual := j.runForever()
+		if actual != s.expected {
+			t.Errorf("%d the test fail, expect %t but get %t", i, s.expected, actual)
+		}
+	}
+}
