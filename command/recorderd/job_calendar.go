@@ -116,7 +116,7 @@ func (j *JobCalendarData) runForever() bool {
 func (j *JobCalendarData) refresh(calendar ConfigCalendar) {
 	j.log.Debug("refresh calendar")
 	if !j.isSameCalendar(calendar) {
-		j.log.Debug("calendar is changed")
+		j.log.Debug("calendar change")
 		j.setNewCalendar(calendar)
 		j.resetEvents()
 		j.parseRawData(calendar)
@@ -205,10 +205,16 @@ func isTimeDataFirstEarlierThanSecond(first TimeData, second TimeData) bool {
 func (j *JobCalendarData) isTimeBooked(event time.Time) bool {
 	weekDay := event.Weekday()
 	events := j.events[weekDay]
+
 	for _, t := range events {
 		afterOrEqualToStartTime := t.start.Before(event) || t.start.Equal(event)
 		beforeOrEqualToEndTime := t.stop.After(event) || t.stop.Equal(event)
+
 		if afterOrEqualToStartTime && beforeOrEqualToEndTime {
+			return true
+		}
+
+		if events[0].stop.IsZero() && afterOrEqualToStartTime {
 			return true
 		}
 	}
@@ -217,6 +223,7 @@ func (j *JobCalendarData) isTimeBooked(event time.Time) bool {
 
 func (j *JobCalendarData) pickInitialiseStartEvent(event time.Time) interface{} {
 	if j.isTimeBooked(event) {
+		j.log.Debugf("working time, start after %s", delayOfStartStop.String())
 		return event.Add(delayOfStartStop)
 	}
 	return j.pickNextStartEvent(event)
@@ -226,24 +233,31 @@ func (j *JobCalendarData) pickInitialiseStopEvent(event time.Time) interface{} {
 	if j.isTimeBooked(event) {
 		return j.pickNextStopEvent(event)
 	}
+	j.log.Debugf("not working time, stop after %s", delayOfStartStop.String())
 	return event.Add(delayOfStartStop)
 }
 
 func (j *JobCalendarData) pickNextStartEvent(event time.Time) interface{} {
 	for _, e := range j.flattenEvents.start {
 		if e.After(event) {
+			j.log.Infof("next start event at %s", e)
 			return e
 		}
 	}
+	j.log.Error("cannot find next start event")
+	j.printEvents()
 	return nil
 }
 
 func (j *JobCalendarData) pickNextStopEvent(event time.Time) interface{} {
 	for _, e := range j.flattenEvents.stop {
 		if e.After(event) {
+			j.log.Infof("next stop event at %s", e)
 			return e
 		}
 	}
+	j.log.Error("cannot find next stop event")
+	j.printEvents()
 	return nil
 }
 

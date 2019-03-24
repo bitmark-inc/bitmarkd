@@ -679,8 +679,32 @@ func TestIsTimeBooked(t *testing.T) {
 	for i, s := range fixture {
 		actual := j.isTimeBooked(s.target)
 		if actual != s.expected {
-			t.Errorf("error checking time, %dth %s in range of %s ~ %s, expect %t but get %t",
-				i, s.target, j.events[weekDay][0].start, j.events[weekDay][0].stop,
+			t.Errorf("%dth error checking time, %s in range of %s ~ %s, expect %t but get %t",
+				i, stringifyTime(s.target), stringifyTime(j.events[weekDay][0].start), stringifyTime(j.events[weekDay][0].stop),
+				s.expected, actual)
+		}
+	}
+
+	j.events[weekDay] = []SingleEvent{
+		{
+			start: afterMinuteFromBase(now, 1),
+		},
+	}
+
+	fixture = []struct {
+		target   time.Time
+		expected bool
+	}{
+		{now, false},
+		{afterMinuteFromBase(now, 1), true},
+		{afterMinuteFromBase(now, 4), true},
+	}
+
+	for i, s := range fixture {
+		actual := j.isTimeBooked(s.target)
+		if actual != s.expected {
+			t.Errorf("%dth error checking time, %s in range of %s ~ %s, expect %t but get %t",
+				i, stringifyTime(s.target), stringifyTime(j.events[weekDay][0].start), stringifyTime(j.events[weekDay][0].stop),
 				s.expected, actual)
 		}
 	}
