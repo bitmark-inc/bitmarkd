@@ -20,39 +20,39 @@ var managerLogging logger.Configuration
 
 type FakeProofer struct{}
 
-func (p *FakeProofer) startHashing() {
+func (p *FakeProofer) StartHashing() {
 	hashingCalled = true
 }
 
-func (p *FakeProofer) stopHashing() {
+func (p *FakeProofer) StopHashing() {
 	hashingCalled = true
 }
 
-func (p *FakeProofer) refresh() {}
+func (p *FakeProofer) Refresh() {}
 
-func (p *FakeProofer) isWorking() bool {
+func (p *FakeProofer) IsWorking() bool {
 	return true
 }
 
 type FakeCalendar struct{}
 
-func (c *FakeCalendar) pickNextStartEvent(t time.Time) interface{} {
+func (c *FakeCalendar) PickNextStartEvent(t time.Time) interface{} {
 	return time.Now()
 }
-func (c *FakeCalendar) pickNextStopEvent(t time.Time) interface{} {
+func (c *FakeCalendar) PickNextStopEvent(t time.Time) interface{} {
 	return time.Now()
 }
-func (c *FakeCalendar) pickInitialiseStartEvent(time.Time) interface{} {
+func (c *FakeCalendar) PickInitialiseStartEvent(time.Time) interface{} {
 	return time.Now()
 }
-func (c *FakeCalendar) pickInitialiseStopEvent(time.Time) interface{} {
+func (c *FakeCalendar) PickInitialiseStopEvent(time.Time) interface{} {
 	return time.Now()
 }
-func (c *FakeCalendar) refresh(ConfigCalendar)               {}
-func (c *FakeCalendar) rescheduleStartEventsPrior(time.Time) {}
-func (c *FakeCalendar) rescheduleStopEventsPrior(time.Time)  {}
-func (c *FakeCalendar) setLog(*logger.L)                     {}
-func (c *FakeCalendar) runForever() bool {
+func (c *FakeCalendar) Refresh(ConfigCalendar)               {}
+func (c *FakeCalendar) RescheduleStartEventsPrior(time.Time) {}
+func (c *FakeCalendar) RescheduleStopEventsPrior(time.Time)  {}
+func (c *FakeCalendar) SetLog(*logger.L)                     {}
+func (c *FakeCalendar) RunForever() bool {
 	return true
 }
 

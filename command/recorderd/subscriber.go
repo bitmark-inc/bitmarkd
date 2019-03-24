@@ -101,7 +101,7 @@ func Subscribe(
 			log.Infof("received data: %s", data)
 
 			// prevent queuing outdated request
-			if !proofer.isWorking() {
+			if !proofer.IsWorking() {
 				log.Infof("Rest time, discard request")
 				continue
 			}

@@ -30,8 +30,8 @@ func setupReader(t *testing.T) *ConfigReaderData {
 	reader := &ConfigReaderData{
 		proofer: &FakeProofer{},
 	}
-	reader.initialise("test")
-	_ = reader.setLog(logger.New("test"))
+	reader.Initialise("test")
+	_ = reader.SetLog(logger.New("test"))
 
 	return reader
 }
@@ -81,14 +81,14 @@ func TestGetConfig(t *testing.T) {
 	reader := setupReader(t)
 	defer teardown()
 
-	oldConfig, _ := reader.getConfig()
+	oldConfig, _, _ := reader.GetConfig()
 	if nil != oldConfig {
 		t.Errorf("Cannot get configuration")
 	}
 
 	newConfig := mockConfiguration(defaultCPUUsage)
 	reader.update(newConfig)
-	currentConfig, _ := reader.getConfig()
+	currentConfig, _, _ := reader.GetConfig()
 	if currentConfig != newConfig {
 		t.Errorf("Get wrong config")
 	}
@@ -100,7 +100,7 @@ func TestUpdateConfiguraion(t *testing.T) {
 
 	newConfiguration := mockConfiguration(defaultCPUUsage)
 	reader.update(newConfiguration)
-	currentConfig, _ := reader.getConfig()
+	currentConfig, _, _ := reader.GetConfig()
 	if currentConfig != newConfiguration {
 		t.Errorf("current configuration %v different from expected %v", currentConfig, newConfiguration)
 	}
@@ -115,7 +115,7 @@ func TestUpdateThreadCount(t *testing.T) {
 	reader.updateCpuCount(totalCPU)
 	reader.update(newConfiguration)
 	threadCount := reader.threadCount
-	if threadCount != reader.optimalThreadCount() {
+	if threadCount != reader.OptimalThreadCount() {
 		t.Errorf("update threadcount fail, expected %d differs %d",
 			threadCount, defaultCPUUsage*totalCPU)
 	}
@@ -140,7 +140,7 @@ func TestOptimalThreadCount(t *testing.T) {
 		mockConfig := mockConfiguration(s.usage)
 		reader.update(mockConfig)
 		reader.updateCpuCount(s.totalCPU)
-		calculatedThreadCount := reader.optimalThreadCount()
+		calculatedThreadCount := reader.OptimalThreadCount()
 		if s.thread != calculatedThreadCount {
 			t.Errorf("expected thread count %d different from calculated %d",
 				s.thread, calculatedThreadCount)

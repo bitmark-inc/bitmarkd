@@ -561,7 +561,7 @@ func TestRescheduleStartEventsPrior(t *testing.T) {
 
 	for i, s := range fixture {
 		j.flattenEvents.stop = s.times
-		j.rescheduleStopEventsPrior(s.event)
+		j.RescheduleStopEventsPrior(s.event)
 		if !isTimeSliceEqual(s.expected, j.flattenEvents.stop) {
 			t.Errorf("%dth test fail, schedule next week event, now is %s",
 				i, stringifyTime(now))
@@ -614,7 +614,7 @@ func TestRescheduleStopEventsPrior(t *testing.T) {
 
 	for i, s := range fixture {
 		j.flattenEvents.stop = s.times
-		j.rescheduleStopEventsPrior(s.event)
+		j.RescheduleStopEventsPrior(s.event)
 		if !isTimeSliceEqual(s.expected, j.flattenEvents.stop) {
 			t.Errorf("%dth test fail, schedule next week event, now is %s",
 				i, stringifyTime(now))
@@ -770,7 +770,7 @@ func TestPickNextStartEvent(t *testing.T) {
 
 	for i, s := range fixture {
 		j.flattenEvents = s.flattenEvents
-		actual := j.pickNextStartEvent(now)
+		actual := j.PickNextStartEvent(now)
 		if actual != s.expected {
 			t.Errorf("%dth test fail cannot get correct next start events", i)
 			t.Errorf("now: %s, yesterday: %s, tomorrow: %s",
@@ -828,7 +828,7 @@ func TestPickNextStopEvent(t *testing.T) {
 
 	for i, s := range fixture {
 		j.flattenEvents = s.flattenEvents
-		actual := j.pickNextStopEvent(now)
+		actual := j.PickNextStopEvent(now)
 		if actual != s.expected {
 			t.Errorf("%dth test fail cannot get correct next stop event", i)
 			t.Errorf("now: %s, yesterday: %s, tomorrow: %s",
@@ -1014,7 +1014,7 @@ func TestPickInitialiseStartEvent(t *testing.T) {
 	for i, s := range fixture {
 		j.flattenEvents = s.flattenEvents
 		j.events = s.events
-		actual := j.pickInitialiseStartEvent(now)
+		actual := j.PickInitialiseStartEvent(now)
 		if actual != s.expected {
 			t.Errorf("%dth test fail, cannot get correct next events", i)
 			t.Errorf("now: %s, 1 hour before: %s, 5 min after: %s, 10 min after: %s",
@@ -1200,7 +1200,7 @@ func TestPickInitialiseStopEvent(t *testing.T) {
 	for i, s := range fixture {
 		j.flattenEvents = s.flattenEvents
 		j.events = s.events
-		actual := j.pickInitialiseStopEvent(now)
+		actual := j.PickInitialiseStopEvent(now)
 		if actual != s.expected {
 			t.Errorf("%dth test fail, cannot get correct next events", i)
 			t.Errorf("now: %s, 1 hour before: %s, 5 min before: %s, 10 min before: %s",
@@ -1381,7 +1381,7 @@ func TestRunForever(t *testing.T) {
 
 	for i, s := range fixture {
 		j.flattenEvents = s.flattenEvents
-		actual := j.runForever()
+		actual := j.RunForever()
 		if actual != s.expected {
 			t.Errorf("%d the test fail, expect %t but get %t", i, s.expected, actual)
 		}

@@ -27,15 +27,15 @@ const (
 )
 
 type JobCalendar interface {
-	pickNextStartEvent(time.Time) interface{}
-	pickNextStopEvent(time.Time) interface{}
-	pickInitialiseStartEvent(time.Time) interface{}
-	pickInitialiseStopEvent(time.Time) interface{}
-	refresh(calendar ConfigCalendar)
-	rescheduleStartEventsPrior(event time.Time)
-	rescheduleStopEventsPrior(event time.Time)
-	runForever() bool
-	setLog(l *logger.L)
+	PickNextStartEvent(time.Time) interface{}
+	PickNextStopEvent(time.Time) interface{}
+	PickInitialiseStartEvent(time.Time) interface{}
+	PickInitialiseStopEvent(time.Time) interface{}
+	Refresh(calendar ConfigCalendar)
+	RescheduleStartEventsPrior(event time.Time)
+	RescheduleStopEventsPrior(event time.Time)
+	RunForever() bool
+	SetLog(l *logger.L)
 }
 
 type NumberRange struct {
@@ -105,15 +105,15 @@ func (j *JobCalendarData) newEmptyEvents() map[time.Weekday][]SingleEvent {
 	}
 }
 
-func (j *JobCalendarData) setLog(l *logger.L) {
+func (j *JobCalendarData) SetLog(l *logger.L) {
 	j.log = l
 }
 
-func (j *JobCalendarData) runForever() bool {
+func (j *JobCalendarData) RunForever() bool {
 	return 0 == len(j.flattenEvents.stop)
 }
 
-func (j *JobCalendarData) refresh(calendar ConfigCalendar) {
+func (j *JobCalendarData) Refresh(calendar ConfigCalendar) {
 	j.log.Debug("refresh calendar")
 	if !j.isSameCalendar(calendar) {
 		j.log.Debug("calendar change")
@@ -221,23 +221,23 @@ func (j *JobCalendarData) isTimeBooked(event time.Time) bool {
 	return false
 }
 
-func (j *JobCalendarData) pickInitialiseStartEvent(event time.Time) interface{} {
+func (j *JobCalendarData) PickInitialiseStartEvent(event time.Time) interface{} {
 	if j.isTimeBooked(event) {
 		j.log.Debugf("working time, start after %s", delayOfStartStop.String())
 		return event.Add(delayOfStartStop)
 	}
-	return j.pickNextStartEvent(event)
+	return j.PickNextStartEvent(event)
 }
 
-func (j *JobCalendarData) pickInitialiseStopEvent(event time.Time) interface{} {
+func (j *JobCalendarData) PickInitialiseStopEvent(event time.Time) interface{} {
 	if j.isTimeBooked(event) {
-		return j.pickNextStopEvent(event)
+		return j.PickNextStopEvent(event)
 	}
 	j.log.Debugf("not working time, stop after %s", delayOfStartStop.String())
 	return event.Add(delayOfStartStop)
 }
 
-func (j *JobCalendarData) pickNextStartEvent(event time.Time) interface{} {
+func (j *JobCalendarData) PickNextStartEvent(event time.Time) interface{} {
 	for _, e := range j.flattenEvents.start {
 		if e.After(event) {
 			j.log.Infof("next start event at %s", e)
@@ -249,7 +249,7 @@ func (j *JobCalendarData) pickNextStartEvent(event time.Time) interface{} {
 	return nil
 }
 
-func (j *JobCalendarData) pickNextStopEvent(event time.Time) interface{} {
+func (j *JobCalendarData) PickNextStopEvent(event time.Time) interface{} {
 	for _, e := range j.flattenEvents.stop {
 		if e.After(event) {
 			j.log.Infof("next stop event at %s", e)
@@ -261,7 +261,7 @@ func (j *JobCalendarData) pickNextStopEvent(event time.Time) interface{} {
 	return nil
 }
 
-func (j *JobCalendarData) rescheduleStartEventsPrior(event time.Time) {
+func (j *JobCalendarData) RescheduleStartEventsPrior(event time.Time) {
 	if 0 == len(j.flattenEvents.start) || j.flattenEvents.start[0].After(event) {
 		return
 	}
@@ -280,7 +280,7 @@ func (j *JobCalendarData) rescheduleStartEventsPrior(event time.Time) {
 	j.flattenEvents.start = newSlices
 }
 
-func (j *JobCalendarData) rescheduleStopEventsPrior(event time.Time) {
+func (j *JobCalendarData) RescheduleStopEventsPrior(event time.Time) {
 	if 0 == len(j.flattenEvents.stop) || j.flattenEvents.stop[0].After(event) {
 		return
 	}
