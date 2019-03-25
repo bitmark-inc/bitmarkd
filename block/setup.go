@@ -6,15 +6,22 @@ package block
 
 import (
 	"encoding/binary"
+	"reflect"
 	"sync"
 
 	"github.com/bitmark-inc/bitmarkd/background"
+	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/storage"
+	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
 )
+
+const BlockValidationCounts = 10
 
 // globals for background process
 type blockData struct {
@@ -34,6 +41,124 @@ type blockData struct {
 
 // global data
 var globalData blockData
+
+func validateTransactionData(header *blockrecord.Header, digest blockdigest.Digest, data []byte) error {
+	log := logger.New("block")
+
+	for i := header.TransactionCount; i > 0; i-- {
+		transaction, n, err := transactionrecord.Packed(data).Unpack(mode.IsTesting())
+		if err != nil {
+			log.Error("can not unpack transaction")
+			return err
+		}
+
+		txId := merkle.NewDigest(data[:n])
+
+		switch tx := transaction.(type) {
+		case *transactionrecord.BlockFoundation:
+			foundationTxId := blockrecord.FoundationTxId(header, digest)
+			packedPayment, err := tx.Payments.Pack(mode.IsTesting())
+			if err != nil {
+				log.Error("can not get packed payments")
+				return err
+			}
+
+			if !storage.Pool.Transactions.Has(foundationTxId[:]) {
+				log.Error("foundation tx not found")
+				return err
+			}
+			if !storage.Pool.BlockOwnerTxIndex.Has(foundationTxId[:]) {
+				log.Error("ownership is not set")
+				return err
+			}
+
+			blockNumberKey := make([]byte, 8)
+			binary.BigEndian.PutUint64(blockNumberKey, header.Number)
+
+			if !reflect.DeepEqual(storage.Pool.BlockOwnerPayment.Get(blockNumberKey[:]), packedPayment) {
+				log.Error("payment info inconsistent")
+				return err
+			}
+
+		case *transactionrecord.BlockOwnerTransfer:
+			if !storage.Pool.Transactions.Has(txId[:]) {
+				log.Error("tx not found")
+				return err
+			}
+			if !storage.Pool.BlockOwnerTxIndex.Has(txId[:]) {
+				log.Error("ownership is not set")
+				return err
+			}
+
+			if storage.Pool.BlockOwnerTxIndex.Has(tx.Link[:]) {
+				log.Error("previous ownership does not clean")
+				return err
+			}
+
+		case *transactionrecord.AssetData:
+			assetId := tx.AssetId()
+			if !storage.Pool.Assets.Has(assetId[:]) {
+				log.Error("asset not found")
+				return err
+			}
+		case *transactionrecord.BitmarkIssue, *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
+			if !storage.Pool.Transactions.Has(txId[:]) {
+				log.Error("tx not found")
+				return err
+			}
+		case *transactionrecord.BitmarkShare, *transactionrecord.ShareGrant, *transactionrecord.ShareSwap:
+			if !storage.Pool.Transactions.Has(txId[:]) {
+				log.Error("tx not found")
+				return err
+			}
+		default:
+			log.Error("unrecognized transaction records")
+			return err
+		}
+		data = data[n:]
+	}
+
+	return nil
+}
+
+func validateAndReturnLastBlock(last storage.Element) (*blockrecord.Header, blockdigest.Digest, error) {
+	log := logger.New("block")
+
+	blocks := [][]byte{last.Value}
+	lastBlockNumber := binary.BigEndian.Uint64(last.Key)
+	lastCheckedBlockNumber := lastBlockNumber - BlockValidationCounts
+	if lastCheckedBlockNumber < 1 {
+		lastCheckedBlockNumber = 1
+	}
+
+	for blockNumber := lastBlockNumber - 1; blockNumber > lastCheckedBlockNumber; blockNumber-- {
+		blockNumberKey := make([]byte, 8)
+		binary.BigEndian.PutUint64(blockNumberKey, blockNumber)
+		block := storage.Pool.Blocks.Get(blockNumberKey)
+		blocks = append([][]byte{block}, blocks...) // prepend
+	}
+
+	var header *blockrecord.Header
+	var digest blockdigest.Digest
+	for _, blockData := range blocks {
+		var data []byte
+		var err error
+
+		header, digest, data, err = blockrecord.ExtractHeader(blockData)
+		if err != nil {
+			log.Error("can not extract header")
+			return header, digest, err
+		}
+
+		log.Infof("validate block. block number: %d, transaction count: %d", header.Number, header.TransactionCount)
+
+		if err := validateTransactionData(header, digest, data); err != nil {
+			return header, digest, err
+		}
+	}
+
+	return header, digest, nil
+}
 
 // setup the current block data
 func Initialise(recover bool) error {
@@ -74,10 +199,10 @@ func Initialise(recover bool) error {
 	// detect if any blocks on file
 	if last, ok := storage.Pool.Blocks.LastElement(); ok {
 
-		// get highest block
-		header, digest, _, err := blockrecord.ExtractHeader(last.Value)
+		// start validating block indexes
+		header, digest, err := validateAndReturnLastBlock(last)
 		if nil != err {
-			log.Criticalf("failed to unpack block: %d from storage  error: %s", binary.BigEndian.Uint64(last.Key), err)
+			log.Criticalf("failed to validate blocks from storage  error: %s", err)
 			return err
 		}
 
