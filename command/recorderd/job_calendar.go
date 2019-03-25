@@ -256,7 +256,7 @@ func (j *JobCalendarData) PickNextStopEvent(event time.Time) interface{} {
 			return e
 		}
 	}
-	j.log.Error("cannot find next stop event")
+	j.log.Info("cannot find next stop event")
 	j.printEvents()
 	return nil
 }
