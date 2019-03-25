@@ -6,6 +6,7 @@ package block
 
 import (
 	"encoding/binary"
+	"errors"
 	"reflect"
 	"sync"
 
@@ -46,6 +47,11 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 	log := logger.New("block")
 
 	for i := header.TransactionCount; i > 0; i-- {
+		if len(data) == 0 {
+			log.Error("insufficient length of transaction data")
+			return errors.New("insufficient length of transaction data")
+		}
+
 		transaction, n, err := transactionrecord.Packed(data).Unpack(mode.IsTesting())
 		if err != nil {
 			log.Error("can not unpack transaction")
@@ -57,56 +63,71 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 		switch tx := transaction.(type) {
 		case *transactionrecord.BlockFoundation:
 			foundationTxId := blockrecord.FoundationTxId(header, digest)
+			log.Debugf("get a foundation transaction. foundationTxId: %s", foundationTxId)
 			packedPayment, err := tx.Payments.Pack(mode.IsTesting())
 			if err != nil {
 				log.Error("can not get packed payments")
 				return err
 			}
 
+			log.Debugf("validate the foundation transaction indexed. foundationTxId: %s", foundationTxId)
 			if !storage.Pool.Transactions.Has(foundationTxId[:]) {
 				log.Error("foundation tx not found")
 				return err
 			}
+			log.Debugf("validate ownership indexed. foundationTxId: %s", foundationTxId)
 			if !storage.Pool.BlockOwnerTxIndex.Has(foundationTxId[:]) {
-				log.Error("ownership is not set")
+				log.Error("ownership is not indexed")
 				return err
 			}
 
 			blockNumberKey := make([]byte, 8)
 			binary.BigEndian.PutUint64(blockNumberKey, header.Number)
 
+			log.Debugf("validate payment info identical. foundationTxId: %s", foundationTxId)
 			if !reflect.DeepEqual(storage.Pool.BlockOwnerPayment.Get(blockNumberKey[:]), packedPayment) {
 				log.Error("payment info inconsistent")
 				return err
 			}
 
 		case *transactionrecord.BlockOwnerTransfer:
+			log.Debugf("get a owner transfer transaction. txId: %s", txId)
+			log.Debugf("validate transaction indexed. txId: %s", txId)
 			if !storage.Pool.Transactions.Has(txId[:]) {
 				log.Error("tx not found")
 				return err
 			}
+
+			log.Debugf("validate ownership indexed. txId: %s", txId)
 			if !storage.Pool.BlockOwnerTxIndex.Has(txId[:]) {
 				log.Error("ownership is not set")
 				return err
 			}
 
+			log.Debugf("validate previous ownership cleaned. txId: %s", txId)
 			if storage.Pool.BlockOwnerTxIndex.Has(tx.Link[:]) {
 				log.Error("previous ownership does not clean")
 				return err
 			}
 
 		case *transactionrecord.AssetData:
+			log.Debugf("get an asset transaction. txId: %s", txId)
+			log.Debugf("validate the asset indexed. txId: %s", txId)
 			assetId := tx.AssetId()
 			if !storage.Pool.Assets.Has(assetId[:]) {
 				log.Error("asset not found")
 				return err
 			}
 		case *transactionrecord.BitmarkIssue, *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
+			log.Debugf("get a regular transaction. txId: %s", txId)
+			log.Debugf("validate the regular transaction indexed. txId: %s", txId)
 			if !storage.Pool.Transactions.Has(txId[:]) {
 				log.Error("tx not found")
 				return err
 			}
 		case *transactionrecord.BitmarkShare, *transactionrecord.ShareGrant, *transactionrecord.ShareSwap:
+			log.Debugf("get a share transaction. txId: %s", txId)
+			log.Debugf("validate the share transaction indexed. txId: %s", txId)
 			if !storage.Pool.Transactions.Has(txId[:]) {
 				log.Error("tx not found")
 				return err
