@@ -124,9 +124,6 @@ func (assetData *AssetData) check(testnet bool) error {
 		return fault.ErrInvalidOwnerOrRegistrant
 	}
 
-	if utf8.RuneCountInString(assetData.Name) < minNameLength {
-		return fault.ErrNameTooShort
-	}
 	if utf8.RuneCountInString(assetData.Name) > maxNameLength {
 		return fault.ErrNameTooLong
 	}

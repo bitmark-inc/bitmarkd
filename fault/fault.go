@@ -91,7 +91,6 @@ var (
 	ErrMissingOwnerData                      = NotFoundError("missing owner data")
 	ErrMissingParameters                     = LengthError("missing parameters")
 	ErrNameTooLong                           = LengthError("name too long")
-	ErrNameTooShort                          = LengthError("name too short")
 	ErrNoConnectionsAvailable                = InvalidError("no connections available")
 	ErrNoNewTransactions                     = InvalidError("no new transactions")
 	ErrNotAPayId                             = InvalidError("not a pay id")
