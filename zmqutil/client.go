@@ -9,12 +9,13 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
-	"sync"
-	"time"
 )
 
 // structure to hold a client connection
@@ -328,6 +329,64 @@ func (client *Client) ReconnectReturningSocket() (*zmq.Socket, error) {
 		return nil, err
 	}
 	return client.socket, nil
+}
+
+func (client *Client) ReconnectOpenedSocket() error {
+	if "" == client.address {
+		msg := "client address empty"
+		logger.Critical(msg)
+		return fmt.Errorf(msg)
+	}
+
+	err := client.disconnect()
+	if nil != err {
+		logger.Criticalf("socket %s disconnect from address %x with error: %s",
+			client.socket.String(),
+			client.address,
+			err.Error(),
+		)
+		return err
+	}
+
+	client.Lock()
+	defer client.Unlock()
+
+	err = client.socket.Connect(client.address)
+	if nil != err {
+		logger.Criticalf("socket %s connect to address %x with error: %s",
+			client.socket.String(),
+			client.address,
+			err.Error(),
+		)
+		return err
+	}
+
+	return nil
+}
+
+func (client *Client) disconnect() error {
+	client.Lock()
+	defer client.Unlock()
+
+	if nil == client.socket {
+		return nil
+	}
+
+	if nil != client.poller {
+		client.poller.Remove(client.socket)
+	}
+
+	if "" == client.address {
+		return nil
+	}
+
+	err := client.socket.Disconnect(client.address)
+	if nil != err {
+		return err
+	}
+
+	return nil
+
 }
 
 // disconnect old address and close
