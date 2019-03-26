@@ -17,12 +17,9 @@ func runCreate(c *cli.Context) error {
 
 	m := c.App.Metadata["config"].(*metadata)
 
-	issuer, err := checkIdentity(c.GlobalString("identity"), m.config)
-	if nil != err {
-		return err
-	}
+	assetName := c.String("asset")
 
-	assetName, err := checkAssetName(c.String("asset"))
+	issuer, err := checkIdentity(c.GlobalString("identity"), m.config)
 	if nil != err {
 		return err
 	}

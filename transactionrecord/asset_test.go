@@ -154,10 +154,24 @@ func TestPackAssetData(t *testing.T) {
 	}
 }
 
-// test the pack failure on missing name
+// test the pack also accept empty name
 func TestPackAssetDataWithEmptyName(t *testing.T) {
 
 	registrantAccount := makeAccount(registrant.publicKey)
+
+	expected := []byte{
+		0x02, 0x00, 0x10, 0x30, 0x31, 0x32, 0x33, 0x34,
+		0x35, 0x36, 0x37, 0x38, 0x39, 0x61, 0x62, 0x63,
+		0x64, 0x65, 0x66, 0x20, 0x64, 0x65, 0x73, 0x63,
+		0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x00,
+		0x4a, 0x75, 0x73, 0x74, 0x20, 0x74, 0x68, 0x65,
+		0x20, 0x64, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70,
+		0x74, 0x69, 0x6f, 0x6e, 0x21, 0x13, 0x7a, 0x81,
+		0x92, 0x56, 0x5e, 0x6c, 0xa2, 0x35, 0x80, 0xe1,
+		0x81, 0x59, 0xef, 0x30, 0x73, 0xf6, 0xe2, 0xfb,
+		0x8e, 0x7e, 0x9d, 0x31, 0x49, 0x7e, 0x79, 0xd7,
+		0x73, 0x1b, 0xa3, 0x74, 0x11, 0x01,
+	}
 
 	r := transactionrecord.AssetData{
 		Name:        "",
@@ -167,13 +181,41 @@ func TestPackAssetDataWithEmptyName(t *testing.T) {
 		Signature:   []byte{1, 2, 3, 4},
 	}
 
+	signature := ed25519.Sign(registrant.privateKey, expected)
+	r.Signature = signature
+
+	l := util.ToVarint64(uint64(len(signature)))
+	expected = append(expected, l...)
+	expected = append(expected, signature...)
+
 	// test the packer
-	_, err := r.Pack(registrantAccount)
-	if nil == err {
-		t.Fatalf("pack should have failed")
+	packed, err := r.Pack(registrantAccount)
+	if nil != err {
+		t.Errorf("pack error: %s", err)
 	}
-	if fault.ErrNameTooShort != err {
-		t.Fatalf("unexpected pack error: %s", err)
+
+	if !bytes.Equal(packed, expected) {
+		t.Errorf("pack record: %x  expected: %x", packed, expected)
+		t.Errorf("*** GENERATED Packed:\n%s", util.FormatBytes("expected", packed))
+		t.Fatal("fatal error")
+	}
+
+	unpacked, n, err := packed.Unpack(true)
+	if nil != err {
+		t.Fatalf("unpack error: %s", err)
+	}
+
+	if len(packed) != n {
+		t.Errorf("did not unpack all data: only used: %d of: %d bytes", n, len(packed))
+	}
+
+	reg, ok := unpacked.(*transactionrecord.AssetData)
+	if !ok {
+		t.Fatalf("did not unpack to AssetData")
+	}
+
+	if !reflect.DeepEqual(r, *reg) {
+		t.Fatalf("different, original: %v  recovered: %v", r, *reg)
 	}
 }
 
