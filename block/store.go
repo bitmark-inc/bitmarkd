@@ -6,6 +6,7 @@ package block
 
 import (
 	"encoding/binary"
+
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
@@ -70,7 +71,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 	// timestamp must be higher than previous
 	if previousTimestamp > header.Timestamp {
 		d := previousTimestamp - header.Timestamp
-		globalData.log.Errorf("prev: %d  next: %d  diff: %d  block: %d  version: %d", previousTimestamp, header.Timestamp, d, header.Number, header.Version)
+		globalData.log.Warnf("prev: %d  next: %d  diff: %d  block: %d  version: %d", previousTimestamp, header.Timestamp, d, header.Number, header.Version)
 
 		// allow more tolerance for old blocks up to a few minutes back in time
 		fail := false
