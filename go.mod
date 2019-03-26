@@ -9,6 +9,7 @@ require (
 	github.com/bitmark-inc/logger v0.3.4
 	github.com/golang/protobuf v1.3.1 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
+	github.com/fsnotify/fsnotify v1.4.7
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/kr/pty v1.1.4 // indirect
 	github.com/mitchellh/mapstructure v1.1.2 // indirect
