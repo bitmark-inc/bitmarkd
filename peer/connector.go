@@ -9,8 +9,6 @@ import (
 	"container/list"
 	"encoding/hex"
 	"fmt"
-	"time"
-
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -20,6 +18,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/peer/upstream"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
+	"time"
 )
 
 // various timeouts
@@ -441,15 +440,15 @@ func (conn *connector) connectUpstream(priority string, serverPublicKey []byte, 
 	// extract the first valid address
 	connV4, connV6 := util.PackedConnection(addresses).Unpack46()
 
-	if nil == connV4 && nil == connV6 {
-		log.Errorf("reconnect: %x  error: no addresses found", serverPublicKey)
-		return fault.ErrAddressIsNil
-	}
-
 	// need to know if this node has IPv6
 	address := connV4
 	if nil != connV6 && conn.preferIPv6 {
 		address = connV6
+	}
+
+	if nil == address {
+		log.Errorf("reconnect: %x  error: no suitable address found ipv6 allowed: %t", serverPublicKey, conn.preferIPv6)
+		return fault.ErrAddressIsNil
 	}
 
 	log.Infof("connect: %s to: %x @ %s", priority, serverPublicKey, address)
