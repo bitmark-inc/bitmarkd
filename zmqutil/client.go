@@ -386,7 +386,10 @@ func (client *Client) disconnect() error {
 	}
 
 	return nil
+}
 
+func (client *Client) GetSocket() *zmq.Socket {
+	return client.socket
 }
 
 // disconnect old address and close
