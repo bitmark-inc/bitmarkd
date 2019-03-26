@@ -340,9 +340,8 @@ func (client *Client) ReconnectOpenedSocket() error {
 
 	err := client.disconnect()
 	if nil != err {
-		logger.Criticalf("socket %s disconnect from address %x with error: %s",
-			client.socket.String(),
-			client.address,
+		logger.Criticalf("client %s disconnect from remote address with error: %s",
+			client.BasicInfo(),
 			err.Error(),
 		)
 		return err
@@ -353,8 +352,8 @@ func (client *Client) ReconnectOpenedSocket() error {
 
 	err = client.socket.Connect(client.address)
 	if nil != err {
-		logger.Criticalf("socket %s connect to address %x with error: %s",
-			client.socket.String(),
+		logger.Criticalf("client %s connect to remote address with error: %s",
+			client.BasicInfo(),
 			client.address,
 			err.Error(),
 		)
@@ -369,6 +368,7 @@ func (client *Client) disconnect() error {
 	defer client.Unlock()
 
 	if nil == client.socket {
+		logger.Criticalf("client %s with empty socket", client.BasicInfo())
 		return nil
 	}
 
@@ -377,11 +377,16 @@ func (client *Client) disconnect() error {
 	}
 
 	if "" == client.address {
+		logger.Criticalf("client %s with empty address", client.BasicInfo())
 		return nil
 	}
 
 	err := client.socket.Disconnect(client.address)
 	if nil != err {
+		logger.Criticalf("client %s disconnect socket with error: %s",
+			client.BasicInfo(),
+			err.Error(),
+		)
 		return err
 	}
 
