@@ -9,15 +9,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net"
-	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
-
-	"golang.org/x/crypto/sha3"
-
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -25,6 +16,13 @@ import (
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/bitmark-inc/logger"
+	"golang.org/x/crypto/sha3"
+	"io/ioutil"
+	"net"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
 )
 
 const (
@@ -146,7 +144,7 @@ func processSetupCommand(arguments []string) bool {
 
 		fmt.Printf("  gen-proof-identity [DIR]   (proof)  - create private key in: %q\n", "DIR/"+proofPrivateKeyFilename)
 		fmt.Printf("                                        the public key in:     %q\n", "DIR/"+proofPublicKeyFilename)
-		fmt.Printf("                                        and sigening keys in:  %q & %q\n", "DIR/"+proofLiveSigningKeyFilename, "DIR/"+proofTestSigningKeyFilename)
+		fmt.Printf("                                        and signing keys in:  %q and: %q\n", "DIR/"+proofLiveSigningKeyFilename, "DIR/"+proofTestSigningKeyFilename)
 		fmt.Printf("\n")
 
 		fmt.Printf("  dns-txt                    (txt)    - display the data to put in a dbs TXT record\n")
