@@ -19,7 +19,7 @@ type ConfigReader interface {
 	Refresh() error
 	GetConfig() (*Configuration, string, error)
 	SetLog(*logger.L) error
-	UpdatePeriodically()
+	Start()
 	FirstTimeRun()
 	SetProofer(Proofer)
 }
@@ -43,15 +43,17 @@ type ConfigReaderData struct {
 	threadCount          uint32
 	calendar             JobCalendar
 	proofer              Proofer
+	watcherChannel       WatcherChannel
 }
 
-func newConfigReader() ConfigReader {
+func newConfigReader(ch WatcherChannel) ConfigReader {
 	return &ConfigReaderData{
 		log:                  nil,
 		currentConfiguration: nil,
 		threadCount:          1,
 		initialized:          false,
 		refreshByMinute:      oneMinute,
+		watcherChannel:       ch,
 	}
 }
 
@@ -74,6 +76,24 @@ func (c *ConfigReaderData) FirstTimeRun() {
 		return
 	}
 	c.notify()
+}
+
+func (c *ConfigReaderData) Start() {
+	for {
+		select {
+		case <-c.watcherChannel.change:
+			c.log.Debugf("receive file change event, wait for 1 minute to adapt")
+			<-time.After(c.refreshByMinute)
+			err := c.Refresh()
+			if nil != err {
+				c.log.Errorf("failed to read configuration from :%s error %s",
+					c.fileName, err)
+			}
+			c.notify()
+		case <-c.watcherChannel.remove:
+			c.log.Warn("config file removed")
+		}
+	}
 }
 
 func (c *ConfigReaderData) UpdatePeriodically() {

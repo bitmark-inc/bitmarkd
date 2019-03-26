@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
@@ -60,7 +61,12 @@ func main() {
 		exitwithstatus.Message("%s: only one config-file option is required, %d were detected", program, len(options["config-file"]))
 	}
 
-	reader := newConfigReader()
+	watcherChannel := WatcherChannel{
+		change: make(chan struct{}, 1),
+		remove: make(chan struct{}, 1),
+	}
+
+	reader := newConfigReader(watcherChannel)
 
 	// read options and parse the configuration file
 	configurationFile := options["config-file"][0]
@@ -188,8 +194,15 @@ func main() {
 	)
 	jobManager.Start()
 
+	watcherData := WatcherData{
+		channels:         watcherChannel,
+		throttleInterval: time.Duration(1) * time.Minute,
+	}
+	watcher := newFileWatcher(reader, logger.New(FileWatcherLoggerPrefix), watcherData)
+	watcher.Start()
+
 	reader.FirstTimeRun()
-	reader.UpdatePeriodically()
+	reader.Start()
 
 	clientCount := 0
 	// start up bitmarkd clients these subscribe to bitmarkd
