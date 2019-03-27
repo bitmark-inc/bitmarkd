@@ -92,16 +92,14 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 		switch tx := transaction.(type) {
 		case *transactionrecord.BlockFoundation:
 			foundationTxId := blockrecord.FoundationTxId(header, digest)
-			globalData.log.Debugf("get a foundation transaction. foundationTxId: %s", foundationTxId)
-
-			globalData.log.Debugf("validate the foundation transaction indexed. foundationTxId: %s", foundationTxId)
+			globalData.log.Debugf("validate whether the foundation transaction indexed. foundationTxId: %s", foundationTxId)
 			if !storage.Pool.Transactions.Has(foundationTxId[:]) {
 				globalData.log.Error("foundation tx is not indexed")
 				return fault.ErrTransactionIsNotIndexed
 			}
 
 			if _, ok := oldBlockOwnerTxs[txId.String()]; !ok {
-				globalData.log.Debugf("validate ownership indexed. foundationTxId: %s", foundationTxId)
+				globalData.log.Debugf("validate whether the ownership indexed. foundationTxId: %s", foundationTxId)
 				if !storage.Pool.BlockOwnerTxIndex.Has(foundationTxId[:]) {
 					globalData.log.Error("ownership is not indexed")
 					return fault.ErrOwnershipIsNotIndexed
@@ -115,7 +113,7 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 
 				blockNumberKey := make([]byte, 8)
 				binary.BigEndian.PutUint64(blockNumberKey, header.Number)
-				globalData.log.Debugf("validate payment info identical. foundationTxId: %s", foundationTxId)
+				globalData.log.Debugf("validate whether the payment info identical. foundationTxId: %s", foundationTxId)
 				if !reflect.DeepEqual(storage.Pool.BlockOwnerPayment.Get(blockNumberKey[:]), packedPayment) {
 					globalData.log.Error("payment info data is not consistent")
 					return fault.ErrDataInconsistent
@@ -123,14 +121,13 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 			}
 
 		case *transactionrecord.BlockOwnerTransfer:
-			globalData.log.Debugf("get a owner transfer transaction. txId: %s", txId)
-			globalData.log.Debugf("validate transaction indexed. txId: %s", txId)
+			globalData.log.Debugf("validate whether the owner transaction indexed. txId: %s", txId)
 			if !storage.Pool.Transactions.Has(txId[:]) {
 				globalData.log.Error("tx is not indexed")
 				return fault.ErrTransactionIsNotIndexed
 			}
 
-			globalData.log.Debugf("validate previous ownership cleaned. txId: %s", txId)
+			globalData.log.Debugf("validate whether the previous ownership cleaned. txId: %s", txId)
 			if storage.Pool.BlockOwnerTxIndex.Has(tx.Link[:]) {
 				globalData.log.Error("ownership is not cleaned")
 				return fault.ErrOwnershipIsNotCleaned
@@ -139,7 +136,7 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 
 			if _, ok := oldBlockOwnerTxs[txId.String()]; !ok {
 				// validate ownership indexed only if the txId is not added into olderBlockOwnerTxs
-				globalData.log.Debugf("validate ownership indexed. txId: %s", txId)
+				globalData.log.Debugf("validate whether the ownership indexed. txId: %s", txId)
 				blockNumberKey := storage.Pool.BlockOwnerTxIndex.Get(txId[:])
 				if blockNumberKey == nil {
 					globalData.log.Error("ownership is not indexed")
@@ -153,7 +150,7 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 				}
 
 				binary.BigEndian.PutUint64(blockNumberKey, header.Number)
-				globalData.log.Debugf("validate payment info identical. txId: %s", txId)
+				globalData.log.Debugf("validate whether the payment info identical. txId: %s", txId)
 				if !reflect.DeepEqual(storage.Pool.BlockOwnerPayment.Get(blockNumberKey[:]), packedPayment) {
 					globalData.log.Error("payment info data is not consistent")
 					return fault.ErrDataInconsistent
@@ -161,31 +158,29 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 			}
 
 		case *transactionrecord.AssetData:
-			globalData.log.Debugf("get an asset transaction. txId: %s", txId)
-			globalData.log.Debugf("validate the asset indexed. txId: %s", txId)
+			globalData.log.Debugf("validate whether the asset indexed. txId: %s", txId)
 			assetId := tx.AssetId()
 			if !storage.Pool.Assets.Has(assetId[:]) {
 				globalData.log.Error("asset is not indexed")
 				return fault.ErrAssetIsNotIndexed
 			}
 		case *transactionrecord.BitmarkIssue:
-			globalData.log.Debugf("get a regular transaction. txId: %s", txId)
-			globalData.log.Debugf("validate the regular transaction indexed. txId: %s", txId)
+			globalData.log.Debugf("validate whether the issue transaction indexed. txId: %s", txId)
 			if !storage.Pool.Transactions.Has(txId[:]) {
 				globalData.log.Error("tx is not indexed")
 				return fault.ErrTransactionIsNotIndexed
 			}
 
 		case transactionrecord.BitmarkTransfer:
-			globalData.log.Debugf("get a regular transaction. txId: %s", txId)
-			globalData.log.Debugf("validate the regular transaction indexed. txId: %s", txId)
+			globalData.log.Debugf("validate whether the transfer transaction indexed. txId: %s", txId)
 			if !storage.Pool.Transactions.Has(txId[:]) {
-				globalData.log.Error("tx not found")
-				return errors.New("tx not found")
+				globalData.log.Error("tx is not indexed")
+				return fault.ErrTransactionIsNotIndexed
 			}
 
+			globalData.log.Debugf("validate whether the prior transaction wiped out. txId: %s", txId)
 			if !isTxWipedOut(tx.GetLink()) {
-				return errors.New("previous tx is not totally wiped out.")
+				return fault.ErrTransactionIsNotCleaned
 			}
 
 			if _, ok := priorTxOwnerTxs[txId.String()]; !ok {
@@ -198,14 +193,13 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 
 				if !reflect.DeepEqual(txIdFromList[:], txId[:]) {
 					globalData.log.Error("tx record inconsistent")
-					return errors.New("tx record inconsistent")
+					return fault.ErrDataInconsistent
 				}
 				priorTxOwnerTxs[txId.String()] = struct{}{}
 			}
 
 		case *transactionrecord.BitmarkShare, *transactionrecord.ShareGrant, *transactionrecord.ShareSwap:
-			globalData.log.Debugf("get a share transaction. txId: %s", txId)
-			globalData.log.Debugf("validate the share transaction indexed. txId: %s", txId)
+			globalData.log.Debugf("validate whether the share transaction indexed. txId: %s", txId)
 			if !storage.Pool.Transactions.Has(txId[:]) {
 				globalData.log.Error("tx is not indexed")
 				return fault.ErrTransactionIsNotIndexed
