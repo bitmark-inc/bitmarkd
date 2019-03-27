@@ -34,7 +34,10 @@ type WatcherChannel struct {
 }
 
 func newFileWatcher(reader ConfigReader, log *logger.L, data WatcherData) FileWatcher {
-	watcher, _ := fsnotify.NewWatcher()
+	watcher, err := fsnotify.NewWatcher()
+	if nil != err {
+		log.Errorf("new watcher with error: %s", err.Error())
+	}
 	return &FileWatcherData{
 		reader:      reader,
 		log:         log,
