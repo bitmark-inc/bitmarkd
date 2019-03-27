@@ -79,21 +79,24 @@ func (c *ConfigReaderData) FirstTimeRun() {
 }
 
 func (c *ConfigReaderData) Start() {
-	for {
-		select {
-		case <-c.watcherChannel.change:
-			c.log.Debugf("receive file change event, wait for 1 minute to adapt")
-			<-time.After(c.refreshByMinute)
-			err := c.Refresh()
-			if nil != err {
-				c.log.Errorf("failed to read configuration from :%s error %s",
-					c.fileName, err)
+	go func() {
+		for {
+			select {
+			case <-c.watcherChannel.change:
+				c.log.Debugf("receive file change event, wait for 1 minute to adapt")
+				<-time.After(c.refreshByMinute)
+				err := c.Refresh()
+				if nil != err {
+					c.log.Errorf("failed to read configuration from :%s error %s",
+						c.fileName, err)
+				}
+				c.notify()
+			case <-c.watcherChannel.remove:
+				c.log.Warn("config file removed")
 			}
-			c.notify()
-		case <-c.watcherChannel.remove:
-			c.log.Warn("config file removed")
 		}
-	}
+
+	}()
 }
 
 func (c *ConfigReaderData) UpdatePeriodically() {
