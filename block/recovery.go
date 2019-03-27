@@ -25,10 +25,7 @@ func recoverBlockHeaderHash(blockNumberBytes []byte, packedBlock []byte) error {
 
 	// reservoir.ClearSpend()
 
-	var blockNumber uint64
-	binary.BigEndian.PutUint64(blockNumberBytes, blockNumber)
-
-	globalData.log.Debugf("rebuilt block header hash: %d", blockNumber)
+	blockNumber := binary.BigEndian.Uint64(blockNumberBytes)
 
 	blockHeaderHashBytes := storage.Pool.BlockHeaderHash.Get(blockNumberBytes)
 	if blockHeaderHashBytes == nil {
@@ -39,6 +36,8 @@ func recoverBlockHeaderHash(blockNumberBytes []byte, packedBlock []byte) error {
 
 		storage.Pool.BlockHeaderHash.Put(blockNumberBytes, digest[:])
 	}
+
+	globalData.log.Debugf("rebuilt block: %d", blockNumber)
 
 	return nil
 }
