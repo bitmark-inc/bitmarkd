@@ -6,6 +6,7 @@ package block
 
 import (
 	"encoding/binary"
+	"time"
 
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/asset"
@@ -32,6 +33,7 @@ const (
 
 // store an incoming block checking to make sure it is valid first
 func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
+	start := time.Now()
 
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -528,7 +530,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 
 	// return early if rebuilding, otherwise store and update DB
 	if globalData.rebuild {
-		globalData.log.Warnf("rebuilt block: %d", header.Number)
+		globalData.log.Debugf("rebuilt block: %d time elapsed: %f", header.Number, time.Since(start).Seconds())
 		return nil
 	}
 
@@ -537,7 +539,8 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 	binary.BigEndian.PutUint64(blockNumber, header.Number)
 
 	storage.Pool.Blocks.Put(blockNumber, packedBlock)
-	globalData.log.Infof("stored block: %d", header.Number)
+	storage.Pool.BlockHeaderHash.Put(thisBlockNumberKey, digest[:])
+	globalData.log.Debugf("stored block: %d time elapsed: %f", header.Number, time.Since(start).Seconds())
 
 	// rescan reservoir to drop any invalid transactions
 	if performRescan {

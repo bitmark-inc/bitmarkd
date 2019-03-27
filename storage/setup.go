@@ -23,6 +23,7 @@ import (
 // note all must be exported (i.e. initial capital) or initialisation will panic
 type pools struct {
 	Blocks            *PoolHandle `prefix:"B" database:"blocks"`
+	BlockHeaderHash   *PoolHandle `prefix:"H" database:"blocks"`
 	BlockOwnerPayment *PoolHandle `prefix:"H" database:"index"`
 	BlockOwnerTxIndex *PoolHandle `prefix:"I" database:"index"`
 	Assets            *PoolNB     `prefix:"A" database:"index"`
@@ -43,7 +44,8 @@ var Pool pools
 var versionKey = []byte{0x00, 'V', 'E', 'R', 'S', 'I', 'O', 'N'}
 
 const (
-	currentVersion = 0x200
+	currentBlockDBVersion = 0x300
+	currentIndexDBVersion = 0x200
 )
 
 // holds the database handle
@@ -61,15 +63,16 @@ const (
 // open up the database connection
 //
 // this must be called before any pool is accessed
-func Initialise(database string, readOnly bool) (bool, error) {
+func Initialise(database string, readOnly bool) (bool, bool, error) {
 	poolData.Lock()
 	defer poolData.Unlock()
 
 	ok := false
+	mustMigrate := false
 	mustReindex := false
 
 	if nil != poolData.dbBlocks {
-		return mustReindex, fault.ErrAlreadyInitialised
+		return mustMigrate, mustReindex, fault.ErrAlreadyInitialised
 	}
 
 	defer func() {
@@ -83,55 +86,51 @@ func Initialise(database string, readOnly bool) (bool, error) {
 
 	db, blocksVersion, err := getDB(blocksDatabase, readOnly)
 	if nil != err {
-		return mustReindex, err
+		return mustMigrate, mustReindex, err
 	}
 	poolData.dbBlocks = db
 
 	// ensure no database downgrade
-	if blocksVersion > currentVersion {
-		logger.Criticalf("block database version: %d > current version: %d", blocksVersion, currentVersion)
-		return mustReindex, fmt.Errorf("block database version: %d > current version: %d", blocksVersion, currentVersion)
+	if blocksVersion > currentBlockDBVersion {
+		logger.Criticalf("block database version: %d > current version: %d", blocksVersion, currentBlockDBVersion)
+		return mustMigrate, mustReindex, fmt.Errorf("block database version: %d > current version: %d", blocksVersion, currentBlockDBVersion)
 	}
 
 	db, indexVersion, err := getDB(indexDatabase, readOnly)
 	if nil != err {
-		return mustReindex, err
+		return mustMigrate, mustReindex, err
 	}
 	poolData.dbIndex = db
 
 	// ensure no database downgrade
-	if indexVersion > currentVersion {
-		logger.Criticalf("index database version: %d > current version: %d", indexVersion, currentVersion)
-		return mustReindex, fmt.Errorf("index database version: %d > current version: %d", indexVersion, currentVersion)
+	if indexVersion > currentIndexDBVersion {
+		logger.Criticalf("index database version: %d > current version: %d", indexVersion, currentIndexDBVersion)
+		return mustMigrate, mustReindex, fmt.Errorf("index database version: %d > current version: %d", indexVersion, currentIndexDBVersion)
 	}
 
 	// prevent readOnly from modifying the database
-	if readOnly && (blocksVersion != currentVersion || indexVersion != currentVersion) {
-		logger.Criticalf("database is inconsistent: blocks: %d  index: %d  current: %d", blocksVersion, indexVersion, currentVersion)
-		return mustReindex, fmt.Errorf("database is inconsistent: blocks: %d  index: %d  current: %d", blocksVersion, indexVersion, currentVersion)
+	if readOnly && (blocksVersion != currentBlockDBVersion || indexVersion != currentIndexDBVersion) {
+		logger.Criticalf("database is inconsistent: blocks: %d  index: %d  current: %d & %d", blocksVersion, indexVersion, currentBlockDBVersion, currentIndexDBVersion)
+		return mustMigrate, mustReindex, fmt.Errorf("database is inconsistent: blocks: %d  index: %d  current: %d & %d", blocksVersion, indexVersion, currentBlockDBVersion, currentIndexDBVersion)
 	}
 
-	if 0 < blocksVersion && blocksVersion < currentVersion {
+	if 0 < blocksVersion && blocksVersion < currentBlockDBVersion {
 
-		// fail if block database is too old
-		// this will be replaced by the appropriate migration code
-		// if the format of blocks needs to be changed in the future
+		mustMigrate = true
 
-		logger.Criticalf("no migration for block database version: %d", blocksVersion)
-		logger.Criticalf("block database version: %d < current version: %d", blocksVersion, currentVersion)
-		return mustReindex, fmt.Errorf("block database version: %d < current version: %d", blocksVersion, currentVersion)
+		logger.Criticalf("block database version: %d < current version: %d", blocksVersion, currentBlockDBVersion)
 
 	} else if 0 == blocksVersion {
 
 		// database was empty so tag as current version
-		err = putVersion(poolData.dbBlocks, currentVersion)
+		err = putVersion(poolData.dbBlocks, currentBlockDBVersion)
 		if err != nil {
-			return mustReindex, err
+			return mustMigrate, mustReindex, err
 		}
 	}
 
 	// see if index need to be created or deleted and re-created
-	if mustReindex || indexVersion < currentVersion {
+	if mustReindex || indexVersion < currentIndexDBVersion {
 
 		mustReindex = true
 
@@ -144,13 +143,13 @@ func Initialise(database string, readOnly bool) (bool, error) {
 		// erase the index completely
 		err = os.RemoveAll(indexDatabase)
 		if nil != err {
-			return mustReindex, err
+			return mustMigrate, mustReindex, err
 		}
 
 		// generate an empty index database
 		poolData.dbIndex, _, err = getDB(indexDatabase, readOnly)
 		if nil != err {
-			return mustReindex, err
+			return mustMigrate, mustReindex, err
 		}
 
 	}
@@ -168,7 +167,7 @@ func Initialise(database string, readOnly bool) (bool, error) {
 
 		prefixTag := fieldInfo.Tag.Get("prefix")
 		if 1 != len(prefixTag) {
-			return mustReindex, fmt.Errorf("pool: %v  has invalid prefix: %q", fieldInfo, prefixTag)
+			return mustMigrate, mustReindex, fmt.Errorf("pool: %v  has invalid prefix: %q", fieldInfo, prefixTag)
 		}
 
 		prefix := prefixTag[0]
@@ -184,7 +183,7 @@ func Initialise(database string, readOnly bool) (bool, error) {
 		case "index":
 			db = poolData.dbIndex
 		default:
-			return mustReindex, fmt.Errorf("pool: %v  has invalid database: %q", fieldInfo, dbName)
+			return mustMigrate, mustReindex, fmt.Errorf("pool: %v  has invalid database: %q", fieldInfo, dbName)
 		}
 
 		p := &PoolHandle{
@@ -207,7 +206,7 @@ func Initialise(database string, readOnly bool) (bool, error) {
 	}
 
 	ok = true // prevent db close
-	return mustReindex, nil
+	return mustMigrate, mustReindex, nil
 }
 
 func dbClose() {
@@ -232,7 +231,7 @@ func Finalise() {
 func ReindexDone() error {
 	poolData.Lock()
 	defer poolData.Unlock()
-	return putVersion(poolData.dbIndex, currentVersion)
+	return putVersion(poolData.dbIndex, currentIndexDBVersion)
 }
 
 // return:
