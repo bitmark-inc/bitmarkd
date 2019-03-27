@@ -42,8 +42,44 @@ type blockData struct {
 // global data
 var globalData blockData
 
+// isTxWipedOut will check whether a transaction is cleaned up from the index db
+func isTxWipedOut(txId merkle.Digest) bool {
+	if storage.Pool.OwnerData.Has(txId[:]) {
+		globalData.log.Error("tx data is not cleaned")
+		return false
+	}
+
+	_, packed := storage.Pool.Transactions.GetNB(txId[:])
+	transaction, _, err := transactionrecord.Packed(packed).Unpack(mode.IsTesting())
+	if err != nil {
+		globalData.log.Errorf("can not fetch transaction. error: %s", err)
+		return false
+	}
+
+	switch tx := transaction.(type) {
+	case *transactionrecord.BitmarkIssue:
+		txIndexKey := append(tx.Owner.Bytes(), txId[:]...)
+		if storage.Pool.OwnerTxIndex.Has(txIndexKey) {
+			globalData.log.Error("owner tx index is not cleaned")
+			return false
+		}
+	case transactionrecord.BitmarkTransfer:
+		txIndexKey := append(tx.GetOwner().Bytes(), txId[:]...)
+		if storage.Pool.OwnerTxIndex.Has(txIndexKey) {
+			globalData.log.Error("owner tx index is not cleaned")
+			return false
+		}
+	default:
+		globalData.log.Critical("invalid type of transaction")
+		return false
+	}
+
+	return true
+}
+
 func validateTransactionData(header *blockrecord.Header, digest blockdigest.Digest, data []byte) error {
 	oldBlockOwnerTxs := map[string]struct{}{}
+	priorTxOwnerTxs := map[string]struct{}{}
 	for i := header.TransactionCount; i > 0; i-- {
 		transaction, n, err := transactionrecord.Packed(data).Unpack(mode.IsTesting())
 		if err != nil {
@@ -132,13 +168,41 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 				globalData.log.Error("asset is not indexed")
 				return fault.ErrAssetIsNotIndexed
 			}
-		case *transactionrecord.BitmarkIssue, *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
+		case *transactionrecord.BitmarkIssue:
 			globalData.log.Debugf("get a regular transaction. txId: %s", txId)
 			globalData.log.Debugf("validate the regular transaction indexed. txId: %s", txId)
 			if !storage.Pool.Transactions.Has(txId[:]) {
 				globalData.log.Error("tx is not indexed")
 				return fault.ErrTransactionIsNotIndexed
 			}
+
+		case transactionrecord.BitmarkTransfer:
+			globalData.log.Debugf("get a regular transaction. txId: %s", txId)
+			globalData.log.Debugf("validate the regular transaction indexed. txId: %s", txId)
+			if !storage.Pool.Transactions.Has(txId[:]) {
+				globalData.log.Error("tx not found")
+				return errors.New("tx not found")
+			}
+
+			if !isTxWipedOut(tx.GetLink()) {
+				return errors.New("previous tx is not totally wiped out.")
+			}
+
+			if _, ok := priorTxOwnerTxs[txId.String()]; !ok {
+				// if a tx is not in the list of prior transaction, it should be the latest tx.
+				txIndexKey := append(tx.GetOwner().Bytes(), txId[:]...)
+				count := storage.Pool.OwnerTxIndex.Get(txIndexKey)
+
+				ownerListKey := append(tx.GetOwner().Bytes(), count[:]...)
+				txIdFromList := storage.Pool.OwnerList.Get(ownerListKey)
+
+				if !reflect.DeepEqual(txIdFromList[:], txId[:]) {
+					globalData.log.Error("tx record inconsistent")
+					return errors.New("tx record inconsistent")
+				}
+				priorTxOwnerTxs[txId.String()] = struct{}{}
+			}
+
 		case *transactionrecord.BitmarkShare, *transactionrecord.ShareGrant, *transactionrecord.ShareSwap:
 			globalData.log.Debugf("get a share transaction. txId: %s", txId)
 			globalData.log.Debugf("validate the share transaction indexed. txId: %s", txId)
