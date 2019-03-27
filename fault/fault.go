@@ -129,6 +129,7 @@ var (
 	ErrWrongNetworkForPublicKey              = InvalidError("wrong network for public key")
 	ErrOwnershipIsNotIndexed                 = ValidationError("ownership is not indexed")
 	ErrOwnershipIsNotCleaned                 = ValidationError("ownership is not cleaned")
+	ErrTransactionIsNotCleaned               = ValidationError("transaction is not cleaned")
 	ErrAssetIsNotIndexed                     = ValidationError("asset is not indexed")
 	ErrTransactionIsNotIndexed               = ValidationError("transaction is not indexed")
 	ErrDataInconsistent                      = ValidationError("data inconsistent")
