@@ -36,7 +36,7 @@ type blockData struct {
 var globalData blockData
 
 // setup the current block data
-func Initialise(recover bool) error {
+func Initialise(migrate, reindex bool) error {
 	globalData.Lock()
 	defer globalData.Unlock()
 
@@ -55,7 +55,20 @@ func Initialise(recover bool) error {
 		return fault.ErrNotInitialised
 	}
 
-	if recover {
+	if migrate {
+		log.Info("start block migration…")
+		globalData.rebuild = true
+		globalData.Unlock()
+		err := doBlockHeaderHash()
+		globalData.Lock()
+		if nil != err {
+			log.Criticalf("blocks migration error: %s", err)
+			return err
+		}
+		log.Info("block migration completed")
+	}
+
+	if reindex {
 		log.Warn("start index rebuild…")
 		globalData.rebuild = true
 		globalData.Unlock()

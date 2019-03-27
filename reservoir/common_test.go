@@ -57,7 +57,7 @@ func setup(t *testing.T, theChain ...string) {
 	}
 
 	// open database
-	mustReindex, err := storage.Initialise(databaseFileName, false)
+	_, mustReindex, err := storage.Initialise(databaseFileName, false)
 	if nil != err {
 		t.Fatalf("storage initialise error: %s", err)
 	}

@@ -133,7 +133,7 @@ func main() {
 	defer logger.Finalise()
 
 	// start of main processing
-	_, err = storage.Initialise(filename, storage.ReadOnly)
+	_, _, err = storage.Initialise(filename, storage.ReadOnly)
 	if nil != err {
 		exitwithstatus.Message("%s: storage setup failed with error: %s", program, err)
 	}

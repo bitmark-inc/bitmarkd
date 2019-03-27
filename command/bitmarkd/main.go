@@ -148,14 +148,17 @@ func main() {
 
 	// start the data storage
 	log.Info("initialise storage")
-	reindexRequired, err := storage.Initialise(masterConfiguration.Database.Name, storage.ReadWrite)
+	migrateRequired, reindexRequired, err := storage.Initialise(masterConfiguration.Database.Name, storage.ReadWrite)
 	if nil != err {
 		log.Criticalf("storage initialise error: %s", err)
 		exitwithstatus.Message("storage initialise error: %s", err)
 	}
 	defer storage.Finalise()
+	if migrateRequired {
+		log.Warn("block database migration required")
+	}
 	if reindexRequired {
-		log.Warn("database reindex required")
+		log.Warn("index database reindex required")
 	}
 
 	// start asset cache
@@ -186,7 +189,7 @@ func main() {
 
 	// block data storage - depends on storage and mode
 	log.Info("initialise block")
-	err = block.Initialise(reindexRequired)
+	err = block.Initialise(migrateRequired, reindexRequired)
 	if nil != err {
 		log.Criticalf("block initialise error: %s", err)
 		exitwithstatus.Message("block initialise error: %s", err)

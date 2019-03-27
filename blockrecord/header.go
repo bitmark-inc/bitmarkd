@@ -13,6 +13,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/bitmark-inc/bitmarkd/storage"
 )
 
 // use fix size array to simplify validation
@@ -87,7 +88,14 @@ func ExtractHeader(block []byte) (*Header, blockdigest.Digest, []byte, error) {
 	if nil != err {
 		return nil, blockdigest.Digest{}, nil, err
 	}
-	digest := blockdigest.NewDigest(packedHeader[:])
+
+	var digest blockdigest.Digest
+	thisBlockNumberKey := make([]byte, 8)
+	binary.BigEndian.PutUint64(thisBlockNumberKey, header.Number)
+	digestBytes := storage.Pool.BlockHeaderHash.Get(thisBlockNumberKey)
+	if err := blockdigest.DigestFromBytes(&digest, digestBytes); err != nil {
+		digest = blockdigest.NewDigest(packedHeader[:])
+	}
 
 	blockDifficulty := header.Difficulty.BigInt()
 	currentDifficulty := difficulty.Current.BigInt()
@@ -105,6 +113,16 @@ func ExtractHeader(block []byte) (*Header, blockdigest.Digest, []byte, error) {
 
 	return header, digest, block[totalBlockSize:], nil
 
+}
+
+func ComputeHeaderHash(block []byte) (blockdigest.Digest, error) {
+	if len(block) < totalBlockSize {
+		return blockdigest.Digest{}, fault.ErrInvalidBlockHeaderSize
+	}
+	packedHeader := PackedHeader{}
+	copy(packedHeader[:], block[:totalBlockSize])
+
+	return blockdigest.NewDigest(packedHeader[:]), nil
 }
 
 // turn a byte slice into a record
