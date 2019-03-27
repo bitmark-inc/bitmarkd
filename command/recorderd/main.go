@@ -204,7 +204,6 @@ func main() {
 	reader.FirstTimeRun()
 	reader.Start()
 
-	clientCount := 0
 	// start up bitmarkd clients these subscribe to bitmarkd
 	// blocks publisher to obtain blocks for mining
 connection_setup:
@@ -245,7 +244,6 @@ connection_setup:
 			log.Warnf("subscribe: %d failed error: %s", i, err)
 			continue connection_setup
 		}
-		clientCount += 1
 	}
 
 	// erase the private key from memory

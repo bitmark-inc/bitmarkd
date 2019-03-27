@@ -118,7 +118,6 @@ func Subscribe(
 			logger.PanicIfError("subscriber sending 2", err)
 			ProofQueueIncrement()
 			log.Infof("queue depth: %d", proofQueueDepth)
-
 		}
 	}()
 	return nil
