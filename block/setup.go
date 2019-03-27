@@ -6,6 +6,7 @@ package block
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"reflect"
 	"sync"
 
@@ -291,4 +292,23 @@ func Finalise() error {
 	globalData.log.Flush()
 
 	return nil
+}
+
+// return the last block hash in hex string if found
+func LastBlockHash() string {
+
+	log := globalData.log
+
+	if last, ok := storage.Pool.Blocks.LastElement(); ok {
+
+		_, digest, _, err := blockrecord.ExtractHeader(last.Value)
+		if nil != err {
+			log.Criticalf("failed to unpack block: %d from storage error: %s", binary.BigEndian.Uint64(last.Key), err)
+			return ""
+		}
+
+		return hex.EncodeToString(digest[:])
+	}
+
+	return ""
 }
