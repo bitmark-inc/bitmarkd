@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/announce"
+	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/mode"
@@ -139,6 +140,11 @@ func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 		Remote uint64 `json:"remote"`
 	}
 
+	type blockInfo struct {
+		LRCount    lrCount `json:"lr_count"`
+		LatestHash string  `json:"latest_hash"`
+	}
+
 	type peerCounts struct {
 		Incoming uint64 `json:"incoming"`
 		Outgoing uint64 `json:"outgoing"`
@@ -147,7 +153,7 @@ func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 	type theReply struct {
 		Chain               string     `json:"chain"`
 		Mode                string     `json:"mode"`
-		Blocks              lrCount    `json:"blocks"`
+		Blocks              blockInfo  `json:"blocks"`
 		RPCs                uint64     `json:"rpcs"`
 		Peers               peerCounts `json:"peers"`
 		TransactionCounters Counters   `json:"transactionCounters"`
@@ -160,9 +166,12 @@ func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 	reply := theReply{
 		Chain: mode.ChainName(),
 		Mode:  mode.String(),
-		Blocks: lrCount{
-			Local:  blockheader.Height(),
-			Remote: peer.BlockHeight(),
+		Blocks: blockInfo{
+			LRCount: lrCount{
+				Local:  blockheader.Height(),
+				Remote: peer.BlockHeight(),
+			},
+			LatestHash: block.LastBlockHash(),
 		},
 		RPCs: connectionCount.Uint64(),
 		// Miners : mine.ConnectionCount(),
