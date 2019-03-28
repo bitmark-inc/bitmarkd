@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/storage"
@@ -69,6 +70,11 @@ func setup(t *testing.T, theChain ...string) {
 	}
 
 	// need to initialise block before any tests can be performed
+	err = blockheader.Initialise()
+	if nil != err {
+		t.Fatalf("blockheader initialise error: %s", err)
+	}
+	// need to initialise block before any tests can be performed
 	err = block.Initialise(false)
 	if nil != err {
 		t.Fatalf("block initialise error: %s", err)
@@ -78,6 +84,7 @@ func setup(t *testing.T, theChain ...string) {
 // post test cleanup
 func teardown(t *testing.T) {
 	block.Finalise()
+	blockheader.Finalise()
 	storage.Finalise()
 	mode.Finalise()
 	logger.Finalise()

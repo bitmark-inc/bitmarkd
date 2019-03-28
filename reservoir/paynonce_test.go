@@ -51,7 +51,7 @@ func TestPayNonce(t *testing.T) {
 func TestNewPayNonceBitmark(t *testing.T) {
 
 	// dependant on the genesis digest for bitmark
-	expected := `"445f81247a6fdecc"`
+	expected := `"5c93f739eb01cdde"`
 
 	setup(t)
 	defer teardown(t)
@@ -78,7 +78,7 @@ func TestNewPayNonceBitmark(t *testing.T) {
 func TestNewPayNonceTesting(t *testing.T) {
 
 	// dependant on the genesis digest for testing
-	expected := `"d1cc53a056227402"`
+	expected := `"8ae68bb87c4a926b"`
 
 	setup(t, chain.Testing)
 	defer teardown(t)
