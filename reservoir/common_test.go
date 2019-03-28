@@ -75,7 +75,7 @@ func setup(t *testing.T, theChain ...string) {
 		t.Fatalf("blockheader initialise error: %s", err)
 	}
 	// need to initialise block before any tests can be performed
-	err = block.Initialise(false)
+	err = block.Initialise(false, false)
 	if nil != err {
 		t.Fatalf("block initialise error: %s", err)
 	}
