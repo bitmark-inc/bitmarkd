@@ -90,10 +90,14 @@ func ExtractHeader(block []byte) (*Header, blockdigest.Digest, []byte, error) {
 	}
 
 	var digest blockdigest.Digest
-	thisBlockNumberKey := make([]byte, 8)
-	binary.BigEndian.PutUint64(thisBlockNumberKey, header.Number)
-	digestBytes := storage.Pool.BlockHeaderHash.Get(thisBlockNumberKey)
-	if err := blockdigest.DigestFromBytes(&digest, digestBytes); err != nil {
+	if storage.Pool.BlockHeaderHash != nil {
+		thisBlockNumberKey := make([]byte, 8)
+		binary.BigEndian.PutUint64(thisBlockNumberKey, header.Number)
+		digestBytes := storage.Pool.BlockHeaderHash.Get(thisBlockNumberKey)
+		if err := blockdigest.DigestFromBytes(&digest, digestBytes); err != nil {
+			digest = blockdigest.NewDigest(packedHeader[:])
+		}
+	} else {
 		digest = blockdigest.NewDigest(packedHeader[:])
 	}
 
