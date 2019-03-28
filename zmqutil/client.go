@@ -332,6 +332,9 @@ func (client *Client) ReconnectReturningSocket() (*zmq.Socket, error) {
 }
 
 func (client *Client) ReconnectOpenedSocket() error {
+	client.Lock()
+	defer client.Unlock()
+
 	if "" == client.address {
 		msg := "client address empty"
 		logger.Critical(msg)
@@ -347,9 +350,6 @@ func (client *Client) ReconnectOpenedSocket() error {
 		return err
 	}
 
-	client.Lock()
-	defer client.Unlock()
-
 	err = client.socket.Connect(client.address)
 	if nil != err {
 		logger.Criticalf("client %s connect to remote address with error: %s",
@@ -364,12 +364,11 @@ func (client *Client) ReconnectOpenedSocket() error {
 }
 
 func (client *Client) disconnect() error {
-	client.Lock()
-	defer client.Unlock()
-
+	var msg string
 	if nil == client.socket {
-		logger.Criticalf("client %s with empty socket", client.BasicInfo())
-		return nil
+		msg = fmt.Sprintf("client %s with empty socket", client.BasicInfo())
+		logger.Criticalf(msg)
+		return fmt.Errorf(msg)
 	}
 
 	if nil != client.poller {
@@ -377,8 +376,9 @@ func (client *Client) disconnect() error {
 	}
 
 	if "" == client.address {
-		logger.Criticalf("client %s with empty address", client.BasicInfo())
-		return nil
+		msg = fmt.Sprintf("client %s with empty address", client.BasicInfo())
+		logger.Criticalf(msg)
+		return fmt.Errorf(msg)
 	}
 
 	err := client.socket.Disconnect(client.address)
