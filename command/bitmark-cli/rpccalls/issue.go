@@ -77,17 +77,6 @@ func (client *Client) Issue(issueConfig *IssueData) (*IssueReply, error) {
 
 	var issuesReply rpc.CreateReply
 	if err := client.client.Call("Bitmarks.Create", issuesArgs, &issuesReply); err != nil {
-		if fault.ErrTransactionAlreadyExists.Error() == err.Error() && issueConfig.FreeIssue {
-			// only for the single free issue nonce must be zero
-			txId, err := makeIssueTxId(client.testnet, issueConfig, 0)
-			if nil != err {
-				return nil, err
-			}
-			r := &IssueReply{
-				IssueIds: []merkle.Digest{*txId},
-			}
-			return r, nil
-		}
 		return nil, err
 	}
 
