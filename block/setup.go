@@ -6,7 +6,6 @@ package block
 
 import (
 	"encoding/binary"
-	"errors"
 	"reflect"
 	"sync"
 
@@ -46,11 +45,6 @@ var globalData blockData
 func validateTransactionData(header *blockrecord.Header, digest blockdigest.Digest, data []byte) error {
 	oldBlockOwnerTxs := map[string]struct{}{}
 	for i := header.TransactionCount; i > 0; i-- {
-		if len(data) == 0 {
-			globalData.log.Error("insufficient length of transaction data")
-			return errors.New("insufficient length of transaction data")
-		}
-
 		transaction, n, err := transactionrecord.Packed(data).Unpack(mode.IsTesting())
 		if err != nil {
 			globalData.log.Error("can not unpack transaction")
@@ -66,20 +60,20 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 
 			globalData.log.Debugf("validate the foundation transaction indexed. foundationTxId: %s", foundationTxId)
 			if !storage.Pool.Transactions.Has(foundationTxId[:]) {
-				globalData.log.Error("foundation tx not found")
-				return errors.New("foundation tx not found")
+				globalData.log.Error("foundation tx is not indexed")
+				return fault.ErrTransactionIsNotIndexed
 			}
 
 			if _, ok := oldBlockOwnerTxs[txId.String()]; !ok {
 				globalData.log.Debugf("validate ownership indexed. foundationTxId: %s", foundationTxId)
 				if !storage.Pool.BlockOwnerTxIndex.Has(foundationTxId[:]) {
 					globalData.log.Error("ownership is not indexed")
-					return errors.New("ownership is not indexed")
+					return fault.ErrOwnershipIsNotIndexed
 				}
 
 				packedPayment, err := tx.Payments.Pack(mode.IsTesting())
 				if err != nil {
-					globalData.log.Error("can not get packed payments")
+					globalData.log.Error("fail to get packed payments")
 					return err
 				}
 
@@ -87,8 +81,8 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 				binary.BigEndian.PutUint64(blockNumberKey, header.Number)
 				globalData.log.Debugf("validate payment info identical. foundationTxId: %s", foundationTxId)
 				if !reflect.DeepEqual(storage.Pool.BlockOwnerPayment.Get(blockNumberKey[:]), packedPayment) {
-					globalData.log.Error("payment info inconsistent")
-					return errors.New("payment info inconsistent")
+					globalData.log.Error("payment info data is not consistent")
+					return fault.ErrDataInconsistent
 				}
 			}
 
@@ -96,14 +90,14 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 			globalData.log.Debugf("get a owner transfer transaction. txId: %s", txId)
 			globalData.log.Debugf("validate transaction indexed. txId: %s", txId)
 			if !storage.Pool.Transactions.Has(txId[:]) {
-				globalData.log.Error("tx not found")
-				return errors.New("tx not found")
+				globalData.log.Error("tx is not indexed")
+				return fault.ErrTransactionIsNotIndexed
 			}
 
 			globalData.log.Debugf("validate previous ownership cleaned. txId: %s", txId)
 			if storage.Pool.BlockOwnerTxIndex.Has(tx.Link[:]) {
-				globalData.log.Error("previous ownership does not clean")
-				return errors.New("previous ownership does not clean")
+				globalData.log.Error("ownership is not cleaned")
+				return fault.ErrOwnershipIsNotCleaned
 			}
 			oldBlockOwnerTxs[tx.Link.String()] = struct{}{}
 
@@ -112,21 +106,21 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 				globalData.log.Debugf("validate ownership indexed. txId: %s", txId)
 				blockNumberKey := storage.Pool.BlockOwnerTxIndex.Get(txId[:])
 				if blockNumberKey == nil {
-					globalData.log.Error("ownership is not set")
-					return errors.New("ownership is not set")
+					globalData.log.Error("ownership is not indexed")
+					return fault.ErrOwnershipIsNotIndexed
 				}
 
 				packedPayment, err := tx.Payments.Pack(mode.IsTesting())
 				if err != nil {
-					globalData.log.Error("can not get packed payments")
+					globalData.log.Error("fail to get packed payments")
 					return err
 				}
 
 				binary.BigEndian.PutUint64(blockNumberKey, header.Number)
 				globalData.log.Debugf("validate payment info identical. txId: %s", txId)
 				if !reflect.DeepEqual(storage.Pool.BlockOwnerPayment.Get(blockNumberKey[:]), packedPayment) {
-					globalData.log.Error("payment info inconsistent")
-					return errors.New("payment info inconsistent")
+					globalData.log.Error("payment info data is not consistent")
+					return fault.ErrDataInconsistent
 				}
 			}
 
@@ -135,26 +129,26 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 			globalData.log.Debugf("validate the asset indexed. txId: %s", txId)
 			assetId := tx.AssetId()
 			if !storage.Pool.Assets.Has(assetId[:]) {
-				globalData.log.Error("asset not found")
-				return errors.New("asset not found")
+				globalData.log.Error("asset is not indexed")
+				return fault.ErrAssetIsNotIndexed
 			}
 		case *transactionrecord.BitmarkIssue, *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
 			globalData.log.Debugf("get a regular transaction. txId: %s", txId)
 			globalData.log.Debugf("validate the regular transaction indexed. txId: %s", txId)
 			if !storage.Pool.Transactions.Has(txId[:]) {
-				globalData.log.Error("tx not found")
-				return errors.New("tx not found")
+				globalData.log.Error("tx is not indexed")
+				return fault.ErrTransactionIsNotIndexed
 			}
 		case *transactionrecord.BitmarkShare, *transactionrecord.ShareGrant, *transactionrecord.ShareSwap:
 			globalData.log.Debugf("get a share transaction. txId: %s", txId)
 			globalData.log.Debugf("validate the share transaction indexed. txId: %s", txId)
 			if !storage.Pool.Transactions.Has(txId[:]) {
-				globalData.log.Error("tx not found")
-				return errors.New("tx not found")
+				globalData.log.Error("tx is not indexed")
+				return fault.ErrTransactionIsNotIndexed
 			}
 		default:
-			globalData.log.Error("unrecognized transaction records")
-			return errors.New("unrecognized transaction records")
+			globalData.log.Error("unexpected transaction records")
+			return fault.ErrUnexpectedTransaction
 		}
 		data = data[n:]
 	}
