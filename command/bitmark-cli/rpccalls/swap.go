@@ -69,7 +69,7 @@ func (client *Client) Swap(swapConfig *SwapData) (*SwapSingleSignedReply, error)
 		if nil != err {
 			return nil, err
 		}
-		swapConfig.BeforeBlock = info.Blocks + 100 // allow plenty of time to mine
+		swapConfig.BeforeBlock = info.Blocks.Height + 100 // allow plenty of time to mine
 	}
 
 	packed, swap, err := makeSwapOneSignature(client.testnet, shareIdOne, swapConfig.QuantityOne, swapConfig.OwnerOne, shareIdTwo, swapConfig.QuantityTwo, swapConfig.OwnerTwo, swapConfig.BeforeBlock)

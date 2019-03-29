@@ -65,7 +65,7 @@ func (node *Node) List(arguments *NodeArguments, reply *NodeReply) error {
 
 type InfoArguments struct{}
 
-type blockInfo struct {
+type BlockInfo struct {
 	Height     uint64 `json:"height"`
 	LatestHash string `json:"latest_hash"`
 }
@@ -73,7 +73,7 @@ type blockInfo struct {
 type InfoReply struct {
 	Chain               string    `json:"chain"`
 	Mode                string    `json:"mode"`
-	Blocks              blockInfo `json:"blocks"`
+	Blocks              BlockInfo `json:"blocks"`
 	RPCs                uint64    `json:"rpcs"`
 	Peers               uint64    `json:"peers"`
 	TransactionCounters Counters  `json:"transactionCounters"`
@@ -97,7 +97,7 @@ func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 	incoming, outgoing := peer.GetCounts()
 	reply.Chain = mode.ChainName()
 	reply.Mode = mode.String()
-	reply.Blocks = blockInfo{
+	reply.Blocks = BlockInfo{
 		Height:     blockheader.Height(),
 		LatestHash: block.LastBlockHash(),
 	}
