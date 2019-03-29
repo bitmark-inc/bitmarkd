@@ -58,23 +58,31 @@ func TestNextProoferID(t *testing.T) {
 	p := setupProofer(t)
 	defer teardownProofer(p, defaultActiveThreadCount+1)
 
-	totalCPU := runtime.NumCPU()
-
 	expected := []struct {
-		threadIncrementCount int
-		expected             int
+		ids      []bool
+		expected int
 	}{
-		{0, 0},                     // none created
-		{1, 1},                     // additional 1 created, next ID will be 1
-		{1, 2},                     // additional 1 created, next ID will be 2
-		{totalCPU, errorProoferID}, // additional total cpu count created, next ID will be -1
+		{[]bool{true, false, true, false}, 1},
+		{[]bool{true, true, true, true}, errorProoferID},
+		{[]bool{false, true, false, true}, 0},
 	}
 
-	for _, s := range expected {
-		p.createProofer(uint32(s.threadIncrementCount))
-		nextID, _ := p.nextProoferID()
-		if s.expected != nextID {
-			t.Errorf("error getting next proofer ID, expect %d but get %d", s.expected, nextID)
+	for i, s := range expected {
+		p.proofIDs = make([]bool, len(s.ids))
+		for idx, boolean := range s.ids {
+			p.proofIDs[idx] = boolean
+		}
+
+		actual, err := p.nextProoferID()
+		if actual != errorProoferID && nil != err {
+			t.Errorf("%dth test fail, error message: %s", i, err.Error())
+		}
+		if actual != s.expected {
+			t.Errorf("%dth test fail, next proofer ID, expect %d but get %d",
+				i,
+				s.expected,
+				actual,
+			)
 		}
 	}
 }
