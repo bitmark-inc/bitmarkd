@@ -35,7 +35,7 @@ M.chain = "local"
 
 -- scheulde time recorderd runs
 -- time is denoted by hour:minute, hour is denoted in 24-hour clock format
--- hour ranges from 0 - 24, minute ranges from 0 - 60
+-- hour ranges from 0 - 24, minute ranges from 0 - 59
 -- period is denoted as start:stop, start time must be earlier than stop time, e.g. "13:00-14:00"
 -- multiple time segment is separated by comma, e.g. "13:00-14:05, 15:20-16:34, 0:00-24:00"
 -- for overnight scheduing, separate into two segments, e.g.: run from monday 15:00 to tuesday 3:00
