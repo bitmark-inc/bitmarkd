@@ -15,6 +15,7 @@ type NotFoundError GenericError
 type ProcessError GenericError
 type RecordError GenericError
 type ValueError GenericError
+type ValidationError GenericError
 
 // common errors - keep in alphabetic order
 var (
@@ -91,7 +92,6 @@ var (
 	ErrMissingOwnerData                      = NotFoundError("missing owner data")
 	ErrMissingParameters                     = LengthError("missing parameters")
 	ErrNameTooLong                           = LengthError("name too long")
-	ErrNameTooShort                          = LengthError("name too short")
 	ErrNoConnectionsAvailable                = InvalidError("no connections available")
 	ErrNoNewTransactions                     = InvalidError("no new transactions")
 	ErrNotAPayId                             = InvalidError("not a pay id")
@@ -127,25 +127,33 @@ var (
 	ErrTransactionLinksToSelf                = RecordError("transaction links to self")
 	ErrWrongNetworkForPrivateKey             = InvalidError("wrong network for private key")
 	ErrWrongNetworkForPublicKey              = InvalidError("wrong network for public key")
+	ErrOwnershipIsNotIndexed                 = ValidationError("ownership is not indexed")
+	ErrOwnershipIsNotCleaned                 = ValidationError("ownership is not cleaned")
+	ErrAssetIsNotIndexed                     = ValidationError("asset is not indexed")
+	ErrTransactionIsNotIndexed               = ValidationError("transaction is not indexed")
+	ErrDataInconsistent                      = ValidationError("data inconsistent")
+	ErrUnexpectedTransaction                 = RecordError("unexpected transaction record")
 )
 
 // the error interface base method
 func (e GenericError) Error() string { return string(e) }
 
 // the error interface methods
-func (e ExistsError) Error() string   { return string(e) }
-func (e InvalidError) Error() string  { return string(e) }
-func (e LengthError) Error() string   { return string(e) }
-func (e NotFoundError) Error() string { return string(e) }
-func (e ProcessError) Error() string  { return string(e) }
-func (e RecordError) Error() string   { return string(e) }
-func (e ValueError) Error() string    { return string(e) }
+func (e ExistsError) Error() string     { return string(e) }
+func (e InvalidError) Error() string    { return string(e) }
+func (e LengthError) Error() string     { return string(e) }
+func (e NotFoundError) Error() string   { return string(e) }
+func (e ProcessError) Error() string    { return string(e) }
+func (e RecordError) Error() string     { return string(e) }
+func (e ValueError) Error() string      { return string(e) }
+func (e ValidationError) Error() string { return string(e) }
 
 // determine the class of an error
-func IsErrExists(e error) bool   { _, ok := e.(ExistsError); return ok }
-func IsErrInvalid(e error) bool  { _, ok := e.(InvalidError); return ok }
-func IsErrLength(e error) bool   { _, ok := e.(LengthError); return ok }
-func IsErrNotFound(e error) bool { _, ok := e.(NotFoundError); return ok }
-func IsErrProcess(e error) bool  { _, ok := e.(ProcessError); return ok }
-func IsErrRecord(e error) bool   { _, ok := e.(RecordError); return ok }
-func IsErrValue(e error) bool    { _, ok := e.(ValueError); return ok }
+func IsErrExists(e error) bool     { _, ok := e.(ExistsError); return ok }
+func IsErrInvalid(e error) bool    { _, ok := e.(InvalidError); return ok }
+func IsErrLength(e error) bool     { _, ok := e.(LengthError); return ok }
+func IsErrNotFound(e error) bool   { _, ok := e.(NotFoundError); return ok }
+func IsErrProcess(e error) bool    { _, ok := e.(ProcessError); return ok }
+func IsErrRecord(e error) bool     { _, ok := e.(RecordError); return ok }
+func IsErrValue(e error) bool      { _, ok := e.(ValueError); return ok }
+func IsErrValidation(e error) bool { _, ok := e.(ValidationError); return ok }

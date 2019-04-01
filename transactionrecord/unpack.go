@@ -112,10 +112,8 @@ unpack_switch:
 	case AssetDataTag:
 
 		// name
-		nameLength, nameOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == nameOffset {
-			break unpack_switch
-		}
+		nameLength, nameOffset := util.ClippedVarint64(record[n:], 0, 8192)
+
 		name := make([]byte, nameLength)
 		n += nameOffset
 		copy(name, record[n:n+nameLength])

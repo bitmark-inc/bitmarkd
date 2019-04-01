@@ -120,14 +120,6 @@ func checkIdentity(name string, config *configuration.Configuration) (*encrypt.I
 	return getIdentity(name, config)
 }
 
-// asset name is required field
-func checkAssetName(name string) (string, error) {
-	if "" == name {
-		return "", ErrRequiredAssetName
-	}
-	return name, nil
-}
-
 // asset fingerprint is required field
 func checkAssetFingerprint(fingerprint string) (string, error) {
 	if "" == fingerprint {

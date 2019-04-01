@@ -48,7 +48,6 @@ type Transaction interface {
 
 // byte sizes for various fields
 const (
-	minNameLength        = 1
 	maxNameLength        = 64
 	maxMetadataLength    = 2048
 	minFingerprintLength = 1
