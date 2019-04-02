@@ -270,7 +270,7 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, er
 		}
 
 		for _, issue := range issues {
-			asset.IncrementCounter(issue.AssetId)
+			asset.IncrementTTL(issue.AssetId)
 		}
 
 		globalData.pendingFreeCount += len(txs)
@@ -361,7 +361,7 @@ func verifyIssueByNonce(payId pay.PayId, nonce []byte) bool {
 		// move each transaction to verified pool
 		for _, tx := range entry.txs {
 			if issue, ok := tx.transaction.(*transactionrecord.AssetData); ok {
-				asset.DecrementCounter(issue.AssetId())
+				asset.DecrementTTL(issue.AssetId())
 			}
 			delete(globalData.pendingIndex, tx.txId)
 			globalData.verifiedIndex[tx.txId] = payId
