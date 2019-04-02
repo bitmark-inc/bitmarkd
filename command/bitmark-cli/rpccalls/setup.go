@@ -6,7 +6,6 @@ package rpccalls
 
 import (
 	"crypto/tls"
-	//"github.com/bitmark-inc/bitmarkd/fault"
 	"io"
 	"net"
 	"net/rpc"
@@ -19,7 +18,7 @@ type Client struct {
 	client  *rpc.Client
 	testnet bool
 	verbose bool
-	handle  io.Writer // if verbose is set output itemes here
+	handle  io.Writer // if verbose is set output items here
 }
 
 func NewClient(testnet bool, connect string, verbose bool, handle io.Writer) (*Client, error) {

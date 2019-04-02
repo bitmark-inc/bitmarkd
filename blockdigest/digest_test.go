@@ -77,7 +77,7 @@ func TestDigest(t *testing.T) {
 	d := blockdigest.NewDigest(s)
 
 	// big endian
-	// printf '%s' 'hello world' | argon2 'hello world' -d -l 32 -m 18 -t 5 -p 1 -r | awk '{for(i=length($1);i>0;i-=2)x=x substr($1,i-1,2);print x}'
+	// printf '%s' 'hello world' | argon2 'hello world' -d -l 32 -m 17 -t 4 -p 1 -r | awk '{for(i=length($1);i>0;i-=2)x=x substr($1,i-1,2);print x}'
 	stringDigest := "f8a17bc25cb53e848e2d09811ade4b8a037f628443661b88611faf5d9a5a1f33"
 
 	var expected blockdigest.Digest
