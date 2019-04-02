@@ -1,3 +1,9 @@
+bitmarkd (0.10.6-1) unstable; urgency=medium
+
+  * handle both Litecoin P2SH Base58 address encodings
+
+ -- Christopher Hall <hsw@bitmark.com>  Tue, 02 Apr 2019 03:45:29 +0000
+
 bitmarkd (0.10.5-1) unstable; urgency=medium
 
   * better address check
