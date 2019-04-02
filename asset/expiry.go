@@ -58,13 +58,13 @@ loop:
 				if ok {
 					switch cache.state {
 					case pendingState:
-						if cache.count == 0 {
+						if cache.ttl == 0 {
 							cache.state = expiringState
 							item.expires = time.Now().Add(constants.AssetTimeout)
 							l.PushBack(item)
 						}
 					case expiringState:
-						if cache.count > 0 {
+						if cache.ttl > 0 {
 							cache.state = pendingState
 							item.expires = time.Time{}
 							l.PushBack(item)

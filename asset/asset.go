@@ -29,7 +29,7 @@ const (
 type cacheData struct {
 	packed transactionrecord.Packed // data
 	state  assetState               // used to detect expired/verified items
-	count  uint64
+	ttl    uint64                   // time to live
 }
 
 // expiry background
@@ -237,18 +237,18 @@ func SetVerified(assetId transactionrecord.AssetIdentifier) {
 	}
 }
 
-func IncrementCounter(assetId transactionrecord.AssetIdentifier) {
+func IncrementTTL(assetId transactionrecord.AssetIdentifier) {
 	globalData.RLock()
 	if _, ok := globalData.cache[assetId]; ok {
-		globalData.cache[assetId].count += 1
+		globalData.cache[assetId].ttl += 1
 	}
 	globalData.RUnlock()
 }
 
-func DecrementCounter(assetId transactionrecord.AssetIdentifier) {
+func DecrementTTL(assetId transactionrecord.AssetIdentifier) {
 	globalData.RLock()
 	if _, ok := globalData.cache[assetId]; ok {
-		globalData.cache[assetId].count -= 1
+		globalData.cache[assetId].ttl -= 1
 	}
 	globalData.RUnlock()
 }

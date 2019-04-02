@@ -546,7 +546,7 @@ func internalDelete(payId pay.PayId) {
 	if entry, ok := globalData.pendingFreeIssues[payId]; ok {
 		for _, tx := range entry.txs {
 			if issue, ok := tx.transaction.(*transactionrecord.AssetData); ok {
-				asset.DecrementCounter(issue.AssetId())
+				asset.DecrementTTL(issue.AssetId())
 			}
 			delete(globalData.pendingIndex, tx.txId)
 		}
