@@ -5,6 +5,10 @@
 package reservoir
 
 import (
+	"sync"
+	"time"
+
+	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/currency"
@@ -16,8 +20,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
-	"sync"
-	"time"
 )
 
 // various limiting constants
@@ -543,6 +545,9 @@ func internalDelete(payId pay.PayId) {
 
 	if entry, ok := globalData.pendingFreeIssues[payId]; ok {
 		for _, tx := range entry.txs {
+			if issue, ok := tx.transaction.(*transactionrecord.AssetData); ok {
+				asset.DecrementCounter(issue.AssetId())
+			}
 			delete(globalData.pendingIndex, tx.txId)
 		}
 		globalData.pendingFreeCount -= len(entry.txs)

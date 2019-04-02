@@ -29,6 +29,7 @@ const (
 type cacheData struct {
 	packed transactionrecord.Packed // data
 	state  assetState               // used to detect expired/verified items
+	count  uint64
 }
 
 // expiry background
@@ -234,4 +235,20 @@ func SetVerified(assetId transactionrecord.AssetIdentifier) {
 	if !ok {
 		logger.Panicf("asset: Store: no cache for asset id: %v", assetId)
 	}
+}
+
+func IncrementCounter(assetId transactionrecord.AssetIdentifier) {
+	globalData.RLock()
+	if _, ok := globalData.cache[assetId]; ok {
+		globalData.cache[assetId].count += 1
+	}
+	globalData.RUnlock()
+}
+
+func DecrementCounter(assetId transactionrecord.AssetIdentifier) {
+	globalData.RLock()
+	if _, ok := globalData.cache[assetId]; ok {
+		globalData.cache[assetId].count -= 1
+	}
+	globalData.RUnlock()
 }
