@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/currency"
@@ -545,9 +544,6 @@ func internalDelete(payId pay.PayId) {
 
 	if entry, ok := globalData.pendingFreeIssues[payId]; ok {
 		for _, tx := range entry.txs {
-			if issue, ok := tx.transaction.(*transactionrecord.AssetData); ok {
-				asset.DecrementTTL(issue.AssetId())
-			}
 			delete(globalData.pendingIndex, tx.txId)
 		}
 		globalData.pendingFreeCount -= len(entry.txs)
