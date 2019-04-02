@@ -101,7 +101,7 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 				return err
 			}
 			switch cType {
-			case litecoin.Testnet, litecoin.TestnetScript:
+			case litecoin.Testnet, litecoin.TestnetScript, litecoin.TestnetScript2:
 				if !mode.IsTesting() {
 					return fault.ErrLitecoinAddressForWrongNetwork
 				}

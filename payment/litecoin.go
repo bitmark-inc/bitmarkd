@@ -13,6 +13,7 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/constants"
 	"github.com/bitmark-inc/bitmarkd/currency"
+	"github.com/bitmark-inc/bitmarkd/currency/litecoin"
 	"github.com/bitmark-inc/bitmarkd/currency/satoshi"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
@@ -255,7 +256,12 @@ scan_vouts:
 		}
 
 		if len(vout.ScriptPubKey.Addresses) == 1 {
-			amounts[vout.ScriptPubKey.Addresses[0]] += satoshi.FromByteString(vout.Value)
+			address := vout.ScriptPubKey.Addresses[0]
+			amounts[address] += satoshi.FromByteString(vout.Value)
+			address2, err := litecoin.TransformAddress(address)
+			if nil == err && address2 != address {
+				amounts[address2] += satoshi.FromByteString(vout.Value)
+			}
 		}
 	}
 

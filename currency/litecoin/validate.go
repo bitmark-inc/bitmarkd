@@ -62,6 +62,29 @@ func ValidateAddress(address string) (Version, AddressBytes, error) {
 	return Version(addr[0]), addressBytes, nil
 }
 
+func TransformAddress(address string) (string, error) {
+	version, addressBytes, err := ValidateAddress(address)
+	if nil != err {
+		return "", err
+	}
+	switch version {
+	case Livenet:
+		return address, nil
+	case LivenetScript:
+		return compose(LivenetScript2, addressBytes), nil
+	case LivenetScript2:
+		return compose(LivenetScript, addressBytes), nil
+	case Testnet:
+		return address, nil
+	case TestnetScript:
+		return compose(TestnetScript2, addressBytes), nil
+	case TestnetScript2:
+		return compose(TestnetScript, addressBytes), nil
+	default:
+		return "", fault.ErrInvalidLitecoinAddress
+	}
+}
+
 // detect if version is a testnet value
 func IsTestnet(version Version) bool {
 	switch version {
@@ -70,4 +93,20 @@ func IsTestnet(version Version) bool {
 	default:
 		return false
 	}
+}
+
+// build address
+func compose(version Version, addressBytes AddressBytes) string {
+
+	addr := append([]byte{byte(version)}, addressBytes[:]...)
+
+	h := sha256.New()
+	h.Write(addr)
+	d := h.Sum([]byte{})
+	h = sha256.New()
+	h.Write(d)
+	d = h.Sum([]byte{})
+
+	addr = append(addr, d[0:4]...)
+	return util.ToBase58(addr)
 }

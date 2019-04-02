@@ -15,8 +15,8 @@ import (
 // prefix for the payment command
 // assumed format is: paymentCommand 'PaymentId' 'address₁,SatoshiAmount₁' … 'addressN,SatoshiAmountN'
 const (
-	paymentCommandLive = "bitmark-wallet --conf ${XDG_CONFIG_HOME}/bitmark-wallet/bitmark-wallet.conf %s sendmany --hex-data '%s'"
-	paymentCommandTest = "bitmark-wallet --conf ${XDG_CONFIG_HOME}/bitmark-wallet/bitmark-wallet.conf %s --testnet sendmany --hex-data '%s'"
+	paymentCommandLive = "bitmark-wallet --conf ${XDG_CONFIG_HOME}/bitmark-wallet/live/live-bitmark-wallet.conf %s sendmany --hex-data '%s'"
+	paymentCommandTest = "bitmark-wallet --conf ${XDG_CONFIG_HOME}/bitmark-wallet/test/test-bitmark-wallet.conf %s --testnet sendmany --hex-data '%s'"
 )
 
 func paymentCommand(testnet bool, currency currency.Currency, payId string, payments transactionrecord.PaymentAlternative) string {

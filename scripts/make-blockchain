@@ -36,6 +36,9 @@ ltc_2="Qb7NQ3PjhvVBLJYTzTc834txdokHmHfLiS"   # priv='cN9tHtJSz35wyHh4XFot7iKpeLm
 # BTC or LTC - set in NEW-CHAIN
 currency=LTC
 
+# wallet network local/test/bitmark
+network=local
+
 # verbose output
 verbose=yes
 
@@ -218,6 +221,14 @@ PAY() {
   txid="${1}"; shift
   pay="${1}"; shift
 
+  VERBOSE 'raw pay: %s' "${pay}"
+
+  script2='Qfs6jPxLBd2qJezyLNGHbxafj9MXtktbcX'
+  script1='2NCWLcP66AWykAUEviGEGXG9Eakui2faUYf'
+  #pay=$(printf '%s' "${pay}" | sed "s/${script2}/${script1}/g;s#/test/test-#/${network}/${network}-#")
+  pay=$(printf '%s' "${pay}" | sed "s/${script1}/${script2}/g;s#/test/test-#/${network}/${network}-#")
+  VERBOSE 'run pay: %s' "${pay}"
+
   sleep 1
   CLI "${user_1}" status -t "${txid}"
   status=$(GET .status)
@@ -366,7 +377,6 @@ NEW-CHAIN() {
   CLI -v "${user_2}" countersign -t "${transfer}"
   SET txid .transferId  pay .commands.${currency}
   VERBOSE 'tx id: %s' "${txid}"
-  VERBOSE 'pay: %s' "${pay}"
 
   PAY "${txid}" "${pay}"
 
@@ -379,7 +389,6 @@ NEW-CHAIN() {
   CLI -v "${user_2}" transfer -r "${user_1}" -t "${txid}" -u
   SET txid .transferId  pay .commands.${currency}
   VERBOSE 'tx id: %s' "${txid}"
-  VERBOSE 'pay: %s' "${pay}"
 
   PAY "${txid}" "${pay}"
 
@@ -391,7 +400,6 @@ NEW-CHAIN() {
   SET txid .txId  share_1_id .shareId  pay .commands.${currency}
   VERBOSE 'tx id: %s' "${txid}"
   VERBOSE 'share id: %s' "${share_1_id}"
-  VERBOSE 'pay: %s' "${pay}"
 
   PAY "${txid}" "${pay}"
 
@@ -418,7 +426,6 @@ NEW-CHAIN() {
   CLI -v "${user_2}" countersign -t "${grant}"
   SET txid .grantId  pay .commands.${currency}
   VERBOSE 'tx id: %s' "${txid}"
-  VERBOSE 'pay: %s' "${pay}"
 
   PAY "${txid}" "${pay}"
 
@@ -445,7 +452,6 @@ NEW-CHAIN() {
   SET txid .txId  share_2_id .shareId  pay .commands.${currency}
   VERBOSE 'tx id: %s' "${txid}"
   VERBOSE 'share 2 id: %s' "${share_2_id}"
-  VERBOSE 'pay: %s' "${pay}"
 
   PAY "${txid}" "${pay}"
 
@@ -465,7 +471,6 @@ NEW-CHAIN() {
   CLI -v "${user_1}" countersign -t "${swap}"
   SET txid .swapId  pay .commands.${currency}
   VERBOSE 'tx id: %s' "${txid}"
-  VERBOSE 'pay: %s' "${pay}"
 
   PAY "${txid}" "${pay}"
 
@@ -558,7 +563,6 @@ ISSUE-NN() {
     CLI -v "${user_y}" countersign -t "${transfer}"
     SET txid .transferId  pay .commands.${currency}
     VERBOSE 'tx id: %s' "${txid}"
-    VERBOSE 'pay: %s' "${pay}"
 
     PAY "${txid}" "${pay}"
 
@@ -622,7 +626,6 @@ BLOCK-TRANSFER() {
   CLI -v "${to_user}" countersign -t "${block_transfer}"
   SET txid .blockTransferId  pay .commands.${currency}
   VERBOSE 'tx id: %s' "${txid}"
-  VERBOSE 'pay: %s' "${pay}"
 
   PAY "${txid}" "${pay}"
 
