@@ -5,9 +5,6 @@
 package reservoir
 
 import (
-	"sync"
-	"time"
-
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/currency"
@@ -19,6 +16,8 @@ import (
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
+	"sync"
+	"time"
 )
 
 // various limiting constants
