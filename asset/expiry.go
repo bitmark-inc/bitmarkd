@@ -58,12 +58,20 @@ loop:
 				if ok {
 					switch cache.state {
 					case pendingState:
-						cache.state = expiringState
-						item.expires = time.Now().Add(constants.AssetTimeout)
-						l.PushBack(item)
+						if cache.count == 0 {
+							cache.state = expiringState
+							item.expires = time.Now().Add(constants.AssetTimeout)
+							l.PushBack(item)
+						}
 					case expiringState:
-						log.Infof("expired: asset id: %s", item.assetId)
-						delete(globalData.cache, item.assetId)
+						if cache.count > 0 {
+							cache.state = pendingState
+							item.expires = time.Time{}
+							l.PushBack(item)
+						} else {
+							log.Infof("expired: asset id: %s", item.assetId)
+							delete(globalData.cache, item.assetId)
+						}
 					case verifiedState:
 						// the item just dropped from expiry queue
 						// but still exists in the map
