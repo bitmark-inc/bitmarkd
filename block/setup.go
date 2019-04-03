@@ -9,10 +9,12 @@ import (
 	"reflect"
 	"sync"
 
+	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
+	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/mode"
@@ -41,6 +43,53 @@ type blockData struct {
 
 // global data
 var globalData blockData
+
+var (
+	priorBlockOwnerTxs map[string]struct{} = map[string]struct{}{}
+	priorTxOwnerTxs    map[string]struct{} = map[string]struct{}{}
+)
+
+// validateTxOwnerRecords will check
+// (1) whether the `OwnerTxIndex` has a key of [owner+txId]
+// (2) whether the `OwnerList` has a key of [owner+{value of (1)}]
+// (3) whether the value of (2) is the txId
+func validateTxOwnerRecords(txId merkle.Digest, owner *account.Account) error {
+	txIndexKey := append(owner.Bytes(), txId[:]...)
+	count := storage.Pool.OwnerTxIndex.Get(txIndexKey)
+
+	ownerListKey := append(owner.Bytes(), count[:]...)
+	txIdFromList := storage.Pool.OwnerList.Get(ownerListKey)
+
+	if !reflect.DeepEqual(txIdFromList[:], txId[:]) {
+		return fault.ErrDataInconsistent
+	}
+	return nil
+}
+
+// validateBlockOwnerRecord will check
+// (1) whether `BlockOwnerTxIndex` has a key of txId
+// (2) whether the value of `BlockOwnerPayment` is identical to the packed payments
+func validateBlockOwnerRecord(txId merkle.Digest, payments currency.Map) error {
+	blockNumberKey := storage.Pool.BlockOwnerTxIndex.Get(txId[:])
+
+	if len(blockNumberKey) == 0 {
+		globalData.log.Error("ownership is not indexed")
+		return fault.ErrOwnershipIsNotIndexed
+	}
+
+	packedPayment, err := payments.Pack(mode.IsTesting())
+	if err != nil {
+		globalData.log.Error("fail to get packed payments")
+		return err
+	}
+
+	globalData.log.Debugf("validate whether the payment info identical. txId: %s", txId)
+	if !reflect.DeepEqual(storage.Pool.BlockOwnerPayment.Get(blockNumberKey[:]), packedPayment) {
+		globalData.log.Error("payment info data is not consistent")
+		return fault.ErrDataInconsistent
+	}
+	return nil
+}
 
 // isTxWipedOut will check whether a transaction is cleaned up from the index db
 func isTxWipedOut(txId merkle.Digest) bool {
@@ -77,9 +126,8 @@ func isTxWipedOut(txId merkle.Digest) bool {
 	return true
 }
 
+// validateTransactionData will validate the block records by go through the transaction records
 func validateTransactionData(header *blockrecord.Header, digest blockdigest.Digest, data []byte) error {
-	oldBlockOwnerTxs := map[string]struct{}{}
-	priorTxOwnerTxs := map[string]struct{}{}
 	for i := header.TransactionCount; i > 0; i-- {
 		transaction, n, err := transactionrecord.Packed(data).Unpack(mode.IsTesting())
 		if err != nil {
@@ -93,32 +141,21 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 		case *transactionrecord.OldBaseData:
 			globalData.log.Warnf("not processing base record: %+v", tx)
 		case *transactionrecord.BlockFoundation:
+			// use foundationTxId instead of txId for block foundation check
 			foundationTxId := blockrecord.FoundationTxId(header, digest)
+
 			globalData.log.Debugf("validate whether the foundation transaction indexed. foundationTxId: %s", foundationTxId)
 			if !storage.Pool.Transactions.Has(foundationTxId[:]) {
 				globalData.log.Error("foundation tx is not indexed")
 				return fault.ErrTransactionIsNotIndexed
 			}
 
-			if _, ok := oldBlockOwnerTxs[txId.String()]; !ok {
+			if _, ok := priorBlockOwnerTxs[foundationTxId.String()]; !ok {
+				// validate ownership indexed only if the txId is not in priorBlockOwnerTxs
 				globalData.log.Debugf("validate whether the ownership indexed. foundationTxId: %s", foundationTxId)
-				if !storage.Pool.BlockOwnerTxIndex.Has(foundationTxId[:]) {
-					globalData.log.Error("ownership is not indexed")
-					return fault.ErrOwnershipIsNotIndexed
-				}
-
-				packedPayment, err := tx.Payments.Pack(mode.IsTesting())
-				if err != nil {
-					globalData.log.Error("fail to get packed payments")
+				if err := validateBlockOwnerRecord(foundationTxId, tx.Payments); err != nil {
+					globalData.log.Error("block ownership validation failed")
 					return err
-				}
-
-				blockNumberKey := make([]byte, 8)
-				binary.BigEndian.PutUint64(blockNumberKey, header.Number)
-				globalData.log.Debugf("validate whether the payment info identical. foundationTxId: %s", foundationTxId)
-				if !reflect.DeepEqual(storage.Pool.BlockOwnerPayment.Get(blockNumberKey[:]), packedPayment) {
-					globalData.log.Error("payment info data is not consistent")
-					return fault.ErrDataInconsistent
 				}
 			}
 
@@ -134,30 +171,17 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 				globalData.log.Error("ownership is not cleaned")
 				return fault.ErrOwnershipIsNotCleaned
 			}
-			oldBlockOwnerTxs[tx.Link.String()] = struct{}{}
 
-			if _, ok := oldBlockOwnerTxs[txId.String()]; !ok {
-				// validate ownership indexed only if the txId is not added into olderBlockOwnerTxs
-				globalData.log.Debugf("validate whether the ownership indexed. txId: %s", txId)
-				blockNumberKey := storage.Pool.BlockOwnerTxIndex.Get(txId[:])
-				if blockNumberKey == nil {
-					globalData.log.Error("ownership is not indexed")
-					return fault.ErrOwnershipIsNotIndexed
-				}
-
-				packedPayment, err := tx.Payments.Pack(mode.IsTesting())
-				if err != nil {
-					globalData.log.Error("fail to get packed payments")
+			if _, ok := priorBlockOwnerTxs[txId.String()]; !ok {
+				// validate ownership indexed only if the txId is not in priorBlockOwnerTxs
+				globalData.log.Debugf("validate whether the block ownership indexed. txId: %s", txId)
+				if err := validateBlockOwnerRecord(txId, tx.Payments); err != nil {
+					globalData.log.Error("block ownership validation failed")
 					return err
 				}
-
-				binary.BigEndian.PutUint64(blockNumberKey, header.Number)
-				globalData.log.Debugf("validate whether the payment info identical. txId: %s", txId)
-				if !reflect.DeepEqual(storage.Pool.BlockOwnerPayment.Get(blockNumberKey[:]), packedPayment) {
-					globalData.log.Error("payment info data is not consistent")
-					return fault.ErrDataInconsistent
-				}
 			}
+			// add the prior block ownership tx id into map
+			priorBlockOwnerTxs[tx.Link.String()] = struct{}{}
 
 		case *transactionrecord.AssetData:
 			globalData.log.Debugf("validate whether the asset indexed. txId: %s", txId)
@@ -173,6 +197,14 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 				return fault.ErrTransactionIsNotIndexed
 			}
 
+			if _, ok := priorTxOwnerTxs[txId.String()]; !ok {
+				// validate tx ownership indexed only if the txId is not in priorBlockOwnerTxs
+				if err := validateTxOwnerRecords(txId, tx.Owner); err != nil {
+					globalData.log.Error("transaction ownership validation failed")
+					return err
+				}
+			}
+
 		case transactionrecord.BitmarkTransfer:
 			globalData.log.Debugf("validate whether the transfer transaction indexed. txId: %s", txId)
 			if !storage.Pool.Transactions.Has(txId[:]) {
@@ -186,19 +218,14 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 			}
 
 			if _, ok := priorTxOwnerTxs[txId.String()]; !ok {
-				// if a tx is not in the list of prior transaction, it should be the latest tx.
-				txIndexKey := append(tx.GetOwner().Bytes(), txId[:]...)
-				count := storage.Pool.OwnerTxIndex.Get(txIndexKey)
-
-				ownerListKey := append(tx.GetOwner().Bytes(), count[:]...)
-				txIdFromList := storage.Pool.OwnerList.Get(ownerListKey)
-
-				if !reflect.DeepEqual(txIdFromList[:], txId[:]) {
-					globalData.log.Error("tx record inconsistent")
-					return fault.ErrDataInconsistent
+				// validate tx ownership indexed only if the txId is not in priorBlockOwnerTxs
+				if err := validateTxOwnerRecords(txId, tx.GetOwner()); err != nil {
+					globalData.log.Error("transaction ownership validation failed")
+					return err
 				}
-				priorTxOwnerTxs[txId.String()] = struct{}{}
 			}
+			// add the prior tx id into map
+			priorTxOwnerTxs[tx.GetLink().String()] = struct{}{}
 
 		case *transactionrecord.BitmarkShare, *transactionrecord.ShareGrant, *transactionrecord.ShareSwap:
 			globalData.log.Debugf("validate whether the share transaction indexed. txId: %s", txId)
@@ -216,6 +243,8 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 	return nil
 }
 
+// validateAndReturnLastBlock will validate index db according to the block db.
+// If all the validation are passed, it returns the latest block.
 func validateAndReturnLastBlock(last storage.Element) (*blockrecord.Header, blockdigest.Digest, error) {
 	var header *blockrecord.Header
 	var digest blockdigest.Digest
