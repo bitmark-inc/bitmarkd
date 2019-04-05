@@ -9,6 +9,8 @@ import (
 	"container/list"
 	"encoding/hex"
 	"fmt"
+	"time"
+
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -18,7 +20,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/peer/upstream"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
-	"time"
 )
 
 // various timeouts
@@ -211,9 +212,9 @@ loop:
 			conn.log.Debugf("received control: %s  public key: %x  connect: %x %q", item.Command, item.Parameters[0], item.Parameters[1], c)
 			//connectToUpstream(conn.log, conn.clients, conn.dynamicStart, item.Command, item.Parameters[0], item.Parameters[1])
 			switch item.Command {
-			case "@D": // internal command: delete an peer
+			case "@D": // internal command: delete a peer
 				conn.releseServerKey(item.Parameters[0])
-				conn.log.Infof("connector Recieve publickServerKey:%s", item.Parameters[0])
+				conn.log.Infof("connector receive server public key: %x", item.Parameters[0])
 			default:
 				conn.connectUpstream(item.Command, item.Parameters[0], item.Parameters[1])
 			}

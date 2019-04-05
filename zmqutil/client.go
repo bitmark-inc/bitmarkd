@@ -9,12 +9,13 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 	zmq "github.com/pebbe/zmq4"
-	"sync"
-	"time"
 )
 
 // structure to hold a client connection
@@ -490,7 +491,7 @@ func ClientFromSocket(socket *zmq.Socket) *Client {
 
 // Return a basic information string for debug
 func (client *Client) BasicInfo() string {
-	s := fmt.Sprintf("serverPublicKey:%x address:%s publicKey:%x  prefix:%s v6:%v socketType:%d ts:%v timeout duration:%s",
+	s := fmt.Sprintf("server public key: %x  address: %s  public key: %x  prefix: %s v6: %v socket type: %d  ts: %v  timeout duration: %s",
 		client.serverPublicKey, client.address, client.publicKey, client.prefix, client.v6, client.socketType, client.timestamp, client.timeout.String())
 
 	return s
