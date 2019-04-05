@@ -54,6 +54,8 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 		txId := merkle.NewDigest(data[:n])
 
 		switch tx := transaction.(type) {
+		case *transactionrecord.OldBaseData:
+			globalData.log.Warnf("not processing base record: %+v", tx)
 		case *transactionrecord.BlockFoundation:
 			foundationTxId := blockrecord.FoundationTxId(header, digest)
 			globalData.log.Debugf("get a foundation transaction. foundationTxId: %s", foundationTxId)
@@ -147,7 +149,7 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 				return fault.ErrTransactionIsNotIndexed
 			}
 		default:
-			globalData.log.Error("unexpected transaction records")
+			globalData.log.Errorf("unexpected transaction record: %+v", tx)
 			return fault.ErrUnexpectedTransaction
 		}
 		data = data[n:]
