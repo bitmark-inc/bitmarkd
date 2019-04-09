@@ -1,6 +1,7 @@
 package main
 
 import (
+	"path"
 	"path/filepath"
 	"time"
 
@@ -59,8 +60,8 @@ func (w *FileWatcherData) Start() {
 			remove := w.watcherData.channels.remove
 			change := w.watcherData.channels.change
 
-			if event.Name != filepath.Clean(filePath) {
-				w.log.Debug("file not match, discard")
+			if path.Base(event.Name) != path.Base(filepath.Clean(filePath)) {
+				w.log.Infof("file %s not match, discard event", filePath)
 				continue
 			}
 
