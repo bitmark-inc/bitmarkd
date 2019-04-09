@@ -34,7 +34,6 @@ func setupTestFileWatcher(t *testing.T) *FileWatcherData {
 				change: changeChannel,
 				remove: removeChannel,
 			},
-			throttleInterval: time.Duration(0) * time.Second,
 		},
 		filePath: filePath,
 	}

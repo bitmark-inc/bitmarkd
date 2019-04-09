@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
@@ -195,8 +194,7 @@ func main() {
 	jobManager.Start()
 
 	watcherData := WatcherData{
-		channels:         watcherChannel,
-		throttleInterval: time.Duration(1) * time.Minute,
+		channels: watcherChannel,
 	}
 	watcher, _ := newFileWatcher(configurationFile, logger.New(FileWatcherLoggerPrefix), watcherData)
 	watcher.Start()
