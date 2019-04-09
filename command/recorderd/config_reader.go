@@ -83,7 +83,7 @@ func (c *ConfigReaderData) Start() {
 		for {
 			select {
 			case <-c.watcherChannel.change:
-				c.log.Debugf("receive file change event, wait for 1 minute to adapt")
+				c.log.Info("receive file change event, wait for 1 minute to adapt")
 				<-time.After(c.refreshByMinute)
 				err := c.Refresh()
 				if nil != err {
