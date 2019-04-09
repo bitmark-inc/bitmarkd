@@ -28,8 +28,7 @@ type FileWatcherData struct {
 }
 
 type WatcherData struct {
-	channels         WatcherChannel
-	throttleInterval time.Duration
+	channels WatcherChannel
 }
 
 type WatcherChannel struct {
