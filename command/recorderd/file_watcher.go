@@ -1,6 +1,9 @@
 package main
 
 import (
+	"errors"
+	"fmt"
+	"os"
 	"path"
 	"path/filepath"
 	"time"
@@ -18,10 +21,10 @@ const (
 )
 
 type FileWatcherData struct {
-	reader      ConfigReader
 	log         *logger.L
 	watcherData WatcherData
 	watcher     *fsnotify.Watcher
+	filePath    string
 }
 
 type WatcherData struct {
@@ -34,34 +37,45 @@ type WatcherChannel struct {
 	remove chan struct{}
 }
 
-func newFileWatcher(reader ConfigReader, log *logger.L, data WatcherData) FileWatcher {
+func newFileWatcher(targetFile string, log *logger.L, data WatcherData) (FileWatcher, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if nil != err {
 		log.Errorf("new watcher with error: %s", err.Error())
 	}
+
+	filePath, err := filepath.Abs(filepath.Clean(targetFile))
+	if nil != err {
+		log.Errorf("parse file %s error: %v", targetFile, err)
+	}
+
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return nil, errors.New("file does not exist")
+	}
+
 	return &FileWatcherData{
-		reader:      reader,
 		log:         log,
 		watcher:     watcher,
 		watcherData: data,
-	}
+		filePath:    filePath,
+	}, nil
 }
 
 func (w *FileWatcherData) Start() {
-	_, fileName, _ := w.reader.GetConfig()
-	filePath, _ := filepath.Abs(filepath.Clean(fileName))
-
-	w.watcher.Add(filePath)
+	err := w.watcher.Add(w.filePath)
+	if nil != err {
+		w.log.Errorf("watcher add error: %v", err)
+	}
 
 	go func() {
 		for {
 			event := <-w.watcher.Events
+			fmt.Printf("file event: %v\n", event)
 			w.log.Infof("file event: %v", event)
 			remove := w.watcherData.channels.remove
 			change := w.watcherData.channels.change
 
-			if path.Base(event.Name) != path.Base(filepath.Clean(filePath)) {
-				w.log.Infof("file %s not match, discard event", filePath)
+			if path.Base(event.Name) != path.Base(filepath.Clean(w.filePath)) {
+				w.log.Infof("file %s not match, discard event", w.filePath)
 				continue
 			}
 
@@ -74,7 +88,8 @@ func (w *FileWatcherData) Start() {
 				}
 			}
 
-			if event.Op&fsnotify.Write == fsnotify.Write {
+			if event.Op&fsnotify.Write == fsnotify.Write ||
+				event.Op&fsnotify.Chmod == fsnotify.Chmod {
 				w.log.Info("sending config change event...")
 				if !w.isChannelFull(change) {
 					change <- struct{}{}

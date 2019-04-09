@@ -198,7 +198,7 @@ func main() {
 		channels:         watcherChannel,
 		throttleInterval: time.Duration(1) * time.Minute,
 	}
-	watcher := newFileWatcher(reader, logger.New(FileWatcherLoggerPrefix), watcherData)
+	watcher, _ := newFileWatcher(configurationFile, logger.New(FileWatcherLoggerPrefix), watcherData)
 	watcher.Start()
 
 	reader.FirstTimeRun()
