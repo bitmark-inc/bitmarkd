@@ -83,11 +83,8 @@ func TestStart(t *testing.T) {
 	f.Close()
 
 	wg.Wait()
-
 	wg.Add(1)
-
 	os.Remove(testFileName)
-
 	wg.Wait()
 
 	fileWatcher.watcher.Close()
@@ -120,5 +117,31 @@ func TestIsChannelFull(t *testing.T) {
 		t.Errorf("error get channel status, expected %t but get %t",
 			expected, actual)
 	}
+}
 
+func TestSendEvent(t *testing.T) {
+	w := setupTestFileWatcher(t)
+	defer teardown()
+
+	ch := make(chan struct{}, 1)
+	expected := true
+	actual := false
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func() {
+		<-ch
+		actual = true
+		wg.Done()
+	}()
+
+	w.sendEvent(ch, "test")
+
+	wg.Wait()
+
+	if actual != expected {
+		t.Errorf("error send channel event, expected %t but get %t",
+			expected, actual)
+	}
 }
