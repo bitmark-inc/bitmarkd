@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -23,6 +24,7 @@ func setupTestFileWatcher(t *testing.T) *FileWatcherData {
 	removeTestFiles()
 	setupLogger(t)
 	w, _ := fsnotify.NewWatcher()
+	filePath, _ := filepath.Abs(filepath.Clean(testFileName))
 
 	fileWatcher := &FileWatcherData{
 		watcher: w,
@@ -38,6 +40,7 @@ func setupTestFileWatcher(t *testing.T) *FileWatcherData {
 			},
 			throttleInterval: time.Duration(0) * time.Second,
 		},
+		filePath: filePath,
 	}
 
 	return fileWatcher
@@ -47,11 +50,16 @@ func TestStart(t *testing.T) {
 	fileWatcher := setupTestFileWatcher(t)
 	defer teardown()
 
+	f, _ := os.Create(testFileName)
+	f.WriteString("start")
+	f.Sync()
+	f.Close()
+
 	changed := false
 	removed := false
 
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(1)
 
 	go func() {
 		for {
@@ -69,23 +77,25 @@ func TestStart(t *testing.T) {
 			}
 		}
 	}()
+
 	time.Sleep(time.Duration(1) * time.Second)
 
 	go fileWatcher.Start()
 
-	f, _ := os.Create(testFileName)
-	f.WriteString("start")
-	f.Sync()
-	f.Close()
 	f, _ = os.OpenFile(testFileName, os.O_RDWR, 0666)
 	f.WriteString("this is test string")
 	f.Sync()
 	f.Close()
 
-	time.Sleep(time.Duration(1) * time.Second)
+	wg.Wait()
+
+	wg.Add(1)
+
 	os.Remove(testFileName)
 
 	wg.Wait()
+
+	fileWatcher.watcher.Close()
 
 	if !changed || !removed {
 		t.Errorf("watcher not receive event")
