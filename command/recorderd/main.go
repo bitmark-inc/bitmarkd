@@ -60,27 +60,21 @@ func main() {
 		exitwithstatus.Message("%s: only one config-file option is required, %d were detected", program, len(options["config-file"]))
 	}
 
-	watcherChannel := WatcherChannel{
-		change: make(chan struct{}, 1),
-		remove: make(chan struct{}, 1),
-	}
-
-	reader := newConfigReader(watcherChannel)
-
 	// read options and parse the configuration file
 	configurationFile := options["config-file"][0]
-	reader.Initialise(configurationFile)
+
+	reader := newConfigReader()
 
 	rescheduleChannel := make(chan struct{})
 	calendar := newJobCalendar(rescheduleChannel)
 	reader.SetCalendar(calendar)
 
-	err = reader.Refresh()
+	err = reader.FirstRefresh(configurationFile)
 	if nil != err {
 		exitwithstatus.Message("%s: failed to read configuration from: %q  error: %s", program, configurationFile, err)
 	}
 
-	masterConfiguration, _, err := reader.GetConfig()
+	masterConfiguration, err := reader.GetConfig()
 	if nil != err {
 		exitwithstatus.Message("%s: configuration is not found", program)
 	}
@@ -90,6 +84,14 @@ func main() {
 		exitwithstatus.Message("%s: logger setup failed with error: %s", program, err)
 	}
 	defer logger.Finalise()
+
+	watcherChannel := WatcherChannel{
+		change: make(chan struct{}, 1),
+		remove: make(chan struct{}, 1),
+	}
+	watcher, _ := newFileWatcher(configurationFile, logger.New(FileWatcherLoggerPrefix), watcherChannel)
+
+	reader.SetWatcher(watcher)
 
 	configLogger := logger.New(ReaderLoggerPrefix)
 	err = reader.SetLog(configLogger)
@@ -193,10 +195,6 @@ func main() {
 	)
 	jobManager.Start()
 
-	watcherData := WatcherData{
-		channels: watcherChannel,
-	}
-	watcher, _ := newFileWatcher(configurationFile, logger.New(FileWatcherLoggerPrefix), watcherData)
 	watcher.Start()
 
 	reader.FirstTimeRun()

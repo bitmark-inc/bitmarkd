@@ -29,8 +29,8 @@ func setupReader(t *testing.T) *ConfigReaderData {
 	setupLogger(t)
 	reader := &ConfigReaderData{
 		proofer: &FakeProofer{},
+		watcher: &FakeWatcher{},
 	}
-	reader.Initialise("test")
 	_ = reader.SetLog(logger.New("test"))
 
 	return reader
@@ -81,14 +81,14 @@ func TestGetConfig(t *testing.T) {
 	reader := setupReader(t)
 	defer teardown()
 
-	oldConfig, _, _ := reader.GetConfig()
+	oldConfig, _ := reader.GetConfig()
 	if nil != oldConfig {
 		t.Errorf("Cannot get configuration")
 	}
 
 	newConfig := mockConfiguration(defaultCPUUsage)
 	reader.update(newConfig)
-	currentConfig, _, _ := reader.GetConfig()
+	currentConfig, _ := reader.GetConfig()
 	if currentConfig != newConfig {
 		t.Errorf("Get wrong config")
 	}
@@ -100,7 +100,7 @@ func TestUpdateConfiguraion(t *testing.T) {
 
 	newConfiguration := mockConfiguration(defaultCPUUsage)
 	reader.update(newConfiguration)
-	currentConfig, _, _ := reader.GetConfig()
+	currentConfig, _ := reader.GetConfig()
 	if currentConfig != newConfiguration {
 		t.Errorf("current configuration %v different from expected %v", currentConfig, newConfiguration)
 	}

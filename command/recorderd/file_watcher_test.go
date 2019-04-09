@@ -20,6 +20,24 @@ var (
 	changeChannel = make(chan struct{}, 1)
 )
 
+type FakeWatcher struct{}
+
+func (f *FakeWatcher) Start() error {
+	return nil
+}
+func (f *FakeWatcher) FileName() string {
+	return "test"
+}
+func (f *FakeWatcher) FilePath() string {
+	return "test"
+}
+func (f *FakeWatcher) ChangeChannel() <-chan struct{} {
+	return make(chan struct{}, 1)
+}
+func (f *FakeWatcher) RemoveChannel() <-chan struct{} {
+	return make(chan struct{}, 1)
+}
+
 func setupTestFileWatcher(t *testing.T) *FileWatcherData {
 	removeTestFiles()
 	setupLogger(t)
@@ -29,11 +47,9 @@ func setupTestFileWatcher(t *testing.T) *FileWatcherData {
 	fileWatcher := &FileWatcherData{
 		watcher: w,
 		log:     logger.New("test"),
-		watcherData: WatcherData{
-			channels: WatcherChannel{
-				change: changeChannel,
-				remove: removeChannel,
-			},
+		channel: WatcherChannel{
+			change: changeChannel,
+			remove: removeChannel,
 		},
 		filePath: filePath,
 	}
@@ -59,12 +75,12 @@ func TestStart(t *testing.T) {
 	go func() {
 		for {
 			select {
-			case <-fileWatcher.watcherData.channels.change:
+			case <-fileWatcher.channel.change:
 				if !changed {
 					changed = true
 					wg.Done()
 				}
-			case <-fileWatcher.watcherData.channels.remove:
+			case <-fileWatcher.channel.remove:
 				if !removed {
 					removed = true
 					wg.Done()
