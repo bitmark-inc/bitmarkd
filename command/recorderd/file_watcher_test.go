@@ -28,11 +28,7 @@ func setupTestFileWatcher(t *testing.T) *FileWatcherData {
 
 	fileWatcher := &FileWatcherData{
 		watcher: w,
-		reader: &ConfigReaderData{
-			fileName:             testFileName,
-			currentConfiguration: &Configuration{},
-		},
-		log: logger.New("test"),
+		log:     logger.New("test"),
 		watcherData: WatcherData{
 			channels: WatcherChannel{
 				change: changeChannel,
