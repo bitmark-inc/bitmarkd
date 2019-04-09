@@ -99,24 +99,6 @@ func (c *ConfigReaderData) Start() {
 	}()
 }
 
-func (c *ConfigReaderData) UpdatePeriodically() {
-	c.log.Info("star to update config perioditically")
-
-	go func() {
-		for {
-			select {
-			case <-time.After(c.refreshByMinute):
-				err := c.Refresh()
-				if nil != err {
-					c.log.Errorf("failed to read configuration from :%s error %s",
-						c.fileName, err)
-				}
-				c.notify()
-			}
-		}
-	}()
-}
-
 func (c *ConfigReaderData) Refresh() error {
 	configuration, err := c.parse()
 	if nil != err {
