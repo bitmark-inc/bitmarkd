@@ -13,12 +13,13 @@ import (
 )
 
 type ConfigReader interface {
-	Initialise(string)
 	OptimalThreadCount() uint32
 	SetCalendar(JobCalendar)
+	FirstRefresh(string) error
 	Refresh() error
-	GetConfig() (*Configuration, string, error)
+	GetConfig() (*Configuration, error)
 	SetLog(*logger.L) error
+	SetWatcher(watcher FileWatcher)
 	Start()
 	FirstTimeRun()
 	SetProofer(Proofer)
@@ -35,7 +36,6 @@ var (
 )
 
 type ConfigReaderData struct {
-	fileName             string
 	refreshByMinute      time.Duration
 	log                  *logger.L
 	currentConfiguration *Configuration
@@ -43,23 +43,21 @@ type ConfigReaderData struct {
 	threadCount          uint32
 	calendar             JobCalendar
 	proofer              Proofer
-	watcherChannel       WatcherChannel
+	watcher              FileWatcher
 }
 
-func newConfigReader(ch WatcherChannel) ConfigReader {
+func newConfigReader() ConfigReader {
 	return &ConfigReaderData{
 		log:                  nil,
 		currentConfiguration: nil,
 		threadCount:          1,
 		initialized:          false,
 		refreshByMinute:      oneMinute,
-		watcherChannel:       ch,
 	}
 }
 
-// configuration needs read first to know logger file location
-func (c *ConfigReaderData) Initialise(fileName string) {
-	c.fileName = fileName
+func (c *ConfigReaderData) SetWatcher(watcher FileWatcher) {
+	c.watcher = watcher
 }
 
 func (c *ConfigReaderData) SetCalendar(calendar JobCalendar) {
@@ -82,21 +80,31 @@ func (c *ConfigReaderData) Start() {
 	go func() {
 		for {
 			select {
-			case <-c.watcherChannel.change:
+			case <-c.watcher.ChangeChannel():
+				fileName := c.watcher.FileName()
 				c.log.Info("receive file change event, wait for 1 minute to adapt")
 				<-time.After(c.refreshByMinute)
 				err := c.Refresh()
 				if nil != err {
 					c.log.Errorf("failed to read configuration from :%s error %s",
-						c.fileName, err)
+						fileName, err)
 				}
 				c.notify()
-			case <-c.watcherChannel.remove:
+			case <-c.watcher.RemoveChannel():
 				c.log.Warn("config file removed")
 			}
 		}
 
 	}()
+}
+
+func (c *ConfigReaderData) FirstRefresh(fileName string) error {
+	configuration, err := getConfiguration(fileName)
+	if nil != err {
+		return err
+	}
+	c.update(configuration)
+	return nil
 }
 
 func (c *ConfigReaderData) Refresh() error {
@@ -114,18 +122,18 @@ func (c *ConfigReaderData) notify() {
 }
 
 func (c *ConfigReaderData) parse() (*Configuration, error) {
-	configuration, err := getConfiguration(c.fileName)
+	configuration, err := getConfiguration(c.watcher.FileName())
 	if nil != err {
 		return nil, err
 	}
 	return configuration, nil
 }
 
-func (c *ConfigReaderData) GetConfig() (*Configuration, string, error) {
+func (c *ConfigReaderData) GetConfig() (*Configuration, error) {
 	if nil == c.currentConfiguration {
-		return nil, "", fmt.Errorf("configuration is empty")
+		return nil, fmt.Errorf("configuration is empty")
 	}
-	return c.currentConfiguration, c.fileName, nil
+	return c.currentConfiguration, nil
 }
 
 func (c *ConfigReaderData) SetLog(log *logger.L) error {

@@ -12,6 +12,10 @@ import (
 
 type FileWatcher interface {
 	Start() error
+	FileName() string
+	FilePath() string
+	ChangeChannel() <-chan struct{}
+	RemoveChannel() <-chan struct{}
 }
 
 const (
@@ -19,14 +23,10 @@ const (
 )
 
 type FileWatcherData struct {
-	log         *logger.L
-	watcherData WatcherData
-	watcher     *fsnotify.Watcher
-	filePath    string
-}
-
-type WatcherData struct {
-	channels WatcherChannel
+	log      *logger.L
+	channel  WatcherChannel
+	watcher  *fsnotify.Watcher
+	filePath string
 }
 
 type WatcherChannel struct {
@@ -34,7 +34,7 @@ type WatcherChannel struct {
 	remove chan struct{}
 }
 
-func newFileWatcher(targetFile string, log *logger.L, data WatcherData) (FileWatcher, error) {
+func newFileWatcher(targetFile string, log *logger.L, channel WatcherChannel) (FileWatcher, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if nil != err {
 		log.Errorf("new watcher with error: %s", err.Error())
@@ -50,10 +50,10 @@ func newFileWatcher(targetFile string, log *logger.L, data WatcherData) (FileWat
 	}
 
 	return &FileWatcherData{
-		log:         log,
-		watcher:     watcher,
-		watcherData: data,
-		filePath:    filePath,
+		log:      log,
+		watcher:  watcher,
+		channel:  channel,
+		filePath: filePath,
 	}, nil
 }
 
@@ -68,8 +68,8 @@ func (w *FileWatcherData) Start() error {
 		for {
 			event := <-w.watcher.Events
 			w.log.Infof("file event: %v", event)
-			change := w.watcherData.channels.change
-			remove := w.watcherData.channels.remove
+			change := w.channel.change
+			remove := w.channel.remove
 
 			if watcherEventFileRemove(event) {
 				w.log.Errorf("file %s removed, stop", w.filePath)
@@ -102,6 +102,22 @@ func (w *FileWatcherData) sendEvent(ch chan<- struct{}, name string) {
 	} else {
 		w.log.Infof("event channel %s full, discard event", name)
 	}
+}
+
+func (w *FileWatcherData) FileName() string {
+	return path.Base(w.filePath)
+}
+
+func (w *FileWatcherData) FilePath() string {
+	return w.filePath
+}
+
+func (w *FileWatcherData) ChangeChannel() <-chan struct{} {
+	return w.channel.change
+}
+
+func (w *FileWatcherData) RemoveChannel() <-chan struct{} {
+	return w.channel.remove
 }
 
 func watcherEventFileRemove(event fsnotify.Event) bool {
