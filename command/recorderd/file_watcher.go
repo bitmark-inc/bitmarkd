@@ -2,18 +2,16 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"path"
 	"path/filepath"
-	"time"
 
 	"github.com/bitmark-inc/logger"
 	"github.com/fsnotify/fsnotify"
 )
 
 type FileWatcher interface {
-	Start()
+	Start() error
 }
 
 const (
@@ -59,47 +57,58 @@ func newFileWatcher(targetFile string, log *logger.L, data WatcherData) (FileWat
 	}, nil
 }
 
-func (w *FileWatcherData) Start() {
+func (w *FileWatcherData) Start() error {
 	err := w.watcher.Add(w.filePath)
 	if nil != err {
-		w.log.Errorf("watcher add error: %v", err)
+		w.log.Errorf("watcher add error: %v, abort", err)
+		return err
 	}
 
 	go func() {
 		for {
 			event := <-w.watcher.Events
-			fmt.Printf("file event: %v\n", event)
 			w.log.Infof("file event: %v", event)
-			remove := w.watcherData.channels.remove
 			change := w.watcherData.channels.change
+			remove := w.watcherData.channels.remove
+
+			if watcherEventFileRemove(event) {
+				w.log.Errorf("file %s removed, stop", w.filePath)
+				w.sendEvent(remove, "remove")
+				return
+			}
 
 			if path.Base(event.Name) != path.Base(filepath.Clean(w.filePath)) {
 				w.log.Infof("file %s not match, discard event", w.filePath)
 				continue
 			}
 
-			if event.Op&fsnotify.Remove == fsnotify.Remove {
-				w.log.Info("sending file remove event")
-				if !w.isChannelFull(remove) {
-					remove <- struct{}{}
-				} else {
-					w.log.Info("remove channel is full, discard event")
-				}
-			}
-
-			if event.Op&fsnotify.Write == fsnotify.Write ||
-				event.Op&fsnotify.Chmod == fsnotify.Chmod {
+			if watcherEventFileChange(event) {
 				w.log.Info("sending config change event...")
-				if !w.isChannelFull(change) {
-					change <- struct{}{}
-				} else {
-					w.log.Info("config change event channel full, discard event")
-				}
+				w.sendEvent(change, "change")
 			}
 		}
 	}()
+
+	return nil
 }
 
-func (w *FileWatcherData) isChannelFull(ch chan struct{}) bool {
+func (w *FileWatcherData) isChannelFull(ch chan<- struct{}) bool {
 	return len(ch) == cap(ch)
+}
+
+func (w *FileWatcherData) sendEvent(ch chan<- struct{}, name string) {
+	if !w.isChannelFull(ch) {
+		ch <- struct{}{}
+	} else {
+		w.log.Infof("event channel %s full, discard event", name)
+	}
+}
+
+func watcherEventFileRemove(event fsnotify.Event) bool {
+	return event.Name == "" || event.Op&fsnotify.Remove == fsnotify.Remove
+}
+
+func watcherEventFileChange(event fsnotify.Event) bool {
+	return event.Op&fsnotify.Write == fsnotify.Write ||
+		event.Op&fsnotify.Chmod == fsnotify.Chmod
 }
