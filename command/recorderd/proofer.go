@@ -97,10 +97,16 @@ func (p *ProoferData) setWorking(working bool) {
 }
 
 func (p *ProoferData) Refresh() {
-	p.log.Debugf("goroutine active count: %d, target count: %d",
+	p.log.Infof("goroutine active count: %d, target count: %d",
 		p.activeThread(),
 		p.reader.OptimalThreadCount(),
 	)
+
+	p.log.Infof("proofer setting change: %t, workable: %t",
+		p.changed(),
+		p.IsWorking(),
+	)
+
 	if !p.changed() || !p.IsWorking() {
 		return
 	}

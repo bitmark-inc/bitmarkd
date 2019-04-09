@@ -65,6 +65,7 @@ func (w *FileWatcherData) Start() {
 			}
 
 			if event.Op&fsnotify.Remove == fsnotify.Remove {
+				w.log.Info("sending file remove event")
 				if !w.isChannelFull(remove) {
 					remove <- struct{}{}
 				} else {
@@ -73,10 +74,11 @@ func (w *FileWatcherData) Start() {
 			}
 
 			if event.Op&fsnotify.Write == fsnotify.Write {
+				w.log.Info("sending config change event...")
 				if !w.isChannelFull(change) {
 					change <- struct{}{}
 				} else {
-					w.log.Info("change channel is full, discard event")
+					w.log.Info("config change event channel full, discard event")
 				}
 			}
 		}
