@@ -63,6 +63,7 @@ func (w *FileWatcherData) Start() error {
 		w.log.Errorf("watcher add error: %v, abort", err)
 		return err
 	}
+	defer w.watcher.Close()
 
 	go func() {
 		for {
