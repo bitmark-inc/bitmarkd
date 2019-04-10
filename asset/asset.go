@@ -6,6 +6,7 @@ package asset
 
 import (
 	"sync"
+	"sync/atomic"
 
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -240,7 +241,7 @@ func SetVerified(assetId transactionrecord.AssetIdentifier) {
 func IncrementTTL(assetId transactionrecord.AssetIdentifier) {
 	globalData.RLock()
 	if _, ok := globalData.cache[assetId]; ok {
-		globalData.cache[assetId].ttl += 1
+		atomic.AddUint64(&globalData.cache[assetId].ttl, 1)
 	}
 	globalData.RUnlock()
 }
@@ -248,7 +249,7 @@ func IncrementTTL(assetId transactionrecord.AssetIdentifier) {
 func DecrementTTL(assetId transactionrecord.AssetIdentifier) {
 	globalData.RLock()
 	if _, ok := globalData.cache[assetId]; ok {
-		globalData.cache[assetId].ttl -= 1
+		atomic.AddUint64(&globalData.cache[assetId].ttl, ^uint64(0))
 	}
 	globalData.RUnlock()
 }
