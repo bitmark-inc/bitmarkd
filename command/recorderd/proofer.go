@@ -42,14 +42,14 @@ type Proofer interface {
 
 type ProoferData struct {
 	sync.RWMutex
-	activeThreadCount uint32
-	prevThreadCount   uint32
-	proofIDs          []bool
-	stopChannel       chan struct{}
-	log               *logger.L
-	workingNow        bool
-	cpuCount          int
-	reader            ConfigReader
+	eventuallyThreadCount uint32
+	prevThreadCount       uint32
+	proofIDs              []bool
+	stopChannel           chan struct{}
+	log                   *logger.L
+	workingNow            bool
+	cpuCount              int
+	reader                ConfigReader
 }
 
 func newProofer(log *logger.L, reader ConfigReader) Proofer {
@@ -66,23 +66,25 @@ func newProofer(log *logger.L, reader ConfigReader) Proofer {
 
 func (p *ProoferData) StartHashing() {
 	p.log.Infof("receive start hashing request, current active thread %d",
-		p.activeThread())
+		p.targetThreadCount())
 	p.setWorking(true)
-	if p.activeThread() < 1 {
+	if p.targetThreadCount() < 1 {
 		p.createProofer(p.reader.OptimalThreadCount())
 	}
 }
 
 func (p *ProoferData) StopHashing() {
 	p.log.Infof("receive stop hashing request, current active thread %d",
-		p.activeThread())
+		p.targetThreadCount())
 	p.setWorking(false)
-	p.deleteProofer(int32(p.activeThread()))
+	p.deleteProofer(int32(p.targetThreadCount()))
 }
 
 func (p *ProoferData) deleteProofer(count int32) {
 	p.log.Infof("delete %d goroutine from hashing", count)
 	for i := int32(0); i < count; i++ {
+
+		p.eventuallyThreadCount--
 		p.log.Debug("send signal to stop channel")
 		p.stopChannel <- struct{}{}
 	}
@@ -98,7 +100,7 @@ func (p *ProoferData) setWorking(working bool) {
 
 func (p *ProoferData) Refresh() {
 	p.log.Infof("goroutine active count: %d, target count: %d",
-		p.activeThread(),
+		p.targetThreadCount(),
 		p.reader.OptimalThreadCount(),
 	)
 
@@ -113,11 +115,11 @@ func (p *ProoferData) Refresh() {
 
 	increment := p.differenceToTargetThreadCount(
 		p.reader.OptimalThreadCount(),
-		p.activeThread(),
+		p.targetThreadCount(),
 	)
 
 	p.log.Infof("refresh settings, active goroutine %d, increase %d goroutine from hashing",
-		p.activeThread(), increment)
+		p.targetThreadCount(), increment)
 
 	if increment > 0 {
 		p.createProofer(uint32(increment))
@@ -134,7 +136,6 @@ func (p *ProoferData) activeThreadIncrement(threadNum uint32) {
 	p.Lock()
 	defer p.Unlock()
 
-	p.activeThreadCount++
 	p.proofIDs[threadNum] = true
 }
 
@@ -142,15 +143,14 @@ func (p *ProoferData) activeThreadDecrement(threadNum uint32) {
 	p.Lock()
 	defer p.Unlock()
 
-	p.activeThreadCount--
 	p.proofIDs[threadNum] = false
 }
 
-func (p *ProoferData) activeThread() uint32 {
+func (p *ProoferData) targetThreadCount() uint32 {
 	p.Lock()
 	defer p.Unlock()
 
-	return p.activeThreadCount
+	return p.eventuallyThreadCount
 }
 
 func ProofQueueIncrement() {
@@ -223,6 +223,7 @@ func (p *ProoferData) nextProoferID() (int, error) {
 func (p *ProoferData) createProofer(threadCount uint32) {
 	p.log.Infof("increase %d goroutine for hashing", threadCount)
 	for i := uint32(0); i < threadCount; i++ {
+		p.eventuallyThreadCount++
 		proofID, err := p.nextProoferID()
 		if nil != err {
 			return
