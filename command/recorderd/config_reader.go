@@ -86,7 +86,7 @@ func (c *ConfigReaderData) Start() {
 				<-time.After(c.refreshByMinute)
 				err := c.Refresh()
 				if nil != err {
-					c.log.Errorf("failed to read configuration from :%s error %s",
+					c.log.Errorf("failed to read configuration from %s error: %s",
 						fileName, err)
 				}
 				c.notify()

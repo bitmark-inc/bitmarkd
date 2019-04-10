@@ -38,15 +38,14 @@ func TestActiveThreadCount(t *testing.T) {
 	p := setupProofer(t)
 	defer teardownProofer(p, defaultActiveThreadCount+1)
 
-	threadCount := p.activeThread()
+	threadCount := p.targetThreadCount()
 	if defaultActiveThreadCount != threadCount {
 		t.Errorf("initial active thread count %d differs from %d",
 			threadCount, defaultActiveThreadCount)
 	}
-	p.activeThreadIncrement(0)
-	defer p.activeThreadDecrement(0)
+	p.eventuallyThreadCount++
 
-	threadCount = p.activeThread()
+	threadCount = p.targetThreadCount()
 	expected := uint32(defaultActiveThreadCount + 1)
 	if expected != threadCount {
 		t.Errorf("after increasing active thread, count %d different thatn expected %d",
