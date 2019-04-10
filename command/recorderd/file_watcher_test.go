@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
@@ -61,10 +62,11 @@ func TestStart(t *testing.T) {
 	fileWatcher := setupTestFileWatcher(t)
 	defer teardown()
 
-	f, _ := os.Create(testFileName)
-	f.WriteString("start")
-	f.Sync()
-	f.Close()
+	emptyFile, err := os.Create(fileWatcher.filePath)
+	if nil != err {
+		t.Errorf("create empty file error: %v", err)
+	}
+	emptyFile.Close()
 
 	changed := false
 	removed := false
@@ -92,20 +94,22 @@ func TestStart(t *testing.T) {
 	go fileWatcher.Start()
 	time.Sleep(time.Duration(1) * time.Second)
 
-	f, _ = os.OpenFile(testFileName, os.O_RDWR, 0666)
-	f.WriteString("this is test string")
-	f.Sync()
-	f.Close()
+	err = ioutil.WriteFile(fileWatcher.filePath, []byte("test"), 0777)
+	if nil != err {
+		t.Errorf("write file error: %v", err)
+	}
 
 	wg.Wait()
+	if !changed {
+		t.Errorf("watcher not receive change event")
+	}
+
 	wg.Add(1)
 	os.Remove(testFileName)
 	wg.Wait()
 
-	fileWatcher.watcher.Close()
-
-	if !changed || !removed {
-		t.Errorf("watcher not receive event")
+	if !removed {
+		t.Errorf("watcher not receive remove event")
 	}
 }
 

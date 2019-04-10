@@ -46,6 +46,7 @@ func newFileWatcher(targetFile string, log *logger.L, channel WatcherChannel) (F
 	}
 
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		log.Errorf("file %s not exist", filePath)
 		return nil, errors.New("file does not exist")
 	}
 
@@ -63,7 +64,6 @@ func (w *FileWatcherData) Start() error {
 		w.log.Errorf("watcher add error: %v, abort", err)
 		return err
 	}
-	defer w.watcher.Close()
 
 	go func() {
 		for {
@@ -122,7 +122,7 @@ func (w *FileWatcherData) RemoveChannel() <-chan struct{} {
 }
 
 func watcherEventFileRemove(event fsnotify.Event) bool {
-	return event.Name == "" || event.Op&fsnotify.Remove == fsnotify.Remove
+	return event.Op&fsnotify.Remove == fsnotify.Remove
 }
 
 func watcherEventFileChange(event fsnotify.Event) bool {
