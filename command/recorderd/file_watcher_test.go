@@ -89,9 +89,8 @@ func TestStart(t *testing.T) {
 		}
 	}()
 
-	time.Sleep(time.Duration(1) * time.Second)
-
 	go fileWatcher.Start()
+	time.Sleep(time.Duration(1) * time.Second)
 
 	f, _ = os.OpenFile(testFileName, os.O_RDWR, 0666)
 	f.WriteString("this is test string")
