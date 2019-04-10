@@ -125,6 +125,5 @@ func watcherEventFileRemove(event fsnotify.Event) bool {
 }
 
 func watcherEventFileChange(event fsnotify.Event) bool {
-	return event.Op&fsnotify.Write == fsnotify.Write ||
-		event.Op&fsnotify.Chmod == fsnotify.Chmod
+	return event.Op&fsnotify.Write == fsnotify.Write
 }
