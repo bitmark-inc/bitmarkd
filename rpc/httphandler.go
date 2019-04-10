@@ -141,8 +141,8 @@ func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type blockInfo struct {
-		LRCount    lrCount `json:"lr_count"`
-		LatestHash string  `json:"latest_hash"`
+		LRCount lrCount `json:"lr_count"`
+		Hash    string  `json:"hash"`
 	}
 
 	type peerCounts struct {
@@ -171,7 +171,7 @@ func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 				Local:  blockheader.Height(),
 				Remote: peer.BlockHeight(),
 			},
-			LatestHash: block.LastBlockHash(),
+			Hash: block.LastBlockHash(),
 		},
 		RPCs: connectionCount.Uint64(),
 		// Miners : mine.ConnectionCount(),
