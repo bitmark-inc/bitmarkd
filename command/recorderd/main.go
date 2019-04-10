@@ -89,7 +89,13 @@ func main() {
 		change: make(chan struct{}, 1),
 		remove: make(chan struct{}, 1),
 	}
-	watcher, _ := newFileWatcher(configurationFile, logger.New(FileWatcherLoggerPrefix), watcherChannel)
+	watcher, err := newFileWatcher(configurationFile, logger.New(FileWatcherLoggerPrefix), watcherChannel)
+	if nil != err {
+		exitwithstatus.Message("%s: file watcher setup failed with error: %s",
+			program,
+			err,
+		)
+	}
 
 	reader.SetWatcher(watcher)
 
