@@ -6,7 +6,6 @@ package block
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 	"reflect"
 	"sync"
 
@@ -409,7 +408,7 @@ func LastBlockHash() string {
 			return ""
 		}
 
-		return hex.EncodeToString(digest[:])
+		return digest.String()
 	}
 
 	return ""

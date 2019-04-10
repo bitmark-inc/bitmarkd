@@ -66,8 +66,8 @@ func (node *Node) List(arguments *NodeArguments, reply *NodeReply) error {
 type InfoArguments struct{}
 
 type BlockInfo struct {
-	Height     uint64 `json:"height"`
-	LatestHash string `json:"latest_hash"`
+	Height uint64 `json:"height"`
+	Hash   string `json:"hash"`
 }
 
 type InfoReply struct {
@@ -98,8 +98,8 @@ func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 	reply.Chain = mode.ChainName()
 	reply.Mode = mode.String()
 	reply.Blocks = BlockInfo{
-		Height:     blockheader.Height(),
-		LatestHash: block.LastBlockHash(),
+		Height: blockheader.Height(),
+		Hash:   block.LastBlockHash(),
 	}
 	reply.RPCs = connectionCount.Uint64()
 	reply.Peers = incoming + outgoing
