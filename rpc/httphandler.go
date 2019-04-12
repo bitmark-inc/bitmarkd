@@ -141,7 +141,7 @@ func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type blockInfo struct {
-		LRCount lrCount `json:"lr_count"`
+		LRCount lrCount `json:"count"`
 		Hash    string  `json:"hash"`
 	}
 
