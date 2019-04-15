@@ -136,7 +136,7 @@ PRETTY() {
 }
 
 READY() {
-  local s mode
+  local s mode blocks_q
   s=0
   printf 'waiting for sync -'
   while :
@@ -147,7 +147,19 @@ READY() {
     SPINNER 1
   done
   printf '\bOK\n'
-  SET chain .chain  blocks .blocks  version .version  uptime .uptime
+
+  blocks_q='
+    (.blocks | type) as $t |
+    if $t == "number" then
+      .blocks
+    elif $t == "object" then
+      .blocks.height
+    else
+      "INVALID"
+    end
+'
+  SET chain .chain  blocks "${blocks_q}"  version .version  uptime .uptime
+  [ X"${blocks}" = X"INVALID" ] && ERROR 'cannot connect to bitmarkd version: "%s"' "${version}"
 }
 
 BITMARKD() {
