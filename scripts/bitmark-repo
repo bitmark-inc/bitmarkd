@@ -24,7 +24,7 @@ USAGE()
     printf "$@"
     printf '\n'
   fi
-  echo usage: $(basename "$0") '[options] bitmarkd-arguments...'
+  echo usage: $(basename "$0") '[options]'
   echo '       --help             -h            this message'
   echo '       --verbose          -v            more messages'
   echo '       --remote=NAME      -r NAME       set remote name ['"${remote}"']'
@@ -32,6 +32,7 @@ USAGE()
   echo '       --user=NAME        -u NAME       set blockchain user'
   echo '       --network=NET      -n NET        set blockchain network (local/test/bitmark) ['"${network}"']'
   echo '       --list             -l            list properties for user'
+  echo '       --continue         -c            do not stop on transaction already exists'
   echo '       --debug                          debuging messages'
   exit 1
 }
@@ -211,6 +212,7 @@ remote=origin
 network=test
 user=
 list=no
+continue=no
 
 # required programs
 programs='jq bitmark-cli git'
@@ -230,7 +232,7 @@ do
   [ -x "${g}" ] && getopt="${g}" && break
 done
 [ -x "${getopt}" ] || ERROR 'no suitable getopt was found'
-args=$(${getopt} -o hvp:n:u:lD --long=help,verbose,url:,network:,user:,list,debug -- "$@") || exit 1
+args=$(${getopt} -o hvp:n:u:lcD --long=help,verbose,url:,network:,user:,list,continue,debug -- "$@") || exit 1
 
 # replace the arguments with the parsed values
 eval set -- "${args}"
@@ -274,6 +276,10 @@ do
 
     (-l|--list)
       list=yes
+      ;;
+
+    (-c|--continue)
+      continue=yes
       ;;
 
     (-D|--debug)
@@ -355,7 +361,12 @@ git log --date=iso8601-strict --date-order --format='%H %cI' | (
     else
       SET error '.error'
       VERBOSE 'error: "%s"' "${error}"
-      [ X"${error}" = X"terminated with error: transaction already exists" ] && break
+      if [ X"${error}" = X"terminated with error: transaction already exists" ]
+      then
+        [ X"${continue}" = X"no" ] && break
+      else
+        break
+      fi
     fi
  done
 )
