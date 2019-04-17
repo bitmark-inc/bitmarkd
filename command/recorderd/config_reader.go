@@ -122,7 +122,7 @@ func (c *ConfigReaderData) notify() {
 }
 
 func (c *ConfigReaderData) parse() (*Configuration, error) {
-	configuration, err := getConfiguration(c.watcher.FileName())
+	configuration, err := getConfiguration(c.watcher.FilePath())
 	if nil != err {
 		return nil, err
 	}
