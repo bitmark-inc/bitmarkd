@@ -33,7 +33,7 @@ M.chain = "local"
 -- default: 50
 -- M.max_cpu_usage = 30
 
--- scheulde time recorderd runs
+-- schedule time recorderd runs
 -- time is denoted by hour:minute, hour is denoted in 24-hour clock format
 -- hour ranges from 0 - 24, minute ranges from 0 - 59
 -- period is denoted as start:stop, start time must be earlier than stop time, e.g. "13:00-14:00"
