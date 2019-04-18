@@ -65,7 +65,7 @@ CLI() {
       esac
   done
   user="${1}"; shift
-  [ X"${verbose}" = X"yes" ] && printf '\033[1;33mCLI[%s]: \033[1;31m%s\033[0m\n' "${user}" "$*"
+  [ X"${verbose}" = X"yes" ] && printf '\033[1;33mCLI[%s]: \033[1;31m%s\033[0m\n' "${network}/${user}" "$*"
   r=$(bitmark-cli -i "${user}" -p 1234567890 -n "${network}" "$@" 2>&1)
   if [ X"${check}" = X"yes" -a $? -ne 0 ]
   then
