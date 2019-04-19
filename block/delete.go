@@ -40,7 +40,7 @@ func DeleteDownToBlock(finalBlockNumber uint64) error {
 
 outer_loop:
 	for {
-		header, digest, data, err := blockrecord.ExtractHeader(packedBlock)
+		header, digest, data, err := blockrecord.ExtractHeader(packedBlock, 0)
 		if nil != err {
 			log.Criticalf("failed to unpack block: %d from storage  error: %s", binary.BigEndian.Uint64(last.Key), err)
 			return err
@@ -320,6 +320,9 @@ outer_loop:
 		storage.Pool.BlockOwnerTxIndex.Delete(foundationTxId[:])
 		storage.Pool.BlockOwnerPayment.Delete(blockNumberKey)
 		storage.Pool.Blocks.Delete(blockNumberKey)
+
+		// and delete its hash
+		storage.Pool.BlockHeaderHash.Delete(blockNumberKey)
 
 		// fetch previous block number
 		binary.BigEndian.PutUint64(blockNumberKey, header.Number-1)

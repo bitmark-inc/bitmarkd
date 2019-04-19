@@ -35,7 +35,7 @@ func DigestForBlock(number uint64) (blockdigest.Digest, error) {
 		return blockdigest.Digest{}, fault.ErrBlockNotFound
 	}
 
-	_, digest, _, err := blockrecord.ExtractHeader(packed)
+	_, digest, _, err := blockrecord.ExtractHeader(packed, 0)
 
 	return digest, err
 }

@@ -77,7 +77,9 @@ type Header struct {
 }
 
 // extract a header from the front of a []byte
-func ExtractHeader(block []byte) (*Header, blockdigest.Digest, []byte, error) {
+// if checkHeight non-zero then verify correct block number first
+// to reduce hashing load for obviously incorrect blocks
+func ExtractHeader(block []byte, checkHeight uint64) (*Header, blockdigest.Digest, []byte, error) {
 	if len(block) < totalBlockSize {
 		return nil, blockdigest.Digest{}, nil, fault.ErrInvalidBlockHeaderSize
 	}
@@ -87,6 +89,10 @@ func ExtractHeader(block []byte) (*Header, blockdigest.Digest, []byte, error) {
 	header, err := packedHeader.Unpack()
 	if nil != err {
 		return nil, blockdigest.Digest{}, nil, err
+	}
+
+	if checkHeight > 0 && header.Number != checkHeight {
+		return nil, blockdigest.Digest{}, nil, fault.ErrHeightOutOfSequence
 	}
 
 	var digest blockdigest.Digest

@@ -43,21 +43,18 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 
 	reservoir.ClearSpend()
 
-	header, digest, data, err := blockrecord.ExtractHeader(packedBlock)
-	if nil != err {
-		return err
-	}
-	thisBlockNumberKey := make([]byte, 8)
-	binary.BigEndian.PutUint64(thisBlockNumberKey, header.Number)
-
 	// get current block header
 	height, previousBlock, previousVersion, previousTimestamp := blockheader.Get()
 
+	// extract incoming block record, checking for correct sequence
+	header, digest, data, err := blockrecord.ExtractHeader(packedBlock, height+1)
+	if nil != err {
+		return err
+	}
+
+	// ensure correct linkage
 	if previousBlock != header.PreviousBlock {
 		return fault.ErrPreviousBlockDigestDoesNotMatch
-	}
-	if height+1 != header.Number {
-		return fault.ErrHeightOutOfSequence
 	}
 
 	// check version
@@ -69,6 +66,10 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 	if previousVersion > header.Version {
 		return fault.ErrBlockVersionMustNotDecrease
 	}
+
+	// create database key for block number
+	thisBlockNumberKey := make([]byte, 8)
+	binary.BigEndian.PutUint64(thisBlockNumberKey, header.Number)
 
 	// timestamp must be higher than previous
 	if previousTimestamp > header.Timestamp {

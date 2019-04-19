@@ -57,7 +57,7 @@ func (bitmark *BlockOwner) TxIdForBlock(info *TxIdForBlockArguments, reply *TxId
 		return fault.ErrBlockNotFound
 	}
 
-	header, digest, _, err := blockrecord.ExtractHeader(packedBlock)
+	header, digest, _, err := blockrecord.ExtractHeader(packedBlock, 0)
 	if nil != err {
 		return err
 	}
