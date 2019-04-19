@@ -28,6 +28,8 @@
 //
 //   B ⧺ BN               - block store
 //                          data: header ⧺ (concat transactions)
+//   2 ⧺ BN               - block Argon2 hashes
+//                          data: hash of block
 //   H ⧺ BN               - current block currencies
 //                          data: map(currency → currency address)
 //   I ⧺ txId             - current block owner transaction index

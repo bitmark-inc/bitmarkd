@@ -23,7 +23,7 @@ import (
 // note all must be exported (i.e. initial capital) or initialisation will panic
 type pools struct {
 	Blocks            *PoolHandle `prefix:"B" database:"blocks"`
-	BlockHeaderHash   *PoolHandle `prefix:"H" database:"blocks"`
+	BlockHeaderHash   *PoolHandle `prefix:"2" database:"blocks"`
 	BlockOwnerPayment *PoolHandle `prefix:"H" database:"index"`
 	BlockOwnerTxIndex *PoolHandle `prefix:"I" database:"index"`
 	Assets            *PoolNB     `prefix:"A" database:"index"`
@@ -44,7 +44,7 @@ var Pool pools
 var versionKey = []byte{0x00, 'V', 'E', 'R', 'S', 'I', 'O', 'N'}
 
 const (
-	currentBlockDBVersion = 0x300
+	currentBlockDBVersion = 0x301
 	currentIndexDBVersion = 0x200
 )
 
