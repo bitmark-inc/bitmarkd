@@ -10,10 +10,12 @@
 #   node_N must be the accounts of the bitmarkds
 user_1=first
 user_2=second
-user_3=node-1
-user_4=node-2
-user_5=node-3
-user_6=node-4
+next_user=3
+for i in 1 2 3 4 5 6 7 8 9
+do
+  eval user_${next_user}=\"node-${i}\"
+  next_user=$((next_user + 1))
+done
 
 # first asset
 asset_name_1='first test asset'
