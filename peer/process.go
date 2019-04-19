@@ -6,6 +6,7 @@ package peer
 
 import (
 	"encoding/binary"
+
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -25,76 +26,76 @@ func processSubscription(log *logger.L, command string, arguments [][]byte) {
 	switch string(command) {
 	case "block":
 		if dataLength < 1 {
-			log.Warnf("block with too few data: %d items", dataLength)
+			log.Debugf("block with too few data: %d items", dataLength)
 			return
 		}
 		log.Infof("received block: %x", arguments[0])
 		if !mode.Is(mode.Normal) {
 			err := fault.ErrNotAvailableDuringSynchronise
-			log.Warnf("failed assets: error: %s", err)
+			log.Debugf("failed assets: error: %s", err)
 		} else {
 			messagebus.Bus.Blockstore.Send("remote", arguments[0])
 		}
 
 	case "assets":
 		if dataLength < 1 {
-			log.Warnf("assets with too few data: %d items", dataLength)
+			log.Debugf("assets with too few data: %d items", dataLength)
 			return
 		}
 		log.Infof("received assets: %x", arguments[0])
 		err := processAssets(arguments[0])
 		if nil != err {
-			log.Warnf("failed assets: error: %s", err)
+			log.Debugf("failed assets: error: %s", err)
 		} else {
 			messagebus.Bus.Broadcast.Send("assets", arguments[0])
 		}
 
 	case "issues":
 		if dataLength < 1 {
-			log.Warnf("issues with too few data: %d items", dataLength)
+			log.Debugf("issues with too few data: %d items", dataLength)
 			return
 		}
 		log.Infof("received issues: %x", arguments[0])
 		err := processIssues(arguments[0])
 		if nil != err {
-			log.Warnf("failed issues: error: %s", err)
+			log.Debugf("failed issues: error: %s", err)
 		} else {
 			messagebus.Bus.Broadcast.Send("issues", arguments[0])
 		}
 
 	case "transfer":
 		if dataLength < 1 {
-			log.Warnf("transfer with too few data: %d items", dataLength)
+			log.Debugf("transfer with too few data: %d items", dataLength)
 			return
 		}
 		log.Infof("received transfer: %x", arguments[0])
 		err := processTransfer(arguments[0])
 		if nil != err {
-			log.Warnf("failed transfer: error: %s", err)
+			log.Debugf("failed transfer: error: %s", err)
 		} else {
 			messagebus.Bus.Broadcast.Send("transfer", arguments[0])
 		}
 
 	case "proof":
 		if dataLength < 1 {
-			log.Warnf("proof with too few data: %d items", dataLength)
+			log.Debugf("proof with too few data: %d items", dataLength)
 			return
 		}
 		log.Infof("received proof: %x", arguments[0])
 		err := processProof(arguments[0])
 		if nil != err {
-			log.Warnf("failed proof: error: %s", err)
+			log.Debugf("failed proof: error: %s", err)
 		} else {
 			messagebus.Bus.Broadcast.Send("proof", arguments[0])
 		}
 
 	case "rpc":
 		if dataLength < 3 {
-			log.Warnf("rpc with too few data: %d items", dataLength)
+			log.Debugf("rpc with too few data: %d items", dataLength)
 			return
 		}
 		if 8 != len(arguments[2]) {
-			log.Warn("rpc with invalid timestamp")
+			log.Debug("rpc with invalid timestamp")
 			return
 		}
 		timestamp := binary.BigEndian.Uint64(arguments[2])
@@ -105,11 +106,11 @@ func processSubscription(log *logger.L, command string, arguments [][]byte) {
 
 	case "peer":
 		if dataLength < 3 {
-			log.Warnf("peer with too few data: %d items", dataLength)
+			log.Debugf("peer with too few data: %d items", dataLength)
 			return
 		}
 		if 8 != len(arguments[2]) {
-			log.Warn("peer with invalid timestamp")
+			log.Debug("peer with invalid timestamp")
 			return
 		}
 		timestamp := binary.BigEndian.Uint64(arguments[2])
@@ -120,14 +121,14 @@ func processSubscription(log *logger.L, command string, arguments [][]byte) {
 
 	case "heart":
 		if dataLength < 1 {
-			log.Warnf("heart with too few data: %d items", dataLength)
+			log.Debugf("heart with too few data: %d items", dataLength)
 			return
 		}
 		log.Infof("received heart: %q", arguments[0])
 		// nothing to forward, this is just to keep communication alive
 
 	default:
-		log.Warnf("received unhandled command: %q arguments: %x", command, arguments)
+		log.Debugf("received unhandled command: %q arguments: %x", command, arguments)
 
 	}
 }
