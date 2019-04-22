@@ -167,6 +167,7 @@ func processAssets(packed []byte) error {
 		packed = packed[n:]
 	}
 
+	// all items were duplicates
 	if !ok {
 		return fault.ErrNoNewTransactions
 	}

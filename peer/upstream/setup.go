@@ -187,6 +187,8 @@ func upstreamRunner(u *Upstream, shutdown <-chan struct{}) {
 
 	queue := messagebus.Bus.Broadcast.Chan(queueSize)
 
+	timer := time.After(cycleInterval)
+
 loop:
 	for {
 		log.Debug("waiting…")
@@ -195,24 +197,8 @@ loop:
 		case <-shutdown:
 			break loop
 
-		case item := <-queue:
-			log.Debugf("from queue: %q  %x", item.Command, item.Parameters)
-
-			if u.registered {
-				u.Lock()
-				err := push(u.client, u.log, &item)
-				if nil != err {
-					log.Errorf("push: error: %s", err)
-					err := u.client.Reconnect()
-					if nil != err {
-						log.Errorf("push: reconnect error: %s", err)
-					}
-				}
-
-				u.Unlock()
-			}
-
-		case <-time.After(cycleInterval):
+		case <-timer:
+			timer = time.After(cycleInterval)
 			u.Lock()
 			if !u.registered {
 				err := register(u.client, u.log)
@@ -244,6 +230,22 @@ loop:
 				}
 			}
 			u.Unlock()
+
+		case item := <-queue:
+			log.Debugf("from queue: %q  %x", item.Command, item.Parameters)
+
+			if u.registered {
+				u.Lock()
+				err := push(u.client, u.log, &item)
+				if nil != err {
+					log.Errorf("push: error: %s", err)
+					err := u.client.Reconnect()
+					if nil != err {
+						log.Errorf("push: reconnect error: %s", err)
+					}
+				}
+				u.Unlock()
+			}
 		}
 	}
 	log.Info("shutting down…")
@@ -257,11 +259,13 @@ func register(client *zmqutil.Client, log *logger.L) error {
 
 	err := announce.SendRegistration(client, "R")
 	if nil != err {
+		log.Errorf("register: %s send error: %s", client, err)
 		return err
 	}
 
 	data, err := client.Receive(0)
 	if nil != err {
+		log.Errorf("register: %s receive error: %s", client, err)
 		return err
 	}
 
@@ -292,17 +296,20 @@ func register(client *zmqutil.Client, log *logger.L) error {
 	}
 }
 
+// must have lock held before calling this
 func getHeight(client *zmqutil.Client, log *logger.L) (uint64, error) {
 
-	log.Debugf("getHeight: client: %s", client)
+	log.Infof("getHeight: client: %s", client)
 
 	err := client.Send("N")
 	if nil != err {
+		log.Errorf("getHeight: %s send error: %s", client, err)
 		return 0, err
 	}
 
 	data, err := client.Receive(0)
 	if nil != err {
+		log.Errorf("push: %s receive error: %s", client, err)
 		return 0, err
 	}
 	if 2 != len(data) {
@@ -324,9 +331,10 @@ func getHeight(client *zmqutil.Client, log *logger.L) (uint64, error) {
 	}
 }
 
+// must have lock held before calling this
 func push(client *zmqutil.Client, log *logger.L, item *messagebus.Message) error {
 
-	log.Debugf("push: client: %s  %q %x", client, item.Command, item.Parameters)
+	log.Infof("push: client: %s  %q %x", client, item.Command, item.Parameters)
 
 	err := client.Send(item.Command, item.Parameters)
 	if nil != err {

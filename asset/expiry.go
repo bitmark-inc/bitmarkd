@@ -32,7 +32,7 @@ loop:
 		case <-shutdown:
 			break loop
 		case assetId := <-state.queue:
-			log.Infof("received: asset id: %s", assetId)
+			log.Debugf("received: asset id: %s", assetId)
 			l.PushBack(expiry{
 				assetId: assetId,
 				expires: time.Now().Add(constants.AssetTimeout),
