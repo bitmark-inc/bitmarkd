@@ -8,40 +8,24 @@ Prerequisites
 * Configure environment variables for go system
 * install the ZMQ4 and Argon2 libraries
 
-For shell add the following to the shell's profile
-(remark the `export CC=clang` if you wish to use gcc)
-~~~~~
-# check for go installation
-GOPATH="${HOME}/gocode"
-if [ -d "${GOPATH}" ]
-then
-  gobin="${GOPATH}/bin"
-  export GOPATH
-  export PATH="${PATH}:${gobin}"
-  # needed for FreeBSD 10 and later
-  export CC=clang
-else
-  unset GOPATH
-fi
-unset gobin
-~~~~~
 
-On FreeBSD
+## FreeBSD
 
 ~~~~~
 pkg install libzmq4 libargon2
 ~~~~~
 
-On  MacOSX
+## MacOSX
+
 (be sure that homebrew is installed correctly)
 ~~~~
 brew install argon2
 
 brew tap bitmark-inc/bitmark
-brew install zeromq41
+brew install zeromq43
 ~~~~
 
-On Ubuntu
+## Ubuntu
 (tested dor distribution 18.04)
 
 Install following packages
@@ -100,24 +84,24 @@ Note that a similar process is needed for the prooferd (mining subsystem)
 # Coding
 
 * setup git hooks
-  
-  Link git hooks directory, run command `./scripts/setup-hook.sh` at root of bitmarkd 
+
+  Link git hooks directory, run command `./scripts/setup-hook.sh` at root of bitmarkd
   directory. Currently it provides checkings for two stages:
-  
+
   1. Before commit (`pre-commt`)
 
 	Runs `go lint` for every modified file(s). It shows suggestions but not
-    necessary to follow. 
+    necessary to follow.
 
   2. Before push to remote (`pre-push`)
-  
+
   	Runs `go test` for whole directory except `vendor` one. It is
     mandatory to pass this check because generally, new modifications should not
     break existing logic/behavior.
-    
+
     Other optional actions are `sonaqube` and `go tool vet`. These two are
     optional to follow since static code analysis just provide some advice.
-  
+
 * all variables are camel case i.e. no underscores
 * labels are all lowercase with '_' between words
 * imports and one single block
