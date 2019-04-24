@@ -66,7 +66,7 @@ CLI() {
   done
   user="${1}"; shift
   [ X"${verbose}" = X"yes" ] && printf '\033[1;33mCLI[%s]: \033[1;31m%s\033[0m\n' "${network}/${user}" "$*"
-  r=$(bitmark-cli -i "${user}" -p 1234567890 -n "${network}" "$@" 2>&1)
+  r=$(bitmark-cli -i "${user}" -p "${password}" -n "${network}" "$@" 2>&1)
   if [ X"${check}" = X"yes" -a $? -ne 0 ]
   then
     [ -z "${r}" ] && r='unknown error: stdout empty'
@@ -340,11 +340,27 @@ VERBOSE 'git url: %s' "${url}"
 # wait for bitmarkd ready
 BITMARKD
 
+# list
 if [ X"${list}" = X"yes" ]
 then
   SHOW-OWNERSHIP
   exit 0
 fi
+
+# read password
+password=
+tty_state=
+restore_tty() {
+  [ -z "${tty_state}" ] || stty ${tty_state}
+  tty_state=
+}
+trap restore_tty INT EXIT
+tty_state=$(stty -g)
+stty -echo
+read -p 'password:' password
+[ $? -eq 0 ] || exit 1
+echo
+restore_tty
 
 # extract all commits in reverse date order
 # bitmarks from most recent commit and stops on duplicate
