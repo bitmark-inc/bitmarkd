@@ -26,7 +26,7 @@ brew install zeromq43
 ~~~~
 
 ## Ubuntu
-(tested dor distribution 18.04)
+(tested on distribution 18.04)
 
 Install following packages
    `sudo apt install libargon2-0-dev uuid-dev libzmq3-dev`
