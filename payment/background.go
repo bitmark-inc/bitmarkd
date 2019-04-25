@@ -225,7 +225,7 @@ loop:
 		case <-shutdown:
 			break loop
 
-		case <-time.After(blockchainCheckInterval):
+		case <-time.After(blockchainCheckInterval): // timeout
 			log.Info("checking…")
 			var wg sync.WaitGroup
 			for _, handler := range globalData.handlers {

@@ -221,7 +221,6 @@ loop:
 		select {
 		case <-finish:
 			break loop
-			//case <-time.After(1 * time.Millisecond):
 		default:
 		}
 
@@ -259,7 +258,6 @@ func bg(key *[]byte, stop <-chan struct{}) {
 		select {
 		case <-stop:
 			return
-		//case <-time.After(t):
 		default:
 		}
 

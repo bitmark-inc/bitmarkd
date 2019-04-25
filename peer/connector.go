@@ -199,6 +199,7 @@ func (conn *connector) Run(args interface{}, shutdown <-chan struct{}) {
 
 	queue := messagebus.Bus.Connector.Chan()
 
+	timer := time.After(cycleInterval)
 loop:
 	for {
 		// wait for shutdown
@@ -207,6 +208,9 @@ loop:
 		select {
 		case <-shutdown:
 			break loop
+		case <-timer: // timer has priority over queue
+			timer = time.After(cycleInterval)
+			conn.process()
 		case item := <-queue:
 			c, _ := util.PackedConnection(item.Parameters[1]).Unpack()
 			conn.log.Debugf("received control: %s  public key: %x  connect: %x %q", item.Command, item.Parameters[0], item.Parameters[1], c)
@@ -218,8 +222,6 @@ loop:
 			default:
 				conn.connectUpstream(item.Command, item.Parameters[0], item.Parameters[1])
 			}
-		case <-time.After(cycleInterval):
-			conn.process()
 		}
 	}
 	log.Info("shutting down…")

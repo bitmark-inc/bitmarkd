@@ -83,7 +83,7 @@ func (c *ConfigReaderData) Start() {
 			case <-c.watcher.ChangeChannel():
 				fileName := c.watcher.FileName()
 				c.log.Info("receive file change event, wait for 1 minute to adapt")
-				<-time.After(c.refreshByMinute)
+				time.Sleep(c.refreshByMinute)
 				err := c.Refresh()
 				if nil != err {
 					c.log.Errorf("failed to read configuration from %s error: %s",

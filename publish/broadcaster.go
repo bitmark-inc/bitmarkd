@@ -84,7 +84,7 @@ loop:
 				logger.Panicf("broadcaster: IPv6 error: %s", err)
 			}
 
-		case <-time.After(heartbeatInterval):
+		case <-time.After(heartbeatInterval): // timeout on queue empty
 			// this will only occur if so data was sent during the interval
 			beat := &messagebus.Message{
 				Command:    "heart",

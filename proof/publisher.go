@@ -190,7 +190,7 @@ loop:
 		select {
 		case <-shutdown:
 			break loop
-		case <-time.After(publishInterval):
+		case <-time.After(publishInterval): // timeout
 			pub.process()
 		}
 	}

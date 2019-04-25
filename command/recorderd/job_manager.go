@@ -71,7 +71,7 @@ func (j *JobManagerData) waitNextHasingStartEvent(duration time.Duration) {
 	defer j.wg.Done()
 	for {
 		select {
-		case <-time.After(d):
+		case <-time.After(d): // timeout
 			j.log.Debugf("start hashing")
 			j.proofer.StartHashing()
 			now := time.Now()
@@ -101,7 +101,7 @@ func (j *JobManagerData) waitNextHasingStopEvent(duration time.Duration) {
 	defer j.wg.Done()
 	for {
 		select {
-		case <-time.After(d):
+		case <-time.After(d): // timeout
 			j.log.Debug("stop hashing")
 			j.proofer.StopHashing()
 			now := time.Now()

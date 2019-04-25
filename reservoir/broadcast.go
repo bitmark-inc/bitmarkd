@@ -32,7 +32,7 @@ loop:
 		case <-shutdown:
 			log.Info("shutting down…")
 			break loop
-		case <-time.After(constants.RebroadcastInterval):
+		case <-time.After(constants.RebroadcastInterval): // timeout
 			r.process()
 		}
 	}
