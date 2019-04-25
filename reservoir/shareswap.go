@@ -5,7 +5,10 @@
 package reservoir
 
 import (
+	"time"
+
 	"github.com/bitmark-inc/bitmarkd/blockheader"
+	"github.com/bitmark-inc/bitmarkd/constants"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/ownership"
@@ -114,9 +117,10 @@ func StoreSwap(swap *transactionrecord.ShareSwap) (*SwapInfo, bool, error) {
 
 	// waiting for the payment to come
 	payment := &transactionPaymentData{
-		payId:    payId,
-		tx:       swapItem,
-		payments: payments,
+		payId:     payId,
+		tx:        swapItem,
+		payments:  payments,
+		expiresAt: time.Now().Add(constants.ReservoirTimeout),
 	}
 
 	globalData.pendingTransactions[payId] = payment
