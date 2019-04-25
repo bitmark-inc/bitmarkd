@@ -54,5 +54,5 @@ func (c *cleaner) deleteExpiredItems() {
 }
 
 func expired(exp time.Time) bool {
-	return !exp.IsZero() && time.Since(exp) > 0
+	return exp.IsZero() || time.Since(exp) > 0
 }
