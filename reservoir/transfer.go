@@ -5,7 +5,10 @@
 package reservoir
 
 import (
+	"time"
+
 	"github.com/bitmark-inc/bitmarkd/account"
+	"github.com/bitmark-inc/bitmarkd/constants"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/mode"
@@ -105,9 +108,10 @@ func StoreTransfer(transfer transactionrecord.BitmarkTransfer) (*TransferInfo, b
 
 	// waiting for the payment to come
 	payment := &transactionPaymentData{
-		payId:    payId,
-		tx:       transferredItem,
-		payments: payments,
+		payId:     payId,
+		tx:        transferredItem,
+		payments:  payments,
+		expiresAt: time.Now().Add(constants.ReservoirTimeout),
 	}
 
 	if len(globalData.pendingTransactions) >= maximumPendingTransactions {
