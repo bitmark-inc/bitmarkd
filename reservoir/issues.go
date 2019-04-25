@@ -309,13 +309,18 @@ func TryProof(payId pay.PayId, clientNonce []byte) TrackingStatus {
 	h := sha3.New256()
 
 	height := blockheader.Height()
+try_loop:
 	for i := uint64(0); i < 20; i += 1 {
+
+		if i >= height {
+			globalData.log.Criticalf("TryProof: height: %d too low at loop: %d", height, i)
+			break try_loop
+		}
 
 		payNonce := PayNonceFromBlock(height - i)
 
 		globalData.log.Debugf("TryProof: payNonce[%d]: %x", i, payNonce)
 
-		i += 1 // ***** FIX THIS: debug
 		h.Reset()
 		h.Write(payId[:])
 		h.Write(payNonce[:])
