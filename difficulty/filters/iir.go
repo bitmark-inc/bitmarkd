@@ -29,13 +29,13 @@ package filters
 //     a(1)y(n) = b(1)x(n)   + b(2)x(n-1) + ... + b(nb+1)x(n-nb)
 //              - a(2)y(n-1) - a(3)y(n-2) - ... - a(na+1)y(n-na)
 
-// sample storage
+// IIR - infinite impulse response filter
 type IIR struct {
 	x [7]float64
 	y [7]float64
 }
 
-// filter - loops unrolled
+// Filter - IIR with loops unrolled
 func (f *IIR) Filter(x float64) float64 {
 
 	f.x[0] = f.x[1]

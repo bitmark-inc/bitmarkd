@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -22,18 +22,20 @@ var (
 	ErrNotTransferRecord = fault.InvalidError("not transfer record")
 )
 
+// TransferData - data for a transfer request
 type TransferData struct {
 	Owner    *keypair.KeyPair
 	NewOwner *keypair.KeyPair
 	TxId     string
 }
 
+// TransferCountersignData - countersign data request
 type TransferCountersignData struct {
 	Transfer string
 	NewOwner *keypair.KeyPair
 }
 
-// JSON data to output after transfer completes
+// TransferReply - JSON data to output after transfer completes
 type TransferReply struct {
 	TransferId merkle.Digest                                   `json:"transferId"`
 	BitmarkId  merkle.Digest                                   `json:"bitmarkId"`
@@ -42,11 +44,13 @@ type TransferReply struct {
 	Commands   map[string]string                               `json:"commands,omitempty"`
 }
 
+// TransferSingleSignedReply - response to single signature
 type TransferSingleSignedReply struct {
 	Identity string `json:"identity"`
 	Transfer string `json:"transfer"`
 }
 
+// Transfer - perform a bitmark transfer
 func (client *Client) Transfer(transferConfig *TransferData) (*TransferReply, error) {
 
 	var link merkle.Digest
@@ -96,6 +100,7 @@ func (client *Client) Transfer(transferConfig *TransferData) (*TransferReply, er
 	return &response, nil
 }
 
+// SingleSignedTransfer - perform a single signed transfer
 func (client *Client) SingleSignedTransfer(transferConfig *TransferData) (*TransferSingleSignedReply, error) {
 
 	var link merkle.Digest
@@ -122,6 +127,7 @@ func (client *Client) SingleSignedTransfer(transferConfig *TransferData) (*Trans
 	return &response, nil
 }
 
+// CountersignTransfer - perform as countersigned transfer
 func (client *Client) CountersignTransfer(transfer *transactionrecord.BitmarkTransferCountersigned) (*TransferReply, error) {
 
 	client.printJson("Transfer Request", transfer)

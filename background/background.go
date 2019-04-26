@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -10,21 +10,21 @@ type shutdown struct {
 	finished chan struct{}
 }
 
-// handle type for the stop
+// T - handle type for the stop
 type T struct {
 	s []shutdown
 }
 
-// type signature for background process
+// Process - type signature for background process
 // and type that implements this Run is a process
 type Process interface {
 	Run(args interface{}, shutdown <-chan struct{})
 }
 
-// list of processes to start
+// Processes - list of processes to start
 type Processes []Process
 
-// start up a set of background processes
+// Start - start up a set of background processes
 // all with the same arg value
 func Start(processes Processes, args interface{}) *T {
 
@@ -47,7 +47,7 @@ func Start(processes Processes, args interface{}) *T {
 	return register
 }
 
-// stop a set of background processes
+// Stop - stop a set of background processes
 func (t *T) Stop() {
 
 	if nil == t {

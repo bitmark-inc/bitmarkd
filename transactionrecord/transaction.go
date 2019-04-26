@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -13,6 +13,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/util"
 )
 
+// TagType - type code for transactions
 type TagType uint64
 
 // enumerate the possible transaction record types
@@ -38,10 +39,10 @@ const (
 	InvalidTag = TagType(iota)
 )
 
-// packed records are just a byte slice
+// Packed - packed records are just a byte slice
 type Packed []byte
 
-// generic transaction interface
+// Transaction - generic transaction interface
 type Transaction interface {
 	Pack(account *account.Account) (Packed, error)
 }
@@ -56,7 +57,7 @@ const (
 	maxTimestampLength   = len("2014-06-21T14:32:16Z")
 )
 
-// the unpacked Proofer Data structure (OBSOLETE)
+// OldBaseData - the unpacked Proofer Data structure (OBSOLETE)
 // this is first tx in every block and can only be used there
 type OldBaseData struct {
 	Currency       currency.Currency `json:"currency"`       // utf-8 → Enum
@@ -66,7 +67,7 @@ type OldBaseData struct {
 	Signature      account.Signature `json:"signature,"`     // hex
 }
 
-// the unpacked Asset Data structure
+// AssetData - the unpacked Asset Data structure
 type AssetData struct {
 	Name        string            `json:"name"`        // utf-8
 	Fingerprint string            `json:"fingerprint"` // utf-8
@@ -75,7 +76,7 @@ type AssetData struct {
 	Signature   account.Signature `json:"signature"`   // hex
 }
 
-// the unpacked BitmarkIssue structure
+// BitmarkIssue - the unpacked BitmarkIssue structure
 type BitmarkIssue struct {
 	AssetId   AssetIdentifier   `json:"assetId"`   // link to asset record
 	Owner     *account.Account  `json:"owner"`     // base58: the "destination" owner
@@ -83,21 +84,21 @@ type BitmarkIssue struct {
 	Signature account.Signature `json:"signature"` // hex: corresponds to owner in linked record
 }
 
-// optional payment record
+// Payment - optional payment record
 type Payment struct {
 	Currency currency.Currency `json:"currency"`      // utf-8 → Enum
 	Address  string            `json:"address"`       // utf-8
 	Amount   uint64            `json:"amount,string"` // number as string, in terms of smallest currency unit
 }
 
-// a single payment possibility - for use in RPC layers
+// PaymentAlternative - a single payment possibility - for use in RPC layers
 // up to entries:
 //   1. issue block owner payment
 //   2. last transfer block owner payment (can merge with 1 if same address)
 //   3. optional transfer payment
 type PaymentAlternative []*Payment
 
-// to access field of various transfer types
+// BitmarkTransfer - to access field of various transfer types
 type BitmarkTransfer interface {
 	Transaction
 	GetLink() merkle.Digest
@@ -108,7 +109,7 @@ type BitmarkTransfer interface {
 	GetCountersignature() account.Signature
 }
 
-// the unpacked BitmarkTransfer structure
+// BitmarkTransferUnratified - the unpacked BitmarkTransfer structure
 type BitmarkTransferUnratified struct {
 	Link      merkle.Digest     `json:"link"`      // previous record
 	Escrow    *Payment          `json:"escrow"`    // optional escrow payment address
@@ -116,7 +117,7 @@ type BitmarkTransferUnratified struct {
 	Signature account.Signature `json:"signature"` // hex: corresponds to owner in linked record
 }
 
-// the unpacked Countersigned BitmarkTransfer structure
+// BitmarkTransferCountersigned - the unpacked Countersigned BitmarkTransfer structure
 type BitmarkTransferCountersigned struct {
 	Link             merkle.Digest     `json:"link"`             // previous record
 	Escrow           *Payment          `json:"escrow"`           // optional escrow payment address
@@ -125,7 +126,7 @@ type BitmarkTransferCountersigned struct {
 	Countersignature account.Signature `json:"countersignature"` // hex: corresponds to owner in this record
 }
 
-// the unpacked Proofer Data structure
+// BlockFoundation - the unpacked Proofer Data structure
 // this is first tx in every block and can only be used there
 type BlockFoundation struct {
 	Version   uint64            `json:"version"`      // reflects combination of supported currencies
@@ -135,7 +136,7 @@ type BlockFoundation struct {
 	Signature account.Signature `json:"signature"`    // hex
 }
 
-// the unpacked Block Owner Transfer Data structure
+// BlockOwnerTransfer - the unpacked Block Owner Transfer Data structure
 // forms a chain that links back to a foundation record which has a TxId of:
 // SHA3-256 . concat blockDigest leBlockNumberUint64
 type BlockOwnerTransfer struct {
@@ -148,14 +149,14 @@ type BlockOwnerTransfer struct {
 	Countersignature account.Signature `json:"countersignature"` // hex: corresponds to owner in this record
 }
 
-// turn a bitmark provenance chain into a fungible share
+// BitmarkShare - turn a bitmark provenance chain into a fungible share
 type BitmarkShare struct {
 	Link      merkle.Digest     `json:"link"`      // previous record
 	Quantity  uint64            `json:"quantity"`  // initial balance quantity
 	Signature account.Signature `json:"signature"` // hex
 }
 
-// grant some shares to another (one way transfer)
+// ShareGrant - grant some shares to another (one way transfer)
 type ShareGrant struct {
 	ShareId          merkle.Digest     `json:"shareId"`          // share = issue id
 	Quantity         uint64            `json:"quantity"`         // shares to transfer > 0
@@ -166,7 +167,7 @@ type ShareGrant struct {
 	Countersignature account.Signature `json:"countersignature"` // hex: corresponds to owner in this record
 }
 
-// swap some shares to another (two way transfer)
+// ShareSwap - swap some shares to another (two way transfer)
 type ShareSwap struct {
 	ShareIdOne       merkle.Digest     `json:"shareIdOne"`       // share = issue id
 	QuantityOne      uint64            `json:"quantityOne"`      // shares to transfer > 0
@@ -179,7 +180,7 @@ type ShareSwap struct {
 	Countersignature account.Signature `json:"countersignature"` // hex: corresponds to owner in this record
 }
 
-// determine the record type code
+// Type - returns the record type code
 func (record Packed) Type() TagType {
 	recordType, n := util.FromVarint64(record)
 	if 0 == n {
@@ -188,7 +189,7 @@ func (record Packed) Type() TagType {
 	return TagType(recordType)
 }
 
-// get the name of a transaction record as a string
+// RecordName - returns the name of a transaction record as a string
 func RecordName(record interface{}) (string, bool) {
 	switch record.(type) {
 	case *OldBaseData, OldBaseData:
@@ -226,28 +227,28 @@ func RecordName(record interface{}) (string, bool) {
 	}
 }
 
-// compute an asset id
+// AssetId - compute an asset id
 func (assetData *AssetData) AssetId() AssetIdentifier {
 	return NewAssetIdentifier([]byte(assetData.Fingerprint))
 }
 
-// Create an link for a packed record
-func (p Packed) MakeLink() merkle.Digest {
-	return merkle.NewDigest(p)
+// MakeLink - Create an link for a packed record
+func (record Packed) MakeLink() merkle.Digest {
+	return merkle.NewDigest(record)
 }
 
-// convert a packed to its hex JSON form
-func (p Packed) MarshalText() ([]byte, error) {
-	size := hex.EncodedLen(len(p))
+// MarshalText - convert a packed to its hex JSON form
+func (record Packed) MarshalText() ([]byte, error) {
+	size := hex.EncodedLen(len(record))
 	b := make([]byte, size)
-	hex.Encode(b, p)
+	hex.Encode(b, record)
 	return b, nil
 }
 
-// convert a packed to its hex JSON form
-func (p *Packed) UnmarshalText(s []byte) error {
+// UnmarshalText - convert a packed to its hex JSON form
+func (record *Packed) UnmarshalText(s []byte) error {
 	size := hex.DecodedLen(len(s))
-	*p = make([]byte, size)
-	_, err := hex.Decode(*p, s)
+	*record = make([]byte, size)
+	_, err := hex.Decode(*record, s)
 	return err
 }

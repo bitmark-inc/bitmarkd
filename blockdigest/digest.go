@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -14,7 +14,7 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-// number of bytes in the digest
+// Length - number of bytes in the digest
 const Length = 32
 
 // internal hashing parameters
@@ -26,13 +26,13 @@ const (
 	digestVersion     = argon2.Version13
 )
 
-// type for a digest
+// Digest - type for a digest
 // stored as little endian byte array
 // represented as big endian hex value for print
 // represented as little endian hex text for JSON encoding
 type Digest [Length]byte
 
-// create a digest from a byte slice
+// NewDigest - create a digest from a byte slice
 func NewDigest(record []byte) Digest {
 
 	context := &argon2.Context{
@@ -52,7 +52,7 @@ func NewDigest(record []byte) Digest {
 	return digest
 }
 
-// convert the hash to its equivalent big.Int
+// Cmp - convert the hash to its equivalent big.Int
 func (digest Digest) Cmp(difficulty *big.Int) int {
 	bigEndian := reversed(digest)
 	result := new(big.Int)
@@ -68,19 +68,19 @@ func reversed(d Digest) []byte {
 	return result
 }
 
-// convert a binary digest to hex string for use by the fmt package (for %s)
+// String - convert a binary digest to hex string for use by the fmt package (for %s)
 //
 // the stored version is in little endian, but the output string is big endian
 func (digest Digest) String() string {
 	return hex.EncodeToString(reversed(digest))
 }
 
-// convert a binary digest to big endian hex string for use by the fmt package (for %#v)
+// GoString - convert a binary digest to big endian hex string for use by the fmt package (for %#v)
 func (digest Digest) GoString() string {
 	return "<Argon2d:" + hex.EncodeToString(reversed(digest)) + ">"
 }
 
-// convert a big endian hex representation to a digest for use by the format package scan routines
+// Scan - convert a big endian hex representation to a digest for use by the format package scan routines
 func (digest *Digest) Scan(state fmt.ScanState, verb rune) error {
 	token, err := state.Token(true, func(c rune) bool {
 		if c >= '0' && c <= '9' {
@@ -109,7 +109,7 @@ func (digest *Digest) Scan(state fmt.ScanState, verb rune) error {
 	return nil
 }
 
-// convert digest to little endian hex text
+// MarshalText - convert digest to little endian hex text
 func (digest Digest) MarshalText() ([]byte, error) {
 	size := hex.EncodedLen(len(digest))
 	buffer := make([]byte, size)
@@ -117,7 +117,7 @@ func (digest Digest) MarshalText() ([]byte, error) {
 	return buffer, nil
 }
 
-// convert little endian hex text into a digest
+// UnmarshalText - convert little endian hex text into a digest
 func (digest *Digest) UnmarshalText(s []byte) error {
 	buffer := make([]byte, hex.DecodedLen(len(s)))
 	byteCount, err := hex.Decode(buffer, s)
@@ -130,7 +130,7 @@ func (digest *Digest) UnmarshalText(s []byte) error {
 	return nil
 }
 
-// convert and validate little endian binary byte slice to a digest
+// DigestFromBytes - convert and validate little endian binary byte slice to a digest
 func DigestFromBytes(digest *Digest, buffer []byte) error {
 	if Length != len(buffer) {
 		return fault.ErrNotLink

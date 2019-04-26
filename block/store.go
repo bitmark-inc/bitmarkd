@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -26,12 +26,13 @@ import (
 
 type rescanType bool
 
+// list of scanning modes
 const (
 	RescanVerified   rescanType = true
 	NoRescanVerified rescanType = true
 )
 
-// store an incoming block checking to make sure it is valid first
+// StoreIncoming - store an incoming block checking to make sure it is valid first
 func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 	start := time.Now()
 

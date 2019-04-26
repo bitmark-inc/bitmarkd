@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -34,7 +34,7 @@ var (
 	ErrWrongPassword          = fault.InvalidError("wrong password")
 )
 
-// full access to data (includes private data)
+// IdentityType - full access to data (includes private data)
 type IdentityType struct {
 	Name             string         `json:"name"`
 	Description      string         `json:"description"`
@@ -44,18 +44,19 @@ type IdentityType struct {
 	PrivateKeyConfig PrivateKeySalt `json:"private_key_config"`
 }
 
+// PrivateKeySalt - structure to hols per account salt
 type PrivateKeySalt struct {
 	Salt string `json:"salt"`
 }
 
-// return of makeKeyPair
+// EncryptedKeyPair - return of makeKeyPair
 type EncryptedKeyPair struct {
 	PublicKey           string
 	EncryptedPrivateKey string
 	EncryptedSeed       string
 }
 
-// create a new public/private keypair
+// MakeKeyPair - create a new public/private keypair
 // note: private key string must be either:
 //       * 64 bytes  =  [32 byte private key][32 byte public key]
 //       * 32 bytes  =  [32 byte private key]
@@ -287,6 +288,7 @@ func checkSignature(publicKey []byte, privateKey []byte) bool {
 	return ed25519.Verify(publicKey, []byte(message), signature)
 }
 
+// VerifyPassword - check if password unlocks data in the configuration file
 func VerifyPassword(password string, identity *IdentityType) (*keypair.KeyPair, error) {
 	salt := new(Salt)
 	salt.UnmarshalText([]byte(identity.PrivateKeyConfig.Salt))
@@ -333,6 +335,7 @@ func VerifyPassword(password string, identity *IdentityType) (*keypair.KeyPair, 
 	return &keyPair, nil
 }
 
+// PublicKeyFromIdentity - convert an identity tag string to a public key
 func PublicKeyFromIdentity(name string, identities []IdentityType) (*keypair.KeyPair, error) {
 
 loop:

@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -6,7 +6,7 @@ package merkle
 
 //"github.com/bitmark-inc/bitmarkd/merkledigest"
 
-// compute minimum merkle root from a set of transaction ids
+// FullMerkleTree - compute merkle root from a set of transaction ids
 //
 // structure is:
 //   1. N * transaction digests
@@ -42,7 +42,7 @@ func FullMerkleTree(txIds []Digest) []Digest {
 	return tree
 }
 
-// merkle hashing
+// MinimumMerkleTree - merkle hashing
 //
 // build a minimised tree
 func MinimumMerkleTree(ids []Digest) []Digest {

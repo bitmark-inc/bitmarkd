@@ -1,10 +1,10 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
 package reservoir
 
-// result of track payment/try proof
+// TrackingStatus - result of track payment/try proof
 type TrackingStatus int
 
 // possible status values
@@ -15,7 +15,7 @@ const (
 	TrackingInvalid   TrackingStatus = iota
 )
 
-// convert the tracking value for printf
+// String - convert the tracking value for printf
 func (ts TrackingStatus) String() string {
 	switch ts {
 	case TrackingNotFound:
@@ -31,13 +31,13 @@ func (ts TrackingStatus) String() string {
 	}
 }
 
-// convert the tracking value for JSON
+// MarshalText - convert the tracking value for JSON
 func (ts TrackingStatus) MarshalText() ([]byte, error) {
 	buffer := []byte(ts.String())
 	return buffer, nil
 }
 
-// convert the tracking value from JSON to enumeration
+// UnmarshalText - convert the tracking value from JSON to enumeration
 func (ts *TrackingStatus) UnmarshalText(s []byte) error {
 	switch string(s) {
 	case "NotFound":

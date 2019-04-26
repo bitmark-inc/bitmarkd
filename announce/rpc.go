@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -6,12 +6,13 @@ package announce
 
 import (
 	"bytes"
+	"time"
+
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
-	"time"
 )
 
-// set this node's rpc announcement data
+// SetRPC - set this node's rpc announcement data
 func SetRPC(fingerprint fingerprintType, rpcs []byte) error {
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -29,7 +30,7 @@ func SetRPC(fingerprint fingerprintType, rpcs []byte) error {
 	return nil
 }
 
-// add an remote RPC listener
+// AddRPC - add an remote RPC listener
 // returns:
 //   true  if this was a new/updated entry
 //   false if the update was within the limits (to prevent continuous relaying)
@@ -124,13 +125,13 @@ expirations:
 	globalData.rpcList = globalData.rpcList[:n] // shrink the list
 }
 
-// type of returned data
+// RPCEntry type of returned data
 type RPCEntry struct {
 	Fingerprint fingerprintType    `json:"fingerprint"`
 	Connections []*util.Connection `json:"connections"`
 }
 
-// fetch some records
+// FetchRPCs - fetch some records
 func FetchRPCs(start uint64, count int) ([]RPCEntry, uint64, error) {
 	if count <= 0 {
 		return nil, 0, fault.ErrInvalidCount

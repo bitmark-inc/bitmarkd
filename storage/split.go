@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -10,11 +10,12 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
+// PoolNB - handle for a storage pool
 type PoolNB struct {
 	pool *PoolHandle
 }
 
-// store a key/value bytes pair to the database
+// Put - store a key/value bytes pair to the database
 func (p *PoolNB) Put(key []byte, nValue []byte, bValue []byte) {
 
 	if 8 != len(nValue) {
@@ -28,12 +29,12 @@ func (p *PoolNB) Put(key []byte, nValue []byte, bValue []byte) {
 	p.pool.Put(key, data)
 }
 
-// remove a key from the database
+// Delete - remove a key from the database
 func (p *PoolNB) Delete(key []byte) {
 	p.pool.Delete(key)
 }
 
-// // read a record and decode first 8 bytes as big endian uint64
+// // GetN - read a record and decode first 8 bytes as big endian uint64
 // //
 // // second parameter is false if record was not found
 // // panics if not 8 (or more) bytes in the record
@@ -49,7 +50,7 @@ func (p *PoolNB) Delete(key []byte) {
 // 	return n, true
 // }
 
-// read a record and decode first 8 bytes as big endian uint64
+// GetNB - read a record and decode first 8 bytes as big endian uint64
 // and return the rest of the record as byte slice
 //
 // second parameter is nil if record was not found
@@ -67,7 +68,7 @@ func (p *PoolNB) GetNB(key []byte) (uint64, []byte) {
 	return n, buffer[8:]
 }
 
-// Check if a key exists
+// Has - Check if a key exists
 func (p *PoolNB) Has(key []byte) bool {
 	return p.pool.Has(key)
 }

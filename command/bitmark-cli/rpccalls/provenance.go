@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -9,21 +9,25 @@ import (
 	"github.com/bitmark-inc/bitmarkd/rpc"
 )
 
+// ProvenanceData - data for a provenance request
 type ProvenanceData struct {
 	TxId       string
 	Count      int
 	Identities map[string]string
 }
 
+// ProvenanceReply - list of transactions in the provenance chain
 type ProvenanceReply struct {
 	Data []provenanceItem `json:"data"`
 }
 
+// provenanceItem - transaction record in provenance chain
 type provenanceItem struct {
 	rpc.ProvenanceRecord
 	Identity string `json:"_IDENTITY"`
 }
 
+// GetProvenance - obtain the provenance chain from a specific transaction id
 func (client *Client) GetProvenance(provenanceConfig *ProvenanceData) (*ProvenanceReply, error) {
 
 	var txId merkle.Digest

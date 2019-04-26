@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -12,7 +12,7 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-// currency enumeration
+// Currency - currency enumeration
 type Currency uint64
 
 // possible currency values
@@ -54,7 +54,7 @@ func fromString(in string) (Currency, error) {
 	}
 }
 
-// convert a currency to its string symbol
+// String - convert a currency to its string symbol
 func (currency Currency) String() string {
 	s, err := toString(currency)
 	if nil != err {
@@ -63,12 +63,12 @@ func (currency Currency) String() string {
 	return string(s)
 }
 
-// convert abot enum value and symbol, for debugging
+// GoString - convert abot enum value and symbol, for debugging
 func (currency Currency) GoString() string {
 	return fmt.Sprintf("<Currency#%d:%q>", currency, currency.String())
 }
 
-// convert a currency string
+// Scan - convert a currency string
 func (currency *Currency) Scan(state fmt.ScanState, verb rune) error {
 	token, err := state.Token(true, func(c rune) bool {
 		if c >= '0' && c <= '9' {
@@ -94,13 +94,13 @@ func (currency *Currency) Scan(state fmt.ScanState, verb rune) error {
 	return nil
 }
 
-// valid currency if in range of First to Last
+// IsValid - valid currency if in range of First to Last
 // None is not considered as valid
 func (currency Currency) IsValid() bool {
 	return currency >= First && currency <= Last
 }
 
-// convert a valid currency to a zero based array index
+// Index - convert a valid currency to a zero based array index
 func (currency Currency) Index() int {
 	if !currency.IsValid() {
 		logger.Panicf("currency.Index: invalid currency: %d", currency)

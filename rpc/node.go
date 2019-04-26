@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -8,11 +8,10 @@ import (
 	"encoding/hex"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/block"
-
 	"golang.org/x/time/rate"
 
 	"github.com/bitmark-inc/bitmarkd/announce"
+	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/mode"
@@ -21,6 +20,7 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
+// Node - type for RPC calls
 type Node struct {
 	log     *logger.L
 	limiter *rate.Limiter
@@ -31,18 +31,21 @@ type Node struct {
 // limit for count
 const maximumNodeList = 100
 
-// list the RPC services available in the network
+// ---
 
+// NodeArguments - arguments for RPC
 type NodeArguments struct {
 	Start uint64 `json:"start,string"`
 	Count int    `json:"count"`
 }
 
+// NodeReply - result from RPC
 type NodeReply struct {
 	Nodes     []announce.RPCEntry `json:"nodes"`
 	NextStart uint64              `json:"nextStart,string"`
 }
 
+// List - list all node offering RPC functionality
 func (node *Node) List(arguments *NodeArguments, reply *NodeReply) error {
 
 	if err := rateLimitN(node.limiter, arguments.Count, maximumNodeList); nil != err {
@@ -59,17 +62,12 @@ func (node *Node) List(arguments *NodeArguments, reply *NodeReply) error {
 	return nil
 }
 
-// return some information about this node
-// only enough for clients to determin node state
-// for more detaile information use http GET requests
+// ---
 
+// InfoArguments - empty arguments for info request
 type InfoArguments struct{}
 
-type BlockInfo struct {
-	Height uint64 `json:"height"`
-	Hash   string `json:"hash"`
-}
-
+// InfoReply - results from info request
 type InfoReply struct {
 	Chain               string    `json:"chain"`
 	Mode                string    `json:"mode"`
@@ -83,11 +81,21 @@ type InfoReply struct {
 	PublicKey           string    `json:"publicKey"`
 }
 
+// BlockInfo - the highest block held by the node
+type BlockInfo struct {
+	Height uint64 `json:"height"`
+	Hash   string `json:"hash"`
+}
+
+// Counters - transaction counters
 type Counters struct {
 	Pending  int `json:"pending"`
 	Verified int `json:"verified"`
 }
 
+// Info - return some information about this node
+// only enough for clients to determine node state
+// for more detaile information use HTTP GET requests
 func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 
 	if err := rateLimit(node.limiter); nil != err {

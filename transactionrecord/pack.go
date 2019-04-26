@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -17,7 +17,7 @@ import (
 // supported currency sets
 // code here will support all versions
 var versions = []currency.Set{
-	currency.MakeSet(),                                    // 0
+	currency.MakeSet(), // 0
 	currency.MakeSet(currency.Bitcoin, currency.Litecoin), // 1
 }
 
@@ -26,7 +26,7 @@ const (
 	FoundationVersion = 1
 )
 
-// pack BaseData
+// Pack - BaseData
 //
 // Pack Varint64(tag) followed by fields in order as struct above with
 // signature last
@@ -77,7 +77,7 @@ func (baseData *OldBaseData) check(testnet bool) error {
 	return nil
 }
 
-// pack AssetData
+// Pack - AssetData
 //
 // Pack Varint64(tag) followed by fields in order as struct above with
 // signature last.
@@ -157,7 +157,7 @@ func (assetData *AssetData) check(testnet bool) error {
 	return nil
 }
 
-// pack BitmarkIssue
+// Pack - BitmarkIssue
 //
 // Pack Varint64(tag) followed by fields in order as struct above with
 // signature last
@@ -202,7 +202,7 @@ func (issue *BitmarkIssue) check(testnet bool) error {
 	return nil
 }
 
-// local function to pack BitmarkTransfer
+// Pack - BitmarkTransfer
 //
 // Pack Varint64(tag) followed by fields in order as struct above with
 // signature last
@@ -257,7 +257,7 @@ func (transfer *BitmarkTransferUnratified) check(testnet bool) error {
 	return nil
 }
 
-// local function to pack BitmarkTransferCountersigned
+// Pack - BitmarkTransferCountersigned
 //
 // Pack Varint64(tag) followed by fields in order as struct above with
 // signature last
@@ -320,7 +320,7 @@ func (transfer *BitmarkTransferCountersigned) check(testnet bool) error {
 	return nil
 }
 
-// pack BlockFoundation
+// Pack - BlockFoundation
 //
 // Pack Varint64(tag) followed by fields in order as struct above with
 // signature last
@@ -375,7 +375,7 @@ func (foundation *BlockFoundation) check(testnet bool) error {
 	return nil
 }
 
-// pack BlockOwnerTransfer
+// Pack - BlockOwnerTransfer
 //
 // Pack Varint64(tag) followed by fields in order as struct above with
 // signature last
@@ -448,7 +448,7 @@ func (transfer *BlockOwnerTransfer) check(testnet bool) error {
 	return nil
 }
 
-// pack BitmarkShare
+// Pack - BitmarkShare
 //
 // Pack Varint64(tag) followed by fields in order as struct above with
 // signature last
@@ -491,7 +491,7 @@ func (share *BitmarkShare) check(testnet bool) error {
 	return nil
 }
 
-// pack ShareGrant
+// Pack - ShareGrant
 //
 // Pack Varint64(tag) followed by fields in order as struct above with
 // signature last
@@ -557,7 +557,7 @@ func (grant *ShareGrant) check(testnet bool) error {
 	return nil
 }
 
-// pack ShareSwap
+// Pack - ShareSwap
 //
 // Pack Varint64(tag) followed by fields in order as struct above with
 // signature last
@@ -633,7 +633,7 @@ func (swap *ShareSwap) check(testnet bool) error {
 // internal routines below here
 // ----------------------------
 
-// check all currency addresses for correct network and validity
+// CheckPayments - check all currency addresses for correct network and validity
 func CheckPayments(version uint64, testnet bool, payments currency.Map) error {
 	// validate version
 	if version < 1 || version >= uint64(len(versions)) {

@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -16,7 +16,7 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-// result returned by store share
+// GrantInfo - result returned by store share
 type GrantInfo struct {
 	Remaining uint64
 	Id        pay.PayId
@@ -35,6 +35,7 @@ type verifiedGrantInfo struct {
 	issueBlockNumber    uint64
 }
 
+// StoreGrant - validate and store a grant request
 func StoreGrant(grant *transactionrecord.ShareGrant) (*GrantInfo, bool, error) {
 
 	globalData.Lock()
@@ -135,6 +136,7 @@ func makeSpendKey(owner *account.Account, shareId merkle.Digest) spendKey {
 	return oKey
 }
 
+// CheckGrantBalance - check sufficient balance to be able to execute a grant request
 func CheckGrantBalance(grant *transactionrecord.ShareGrant) (uint64, error) {
 
 	// check incoming quantity

@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -8,7 +8,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 )
 
-// convert a string to a currency
+// GetFee - returns the fee for a specific currency
 func (currency Currency) GetFee() (uint64, error) {
 	switch currency {
 	case Nothing:

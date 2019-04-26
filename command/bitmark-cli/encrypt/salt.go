@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -21,8 +21,10 @@ var (
 	ErrUnmarshalTextFail = fault.ProcessError("unmarshal text failed")
 )
 
+// Salt - type to hold a salt value
 type Salt [saltSize]byte
 
+// MakeSalt - create a salt using secure random number generator
 func MakeSalt() (*Salt, error) {
 	salt := new(Salt)
 	if _, err := io.ReadFull(rand.Reader, salt[:]); err != nil {
@@ -31,17 +33,17 @@ func MakeSalt() (*Salt, error) {
 	return salt, nil
 }
 
-// convert a binary salt to byte slice
+// Bytes - convert a binary salt to byte slice
 func (salt Salt) Bytes() []byte {
 	return salt[:]
 }
 
-// convert a binary salt to little endian hex string for use by the fmt package (for %s)
+// String - convert a binary salt to little endian hex string for use by the fmt package (for %s)
 func (salt Salt) String() string {
 	return hex.EncodeToString(salt.Bytes())
 }
 
-// convert salt to little endian hex text
+// MarshalText - convert salt to little endian hex text
 //
 // ***** possibly use NewEncoder and byte buffer to save copy
 func (salt *Salt) MarshalText() []byte {
@@ -53,7 +55,7 @@ func (salt *Salt) MarshalText() []byte {
 	return buffer
 }
 
-// convert little endian hex text into a salt
+// UnmarshalText - convert little endian hex text into a salt
 func (salt *Salt) UnmarshalText(s []byte) error {
 	buffer := make([]byte, hex.DecodedLen(len(s)))
 	byteCount, err := hex.Decode(buffer, s)

@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -9,10 +9,10 @@ import (
 	"encoding/hex"
 )
 
-// type for nonce
+// NonceType - for header nonce field
 type NonceType uint64
 
-// convert a nonce to little endian hex for JSON
+// MarshalText - convert a nonce to little endian hex for JSON
 func (nonce NonceType) MarshalText() ([]byte, error) {
 
 	bits := make([]byte, 8)
@@ -24,7 +24,7 @@ func (nonce NonceType) MarshalText() ([]byte, error) {
 	return buffer, nil
 }
 
-// convert a nonce little endian hex string to nonce value
+// UnmarshalText - convert a nonce little endian hex string to nonce value
 func (nonce *NonceType) UnmarshalText(b []byte) error {
 	buffer := make([]byte, hex.DecodedLen(len(b)))
 	_, err := hex.Decode(buffer, b)

@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -12,13 +12,13 @@ import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 )
 
-// cursor structure
+// FetchCursor - cursor structure
 type FetchCursor struct {
 	pool     *PoolHandle
 	maxRange util.Range
 }
 
-// initialise a cursor to the start of a key range
+// NewFetchCursor - initialise a cursor to the start of a key range
 func (p *PoolHandle) NewFetchCursor() *FetchCursor {
 
 	return &FetchCursor{
@@ -30,11 +30,12 @@ func (p *PoolHandle) NewFetchCursor() *FetchCursor {
 	}
 }
 
-// initialise a cursor to the start of a key range
+// NewFetchCursor - initialise a cursor to the start of a key range
 func (p *PoolNB) NewFetchCursor() *FetchCursor {
 	return p.pool.NewFetchCursor()
 }
 
+// Seek - move cursor to specific key position
 func (cursor *FetchCursor) Seek(key []byte) *FetchCursor {
 	cursor.maxRange.Start = cursor.pool.prefixKey(key)
 	return cursor
@@ -43,7 +44,7 @@ func (cursor *FetchCursor) Seek(key []byte) *FetchCursor {
 // to increment the key
 var one = big.NewInt(1)
 
-// fetch some elements starting from key
+// Fetch - return some elements starting from key
 func (cursor *FetchCursor) Fetch(count int) ([]Element, error) {
 	if nil == cursor {
 		return nil, fault.ErrInvalidCursor
@@ -99,7 +100,7 @@ iterating:
 	return results, err
 }
 
-// map a function over all elements in the range
+// Map - run a function on all elements in the range
 func (cursor *FetchCursor) Map(f func(key []byte, value []byte) error) error {
 	if nil == cursor {
 		return fault.ErrInvalidCursor

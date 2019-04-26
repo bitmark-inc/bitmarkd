@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -22,6 +22,7 @@ var (
 	ErrNotSwapRecord = fault.InvalidError("not swap record")
 )
 
+// SwapData - data for a swap request
 type SwapData struct {
 	ShareIdOne  string
 	QuantityOne uint64
@@ -32,12 +33,13 @@ type SwapData struct {
 	BeforeBlock uint64
 }
 
+// SwapCountersignData - data for countersigning
 type SwapCountersignData struct {
 	Swap      string
 	Recipient *keypair.KeyPair
 }
 
-// JSON data to output after swap completes
+// SwapReply - JSON data to output after swap completes
 type SwapReply struct {
 	SwapId   merkle.Digest                                   `json:"swapId"`
 	PayId    pay.PayId                                       `json:"payId"`
@@ -45,11 +47,13 @@ type SwapReply struct {
 	Commands map[string]string                               `json:"commands,omitempty"`
 }
 
+// SwapSingleSignedReply - result of single signature
 type SwapSingleSignedReply struct {
 	Identity string `json:"identity"`
 	Swap     string `json:"swap"`
 }
 
+// Swap - perform swap request
 func (client *Client) Swap(swapConfig *SwapData) (*SwapSingleSignedReply, error) {
 
 	var shareIdOne merkle.Digest
@@ -90,6 +94,7 @@ func (client *Client) Swap(swapConfig *SwapData) (*SwapSingleSignedReply, error)
 	return &response, nil
 }
 
+// CountersignSwap - perform countersigning
 func (client *Client) CountersignSwap(swap *transactionrecord.ShareSwap) (*SwapReply, error) {
 
 	client.printJson("Swap Request", swap)

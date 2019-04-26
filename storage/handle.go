@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -13,13 +13,14 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
+// PoolHandle - the structure of a pool handle
 type PoolHandle struct {
 	prefix   byte
 	limit    []byte
 	database *leveldb.DB
 }
 
-// a binary data item
+// Element - a binary data item
 type Element struct {
 	Key   []byte
 	Value []byte
@@ -32,7 +33,7 @@ func (p *PoolHandle) prefixKey(key []byte) []byte {
 	return append(prefixedKey, key...)
 }
 
-// store a key/value bytes pair to the database
+// Put - store a key/value bytes pair to the database
 func (p *PoolHandle) Put(key []byte, value []byte) {
 	poolData.RLock()
 	defer poolData.RUnlock()
@@ -44,14 +45,14 @@ func (p *PoolHandle) Put(key []byte, value []byte) {
 	logger.PanicIfError("pool.Put", err)
 }
 
-// store a uint8 as an 8 byte sequence
+// PutN - store a uint8 as an 8 byte sequence
 func (p *PoolHandle) PutN(key []byte, value uint64) {
 	buffer := make([]byte, 8)
 	binary.BigEndian.PutUint64(buffer, value)
 	p.Put(key, buffer)
 }
 
-// remove a key from the database
+// Delete - remove a key from the database
 func (p *PoolHandle) Delete(key []byte) {
 	poolData.RLock()
 	defer poolData.RUnlock()
@@ -59,7 +60,7 @@ func (p *PoolHandle) Delete(key []byte) {
 	logger.PanicIfError("pool.Delete", err)
 }
 
-// read a value for a given key
+// Get - read a value for a given key
 //
 // this returns the actual element - copy the result if it must be preserved
 func (p *PoolHandle) Get(key []byte) []byte {
@@ -76,7 +77,7 @@ func (p *PoolHandle) Get(key []byte) []byte {
 	return value
 }
 
-// read a record and decode first 8 bytes as big endian uint64
+// GetN - read a record and decode first 8 bytes as big endian uint64
 //
 // second parameter is false if record was not found
 // panics if not 8 (or more) bytes in the record
@@ -92,7 +93,7 @@ func (p *PoolHandle) GetN(key []byte) (uint64, bool) {
 	return n, true
 }
 
-// read a record and decode first 8 bytes as big endian uint64
+// GetNB - read a record and decode first 8 bytes as big endian uint64
 // and return the rest of the record as byte slice
 //
 // second parameter is nil if record was not found
@@ -110,7 +111,7 @@ func (p *PoolHandle) GetNB(key []byte) (uint64, []byte) {
 	return n, buffer[8:]
 }
 
-// Check if a key exists
+// Has - Check if a key exists
 func (p *PoolHandle) Has(key []byte) bool {
 	poolData.RLock()
 	defer poolData.RUnlock()
@@ -122,7 +123,7 @@ func (p *PoolHandle) Has(key []byte) bool {
 	return value
 }
 
-// get the last element in a pool
+// LastElement - get the last element in a pool
 func (p *PoolHandle) LastElement() (Element, bool) {
 	maxRange := ldb_util.Range{
 		Start: []byte{p.prefix}, // Start of key range, included in the range

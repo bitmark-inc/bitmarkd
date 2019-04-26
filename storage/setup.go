@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -37,7 +37,7 @@ type pools struct {
 	TestData          *PoolHandle `prefix:"Z" database:"index"`
 }
 
-// the instance
+// Pool - the set of exported pools
 var Pool pools
 
 // for database version
@@ -55,12 +55,13 @@ var poolData struct {
 	dbIndex  *leveldb.DB
 }
 
+// pool access modes
 const (
 	ReadOnly  = true
 	ReadWrite = false
 )
 
-// open up the database connection
+// Initialise - open up the database connection
 //
 // this must be called before any pool is accessed
 func Initialise(database string, readOnly bool) (bool, bool, error) {
@@ -220,14 +221,14 @@ func dbClose() {
 	}
 }
 
-// close the database connection
+// Finalise - close the database connection
 func Finalise() {
 	poolData.Lock()
 	dbClose()
 	poolData.Unlock()
 }
 
-// called at the end of reindex
+// ReindexDone - called at the end of reindex
 func ReindexDone() error {
 	poolData.Lock()
 	defer poolData.Unlock()

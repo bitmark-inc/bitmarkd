@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -16,14 +16,14 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-// hardwired connections
+// Connection - hardwired connections
 // this is read from the configuration file
 type Connection struct {
 	PublicKey string `gluamapper:"public_key" json:"public_key"`
 	Address   string `gluamapper:"address" json:"address"`
 }
 
-// a block of configuration data
+// Configuration - a block of configuration data
 // this is read from the configuration file
 type Configuration struct {
 	DynamicConnections bool         `gluamapper:"dynamic_connections" json:"dynamic_connections"`
@@ -35,13 +35,7 @@ type Configuration struct {
 	Connect            []Connection `gluamapper:"connect" json:"connect,omitempty"`
 }
 
-type PublishConfiguration struct {
-	Broadcast  []string `gluamapper:"broadcast" json:"broadcast"`
-	PrivateKey string   `gluamapper:"private_key" json:"private_key"`
-	PublicKey  string   `gluamapper:"public_key" json:"public_key"`
-}
-
-// globals for background proccess
+// globals for background process
 type peerData struct {
 	sync.RWMutex // to allow locking
 
@@ -67,7 +61,7 @@ type peerData struct {
 // global data
 var globalData peerData
 
-// initialise peer backgrouds processes
+// Initialise - setup peer background processes
 func Initialise(configuration *Configuration, version string) error {
 
 	globalData.Lock()
@@ -155,7 +149,7 @@ process_listen:
 	return nil
 }
 
-// finialise - stop all background tasks
+// Finalise - stop all background tasks
 func Finalise() error {
 
 	if !globalData.initialised {
@@ -177,19 +171,19 @@ func Finalise() error {
 	return nil
 }
 
-// return public key
+// PublicKey - return public key
 func PublicKey() []byte {
 	return globalData.publicKey
 }
 
-// return connection counts:
+// GetCounts - return connection counts:
 //   incoming - total peers connectng to all listeners
 //   outgoing - total outgoing connections
 func GetCounts() (uint64, uint64) {
 	return globalData.lstn.connections, uint64(globalData.clientCount)
 }
 
-// return global block height
+// BlockHeight - return global block height
 func BlockHeight() uint64 {
 	return globalData.blockHeight
 }

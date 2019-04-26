@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -20,18 +20,22 @@ var (
 	ErrNotFoundIdentity = fault.NotFoundError("identity name not found")
 )
 
+// KeyPair - structure to hold public and private keys and the seed
+// that was used to generate them
 type KeyPair struct {
 	Seed       string
 	PublicKey  []byte
 	PrivateKey []byte
 }
 
+// RawKeyPair - text version of seed and keys
 type RawKeyPair struct {
 	Seed       string `json:"seed"`
 	PublicKey  string `json:"public_key"`
 	PrivateKey string `json:"private_key"`
 }
 
+// NewSeed - create a new seed from secure random data
 func NewSeed(test bool) (string, error) {
 	// generate new seed
 	seedCore := make([]byte, 32)
@@ -55,6 +59,7 @@ func NewSeed(test bool) (string, error) {
 	return seed, nil
 }
 
+// MakeRawKeyPair - create new seed and generate public/private keys from it
 func MakeRawKeyPair(test bool) (*RawKeyPair, *KeyPair, error) {
 	seed, err := NewSeed(test)
 	if err != nil {
@@ -63,6 +68,7 @@ func MakeRawKeyPair(test bool) (*RawKeyPair, *KeyPair, error) {
 	return MakeRawKeyPairFromSeed(seed, test)
 }
 
+// MakeRawKeyPairFromSeed - generate public/private keys from existing seed
 func MakeRawKeyPairFromSeed(seed string, test bool) (*RawKeyPair, *KeyPair, error) {
 
 	privateKey, err := account.PrivateKeyFromBase58Seed(seed)
@@ -85,6 +91,7 @@ func MakeRawKeyPairFromSeed(seed string, test bool) (*RawKeyPair, *KeyPair, erro
 	return &rawKeyPair, &keyPair, nil
 }
 
+// AccountFromHexPublicKey - create an account from a hexadecimal public key
 func AccountFromHexPublicKey(publicKey string, test bool) (*account.Account, error) {
 
 	k, err := hex.DecodeString(publicKey)

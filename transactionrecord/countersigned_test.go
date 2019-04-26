@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -371,7 +371,7 @@ func TestPackBitmarkTransferCountersignedThree(t *testing.T) {
 
 // test the packing/unpacking of Bitmark transfer record
 //
-// check for error on incorrecty countersignature
+// check for error on incorrect countersignature
 func TestPackBitmarkTransferCountersignedFail(t *testing.T) {
 
 	ownerOneAccount := makeAccount(ownerOne.publicKey)

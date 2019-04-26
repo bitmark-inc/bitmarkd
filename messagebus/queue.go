@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -15,20 +15,20 @@ const (
 	defaultQueueSize = 1000 // if specific size is not specified
 )
 
-// message to put into a queue
+// Message - message to put into a queue
 type Message struct {
 	Command    string   // type of packed data
 	Parameters [][]byte // array of parameters
 }
 
-// a 1:1 queue
+// Queue - a 1:1 queue
 type Queue struct {
 	c    chan Message
 	size int
 	used bool
 }
 
-// a 1:M queue
+// BroadcastQueue - a 1:M queue
 // out is synchronous, so messages to routines not waiting are dropped
 type BroadcastQueue struct {
 	in          chan Message
@@ -47,7 +47,7 @@ type busses struct {
 	TestQueue  *Queue          `size:"50"`   // for testing use
 }
 
-// the instance
+// Bus - all available message queues
 var Bus busses
 
 // initialise all queues with preset size
@@ -106,7 +106,7 @@ func init() {
 	}
 }
 
-// send a message to a 1:1 queue
+// Send - send a message to a 1:1 queue
 // but only if listener is connected
 func (queue *Queue) Send(command string, parameters ...[]byte) {
 	queue.c <- Message{
@@ -115,7 +115,7 @@ func (queue *Queue) Send(command string, parameters ...[]byte) {
 	}
 }
 
-// channel to read from 1:1 queue
+// Chan - channel to read from 1:1 queue
 // can only be called once
 func (queue *Queue) Chan() <-chan Message {
 	if queue.used {
@@ -125,14 +125,14 @@ func (queue *Queue) Chan() <-chan Message {
 	return queue.c
 }
 
-// give the channel back
+// Release - give the channel back
 func (queue *Queue) Release() {
 	queue.used = false
 	close(queue.c)
 	queue.c = make(chan Message, queue.size)
 }
 
-// send a message to a 1:M queue
+// Send - send a message to a 1:M queue
 func (queue *BroadcastQueue) Send(command string, parameters ...[]byte) {
 	queue.in <- Message{
 		Command:    command,
@@ -140,7 +140,7 @@ func (queue *BroadcastQueue) Send(command string, parameters ...[]byte) {
 	}
 }
 
-// get a new channel to read from a 1:M queue
+// Chan - get a new channel to read from a 1:M queue
 // each call gets a distinct channel
 func (queue *BroadcastQueue) Chan(size int) <-chan Message {
 	if size < 0 {

@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -20,7 +20,7 @@ import (
 )
 
 // set by the linker: go build -ldflags "-X main.version=M.N" ./...
-var version string = "zero" // do not change this value
+var version = "zero" // do not change this value
 
 // main program
 func main() {
@@ -105,7 +105,7 @@ func main() {
 		exitwithstatus.Message("%s: new logger '%s' failed with error: %s", program, ReaderLoggerPrefix, err)
 	}
 
-	calendarLogger := logger.New(JobCalendarPrefix)
+	calendarLogger := logger.New(jobCalendarPrefix)
 	calendar.SetLog(calendarLogger)
 
 	// create a logger channel for the main program
@@ -179,7 +179,7 @@ func main() {
 	ProofProxy()
 	SubmitQueue()
 
-	proofer := newProofer(logger.New(ProoferLoggerPrefix), reader)
+	proofer := newProofer(logger.New(prooferLoggerPrefix), reader)
 	reader.SetProofer(proofer)
 	// start background processes
 	// these will has blocks, changing nonce to meet difficulty

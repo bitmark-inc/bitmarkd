@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -12,7 +12,7 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-// type to hold the mode
+// Mode - type to hold the mode
 type Mode int
 
 // all possible modes
@@ -34,7 +34,7 @@ var globalData struct {
 	initialised bool
 }
 
-// set up the mode system
+// Initialise - set up the mode system
 func Initialise(chainName string) error {
 
 	// ensure start up in resynchronise mode
@@ -71,7 +71,7 @@ func Initialise(chainName string) error {
 	return nil
 }
 
-// shutdown mode handling
+// Finalise - shutdown mode handling
 func Finalise() error {
 
 	if !globalData.initialised {
@@ -92,7 +92,7 @@ func Finalise() error {
 	return nil
 }
 
-// change mode
+// Set - change mode
 func Set(mode Mode) {
 
 	if mode >= Stopped && mode < maximum {
@@ -106,42 +106,42 @@ func Set(mode Mode) {
 	}
 }
 
-// detect mode
+// Is - detect mode
 func Is(mode Mode) bool {
 	globalData.RLock()
 	defer globalData.RUnlock()
 	return mode == globalData.mode
 }
 
-// detect mode
+// IsNot - detect mode
 func IsNot(mode Mode) bool {
 	globalData.RLock()
 	defer globalData.RUnlock()
 	return mode != globalData.mode
 }
 
-// special for testing
+// IsTesting - special for testing
 func IsTesting() bool {
 	globalData.RLock()
 	defer globalData.RUnlock()
 	return globalData.testing
 }
 
-// name of the current chain
+// ChainName - name of the current chain
 func ChainName() string {
 	globalData.RLock()
 	defer globalData.RUnlock()
 	return globalData.chain
 }
 
-// current mode represented as a string
+// String - current mode represented as a string
 func String() string {
 	globalData.RLock()
 	defer globalData.RUnlock()
 	return globalData.mode.String()
 }
 
-// current mode rep[resented as a string
+// String - current mode rep[resented as a string
 func (m Mode) String() string {
 	switch m {
 	case Stopped:

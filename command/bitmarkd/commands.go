@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -9,6 +9,15 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+
+	"golang.org/x/crypto/sha3"
+
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -16,13 +25,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/bitmark-inc/logger"
-	"golang.org/x/crypto/sha3"
-	"io/ioutil"
-	"net"
-	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
 )
 
 const (
@@ -458,7 +460,7 @@ func getFilenameWithDirectory(arguments []string, name string) string {
 func makeSigningKey(test bool, fileName string) error {
 	seedCore := make([]byte, 32)
 	if _, err := rand.Read(seedCore); err != nil {
-		return fmt.Errorf("error generating signing core error: %s\n", err)
+		return fmt.Errorf("failed to generate signing core error: %s", err)
 	}
 	seed := []byte{0x5a, 0xfe, 0x01, 0x00} // header + network(live)
 	if test {
@@ -470,7 +472,7 @@ func makeSigningKey(test bool, fileName string) error {
 
 	data := "SEED:" + util.ToBase58(seed) + "\n"
 	if err := ioutil.WriteFile(fileName, []byte(data), 0600); err != nil {
-		return fmt.Errorf("error writing signing key file error: %s\n", err)
+		return fmt.Errorf("error writing signing key file error: %s", err)
 	}
 
 	return nil

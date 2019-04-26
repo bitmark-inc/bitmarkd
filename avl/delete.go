@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -205,8 +205,8 @@ func del(qq **Node, rr **Node) bool {
 	return h
 }
 
-// delete a specific item
-func (tree *Tree) Delete(key item) interface{} {
+// Delete - removes a specific item from the tree
+func (tree *Tree) Delete(key Item) interface{} {
 	value, removed, _ := delete(key, &tree.root)
 	if removed {
 		tree.count -= 1
@@ -215,7 +215,7 @@ func (tree *Tree) Delete(key item) interface{} {
 }
 
 // internal delete routine
-func delete(key item, pp **Node) (interface{}, bool, bool) {
+func delete(key Item, pp **Node) (interface{}, bool, bool) {
 	h := false
 	if nil == *pp { // key not in tree
 		return nil, false, h

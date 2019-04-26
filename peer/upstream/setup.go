@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -28,6 +28,7 @@ const (
 	queueSize     = 50 // 0 => synchronous queue
 )
 
+// Upstream - structure to hold an upstream connection
 type Upstream struct {
 	sync.RWMutex
 	log         *logger.L
@@ -40,6 +41,7 @@ type Upstream struct {
 // atomically incremented counter for log names
 var upstreamCounter counter.Counter
 
+// New - create a connection to an upstream server
 func New(privateKey []byte, publicKey []byte, timeout time.Duration) (*Upstream, error) {
 	client, err := zmqutil.NewClient(zmq.REQ, privateKey, publicKey, timeout)
 	if nil != err {
@@ -60,20 +62,22 @@ func New(privateKey []byte, publicKey []byte, timeout time.Duration) (*Upstream,
 	return u, nil
 }
 
+// Destroy - shutdown a connection
 func (u *Upstream) Destroy() {
 	if nil != u {
 		close(u.shutdown)
 	}
 }
 
-//Clear Server side info of Zmq client for reusing the upstream
+// ResetServer - clear Server side info of Zmq client for reusing the
+// upstream
 func (u *Upstream) ResetServer() {
 	u.GetClient().ResetServer()
 	u.registered = false
 	u.blockHeight = 0
 }
 
-// check the current destination
+// IsConnectedTo - check the current destination
 //
 // does not mean actually connected, as could be in a timeout and
 // reconnect state
@@ -81,17 +85,17 @@ func (u *Upstream) IsConnectedTo(serverPublicKey []byte) bool {
 	return u.client.IsConnectedTo(serverPublicKey)
 }
 
-// if registered the have avalid connection
+// IsOK - check if registered and have a valid connection
 func (u *Upstream) IsOK() bool {
 	return u.registered
 }
 
-// if registered the have avalid connection
+// ConnectedTo - if registered return the connection data
 func (u *Upstream) ConnectedTo() *zmqutil.Connected {
 	return u.client.ConnectedTo()
 }
 
-// connect (or reconnect) to a specific server
+// Connect - connect (or reconnect) to a specific server
 func (u *Upstream) Connect(address *util.Connection, serverPublicKey []byte) error {
 	u.log.Infof("connecting to address: %s", address)
 	u.log.Infof("connecting to server: %x", serverPublicKey)
@@ -103,16 +107,18 @@ func (u *Upstream) Connect(address *util.Connection, serverPublicKey []byte) err
 	u.Unlock()
 	return err
 }
+
+// GetClient - return the internal ZeroMQ client data
 func (u *Upstream) GetClient() *zmqutil.Client {
 	return u.client
 }
 
-// fetch height from last polled value
+// GetHeight - fetch height from last polled value
 func (u *Upstream) GetHeight() uint64 {
 	return u.blockHeight
 }
 
-// fetch block digest
+// GetBlockDigest - fetch block digest from a specific block number
 func (u *Upstream) GetBlockDigest(blockNumber uint64) (blockdigest.Digest, error) {
 	parameter := make([]byte, 8)
 	binary.BigEndian.PutUint64(parameter, blockNumber)
@@ -148,7 +154,7 @@ func (u *Upstream) GetBlockDigest(blockNumber uint64) (blockdigest.Digest, error
 	return blockdigest.Digest{}, fault.ErrInvalidPeerResponse
 }
 
-// fetch block data
+// GetBlockData - fetch block data from a specific block number
 func (u *Upstream) GetBlockData(blockNumber uint64) ([]byte, error) {
 	parameter := make([]byte, 8)
 	binary.BigEndian.PutUint64(parameter, blockNumber)
@@ -180,6 +186,7 @@ func (u *Upstream) GetBlockData(blockNumber uint64) ([]byte, error) {
 	return nil, fault.ErrInvalidPeerResponse
 }
 
+// loop to handle upstream communication
 func upstreamRunner(u *Upstream, shutdown <-chan struct{}) {
 	log := u.log
 
@@ -253,6 +260,7 @@ loop:
 	log.Info("stopped")
 }
 
+// register with server and check chain information
 func register(client *zmqutil.Client, log *logger.L) error {
 
 	log.Debugf("register: client: %s", client)

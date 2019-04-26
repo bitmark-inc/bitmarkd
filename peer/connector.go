@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -179,7 +179,7 @@ func (conn *connector) destroy() {
 	})
 }
 
-// Print all upstream connectors default: "debug", availible: "debug", "info" , "warn" , used for debug
+// Print all upstream connectors default: "debug", available: "debug", "info" , "warn" , used for debug
 func (conn *connector) PrintUpstreams(prefix string) string {
 	counter := 0
 	upstreams := ""

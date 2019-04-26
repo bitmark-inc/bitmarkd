@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -11,7 +11,7 @@ const (
 	Local   = "local"
 )
 
-// validate a chain name
+// Valid - validate a chain name
 func Valid(name string) bool {
 	switch name {
 	case Bitmark, Testing, Local:

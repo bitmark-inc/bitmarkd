@@ -1,13 +1,13 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
 package util
 
-// maximum possible number of bytes in Varint64
+// Varint64MaximumBytes - maximum possible number of bytes in Varint64
 const Varint64MaximumBytes = 9
 
-// convert a 64 bit unsigned integer to Varint64
+// ToVarint64 - convert a 64 bit unsigned integer to Varint64
 //
 // Structure of the result
 // byte 1:  ext | B06 | B05 | B04 | B03 | B02 | B01 | B00
@@ -25,6 +25,7 @@ func ToVarint64(value uint64) []byte {
 		result = append(result, byte(value))
 		return result
 	}
+
 	for i := 0; i < Varint64MaximumBytes && value != 0; i += 1 {
 		ext := uint64(0x80)
 		if value < 0x80 {
@@ -36,7 +37,7 @@ func ToVarint64(value uint64) []byte {
 	return result
 }
 
-// convert an array of up to Varint64MaximumBytes to a uint64
+// FromVarint64 - convert an array of up to Varint64MaximumBytes to a uint64
 //
 // also return the number of bytes used as second value
 // returns 0, 0 if varint64 buffer is truncated
@@ -63,7 +64,7 @@ func FromVarint64(buffer []byte) (uint64, int) {
 	return 0, 0
 }
 
-// make a copy of a Varint64 from the beginning of a buffer
+// CopyVarint64 - make a copy of a Varint64 from the beginning of a buffer
 func CopyVarint64(buffer []byte) []byte {
 	result := make([]byte, 0)
 
@@ -78,7 +79,7 @@ loop:
 	return result
 }
 
-// return a positive clipped value as an int
+// ClippedVarint64 - return a positive clipped value as an int
 // any value outside the range minimum..maximum is an error
 func ClippedVarint64(buffer []byte, minimum int, maximum int) (int, int) {
 	if minimum < 0 || maximum < 0 || minimum >= maximum {

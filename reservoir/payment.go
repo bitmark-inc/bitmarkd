@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -15,7 +15,7 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-// a single segment of a payment
+// PaymentSegment - a single segment of a payment
 // e.g. for an issue or transfer block owner
 type PaymentSegment [currency.Count]*transactionrecord.Payment
 

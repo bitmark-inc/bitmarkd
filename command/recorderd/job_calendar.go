@@ -23,7 +23,7 @@ const (
 	defaultIndex              = 0
 	oneWeekDuration           = time.Duration(24*7) * time.Hour
 	delayOfStartStop          = time.Duration(5) * time.Second
-	JobCalendarPrefix         = "calendar"
+	jobCalendarPrefix         = "calendar"
 )
 
 type JobCalendar interface {
@@ -73,13 +73,13 @@ func newJobCalendar(channel chan<- struct{}) JobCalendar {
 			stop:  []time.Time{},
 		},
 		events: map[time.Weekday][]SingleEvent{
-			time.Sunday:    []SingleEvent{},
-			time.Monday:    []SingleEvent{},
-			time.Tuesday:   []SingleEvent{},
-			time.Wednesday: []SingleEvent{},
-			time.Thursday:  []SingleEvent{},
-			time.Friday:    []SingleEvent{},
-			time.Saturday:  []SingleEvent{},
+			time.Sunday:    {},
+			time.Monday:    {},
+			time.Tuesday:   {},
+			time.Wednesday: {},
+			time.Thursday:  {},
+			time.Friday:    {},
+			time.Saturday:  {},
 		},
 		rawData:           ConfigCalendar{},
 		rescheduleChannel: channel,
@@ -95,13 +95,13 @@ func (j *JobCalendarData) newEmptyFlattenEvents() FlattenEvents {
 
 func (j *JobCalendarData) newEmptyEvents() map[time.Weekday][]SingleEvent {
 	return map[time.Weekday][]SingleEvent{
-		time.Sunday:    []SingleEvent{},
-		time.Monday:    []SingleEvent{},
-		time.Tuesday:   []SingleEvent{},
-		time.Wednesday: []SingleEvent{},
-		time.Thursday:  []SingleEvent{},
-		time.Friday:    []SingleEvent{},
-		time.Saturday:  []SingleEvent{},
+		time.Sunday:    {},
+		time.Monday:    {},
+		time.Tuesday:   {},
+		time.Wednesday: {},
+		time.Thursday:  {},
+		time.Friday:    {},
+		time.Saturday:  {},
 	}
 }
 
@@ -150,13 +150,15 @@ func (j *JobCalendarData) removeRedundantStopEvent() {
 	start := j.flattenEvents.start
 	stop := j.flattenEvents.stop
 	redundantIdx := make([]bool, len(j.flattenEvents.stop))
+
+loop:
 	for i, k := 0, 0; i < len(start) && k < len(stop); {
 		if start[i].Equal(stop[k]) {
 			j.log.Debugf("%+v stop event is redundant", j.flattenEvents.stop[k])
 			redundantIdx[k] = true
 			i++
 			k++
-			continue
+			continue loop
 		}
 		if start[i].After(stop[k]) {
 			k++
@@ -268,12 +270,13 @@ func (j *JobCalendarData) RescheduleStartEventsPrior(event time.Time) {
 	times := j.flattenEvents.start
 	newSlices := make([]time.Time, 0, len(times))
 	schedules := make([]time.Time, 0, len(times))
+loop:
 	for i, t := range times {
 		if t.Before(event) || t.Equal(event) {
 			schedules = append(schedules, t.Add(oneWeekDuration))
 		} else {
 			newSlices = append(newSlices, times[i:]...)
-			break
+			break loop
 		}
 	}
 	newSlices = append(newSlices, schedules...)
@@ -287,12 +290,13 @@ func (j *JobCalendarData) RescheduleStopEventsPrior(event time.Time) {
 	times := j.flattenEvents.stop
 	newSlices := make([]time.Time, 0, len(times))
 	schedules := make([]time.Time, 0, len(times))
+loop:
 	for i, t := range times {
 		if t.Before(event) || t.Equal(event) {
 			schedules = append(schedules, t.Add(oneWeekDuration))
 		} else {
 			newSlices = append(newSlices, times[i:]...)
-			break
+			break loop
 		}
 	}
 	newSlices = append(newSlices, schedules...)
@@ -462,14 +466,16 @@ func (j *JobCalendarData) scheduleEvents(day time.Weekday, clock string) {
 		start: []time.Time{},
 		stop:  []time.Time{},
 	}
+
+loop:
 	for _, period := range periods {
 		if !j.isValidPeriod(period) {
-			continue
+			continue loop
 		}
 		t1, t2, err := j.parseTimePeriod(period)
 		if nil != err {
 			j.log.Errorf("error parse time period %s, error: %s", period, err)
-			continue
+			continue loop
 		}
 		events = append(events, SingleEvent{
 			start: j.timeByWeekdayAndOffset(day, t1),
@@ -500,7 +506,7 @@ func (j *JobCalendarData) scheduleStartEventWhenDayBegin(day time.Weekday) {
 	flattenEvent := j.timeOfWeekdayStartFromBeginning(day)
 	j.flattenEvents.start = append(j.flattenEvents.start, flattenEvent.start[0])
 	j.events[day] = []SingleEvent{
-		SingleEvent{start: flattenEvent.start[0]},
+		{start: flattenEvent.start[0]},
 	}
 }
 

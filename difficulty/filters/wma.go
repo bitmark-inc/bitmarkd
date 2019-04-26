@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -11,6 +11,7 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
+// WMA - filter instance
 type WMA struct {
 	sync.RWMutex
 	Filter
@@ -23,6 +24,7 @@ type WMA struct {
 	denominator float64
 }
 
+// NewWMA - create a filter instance
 func NewWMA(start float64, n uint64) Filter {
 	filter := WMA{
 		samples:     make([]float64, n),
@@ -38,6 +40,7 @@ func NewWMA(start float64, n uint64) Filter {
 	return &filter
 }
 
+// Name - return the name of the filter
 func (filter *WMA) Name() string {
 	filter.RLock()
 	defer filter.RUnlock()
@@ -45,6 +48,7 @@ func (filter *WMA) Name() string {
 	return fmt.Sprintf("Weighted Moving Average %d", len(filter.samples))
 }
 
+// Process - add a input value to the filter
 func (filter *WMA) Process(s float64) float64 {
 	filter.Lock()
 	defer filter.Unlock()
@@ -71,6 +75,7 @@ func (filter *WMA) Process(s float64) float64 {
 	return filter.current
 }
 
+// Current - return the current filter value
 func (filter *WMA) Current() float64 {
 	filter.RLock()
 	defer filter.RUnlock()

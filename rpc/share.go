@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -21,14 +21,16 @@ import (
 // Share
 // --------
 
+// Share - type for RPC
 type Share struct {
 	log     *logger.L
 	limiter *rate.Limiter
 }
 
 // Create a share with initial balance
-// --------------------------------------
+// -----------------------------------
 
+// ShareCreateReply - results from creating a share
 type ShareCreateReply struct {
 	TxId     merkle.Digest                                   `json:"txId"`
 	ShareId  merkle.Digest                                   `json:"shareId"`
@@ -36,6 +38,7 @@ type ShareCreateReply struct {
 	Payments map[string]transactionrecord.PaymentAlternative `json:"payments"`
 }
 
+// Create - create fractional bitmark
 func (share *Share) Create(bmfr *transactionrecord.BitmarkShare, reply *ShareCreateReply) error {
 
 	if err := rateLimit(share.limiter); nil != err {
@@ -85,16 +88,19 @@ func (share *Share) Create(bmfr *transactionrecord.BitmarkShare, reply *ShareCre
 // Get share balance
 // --------------------
 
+// ShareBalanceArguments - arguments for RPC
 type ShareBalanceArguments struct {
 	Owner   *account.Account `json:"owner"` // base58
 	ShareId merkle.Digest    `json:"shareId"`
 	Count   int              `json:"count"` // number of records
 }
 
+// ShareBalanceReply - balances of shares belonging to an account
 type ShareBalanceReply struct {
 	Balances []reservoir.BalanceInfo `json:"balances"`
 }
 
+// Balance - list balances for an account
 func (share *Share) Balance(arguments *ShareBalanceArguments, reply *ShareBalanceReply) error {
 
 	if err := rateLimit(share.limiter); nil != err {
@@ -136,8 +142,9 @@ func (share *Share) Balance(arguments *ShareBalanceArguments, reply *ShareBalanc
 }
 
 // Grant some shares
-// --------------------
+// -----------------
 
+// ShareGrantReply - result of granting some shares to another account
 type ShareGrantReply struct {
 	Remaining uint64                                          `json:"remaining"`
 	TxId      merkle.Digest                                   `json:"txId"`
@@ -145,6 +152,7 @@ type ShareGrantReply struct {
 	Payments  map[string]transactionrecord.PaymentAlternative `json:"payments"`
 }
 
+// Grant - grant a number of shares to another account
 func (share *Share) Grant(arguments *transactionrecord.ShareGrant, reply *ShareGrantReply) error {
 
 	if err := rateLimit(share.limiter); nil != err {
@@ -208,6 +216,7 @@ func (share *Share) Grant(arguments *transactionrecord.ShareGrant, reply *ShareG
 // Swap some shares
 // -------------------
 
+// ShareSwapReply - result of a share swap
 type ShareSwapReply struct {
 	RemainingOne uint64                                          `json:"remainingOne"`
 	RemainingTwo uint64                                          `json:"remainingTwo"`
@@ -216,6 +225,7 @@ type ShareSwapReply struct {
 	Payments     map[string]transactionrecord.PaymentAlternative `json:"payments"`
 }
 
+// Swap - atomically swap shares between accounts
 func (share *Share) Swap(arguments *transactionrecord.ShareSwap, reply *ShareSwapReply) error {
 
 	if err := rateLimit(share.limiter); nil != err {

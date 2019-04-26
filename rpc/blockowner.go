@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -24,22 +24,23 @@ import (
 // Block Owner
 // -----------
 
+// BlockOwner - the type of the RPC
 type BlockOwner struct {
 	log     *logger.L
 	limiter *rate.Limiter
 }
 
-// get the id for a given block number
-// -----------------------------------
-
+// TxIdForBlockArguments - get the id for a given block number
 type TxIdForBlockArguments struct {
 	BlockNumber uint64 `json:"blockNumber"`
 }
 
+// TxIdForBlockReply - results for block id
 type TxIdForBlockReply struct {
 	TxId merkle.Digest `json:"txId"`
 }
 
+// TxIdForBlock - RPC to get transaction id for block ownership record
 func (bitmark *BlockOwner) TxIdForBlock(info *TxIdForBlockArguments, reply *TxIdForBlockReply) error {
 
 	if err := rateLimit(bitmark.limiter); nil != err {
@@ -70,12 +71,15 @@ func (bitmark *BlockOwner) TxIdForBlock(info *TxIdForBlockArguments, reply *TxId
 // Block owner transfer
 // --------------------
 
+// BlockOwnerTransferReply - results of transferring block ownership
 type BlockOwnerTransferReply struct {
 	TxId     merkle.Digest                                   `json:"txId"`
 	PayId    pay.PayId                                       `json:"payId"`
 	Payments map[string]transactionrecord.PaymentAlternative `json:"payments"`
 }
 
+// Transfer - transfer the ownership of a block to new account and/or
+// payment addresses
 func (bitmark *BlockOwner) Transfer(transfer *transactionrecord.BlockOwnerTransfer, reply *BlockOwnerTransferReply) error {
 
 	if err := rateLimit(bitmark.limiter); nil != err {

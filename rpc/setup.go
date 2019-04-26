@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -24,6 +24,7 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
+// RPCConfiguration - configuration file data for RPC setup
 type RPCConfiguration struct {
 	MaximumConnections int      `gluamapper:"maximum_connections" json:"maximum_connections"`
 	Bandwidth          float64  `gluamapper:"bandwidth" json:"bandwidth"`
@@ -33,6 +34,7 @@ type RPCConfiguration struct {
 	Announce           []string `gluamapper:"announce" json:"announce"`
 }
 
+// HTTPSConfiguration - configuration file data for HTTPS setup
 type HTTPSConfiguration struct {
 	MaximumConnections int                 `gluamapper:"maximum_connections" json:"maximum_connections"`
 	Listen             []string            `gluamapper:"listen" json:"listen"`
@@ -86,7 +88,7 @@ type rpcData struct {
 // global data
 var globalData rpcData
 
-// initialise peer backgrouds processes
+// Initialise - setup peer backgrouds processes
 func Initialise(rpcConfiguration *RPCConfiguration, httpsConfiguration *HTTPSConfiguration, version string) error {
 
 	globalData.Lock()
@@ -117,7 +119,7 @@ func Initialise(rpcConfiguration *RPCConfiguration, httpsConfiguration *HTTPSCon
 	return nil
 }
 
-// finialise - stop all background tasks
+// Finalise - stop all background tasks
 func Finalise() error {
 
 	if !globalData.initialised {
@@ -352,7 +354,7 @@ func getCertificate(log *logger.L, name, certificate, key string) (*tls.Config, 
 	return tlsConfiguration, fingerprint, nil
 }
 
-// compute the fingerprint of a certificate
+// CertificateFingerprint - compute the fingerprint of a certificate
 //
 // FreeBSD: openssl x509 -outform DER -in bitmarkd-local-rpc.crt | sha3sum -a 256
 func CertificateFingerprint(certificate []byte) [32]byte {
@@ -373,7 +375,7 @@ func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
 	return tc, nil
 }
 
-// start a HTTPS server using in-memory TLS KeyPair
+// ListenAndServeTLSKeyPair - start a HTTPS server using in-memory TLS KeyPair
 func ListenAndServeTLSKeyPair(addr string, handler http.Handler, cfg *tls.Config) error {
 	s := &http.Server{
 		Addr:           addr,

@@ -1,8 +1,8 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-// Cache for assets
+// Package asset - Cache for assets
 //
 // temporary store assets just received until they are:
 // a. verified by having a corresponding issue verified

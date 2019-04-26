@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-// for dumping the expected hex
-// used by some test routines
+// FormatBytes - for dumping the expected hex used by some test
+// routines
 func FormatBytes(name string, data []byte) string {
 	a := strings.Split(fmt.Sprintf("% #x", data), " ")
 	s := name + " := []byte{"

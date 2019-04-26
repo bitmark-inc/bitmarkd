@@ -1,11 +1,10 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -48,7 +47,7 @@ const (
 	defaultBandwidth  = 25 * 1000000 // 25Mbps
 )
 
-// to hold log levels
+// LoglevelMap - to hold current logging levels
 type LoglevelMap map[string]string
 
 // path expanded or calculated defaults
@@ -58,11 +57,13 @@ var (
 	}
 )
 
+// DatabaseType - directory and name of a database
 type DatabaseType struct {
 	Directory string `gluamapper:"directory" json:"directory"`
 	Name      string `gluamapper:"name" json:"name"`
 }
 
+// Configuration - the main configuration file data
 type Configuration struct {
 	DataDirectory string       `gluamapper:"data_directory" json:"data_directory"`
 	PidFile       string       `gluamapper:"pidfile" json:"pidfile"`
@@ -139,7 +140,7 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 	// not recognised.
 	options.Chain = strings.ToLower(options.Chain)
 	if !chain.Valid(options.Chain) {
-		return nil, errors.New(fmt.Sprintf("Chain: %q is not supported", options.Chain))
+		return nil, fmt.Errorf("Chain: %q is not supported", options.Chain)
 	}
 
 	// if database was not changed from default
@@ -156,13 +157,13 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 			options.PeerFile = defaultLocalPeerFile
 			options.ReservoirFile = defaultLocalReservoirFile
 		default:
-			return nil, errors.New(fmt.Sprintf("Chain: %s no default database setting", options.Chain))
+			return nil, fmt.Errorf("Chain: %s no default database setting", options.Chain)
 		}
 	}
 
 	// ensure absolute data directory
 	if "" == options.DataDirectory || "~" == options.DataDirectory {
-		return nil, errors.New(fmt.Sprintf("Path: %q is not a valid directory", options.DataDirectory))
+		return nil, fmt.Errorf("Path: %q is not a valid directory", options.DataDirectory)
 	} else if "." == options.DataDirectory {
 		options.DataDirectory = dataDirectory // same directory as the configuration file
 	} else {
@@ -173,7 +174,7 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 	if fileInfo, err := os.Stat(options.DataDirectory); nil != err {
 		return nil, err
 	} else if !fileInfo.IsDir() {
-		return nil, errors.New(fmt.Sprintf("Path: %q is not a directory", options.DataDirectory))
+		return nil, fmt.Errorf("Path: %q is not a directory", options.DataDirectory)
 	}
 
 	// force all relevant items to be absolute paths
@@ -199,7 +200,7 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 	}
 
 	// fail if any of these are not simple file names i.e. must
-	// not contain path seperator, then add the correct directory
+	// not contain path separator, then add the correct directory
 	// prefix, file item is first and corresponding directory is
 	// second (or nil if no prefix can be added)
 	mustNotBePaths := [][2]*string{
@@ -213,7 +214,7 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 				*f[0] = util.EnsureAbsolute(*f[1], *f[0])
 			}
 		default:
-			return nil, errors.New(fmt.Sprintf("Files: %q is not plain name", *f[0]))
+			return nil, fmt.Errorf("Files: %q is not plain name", *f[0])
 		}
 	}
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -12,7 +12,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/util"
 )
 
-// check the address and return its version
+// FromBitcoin - check the address and return its version
 func FromBitcoin(address string) (string, error) {
 
 	version, addressBytes, err := bitcoin.ValidateAddress(address)

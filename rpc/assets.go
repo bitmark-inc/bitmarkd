@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -15,9 +15,7 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-// Assets type
-// ------=----
-
+// Assets - type for the RPC
 type Assets struct {
 	log     *logger.L
 	limiter *rate.Limiter
@@ -27,13 +25,13 @@ const (
 	maximumAssets = 100
 )
 
-// Assets registration
-// -------------------
+// AssetStatus - arguments for RPC request
 type AssetStatus struct {
 	AssetId   *transactionrecord.AssetIdentifier `json:"id"`
 	Duplicate bool                               `json:"duplicate"`
 }
 
+// AssetsRegisterReply - results from RPC request
 type AssetsRegisterReply struct {
 	Assets []AssetStatus `json:"assets"`
 }
@@ -63,17 +61,19 @@ func assetRegister(assets []*transactionrecord.AssetData) ([]AssetStatus, []byte
 	return assetStatus, packed, nil
 }
 
-// Asset get
-// ---------
+// ---
 
+// AssetGetArguments - arguments for RPC request
 type AssetGetArguments struct {
 	Fingerprints []string `json:"fingerprints"`
 }
 
+// AssetGetReply - results from get RPC request
 type AssetGetReply struct {
 	Assets []AssetRecord `json:"assets"`
 }
 
+// AssetRecord - structure of asset records in the response
 type AssetRecord struct {
 	Record    string      `json:"record"`
 	Confirmed bool        `json:"confirmed"`
@@ -81,6 +81,7 @@ type AssetRecord struct {
 	Data      interface{} `json:"data"`
 }
 
+// Get - RPC to fetch asset data
 func (assets *Assets) Get(arguments *AssetGetArguments, reply *AssetGetReply) error {
 
 	log := assets.log

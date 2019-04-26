@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -37,11 +37,12 @@ const (
 
 )
 
-// base type for accounts
+// Account - base type for accounts
 type Account struct {
 	AccountInterface
 }
 
+// AccountInterface - interface type for account methods
 type AccountInterface interface {
 	KeyType() int
 	PublicKeyBytes() []byte
@@ -53,19 +54,19 @@ type AccountInterface interface {
 	IsZero() bool
 }
 
-// for ed25519 signatures
+// ED25519Account - for ed25519 signatures
 type ED25519Account struct {
 	Test      bool
 	PublicKey []byte
 }
 
-// just for debugging
+// NothingAccount - just for debugging
 type NothingAccount struct {
 	Test      bool
 	PublicKey []byte
 }
 
-// this converts a Base58 encoded string and returns an account
+// AccountFromBase58 - this converts a Base58 encoded string and returns an account
 //
 // one of the specific account types are returned using the base "AccountInterface"
 // interface type to allow individual methods to be called.
@@ -137,7 +138,7 @@ func AccountFromBase58(accountBase58Encoded string) (*Account, error) {
 	}
 }
 
-// this converts a byte encoded buffer and returns an account
+// AccountFromBytes - this converts a byte encoded buffer and returns an account
 //
 // one of the specific account types are returned using the base "AccountInterface"
 // interface type to allow individual methods to be called.
@@ -197,6 +198,7 @@ func AccountFromBytes(accountBytes []byte) (*Account, error) {
 	}
 }
 
+// UnmarshalText - create account from text string
 func (account *Account) UnmarshalText(s []byte) error {
 	a, err := AccountFromBase58(string(s))
 	if nil != err {
@@ -209,17 +211,17 @@ func (account *Account) UnmarshalText(s []byte) error {
 // ED25519
 // -------
 
-// key type code (see enumeration above)
+// KeyType - key type code (see enumeration above)
 func (account *ED25519Account) KeyType() int {
 	return ED25519
 }
 
-// fetch the public key as byte slice
+// PublicKeyBytes - fetch the public key as byte slice
 func (account *ED25519Account) PublicKeyBytes() []byte {
 	return account.PublicKey[:]
 }
 
-// check the signature of a message
+// CheckSignature - check the signature of a message
 func (account *ED25519Account) CheckSignature(message []byte, signature Signature) error {
 
 	if ed25519.SignatureSize != len(signature) {
@@ -232,7 +234,7 @@ func (account *ED25519Account) CheckSignature(message []byte, signature Signatur
 	return nil
 }
 
-// byte slice for encoded key
+// Bytes - byte slice for encoded key
 func (account *ED25519Account) Bytes() []byte {
 	keyVariant := byte(ED25519<<algorithmShift) | publicKeyCode
 	if account.Test {
@@ -241,7 +243,7 @@ func (account *ED25519Account) Bytes() []byte {
 	return append([]byte{keyVariant}, account.PublicKey[:]...)
 }
 
-// base58 encoding of encoded key
+// String - base58 encoding of encoded key
 func (account *ED25519Account) String() string {
 	buffer := account.Bytes()
 	checksum := sha3.Sum256(buffer)
@@ -249,17 +251,17 @@ func (account *ED25519Account) String() string {
 	return util.ToBase58(buffer)
 }
 
-// convert an account to its Base58 JSON form
+// MarshalText - convert an account to its Base58 JSON form
 func (account ED25519Account) MarshalText() ([]byte, error) {
 	return []byte(account.String()), nil
 }
 
-// return whether the public key is in test mode or not
+// IsTesting - return whether the public key is in test mode or not
 func (account ED25519Account) IsTesting() bool {
 	return account.Test
 }
 
-// return whether the public key is all zero or not
+// IsZero - return whether the public key is all zero or not
 func (account ED25519Account) IsZero() bool {
 	for _, b := range account.PublicKey {
 		if 0 != b {
@@ -272,22 +274,22 @@ func (account ED25519Account) IsZero() bool {
 // Nothing
 // -------
 
-// key type code (see enumeration above)
+// KeyType - key type code (see enumeration above)
 func (account *NothingAccount) KeyType() int {
 	return Nothing
 }
 
-// fetch the public key as byte slice
+// PublicKeyBytes - fetch the public key as byte slice
 func (account *NothingAccount) PublicKeyBytes() []byte {
 	return account.PublicKey[:]
 }
 
-// check the signature of a message
+// CheckSignature - check the signature of a message
 func (account *NothingAccount) CheckSignature(message []byte, signature Signature) error {
 	return fault.ErrInvalidSignature
 }
 
-// byte slice for encoded key
+// Bytes - byte slice for encoded key
 func (account *NothingAccount) Bytes() []byte {
 	keyVariant := byte(Nothing<<algorithmShift) | publicKeyCode
 	if account.Test {
@@ -296,7 +298,7 @@ func (account *NothingAccount) Bytes() []byte {
 	return append([]byte{keyVariant}, account.PublicKey[:]...)
 }
 
-// base58 encoding of encoded key
+// String - base58 encoding of encoded key
 func (account *NothingAccount) String() string {
 	buffer := account.Bytes()
 	checksum := sha3.Sum256(buffer)
@@ -304,17 +306,17 @@ func (account *NothingAccount) String() string {
 	return util.ToBase58(buffer)
 }
 
-// convert an account to its Base58 JSON form
+// MarshalText - convert an account to its Base58 JSON form
 func (account NothingAccount) MarshalText() ([]byte, error) {
 	return []byte(account.String()), nil
 }
 
-// return whether the public key is in test mode or not
+// IsTesting - return whether the public key is in test mode or not
 func (account NothingAccount) IsTesting() bool {
 	return account.Test
 }
 
-// return whether the public key is all zero or not
+// IsZero - return whether the public key is all zero or not
 func (account NothingAccount) IsZero() bool {
 	for _, b := range account.PublicKey {
 		if 0 != b {

@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -30,8 +30,8 @@ const (
 	initialTestingDifficulty = 256.0  // 16 leading zero bits
 )
 
-// produce a scaled difficulty based on the number of items
-// in a block to be processed and include a quantity discount
+// ScaledDifficulty - produce a scaled difficulty based on the number
+// of items in a block to be processed and include a quantity discount
 func ScaledDifficulty(count int) *difficulty.Difficulty {
 
 	d := difficulty.New()

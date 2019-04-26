@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -11,6 +11,8 @@ import (
 	"net/http"
 )
 
+// FetchJSON - fetch a JSON response from an HTTP request and decode
+// it
 func FetchJSON(client *http.Client, url string, reply interface{}) error {
 	request, err := http.NewRequest("GET", url, nil)
 	if nil != err {

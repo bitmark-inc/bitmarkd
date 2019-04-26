@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -21,29 +21,24 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-// Bitmarks
-// --------
-
+// Bitmarks - type for the RPC
 type Bitmarks struct {
 	log     *logger.L
 	limiter *rate.Limiter
 }
 
-// Bitmarks issue
-// --------------
-
+// IssueStatus - results from an issue
 type IssueStatus struct {
 	TxId merkle.Digest `json:"txId"`
 }
 
-// Bitmarks create
-// --------------
-
+// CreateArguments - arguments for creating a bitmark
 type CreateArguments struct {
 	Assets []*transactionrecord.AssetData    `json:"assets"`
 	Issues []*transactionrecord.BitmarkIssue `json:"issues"`
 }
 
+// CreateReply - results from create RPC
 type CreateReply struct {
 	Assets     []AssetStatus                                   `json:"assets"`
 	Issues     []IssueStatus                                   `json:"issues"`
@@ -53,6 +48,7 @@ type CreateReply struct {
 	Payments   map[string]transactionrecord.PaymentAlternative `json:"payments,omitempty"`
 }
 
+// Create - create assets and issues
 func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply) error {
 
 	log := bitmarks.log
@@ -119,7 +115,7 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 		result.PayId = stored.Id
 		result.PayNonce = stored.Nonce
 		if nil == stored.Difficulty {
-			result.Difficulty = "" // supress difficulty if not applicable
+			result.Difficulty = "" // suppress difficulty if not applicable
 		} else {
 			result.Difficulty = stored.Difficulty.GoString()
 		}
@@ -146,15 +142,18 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 // Bitmarks proof
 // --------------
 
+// ProofArguments - arguments for RPC
 type ProofArguments struct {
 	PayId pay.PayId `json:"payId"`
 	Nonce string    `json:"nonce"`
 }
 
+// ProofReply - results from a proof RPC
 type ProofReply struct {
 	Status reservoir.TrackingStatus `json:"status"`
 }
 
+// Proof - supply proof that client-side hashing to confirm free issue was done
 func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) error {
 
 	if err := rateLimit(bitmarks.limiter); nil != err {

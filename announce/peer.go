@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -9,12 +9,13 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"math/big"
+	"time"
+
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
-	"math/big"
-	"time"
 )
 
 type pubkey []byte
@@ -25,13 +26,14 @@ type peerEntry struct {
 	timestamp time.Time
 }
 
+// string - conversion fro fmt package
 func (p peerEntry) String() string {
 	v4, v6 := util.PackedConnection(p.listeners).Unpack46()
 	return fmt.Sprintf("%x @ %q %q - %s", p.publicKey, v4, v6, p.timestamp.Format(timeFormat))
 }
 
-// called by the peering initialisation to set up this node's
-// announcement data
+// SetPeer - called by the peering initialisation to set up this
+// node's announcement data
 func SetPeer(publicKey []byte, listeners []byte) error {
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -52,7 +54,7 @@ func SetPeer(publicKey []byte, listeners []byte) error {
 	return nil
 }
 
-// add a peer announcement to the in-memory tree
+// AddPeer - add a peer announcement to the in-memory tree
 // returns:
 //   true  if this was a new/updated entry
 //   false if the update was within the limits (to prevent continuous relaying)
@@ -108,7 +110,7 @@ func addPeer(publicKey []byte, listeners []byte, timestamp uint64) bool {
 	return true
 }
 
-// fetch the data for the next node in the ring for a given public key
+// GetNext - fetch the data for the next node in the ring for a given public key
 func GetNext(publicKey []byte) ([]byte, []byte, time.Time, error) {
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -127,7 +129,7 @@ func GetNext(publicKey []byte) ([]byte, []byte, time.Time, error) {
 	return peer.publicKey, peer.listeners, peer.timestamp, nil
 }
 
-// fetch the data for the random node in the ring not matching a given public key
+// GetRandom - fetch the data for a random node in the ring not matching a given public key
 func GetRandom(publicKey []byte) ([]byte, []byte, time.Time, error) {
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -158,7 +160,7 @@ retry_loop:
 	return nil, nil, time.Now(), fault.ErrInvalidPublicKey
 }
 
-// send a peer registration request to a client channel
+// SendRegistration - send a peer registration request to a client channel
 func SendRegistration(client *zmqutil.Client, fn string) error {
 	chain := mode.ChainName()
 
@@ -169,12 +171,12 @@ func SendRegistration(client *zmqutil.Client, fn string) error {
 	return client.Send(fn, chain, globalData.publicKey, globalData.listeners, timestamp)
 }
 
-// public key comparison for AVL interface
+// Compare - public key comparison for AVL interface
 func (p pubkey) Compare(q interface{}) int {
 	return bytes.Compare(p, q.(pubkey))
 }
 
-// public key string convert for AVL interface
+// String - public key string convert for AVL interface
 func (p pubkey) String() string {
 	return fmt.Sprintf("%x", []byte(p))
 }

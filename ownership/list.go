@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -15,7 +15,7 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-// type to represent an ownership record
+// Ownership - type to represent an ownership record
 type Ownership struct {
 	N           uint64                             `json:"n,string"`
 	TxId        merkle.Digest                      `json:"txId"`
@@ -25,7 +25,7 @@ type Ownership struct {
 	BlockNumber *uint64                            `json:"blockNumber,omitempty"`
 }
 
-// fetch a list of bitmarks for an owner
+// ListBitmarksFor - fetch a list of bitmarks for an owner
 func ListBitmarksFor(owner *account.Account, start uint64, count int) ([]Ownership, error) {
 
 	startBytes := make([]byte, uint64ByteSize)

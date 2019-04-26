@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -15,7 +15,7 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-// result returned by store share
+// SwapInfo - result returned by store share
 type SwapInfo struct {
 	RemainingOne uint64
 	RemainingTwo uint64
@@ -36,6 +36,7 @@ type verifiedSwapInfo struct {
 	issueBlockNumber    uint64
 }
 
+// StoreSwap - verify and store a swap request
 func StoreSwap(swap *transactionrecord.ShareSwap) (*SwapInfo, bool, error) {
 
 	globalData.Lock()
@@ -129,6 +130,7 @@ func StoreSwap(swap *transactionrecord.ShareSwap) (*SwapInfo, bool, error) {
 	return result, false, nil
 }
 
+// CheckSwapBalances - check sufficient balance on both accounts to be able to execute a swap request
 func CheckSwapBalances(swap *transactionrecord.ShareSwap) (uint64, uint64, error) {
 
 	// check incoming quantity

@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -15,11 +15,12 @@ import (
 	"github.com/bitmark-inc/bitmarkd/util"
 )
 
-// base type for PrivateKey
+// PrivateKey - base type for PrivateKey
 type PrivateKey struct {
 	PrivateKeyInterface
 }
 
+// PrivateKeyInterface - interface type for private key methods
 type PrivateKeyInterface interface {
 	Account() *Account
 	KeyType() int
@@ -30,13 +31,13 @@ type PrivateKeyInterface interface {
 	MarshalText() ([]byte, error)
 }
 
-// for ed25519 keys
+// ED25519PrivateKey - structure for ed25519 keys
 type ED25519PrivateKey struct {
 	Test       bool
 	PrivateKey []byte
 }
 
-// just for debugging
+// NothingPrivateKey - just for debugging
 type NothingPrivateKey struct {
 	Test       bool
 	PrivateKey []byte
@@ -63,7 +64,7 @@ const (
 	seedChecksumLength = 4
 )
 
-// this converts a Base58 encoded seed string and returns a private key
+// PrivateKeyFromBase58Seed - this converts a Base58 encoded seed string and returns a private key
 //
 // one of the specific private key types are returned using the base "PrivateKeyInterface"
 // interface type to allow individual methods to be called.
@@ -116,7 +117,7 @@ func PrivateKeyFromBase58Seed(seedBase58Encoded string) (*PrivateKey, error) {
 	return privateKey, nil
 }
 
-// this converts a Base58 encoded string and returns an private key
+// PrivateKeyFromBase58 - this converts a Base58 encoded string and returns an private key
 //
 // one of the specific private key types are returned using the base "PrivateKeyInterface"
 // interface type to allow individual methods to be called.
@@ -188,7 +189,7 @@ func PrivateKeyFromBase58(privateKeyBase58Encoded string) (*PrivateKey, error) {
 	}
 }
 
-// this converts a byte encoded buffer and returns an private key
+// PrivateKeyFromBytes - this converts a byte encoded buffer and returns an private key
 //
 // one of the specific private key types are returned using the base "PrivateKeyInterface"
 // interface type to allow individual methods to be called.
@@ -248,6 +249,7 @@ func PrivateKeyFromBytes(privateKeyBytes []byte) (*PrivateKey, error) {
 	}
 }
 
+// UnmarshalText - convert string to private key structure
 func (privateKey *PrivateKey) UnmarshalText(s []byte) error {
 	a, err := PrivateKeyFromBase58(string(s))
 	if nil != err {
@@ -260,17 +262,17 @@ func (privateKey *PrivateKey) UnmarshalText(s []byte) error {
 // ED25519
 // -------
 
-// return whether the private key is in test mode or not
+// IsTesting - return whether the private key is in test mode or not
 func (privateKey *ED25519PrivateKey) IsTesting() bool {
 	return privateKey.Test
 }
 
-// key type code (see enumeration in account.go)
+// KeyType - key type code (see enumeration in account.go)
 func (privateKey *ED25519PrivateKey) KeyType() int {
 	return ED25519
 }
 
-// return the corresponding account
+// Account - return the corresponding account
 func (privateKey *ED25519PrivateKey) Account() *Account {
 	return &Account{
 		AccountInterface: &ED25519Account{
@@ -280,12 +282,12 @@ func (privateKey *ED25519PrivateKey) Account() *Account {
 	}
 }
 
-// fetch the private key as byte slice
+// PrivateKeyBytes - fetch the private key as byte slice
 func (privateKey *ED25519PrivateKey) PrivateKeyBytes() []byte {
 	return privateKey.PrivateKey[:]
 }
 
-// byte slice for encoded key
+// Bytes - byte slice for encoded key
 func (privateKey *ED25519PrivateKey) Bytes() []byte {
 	keyVariant := byte(ED25519 << algorithmShift)
 	if privateKey.Test {
@@ -294,7 +296,7 @@ func (privateKey *ED25519PrivateKey) Bytes() []byte {
 	return append([]byte{keyVariant}, privateKey.PrivateKey[:]...)
 }
 
-// base58 encoding of encoded key
+// String - base58 encoding of encoded key
 func (privateKey *ED25519PrivateKey) String() string {
 	buffer := privateKey.Bytes()
 	checksum := sha3.Sum256(buffer)
@@ -302,7 +304,7 @@ func (privateKey *ED25519PrivateKey) String() string {
 	return util.ToBase58(buffer)
 }
 
-// convert an privateKey to its Base58 JSON form
+// MarshalText - convert an privateKey to its Base58 JSON form
 func (privateKey ED25519PrivateKey) MarshalText() ([]byte, error) {
 	return []byte(privateKey.String()), nil
 }
@@ -310,27 +312,27 @@ func (privateKey ED25519PrivateKey) MarshalText() ([]byte, error) {
 // Nothing
 // -------
 
-// return whether the private key is in test mode or not
+// IsTesting - return whether the private key is in test mode or not
 func (privateKey *NothingPrivateKey) IsTesting() bool {
 	return privateKey.Test
 }
 
-// key type code (see enumeration in account.go)
+// KeyType - key type code (see enumeration in account.go)
 func (privateKey *NothingPrivateKey) KeyType() int {
 	return Nothing
 }
 
-// return the corresponding account
+// Account - return the corresponding account
 func (privateKey *NothingPrivateKey) Account() *Account {
 	return nil
 }
 
-// fetch the private key as byte slice
+// PrivateKeyBytes - fetch the private key as byte slice
 func (privateKey *NothingPrivateKey) PrivateKeyBytes() []byte {
 	return privateKey.PrivateKey[:]
 }
 
-// byte slice for encoded key
+// Bytes - byte slice for encoded key
 func (privateKey *NothingPrivateKey) Bytes() []byte {
 	keyVariant := byte(Nothing << algorithmShift)
 	if privateKey.Test {
@@ -339,7 +341,7 @@ func (privateKey *NothingPrivateKey) Bytes() []byte {
 	return append([]byte{keyVariant}, privateKey.PrivateKey[:]...)
 }
 
-// base58 encoding of encoded key
+// String - base58 encoding of encoded key
 func (privateKey *NothingPrivateKey) String() string {
 	buffer := privateKey.Bytes()
 	checksum := sha3.Sum256(buffer)
@@ -347,7 +349,7 @@ func (privateKey *NothingPrivateKey) String() string {
 	return util.ToBase58(buffer)
 }
 
-// convert an privateKey to its Base58 JSON form
+// MarshalText - convert an privateKey to its Base58 JSON form
 func (privateKey NothingPrivateKey) MarshalText() ([]byte, error) {
 	return []byte(privateKey.String()), nil
 }

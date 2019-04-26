@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -15,7 +15,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/avl"
 )
 
-//type stringItem string
 type stringItem struct {
 	s string
 }
@@ -23,6 +22,7 @@ type stringItem struct {
 func (s stringItem) String() string {
 	return s.s
 }
+
 func (s stringItem) Compare(x interface{}) int {
 	return strings.Compare(s.s, x.(stringItem).s)
 }
@@ -130,10 +130,10 @@ func doList(t *testing.T, addList []stringItem) {
 		}
 
 		if !tree.CheckUp() {
-			t.Errorf("add: inconsistant tree")
+			t.Errorf("add: inconsistent tree")
 			depth := tree.Print(true)
 			t.Logf("depth: %q", depth)
-			t.Fatal("inconsistant tree")
+			t.Fatal("inconsistent tree")
 		}
 
 	delete_items:
@@ -151,10 +151,10 @@ func doList(t *testing.T, addList []stringItem) {
 		}
 
 		if !tree.CheckUp() {
-			t.Errorf("delete: inconsistant tree")
+			t.Errorf("delete: inconsistent tree")
 			depth := tree.Print(true)
 			t.Logf("depth: %q", depth)
-			t.Fatal("inconsistant tree")
+			t.Fatal("inconsistent tree")
 		}
 
 	delete_remainder:
@@ -379,7 +379,7 @@ func randomTree(t *testing.T, total int, toDelete int) {
 	if !tree.CheckUp() {
 		depth := tree.Print(true)
 		t.Logf("depth: %d", depth)
-		t.Fatalf("inconsistant tree")
+		t.Fatalf("inconsistent tree")
 	}
 
 	for _, key := range d {
@@ -389,7 +389,7 @@ func randomTree(t *testing.T, total int, toDelete int) {
 			depth := tree.Print(true)
 			t.Logf("depth: %d", depth)
 
-			t.Fatalf("inconsistant tree")
+			t.Fatalf("inconsistent tree")
 		}
 	}
 
@@ -402,7 +402,7 @@ func randomTree(t *testing.T, total int, toDelete int) {
 		depth := tree.Print(true)
 		t.Logf("depth: %d", depth)
 
-		t.Fatalf("inconsistant tree")
+		t.Fatalf("inconsistent tree")
 	}
 
 	if !tree.CheckCounts() {
@@ -466,10 +466,10 @@ func TestOverwriteAndNodeStability(t *testing.T) {
 	}
 
 	if !tree.CheckUp() {
-		t.Errorf("add: inconsistant tree")
+		t.Errorf("add: inconsistent tree")
 		depth := tree.Print(true)
 		t.Logf("depth: %q", depth)
-		t.Fatalf("inconsistant tree")
+		t.Fatalf("inconsistent tree")
 	}
 
 	// overwrite a key
@@ -479,10 +479,10 @@ func TestOverwriteAndNodeStability(t *testing.T) {
 	tree.Insert(oKey, newData)
 
 	if !tree.CheckUp() {
-		t.Errorf("add: inconsistant tree")
+		t.Errorf("add: inconsistent tree")
 		depth := tree.Print(true)
 		t.Logf("depth: %q", depth)
-		t.Fatalf("inconsistant tree")
+		t.Fatalf("inconsistent tree")
 	}
 
 	// check overwrite
@@ -510,10 +510,10 @@ func TestOverwriteAndNodeStability(t *testing.T) {
 		t.Fatalf("node moved from: %p → %p", node1, node2)
 	}
 	if !tree.CheckUp() {
-		t.Errorf("delete: inconsistant tree")
+		t.Errorf("delete: inconsistent tree")
 		depth := tree.Print(true)
 		t.Logf("depth: %d", depth)
-		t.Fatalf("inconsistant tree")
+		t.Fatalf("inconsistent tree")
 	}
 }
 

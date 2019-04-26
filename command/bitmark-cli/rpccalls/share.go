@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -19,6 +19,7 @@ var (
 	ErrMakeShareFail = fault.ProcessError("make share failed")
 )
 
+// ShareData - data for a share request
 type ShareData struct {
 	Owner    *keypair.KeyPair
 	NewOwner *keypair.KeyPair
@@ -26,7 +27,7 @@ type ShareData struct {
 	Quantity uint64
 }
 
-// JSON data to output after transfer completes
+// ShareReply - JSON data to output after transfer completes
 type ShareReply struct {
 	TxId     merkle.Digest                                   `json:"txId"`
 	ShareId  merkle.Digest                                   `json:"shareId"`
@@ -35,6 +36,7 @@ type ShareReply struct {
 	Commands map[string]string                               `json:"commands,omitempty"`
 }
 
+// Share - perform a share request
 func (client *Client) Share(shareConfig *ShareData) (*ShareReply, error) {
 
 	var link merkle.Digest

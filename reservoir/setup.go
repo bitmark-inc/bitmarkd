@@ -1,10 +1,13 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
 package reservoir
 
 import (
+	"sync"
+	"time"
+
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/currency"
@@ -16,8 +19,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
-	"sync"
-	"time"
 )
 
 // various limiting constants
@@ -64,6 +65,7 @@ type issueFreeData struct {
 	expiresAt  time.Time              // only used in pending state
 }
 
+// PaymentDetail - a payment record for a single currency
 type PaymentDetail struct {
 	Currency currency.Currency // code number
 	TxID     string            // tx id on currency blockchain
@@ -120,7 +122,7 @@ type globalDataType struct {
 // globals as a struct to allow lock
 var globalData globalDataType
 
-// create the cache
+// Initialise - create the cache
 func Initialise(reservoirDataFile string) error {
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -176,7 +178,7 @@ func Initialise(reservoirDataFile string) error {
 	return nil
 }
 
-// stop all
+// Finalise - stop all background processes
 func Finalise() error {
 
 	if !globalData.initialised {
@@ -201,7 +203,7 @@ func Finalise() error {
 	return nil
 }
 
-// for API to get status data
+// ReadCounters - for API to get status data
 func ReadCounters() (int, int) {
 	globalData.RLock()
 	pending := len(globalData.pendingIndex)
@@ -210,9 +212,10 @@ func ReadCounters() (int, int) {
 	return pending, verified
 }
 
-// status
+// TransactionState - status enumeration
 type TransactionState int
 
+// list of all states
 const (
 	StateUnknown   TransactionState = iota
 	StatePending   TransactionState = iota
@@ -220,6 +223,7 @@ const (
 	StateConfirmed TransactionState = iota
 )
 
+// String - string representation of a transaction state
 func (state TransactionState) String() string {
 	switch state {
 	case StateUnknown:
@@ -235,7 +239,7 @@ func (state TransactionState) String() string {
 	}
 }
 
-// get status of a transaction
+// TransactionStatus - get status of a transaction
 func TransactionStatus(txId merkle.Digest) TransactionState {
 	globalData.RLock()
 	defer globalData.RUnlock()
@@ -332,7 +336,7 @@ next_currency:
 	return false
 }
 
-// set verified if transaction found, otherwise preserv payment for later
+// SetTransferVerified - set verified if transaction found, otherwise preserv payment for later
 func SetTransferVerified(payId pay.PayId, detail *PaymentDetail) {
 	globalData.log.Infof("txid: %s  payid: %s", detail.TxID, payId)
 
@@ -344,21 +348,21 @@ func SetTransferVerified(payId pay.PayId, detail *PaymentDetail) {
 	globalData.Unlock()
 }
 
-// lock down to prevent proofer from getting data
+// Disable - lock down to prevent proofer from getting data
 func Disable() {
 	globalData.Lock()
 	globalData.enabled = false
 	globalData.Unlock()
 }
 
-// allow proofer to run again
+// Enable - allow proofer to run again
 func Enable() {
 	globalData.Lock()
 	globalData.enabled = true
 	globalData.Unlock()
 }
 
-// reset spend map
+// ClearSpend - reset spend map
 func ClearSpend() {
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -370,7 +374,7 @@ func ClearSpend() {
 	globalData.spend = make(map[spendKey]uint64)
 }
 
-// before calling Enable may need to run rescan to drop any
+// Rescan - before calling Enable may need to run rescan to drop any
 // invalidated transactions especially if the block height has changed
 func Rescan() {
 	globalData.Lock()
@@ -485,7 +489,7 @@ func rescanItem(item *transactionData) {
 	}
 }
 
-// remove a record using a transaction id
+// DeleteByTxId - remove a record using a transaction id
 // note, remove one issue in a block removes the whole issue block
 func DeleteByTxId(txId merkle.Digest) {
 	globalData.Lock()
@@ -508,7 +512,7 @@ func internalDeleteByTxId(txId merkle.Digest) {
 	}
 }
 
-// remove a record using a link id
+// DeleteByLink - remove a record using a link id
 func DeleteByLink(link merkle.Digest) {
 	globalData.Lock()
 	defer globalData.Unlock()

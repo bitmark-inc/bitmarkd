@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -10,12 +10,14 @@ import (
 	"github.com/bitmark-inc/bitmarkd/rpc"
 )
 
+// BalanceData - the parameters for a balance request
 type BalanceData struct {
 	Owner   *keypair.KeyPair
 	ShareId string
 	Count   int
 }
 
+// GetBalance - retrieve some balance data
 func (client *Client) GetBalance(balanceConfig *BalanceData) (*rpc.ShareBalanceReply, error) {
 
 	var shareId merkle.Digest // if not present the all zero id

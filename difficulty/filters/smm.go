@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -10,6 +10,7 @@ import (
 	"sync"
 )
 
+// SMM - filter instance
 type SMM struct {
 	sync.RWMutex
 	Filter
@@ -19,6 +20,7 @@ type SMM struct {
 	current float64
 }
 
+// NewSMM - create new filter
 func NewSMM(start float64, n uint64) Filter {
 	if 0 == n%2 {
 		panic("need odd number of samples")
@@ -35,6 +37,7 @@ func NewSMM(start float64, n uint64) Filter {
 	return &filter
 }
 
+// Name - return the name of the filter
 func (filter *SMM) Name() string {
 	filter.RLock()
 	defer filter.RUnlock()
@@ -42,6 +45,7 @@ func (filter *SMM) Name() string {
 	return fmt.Sprintf("Simple Moving Median %d", len(filter.samples))
 }
 
+// Process - add a input value to the filter
 func (filter *SMM) Process(s float64) float64 {
 	filter.Lock()
 	defer filter.Unlock()
@@ -60,6 +64,7 @@ func (filter *SMM) Process(s float64) float64 {
 	return filter.current
 }
 
+// Current - return the current filter value
 func (filter *SMM) Current() float64 {
 	filter.RLock()
 	defer filter.RUnlock()

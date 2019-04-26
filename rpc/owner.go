@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -18,8 +18,9 @@ import (
 )
 
 // Owner
-// -------
+// -----
 
+// Owner - type for the RPC
 type Owner struct {
 	log     *logger.L
 	limiter *rate.Limiter
@@ -32,19 +33,21 @@ const (
 	maximumBitmarksCount = 100
 )
 
+// OwnerBitmarksArguments - arguments for RPC
 type OwnerBitmarksArguments struct {
 	Owner *account.Account `json:"owner"`        // base58
 	Start uint64           `json:"start,string"` // first record number
 	Count int              `json:"count"`        // number of records
 }
 
+// OwnerBitmarksReply - result of owner RPC
 type OwnerBitmarksReply struct {
 	Next uint64                    `json:"next,string"` // start value for the next call
 	Data []ownership.Ownership     `json:"data"`        // list of bitmarks either issue or transfer
 	Tx   map[string]BitmarksRecord `json:"tx"`          // table of tx records
 }
 
-// can be any of the transaction records
+// BitmarksRecord - can be any of the transaction records
 type BitmarksRecord struct {
 	Record  string      `json:"record"`
 	TxId    interface{} `json:"txId,omitempty"`
@@ -53,10 +56,12 @@ type BitmarksRecord struct {
 	Data    interface{} `json:"data"`
 }
 
+// BlockAsset - special record for owned blocks
 type BlockAsset struct {
 	Number uint64 `json:"number"`
 }
 
+// Bitmarks - list bitmarks belonging to an account
 func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitmarksReply) error {
 
 	if err := rateLimitN(owner.limiter, arguments.Count, maximumBitmarksCount); nil != err {

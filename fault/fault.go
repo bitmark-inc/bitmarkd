@@ -1,10 +1,10 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
 package fault
 
-// error base
+// GenericError - error base class
 type GenericError string
 
 // to allow for different classes of errors

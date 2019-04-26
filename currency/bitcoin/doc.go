@@ -1,6 +1,6 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-// to validate bitcoin addresses
+// Package bitcoin - to validate bitcoin addresses
 package bitcoin

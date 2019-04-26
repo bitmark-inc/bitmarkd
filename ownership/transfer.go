@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -26,7 +26,7 @@ var toLock sync.Mutex
 //   OwnerList       txId - list of owned items
 //   OwnerTxIndex    BN   - position in list of owned items, for delete after transfer
 
-// need to have a lock
+// Share - setup for share ownership transfer, must have a lock
 func Share(previousTxId merkle.Digest, transferTxId merkle.Digest, transferBlockNumber uint64, currentOwner *account.Account, balance uint64) {
 
 	// ensure single threaded
@@ -37,6 +37,7 @@ func Share(previousTxId merkle.Digest, transferTxId merkle.Digest, transferBlock
 	transfer(previousTxId, transferTxId, transferBlockNumber, currentOwner, nil, balance)
 }
 
+// Transfer - transfer ownership
 func Transfer(previousTxId merkle.Digest, transferTxId merkle.Digest, transferBlockNumber uint64, currentOwner *account.Account, newOwner *account.Account) {
 
 	// ensure single threaded
@@ -198,6 +199,7 @@ func create(txId merkle.Digest, ownerData OwnerData, owner *account.Account) {
 	storage.Pool.OwnerData.Put(txId[:], ownerData.Pack())
 }
 
+// CreateAsset - create the ownership record for an asset
 func CreateAsset(issueTxId merkle.Digest, issueBlockNumber uint64, assetId transactionrecord.AssetIdentifier, newOwner *account.Account) {
 	// ensure single threaded
 	toLock.Lock()
@@ -214,6 +216,7 @@ func CreateAsset(issueTxId merkle.Digest, issueBlockNumber uint64, assetId trans
 	create(issueTxId, newData, newOwner)
 }
 
+// CreateBlock - create the ownership record for a block
 func CreateBlock(issueTxId merkle.Digest, blockNumber uint64, newOwner *account.Account) {
 	// ensure single threaded
 	toLock.Lock()
@@ -229,7 +232,7 @@ func CreateBlock(issueTxId merkle.Digest, blockNumber uint64, newOwner *account.
 	create(issueTxId, newData, newOwner)
 }
 
-// find the owner of a specific transaction
+// OwnerOf - find the owner of a specific transaction
 func OwnerOf(txId merkle.Digest) (uint64, *account.Account) {
 
 	blockNumber, packed := storage.Pool.Transactions.GetNB(txId[:])
@@ -262,7 +265,7 @@ func OwnerOf(txId merkle.Digest) (uint64, *account.Account) {
 	}
 }
 
-// check owner currently owns this transaction id
+// CurrentlyOwns - check owner currently owns this transaction id
 func CurrentlyOwns(owner *account.Account, txId merkle.Digest) bool {
 	dKey := append(owner.Bytes(), txId[:]...)
 	return storage.Pool.OwnerTxIndex.Has(dKey)

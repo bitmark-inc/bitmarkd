@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -12,7 +12,7 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-// server identification in Z85 (ZeroMQ Base-85 Encoding) see: http://rfc.zeromq.org/spec:32
+// Configuration - server identification in Z85 (ZeroMQ Base-85 Encoding) see: http://rfc.zeromq.org/spec:32
 // a block of configuration data
 // this is read from the configuration file
 type Configuration struct {
@@ -24,7 +24,7 @@ type Configuration struct {
 	PaymentAddr map[string]string `gluamapper:"payment_address" json:"payment_address"`
 }
 
-// globals for background proccess
+// globals for background process
 type proofData struct {
 	sync.RWMutex // to allow locking
 
@@ -47,7 +47,7 @@ type proofData struct {
 // global data
 var globalData proofData
 
-// initialise proofer backgrouds processes
+// Initialise - start proofer background processes
 func Initialise(configuration *Configuration) error {
 
 	globalData.Lock()
@@ -88,7 +88,7 @@ func Initialise(configuration *Configuration) error {
 	return nil
 }
 
-// finialise - stop all background tasks
+// Finalise - stop all background tasks
 func Finalise() error {
 
 	if !globalData.initialised {

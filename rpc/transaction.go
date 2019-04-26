@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -14,24 +14,24 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-// Transaction is a rpc entry for transaction related functions
+// Transaction - an RPC entry for transaction related functions
 type Transaction struct {
 	log     *logger.L
 	limiter *rate.Limiter
 	start   time.Time
 }
 
-// TransactionArguments is the arguments for statuc rpc request
+// TransactionArguments - arguments for status RPC request
 type TransactionArguments struct {
 	TxId merkle.Digest `json:"txId"`
 }
 
-// TransactionStatus is a struct for an rpc reply
+// TransactionStatusReply - results from status RPC
 type TransactionStatusReply struct {
 	Status string `json:"status"`
 }
 
-// Status is an rpc api for query transaction status
+// Status - query transaction status
 func (t *Transaction) Status(arguments *TransactionArguments, reply *TransactionStatusReply) error {
 
 	if err := rateLimit(t.limiter); nil != err {

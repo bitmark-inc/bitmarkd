@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -22,13 +22,13 @@ const (
 	MinimumReciprocal float64 = 1.0
 )
 
-// number of block times to decay the difficulty by 50%
+// HalfLife - number of block times to decay the difficulty by 50%
 const HalfLife = 100
 
 // the decay constant
 const decayLambda float64 = math.Ln2 / HalfLife
 
-// Type for difficulty
+// Difficulty - Type for difficulty
 //
 // bits is encoded as:
 //    8 bit exponent,
@@ -47,7 +47,7 @@ type Difficulty struct {
 	filter     filters.Filter // filter for difficulty auto-adjust
 }
 
-// current difficulty
+// Current - current difficulty
 var Current = New()
 
 // difficulty of 1 as 256 bit big endian value
@@ -75,14 +75,14 @@ func init() {
 	Current.SetBits(OneUint64)
 }
 
-// create a difficulty with the largest possible value
+// New - create a difficulty with the largest possible value
 // which is the easiest for the miners and has the fewest leading zeros
 func New() *Difficulty {
 	d := new(Difficulty)
 	return d.internalReset()
 }
 
-// Get 1/difficulty as normal floating-point value
+// Reciprocal - Get 1/difficulty as normal floating-point value
 // this is the Pdiff value
 func (difficulty *Difficulty) Reciprocal() float64 {
 	difficulty.m.RLock()
@@ -90,26 +90,26 @@ func (difficulty *Difficulty) Reciprocal() float64 {
 	return difficulty.reciprocal
 }
 
-// Get difficulty as short packed value
+// Bits - Get difficulty as short packed value
 func (difficulty *Difficulty) Bits() uint64 {
 	difficulty.m.RLock()
 	defer difficulty.m.RUnlock()
 	return difficulty.bits
 }
 
-// Get difficulty as the big endian hex encodes short packed value
+// String - Get difficulty as the big endian hex encodes short packed value
 func (difficulty *Difficulty) String() string {
 	difficulty.m.RLock()
 	defer difficulty.m.RUnlock()
 	return fmt.Sprintf("%016x", difficulty.bits)
 }
 
-// for the %#v format use 256 bit value
+// GoString - for the %#v format use 256 bit value
 func (difficulty *Difficulty) GoString() string {
 	return fmt.Sprintf("%064x", difficulty.BigInt())
 }
 
-// convert a uint64 difficulty value to a big.Int
+// BigInt - convert a uint64 difficulty value to a big.Int
 func (difficulty *Difficulty) BigInt() *big.Int {
 	difficulty.m.RLock()
 	defer difficulty.m.RUnlock()
@@ -132,7 +132,7 @@ func (difficulty *Difficulty) internalReset() *Difficulty {
 	return difficulty
 }
 
-// set from a 64 bit word (bits)
+// SetBits - set from a 64 bit word (bits)
 func (difficulty *Difficulty) SetBits(u uint64) *Difficulty {
 
 	// quick setup for default
@@ -171,6 +171,7 @@ func (difficulty *Difficulty) SetBits(u uint64) *Difficulty {
 	return difficulty
 }
 
+// SetReciprocal - set the difficulty value from a reciprocal value
 func (difficulty *Difficulty) SetReciprocal(f float64) {
 	difficulty.m.Lock()
 	defer difficulty.m.Unlock()
@@ -260,12 +261,12 @@ scan_buffer:
 	return difficulty.reciprocal
 }
 
-// set the difficulty from little endian bytes
+// SetBytes - set the difficulty from little endian bytes
 func (difficulty *Difficulty) SetBytes(b []byte) *Difficulty {
 
 	const byteLength = 8
 	if len(b) != byteLength {
-		logger.Panicf("difficulty.SetBytes: too few bytes expeced: %d had: %d", byteLength, len(b))
+		logger.Panicf("difficulty.SetBytes: too few bytes expected: %d had: %d", byteLength, len(b))
 	}
 
 	u := uint64(b[0]) |
@@ -280,7 +281,7 @@ func (difficulty *Difficulty) SetBytes(b []byte) *Difficulty {
 	return difficulty.SetBits(u)
 }
 
-// adjustment based on error from desired cycle time
+// Adjust - adjustment based on error from desired cycle time
 // call as difficulty.Adjust(expectedMinutes, actualMinutes)
 func (difficulty *Difficulty) Adjust(expectedMinutes float64, actualMinutes float64) float64 {
 	difficulty.m.Lock()
@@ -303,7 +304,7 @@ func (difficulty *Difficulty) Adjust(expectedMinutes float64, actualMinutes floa
 	return difficulty.internalSetReciprocal(newReciprocal)
 }
 
-// exponential decay of difficulty
+// Decay - exponential decay of difficulty
 // call each expected block period to decay the current difficulty
 func (difficulty *Difficulty) Decay() float64 {
 	difficulty.m.Lock()
@@ -315,7 +316,7 @@ func (difficulty *Difficulty) Decay() float64 {
 	return difficulty.internalSetReciprocal(newReciprocal)
 }
 
-// convert a difficulty to little endian hex for JSON
+// MarshalText - convert a difficulty to little endian hex for JSON
 func (difficulty Difficulty) MarshalText() ([]byte, error) {
 
 	bits := make([]byte, 8)
@@ -327,7 +328,7 @@ func (difficulty Difficulty) MarshalText() ([]byte, error) {
 	return buffer, nil
 }
 
-// convert a difficulty little endian hex string to difficulty value
+// UnmarshalText - convert a difficulty little endian hex string to difficulty value
 func (difficulty *Difficulty) UnmarshalText(s []byte) error {
 	buffer := make([]byte, hex.DecodedLen(len(s)))
 	_, err := hex.Decode(buffer, s)

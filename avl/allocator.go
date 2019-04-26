@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -8,17 +8,17 @@ import (
 	"sync"
 )
 
-// a key item must implement the Compare function
-type item interface {
+// Item - a key item must implement the Compare function
+type Item interface {
 	Compare(interface{}) int // for left/right ordering of items
 }
 
-// a node in the tree
+// Node - a node in the tree
 type Node struct {
 	left       *Node       // left sub-tree
 	right      *Node       // right sub-tree
 	up         *Node       // points to parent node
-	key        item        // key part for ordering
+	key        Item        // key part for ordering
 	value      interface{} // value part for data storage
 	leftNodes  int         // node count
 	rightNodes int         // node count
@@ -32,7 +32,7 @@ var totalNodes int // total nodes created
 var freeNodes int  // number of nodes in the pool
 
 // allocate a new node, reuses reclaimed nodes if any are available
-func newNode(key item, value interface{}) *Node {
+func newNode(key Item, value interface{}) *Node {
 	m.Lock()
 	if nil == pool {
 		if 0 != freeNodes {

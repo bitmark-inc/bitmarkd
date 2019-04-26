@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -12,7 +12,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/util"
 )
 
-// turn a byte slice into a record
+// Unpack - turn a byte slice into a record
 // Note: the unpacker will access the underlying array of the packed
 //       record so p[x:y].Unpack() can read past p[y] and couldcontinue up to cap(p)
 //       i.e p[x:cap(p)].Unpack() performs the same operation

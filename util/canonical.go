@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -13,13 +13,13 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-// type to hold an IP and Port
+// Connection - type to hold an IP and Port
 type Connection struct {
 	ip   net.IP
 	port uint16
 }
 
-// decode a connection string into an IP and Port
+// NewConnection - create a connection from an Host:Port string
 func NewConnection(hostPort string) (*Connection, error) {
 	host, port, err := net.SplitHostPort(hostPort)
 	if nil != err {
@@ -52,7 +52,7 @@ func NewConnection(hostPort string) (*Connection, error) {
 	return c, nil
 }
 
-// convert an array of connections
+// NewConnections -  convert an array of connections
 func NewConnections(hostPort []string) ([]*Connection, error) {
 	if 0 == len(hostPort) {
 		return nil, fault.ErrInvalidLength
@@ -68,7 +68,7 @@ func NewConnections(hostPort []string) ([]*Connection, error) {
 	return c, nil
 }
 
-// convert an IP and port to a connection
+// ConnectionFromIPandPort - convert an IP and port to a connection
 func ConnectionFromIPandPort(ip net.IP, port uint16) *Connection {
 	return &Connection{
 		ip:   ip,
@@ -76,7 +76,7 @@ func ConnectionFromIPandPort(ip net.IP, port uint16) *Connection {
 	}
 }
 
-// make the IP:Port into canonical string
+// CanonicalIPandPort - make the IP:Port into canonical string
 //
 // examples:
 //   IPv4:  127.0.0.1:1234
@@ -99,16 +99,16 @@ func (conn Connection) String() string {
 	return s
 }
 
-// convert to text for JSON
+// MarshalText - convert to text for JSON
 func (conn Connection) MarshalText() ([]byte, error) {
 	s, _ := conn.CanonicalIPandPort("")
 	return []byte(s), nil
 }
 
-// type for packed byte buffer IP and Port
+// PackedConnection - type for packed byte buffer IP and Port
 type PackedConnection []byte
 
-// pack an IP and Port into a byte buffer
+// Pack - pack an IP and Port into a byte buffer
 func (conn *Connection) Pack() PackedConnection {
 	b := []byte(conn.ip)
 	length := len(b)
@@ -124,9 +124,9 @@ func (conn *Connection) Pack() PackedConnection {
 	return b2
 }
 
-// unpack a byte buffer into an IP and Port
+// Unpack - unpack a byte buffer into an IP and Port
 // returns nil if unpack fails
-// if sucessful returns connection and number of bytes used
+// if successful returns connection and number of bytes used
 // so an array can be unpacked more easily
 func (packed PackedConnection) Unpack() (*Connection, int) {
 	if nil == packed {
@@ -150,32 +150,32 @@ func (packed PackedConnection) Unpack() (*Connection, int) {
 	return c, int(n)
 }
 
-// unpack first IPv4 and first IPv6 plus Port
+// Unpack46 - unpack first IPv4 and first IPv6 plus Port
 func (packed PackedConnection) Unpack46() (*Connection, *Connection) {
 
 	// only expect two
-	ipv4_connection := (*Connection)(nil)
-	ipv6_connection := (*Connection)(nil)
+	ipv4Connection := (*Connection)(nil)
+	ipv6Connection := (*Connection)(nil)
 
 	for {
 		conn, n := packed.Unpack()
 		packed = packed[n:]
 
 		if nil == conn {
-			return ipv4_connection, ipv6_connection
+			return ipv4Connection, ipv6Connection
 		}
 
 		if nil != conn.ip.To4() {
-			if nil == ipv4_connection {
-				ipv4_connection = conn
+			if nil == ipv4Connection {
+				ipv4Connection = conn
 			}
-		} else if nil == ipv6_connection {
-			ipv6_connection = conn
+		} else if nil == ipv6Connection {
+			ipv6Connection = conn
 		}
 
 		// if both kinds found
-		if nil != ipv4_connection && nil != ipv6_connection {
-			return ipv4_connection, ipv6_connection
+		if nil != ipv4Connection && nil != ipv6Connection {
+			return ipv4Connection, ipv6Connection
 		}
 	}
 }

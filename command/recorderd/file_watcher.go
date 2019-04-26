@@ -6,10 +6,12 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/bitmark-inc/logger"
 	"github.com/fsnotify/fsnotify"
+
+	"github.com/bitmark-inc/logger"
 )
 
+// FileWatcher - system for monitoring for file changes
 type FileWatcher interface {
 	Start() error
 	FileName() string
@@ -66,6 +68,7 @@ func (w *FileWatcherData) Start() error {
 	}
 
 	go func() {
+	loop:
 		for {
 			event := <-w.watcher.Events
 			w.log.Infof("file event: %v", event)
@@ -80,7 +83,7 @@ func (w *FileWatcherData) Start() error {
 
 			if path.Base(event.Name) != path.Base(filepath.Clean(w.filePath)) {
 				w.log.Infof("file %s not match, discard event", w.filePath)
-				continue
+				continue loop
 			}
 
 			if watcherEventFileChange(event) {

@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -163,7 +163,7 @@ func (iter *transactionIter) Close() {
 	close(iter.control)
 }
 
-// fetch a series of verified transactions
+// FetchVerified - fetch a series of verified transactions
 func FetchVerified(count int) ([]merkle.Digest, []byte, error) {
 	if count <= 0 {
 		return nil, nil, fault.ErrInvalidCount

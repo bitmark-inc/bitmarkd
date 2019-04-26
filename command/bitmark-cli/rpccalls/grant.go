@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -22,6 +22,7 @@ var (
 	ErrNotGrantRecord = fault.InvalidError("not grant record")
 )
 
+// GrantData - data for a grant request
 type GrantData struct {
 	ShareId     string
 	Quantity    uint64
@@ -30,12 +31,13 @@ type GrantData struct {
 	BeforeBlock uint64
 }
 
+// GrantCountersignData - data to be countersigned
 type GrantCountersignData struct {
 	Grant     string
 	Recipient *keypair.KeyPair
 }
 
-// JSON data to output after grant completes
+// GrantReply - JSON data to output after grant completes
 type GrantReply struct {
 	GrantId  merkle.Digest                                   `json:"grantId"`
 	PayId    pay.PayId                                       `json:"payId"`
@@ -43,11 +45,13 @@ type GrantReply struct {
 	Commands map[string]string                               `json:"commands,omitempty"`
 }
 
+// GrantSingleSignedReply - result from single signature
 type GrantSingleSignedReply struct {
 	Identity string `json:"identity"`
 	Grant    string `json:"grant"`
 }
 
+// Grant - perform the grant request
 func (client *Client) Grant(grantConfig *GrantData) (*GrantSingleSignedReply, error) {
 
 	var shareId merkle.Digest
@@ -82,6 +86,7 @@ func (client *Client) Grant(grantConfig *GrantData) (*GrantSingleSignedReply, er
 	return &response, nil
 }
 
+// CountersignGrant - perform the countersignature
 func (client *Client) CountersignGrant(grant *transactionrecord.ShareGrant) (*GrantReply, error) {
 
 	client.printJson("Grant Request", grant)

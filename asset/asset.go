@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -55,7 +55,7 @@ type globalDataType struct {
 // gobal storage
 var globalData globalDataType
 
-// initialise the asset cache
+// Initialise - setup the asset cache
 func Initialise() error {
 
 	globalData.Lock()
@@ -91,7 +91,7 @@ func Initialise() error {
 	return nil
 }
 
-// stop all background handlers
+// Finalise - stop all background handlers
 func Finalise() error {
 
 	if !globalData.initialised {
@@ -113,7 +113,7 @@ func Finalise() error {
 	return nil
 }
 
-// cache an incoming asset
+// Cache - cache an incoming asset
 func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIdentifier, transactionrecord.Packed, error) {
 	packedAsset, err := asset.Pack(asset.Registrant)
 	if nil != err {
@@ -181,7 +181,7 @@ func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIdentifi
 	return &assetId, packedAsset, nil
 }
 
-// check if an asset is exist and is confirmed
+// Exists - check if an asset is exist and is confirmed
 func Exists(assetId transactionrecord.AssetIdentifier) bool {
 
 	// already confirmed
@@ -195,7 +195,7 @@ func Exists(assetId transactionrecord.AssetIdentifier) bool {
 	return ok
 }
 
-// get packed asset data from cache (nil if not present)
+// Get - get packed asset data from cache (nil if not present)
 func Get(assetId transactionrecord.AssetIdentifier) transactionrecord.Packed {
 
 	globalData.RLock()
@@ -207,7 +207,7 @@ func Get(assetId transactionrecord.AssetIdentifier) transactionrecord.Packed {
 	return item.packed
 }
 
-// remove an asset from the cache
+// Delete - remove an asset from the cache
 func Delete(assetId transactionrecord.AssetIdentifier) {
 
 	globalData.Lock()
@@ -215,7 +215,7 @@ func Delete(assetId transactionrecord.AssetIdentifier) {
 	globalData.Unlock()
 }
 
-// mark a cached asset being verified
+// SetVerified - mark a cached asset being verified
 func SetVerified(assetId transactionrecord.AssetIdentifier) {
 
 	// already confirmed
@@ -238,6 +238,7 @@ func SetVerified(assetId transactionrecord.AssetIdentifier) {
 	}
 }
 
+// IncrementTTL - lock ass as used by one issue
 func IncrementTTL(assetId transactionrecord.AssetIdentifier) {
 	globalData.RLock()
 	if _, ok := globalData.cache[assetId]; ok {
@@ -246,6 +247,7 @@ func IncrementTTL(assetId transactionrecord.AssetIdentifier) {
 	globalData.RUnlock()
 }
 
+// DecrementTTL - issue was expired so decrease lock count
 func DecrementTTL(assetId transactionrecord.AssetIdentifier) {
 	globalData.RLock()
 	if _, ok := globalData.cache[assetId]; ok {

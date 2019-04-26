@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -32,7 +32,7 @@ type blockData struct {
 // global data
 var globalData blockData
 
-// setup the current block data
+// Initialise - setup the current block data
 func Initialise() error {
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -58,7 +58,7 @@ func Initialise() error {
 	return nil
 }
 
-// shutdown the block header system
+// Finalise -  shutdown the block header system
 func Finalise() error {
 
 	if !globalData.initialised {
@@ -77,7 +77,7 @@ func Finalise() error {
 	return nil
 }
 
-// reset the block data
+// SetGenesis - reset the block data
 func SetGenesis() {
 	globalData.Lock()
 	setGenesis()
@@ -95,7 +95,7 @@ func setGenesis() {
 	}
 }
 
-// set all data
+// Set - set current header data
 func Set(height uint64, digest blockdigest.Digest, version uint16, timestamp uint64) {
 
 	globalData.Lock()
@@ -108,7 +108,7 @@ func Set(height uint64, digest blockdigest.Digest, version uint16, timestamp uin
 	globalData.Unlock()
 }
 
-// return all header data
+// Get - return all header data
 func Get() (uint64, blockdigest.Digest, uint16, uint64) {
 
 	globalData.Lock()
@@ -117,7 +117,7 @@ func Get() (uint64, blockdigest.Digest, uint16, uint64) {
 	return globalData.height, globalData.previousBlock, globalData.previousVersion, globalData.previousTimestamp
 }
 
-// get block data for initialising a new block
+// GetNew - return block data for initialising a new block
 // returns: previous block digest and the number for the new block
 func GetNew() (blockdigest.Digest, uint64) {
 	globalData.Lock()
@@ -126,7 +126,7 @@ func GetNew() (blockdigest.Digest, uint64) {
 	return globalData.previousBlock, nextBlockNumber
 }
 
-// current height
+// Height - return current height
 func Height() uint64 {
 
 	globalData.Lock()

@@ -5,6 +5,8 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
+// ParseConfigurationFile - read and execute a Lua files and assign
+// the results to a configuration structure
 func ParseConfigurationFile(fileName string, config interface{}) error {
 	L := lua.NewState()
 	defer L.Close()

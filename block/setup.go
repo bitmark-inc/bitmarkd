@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -23,6 +23,7 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
+// BlockValidationCounts - number of blocks to validate on startup
 const BlockValidationCounts = 10
 
 // globals for background process
@@ -45,8 +46,8 @@ type blockData struct {
 var globalData blockData
 
 var (
-	priorBlockOwnerTxs map[string]struct{} = map[string]struct{}{}
-	priorTxOwnerTxs    map[string]struct{} = map[string]struct{}{}
+	priorBlockOwnerTxs = map[string]struct{}{}
+	priorTxOwnerTxs    = map[string]struct{}{}
 )
 
 // validateTxOwnerRecords will check
@@ -289,7 +290,7 @@ func validateAndReturnLastBlock(last storage.Element) (*blockrecord.Header, bloc
 	return header, digest, nil
 }
 
-// setup the current block data
+// Initialise - setup the current block data
 func Initialise(migrate, reindex bool) error {
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -374,7 +375,7 @@ func Initialise(migrate, reindex bool) error {
 	return nil
 }
 
-// shutdown the block system
+// Finalise - shutdown the block system
 func Finalise() error {
 
 	if !globalData.initialised {
@@ -395,7 +396,7 @@ func Finalise() error {
 	return nil
 }
 
-// return the last block hash in hex string if found
+// LastBlockHash - return the last block hash in hex string if found
 func LastBlockHash() string {
 
 	log := globalData.log

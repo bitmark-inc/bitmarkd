@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -19,17 +19,13 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-// Bitmark
-// -------
-
+// Bitmark - type for the RPC
 type Bitmark struct {
 	log     *logger.L
 	limiter *rate.Limiter
 }
 
-// Bitmark transfer
-// ----------------
-
+// BitmarkTransferReply - result from transfer RPC
 type BitmarkTransferReply struct {
 	TxId      merkle.Digest                                   `json:"txId"`
 	BitmarkId merkle.Digest                                   `json:"bitmarkId"`
@@ -37,6 +33,7 @@ type BitmarkTransferReply struct {
 	Payments  map[string]transactionrecord.PaymentAlternative `json:"payments"`
 }
 
+// Transfer - transfer a bitmark
 func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransferCountersigned, reply *BitmarkTransferReply) error {
 
 	if err := rateLimit(bitmark.limiter); nil != err {
@@ -108,12 +105,13 @@ const (
 	maximumProvenanceCount = 100
 )
 
+// ProvenanceArguments - arguments for provenance RPC
 type ProvenanceArguments struct {
 	TxId  merkle.Digest `json:"txId"`
 	Count int           `json:"count"`
 }
 
-// can be any of the transaction records
+// ProvenanceRecord - can be any of the transaction records
 type ProvenanceRecord struct {
 	Record  string      `json:"record"`
 	IsOwner bool        `json:"isOwner"`
@@ -123,10 +121,12 @@ type ProvenanceRecord struct {
 	Data    interface{} `json:"data"`
 }
 
+// ProvenanceReply - results from provenance RPC
 type ProvenanceReply struct {
 	Data []ProvenanceRecord `json:"data"`
 }
 
+// Provenance - list the provenance from s transaction id
 func (bitmark *Bitmark) Provenance(arguments *ProvenanceArguments, reply *ProvenanceReply) error {
 
 	if err := rateLimitN(bitmark.limiter, arguments.Count, maximumProvenanceCount); nil != err {

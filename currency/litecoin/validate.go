@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -12,10 +12,10 @@ import (
 	"github.com/bitmark-inc/bitmarkd/util"
 )
 
-// to hold the type of the address
+// Version - to hold the type of the address
 type Version byte
 
-// to hold the fixed-length address bytes
+// AddressBytes - to hold the fixed-length address bytes
 type AddressBytes [20]byte
 
 // from: https://en.bitcoin.it/wiki/List_of_address_prefixes
@@ -29,7 +29,7 @@ const (
 	vNull          Version = 0xff
 )
 
-// check the address and return its version
+// ValidateAddress - check the address and return its version
 func ValidateAddress(address string) (Version, AddressBytes, error) {
 
 	addr := util.FromBase58(address)
@@ -62,6 +62,7 @@ func ValidateAddress(address string) (Version, AddressBytes, error) {
 	return Version(addr[0]), addressBytes, nil
 }
 
+// TransformAddress - convert address to/from new version prefix
 func TransformAddress(address string) (string, error) {
 	version, addressBytes, err := ValidateAddress(address)
 	if nil != err {
@@ -85,7 +86,7 @@ func TransformAddress(address string) (string, error) {
 	}
 }
 
-// detect if version is a testnet value
+// IsTestnet - detect if version is a testnet value
 func IsTestnet(version Version) bool {
 	switch version {
 	case Testnet, TestnetScript, TestnetScript2:

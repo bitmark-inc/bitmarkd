@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -9,12 +9,14 @@ import (
 	"github.com/bitmark-inc/bitmarkd/rpc"
 )
 
+// OwnedData - data for an ownership request
 type OwnedData struct {
 	Owner *keypair.KeyPair
 	Start uint64
 	Count int
 }
 
+// GetOwned - obtain list of owned bitmarks
 func (client *Client) GetOwned(ownedConfig *OwnedData) (*rpc.OwnerBitmarksReply, error) {
 
 	ownerAddress := makeAddress(ownedConfig.Owner, client.testnet)

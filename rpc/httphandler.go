@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -35,7 +35,7 @@ const (
 	maximumCount = 100
 )
 
-// type to allow rpc system to interface to http request
+// InternalConnection - type to allow rpc system to interface to http request
 type InternalConnection struct {
 	in  io.Reader
 	out io.Writer

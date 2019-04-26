@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -18,31 +18,31 @@ const (
 	AssetIdentifierLength = 64
 )
 
-// the type for an asset identifier
+// AssetIdentifier - the type for an asset identifier
 // stored as little endian byte array
 // represented as little endian hex text for JSON encoding
 // convert a binary assetId to byte slice
 // to get bytes value just use assetId[:]
 type AssetIdentifier [AssetIdentifierLength]byte
 
-// create an asset id from a byte slice
+// NewAssetIdentifier - create an asset id from a byte slice
 //
 // SHA3-512 Hash
 func NewAssetIdentifier(record []byte) AssetIdentifier {
 	return AssetIdentifier(sha3.Sum512(record))
 }
 
-// convert a binary assetId to little endian hex string for use by the fmt package (for %s)
+// String - convert a binary assetId to little endian hex string for use by the fmt package (for %s)
 func (assetId AssetIdentifier) String() string {
 	return hex.EncodeToString(assetId[:])
 }
 
-// convert a binary assetId to little endian hex string for use by the fmt package (for %#v)
+// GoString - convert a binary assetId to little endian hex string for use by the fmt package (for %#v)
 func (assetId AssetIdentifier) GoString() string {
 	return "<asset:" + hex.EncodeToString(assetId[:]) + ">"
 }
 
-// convert a little endian hex text representation to a assetId for use by the format package scan routines
+// Scan - convert a little endian hex text representation to a assetId for use by the format package scan routines
 func (assetId *AssetIdentifier) Scan(state fmt.ScanState, verb rune) error {
 	token, err := state.Token(true, func(c rune) bool {
 		if c >= '0' && c <= '9' {
@@ -74,7 +74,7 @@ func (assetId *AssetIdentifier) Scan(state fmt.ScanState, verb rune) error {
 	return nil
 }
 
-// convert assetId to little endian hex text
+// MarshalText - convert assetId to little endian hex text
 func (assetId AssetIdentifier) MarshalText() ([]byte, error) {
 	size := hex.EncodedLen(len(assetId))
 	buffer := make([]byte, size)
@@ -82,7 +82,7 @@ func (assetId AssetIdentifier) MarshalText() ([]byte, error) {
 	return buffer, nil
 }
 
-// convert little endian hex text into a assetId
+// UnmarshalText - convert little endian hex text into a assetId
 func (assetId *AssetIdentifier) UnmarshalText(s []byte) error {
 	if len(assetId) != hex.DecodedLen(len(s)) {
 		return fault.ErrNotLink
@@ -97,7 +97,7 @@ func (assetId *AssetIdentifier) UnmarshalText(s []byte) error {
 	return nil
 }
 
-// convert and validate little endian binary byte slice to a assetId
+// AssetIdentifierFromBytes - convert and validate little endian binary byte slice to a assetId
 func AssetIdentifierFromBytes(assetId *AssetIdentifier, buffer []byte) error {
 	if AssetIdentifierLength != len(buffer) {
 		return fault.ErrNotAssetIdentifier

@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -23,8 +23,8 @@ const (
 	privateLength = 32
 )
 
-// create a new public/private keypair and write them to separate
-// files
+// MakeKeyPair - create a new public/private keypair and write them to
+// separate files
 func MakeKeyPair(publicKeyFileName string, privateKeyFileName string) error {
 	if util.EnsureFileExists(publicKeyFileName) {
 		return fault.ErrKeyFileAlreadyExists
@@ -55,7 +55,7 @@ func MakeKeyPair(publicKeyFileName string, privateKeyFileName string) error {
 	return nil
 }
 
-// read a public key from a string returning it as a 32 byte string
+// ReadPublicKey - extract the public key from a string returning it as a 32 byte string
 func ReadPublicKey(key string) ([]byte, error) {
 	data, private, err := ParseKey(key)
 	if err != nil {
@@ -67,7 +67,7 @@ func ReadPublicKey(key string) ([]byte, error) {
 	return data, err
 }
 
-// read a private key from a string returning it as a 32 byte string
+// ReadPrivateKey - extract the private key from a string returning it as a 32 byte string
 func ReadPrivateKey(key string) ([]byte, error) {
 	data, private, err := ParseKey(key)
 	if err != nil {
@@ -79,6 +79,7 @@ func ReadPrivateKey(key string) ([]byte, error) {
 	return data, err
 }
 
+// ParseKey - parse hexadecimal key strings
 func ParseKey(data string) ([]byte, bool, error) {
 	s := strings.TrimSpace(string(data))
 	if strings.HasPrefix(s, taggedPrivate) {

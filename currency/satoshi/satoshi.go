@@ -1,10 +1,10 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
 package satoshi
 
-// convert a string to a Satoshi value
+// FromByteString - convert a string to a Satoshi value
 //
 // i.e. "0.00000001" will convert to uint64(1)
 //

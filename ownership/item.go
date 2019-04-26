@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -11,7 +11,7 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-// the flag byte
+// OwnedItem - the flag byte
 type OwnedItem byte
 
 // type codes for flag byte
@@ -35,7 +35,7 @@ func toString(item OwnedItem) ([]byte, error) {
 	}
 }
 
-// convert a owned item to its string symbol
+// String - convert a owned item to its string symbol
 func (item OwnedItem) String() string {
 	s, err := toString(item)
 	if nil != err {
@@ -44,7 +44,7 @@ func (item OwnedItem) String() string {
 	return string(s)
 }
 
-// convert item to text
+// MarshalText - convert item to text
 func (item OwnedItem) MarshalText() ([]byte, error) {
 	s, err := toString(item)
 	if nil != err {
@@ -53,7 +53,7 @@ func (item OwnedItem) MarshalText() ([]byte, error) {
 	return s, nil
 }
 
-// convert test to Item
+// UnmarshalText - convert test to Item
 func (item *OwnedItem) UnmarshalText(s []byte) error {
 	switch strings.ToLower(string(s)) {
 	case "asset":

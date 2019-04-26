@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -9,10 +9,12 @@ import (
 	"github.com/bitmark-inc/bitmarkd/rpc"
 )
 
+// TransactionStatusData - request data fro transaction status
 type TransactionStatusData struct {
 	TxId string
 }
 
+// GetTransactionStatus - perform a status request
 func (client *Client) GetTransactionStatus(statusConfig *TransactionStatusData) (*rpc.TransactionStatusReply, error) {
 
 	var txId merkle.Digest

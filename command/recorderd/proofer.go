@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -26,7 +26,7 @@ const (
 	proofRequest        = "inproc://blocks.request"  // to fair-queue block requests
 	dispatch            = "inproc://blocks.dispatch" // proofer fetches from here
 	errorProoferID      = -1
-	ProoferLoggerPrefix = "proofer"
+	prooferLoggerPrefix = "proofer"
 )
 
 var (
@@ -206,11 +206,12 @@ func (p *ProoferData) nextProoferID() (int, error) {
 	var idx int
 	found := false
 
+loop:
 	for k, v := range p.proofIDs {
 		if !v {
 			idx = k
 			found = true
-			break
+			break loop
 		}
 	}
 

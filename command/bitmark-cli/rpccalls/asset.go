@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -15,6 +15,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 
+// AssetData - asset data for bitmark creation
 type AssetData struct {
 	Name        string
 	Metadata    string
@@ -23,12 +24,13 @@ type AssetData struct {
 	Fingerprint string
 }
 
+// AssetResult - result of an asset get request
 type AssetResult struct {
 	AssetId   *transactionrecord.AssetIdentifier
 	Confirmed bool
 }
 
-// build a properly signed asset
+// MakeAsset - build a properly signed asset
 func (client *Client) MakeAsset(assetConfig *AssetData) (*AssetResult, error) {
 
 	result := &AssetResult{}

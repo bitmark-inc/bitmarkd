@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -16,7 +16,7 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-// result returned by store transfer
+// TransferInfo - result returned by store transfer
 type TransferInfo struct {
 	Id        pay.PayId
 	TxId      merkle.Digest
@@ -35,6 +35,7 @@ type verifiedTransferInfo struct {
 	issueBlockNumber    uint64
 }
 
+// StoreTransfer - verify and store a transfer request
 func StoreTransfer(transfer transactionrecord.BitmarkTransfer) (*TransferInfo, bool, error) {
 
 	globalData.RLock()

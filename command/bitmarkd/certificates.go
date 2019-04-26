@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -46,7 +46,7 @@ func makeSelfSignedCertificate(name string, certificateFileName string, privateK
 	return nil
 }
 
-// compute the fingerprint of a certificate
+// CertificateFingerprint - compute the fingerprint of a certificate
 //
 // FreeBSD: openssl x509 -outform DER -in bitmarkd-local-rpc.crt | sha3sum -a 256
 func CertificateFingerprint(certificate []byte) [32]byte {

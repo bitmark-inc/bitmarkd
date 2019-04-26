@@ -1,12 +1,12 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
 package avl
 
-// insert a new node into the tree
+// Insert - insert a new node into the tree
 // returns the possibly updated root
-func (tree *Tree) Insert(key item, value interface{}) bool {
+func (tree *Tree) Insert(key Item, value interface{}) bool {
 	added := false
 	tree.root, added, _ = insert(key, value, tree.root)
 	if added {
@@ -16,7 +16,7 @@ func (tree *Tree) Insert(key item, value interface{}) bool {
 }
 
 // internal routine for insert
-func insert(key item, value interface{}, p *Node) (*Node, bool, bool) {
+func insert(key Item, value interface{}, p *Node) (*Node, bool, bool) {
 	h := false
 	if nil == p { // insert new node
 		h = true

@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -19,6 +19,7 @@ const (
 // LIVE Network
 // ------------
 
+// LiveGenesisBlock - live genesis block data
 var LiveGenesisBlock = []byte{
 	0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -51,7 +52,7 @@ var LiveGenesisBlock = []byte{
 	0x8d, 0x4d, 0xf8, 0x62, 0x77, 0x0d, 0x0c,
 }
 
-// digest of the live genesis header
+// LiveGenesisDigest - digest of the live genesis header
 // 0012af8f437cc0b4358df93f317129747ab3cf3cf0795530decd01eb39f7935c
 var LiveGenesisDigest = blockdigest.Digest([...]byte{
 	0x5c, 0x93, 0xf7, 0x39, 0xeb, 0x01, 0xcd, 0xde,
@@ -63,6 +64,7 @@ var LiveGenesisDigest = blockdigest.Digest([...]byte{
 // TEST Network
 // ------------
 
+// TestGenesisBlock - testnet genesis block data
 var TestGenesisBlock = []byte{
 	0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -96,7 +98,7 @@ var TestGenesisBlock = []byte{
 	0xeb, 0xc0, 0xf8, 0x02, 0x98, 0x3d, 0xf6, 0x01,
 }
 
-// digest of the test genesis header
+// TestGenesisDigest - digest of the test genesis header
 // 00fe807b8f2c5a5416bc570b289baadebb9596daeec5128f6b924a7cb88be68a
 var TestGenesisDigest = blockdigest.Digest([...]byte{
 	0x8a, 0xe6, 0x8b, 0xb8, 0x7c, 0x4a, 0x92, 0x6b,

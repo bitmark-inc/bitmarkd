@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -68,6 +68,7 @@ const (
 	sharePackLength = assetIdentifierFinish
 )
 
+// AssetOwnerData - owner data
 type AssetOwnerData struct {
 	transferBlockNumber uint64
 	issueTxId           merkle.Digest
@@ -75,12 +76,14 @@ type AssetOwnerData struct {
 	assetId             transactionrecord.AssetIdentifier
 }
 
+// BlockOwnerData - owner data
 type BlockOwnerData struct {
 	transferBlockNumber uint64
 	issueTxId           merkle.Digest
 	issueBlockNumber    uint64 // also this is the number of the owned block
 }
 
+// ShareOwnerData - owner data
 type ShareOwnerData struct {
 	transferBlockNumber uint64
 	issueTxId           merkle.Digest
@@ -88,6 +91,7 @@ type ShareOwnerData struct {
 	assetId             transactionrecord.AssetIdentifier
 }
 
+// OwnerData - generic owner data methods
 type OwnerData interface {
 	Pack() PackedOwnerData
 
@@ -96,9 +100,10 @@ type OwnerData interface {
 	IssueBlockNumber() uint64
 }
 
+// PackedOwnerData - packed data to store in database
 type PackedOwnerData []byte
 
-// fetch and unpack owner data
+// GetOwnerData - fetch and unpack owner data
 func GetOwnerData(txId merkle.Digest) (OwnerData, error) {
 
 	packed := storage.Pool.OwnerData.Get(txId[:])
@@ -109,7 +114,7 @@ func GetOwnerData(txId merkle.Digest) (OwnerData, error) {
 	return PackedOwnerData(packed).Unpack()
 }
 
-// fetch and unpack owner data
+// GetOwnerDataB - fetch and unpack owner data
 func GetOwnerDataB(txId []byte) (OwnerData, error) {
 
 	packed := storage.Pool.OwnerData.Get(txId)
@@ -120,7 +125,7 @@ func GetOwnerDataB(txId []byte) (OwnerData, error) {
 	return PackedOwnerData(packed).Unpack()
 }
 
-// pack asset owner data to byte slice
+// Pack - pack asset owner data to byte slice
 func (a AssetOwnerData) Pack() PackedOwnerData {
 
 	// 8 byte block number
@@ -152,7 +157,7 @@ func (a AssetOwnerData) IssueBlockNumber() uint64 {
 	return a.issueBlockNumber
 }
 
-// pack block owner data to byte slice
+// Pack - pack block owner data to byte slice
 func (b BlockOwnerData) Pack() PackedOwnerData {
 
 	// 8 byte block number
@@ -183,7 +188,7 @@ func (b BlockOwnerData) IssueBlockNumber() uint64 {
 	return b.issueBlockNumber
 }
 
-// pack share owner data to byte slice
+// Pack - pack share owner data to byte slice
 func (a ShareOwnerData) Pack() PackedOwnerData {
 
 	// 8 byte block number
@@ -215,7 +220,7 @@ func (a ShareOwnerData) IssueBlockNumber() uint64 {
 	return a.issueBlockNumber
 }
 
-// unpack record into the appropriate type
+// Unpack - unpack record into the appropriate type
 func (packed PackedOwnerData) Unpack() (OwnerData, error) {
 	if len(packed) < 1 {
 		return nil, fault.ErrNotOwnerDataPack

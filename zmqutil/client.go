@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -12,13 +12,14 @@ import (
 	"sync"
 	"time"
 
+	zmq "github.com/pebbe/zmq4"
+
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
-	zmq "github.com/pebbe/zmq4"
 )
 
-// structure to hold a client connection
+// Client - structure to hold a client connection
 //
 // prefix:
 //   REQ socket this adds an item before send
@@ -55,7 +56,7 @@ var globalClientData = globalClientDataType{
 	clients: make(map[*zmq.Socket]*Client),
 }
 
-// create a client socket ususlly of type zmq.REQ or zmq.SUB
+// NewClient - create a client socket ususlly of type zmq.REQ or zmq.SUB
 func NewClient(socketType zmq.Type, privateKey []byte, publicKey []byte, timeout time.Duration) (*Client, error) {
 
 	if len(publicKey) != publicKeySize {
@@ -83,7 +84,7 @@ func NewClient(socketType zmq.Type, privateKey []byte, publicKey []byte, timeout
 	return client, nil
 }
 
-// create a socket and connect to specific server with specifed key
+// create a socket and connect to specific server with public key
 func (client *Client) openSocket() error {
 	client.Lock()
 	defer client.Unlock()
@@ -267,7 +268,7 @@ func (client *Client) closeSocket() error {
 	return err
 }
 
-// disconnect old address and connect to new
+// Connect - disconnect old address and connect to new
 func (client *Client) Connect(conn *util.Connection, serverPublicKey []byte, prefix string) error {
 
 	// if already connected, disconnect first
@@ -278,7 +279,7 @@ func (client *Client) Connect(conn *util.Connection, serverPublicKey []byte, pre
 	client.address = ""
 	client.prefix = prefix
 
-	// small delay to allow any backgroud socket closing
+	// small delay to allow any background socket closing
 	// and to restrict rate of reconnection
 	time.Sleep(5 * time.Millisecond)
 
@@ -291,12 +292,12 @@ func (client *Client) Connect(conn *util.Connection, serverPublicKey []byte, pre
 	return client.openSocket()
 }
 
-// check if connected to a node
+// IsConnected - check if connected to a node
 func (client *Client) IsConnected() bool {
 	return "" != client.address
 }
 
-// check if connected to a specific node
+// IsConnectedTo - check if connected to a specific node
 func (client *Client) IsConnectedTo(serverPublicKey []byte) bool {
 	return bytes.Equal(client.serverPublicKey, serverPublicKey)
 }
@@ -311,13 +312,13 @@ func (client *Client) IsConnectedTo(serverPublicKey []byte) bool {
 // 	return time.Since(client.timestamp)
 // }
 
-// close and reopen the connection
+// Reconnect - close and reopen the connection
 func (client *Client) Reconnect() error {
 	_, err := client.ReconnectReturningSocket()
 	return err
 }
 
-// close and reopen the connection
+// ReconnectReturningSocket - close and reopen the connection
 func (client *Client) ReconnectReturningSocket() (*zmq.Socket, error) {
 
 	err := client.closeSocket()
@@ -331,6 +332,7 @@ func (client *Client) ReconnectReturningSocket() (*zmq.Socket, error) {
 	return client.socket, nil
 }
 
+// ReconnectOpenedSocket - disconnect and reconnect the current socket
 func (client *Client) ReconnectOpenedSocket() error {
 	client.Lock()
 	defer client.Unlock()
@@ -393,16 +395,17 @@ func (client *Client) disconnect() error {
 	return nil
 }
 
+// GetSocket - return the currently attached ZeroMQ socket
 func (client *Client) GetSocket() *zmq.Socket {
 	return client.socket
 }
 
-// disconnect old address and close
+// Close - disconnect old address and close
 func (client *Client) Close() error {
 	return client.closeSocket()
 }
 
-// disconnect old addresses and close all
+// CloseClients - disconnect old addresses and close all
 func CloseClients(clients []*Client) {
 	for _, client := range clients {
 		if nil != client {
@@ -411,7 +414,7 @@ func CloseClients(clients []*Client) {
 	}
 }
 
-// send a message
+// Send - send a message
 func (client *Client) Send(items ...interface{}) error {
 	client.Lock()
 	defer client.Unlock()
@@ -496,7 +499,7 @@ func (client *Client) Send(items ...interface{}) error {
 	return nil
 }
 
-// receive a reply
+// Receive - receive a reply
 func (client *Client) Receive(flags zmq.Flag) ([][]byte, error) {
 	client.Lock()
 	defer client.Unlock()
@@ -508,7 +511,7 @@ func (client *Client) Receive(flags zmq.Flag) ([][]byte, error) {
 	return data, err
 }
 
-// add poller to client
+// BeginPolling - add poller to client
 func (client *Client) BeginPolling(poller *Poller, events zmq.State) *zmq.Socket {
 
 	// if poller changed
@@ -525,17 +528,18 @@ func (client *Client) BeginPolling(poller *Poller, events zmq.State) *zmq.Socket
 	return client.socket
 }
 
-// to string
+// String - return a string description of a client
 func (client *Client) String() string {
 	return client.address
 }
 
+// Connected - representation of a connected server
 type Connected struct {
 	Address string `json:"address"`
 	Server  string `json:"server"`
 }
 
-// to string
+// ConnectedTo - return string representation of client
 func (client *Client) ConnectedTo() *Connected {
 
 	if "" == client.address {
@@ -547,7 +551,7 @@ func (client *Client) ConnectedTo() *Connected {
 	}
 }
 
-// find the client corresponding to a socket
+// ClientFromSocket - find the client corresponding to a socket
 func ClientFromSocket(socket *zmq.Socket) *Client {
 	globalClientData.Lock()
 	client := globalClientData.clients[socket]
@@ -555,7 +559,7 @@ func ClientFromSocket(socket *zmq.Socket) *Client {
 	return client
 }
 
-// Return a basic information string for debug
+// BasicInfo - return a basic information string for debugging purposes
 func (client *Client) BasicInfo() string {
 	s := fmt.Sprintf("server public key: %x  address: %s  public key: %x  prefix: %s v6: %v socket type: %d  ts: %v  timeout duration: %s",
 		client.serverPublicKey, client.address, client.publicKey, client.prefix, client.v6, client.socketType, client.timestamp, client.timeout.String())
@@ -563,12 +567,12 @@ func (client *Client) BasicInfo() string {
 	return s
 }
 
-// Return ServerPublicKey
+// GetServerPublicKey - return server's public key
 func (client *Client) GetServerPublicKey() []byte {
 	return client.serverPublicKey
 }
 
-// Clear Server fields for reusing the client
+// ResetServer - clear server fields for reusing the client
 func (client *Client) ResetServer() error {
 	err := client.closeSocket()
 	if nil != err {

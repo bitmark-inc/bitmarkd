@@ -1,10 +1,10 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
 package avl
 
-// index to specific item
+// Get - access specific item by index
 func (tree *Tree) Get(index int) *Node {
 	if index < 0 || index >= tree.Count() {
 		return nil

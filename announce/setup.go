@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -38,7 +38,7 @@ type rpcEntry struct {
 // format for timestamps
 const timeFormat = "2006-01-02 15:04:05"
 
-// globals for background proccess
+// globals for background process
 type announcerData struct {
 	sync.RWMutex // to allow locking
 
@@ -76,7 +76,7 @@ type announcerData struct {
 // global data
 var globalData announcerData
 
-// initialise the announcement system
+// Initialise - set up the announcement system
 // pass a fully qualified domain for root node list
 // or empty string for no root nodes
 func Initialise(nodesDomain, peerFile string) error {
@@ -167,7 +167,7 @@ func Initialise(nodesDomain, peerFile string) error {
 	return nil
 }
 
-// finialise - stop all background tasks
+// Finalise - stop all background tasks
 func Finalise() error {
 
 	if !globalData.initialised {
@@ -194,7 +194,7 @@ func Finalise() error {
 	return nil
 }
 
-// convert fingerprint to little endian hex text
+// MarshalText - convert fingerprint to little endian hex text
 func (fingerprint fingerprintType) MarshalText() ([]byte, error) {
 	size := hex.EncodedLen(len(fingerprint))
 	buffer := make([]byte, size)

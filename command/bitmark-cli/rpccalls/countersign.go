@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -14,6 +14,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 
+// CountersignData - data for a countersignature request
 type CountersignData struct {
 	Transaction string
 	NewOwner    *keypair.KeyPair
@@ -23,6 +24,7 @@ var (
 	ErrNotCountersignableRecord = fault.InvalidError("not countersignable record")
 )
 
+// Countersign - countersign a transfer
 func (client *Client) Countersign(countersignConfig *CountersignData) (interface{}, error) {
 
 	b, err := hex.DecodeString(countersignConfig.Transaction)

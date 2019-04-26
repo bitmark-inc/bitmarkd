@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -20,7 +20,7 @@ import (
 )
 
 // set by the linker: go build -ldflags "-X main.version=M.N" ./...
-var version string = "zero" // do not change this value
+var version = "zero" // do not change this value
 
 // colours
 const (
@@ -68,7 +68,7 @@ func main() {
 		// this will be a struct type
 		poolType := reflect.TypeOf(storage.Pool)
 
-		// print all avalable tags
+		// print all available tags
 		fmt.Printf(" tags:\n")
 		for i := 0; i < poolType.NumField(); i += 1 {
 			fieldInfo := poolType.Field(i)

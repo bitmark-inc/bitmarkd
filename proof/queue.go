@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -15,7 +15,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/mode"
 )
 
-// to send to proofer
+// PublishedItem - to send to proofer
 type PublishedItem struct {
 	Job    string
 	Header blockrecord.Header
@@ -23,7 +23,7 @@ type PublishedItem struct {
 	TxIds  []merkle.Digest
 }
 
-// received from the proofer
+// SubmittedItem - received from the proofer
 type SubmittedItem struct {
 	Request string
 	Job     string

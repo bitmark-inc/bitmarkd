@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -9,10 +9,10 @@ import (
 	"github.com/bitmark-inc/bitmarkd/util"
 )
 
-// currency mapping to address strings
+// Map - currency mapping to address strings
 type Map map[Currency]string
 
-// validate and pack a currency → address mapping
+// Pack - validate and pack a currency → address mapping
 // create packed data as: (N = Address length)
 //   Currency N Address   {first item}
 //   …                    {more items}
@@ -47,7 +47,7 @@ scan_currency:
 	return buffer, nil
 }
 
-// unpack and validate a currency address mapping
+// UnpackMap - unpack and validate a currency address mapping
 func UnpackMap(buffer []byte, testnet bool) (Map, Set, error) {
 
 	if nil == buffer || len(buffer) < 2 {

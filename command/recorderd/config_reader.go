@@ -12,6 +12,7 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
+// ConfigReader - methods supported by the configuration system
 type ConfigReader interface {
 	OptimalThreadCount() uint32
 	SetCalendar(JobCalendar)
@@ -35,6 +36,7 @@ var (
 	totalCPUCount = uint32(runtime.NumCPU())
 )
 
+// ConfigReaderData - result from reading configuration
 type ConfigReaderData struct {
 	refreshByMinute      time.Duration
 	log                  *logger.L

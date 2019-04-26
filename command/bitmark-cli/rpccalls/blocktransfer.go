@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -23,6 +23,7 @@ var (
 	ErrNotBlockTransferRecord = fault.InvalidError("not block transfer record")
 )
 
+// BlockTransferData - data for a block transfer request
 type BlockTransferData struct {
 	Payments currency.Map
 	Owner    *keypair.KeyPair
@@ -30,7 +31,7 @@ type BlockTransferData struct {
 	TxId     string
 }
 
-// JSON data to output after blockTransfer completes
+// BlockTransferReply - JSON data to output after blockTransfer completes
 type BlockTransferReply struct {
 	BlockTransferId merkle.Digest                                   `json:"blockTransferId"`
 	PayId           pay.PayId                                       `json:"payId"`
@@ -38,11 +39,13 @@ type BlockTransferReply struct {
 	Commands        map[string]string                               `json:"commands,omitempty"`
 }
 
+// BlockTransferSingleSignedReply - reply if performing a single signature transfer
 type BlockTransferSingleSignedReply struct {
 	Identity      string `json:"identity"`
 	BlockTransfer string `json:"blockTransfer"`
 }
 
+// SingleSignedBlockTransfer - perform a transfer
 func (client *Client) SingleSignedBlockTransfer(blockTransferConfig *BlockTransferData) (*BlockTransferSingleSignedReply, error) {
 
 	var link merkle.Digest
@@ -69,6 +72,7 @@ func (client *Client) SingleSignedBlockTransfer(blockTransferConfig *BlockTransf
 	return &response, nil
 }
 
+// CountersignBlockTransfer - perform a transfer
 func (client *Client) CountersignBlockTransfer(blockTransfer *transactionrecord.BlockOwnerTransfer) (*BlockTransferReply, error) {
 
 	var reply rpc.BlockOwnerTransferReply

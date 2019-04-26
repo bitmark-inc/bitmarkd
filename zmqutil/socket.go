@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -27,19 +27,19 @@ const (
 // 	heartbeatTTL      = 60 * time.Second
 // )
 
-// return a pair of connected PAIR sockets
+// NewSignalPair -return a pair of connected PAIR sockets
 // for shutdown signalling
-func NewSignalPair(signal string) (reciever *zmq.Socket, sender *zmq.Socket, err error) {
+func NewSignalPair(signal string) (receiver *zmq.Socket, sender *zmq.Socket, err error) {
 
 	// PAIR server, half of signalling channel
-	reciever, err = zmq.NewSocket(zmq.PAIR)
+	receiver, err = zmq.NewSocket(zmq.PAIR)
 	if nil != err {
 		return nil, nil, err
 	}
-	reciever.SetLinger(0)
-	err = reciever.Bind(signal)
+	receiver.SetLinger(0)
+	err = receiver.Bind(signal)
 	if nil != err {
-		reciever.Close()
+		receiver.Close()
 		return nil, nil, err
 	}
 
@@ -56,10 +56,10 @@ func NewSignalPair(signal string) (reciever *zmq.Socket, sender *zmq.Socket, err
 		return nil, nil, err
 	}
 
-	return reciever, sender, nil
+	return receiver, sender, nil
 }
 
-// bind a list of addresses
+// NewBind - bind socket to a list of addresses
 // creates up to 2 sockets for separate IPv4 and IPv6 traffic
 func NewBind(log *logger.L, socketType zmq.Type, zapDomain string, privateKey []byte, publicKey []byte, listen []*util.Connection) (*zmq.Socket, *zmq.Socket, error) {
 
@@ -110,7 +110,7 @@ fail:
 	return nil, nil, err
 }
 
-// create a socket suitable for a server side connection
+// NewServerSocket - create a socket suitable for a server side connection
 func NewServerSocket(socketType zmq.Type, zapDomain string, privateKey []byte, publicKey []byte, v6 bool) (*zmq.Socket, error) {
 
 	socket, err := zmq.NewSocket(socketType)

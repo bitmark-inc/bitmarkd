@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -30,7 +30,7 @@ const (
 
 // the BOF tag to chec file version
 // exact match is required
-var bofData []byte = []byte("bitmark-cache v1.0")
+var bofData = []byte("bitmark-cache v1.0")
 
 // load transactions from file
 // called from Initialise so already locked

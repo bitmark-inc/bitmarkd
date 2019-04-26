@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -15,22 +15,26 @@ import (
 	"github.com/bitmark-inc/getoptions"
 )
 
+// RPCEmptyArguments - null parameters for RPC call
 type RPCEmptyArguments struct{}
 
+// Connected - connection information
 type Connected struct {
 	Address string `json:"address"`
 	Server  string `json:"server"`
 }
 
+// ConnClient - list of connections
 type ConnClient struct {
 	Clients []Connected `json:"clients"`
 }
 
+// RPCClient - client connection for RPC calls
 type RPCClient struct {
 	Client *rpc.Client
 }
 
-// GetNodeInfo will get the node info of a node from bitmark rpc
+// GetNodeInfo - returns the node info of a node from bitmark rpc
 func (r *RPCClient) GetNodeInfo() (json.RawMessage, error) {
 	args := RPCEmptyArguments{}
 	var reply json.RawMessage
@@ -39,7 +43,7 @@ func (r *RPCClient) GetNodeInfo() (json.RawMessage, error) {
 }
 
 // set by the linker: go build -ldflags "-X main.version=M.N" ./...
-var version string = "zero" // do not change this value
+var version = "zero" // do not change this value
 
 // main program
 func main() {

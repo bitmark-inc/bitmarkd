@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -14,12 +14,17 @@ import (
 )
 
 const (
-	MinimumNonceLength    = 8  // bytes
-	MaximumNonceLength    = 64 // bytes
+	// MinimumNonceLength - least number of bytes in NONCE
+	MinimumNonceLength = 8
+	// MaximumNonceLength - most number of bytes in NONCE
+	MaximumNonceLength = 64
+)
+const (
 	requiredConfirmations = 3
 	maximumBlockRate      = 500.0 // blocks per second
 )
 
+// Configuration - structure for configuration file
 type Configuration struct {
 	UseDiscovery bool                    `gluamapper:"use_discovery" hcl:"use_discovery" json:"use_discovery"`
 	Discovery    *discoveryConfiguration `gluamapper:"discovery" hcl:"discovery" json:"discovery"`
@@ -49,6 +54,7 @@ type globalDataType struct {
 
 var globalData globalDataType
 
+// Initialise - setup the payment system
 func Initialise(configuration *Configuration) error {
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -107,6 +113,7 @@ func Initialise(configuration *Configuration) error {
 	return nil
 }
 
+// Finalise - stop all background tasks
 func Finalise() error {
 	if !globalData.initialised {
 		return fault.ErrNotInitialised

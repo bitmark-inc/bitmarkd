@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -11,14 +11,14 @@ import (
 	zmq "github.com/pebbe/zmq4"
 )
 
-// structure to hold a poller
+// Poller - structure to hold a poller
 type Poller struct {
 	sync.Mutex
 	sockets map[*zmq.Socket]zmq.State
 	poller  *zmq.Poller
 }
 
-// create a poller
+// NewPoller - create a poller
 // this is just to encapsulate the zmq poller to allow removal of a socket from a socket
 func NewPoller() *Poller {
 	return &Poller{
@@ -27,7 +27,7 @@ func NewPoller() *Poller {
 	}
 }
 
-// add a socket to a poller
+// Add - adds a socket to a poller
 func (poller *Poller) Add(socket *zmq.Socket, events zmq.State) {
 
 	poller.Lock()
@@ -45,7 +45,7 @@ func (poller *Poller) Add(socket *zmq.Socket, events zmq.State) {
 	poller.poller.Add(socket, events)
 }
 
-// remove a socket from a poller
+// Remove - removes a socket from a poller
 func (poller *Poller) Remove(socket *zmq.Socket) {
 
 	poller.Lock()
@@ -61,7 +61,7 @@ func (poller *Poller) Remove(socket *zmq.Socket) {
 	poller.poller.RemoveBySocket(socket)
 }
 
-// perform a poll
+// Poll - perform a poll
 func (poller *Poller) Poll(timeout time.Duration) ([]zmq.Polled, error) {
 	poller.Lock()
 	p := poller.poller

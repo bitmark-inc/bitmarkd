@@ -1,15 +1,15 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
 package avl
 
-// find a specific item
-func (tree *Tree) Search(key item) (*Node, int) {
+// Search - find a specific item
+func (tree *Tree) Search(key Item) (*Node, int) {
 	return search(key, tree.root, 0)
 }
 
-func search(key item, tree *Node, index int) (*Node, int) {
+func search(key Item, tree *Node, index int) (*Node, int) {
 	if nil == tree {
 		return nil, -1
 	}

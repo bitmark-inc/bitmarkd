@@ -1,10 +1,10 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
 package avl
 
-// return the node with the lowest key value
+// First - return the node with the lowest key value
 func (tree *Tree) First() *Node {
 	return tree.root.first()
 }
@@ -20,7 +20,7 @@ func (tree *Node) first() *Node {
 	return tree
 }
 
-// return the node with the highest key value
+// Last - return the node with the highest key value
 func (tree *Tree) Last() *Node {
 	return tree.root.last()
 }
@@ -36,8 +36,8 @@ func (tree *Node) last() *Node {
 	return tree
 }
 
-// given a node, return the node with the next highest key value or
-// nil if no more nodes.
+// Next - given a node, return the node with the next highest key
+// value or nil if no more nodes.
 func (tree *Node) Next() *Node {
 	if nil == tree.right {
 		key := tree.key
@@ -54,8 +54,8 @@ func (tree *Node) Next() *Node {
 	return tree.right.first()
 }
 
-// given a node, return the node with the lowest key value or nil if
-// no more nodes
+// Prev - given a node, return the node with the lowest key value or
+// nil if no more nodes
 func (tree *Node) Prev() *Node {
 	if nil == tree.left {
 		key := tree.key

@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -11,11 +11,11 @@ import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 )
 
-// type to represent a payment nonce
+// PayNonce - type to represent a payment nonce
 // Note: no reversal is required for this
 type PayNonce [8]byte
 
-// create a random pay nonce
+// NewPayNonce - create a random pay nonce
 func NewPayNonce() PayNonce {
 	_, digest, _, _ := blockheader.Get()
 	nonce := PayNonce{}
@@ -23,7 +23,7 @@ func NewPayNonce() PayNonce {
 	return nonce
 }
 
-// get a previous paynonce
+// PayNonceFromBlock - get a previous paynonce
 func PayNonceFromBlock(number uint64) PayNonce {
 	nonce := PayNonce{}
 	digest, err := blockheader.DigestForBlock(number)
@@ -34,17 +34,17 @@ func PayNonceFromBlock(number uint64) PayNonce {
 	return nonce
 }
 
-// convert a binary pay nonce to big endian hex string for use by the fmt package (for %s)
+// String - convert a binary pay nonce to big endian hex string for use by the fmt package (for %s)
 func (paynonce PayNonce) String() string {
 	return hex.EncodeToString(paynonce[:])
 }
 
-// convert a binary pay nonce to big endian hex string for use by the fmt package (for %#v)
+// GoString - convert a binary pay nonce to big endian hex string for use by the fmt package (for %#v)
 func (paynonce PayNonce) GoString() string {
 	return "<paynonce:" + hex.EncodeToString(paynonce[:]) + ">"
 }
 
-// convert pay nonce to big endian hex text
+// MarshalText - convert pay nonce to big endian hex text
 func (paynonce PayNonce) MarshalText() ([]byte, error) {
 	size := hex.EncodedLen(len(paynonce))
 	buffer := make([]byte, size)
@@ -52,7 +52,7 @@ func (paynonce PayNonce) MarshalText() ([]byte, error) {
 	return buffer, nil
 }
 
-// convert little endian hex text into a pay nonce
+// UnmarshalText - convert little endian hex text into a pay nonce
 func (paynonce *PayNonce) UnmarshalText(s []byte) error {
 	if len(*paynonce) != hex.DecodedLen(len(s)) {
 		return fault.ErrNotAPayNonce

@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -8,7 +8,7 @@ import (
 	zmq "github.com/pebbe/zmq4"
 )
 
-// return a socket connection to the monitoring channel of another socket
+// NewMonitor - return a socket connection to the monitoring channel of another socket
 // for connection state signalling
 // a unique inproc://name must be provided for each use
 func NewMonitor(socket *zmq.Socket, connection string, event zmq.Event) (*zmq.Socket, error) {

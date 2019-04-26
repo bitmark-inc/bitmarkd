@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -25,7 +25,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 
-// result returned by store issues
+// IssueInfo - result returned by store issues
 type IssueInfo struct {
 	TxIds      []merkle.Digest
 	Packed     []byte
@@ -35,7 +35,7 @@ type IssueInfo struct {
 	Payments   []transactionrecord.PaymentAlternative
 }
 
-// store packed record(s) in the pending table
+// StoreIssues - store packed record(s) in the pending table
 //
 // return payment id and a duplicate flag
 //
@@ -283,7 +283,7 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, er
 	return result, false, nil
 }
 
-// instead of paying, try a proof from the client nonce
+// TryProof - instead of paying, try a proof from the client nonce
 func TryProof(payId pay.PayId, clientNonce []byte) TrackingStatus {
 
 	globalData.RLock()

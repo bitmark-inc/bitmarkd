@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -9,20 +9,20 @@ import (
 	"fmt"
 )
 
-// the type for a signature
+// Signature - the type for a signature
 type Signature []byte
 
-// convert a binary signature to hex string for use by the fmt package (for %s)
+// String - convert a binary signature to hex string for use by the fmt package (for %s)
 func (signature Signature) String() string {
 	return hex.EncodeToString(signature)
 }
 
-// convert a binary signature to hex string for use by the fmt package (for %#v)
+// GoString - convert a binary signature to hex string for use by the fmt package (for %#v)
 func (signature Signature) GoString() string {
 	return "<signature:" + hex.EncodeToString(signature) + ">"
 }
 
-// convert a text representation to a signature for use by the format package scan routines
+// Scan - convert a text representation to a signature for use by the format package scan routines
 func (signature *Signature) Scan(state fmt.ScanState, verb rune) error {
 	token, err := state.Token(true, func(c rune) bool {
 		if c >= '0' && c <= '9' {
@@ -48,7 +48,7 @@ func (signature *Signature) Scan(state fmt.ScanState, verb rune) error {
 	return nil
 }
 
-// convert signature to text
+// MarshalText - convert signature to text
 func (signature Signature) MarshalText() ([]byte, error) {
 	size := hex.EncodedLen(len(signature))
 	b := make([]byte, size)
@@ -56,7 +56,7 @@ func (signature Signature) MarshalText() ([]byte, error) {
 	return b, nil
 }
 
-// convert text into a signature
+// UnmarshalText - convert text into a signature
 func (signature *Signature) UnmarshalText(s []byte) error {
 	sig := make([]byte, hex.DecodedLen(len(s)))
 	byteCount, err := hex.Decode(sig, s)

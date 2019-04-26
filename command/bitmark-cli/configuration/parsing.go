@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -13,10 +13,10 @@ import (
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
 )
 
-const (
-	DefaultNetwork = "testing"
-)
+// DefaultNetwork - select the default network
+const DefaultNetwork = "testing"
 
+// Configuration - configuration file data format
 type Configuration struct {
 	DefaultIdentity string                 `json:"default_identity"`
 	TestNet         bool                   `json:"testnet"`
@@ -24,8 +24,7 @@ type Configuration struct {
 	Identities      []encrypt.IdentityType `json:"identities"`
 }
 
-// restricted access to data (excludes private items)
-
+// InfoIdentityType - restricted access to data (excludes private items)
 type InfoIdentityType struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
@@ -33,8 +32,7 @@ type InfoIdentityType struct {
 	Account     string `json:"account"`
 }
 
-// restricted view of configuration
-
+// InfoConfiguration - restricted view of configuration
 type InfoConfiguration struct {
 	DefaultIdentity string             `json:"default_identity"`
 	TestNet         bool               `json:"testnet"`
@@ -54,7 +52,7 @@ func (s *InfoConfiguration) Less(i int, j int) bool {
 	return s.Identities[i].Name < s.Identities[j].Name
 }
 
-// full access to data (includes private data)
+// GetConfiguration - full access to data (includes private data)
 func GetConfiguration(filename string) (*Configuration, error) {
 
 	options := &Configuration{}
@@ -66,7 +64,7 @@ func GetConfiguration(filename string) (*Configuration, error) {
 	return options, nil
 }
 
-// restricted access to data (excludes private items)
+// GetInfoConfiguration - restricted access to data (excludes private items)
 func GetInfoConfiguration(filename string) (*InfoConfiguration, error) {
 
 	options := &InfoConfiguration{}

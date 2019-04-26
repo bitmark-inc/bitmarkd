@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -13,7 +13,7 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-// a block of configuration data
+// Configuration - a block of configuration data
 // this is read from the configuration file
 type Configuration struct {
 	Broadcast  []string `gluamapper:"broadcast" json:"broadcast"`
@@ -21,7 +21,7 @@ type Configuration struct {
 	PublicKey  string   `gluamapper:"public_key" json:"public_key"`
 }
 
-// globals for background proccess
+// globals for background process
 type publishData struct {
 	sync.RWMutex // to allow locking
 
@@ -41,7 +41,7 @@ type publishData struct {
 // global data
 var globalData publishData
 
-// initialise peer backgrouds processes
+// Initialise - setup peer background processes
 func Initialise(configuration *Configuration, version string) error {
 
 	globalData.Lock()
@@ -95,7 +95,7 @@ func Initialise(configuration *Configuration, version string) error {
 	return nil
 }
 
-// finialise - stop all background tasks
+// Finalise - stop all background tasks
 func Finalise() error {
 
 	if !globalData.initialised {

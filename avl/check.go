@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -8,7 +8,7 @@ import (
 	"fmt"
 )
 
-// check the up pointers for consistency
+// CheckUp - check the up pointers for consistency
 func (tree *Tree) CheckUp() bool {
 	return checkUp(tree.root, nil)
 }
@@ -28,7 +28,7 @@ func checkUp(p *Node, up *Node) bool {
 	return checkUp(p.right, p)
 }
 
-// check left and right node counts are ok
+// CheckCounts - check left and right node counts are ok
 func (tree *Tree) CheckCounts() bool {
 	b, _ := checkCounts(tree.root)
 	return b

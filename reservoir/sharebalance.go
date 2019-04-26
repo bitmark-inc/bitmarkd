@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -14,7 +14,7 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-// result returned by store share
+// BalanceInfo - result returned by store share
 type BalanceInfo struct {
 	ShareId   merkle.Digest `json:"shareId"`
 	Confirmed uint64        `json:"confirmed"`
@@ -22,7 +22,7 @@ type BalanceInfo struct {
 	Available uint64        `json:"available"`
 }
 
-// get a list of balances
+// ShareBalance - get a list of balances
 func ShareBalance(owner *account.Account, startShareId merkle.Digest, count int) ([]BalanceInfo, error) {
 
 	ownerBytes := owner.Bytes()

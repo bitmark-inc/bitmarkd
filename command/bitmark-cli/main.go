@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -6,11 +6,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
-	"github.com/urfave/cli"
 	"io"
 	"os"
 	"path"
+
+	"github.com/urfave/cli"
+
+	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 )
 
 type metadata struct {
@@ -24,7 +26,7 @@ type metadata struct {
 }
 
 // set by the linker: go build -ldflags "-X main.version=M.N" ./...
-var version string = "zero" // do not change this value
+var version = "zero" // do not change this value
 
 func main() {
 

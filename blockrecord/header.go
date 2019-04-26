@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -16,10 +16,11 @@ import (
 	"github.com/bitmark-inc/bitmarkd/storage"
 )
 
-// use fix size array to simplify validation
+// PackedHeader - use fixed size byte array for header to simplify
+// validation
 type PackedHeader [totalBlockSize]byte
 
-// packed records are just a byte slice
+// PackedBlock - packed records are just a byte slice
 type PackedBlock []byte
 
 // currently supported block version (used by proofer)
@@ -63,8 +64,7 @@ const (
 	totalBlockSize = nonceOffset + NonceSize // total bytes in the header
 )
 
-// the unpacked header structure
-// the types here must match Bitcoin header types
+// Header - the unpacked header structure
 type Header struct {
 	Version          uint16                 `json:"version"`
 	TransactionCount uint16                 `json:"transactionCount"`
@@ -76,7 +76,7 @@ type Header struct {
 	Nonce            NonceType              `json:"nonce"`
 }
 
-// extract a header from the front of a []byte
+// ExtractHeader - extract a header from the front of a []byte
 // if checkHeight non-zero then verify correct block number first
 // to reduce hashing load for obviously incorrect blocks
 func ExtractHeader(block []byte, checkHeight uint64) (*Header, blockdigest.Digest, []byte, error) {
@@ -125,6 +125,7 @@ func ExtractHeader(block []byte, checkHeight uint64) (*Header, blockdigest.Diges
 
 }
 
+// ComputeHeaderHash - return the hash of a block's header
 func ComputeHeaderHash(block []byte) (blockdigest.Digest, error) {
 	if len(block) < totalBlockSize {
 		return blockdigest.Digest{}, fault.ErrInvalidBlockHeaderSize
@@ -135,7 +136,7 @@ func ComputeHeaderHash(block []byte) (blockdigest.Digest, error) {
 	return blockdigest.NewDigest(packedHeader[:]), nil
 }
 
-// turn a byte slice into a record
+// Unpack - turn a byte slice into a record
 func (record PackedHeader) Unpack() (*Header, error) {
 
 	header := &Header{
@@ -181,13 +182,13 @@ func (record PackedHeader) Unpack() (*Header, error) {
 	return header, nil
 }
 
-// digest for a packed header
+// Digest - digest for a packed header
 // make sure to truncate bytes to correct length
 func (record PackedHeader) Digest() blockdigest.Digest {
 	return blockdigest.NewDigest(record[:])
 }
 
-// turn a record into an array of bytes
+// Pack - turn a record into an array of bytes
 func (header *Header) Pack() PackedHeader {
 	//buffer := make([]byte, TotalBlockSize)
 	buffer := PackedHeader{}
@@ -207,7 +208,7 @@ func (header *Header) Pack() PackedHeader {
 	return buffer
 }
 
-// create the foundation record
+// FoundationTxId - create the transaction id for a foundation record
 // its TxId is sha3-256 . concat blockDigest leBlockNumberUint64
 func FoundationTxId(header *Header, digest blockdigest.Digest) merkle.Digest {
 	leBlockNumber := make([]byte, 8)

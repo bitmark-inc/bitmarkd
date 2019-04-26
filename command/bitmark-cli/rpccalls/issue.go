@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -8,6 +8,12 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"io"
+	"time"
+
+	"golang.org/x/crypto/ed25519"
+	"golang.org/x/crypto/sha3"
+
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/keypair"
 	"github.com/bitmark-inc/bitmarkd/merkle"
@@ -15,16 +21,13 @@ import (
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
-	"golang.org/x/crypto/ed25519"
-	"golang.org/x/crypto/sha3"
-	"io"
-	"time"
 )
 
 var (
 	ErrMakeIssueFail = fault.ProcessError("make issue failed")
 )
 
+// IssueData - data for an issue request
 type IssueData struct {
 	Issuer    *keypair.KeyPair
 	AssetId   *transactionrecord.AssetIdentifier
@@ -32,7 +35,7 @@ type IssueData struct {
 	FreeIssue bool
 }
 
-// JSON data to output after asset/issue/proof completes
+// IssueReply - JSON data to output after asset/issue/proof completes
 type IssueReply struct {
 	AssetId        transactionrecord.AssetIdentifier               `json:"assetId"`
 	IssueIds       []merkle.Digest                                 `json:"issueIds"`
@@ -45,6 +48,7 @@ type IssueReply struct {
 	Commands       map[string]string                               `json:"commands,omitempty"`
 }
 
+// Issue - perform an issue request
 func (client *Client) Issue(issueConfig *IssueData) (*IssueReply, error) {
 
 	if issueConfig.FreeIssue && 1 != issueConfig.Quantity {
