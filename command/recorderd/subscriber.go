@@ -8,9 +8,10 @@ import (
 	"encoding/json"
 	"fmt"
 
+	zmq "github.com/pebbe/zmq4"
+
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/logger"
-	zmq "github.com/pebbe/zmq4"
 )
 
 // sent by bitmarkd
@@ -95,6 +96,7 @@ func Subscribe(
 		defer socket.Close()
 		defer proof.Close()
 
+	loop:
 		for {
 			data, err := socket.Recv(0)
 			logger.PanicIfError("subscriber", err)
@@ -103,7 +105,7 @@ func Subscribe(
 			// prevent queuing outdated request
 			if !proofer.IsWorking() {
 				log.Infof("Rest time, discard request")
-				continue
+				continue loop
 			}
 
 			// ***** FIX THIS: just debugging? or really split block into multiple nonce ranges

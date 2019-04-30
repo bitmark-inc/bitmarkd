@@ -1,3 +1,7 @@
+// Copyright (c) 2014-2019 Bitmark Inc.
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
 // IIR filter generated on: 2015-05-11 15:39:02
 
 package filters

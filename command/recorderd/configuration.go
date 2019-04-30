@@ -76,7 +76,7 @@ type Configuration struct {
 	DataDirectory string               `gluamapper:"data_directory" json:"data_directory"`
 	PidFile       string               `gluamapper:"pidfile" json:"pidfile"`
 	Chain         string               `gluamapper:"chain" json:"chain"`
-	MaxCPUUsage   int                  `gluamapper:"max_cpu_usage" json:"max_cpu_usage`
+	MaxCPUUsage   int                  `gluamapper:"max_cpu_usage" json:"max_cpu_usage"`
 	Calendar      ConfigCalendar       `gluamapper:"calendar" json:"calendar"`
 	Peering       PeerType             `gluamapper:"peering" json:"peering"`
 	Logging       logger.Configuration `gluamapper:"logging" json:"logging"`

@@ -88,7 +88,7 @@ type rpcData struct {
 // global data
 var globalData rpcData
 
-// Initialise - setup peer backgrouds processes
+// Initialise - setup peer background processes
 func Initialise(rpcConfiguration *RPCConfiguration, httpsConfiguration *HTTPSConfiguration, version string) error {
 
 	globalData.Lock()

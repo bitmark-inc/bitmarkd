@@ -1,3 +1,7 @@
+// Copyright (c) 2014-2019 Bitmark Inc.
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
 package main
 
 import (
@@ -61,7 +65,7 @@ func (j *JobManagerData) waitForRefresh() {
 			j.reschedule()
 		}
 	}
-	j.log.Info("stop...")
+	// j.log.Info("stop...")
 }
 
 func (j *JobManagerData) waitNextHasingStartEvent(duration time.Duration) {
@@ -69,6 +73,7 @@ func (j *JobManagerData) waitNextHasingStartEvent(duration time.Duration) {
 		duration.Minutes())
 	d := duration
 	defer j.wg.Done()
+loop:
 	for {
 		select {
 		case <-time.After(d): // timeout
@@ -88,7 +93,7 @@ func (j *JobManagerData) waitNextHasingStartEvent(duration time.Duration) {
 				nextEvent.String(), d.Minutes())
 		case <-j.channels.startEventChannel:
 			j.log.Debug("reset event, terminate start goroutine...")
-			return
+			break loop
 		}
 	}
 	j.log.Infof("start event terminated...")
@@ -99,6 +104,7 @@ func (j *JobManagerData) waitNextHasingStopEvent(duration time.Duration) {
 		duration.Minutes())
 	d := duration
 	defer j.wg.Done()
+loop:
 	for {
 		select {
 		case <-time.After(d): // timeout
@@ -118,7 +124,7 @@ func (j *JobManagerData) waitNextHasingStopEvent(duration time.Duration) {
 				nextEvent.String(), d.Minutes())
 		case <-j.channels.stopEventChannel:
 			j.log.Debug("reset event, terminate stop goroutine...")
-			return
+			break loop
 		}
 	}
 	j.log.Infof("stop event terminated...")

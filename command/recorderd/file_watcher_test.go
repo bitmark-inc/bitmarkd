@@ -1,3 +1,7 @@
+// Copyright (c) 2014-2019 Bitmark Inc.
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
 package main
 
 import (
@@ -8,8 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bitmark-inc/logger"
 	"github.com/fsnotify/fsnotify"
+
+	"github.com/bitmark-inc/logger"
 )
 
 const (

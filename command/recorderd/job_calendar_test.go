@@ -1,3 +1,7 @@
+// Copyright (c) 2014-2019 Bitmark Inc.
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
 package main
 
 import (
@@ -36,13 +40,13 @@ func setupTestCalendar() *JobCalendarData {
 			stop:  []time.Time{},
 		},
 		events: map[time.Weekday][]SingleEvent{
-			time.Sunday:    []SingleEvent{{start: now, stop: now}},
-			time.Monday:    []SingleEvent{{start: now, stop: now}},
-			time.Tuesday:   []SingleEvent{{start: now, stop: now}},
-			time.Wednesday: []SingleEvent{{start: now, stop: now}},
-			time.Thursday:  []SingleEvent{{start: now, stop: now}},
-			time.Friday:    []SingleEvent{{start: now, stop: now}},
-			time.Saturday:  []SingleEvent{{start: now, stop: now}},
+			time.Sunday:    {{start: now, stop: now}},
+			time.Monday:    {{start: now, stop: now}},
+			time.Tuesday:   {{start: now, stop: now}},
+			time.Wednesday: {{start: now, stop: now}},
+			time.Thursday:  {{start: now, stop: now}},
+			time.Friday:    {{start: now, stop: now}},
+			time.Saturday:  {{start: now, stop: now}},
 		},
 		rawData:           ConfigCalendar{},
 		rescheduleChannel: channel,
@@ -166,7 +170,7 @@ func TestConvertStr2NumberWithLimit(t *testing.T) {
 
 	for _, s := range expects {
 		num, err := j.convertStr2NumberWithLimit(s.str, s.r)
-		if (err != nil && s.err.Error() != err.Error()) || (err == nil && s.err != err) {
+		if err != nil && s.err.Error() != err.Error() || err == nil && s.err != err {
 			t.Errorf("error convert string %s to hour, expect error %s but get %s",
 				s.str, s.err, err)
 		}
@@ -880,7 +884,7 @@ func TestPickInitialiseStartEvent(t *testing.T) {
 				},
 			},
 			map[time.Weekday][]SingleEvent{
-				time.Monday: []SingleEvent{
+				time.Monday: {
 					{
 						start: oneHourBefore.AddDate(0, 0,
 							j.weekDayCurrent2Target(now.Weekday(), time.Monday)),
@@ -888,7 +892,7 @@ func TestPickInitialiseStartEvent(t *testing.T) {
 							j.weekDayCurrent2Target(now.Weekday(), time.Monday)),
 					},
 				},
-				time.Tuesday: []SingleEvent{
+				time.Tuesday: {
 					{
 						start: oneHourBefore.AddDate(0, 0,
 							j.weekDayCurrent2Target(now.Weekday(), time.Tuesday)),
@@ -896,7 +900,7 @@ func TestPickInitialiseStartEvent(t *testing.T) {
 							j.weekDayCurrent2Target(now.Weekday(), time.Tuesday)),
 					},
 				},
-				time.Wednesday: []SingleEvent{
+				time.Wednesday: {
 					{
 						start: oneHourBefore.AddDate(0, 0,
 							j.weekDayCurrent2Target(now.Weekday(), time.Wednesday)),
@@ -904,7 +908,7 @@ func TestPickInitialiseStartEvent(t *testing.T) {
 							j.weekDayCurrent2Target(now.Weekday(), time.Wednesday)),
 					},
 				},
-				time.Thursday: []SingleEvent{
+				time.Thursday: {
 					{
 						start: oneHourBefore.AddDate(0, 0,
 							j.weekDayCurrent2Target(now.Weekday(), time.Thursday)),
@@ -912,7 +916,7 @@ func TestPickInitialiseStartEvent(t *testing.T) {
 							j.weekDayCurrent2Target(now.Weekday(), time.Thursday)),
 					},
 				},
-				time.Friday: []SingleEvent{
+				time.Friday: {
 					{
 						start: oneHourBefore.AddDate(0, 0,
 							j.weekDayCurrent2Target(now.Weekday(), time.Friday)),
@@ -920,7 +924,7 @@ func TestPickInitialiseStartEvent(t *testing.T) {
 							j.weekDayCurrent2Target(now.Weekday(), time.Friday)),
 					},
 				},
-				time.Saturday: []SingleEvent{
+				time.Saturday: {
 					{
 						start: oneHourBefore.AddDate(0, 0,
 							j.weekDayCurrent2Target(now.Weekday(), time.Saturday)),
@@ -928,7 +932,7 @@ func TestPickInitialiseStartEvent(t *testing.T) {
 							j.weekDayCurrent2Target(now.Weekday(), time.Saturday)),
 					},
 				},
-				time.Sunday: []SingleEvent{
+				time.Sunday: {
 					{
 						start: oneHourBefore.AddDate(0, 0,
 							j.weekDayCurrent2Target(now.Weekday(), time.Sunday)),
@@ -950,7 +954,7 @@ func TestPickInitialiseStartEvent(t *testing.T) {
 				},
 			},
 			map[time.Weekday][]SingleEvent{
-				time.Monday: []SingleEvent{
+				time.Monday: {
 					{
 						start: fiveMinuteAfter.AddDate(0, 0,
 							j.weekDayCurrent2Target(now.Weekday(), time.Monday)),
@@ -958,7 +962,7 @@ func TestPickInitialiseStartEvent(t *testing.T) {
 							j.weekDayCurrent2Target(now.Weekday(), time.Monday)),
 					},
 				},
-				time.Tuesday: []SingleEvent{
+				time.Tuesday: {
 					{
 						start: fiveMinuteAfter.AddDate(0, 0,
 							j.weekDayCurrent2Target(now.Weekday(), time.Monday)),
@@ -966,7 +970,7 @@ func TestPickInitialiseStartEvent(t *testing.T) {
 							j.weekDayCurrent2Target(now.Weekday(), time.Monday)),
 					},
 				},
-				time.Wednesday: []SingleEvent{
+				time.Wednesday: {
 					{
 						start: fiveMinuteAfter.AddDate(0, 0,
 							j.weekDayCurrent2Target(now.Weekday(), time.Monday)),
@@ -974,7 +978,7 @@ func TestPickInitialiseStartEvent(t *testing.T) {
 							j.weekDayCurrent2Target(now.Weekday(), time.Monday)),
 					},
 				},
-				time.Thursday: []SingleEvent{
+				time.Thursday: {
 					{
 						start: fiveMinuteAfter.AddDate(0, 0,
 							j.weekDayCurrent2Target(now.Weekday(), time.Monday)),
@@ -982,7 +986,7 @@ func TestPickInitialiseStartEvent(t *testing.T) {
 							j.weekDayCurrent2Target(now.Weekday(), time.Monday)),
 					},
 				},
-				time.Friday: []SingleEvent{
+				time.Friday: {
 					{
 						start: fiveMinuteAfter.AddDate(0, 0,
 							j.weekDayCurrent2Target(now.Weekday(), time.Monday)),
@@ -990,7 +994,7 @@ func TestPickInitialiseStartEvent(t *testing.T) {
 							j.weekDayCurrent2Target(now.Weekday(), time.Monday)),
 					},
 				},
-				time.Saturday: []SingleEvent{
+				time.Saturday: {
 					{
 						start: fiveMinuteAfter.AddDate(0, 0,
 							j.weekDayCurrent2Target(now.Weekday(), time.Monday)),
@@ -998,7 +1002,7 @@ func TestPickInitialiseStartEvent(t *testing.T) {
 							j.weekDayCurrent2Target(now.Weekday(), time.Monday)),
 					},
 				},
-				time.Sunday: []SingleEvent{
+				time.Sunday: {
 					{
 						start: fiveMinuteAfter.AddDate(0, 0,
 							j.weekDayCurrent2Target(now.Weekday(), time.Monday)),
@@ -1066,7 +1070,7 @@ func TestPickInitialiseStopEvent(t *testing.T) {
 				},
 			},
 			map[time.Weekday][]SingleEvent{
-				time.Monday: []SingleEvent{
+				time.Monday: {
 					{
 						start: oneHourBefore.AddDate(0, 0,
 							j.weekDayCurrent2Target(now.Weekday(), time.Monday)),
@@ -1074,7 +1078,7 @@ func TestPickInitialiseStopEvent(t *testing.T) {
 							j.weekDayCurrent2Target(now.Weekday(), time.Monday)),
 					},
 				},
-				time.Tuesday: []SingleEvent{
+				time.Tuesday: {
 					{
 						start: oneHourBefore.AddDate(0, 0,
 							j.weekDayCurrent2Target(now.Weekday(), time.Tuesday)),
@@ -1082,7 +1086,7 @@ func TestPickInitialiseStopEvent(t *testing.T) {
 							j.weekDayCurrent2Target(now.Weekday(), time.Tuesday)),
 					},
 				},
-				time.Wednesday: []SingleEvent{
+				time.Wednesday: {
 					{
 						start: oneHourBefore.AddDate(0, 0,
 							j.weekDayCurrent2Target(now.Weekday(), time.Wednesday)),
@@ -1090,7 +1094,7 @@ func TestPickInitialiseStopEvent(t *testing.T) {
 							j.weekDayCurrent2Target(now.Weekday(), time.Wednesday)),
 					},
 				},
-				time.Thursday: []SingleEvent{
+				time.Thursday: {
 					{
 						start: oneHourBefore.AddDate(0, 0,
 							j.weekDayCurrent2Target(now.Weekday(), time.Thursday)),
@@ -1098,7 +1102,7 @@ func TestPickInitialiseStopEvent(t *testing.T) {
 							j.weekDayCurrent2Target(now.Weekday(), time.Thursday)),
 					},
 				},
-				time.Friday: []SingleEvent{
+				time.Friday: {
 					{
 						start: oneHourBefore.AddDate(0, 0,
 							j.weekDayCurrent2Target(now.Weekday(), time.Friday)),
@@ -1106,7 +1110,7 @@ func TestPickInitialiseStopEvent(t *testing.T) {
 							j.weekDayCurrent2Target(now.Weekday(), time.Friday)),
 					},
 				},
-				time.Saturday: []SingleEvent{
+				time.Saturday: {
 					{
 						start: oneHourBefore.AddDate(0, 0,
 							j.weekDayCurrent2Target(now.Weekday(), time.Saturday)),
@@ -1114,7 +1118,7 @@ func TestPickInitialiseStopEvent(t *testing.T) {
 							j.weekDayCurrent2Target(now.Weekday(), time.Saturday)),
 					},
 				},
-				time.Sunday: []SingleEvent{
+				time.Sunday: {
 					{
 						start: oneHourBefore.AddDate(0, 0,
 							j.weekDayCurrent2Target(now.Weekday(), time.Sunday)),
@@ -1136,7 +1140,7 @@ func TestPickInitialiseStopEvent(t *testing.T) {
 				},
 			},
 			map[time.Weekday][]SingleEvent{
-				time.Monday: []SingleEvent{
+				time.Monday: {
 					{
 						stop: tenMinuteAfter.AddDate(0, 0,
 							j.weekDayCurrent2Target(now.Weekday(), time.Monday)),
@@ -1144,7 +1148,7 @@ func TestPickInitialiseStopEvent(t *testing.T) {
 							j.weekDayCurrent2Target(now.Weekday(), time.Monday)),
 					},
 				},
-				time.Tuesday: []SingleEvent{
+				time.Tuesday: {
 					{
 						stop: tenMinuteAfter.AddDate(0, 0,
 							j.weekDayCurrent2Target(now.Weekday(), time.Tuesday)),
@@ -1152,7 +1156,7 @@ func TestPickInitialiseStopEvent(t *testing.T) {
 							j.weekDayCurrent2Target(now.Weekday(), time.Tuesday)),
 					},
 				},
-				time.Wednesday: []SingleEvent{
+				time.Wednesday: {
 					{
 						stop: tenMinuteAfter.AddDate(0, 0,
 							j.weekDayCurrent2Target(now.Weekday(), time.Wednesday)),
@@ -1160,7 +1164,7 @@ func TestPickInitialiseStopEvent(t *testing.T) {
 							j.weekDayCurrent2Target(now.Weekday(), time.Wednesday)),
 					},
 				},
-				time.Thursday: []SingleEvent{
+				time.Thursday: {
 					{
 						stop: tenMinuteAfter.AddDate(0, 0,
 							j.weekDayCurrent2Target(now.Weekday(), time.Thursday)),
@@ -1168,7 +1172,7 @@ func TestPickInitialiseStopEvent(t *testing.T) {
 							j.weekDayCurrent2Target(now.Weekday(), time.Thursday)),
 					},
 				},
-				time.Friday: []SingleEvent{
+				time.Friday: {
 					{
 						stop: tenMinuteAfter.AddDate(0, 0,
 							j.weekDayCurrent2Target(now.Weekday(), time.Friday)),
@@ -1176,7 +1180,7 @@ func TestPickInitialiseStopEvent(t *testing.T) {
 							j.weekDayCurrent2Target(now.Weekday(), time.Friday)),
 					},
 				},
-				time.Saturday: []SingleEvent{
+				time.Saturday: {
 					{
 						stop: tenMinuteAfter.AddDate(0, 0,
 							j.weekDayCurrent2Target(now.Weekday(), time.Saturday)),
@@ -1184,7 +1188,7 @@ func TestPickInitialiseStopEvent(t *testing.T) {
 							j.weekDayCurrent2Target(now.Weekday(), time.Saturday)),
 					},
 				},
-				time.Sunday: []SingleEvent{
+				time.Sunday: {
 					{
 						stop: tenMinuteAfter.AddDate(0, 0,
 							j.weekDayCurrent2Target(now.Weekday(), time.Sunday)),

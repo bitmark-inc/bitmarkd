@@ -1,3 +1,7 @@
+// Copyright (c) 2014-2019 Bitmark Inc.
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
 package configuration
 
 import (
@@ -31,9 +35,6 @@ func ParseConfigurationFile(fileName string, config interface{}) error {
 		TagName: "gluamapper",
 	}
 	mapper := gluamapper.Mapper{Option: mapperOption}
-	if err := mapper.Map(L.Get(L.GetTop()).(*lua.LTable), config); err != nil {
-		return err
-	}
-
-	return nil
+	err := mapper.Map(L.Get(L.GetTop()).(*lua.LTable), config)
+	return err
 }
