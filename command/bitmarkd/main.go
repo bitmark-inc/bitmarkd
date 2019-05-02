@@ -215,7 +215,7 @@ func main() {
 	// so can restore any previously saved transactions
 	// before any peer services are started
 	err = reservoir.LoadFromFile()
-	if nil != err {
+	if nil != err && !os.IsNotExist(err) {
 		log.Criticalf("reservoir reload error: %s", err)
 		exitwithstatus.Message("reservoir reload error: %s", err)
 	}
