@@ -32,7 +32,7 @@ const (
 // exact match is required
 var bofData = []byte("bitmark-cache v1.0")
 
-// load transactions from file
+// LoadFromFile - load transactions from file
 // called later when system is able to handle the tx and proofs
 func LoadFromFile() error {
 	Disable()
