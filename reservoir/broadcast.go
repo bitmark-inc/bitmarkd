@@ -109,4 +109,12 @@ func broadcastFreeIssue(item *issueFreeData) {
 		messagebus.Bus.Broadcast.Send("assets", packedAssets)
 	}
 	messagebus.Bus.Broadcast.Send("issues", packedIssues)
+
+	// if the issue is a free issue, broadcast the proof
+	if nil != item.difficulty {
+		packed := make([]byte, len(item.payId), len(item.payId)+len(item.nonce))
+		copy(packed, item.payId[:])
+		packed = append(packed, item.nonce[:]...)
+		messagebus.Bus.Broadcast.Send("proof", packed)
+	}
 }
