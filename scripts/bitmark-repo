@@ -16,6 +16,12 @@ VERBOSE() {
   printf '\n'
 }
 
+LOG() {
+  [ -z "${logfile}" ] && return
+  printf -- "$@" >> "${logfile}"
+  printf '\n' >> "${logfile}"
+}
+
 USAGE()
 {
   if [ -n "$1" ]
@@ -31,7 +37,9 @@ USAGE()
   echo '       --url=URL-PREFIX   -p URL-PREFIX set URL prefix ['"${url}"']'
   echo '       --user=NAME        -u NAME       set blockchain user'
   echo '       --network=NET      -n NET        set blockchain network (local/test/bitmark) ['"${network}"']'
+  echo '       --file=FILE        -f FILE       save issue ids to a file [NONE]'
   echo '       --list             -l            list properties for user'
+  echo '       --status=FILE      -s FILE       check status from a log file'
   echo '       --continue         -c            do not stop on transaction already exists'
   echo '       --debug                          debuging messages'
   exit 1
@@ -203,6 +211,38 @@ def n($f): (($f|tostring)+"          ")[:10] + " ";
   printf '\n'
 }
 
+# read a logfile and print its status
+SHOW-STATUS() {
+  local file w1 w2 w3 w4 w5 w6 junk status n e
+  file="${1}"
+  [ -z "${file}" ] && return 1
+  [ -f "${file}" ] || return 1
+
+  cat "${file}" | (
+    n=0
+    e=0
+    while read w1 w2 w3 w4 w5 w6 junk
+    do
+      # LOG 'commit: %s   date: %s  issue_id: %s' "${commit}" "${timestamp}" "${issue_id}"
+      [ X"${w1}" = X"commit:" ] || continue
+      n=$((n + 1))
+      case "${w5}" in
+        (issue_id:)
+          CLI "${user}" status -t "${w6}"
+          SET status '.status'
+          printf '%6d: commit: %s  status: %s\n' "${n}" "${w2}" "${status}"
+          ;;
+        (error:)
+          e=$((e + 1))
+          printf '%6d: commit: %s  error: %s\n' "${n}" "${w2}" "${w6} ${junk}"
+          ;;
+        (*)
+          ;;
+      esac
+    done
+    printf 'total records: %6d:  errors: %6d\n' "${n}" "${e}"
+  )
+}
 
 # main program
 verbose=no
@@ -211,7 +251,9 @@ url=
 remote=origin
 network=test
 user=
+logfile=
 list=no
+status=
 continue=no
 
 # required programs
@@ -232,7 +274,7 @@ do
   [ -x "${g}" ] && getopt="${g}" && break
 done
 [ -x "${getopt}" ] || ERROR 'no suitable getopt was found'
-args=$(${getopt} -o hvp:n:u:lcD --long=help,verbose,url:,network:,user:,list,continue,debug -- "$@") || exit 1
+args=$(${getopt} -o hvp:n:u:f:lcs:D --long=help,verbose,url:,network:,user:,file:,list,continue,status:,debug -- "$@") || exit 1
 
 # replace the arguments with the parsed values
 eval set -- "${args}"
@@ -274,8 +316,20 @@ do
       shift
       ;;
 
+    (-f|--file)
+      [ -z "${2}" ] && ERROR 'file cannot be blank'
+      logfile="${2}"
+      shift
+      ;;
+
     (-l|--list)
       list=yes
+      ;;
+
+    (-s|--status)
+      [ -z "${2}" ] && ERROR 'ststus cannot be blank'
+      status="${2}"
+      shift
       ;;
 
     (-c|--continue)
@@ -347,6 +401,13 @@ then
   exit 0
 fi
 
+# status
+if [ ! -z "${status}" ]
+then
+  SHOW-STATUS "${status}"
+  exit 0
+fi
+
 # read password
 password=
 tty_state=
@@ -374,9 +435,11 @@ git log --date=iso8601-strict --date-order --format='%H %cI' | (
     then
       SET issue_id '.issueIds[0]'
       VERBOSE 'commit: %s   date: %s  issue_id: %s' "${commit}" "${timestamp}" "${issue_id}"
+      LOG 'commit: %s   date: %s  issue_id: %s' "${commit}" "${timestamp}" "${issue_id}"
     else
       SET error '.error'
-      VERBOSE 'error: "%s"' "${error}"
+      VERBOSE 'commit: %s   date: %s  error: %s' "${commit}" "${timestamp}" "${error}"
+      LOG 'commit: %s   date: %s  error: %s' "${commit}" "${timestamp}" "${error}"
       if [ X"${error}" = X"terminated with error: transaction already exists" ]
       then
         [ X"${continue}" = X"no" ] && break
