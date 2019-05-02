@@ -154,16 +154,14 @@ func Initialise(reservoirDataFile string) error {
 
 	globalData.spend = make(map[spendKey]uint64)
 
+	globalData.enabled = true
+
 	globalData.filename = reservoirDataFile
 
 	// all data initialised
 	globalData.initialised = true
 
 	globalData.log.Debugf("load from file: %s", reservoirDataFile)
-	globalData.Unlock()
-	loadFromFile() // this uses locks in calls it makes
-	Enable()
-	globalData.Lock()
 
 	// start background processes
 	globalData.log.Info("start background…")

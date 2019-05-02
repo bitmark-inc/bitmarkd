@@ -33,8 +33,14 @@ const (
 var bofData = []byte("bitmark-cache v1.0")
 
 // load transactions from file
-// called from Initialise so already locked
-func loadFromFile() error {
+// called later when system is able to handle the tx and proofs
+func LoadFromFile() error {
+	Disable()
+	defer Enable()
+
+	log := globalData.log
+
+	log.Info("starting…")
 
 	f, err := os.Open(globalData.filename)
 	if nil != err {
@@ -56,6 +62,8 @@ func loadFromFile() error {
 		return fmt.Errorf("expected BOF: %q but read: %q", bofData, packed)
 	}
 
+	log.Infof("restore from file: %s", globalData.filename)
+
 restore_loop:
 	for {
 		tag, packed, err := readRecord(f)
@@ -71,7 +79,7 @@ restore_loop:
 
 			unpacked, _, err := packed.Unpack(mode.IsTesting())
 			if nil != err {
-				globalData.log.Errorf("unable to unpack asset: %s", err)
+				log.Errorf("unable to unpack asset: %s", err)
 				continue restore_loop
 			}
 			switch tx := unpacked.(type) {
@@ -79,7 +87,7 @@ restore_loop:
 			case *transactionrecord.AssetData:
 				_, _, err := asset.Cache(tx)
 				if nil != err {
-					globalData.log.Errorf("fail to cache asset: %s", err)
+					log.Errorf("fail to cache asset: %s", err)
 				}
 
 			case *transactionrecord.BitmarkIssue:
@@ -88,14 +96,14 @@ restore_loop:
 				for len(packedIssues) > 0 {
 					transaction, n, err := packedIssues.Unpack(mode.IsTesting())
 					if nil != err {
-						globalData.log.Errorf("unable to unpack issue: %s", err)
+						log.Errorf("unable to unpack issue: %s", err)
 						continue restore_loop
 					}
 
 					if issue, ok := transaction.(*transactionrecord.BitmarkIssue); ok {
 						issues = append(issues, issue)
 					} else {
-						globalData.log.Errorf("issue block contains non-issue: %+v", transaction)
+						log.Errorf("issue block contains non-issue: %+v", transaction)
 						continue restore_loop
 					}
 					packedIssues = packedIssues[n:]
@@ -103,7 +111,7 @@ restore_loop:
 
 				_, _, err := StoreIssues(issues)
 				if nil != err {
-					globalData.log.Errorf("fail to store issue: %s", err)
+					log.Errorf("fail to store issue: %s", err)
 				}
 
 			case *transactionrecord.BitmarkTransferUnratified,
@@ -111,11 +119,11 @@ restore_loop:
 				tr := tx.(transactionrecord.BitmarkTransfer)
 				_, _, err := StoreTransfer(tr)
 				if nil != err {
-					globalData.log.Errorf("fail to store transfer: %s", err)
+					log.Errorf("fail to store transfer: %s", err)
 				}
 
 			default:
-				globalData.log.Errorf("read invalid transaction: %+v", tx)
+				log.Errorf("read invalid transaction: %+v", tx)
 				return fmt.Errorf("read invalid transaction")
 			}
 
@@ -123,7 +131,7 @@ restore_loop:
 			var payId pay.PayId
 			pn := len(payId)
 			if len(packed) <= pn {
-				globalData.log.Errorf("unable to unpack proof: record too short: %d  expected > %d", len(packed), pn)
+				log.Errorf("unable to unpack proof: record too short: %d  expected > %d", len(packed), pn)
 				continue restore_loop
 			}
 			copy(payId[:], packed[:pn])
@@ -131,10 +139,11 @@ restore_loop:
 			TryProof(payId, nonce)
 
 		default:
-			globalData.log.Errorf("read invalid tag: 0x%02x", tag)
+			log.Errorf("read invalid tag: 0x%02x", tag)
 			return fmt.Errorf("read invalid tag: 0x%02x", tag)
 		}
 	}
+	log.Info("restore completed")
 	return nil
 }
 
@@ -143,12 +152,14 @@ func saveToFile() error {
 	globalData.Lock()
 	defer globalData.Unlock()
 
+	log := globalData.log
+
 	if !globalData.initialised {
-		globalData.log.Error("save when not initialised")
+		log.Error("save when not initialised")
 		return fault.ErrNotInitialised
 	}
 
-	globalData.log.Info("saving…")
+	log.Info("saving…")
 
 	f, err := os.OpenFile(globalData.filename, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	if nil != err {
@@ -224,7 +235,7 @@ func saveToFile() error {
 		return err
 	}
 
-	globalData.log.Info("completed")
+	log.Info("save completed")
 	return nil
 }
 

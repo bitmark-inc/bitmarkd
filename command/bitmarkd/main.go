@@ -211,6 +211,15 @@ func main() {
 		return
 	}
 
+	// reservoir and block are both ready
+	// so can restore any previously saved transactions
+	// before any peer services are started
+	err = reservoir.LoadFromFile()
+	if nil != err {
+		log.Criticalf("reservoir reload error: %s", err)
+		exitwithstatus.Message("reservoir reload error: %s", err)
+	}
+
 	// network announcements need to be before peer and rpc initialisation
 	log.Info("initialise announce")
 	nodesDomain := "" // initially none
