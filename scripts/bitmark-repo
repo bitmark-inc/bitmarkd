@@ -37,9 +37,9 @@ USAGE()
   echo '       --url=URL-PREFIX   -p URL-PREFIX set URL prefix ['"${url}"']'
   echo '       --user=NAME        -u NAME       set blockchain user'
   echo '       --network=NET      -n NET        set blockchain network (local/test/bitmark) ['"${network}"']'
-  echo '       --file=FILE        -f FILE       save issue ids to a file [NONE]'
+  echo '       --file=FILE        -f FILE       set alternative logfile ['"${logfile}"']'
   echo '       --list             -l            list properties for user'
-  echo '       --status=FILE      -s FILE       check status from a log file'
+  echo '       --status=FILE      -s FILE       check status from a specific logfile'
   echo '       --continue         -c            do not stop on transaction already exists'
   echo '       --debug                          debuging messages'
   exit 1
@@ -213,7 +213,7 @@ def n($f): (($f|tostring)+"          ")[:10] + " ";
 
 # read a logfile and print its status
 SHOW-STATUS() {
-  local file w1 w2 w3 w4 w5 w6 junk status n e
+  local file w0 w1 w2 w3 w4 w5 w6 junk status n e
   file="${1}"
   [ -z "${file}" ] && return 1
   [ -f "${file}" ] || return 1
@@ -221,9 +221,9 @@ SHOW-STATUS() {
   cat "${file}" | (
     n=0
     e=0
-    while read w1 w2 w3 w4 w5 w6 junk
+    while read w0 w1 w2 w3 w4 w5 w6 junk
     do
-      # LOG 'commit: %s   date: %s  issue_id: %s' "${commit}" "${timestamp}" "${issue_id}"
+      # LOG '%6d: commit: %s   date: %s  issue_id: %s' "${i}" "${commit}" "${timestamp}" "${issue_id}"
       [ X"${w1}" = X"commit:" ] || continue
       n=$((n + 1))
       case "${w5}" in
@@ -251,7 +251,7 @@ url=
 remote=origin
 network=test
 user=
-logfile=
+logfile="bmr-${network}-$(date '+%Y%m%d_%H%M%S').log"
 list=no
 status=
 continue=no
@@ -302,6 +302,7 @@ do
       case "${2}" in
         (local|test|bitmark)
           network="${2}"
+          logfile="bmr-${network}-$(date '+%Y%m%d_%H%M%S').log"
           ;;
         (*)
           USAGE 'invalid network: %s' "${2}"
@@ -423,6 +424,8 @@ read -p 'password:' password
 echo
 restore_tty
 
+VERBOSE 'logfile: %s' "${logfile}"
+
 # extract all commits in reverse date order
 # bitmarks from most recent commit and stops on duplicate
 git log --date=iso8601-strict --date-order --format='%H %cI' | (
@@ -434,12 +437,12 @@ git log --date=iso8601-strict --date-order --format='%H %cI' | (
     if [ $? -eq 0 ]
     then
       SET issue_id '.issueIds[0]'
-      VERBOSE 'commit: %s   date: %s  issue_id: %s' "${commit}" "${timestamp}" "${issue_id}"
-      LOG 'commit: %s   date: %s  issue_id: %s' "${commit}" "${timestamp}" "${issue_id}"
+      VERBOSE '%6d: commit: %s   date: %s  issue_id: %s' "${i}" "${commit}" "${timestamp}" "${issue_id}"
+      LOG '%6d: commit: %s   date: %s  issue_id: %s' "${i}" "${commit}" "${timestamp}" "${issue_id}"
     else
       SET error '.error'
-      VERBOSE 'commit: %s   date: %s  error: %s' "${commit}" "${timestamp}" "${error}"
-      LOG 'commit: %s   date: %s  error: %s' "${commit}" "${timestamp}" "${error}"
+      VERBOSE '%6d: commit: %s   date: %s  error: %s' "${i}" "${commit}" "${timestamp}" "${error}"
+      LOG '%6d: commit: %s   date: %s  error: %s' "${i}" "${commit}" "${timestamp}" "${error}"
       if [ X"${error}" = X"terminated with error: transaction already exists" ]
       then
         [ X"${continue}" = X"no" ] && break
@@ -447,5 +450,9 @@ git log --date=iso8601-strict --date-order --format='%H %cI' | (
         break
       fi
     fi
- done
+  done
+  printf 'total commits read: %d\n' "${i}"
 )
+
+# display the final results file
+printf 'results written to logfile: %s\n' "${logfile}"
