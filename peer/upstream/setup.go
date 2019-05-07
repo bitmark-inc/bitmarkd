@@ -186,6 +186,39 @@ func (u *Upstream) GetBlockData(blockNumber uint64) ([]byte, error) {
 	return nil, fault.ErrInvalidPeerResponse
 }
 
+// Ping - ping to check the connection
+func (u *Upstream) Ping() (success bool) {
+
+	// critical section - lock out the runner process
+	u.Lock()
+
+	var data [][]byte
+	err := u.client.Send("P")
+	if nil == err {
+		data, err = u.client.Receive(0)
+	}
+
+	u.Unlock()
+
+	if nil != err {
+		u.log.Errorf("Ping to server %s failed with error %s", u.client, err)
+		return
+	}
+
+	if 0 == len(data) {
+		return
+	}
+
+	switch string(data[0]) {
+	case "P":
+		// Ping to peer successfully
+		u.log.Infof("Ping to server %s success", u.client)
+		success = true
+	default:
+	}
+	return
+}
+
 // loop to handle upstream communication
 func upstreamRunner(u *Upstream, shutdown <-chan struct{}) {
 	log := u.log
