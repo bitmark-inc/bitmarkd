@@ -23,7 +23,7 @@ type pubkey []byte
 type peerEntry struct {
 	publicKey []byte
 	listeners []byte
-	timestamp time.Time
+	timestamp time.Time // last seen time
 }
 
 // string - conversion fro fmt package
@@ -179,4 +179,20 @@ func (p pubkey) Compare(q interface{}) int {
 // String - public key string convert for AVL interface
 func (p pubkey) String() string {
 	return fmt.Sprintf("%x", []byte(p))
+}
+
+// SetPeerTimestamp - set the timestamp for the peer with given public key
+func SetPeerTimestamp(publicKey []byte, timestamp time.Time) {
+	globalData.Lock()
+	defer globalData.Unlock()
+
+	node, _ := globalData.peerTree.Search(pubkey(publicKey))
+	log := globalData.log
+	if nil == node {
+		log.Errorf("The peer with public key %x is not existing in peer tree", publicKey)
+		return
+	}
+
+	peer := node.Value().(*peerEntry)
+	peer.timestamp = timestamp
 }

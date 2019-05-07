@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/announce"
+
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -31,6 +33,7 @@ const (
 	forkProtection        = 60               // fail to fork if height difference is greater than this
 	minimumClients        = 3                // do not proceed unless this many clients are connected
 	maximumDynamicClients = 10               // total number of dynamic clients
+	pingInterval          = 1 * time.Minute  // time interval to ping to outgoing connection
 )
 
 // a state type for the thread
@@ -200,6 +203,9 @@ func (conn *connector) Run(args interface{}, shutdown <-chan struct{}) {
 	queue := messagebus.Bus.Connector.Chan()
 
 	timer := time.After(cycleInterval)
+
+	pingTimer := time.After(pingInterval)
+
 loop:
 	for {
 		// wait for shutdown
@@ -211,6 +217,9 @@ loop:
 		case <-timer: // timer has priority over queue
 			timer = time.After(cycleInterval)
 			conn.process()
+		case <-pingTimer:
+			pingTimer = time.After(pingInterval)
+			conn.ping()
 		case item := <-queue:
 			c, _ := util.PackedConnection(item.Parameters[1]).Unpack()
 			conn.log.Debugf("received control: %s  public key: %x  connect: %x %q", item.Command, item.Parameters[0], item.Parameters[1], c)
@@ -504,4 +513,17 @@ func (conn *connector) releseServerKey(serverPublicKey []byte) error {
 		return false
 	})
 	return nil
+}
+
+func (conn *connector) ping() {
+	conn.allClients(func(client *upstream.Upstream, e *list.Element) {
+
+		success := client.Ping()
+
+		if success {
+			// set the last seen time of the peer
+			publicKey := client.GetClient().GetServerPublicKey()
+			announce.SetPeerTimestamp(publicKey, time.Now())
+		}
+	})
 }
