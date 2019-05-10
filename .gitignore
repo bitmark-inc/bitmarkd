@@ -17,6 +17,7 @@
 *.swp
 TAGS
 tags
+.vscode/
 
 # LOG
 *.log
