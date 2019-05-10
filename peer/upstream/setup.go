@@ -201,7 +201,7 @@ func (u *Upstream) Ping() (success bool) {
 	u.Unlock()
 
 	if nil != err {
-		u.log.Errorf("Ping to server %s failed with error %s", u.client, err)
+		u.log.Errorf("ping to server %s failed with error %s", u.client, err)
 		return
 	}
 
@@ -212,7 +212,7 @@ func (u *Upstream) Ping() (success bool) {
 	switch string(data[0]) {
 	case "P":
 		// Ping to peer successfully
-		u.log.Infof("Ping to server %s success", u.client)
+		u.log.Infof("ping to server %s success", u.client)
 		success = true
 	default:
 	}
