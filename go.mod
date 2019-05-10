@@ -11,6 +11,8 @@ require (
 	github.com/golang/protobuf v1.3.1 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
+	github.com/miekg/dns v1.1.9
+	github.com/miekg/exdns v0.0.0-20180508064346-75eec86f1dd5 // indirect
 	github.com/mitchellh/mapstructure v1.1.2 // indirect
 	github.com/onsi/ginkgo v1.8.0 // indirect
 	github.com/onsi/gomega v1.5.0 // indirect

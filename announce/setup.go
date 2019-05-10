@@ -6,8 +6,6 @@ package announce
 
 import (
 	"encoding/hex"
-	"net"
-	"strings"
 	"sync"
 	"time"
 
@@ -66,6 +64,8 @@ type announcerData struct {
 	// data for thread
 	ann announcer
 
+	nodesLookup nodesLookup
+
 	// for background
 	background *background.T
 
@@ -108,46 +108,10 @@ func Initialise(nodesDomain, peerFile string) error {
 		globalData.log.Errorf("fail to restore peer data: %s", err.Error())
 	}
 
-	if "" != nodesDomain {
-		texts, err := net.LookupTXT(nodesDomain)
-		if nil != err {
-			return err
-		}
-
-		// process DNS entries
-		for i, t := range texts {
-			t = strings.TrimSpace(t)
-			tag, err := parseTag(t)
-			if nil != err {
-				globalData.log.Infof("ignore TXT[%d]: %q  error: %s", i, t, err)
-			} else {
-				globalData.log.Infof("process TXT[%d]: %q", i, t)
-				globalData.log.Infof("result[%d]: IPv4: %q  IPv6: %q  rpc: %d  connect: %d", i, tag.ipv4, tag.ipv6, tag.rpcPort, tag.connectPort)
-				globalData.log.Infof("result[%d]: peer public key: %x", i, tag.publicKey)
-				globalData.log.Infof("result[%d]: rpc fingerprint: %x", i, tag.certificateFingerprint)
-
-				listeners := []byte{}
-
-				if nil != tag.ipv4 {
-					c1 := util.ConnectionFromIPandPort(tag.ipv4, tag.connectPort)
-					listeners = append(listeners, c1.Pack()...)
-				}
-				if nil != tag.ipv6 {
-					c2 := util.ConnectionFromIPandPort(tag.ipv6, tag.connectPort)
-					listeners = append(listeners, c2.Pack()...)
-				}
-
-				if nil == tag.ipv4 && nil == tag.ipv6 {
-					globalData.log.Debugf("result[%d]: ignoring invalid record", i)
-				} else {
-					globalData.log.Infof("result[%d]: adding: %x", i, listeners)
-
-					// internal add, as lock is already held
-					addPeer(tag.publicKey, listeners, 0)
-				}
-			}
-		}
+	if err := globalData.nodesLookup.initialise(nodesDomain); nil != err {
+		return err
 	}
+
 	if err := globalData.ann.initialise(); nil != err {
 		return err
 	}
@@ -159,7 +123,7 @@ func Initialise(nodesDomain, peerFile string) error {
 	globalData.log.Info("start background…")
 
 	processes := background.Processes{
-		&globalData.ann,
+		&globalData.nodesLookup, &globalData.ann,
 	}
 
 	globalData.background = background.Start(processes, globalData.log)
