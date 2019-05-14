@@ -218,7 +218,7 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 				return fault.ErrTransactionIsNotCleaned
 			}
 
-			if _, ok := priorTxOwnerTxs[txId.String()]; !ok {
+			if _, ok := priorTxOwnerTxs[txId.String()]; !ok && nil != tx.GetOwner() {
 				// validate tx ownership indexed only if the txId is not in priorBlockOwnerTxs
 				if err := validateTxOwnerRecords(txId, tx.GetOwner()); err != nil {
 					globalData.log.Error("transaction ownership validation failed")
