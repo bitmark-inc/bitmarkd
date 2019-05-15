@@ -72,3 +72,11 @@ func (p *PoolNB) GetNB(key []byte) (uint64, []byte) {
 func (p *PoolNB) Has(key []byte) bool {
 	return p.pool.Has(key)
 }
+
+func (p *PoolNB) BeginDBTransaction() {
+	p.pool.BeginDBTransaction()
+}
+
+func (p *PoolNB) WriteDBTransaction() {
+	p.pool.WriteDBTransaction()
+}
