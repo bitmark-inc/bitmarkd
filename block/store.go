@@ -342,6 +342,10 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 		return fault.ErrTransactionCountOutOfRange
 	}
 
+	// start db transaction by block & index db
+	storage.Pool.Blocks.BeginDBTransaction()
+	storage.Pool.Transactions.BeginDBTransaction()
+
 	// process the transactions into the database
 	// but skip base/block-issue as these are already processed
 	for _, item := range txs[txStart:] {
@@ -357,14 +361,16 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 		case *transactionrecord.AssetData:
 			assetId := tx.AssetId()
 			asset.Delete(assetId) // delete from pending cache
-			if !storage.Pool.Assets.Has(assetId[:]) {
-				storage.Pool.Assets.Put(assetId[:], thisBlockNumberKey, item.packed)
+			assets := storage.Pool.Assets
+			if !assets.Has(assetId[:]) {
+				assets.Put(assetId[:], thisBlockNumberKey, item.packed)
 			}
 
 		case *transactionrecord.BitmarkIssue:
 			reservoir.DeleteByTxId(item.txId) // delete from pending cache
-			if !storage.Pool.Transactions.Has(item.txId[:]) {
-				storage.Pool.Transactions.Put(item.txId[:], thisBlockNumberKey, item.packed)
+			issues := storage.Pool.Transactions
+			if !issues.Has(item.txId[:]) {
+				issues.Put(item.txId[:], thisBlockNumberKey, item.packed)
 				ownership.CreateAsset(item.txId, header.Number, tx.AssetId, tx.Owner)
 			}
 
@@ -379,7 +385,8 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 			// to prevent the possibility of a double-spend
 			reservoir.DeleteByLink(link)
 
-			storage.Pool.Transactions.Put(item.txId[:], thisBlockNumberKey, item.packed)
+			txrs := storage.Pool.Transactions
+			txrs.Put(item.txId[:], thisBlockNumberKey, item.packed)
 			ownership.Transfer(link, item.txId, header.Number, item.linkOwner, tr.GetOwner())
 
 		case *transactionrecord.BlockFoundation:
@@ -404,7 +411,8 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 				logger.Panicf("pack, should not error: %s", err)
 			}
 
-			storage.Pool.Transactions.Put(item.txId[:], thisBlockNumberKey, item.packed)
+			txrs := storage.Pool.Transactions
+			txrs.Put(item.txId[:], thisBlockNumberKey, item.packed)
 			storage.Pool.BlockOwnerPayment.Put(item.blockNumberKey, pkPayments)
 			storage.Pool.BlockOwnerTxIndex.Put(item.txId[:], item.blockNumberKey)
 			storage.Pool.BlockOwnerTxIndex.Delete(link[:])
@@ -421,7 +429,8 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 			// to prevent the possibility of a double-spend
 			reservoir.DeleteByLink(link)
 
-			storage.Pool.Transactions.Put(item.txId[:], thisBlockNumberKey, item.packed)
+			txrs := storage.Pool.Transactions
+			txrs.Put(item.txId[:], thisBlockNumberKey, item.packed)
 			ownership.Share(link, item.txId, header.Number, item.linkOwner, tx.Quantity)
 
 		case *transactionrecord.ShareGrant:
@@ -444,13 +453,15 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 			oAccountBalance -= tx.Quantity
 			rAccountBalance += tx.Quantity
 
+			share := storage.Pool.ShareQuantity
+
 			// update balances
 			if 0 == oAccountBalance {
-				storage.Pool.ShareQuantity.Delete(oKey)
+				share.Delete(oKey)
 			} else {
-				storage.Pool.ShareQuantity.PutN(oKey, oAccountBalance)
+				share.PutN(oKey, oAccountBalance)
 			}
-			storage.Pool.ShareQuantity.PutN(rKey, rAccountBalance)
+			share.PutN(rKey, rAccountBalance)
 
 			storage.Pool.Transactions.Put(item.txId[:], thisBlockNumberKey, item.packed)
 
@@ -487,21 +498,22 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 			ownerTwoShareTwoAccountBalance -= tx.QuantityTwo
 			ownerOneShareTwoAccountBalance += tx.QuantityTwo
 
+			share := storage.Pool.ShareQuantity
 			// update database share one
 			if 0 == ownerOneShareOneAccountBalance {
-				storage.Pool.ShareQuantity.Delete(ownerOneShareOneKey)
+				share.Delete(ownerOneShareOneKey)
 			} else {
-				storage.Pool.ShareQuantity.PutN(ownerOneShareOneKey, ownerOneShareOneAccountBalance)
+				share.PutN(ownerOneShareOneKey, ownerOneShareOneAccountBalance)
 			}
-			storage.Pool.ShareQuantity.PutN(ownerTwoShareOneKey, ownerTwoShareOneAccountBalance)
+			share.PutN(ownerTwoShareOneKey, ownerTwoShareOneAccountBalance)
 
 			// update database share two
 			if 0 == ownerTwoShareTwoAccountBalance {
-				storage.Pool.ShareQuantity.Delete(ownerTwoShareTwoKey)
+				share.Delete(ownerTwoShareTwoKey)
 			} else {
-				storage.Pool.ShareQuantity.PutN(ownerTwoShareTwoKey, ownerTwoShareTwoAccountBalance)
+				share.PutN(ownerTwoShareTwoKey, ownerTwoShareTwoAccountBalance)
 			}
-			storage.Pool.ShareQuantity.PutN(ownerOneShareTwoKey, ownerOneShareTwoAccountBalance)
+			share.PutN(ownerOneShareTwoKey, ownerOneShareTwoAccountBalance)
 
 			storage.Pool.Transactions.Put(item.txId[:], thisBlockNumberKey, item.packed)
 
@@ -543,6 +555,9 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 	storage.Pool.Blocks.Put(blockNumber, packedBlock)
 	storage.Pool.BlockHeaderHash.Put(thisBlockNumberKey, digest[:])
 	globalData.log.Debugf("stored block: %d time elapsed: %f", header.Number, time.Since(start).Seconds())
+
+	storage.Pool.Blocks.WriteDBTransaction()
+	storage.Pool.Transactions.WriteDBTransaction()
 
 	// rescan reservoir to drop any invalid transactions
 	if performRescan {

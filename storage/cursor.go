@@ -53,11 +53,11 @@ func (cursor *FetchCursor) Fetch(count int) ([]Element, error) {
 		return nil, fault.ErrInvalidCount
 	}
 
-	if nil == cursor.pool.database {
+	if nil == cursor.pool.dataAccess {
 		return nil, nil
 	}
 
-	iter := cursor.pool.database.NewIterator(&cursor.maxRange, nil)
+	iter := cursor.pool.dataAccess.Iterator(&cursor.maxRange)
 
 	results := make([]Element, 0, count)
 	n := 0
@@ -106,11 +106,11 @@ func (cursor *FetchCursor) Map(f func(key []byte, value []byte) error) error {
 		return fault.ErrInvalidCursor
 	}
 
-	if nil == cursor.pool.database {
+	if nil == cursor.pool.dataAccess {
 		return nil
 	}
 
-	iter := cursor.pool.database.NewIterator(&cursor.maxRange, nil)
+	iter := cursor.pool.dataAccess.Iterator(&cursor.maxRange)
 
 	var err error
 iterating:

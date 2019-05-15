@@ -161,6 +161,10 @@ func Initialise(database string, readOnly bool) (bool, bool, error) {
 	// get write access by using pointer + Elem()
 	poolValue := reflect.ValueOf(&Pool).Elem()
 
+	// databases
+	blockDB := newDB(poolData.dbBlocks)
+	indexDB := newDB(poolData.dbIndex)
+
 	// scan each field
 	for i := 0; i < poolType.NumField(); i += 1 {
 
@@ -177,20 +181,20 @@ func Initialise(database string, readOnly bool) (bool, bool, error) {
 			limit = []byte{prefix + 1}
 		}
 
-		db := poolData.dbIndex
+		var dataAccess DataAccess
 		switch dbName := fieldInfo.Tag.Get("database"); dbName {
 		case "blocks":
-			db = poolData.dbBlocks
+			dataAccess = blockDB
 		case "index":
-			db = poolData.dbIndex
+			dataAccess = indexDB
 		default:
 			return mustMigrate, mustReindex, fmt.Errorf("pool: %v  has invalid database: %q", fieldInfo, dbName)
 		}
 
 		p := &PoolHandle{
-			prefix:   prefix,
-			limit:    limit,
-			database: db,
+			prefix:     prefix,
+			limit:      limit,
+			dataAccess: dataAccess,
 		}
 
 		if poolValue.Field(i).Type() == reflect.TypeOf((*PoolNB)(nil)) {

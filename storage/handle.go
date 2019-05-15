@@ -15,9 +15,9 @@ import (
 
 // PoolHandle - the structure of a pool handle
 type PoolHandle struct {
-	prefix   byte
-	limit    []byte
-	database *leveldb.DB
+	prefix     byte
+	limit      []byte
+	dataAccess DataAccess
 }
 
 // Element - a binary data item
@@ -37,12 +37,11 @@ func (p *PoolHandle) prefixKey(key []byte) []byte {
 func (p *PoolHandle) Put(key []byte, value []byte) {
 	poolData.RLock()
 	defer poolData.RUnlock()
-	if nil == p.database {
+	if nil == p.dataAccess {
 		logger.Panic("pool.Put nil database")
 		return
 	}
-	err := p.database.Put(p.prefixKey(key), value, nil)
-	logger.PanicIfError("pool.Put", err)
+	p.dataAccess.Put(p.prefixKey(key), value)
 }
 
 // PutN - store a uint8 as an 8 byte sequence
@@ -56,8 +55,7 @@ func (p *PoolHandle) PutN(key []byte, value uint64) {
 func (p *PoolHandle) Delete(key []byte) {
 	poolData.RLock()
 	defer poolData.RUnlock()
-	err := p.database.Delete(p.prefixKey(key), nil)
-	logger.PanicIfError("pool.Delete", err)
+	p.dataAccess.Delete(p.prefixKey(key))
 }
 
 // Get - read a value for a given key
@@ -66,10 +64,10 @@ func (p *PoolHandle) Delete(key []byte) {
 func (p *PoolHandle) Get(key []byte) []byte {
 	poolData.RLock()
 	defer poolData.RUnlock()
-	if nil == p.database {
+	if nil == p.dataAccess {
 		return nil
 	}
-	value, err := p.database.Get(p.prefixKey(key), nil)
+	value, err := p.dataAccess.Get(p.prefixKey(key))
 	if leveldb.ErrNotFound == err {
 		return nil
 	}
@@ -115,10 +113,10 @@ func (p *PoolHandle) GetNB(key []byte) (uint64, []byte) {
 func (p *PoolHandle) Has(key []byte) bool {
 	poolData.RLock()
 	defer poolData.RUnlock()
-	if nil == p.database {
+	if nil == p.dataAccess {
 		return false
 	}
-	value, err := p.database.Has(p.prefixKey(key), nil)
+	value, err := p.dataAccess.Has(p.prefixKey(key))
 	logger.PanicIfError("pool.Has", err)
 	return value
 }
@@ -132,11 +130,11 @@ func (p *PoolHandle) LastElement() (Element, bool) {
 
 	poolData.RLock()
 	defer poolData.RUnlock()
-	if nil == p.database {
+	if nil == p.dataAccess {
 		return Element{}, false
 	}
 
-	iter := p.database.NewIterator(&maxRange, nil)
+	iter := p.dataAccess.Iterator(&maxRange)
 
 	found := false
 	result := Element{}
@@ -161,4 +159,12 @@ func (p *PoolHandle) LastElement() (Element, bool) {
 	err := iter.Error()
 	logger.PanicIfError("pool.LastElement", err)
 	return result, found
+}
+
+func (p *PoolHandle) BeginDBTransaction() {
+	p.dataAccess.Begin()
+}
+
+func (p *PoolHandle) WriteDBTransaction() {
+	p.dataAccess.Write()
 }
