@@ -50,6 +50,9 @@ type busses struct {
 // Bus - all available message queues
 var Bus busses
 
+// cache for the delivered message
+var deliveredMessage map[string]Message
+
 // initialise all queues with preset size
 func init() {
 
@@ -134,10 +137,23 @@ func (queue *Queue) Release() {
 
 // Send - send a message to a 1:M queue
 func (queue *BroadcastQueue) Send(command string, parameters ...[]byte) {
-	queue.in <- Message{
+	m := Message{
 		Command:    command,
 		Parameters: parameters,
 	}
+
+	if isCached(m) {
+		// Drop the message that already cached
+		return
+	}
+
+	queue.in <- m
+
+	// Ignore caching rpc/peer command
+	if "rpc" == command || "peer" == command {
+		return
+	}
+	cache(m)
 }
 
 // Chan - get a new channel to read from a 1:M queue
@@ -149,6 +165,52 @@ func (queue *BroadcastQueue) Chan(size int) <-chan Message {
 	c := make(chan Message, size)
 	queue.out = append(queue.out, c)
 	return c
+}
+
+// DropCache - drop the item from cache
+func DropCache(m Message) {
+	if !isCached(m) {
+		return
+	}
+
+	delete(deliveredMessage, m.packHex())
+}
+
+// cache the delivered message
+func cache(m Message) {
+
+	if isCached(m) {
+		return
+	}
+
+	// store the message to cache
+	if nil == deliveredMessage {
+		deliveredMessage = make(map[string]Message)
+	}
+	deliveredMessage[m.packHex()] = m
+}
+
+// pack Message
+func (m Message) pack() []byte {
+	s := make([]byte, 0)
+	s = append(s, []byte(m.Command)...)
+	for _, a := range m.Parameters {
+		s = append(s, a...)
+	}
+	return s
+}
+
+// pack Message in hex string
+func (m Message) packHex() string {
+	return fmt.Sprintf("%x", m.pack())
+}
+
+// check whether Message is cached
+func isCached(m Message) (isCached bool) {
+	if _, ok := deliveredMessage[m.packHex()]; ok {
+		isCached = true
+	}
+	return
 }
 
 // background processing for the 1:M queue

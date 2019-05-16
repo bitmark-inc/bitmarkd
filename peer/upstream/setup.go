@@ -352,6 +352,8 @@ func push(client *zmqutil.Client, log *logger.L, item *messagebus.Message) error
 	err := client.Send(item.Command, item.Parameters)
 	if nil != err {
 		log.Errorf("push: %s send error: %s", client, err)
+		// Drop the message from cache for retrying later
+		messagebus.DropCache(*item)
 		return err
 	}
 

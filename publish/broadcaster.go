@@ -123,11 +123,15 @@ func (brdc *broadcaster) process(socket *zmq.Socket, item *messagebus.Message) e
 
 	_, err := socket.Send(brdc.chain, zmq.SNDMORE|zmq.DONTWAIT)
 	if nil != err {
+		// Drop the message from cache for retrying later
+		messagebus.DropCache(*item)
 		return err
 	}
 
 	_, err = socket.Send(item.Command, zmq.SNDMORE|zmq.DONTWAIT)
 	if nil != err {
+		// Drop the message from cache for retrying later
+		messagebus.DropCache(*item)
 		return err
 	}
 
@@ -139,6 +143,8 @@ func (brdc *broadcaster) process(socket *zmq.Socket, item *messagebus.Message) e
 			_, err = socket.SendBytes(p, zmq.SNDMORE|zmq.DONTWAIT)
 		}
 		if nil != err {
+			// Drop the message from cache for retrying later
+			messagebus.DropCache(*item)
 			return err
 		}
 	}
