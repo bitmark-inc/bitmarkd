@@ -25,7 +25,6 @@ import (
 
 const (
 	cycleInterval = 30 * time.Second
-	queueSize     = 50 // 0 => synchronous queue
 )
 
 // Upstream - structure to hold an upstream connection
@@ -193,7 +192,8 @@ func upstreamRunner(u *Upstream, shutdown <-chan struct{}) {
 
 	log.Debug("starting…")
 
-	queue := messagebus.Bus.Broadcast.Chan(queueSize)
+	// use default queue size
+	queue := messagebus.Bus.Broadcast.Chan(-1)
 
 	timer := time.After(cycleInterval)
 
