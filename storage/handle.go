@@ -166,5 +166,5 @@ func (p *PoolHandle) BeginDBTransaction() {
 }
 
 func (p *PoolHandle) WriteDBTransaction() {
-	p.dataAccess.Write()
+	p.dataAccess.Commit()
 }
