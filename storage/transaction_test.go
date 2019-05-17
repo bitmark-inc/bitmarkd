@@ -23,11 +23,18 @@ var (
 		limit:      []byte{2},
 		dataAccess: &fakeDataAccess{},
 	}
+	f1 *fakeDataAccess
+	f2 *fakeDataAccess
 )
 
-type fakeDataAccess struct{}
+type fakeDataAccess struct {
+	isBeginCalled bool
+}
 
-func (f *fakeDataAccess) Begin() error       { return nil }
+func (f *fakeDataAccess) Begin() error {
+	f.isBeginCalled = true
+	return nil
+}
 func (f *fakeDataAccess) Put([]byte, []byte) { isPutCalled = true }
 func (f *fakeDataAccess) Delete([]byte)      { isDeleteCalled = true }
 func (f *fakeDataAccess) Commit() error {
@@ -86,8 +93,13 @@ func teardownTestLogger() {
 }
 
 func setupTestTransaction() Transaction {
+	f1 = &fakeDataAccess{}
+	f2 = &fakeDataAccess{}
+	arr := []DataAccess{f1, f2}
+
 	return &TransactionImpl{
-		inUse: false,
+		inUse:      false,
+		dataAccess: arr,
 	}
 }
 
@@ -96,66 +108,30 @@ func TestBegin(t *testing.T) {
 
 	err := tx.Begin()
 	if nil != err {
-		t.Errorf("Error first time Begin, should not return any error")
+		t.Errorf("first time call Begin should not return any error")
+	}
+
+	if !f1.isBeginCalled || !f2.isBeginCalled {
+		t.Errorf("internal method dataAccess.Begin not being called")
 	}
 
 	err = tx.Begin()
 	if nil == err {
-		t.Errorf("Error second time Begin, should return error")
+		t.Errorf("second time call Begin should return error")
 	}
 }
 
 func TestPut(t *testing.T) {
 	tx := setupTestTransaction()
 	_ = tx.Begin()
-	tx.Put(ph, []byte{}, []byte{})
+	err := tx.Put(ph, []byte{}, []byte{})
 
 	if !isPutCalled {
-		t.Errorf("Error put is not called")
+		t.Errorf("internal method put is not called")
 	}
-}
 
-func TestDelete(t *testing.T) {
-	tx := setupTestTransaction()
-	_ = tx.Begin()
-	tx.Delete(ph, []byte{})
-
-	if !isDeleteCalled {
-		t.Errorf("Error remove is not called")
-	}
-}
-
-func TestGet(t *testing.T) {
-	tx := setupTestTransaction()
-	_ = tx.Begin()
-	tx.Get(ph, []byte{})
-
-	if !isGetCalled {
-		t.Errorf("Error get is not called")
-	}
-}
-
-func TestGetN(t *testing.T) {
-	tx := setupTestTransaction()
-	_ = tx.Begin()
-	isGetCalled = false
-	tx.Get(ph, []byte{})
-
-	if !isGetCalled {
-		t.Errorf("Error get is not called")
-	}
-}
-
-func TestGetNB(t *testing.T) {
-	setupTestLogger()
-	defer teardownTestLogger()
-	tx := setupTestTransaction()
-	_ = tx.Begin()
-	isGetCalled = false
-	tx.GetNB(ph, []byte{})
-
-	if !isGetCalled {
-		t.Errorf("Error get is not called")
+	if nil != err {
+		t.Errorf("Put with error: %s", err.Error())
 	}
 }
 
@@ -170,6 +146,66 @@ func TestPutN(t *testing.T) {
 	}
 }
 
+func TestDelete(t *testing.T) {
+	tx := setupTestTransaction()
+	_ = tx.Begin()
+	err := tx.Delete(ph, []byte{})
+
+	if !isDeleteCalled {
+		t.Errorf("internal method remove is not called")
+	}
+
+	if nil != err {
+		t.Errorf("Delete with error: %s", err.Error())
+	}
+}
+
+func TestGet(t *testing.T) {
+	tx := setupTestTransaction()
+	_ = tx.Begin()
+	_, err := tx.Get(ph, []byte{})
+
+	if !isGetCalled {
+		t.Errorf("internal method get is not called")
+	}
+
+	if nil != err {
+		t.Errorf("Get with error message: %s", err.Error())
+	}
+}
+
+func TestGetN(t *testing.T) {
+	tx := setupTestTransaction()
+	_ = tx.Begin()
+	isGetCalled = false
+	_, _, err := tx.GetN(ph, []byte{})
+
+	if !isGetCalled {
+		t.Errorf("internal method get is not called")
+	}
+
+	if nil != err {
+		t.Errorf("GetN with error: %s", err.Error())
+	}
+}
+
+func TestGetNB(t *testing.T) {
+	setupTestLogger()
+	defer teardownTestLogger()
+	tx := setupTestTransaction()
+	_ = tx.Begin()
+	isGetCalled = false
+	_, _, err := tx.GetNB(ph, []byte{})
+
+	if !isGetCalled {
+		t.Errorf("internal method get is not called")
+	}
+
+	if nil != err {
+		t.Errorf("GetNB with error: %s", err.Error())
+	}
+}
+
 func TestCommit(t *testing.T) {
 	tx := setupTestTransaction()
 	_ = tx.Begin()
@@ -181,11 +217,23 @@ func TestCommit(t *testing.T) {
 	}
 
 	if nil != err {
-		t.Error("Error Commit didn't reset inUse")
+		t.Errorf("Error Commit didn't reset inUse")
 	}
 
 	err = tx.Begin()
 	if nil != err {
-		t.Error("Erro Commit didn't refresh lock")
+		t.Errorf("Erro Commit didn't refresh lock")
+	}
+}
+
+func TestIsNilPtr(t *testing.T) {
+	err := isNilPtr(nil)
+	if nil == err {
+		t.Errorf("wrong result, cannot check nil pointer")
+	}
+
+	err = isNilPtr(&fakeDataAccess{})
+	if nil != err {
+		t.Errorf("wrong result, cannot check non-nil pointer")
 	}
 }
