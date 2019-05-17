@@ -5,27 +5,40 @@ import (
 	"sync"
 )
 
+const (
+	ErrHandleNil = "Error handle is nil"
+)
+
 // Transaction RDBS transaction
 type Transaction interface {
 	Begin() error
-	Put(*PoolHandle, []byte, []byte)
-	PutN(*PoolHandle, []byte, uint64)
-	Delete(*PoolHandle, []byte)
-	Get(*PoolHandle, []byte) []byte
-	GetN(*PoolHandle, []byte) (uint64, bool)
-	GetNB(*PoolHandle, []byte) (uint64, []byte)
+	Put(*PoolHandle, []byte, []byte) error
+	PutN(*PoolHandle, []byte, uint64) error
+	Delete(*PoolHandle, []byte) error
+	Get(*PoolHandle, []byte) ([]byte, error)
+	GetN(*PoolHandle, []byte) (uint64, bool, error)
+	GetNB(*PoolHandle, []byte) (uint64, []byte, error)
 	Commit(*PoolHandle) error
 }
 
 type TransactionImpl struct {
 	sync.Mutex
-	inUse bool
+	inUse      bool
+	dataAccess []DataAccess
 }
 
-func newTransaction() Transaction {
+func newTransaction(access []DataAccess) Transaction {
 	return &TransactionImpl{
-		inUse: false,
+		inUse:      false,
+		dataAccess: access,
 	}
+}
+
+func isNilPtr(ptr interface{}) error {
+	if nil == ptr {
+		return fmt.Errorf(ErrHandleNil)
+	}
+	return nil
 }
 
 func (d *TransactionImpl) Begin() error {
@@ -37,39 +50,80 @@ func (d *TransactionImpl) Begin() error {
 	d.inUse = true
 	d.Unlock()
 
+	for _, access := range d.dataAccess {
+		access.Begin()
+	}
+
 	return nil
 }
 
-func (d *TransactionImpl) Put(handle *PoolHandle, key []byte, value []byte) {
-	handle.put(key, value)
+func (d *TransactionImpl) Put(ph *PoolHandle, key []byte, value []byte) error {
+	if nil == ph {
+		return fmt.Errorf(ErrHandleNil)
+	}
+
+	ph.put(key, value)
+	return nil
 }
 
-func (d *TransactionImpl) PutN(handle *PoolHandle, key []byte, value uint64) {
-	handle.putN(key, value)
+func (d *TransactionImpl) PutN(ph *PoolHandle, key []byte, value uint64) error {
+	err := isNilPtr(ph)
+	if nil != err {
+		return err
+	}
+
+	ph.putN(key, value)
+	return nil
 }
 
-func (d *TransactionImpl) Delete(handle *PoolHandle, key []byte) {
-	handle.remove(key)
+func (d *TransactionImpl) Delete(ph *PoolHandle, key []byte) error {
+	err := isNilPtr(ph)
+	if nil != err {
+		return err
+	}
+
+	ph.remove(key)
+	return nil
 }
 
-func (d *TransactionImpl) Commit(handle *PoolHandle) error {
+func (d *TransactionImpl) Commit(ph *PoolHandle) error {
+	err := isNilPtr(ph)
+	if nil != err {
+		return err
+	}
+
 	d.Lock()
 	defer d.Unlock()
 
 	d.inUse = false
-	handle.Commit()
-
-	return nil
+	return ph.Commit()
 }
 
-func (d *TransactionImpl) Get(ph *PoolHandle, key []byte) []byte {
-	return ph.Get(key)
+func (d *TransactionImpl) Get(ph *PoolHandle, key []byte) ([]byte, error) {
+	err := isNilPtr(ph)
+	if nil != err {
+		return []byte{}, err
+	}
+
+	return ph.Get(key), nil
 }
 
-func (d *TransactionImpl) GetN(ph *PoolHandle, key []byte) (uint64, bool) {
-	return ph.getN(key)
+func (d *TransactionImpl) GetN(ph *PoolHandle, key []byte) (uint64, bool, error) {
+	err := isNilPtr(ph)
+	if nil != err {
+		return uint64(0), false, err
+	}
+
+	num, found := ph.getN(key)
+	return num, found, nil
 }
 
-func (d *TransactionImpl) GetNB(ph *PoolHandle, key []byte) (uint64, []byte) {
-	return ph.getNB(key)
+func (d *TransactionImpl) GetNB(ph *PoolHandle, key []byte) (uint64, []byte, error) {
+	err := isNilPtr(ph)
+	if nil != err {
+		return uint64(0), []byte{}, err
+	}
+
+	num, buffer := ph.getNB(key)
+	return num, buffer, nil
 }
