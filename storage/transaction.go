@@ -18,7 +18,7 @@ type Transaction interface {
 	Get(*PoolHandle, []byte) ([]byte, error)
 	GetN(*PoolHandle, []byte) (uint64, bool, error)
 	GetNB(*PoolHandle, []byte) (uint64, []byte, error)
-	Commit(*PoolHandle) error
+	Commit() error
 }
 
 type TransactionImpl struct {
@@ -86,17 +86,18 @@ func (d *TransactionImpl) Delete(ph *PoolHandle, key []byte) error {
 	return nil
 }
 
-func (d *TransactionImpl) Commit(ph *PoolHandle) error {
-	err := isNilPtr(ph)
-	if nil != err {
-		return err
-	}
-
+func (d *TransactionImpl) Commit() error {
 	d.Lock()
+	d.inUse = false
 	defer d.Unlock()
 
-	d.inUse = false
-	return ph.Commit()
+	for _, access := range d.dataAccess {
+		err := access.Commit()
+		if nil != err {
+			return err
+		}
+	}
+	return nil
 }
 
 func (d *TransactionImpl) Get(ph *PoolHandle, key []byte) ([]byte, error) {
