@@ -53,6 +53,7 @@ var poolData struct {
 	sync.RWMutex
 	dbBlocks *leveldb.DB
 	dbIndex  *leveldb.DB
+	trx      Transaction
 }
 
 // pool access modes
@@ -162,8 +163,10 @@ func Initialise(database string, readOnly bool) (bool, bool, error) {
 	poolValue := reflect.ValueOf(&Pool).Elem()
 
 	// databases
-	blockDB := newDB(poolData.dbBlocks)
-	indexDB := newDB(poolData.dbIndex)
+	blockDBAccess := newDB(poolData.dbBlocks)
+	indexDBAccess := newDB(poolData.dbIndex)
+	access := []DataAccess{blockDBAccess, indexDBAccess}
+	poolData.trx = newTransaction(access)
 
 	// scan each field
 	for i := 0; i < poolType.NumField(); i += 1 {
@@ -172,7 +175,7 @@ func Initialise(database string, readOnly bool) (bool, bool, error) {
 
 		prefixTag := fieldInfo.Tag.Get("prefix")
 		if 1 != len(prefixTag) {
-			return mustMigrate, mustReindex, fmt.Errorf("pool: %v  has invalid prefix: %q", fieldInfo, prefixTag)
+			return mustMigrate, mustReindex, fmt.Errorf("pool: %v has invalid prefix: %q", fieldInfo, prefixTag)
 		}
 
 		prefix := prefixTag[0]
@@ -184,9 +187,9 @@ func Initialise(database string, readOnly bool) (bool, bool, error) {
 		var dataAccess DataAccess
 		switch dbName := fieldInfo.Tag.Get("database"); dbName {
 		case "blocks":
-			dataAccess = blockDB
+			dataAccess = blockDBAccess
 		case "index":
-			dataAccess = indexDB
+			dataAccess = indexDBAccess
 		default:
 			return mustMigrate, mustReindex, fmt.Errorf("pool: %v  has invalid database: %q", fieldInfo, dbName)
 		}
@@ -278,4 +281,20 @@ func putVersion(db *leveldb.DB, version int) error {
 	binary.BigEndian.PutUint32(currentVersion, uint32(version))
 
 	return db.Put(versionKey, currentVersion, nil)
+}
+
+func Begin() (Transaction, error) {
+	err := poolData.trx.Begin()
+	if nil != err {
+		return nil, err
+	}
+	return poolData.trx, nil
+}
+
+func Commit(trx Transaction) error {
+	err := trx.Commit()
+	if nil != err {
+		return err
+	}
+	return nil
 }

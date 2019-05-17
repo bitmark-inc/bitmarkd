@@ -17,7 +17,6 @@ var (
 	isPutCalled    = false
 	isDeleteCalled = false
 	isGetCalled    = false
-	isCommitCalled = false
 	ph             = &PoolHandle{
 		prefix:     'a',
 		limit:      []byte{2},
@@ -28,7 +27,8 @@ var (
 )
 
 type fakeDataAccess struct {
-	isBeginCalled bool
+	isBeginCalled  bool
+	isCommitCalled bool
 }
 
 func (f *fakeDataAccess) Begin() error {
@@ -38,7 +38,7 @@ func (f *fakeDataAccess) Begin() error {
 func (f *fakeDataAccess) Put([]byte, []byte) { isPutCalled = true }
 func (f *fakeDataAccess) Delete([]byte)      { isDeleteCalled = true }
 func (f *fakeDataAccess) Commit() error {
-	isCommitCalled = true
+	f.isCommitCalled = true
 	return nil
 }
 func (f *fakeDataAccess) Get([]byte) ([]byte, error) {
@@ -108,16 +108,16 @@ func TestBegin(t *testing.T) {
 
 	err := tx.Begin()
 	if nil != err {
-		t.Errorf("first time call Begin should not return any error")
+		t.Errorf("first time call should not return any error")
 	}
 
 	if !f1.isBeginCalled || !f2.isBeginCalled {
-		t.Errorf("internal method dataAccess.Begin not being called")
+		t.Errorf("internal method dataAccess.Begin not called")
 	}
 
 	err = tx.Begin()
 	if nil == err {
-		t.Errorf("second time call Begin should return error")
+		t.Errorf("second time call should return error")
 	}
 }
 
@@ -131,7 +131,7 @@ func TestPut(t *testing.T) {
 	}
 
 	if nil != err {
-		t.Errorf("Put with error: %s", err.Error())
+		t.Errorf("error message: %s", err.Error())
 	}
 }
 
@@ -142,7 +142,7 @@ func TestPutN(t *testing.T) {
 	tx.PutN(ph, []byte{}, uint64(0))
 
 	if !isPutCalled {
-		t.Errorf("Error putN is not called")
+		t.Errorf("internal method putN is not called")
 	}
 }
 
@@ -156,7 +156,7 @@ func TestDelete(t *testing.T) {
 	}
 
 	if nil != err {
-		t.Errorf("Delete with error: %s", err.Error())
+		t.Errorf("error message: %s", err.Error())
 	}
 }
 
@@ -170,7 +170,7 @@ func TestGet(t *testing.T) {
 	}
 
 	if nil != err {
-		t.Errorf("Get with error message: %s", err.Error())
+		t.Errorf("error message: %s", err.Error())
 	}
 }
 
@@ -185,7 +185,7 @@ func TestGetN(t *testing.T) {
 	}
 
 	if nil != err {
-		t.Errorf("GetN with error: %s", err.Error())
+		t.Errorf("error message: %s", err.Error())
 	}
 }
 
@@ -202,7 +202,7 @@ func TestGetNB(t *testing.T) {
 	}
 
 	if nil != err {
-		t.Errorf("GetNB with error: %s", err.Error())
+		t.Errorf("error message: %s", err.Error())
 	}
 }
 
@@ -210,30 +210,30 @@ func TestCommit(t *testing.T) {
 	tx := setupTestTransaction()
 	_ = tx.Begin()
 	_ = tx.Begin()
-	err := tx.Commit(ph)
+	err := tx.Commit()
 
-	if !isCommitCalled {
-		t.Errorf("Error Commit not call member function Commit")
+	if !f1.isCommitCalled || !f2.isCommitCalled {
+		t.Errorf("not call internal method Commit")
 	}
 
 	if nil != err {
-		t.Errorf("Error Commit didn't reset inUse")
+		t.Errorf("didn't reset inUse")
 	}
 
 	err = tx.Begin()
 	if nil != err {
-		t.Errorf("Erro Commit didn't refresh lock")
+		t.Errorf("didn't refresh lock")
 	}
 }
 
 func TestIsNilPtr(t *testing.T) {
 	err := isNilPtr(nil)
 	if nil == err {
-		t.Errorf("wrong result, cannot check nil pointer")
+		t.Errorf("cannot check nil pointer")
 	}
 
 	err = isNilPtr(&fakeDataAccess{})
 	if nil != err {
-		t.Errorf("wrong result, cannot check non-nil pointer")
+		t.Errorf("cannot check non-nil pointer")
 	}
 }
