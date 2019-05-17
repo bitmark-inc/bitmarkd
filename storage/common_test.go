@@ -42,9 +42,7 @@ func setup(t *testing.T) {
 	}
 
 	// start logging
-	if err := logger.Initialise(logging); nil != err {
-		panic("logger setup failed: " + err.Error())
-	}
+	_ = logger.Initialise(logging)
 
 	// open database
 	_, mustReindex, err := storage.Initialise(databaseFileName, false)
