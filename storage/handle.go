@@ -34,6 +34,7 @@ func (p *PoolHandle) prefixKey(key []byte) []byte {
 }
 
 // Put - store a key/value bytes pair to the database
+// TODO: Aaron delete it
 func (p *PoolHandle) Put(key []byte, value []byte) {
 	poolData.RLock()
 	defer poolData.RUnlock()
@@ -44,15 +45,41 @@ func (p *PoolHandle) Put(key []byte, value []byte) {
 	p.dataAccess.Put(p.prefixKey(key), value)
 }
 
+// Put - store a key/value bytes pair to the database
+func (p *PoolHandle) put(key []byte, value []byte) {
+	poolData.RLock()
+	defer poolData.RUnlock()
+	if nil == p.dataAccess {
+		logger.Panic("pool.Put nil database")
+		return
+	}
+	p.dataAccess.Put(p.prefixKey(key), value)
+}
+
 // PutN - store a uint8 as an 8 byte sequence
+// TODO: Aaron delete
 func (p *PoolHandle) PutN(key []byte, value uint64) {
 	buffer := make([]byte, 8)
 	binary.BigEndian.PutUint64(buffer, value)
 	p.Put(key, buffer)
 }
 
+// PutN - store a uint8 as an 8 byte sequence
+func (p *PoolHandle) putN(key []byte, value uint64) {
+	buffer := make([]byte, 8)
+	binary.BigEndian.PutUint64(buffer, value)
+	p.Put(key, buffer)
+}
+
 // Delete - remove a key from the database
+// TODO: Aaron delete it
 func (p *PoolHandle) Delete(key []byte) {
+	poolData.RLock()
+	defer poolData.RUnlock()
+	p.dataAccess.Delete(p.prefixKey(key))
+}
+
+func (p *PoolHandle) remove(key []byte) {
 	poolData.RLock()
 	defer poolData.RUnlock()
 	p.dataAccess.Delete(p.prefixKey(key))
@@ -79,7 +106,24 @@ func (p *PoolHandle) Get(key []byte) []byte {
 //
 // second parameter is false if record was not found
 // panics if not 8 (or more) bytes in the record
+// TODO: Aaron delete
 func (p *PoolHandle) GetN(key []byte) (uint64, bool) {
+	buffer := p.Get(key)
+	if nil == buffer {
+		return 0, false
+	}
+	if len(buffer) < 8 {
+		logger.Panicf("pool.GetN truncated record for: %x: %s", key, buffer)
+	}
+	n := binary.BigEndian.Uint64(buffer[:8])
+	return n, true
+}
+
+// GetN - read a record and decode first 8 bytes as big endian uint64
+//
+// second parameter is false if record was not found
+// panics if not 8 (or more) bytes in the record
+func (p *PoolHandle) getN(key []byte) (uint64, bool) {
 	buffer := p.Get(key)
 	if nil == buffer {
 		return 0, false
@@ -97,7 +141,26 @@ func (p *PoolHandle) GetN(key []byte) (uint64, bool) {
 // second parameter is nil if record was not found
 // panics if not 9 (or more) bytes in the record
 // this returns the actual element in the second parameter - copy the result if it must be preserved
+// TODO: Aaron delete
 func (p *PoolHandle) GetNB(key []byte) (uint64, []byte) {
+	buffer := p.Get(key)
+	if nil == buffer {
+		return 0, nil
+	}
+	if len(buffer) < 9 { // must have at least one byte after the N value
+		logger.Panicf("pool.GetNB truncated record for: %x: %s", key, buffer)
+	}
+	n := binary.BigEndian.Uint64(buffer[:8])
+	return n, buffer[8:]
+}
+
+// GetNB - read a record and decode first 8 bytes as big endian uint64
+// and return the rest of the record as byte slice
+//
+// second parameter is nil if record was not found
+// panics if not 9 (or more) bytes in the record
+// this returns the actual element in the second parameter - copy the result if it must be preserved
+func (p *PoolHandle) getNB(key []byte) (uint64, []byte) {
 	buffer := p.Get(key)
 	if nil == buffer {
 		return 0, nil
@@ -161,10 +224,10 @@ func (p *PoolHandle) LastElement() (Element, bool) {
 	return result, found
 }
 
-func (p *PoolHandle) BeginDBTransaction() {
+func (p *PoolHandle) Begin() {
 	p.dataAccess.Begin()
 }
 
-func (p *PoolHandle) WriteDBTransaction() {
-	p.dataAccess.Commit()
+func (p *PoolHandle) Commit() error {
+	return p.dataAccess.Commit()
 }

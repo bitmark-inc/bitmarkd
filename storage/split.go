@@ -74,9 +74,9 @@ func (p *PoolNB) Has(key []byte) bool {
 }
 
 func (p *PoolNB) BeginDBTransaction() {
-	p.pool.BeginDBTransaction()
+	p.pool.Begin()
 }
 
 func (p *PoolNB) WriteDBTransaction() {
-	p.pool.WriteDBTransaction()
+	p.pool.Commit()
 }

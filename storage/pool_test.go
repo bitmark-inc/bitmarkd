@@ -16,16 +16,16 @@ import (
 
 // helper to add to pool
 func poolPut(t *testing.T, p *storage.PoolHandle, key string, data string) {
-	p.BeginDBTransaction()
+	p.Begin()
 	p.Put([]byte(key), []byte(data))
-	p.WriteDBTransaction()
+	p.Commit()
 }
 
 // helper to remove from pool
 func poolDelete(t *testing.T, p *storage.PoolHandle, key string) {
-	p.BeginDBTransaction()
+	p.Begin()
 	p.Delete([]byte(key))
-	p.WriteDBTransaction()
+	p.Commit()
 }
 
 // main pool test
@@ -238,17 +238,17 @@ loop:
 		key = rb(127)
 		data := rb(156)
 
-		p.BeginDBTransaction()
+		p.Begin()
 		p.Delete(key)
-		p.WriteDBTransaction()
+		p.Commit()
 		d := p.Get(key)
 
 		a := p.Get(key)
 		fmt.Printf("a: %x\n", a)
-		p.BeginDBTransaction()
+		p.Begin()
 		p.Put(key, data)
 		p.Delete(oldkey)
-		p.WriteDBTransaction()
+		p.Commit()
 		b := p.Get(key)
 		fmt.Printf("b: %x\n", b)
 
@@ -281,7 +281,7 @@ func bg(key *[]byte, stop <-chan struct{}) {
 		data1 := rb(15)
 		data2 := rb(165)
 
-		p.BeginDBTransaction()
+		p.Begin()
 		p.Delete(key2)
 		p.Put(key2, data1)
 		p.Get(*key)
@@ -289,7 +289,7 @@ func bg(key *[]byte, stop <-chan struct{}) {
 		p.Put(key2, data2)
 		p.Get(key2)
 		p.Get(*key)
-		p.WriteDBTransaction()
+		p.Commit()
 	}
 }
 
