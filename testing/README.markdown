@@ -53,3 +53,38 @@ initial balance with be zero regtest coins so generate 101 blocks
 
 You can use getnewaddress and other coin commands to make payments
 when doing transfers with bitmark-cli
+
+
+# bitmark-cli
+
+create two users for the make-blockchain script
+Create users for all the nodes
+
+~~~
+sh create-node-users.sh
+~~~
+
+# setup bitmark-wallet
+
+This will create a wallet (if does not already exist) and add another
+25 coins to an existing wallet
+
+~~~
+sh create-bitmark-wallet.sh
+~~~
+
+
+# now create a minimum blockchain
+
+~~~
+make-blockchain new btc
+~~~
+
+to delete blockchain and regenerate using ltc
+
+~~~
+restart-all-bitmarkds -r -p ; make-blockchain new ltc
+~~~
+
+Note the old blockchain is actually renamed so could be renamed back
+if desired

@@ -1,0 +1,149 @@
+#!/bin/sh
+# stop all bitmarkd run by bm-tester and then restart them all
+
+ERROR()
+{
+  printf 'error: '
+  printf "$@"
+  printf '\n'
+  exit 1
+}
+
+USAGE()
+{
+  if [ -n "$1" ]
+  then
+    printf 'error: '
+    printf "$@"
+    printf '\n'
+  fi
+  echo usage: $(basename "$0") '<options>'
+  echo '       --help           -h         this message'
+  echo '       --verbose        -v         more messages'
+  echo '       --copy-from N    -f N       copy database from node N, backup first'
+  echo '       --peer-delete    -p         delete peers.json'
+  echo '       --reset-data     -r         remove DB, but backup first'
+  echo '       --debug          -D         show debug information'
+  exit 1
+}
+
+
+# main program
+
+verbose=no
+from=
+peer_delete=no
+reset=no
+config_root="${HOME}/.config/bitmarkd"
+
+getopt=
+for g in /usr/local/bin/getopt /usr/local/opt/gnu-getopt/bin/getopt /usr/bin/getopt
+do
+  [ -x "${g}" ] && getopt="${g}" && break
+done
+[ -x "${getopt}" ] || ERROR 'no suitable getopt was found'
+args=$(${getopt} -o hvf:prD --long=help,verbose,copy-from:,peer-delete,reset-data,debug -- "$@") ||exit 1
+
+# replace the arguments with the parsed values
+eval set -- "${args}"
+
+while :
+do
+  case "$1" in
+    (-v|--verbose)
+      verbose=yes
+      ;;
+
+    (-f|--copy-from)
+      from=$2
+      shift
+      ;;
+
+    (-p|--peer-delete)
+      peer_delete=yes
+      ;;
+
+    (-r|--reset-data)
+      reset=yes
+      ;;
+
+    (-D|--debug)
+      debug=yes
+      ;;
+
+    (--)
+      shift
+      break
+      ;;
+
+    (-h|--help)
+      USAGE
+      ;;
+
+    (*)
+      USAGE 'invalid argument: "%s"' "$1"
+      ;;
+  esac
+  shift
+done
+
+#[ $# -eq 0 ] && USAGE 'missing arguments'
+[ $# -ne 0 ] && USAGE 'extraneous arguments'
+
+[ -n "${from}" ] && [ -n "${from#[1-9]}" ] && ERROR 'invalid --copy=from="%s"' "${from}"
+
+[ X"${debug}" = X"yes" ] && set -x
+
+# stop all existing bitmarkds
+killall bitmarkd
+
+# if backup
+src_dir=''
+if [ -n "${from}" ]
+then
+  src_dir="${config_root}${from}/data"
+  [ -d "${src_dir}" ] || ERROR 'data directory: "%s" does not exist' "${src_dir}"
+fi
+
+# need to backup/reset database?
+if [ -n "${src_dir}" -o X"${reset}" = X"yes" ]
+then
+  date=$(date +'%Y-%m-%d_%H-%M-%S')
+  for i in 1 2 3 4 5 6 7 8 9
+  do
+    [ X"${i}" = X"${from}" ] && continue
+    dst_dir="${config_root}${i}/data"
+    bk_dir="${config_root}${i}/data.${date}"
+
+    if [ -d "${dst_dir}" ]
+    then
+      printf 'backup database[%d] to: %s\n' "${i}" "${bk_dir}"
+      mv "${dst_dir}" "${bk_dir}"
+    fi
+
+     rm -f "${config_root}${i}/reservoir-local.cache"
+
+    if [ -n "${src_dir}" ]
+    then
+      printf 'copy database to: %s\n' "${dst_dir}"
+      rsync -cavHxP --delete "${src_dir}/"  "${dst_dir}/"
+    fi
+  done
+
+fi
+
+tmux list-panes -a -F '#{pane_id} #{pane_title}' | (
+  while read id command config other
+  do
+    case "${command}" in
+      (run-bitmarkd)
+        n="${config##*%}"
+        [ X"${peer_delete}" = X"yes" ] && rm -f "${HOME}/.config/bitmarkd${n}/peers*.json"
+        printf '%s → bitmarkd: %s\n' "${id}" "${n}"
+        tmux send-keys -t "${id}" 'y' 'C-j'
+        ;;
+      (*)
+        ;;
+    esac
+  done
+)

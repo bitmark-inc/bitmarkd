@@ -3,5 +3,12 @@
 
 n=1
 [ -n "${1}" ] && n="${1}"
-run-bitcoin generate "${n}"
-run-litecoin generate "${n}"
+
+#run-bitcoin generate "${n}"
+#run-litecoin generate "${n}"
+
+btc_address=$(run-bitcoin getnewaddress)
+ltc_address=$(run-litecoin getnewaddress)
+
+run-bitcoin generatetoaddress "${n}" "${btc_address}"
+run-litecoin generatetoaddress "${n}" "${ltc_address}"
