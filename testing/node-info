@@ -1,0 +1,147 @@
+#!/bin/sh
+# get information from bitmarkd servers
+
+# all available servers
+servers='
+  [::1]:2131
+  [::1]:2231
+  [::1]:2331
+  [::1]:2431
+  [::1]:2531
+  [::1]:2631
+  [::1]:2731
+  [::1]:2831
+'
+
+ERROR()
+{
+  printf 'error: '
+  printf "$@"
+  printf '\n'
+  exit 1
+}
+
+USAGE()
+{
+  if [ -n "$1" ]
+  then
+    printf 'error: '
+    printf "$@"
+    printf '\n'
+  fi
+  echo usage: $(basename "$0") '[options] [N...|all]'
+  echo '       --help             -h            this message'
+  echo '       --verbose          -v            more messages'
+  echo '       --debug            -D            debuging messages'
+  exit 1
+}
+
+VERBOSE()
+{
+  [ X"${verbose}" = X"yes" ] && printf "$@"
+}
+
+# main program
+verbose=no
+debug=no
+
+getopt=/usr/local/bin/getopt
+[ -x "${getopt}" ] || getopt=getopt
+args=$(${getopt} -o hvD --long=help,verbose,debug -- "$@") || exit 1
+
+# replace the arguments with the parsed values
+eval set -- "${args}"
+
+while :
+do
+  case "$1" in
+    (-v|--verbose)
+      verbose=yes
+      ;;
+
+    (-D|--debug)
+      debug=yes
+      ;;
+
+    (--)
+      shift
+      break
+      ;;
+
+    (-h|--help)
+      USAGE
+      ;;
+
+    (*)
+      USAGE 'invalid option: %s' "$1"
+      ;;
+  esac
+  shift
+done
+
+# verify arguments
+[ $# -ne 0 ] && USAGE 'invalid extraneous arguments'
+
+# enable debuging
+[ X"${debug}" = X"yes" ] && set -x
+
+VERBOSE 'servers: %s\n' "${servers}"
+
+keys='{'
+n=0
+for s in ${servers}
+do
+  n=$((n + 1))
+  printf '%+d' "${n}"
+  host="${s%:*}"
+  port="${s##*:}"
+  r=$(curl -sk "https://${host}:${port}/bitmarkd/details" "https://${host}:${port}/bitmarkd/connections")
+  rc="$?"
+
+  if [ -z "${r}" -o "${rc}" -ne 0 ]
+  then
+    #printf 'timeout: rc: %s  r: "%s"\n' "${rc}" "${r}"
+    eval info_${n}='{}'
+    continue
+  fi
+
+  r=$(printf '%s' "${r}" | jq --slurp '{node:.[0],conn:.[1].connectedTo}' 2> /dev/null)
+
+  eval info_${n}="'${r}'"
+  keys="${keys}\"$(printf '%s' "${r}" | jq --raw-output .node.publicKey 2> /dev/null)\":${n},"
+
+done
+keys="${keys}\"\":9999}"
+printf '\n'
+
+filter='
+  def rj($f;$w): ("          "+($f|tostring))[-$w:];
+  def lj($f;$w): (($f|tostring)+"          ")[:$w];
+  "\u001b[1;32mb: \u001b[1;33m" + (.node.blocks.count.local|tostring) +
+  "\u001b[0;33m " + (.node.blocks.hash[56:64]) +
+  "  \u001b[" + (if .node.mode=="Normal" then "1;32" else "0;31" end) + "m" + .node.mode[0:6] +
+  "  \u001b[0;36m" + .node.chain +
+  "  \u001b[1;34mp: " + rj(.node.transactionCounters.pending;3) +
+  "  \u001b[1;31mv: " + rj(.node.transactionCounters.verified;3) +
+  "  \u001b[1;35msw: " + (.node.version|tostring) +
+  "  \u001b[1;34min: " + (.node.peers.incoming|tostring) +
+  "  \u001b[1;31mout: " + (.node.peers.outgoing|tostring) +
+  "  \u001b[1;33mc: [" + (.conn|map($keys[.server])|map(if . == null then 0 else . end) |
+    reduce .[] as $n (
+      "................" | split("");
+      .[$n]=(if 0==$n then "?" else [$n + 96]|implode end)
+    ) | join("")|tostring) + "]" +
+  "  \u001b[0;37mup: " + (.node.uptime|tostring) +
+  "\u001b[0m"'
+
+n=0
+for s in ${servers}
+do
+  n=$((n + 1))
+  eval info="\"\${info_${n}}\""
+
+  r=$(printf '%s' "${info}" | jq --raw-output --argjson keys "${keys}" "${filter}" 2> /dev/null)
+  [ -z "${r}" ] && r='OFFLINE'
+  printf '[%2d]: %s\n' "${n}" "${r}"
+
+done

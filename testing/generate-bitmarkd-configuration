@@ -1,0 +1,652 @@
+#!/bin/sh
+# script to create a new bitmarkd instance
+
+ERROR()
+{
+  printf 'error: '
+  printf "$@"
+  printf '\n'
+  exit 1
+}
+
+VERBOSE()
+{
+  if [ X"${verbose}" = X"yes" ]
+  then
+    printf "$@"
+    printf '\n'
+  fi
+}
+
+WARNING()
+{
+  printf 'WARNING: '
+  printf "$@"
+  printf '\n'
+}
+
+USAGE()
+{
+  if [ -n "$1" ]
+  then
+    printf 'error: '
+    printf "$@"
+    printf '\n'
+  fi
+  echo usage: $(basename "$0") '[options] index-numbers...'
+  echo '       --help                -h            this message'
+  echo '       --verbose             -v            more messages'
+  echo '       --chain=chain         -c CHAIN      set the chain [local|testing|bitmark]: ['"${network}"']'
+  echo '       --nodes=DOMAIN        -n DOMAIN     set the nodes [none|chain|nodes.domain.tld]: ['"${nodes}"']'
+  echo '       --connect=K:H:P       -C K:H:P      connect to specific bitmarkd public_key:host:port'
+  echo '       --bitcoin=DIR|FILE    -b DIR|FILE   set bitcoin access from bitcoin.conf'
+  echo '       --litecoin=DIR|FILE   -l DIR|FILE   set litecoin access from litecoin.conf'
+  echo '       --discovery=DIR|FILE  -d DIR|FILE   set discovery proxy from discovery.conf'
+  echo '       --console             -k            log to console'
+  echo '       --more                -m            more logging output'
+  echo '       --update              -u            overwrite an existing configuration, does not change exiting keys'
+  echo '       --debug               -D            debuging messages'
+  exit 1
+}
+
+
+# main program
+
+xdg_home="${XDG_CONFIG_HOME}"
+[ -z "${xdg_home}" ] && xdg_home="${HOME}/.config"
+[ -d "${xdg_home}" ] || ERROR 'missing directory: "%s" please create first' "${xdg_home}"
+
+verbose=no
+prefix_local=20
+prefix_testing=50
+prefix_bitmark=70
+chain=local
+nodes=none
+bitmark_connect=
+bitcoin_conf=
+litecoin_conf=
+discovery_conf=
+proxy=no
+log_size=1048576
+log_count=100
+log_console=false
+log_default=error
+debug=no
+update=no
+
+# depends on config language (Lua)
+comment_string='-- '
+
+testnet_only=''
+livenet_only="${comment_string}"
+
+
+getopt=
+for g in /usr/local/bin/getopt /usr/local/opt/gnu-getopt/bin/getopt /usr/bin/getopt
+do
+  [ -x "${g}" ] && getopt="${g}" && break
+done
+[ -x "${getopt}" ] || ERROR 'no suitable getopt was found'
+[ X"$(${getopt} --version 2>&1 | sed 's/^[^(]*[(]//;s/[)][^)]*$//')" = X"enhanced" ] || ERROR 'getopt does not support long options'
+
+args=$(${getopt} -o hvc:n:C:b:l:d:kmuD --long=help,verbose,chain:,nodes:,connect:,bitcoin:,litecoin:,discovery:,console,more,update,debug -- "$@") || exit 1
+
+# replace the arguments with the parsed values
+eval set -- "${args}"
+
+while :
+do
+  case "$1" in
+    (-v|--verbose)
+      verbose=yes
+      ;;
+
+    (-c|--chain)
+      testnet_only=''
+      livenet_only="${comment_string}"
+      case "$2" in
+        (live|bitmark)
+          chain=bitmark
+          testnet_only="${comment_string}"
+          livenet_only=''
+          ;;
+        (test|testing)
+          chain=testing
+          ;;
+        (local)
+          chain=local
+          ;;
+        (*)
+          ERROR 'invalid chain: %s' "$2"
+          ;;
+      esac
+      shift
+      ;;
+
+    (-n|--nodes)
+      case "$2" in
+        (none|chain)
+          nodes="$2"
+          ;;
+        (*.*)
+          nodes="$2"
+          n=$(host -t TXT "${nodes}")
+          [ $? -ne 0 ] && USAGE 'nodes cannot fetch TXT record for: "%s"' "${nodes}"
+          [ -z "${n}" ] && USAGE 'nodes cannot empty TXT record for: "%s"' "${nodes}"
+          ;;
+        (*)
+          ERROR 'invalid nodes: %s' "$2"
+          ;;
+      esac
+      shift
+      ;;
+
+    (-C|--connect)
+      conn="$2"
+      [ -z "${conn}" ] && USAGE 'bitmarkd connect cannot be empty'
+      shift
+      bitmarkd_connect="${bitmarkd_connect} ${conn}"
+      ;;
+
+    (-d|--discovery)
+      discovery_conf="$2"
+      [ -z "${discovery_conf}" ] && USAGE 'discovery configuration cannot be empty'
+      [ -d "${discovery_conf}" ] && discovery_conf="${discovery_conf}/discovery.conf"
+      shift
+      proxy=yes
+      ;;
+
+    (-b|--bitcoin)
+      bitcoin_conf="$2"
+      [ -z "${bitcoin_conf}" ] && USAGE 'bitcoin configuration cannot be empty'
+      [ -d "${bitcoin_conf}" ] && bitcoin_conf="${bitcoin_conf}/bitcoin.conf"
+      shift
+      ;;
+
+    (-l|--litecoin)
+      litecoin_conf="$2"
+      [ -z "${litecoin_conf}" ] && USAGE 'litecoin configuration cannot be empty'
+      [ -d "${litecoin_conf}" ] && litecoin_conf="${litecoin_conf}/litecoin.conf"
+      shift
+      ;;
+
+    (-k|--console)
+      log_console=true
+      ;;
+
+    (-m|--more)
+      case "${log_default}" in
+        (error)
+          log_default=warn
+          ;;
+        (warn)
+          log_default=info
+          ;;
+        (info)
+          log_default=debug
+          ;;
+        (debug)
+          log_default=trace
+          ;;
+        (*)
+          log_default=info
+          ;;
+      esac
+      ;;
+
+    (-u|--update)
+      update=yes
+      ;;
+
+    (-D|--debug)
+      debug=yes
+      ;;
+
+    (--)
+      shift
+      break
+      ;;
+
+    (-h|--help)
+      USAGE
+      ;;
+
+    (*)
+      USAGE 'invalid option: %s' "$1"
+      ;;
+  esac
+  shift
+done
+
+# verify arguments
+[ $# -eq 0 ] && USAGE "missing arguments"
+
+# enable debugging
+[ X"${debug}" = X"yes" ] && set -x
+
+get_url() {
+  local conf ip port path json
+  conf="$1"; shift
+  ip="$1"; shift
+  port="$1"; shift
+  path="$1"; shift
+
+  json=$(ucl_tool --format=compact_json --in="${conf}")
+
+  ip=$(printf '%s' "${json}" | jq --raw-output '(.rpcbind // "'"${ip}"'")')
+  port=$(printf '%s' "${json}" | jq --raw-output '(.rpcport // "'"${port}"'")')
+
+  printf 'http://%s:%s%s' "${ip}" "${port}" "${path}"
+}
+
+get_endpoint() {
+  local name conf ip port r protocol ip2 port2
+  name="$1"; shift
+  conf="$1"; shift
+  ip="$1"; shift
+  port="$1"; shift
+
+  r=$(lua52 <<EOF -
+    arg = {
+      [0] = "${conf}",
+    }
+    m = dofile(arg[0])
+    print(m.${name})
+EOF
+   )
+
+  protocol="${r%%:*}"
+  ip2="${r#*:}"
+  ip2="${ip2%:*}"
+  port2="${r##*:}"
+
+  ip2="${ip2#//}"
+  [ X"${ip2}" = X'*' ] && ip2="${ip}"
+  [ -z "${port2}" ] && port2="${port}"
+
+  printf '%s:%s' "${ip2}" "${port2}"
+}
+
+if [ X"${proxy}" = X"yes" ]
+then
+  # all discovery conf must exist
+
+  #check if URL:host:pub:rep form is specified
+  if [ X"${discovery_conf#URL:}" != X"${discovery_conf}" ]
+  then
+    d="${discovery_conf#URL:}"
+    d_host="${d%%:*}"
+    d="${d#*:}"
+    d_pub="${d%%:*}"
+    d="${d#*:}"
+    d_rep="${d%%:*}"
+    [ -z "${d_host}" ] && ERROR 'cannot determine discovery host from: %s' "${discovery_conf}"
+    [ -z "${d_pub}" ] && ERROR 'cannot determine discovery pub from: %s' "${discovery_conf}"
+    [ -z "${d_rep}" ] && ERROR 'cannot determine discovery rep from: %s' "${discovery_conf}"
+    discovery_pub="${d_host}:${d_pub}"
+    discovery_rep="${d_host}:${d_rep}"
+
+  else
+
+    # must be a config file
+    [ -f "${discovery_conf}" ] || USAGE 'missing discovery configuration: %s' "${discovery_conf}"
+
+    discovery_pub=$(get_endpoint pub_endpoint "${discovery_conf}" "127.0.0.1" 17008)
+    [ -z "${discovery_pub}" ] && ERROR 'cannot determine discovery pub from: %s' "${discovery_conf}"
+
+    discovery_rep=$(get_endpoint rep_endpoint "${discovery_conf}" "127.0.0.1" 17009)
+    [ -z "${discovery_rep}" ] && ERROR 'cannot determine discovery rep from: %s' "${discovery_conf}"
+
+  fi
+
+  # dummy coin configurations as these are not used when proxy is on
+  bitcoin_url=$(get_url /dev/null "127.0.0.1" 8332 /rest)
+  litecoin_url=$(get_url /dev/null "127.0.0.1" 9332 /rest)
+
+else
+  # all coin conf must exist
+  [ -f "${bitcoin_conf}" ] || USAGE 'missing bitcoin configuration: %s' "${bitcoin_conf}"
+  [ -f "${litecoin_conf}" ] || USAGE 'missing litecoin configuration: %s' "${litecoin_conf}"
+
+  bitcoin_url=$(get_url "${bitcoin_conf}" "127.0.0.1" 8332 /rest)
+  [ -z "${bitcoin_url}" ] && ERROR 'cannot determine bitcoin rest url from: %s' "${bitcoin_conf}"
+
+  litecoin_url=$(get_url "${litecoin_conf}" "127.0.0.1" 9332 /rest)
+  [ -z "${litecoin_url}" ] && ERROR 'cannot determine litecoin rest url from: %s' "${litecoin_conf}"
+fi
+
+connections=$(printf '\n    connect = {')
+for conn in ${bitmarkd_connect}
+do
+  public_key="${conn%%:*}"
+  address="${conn#*:}"
+  connections="${connections}$(printf '\n        {\n            public_key = "%s",\n            address = "%s"\n        },\n' "${public_key}" "${address}")"
+done
+connections="${connections}$(printf '\n    }\n')"
+
+
+# process all arguments can be 1..99 or T1..T99 0r L1..L99
+# T = testnet   L = livenet
+for i in "$@"
+do
+  external_net_comment=
+  j="${i#[LT]}"
+  [ X"${j}" != X"${i}" ] && external_net_comment="${comment_string}"
+
+  [ "${j}" -lt 1 -o "${j}" -gt 99 ] && ERROR 'index is out of range: %s' "${i}"
+
+  dir="${xdg_home}/bitmarkd${i}"
+  config="${dir}/bitmarkd.conf"
+
+  # stop if a config exists and not update
+  [ X"${update}" = X"no" ] && [ -d "${dir}" -o -f "${config}" ] && ERROR 'index: %s is already used: %s' "${i}" "${dir}"
+
+  eval prefix_base=\"\${prefix_${chain}}\"
+  prefix=$((prefix_base + j))
+  [ -d "${dir}" ] || mkdir -p "${dir}"
+
+  VERBOSE 'config: %s  ports: %dXX' "${config}" "${prefix}"
+
+  cat > "${config}" <<EOF
+-- bitmarkd.conf  -*- mode: lua -*-
+
+local M = {}
+
+local public_ip = {}
+
+-- Read the named file in under the specified data directory
+-- M.data_directory and return the contents.
+function read_file(name)
+    local f, err = io.open(M.data_directory .. "/" .. name, "r")
+    if f == nil then
+        return nil
+    end
+    local r = f:read("*a")
+    f:close()
+    return r
+end
+
+-- Let the node announce itself (ip:port) to the network.
+-- The ip should be provided using environment variables
+-- either PUBLIC_IPV4 or PUBLIC_IPV6, or both
+-- depends on the public IP addresses of the node.
+function announce_self(port)
+    local announcements = {}
+    for k, v in pairs(public_ip) do
+        announcements[#announcements+1] = v .. ":" .. port
+    end
+    return unpack(announcements)
+end
+
+-- set the public IP addresses
+local public_ipv4 = os.getenv("PUBLIC_IPV4")
+if public_ipv4 ~= nil and public_ipv4 ~= "" then
+    public_ip[#public_ip+1] = public_ipv4
+end
+
+local public_ipv6 = os.getenv("PUBLIC_IPV6")
+if public_ipv6 ~= nil and public_ipv6 ~= "" then
+    public_ip[#public_ip+1] = public_ipv6
+end
+
+
+-- set the directory for data and log files
+M.data_directory = arg[0]:match("(.*/)")  -- dir from configuration file
+--M.data_directory = "."                    -- current directory
+--M.data_directory = "/var/lib/bitmarkd"    -- absolute path
+
+-- optional pid file if not absolute path then is created relative to
+-- the data directory
+--M.pidfile = "bitmarkd.pid"
+
+-- select the chain of the network for peer connections
+-- cross chain networking connects will not work
+--M.chain = "bitmark"
+--M.chain = "testing"
+--M.chain = "local"
+M.chain = "${chain}"
+
+-- select the default node configuration
+-- choose from: none, chain OR sub.domain.tld
+--M.nodes = "chain"
+M.nodes = "${nodes}"
+
+-- optional reservoir file if not absolute path then is created relative to
+-- the data directory
+M.reservoir_file = "reservoir-" .. M.chain .. ".cache"
+
+-- optional peer file if not absolute path then is created relative to
+-- the data directory
+M.peer_file = "peers-" .. M.chain .. ".json"
+
+
+-- for JSON clients on TLS connection
+M.client_rpc = {
+
+    maximum_connections = 50,
+    bandwidth = 25000000,
+
+    listen = {
+        "127.0.0.1:${prefix}30",
+        "[::1]:${prefix}30"
+    },
+
+    -- announce certain public IP:ports to network
+    -- if using firewall port forwarding use the firewall external IP:port
+    ${external_net_comment}announce = {
+    ${external_net_comment}    "127.0.0.1:${prefix}30",
+    ${external_net_comment}    "[::1]:${prefix}30",
+    ${external_net_comment}
+    ${external_net_comment}    -- only used if PUBLIC_IPV[46] variables are set
+    ${external_net_comment}    announce_self(${prefix}30)
+    ${external_net_comment}},
+
+    certificate = read_file("rpc.crt"),
+    private_key = read_file("rpc.key")
+}
+
+
+-- for local monitoring
+M.https_rpc = {
+
+    maximum_connections = 100,
+    bandwidth = 25000000,
+
+    -- POST /bitmarkd/rpc          (unrestricted: json body as client rpc)
+    -- GET  /bitmarkd/details      (protected: more data than Node.Info))
+    -- GET  /bitmarkd/peers        (protected: list of all peers and their public key)
+    -- GET  /bitmarkd/connections  (protected: list of all outgoing peer connections)
+
+    listen = {
+        "127.0.0.1:${prefix}31",
+        "[::1]:${prefix}31"
+    },
+
+    -- IP networks in CIDR form that can access the /bitmarkd/* GET APIs
+    -- default is deny
+    allow = {
+        details = {
+            "127.0.0.0/8",
+            "::1/128",
+        },
+        connections = {
+            "127.0.0.0/8",
+            "::1/128",
+        },
+        peers = {
+            "127.0.0.0/8",
+            "::1/128",
+        }
+    },
+
+    -- this example shares keys with client rpc
+    certificate = read_file("rpc.crt"),
+    private_key = read_file("rpc.key")
+}
+
+
+-- peer-to-peer connections
+M.peering = {
+    -- set to false to prevent additional connections
+    dynamic_connections = true,
+
+    -- set to false to only use IPv4 for outgoing connections
+    prefer_ipv6 = true,
+
+    -- for incoming peer connections
+    listen = {
+        "127.0.0.1:${prefix}36",
+        "[::1]:${prefix}36"
+    },
+
+    -- announce certain public IP:ports to network
+    -- if using firewall port forwarding use the firewall external IP:port
+    ${external_net_comment}announce = {
+    ${external_net_comment}    "127.0.0.1:${prefix}36",
+    ${external_net_comment}    "[::1]:${prefix}36",
+    ${external_net_comment}
+    ${external_net_comment}     -- only used if PUBLIC_IPV[46] variables are set
+    ${external_net_comment}     announce_self(${prefix}36)
+    ${external_net_comment}},
+
+    public_key = read_file("peer.public"),
+    private_key = read_file("peer.private"),
+
+    -- dedicated connections
+${connections}
+    -- connect = {
+    --    {
+    --        public_key = "781d78a9eb338a511ae88a9be5383095ede46445596506e29ad8f022a3f8596e",
+    --        address = "127.0.0.1:3136"
+    --    }
+    -- }
+}
+
+
+-- optional transaction/block publishing for subscribers to receive various announcements
+-- intended for local services
+M.publishing = {
+
+    broadcast = {
+        "127.0.0.1:${prefix}35",
+        "[::1]:${prefix}35"
+    },
+
+    -- ok to use the same keys as peer
+    public_key = read_file("peer.public"),
+    private_key = read_file("peer.private")
+}
+
+
+-- configuration of recorderd connections
+M.proofing = {
+
+    public_key = read_file("proof.public"),
+    private_key = read_file("proof.private"),
+    signing_key = read_file(M.chain == "bitmark" and "proof.live" or "proof.test"),
+
+    -- payments for future transfers
+    -- private keys are just samples for testing
+    -- (do not include such keys in a real configuration file)
+    payment_address = {
+
+        -- bitcoin key: "cPcHEqnqNG3Ze27Yqqxk8fQXmFVAgme1h1UT3HBN3MV4gERUVbVc"
+        ${testnet_only}bitcoin = "msxN7C7cRNgbgyUzt3EcvrpmWXc59sZVN4",
+
+        -- litecoin key: "cUhoPFEKgWzxX9Ycynemjtvh4kEv3vcoVW6RgLaxzEVTGHFWF6WY"
+        ${testnet_only}litecoin = "mjPkDNakVA4w4hJZ6WF7p8yKUV2merhyCM"
+
+        ${livenet_only}bitcoin = "1HeFjMrDTjheiZrBYViLGgjovRZK9Ba5EQ",
+        ${livenet_only}litecoin = "LYg45SVcJALHWHSMVkHSKAnbAEXAbhei7h"
+
+    },
+
+    publish = {
+        "127.0.0.1:${prefix}38",
+        "[::1]:${prefix}38"
+    },
+    submit = {
+        "127.0.0.1:${prefix}39",
+        "[::1]:${prefix}39"
+    }
+}
+
+
+-- setup for every payment service
+M.payment = {
+
+    -- set to true to get payment transactions directly from the discovery proxy
+    use_discovery = true,
+
+    discovery = {
+        sub_endpoint = "${discovery_pub}",
+        req_endpoint = "${discovery_rep}"
+    },
+
+    -- local bitcoin access to REST API
+    bitcoin = {
+        url = "${bitcoin_url}"
+    },
+
+    -- local litecoin access to REST API
+    litecoin = {
+        url = "${litecoin_url}"
+    }
+}
+
+
+-- configure global or specific logger channel levels
+M.logging = {
+    size = ${log_size},
+    count = ${log_count},
+
+    -- set to true to log to console
+    console = ${log_console},
+
+    -- set the logging level for various modules
+    -- modules not overridden with get the value from DEFAULT
+    -- the default value for DEFAULT is "critical"
+    levels = {
+        -- DEFAULT = "debug",
+        -- DEFAULT = "error",
+        -- DEFAULT = "warn",
+        -- DEFAULT = "info",
+        DEFAULT = "${log_default}",
+
+        -- some specific logging channels: (there may be others)
+        -- announce = "info",
+        -- announcer = "info",
+        -- asset = "info",
+        -- asset-expiry = "info",
+        -- bitcoin = "info",
+        -- block = "info",
+        -- blockstore = "info",
+        -- broadcaster = "info",
+        -- checker = "info",
+        -- connector = "info",
+        -- discoverer = "info",
+        -- listener = "info",
+        -- litecoin = "info",
+        -- main = "info",
+        -- mode = "info",
+        -- payment = "info",
+        -- peer = "info",
+        -- proof = "info",
+        -- publish = "info",
+        -- publisher = "info",
+        -- rebroadcaster = "info",
+        -- reservoir = "info",
+        -- rpc = "info",
+        -- submission = "info",
+        -- upstream@N = "info", -- replace <N> by number 0…
+    }
+}
+
+
+-- return the complete configuration
+return M
+EOF
+
+  # create identities
+  run-bitmarkd --config="%${i}" --generate
+done

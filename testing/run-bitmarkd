@@ -1,0 +1,204 @@
+#!/bin/sh
+# test bitmarkd
+dir=$(dirname "$0")
+
+ERROR()
+{
+  printf 'error: '
+  printf "$@"
+  printf '\n'
+  exit 1
+}
+
+USAGE()
+{
+  if [ -n "$1" ]
+  then
+    printf 'error: '
+    printf "$@"
+    printf '\n'
+  fi
+  echo usage: $(basename "$0") '[options] bitmarkd-arguments...'
+  echo '       --help             -h            this message'
+  echo '       --verbose          -v            more messages'
+  echo '       --config=FILE      -c FILE       set configuration file ['"${config}"']'
+  echo '                                        or %1..%99 or %T1..%T99 or %L1..%L99'
+  echo '       --generate         -g            generate all keys/certificates'
+  echo '       --reset            -r            reset the database'
+  echo '       --from=DIR         -f DIR        reset the database  from this sample'
+  echo '       --sleep=SECONDS    -s SECONDS    start delay'
+  echo '       --debug                          debuging messages'
+  exit 1
+}
+
+# main program
+
+xdg_home="${XDG_CONFIG_HOME}"
+[ -z "${xdg_home}" ] && xdg_home="${HOME}/.config"
+[ -d "${xdg_home}" ] || ERROR 'missing directory: "%s" please create first' "${xdg_home}"
+
+verbose=no
+debug=no
+reset=no
+from=
+generate=no
+count=
+config="${xdg_home}/bitmarkd/bitmarkd.conf"
+generate_items='gen-peer-identity gen-rpc-cert gen-proof-identity'
+sleep=
+
+getopt=
+for g in /usr/local/bin/getopt /usr/local/opt/gnu-getopt/bin/getopt /usr/bin/getopt
+do
+  [ -x "${g}" ] && getopt="${g}" && break
+done
+[ -x "${getopt}" ] || ERROR 'no suitable getopt was found'
+[ X"$(${getopt} --version 2>&1 | sed 's/^[^(]*[(]//;s/[)][^)]*$//')" = X"enhanced" ] || ERROR 'getopt does not support long options'
+
+args=$(${getopt} -o hvc:grf:s:D --long=help,verbose,config:,generate,reset,from:,sleep:,debug -- "$@") || exit 1
+
+# replace the arguments with the parsed values
+eval set -- "${args}"
+
+while :
+do
+  case "$1" in
+    (-v|--verbose)
+      verbose=yes
+      ;;
+
+    (-c|--config)
+      case "$2" in
+        (%[1-9]|%[1-9][0-9]|%T[1-9]|%T[1-9][0-9]|%L[1-9]|%L[1-9][0-9])
+          n="${2#%}"
+          config="${xdg_home}/bitmarkd${n}/bitmarkd.conf"
+          ;;
+        (%*)
+          ERROR 'unsupported config shortcut: %s' "$2"
+          ;;
+        (*)
+          config="$2"
+          ;;
+      esac
+      shift
+      ;;
+
+    (-g|--generate)
+      generate=yes
+      ;;
+
+    (-r|--reset)
+      reset=yes
+      ;;
+
+    (-f|--from)
+      from="$2"
+      shift
+      [ -d "${from}" ] || USAGE 'not a levelDB: --from="%s"' "${from}"
+      [ -f "${from}/CURRENT" ] || USAGE 'not a levelDB: --from="%S"' "${from}"
+      ;;
+
+    (-s|--sleep)
+      sleep="$2"
+      [ -z "${sleep}" ] && USAGE 'sleep cannot be blank'
+      [ -z "$(printf '%s' "${sleep}" | tr -d '[0-9]')" ] || USAGE 'sleep value: "%s" is not a number' "${sleep}"
+      shift
+      ;;
+
+    (-D|--debug)
+      debug=yes
+      ;;
+
+    (--)
+      shift
+      break
+      ;;
+
+    (-h|--help)
+      USAGE
+      ;;
+
+    (*)
+      USAGE 'invalid option: %s' "$1"
+      ;;
+  esac
+  shift
+done
+
+# verify arguments
+[ X"${reset}" = X"no" -a -n "${from}" ] && USAGE 'conflicting --from requires --reset'
+
+[ -f "${config}" ] || USAGE 'configuration file: "%s" does not exist' "${config}"
+config_dir=$(dirname "${config}")
+
+# enable debuging
+[ X"${debug}" = X"yes" ] && set -x
+
+# determine if a bitmarkd is running
+pidfile="${config_dir}/bitmarkd.pid"
+
+pid2=not-running
+[ -e "${pidfile}" ] && pid2=$(cat -- "${pidfile}")
+
+for pid in $(pgrep bitmarkd)
+do
+  [ X"${pid}" = X"${pid2}" ] && ERROR 'bitmarkd already running: pid=%s' "${pid}"
+done
+
+echo starting bitmarkd...
+rm -f "${pidfile}"
+rm -f "${config_dir}/log/bitmarkd.log"*
+if [ X"${reset}" = X"yes" ]
+then
+  rm -fr "${config_dir}/data"
+  mkdir -p "${config_dir}/data"
+  [ -n "${from}" ] && rsync -aHx "${from}" "${config_dir}/data/"
+fi
+
+# just generate the keys
+if [ X"${generate}" = X"yes" ]
+then
+  for g in ${generate_items}
+  do
+    (
+      cd "${config_dir}" && bitmarkd --config-file="${config}" "${g}" "${config_dir}"
+    )
+  done
+  exit 0
+fi
+
+# yes or no detection
+run_again()
+{
+  local yorn junk program
+  program="$1"
+  while :
+  do
+    read -p "Run ${program} again? " yorn junk
+    case "${yorn}" in
+      ([yY]|[yY][eE][sS])
+        return 0
+        ;;
+      ([nN]|[nN][oO])
+        return 1
+        ;;
+      (*)
+        echo 'Please answer yes or no'
+        ;;
+    esac
+  done
+}
+
+# delay if running without arguments
+[ -n "${sleep}" -a $# -eq 0 ] && sleep "${sleep}"
+
+# finally run the program
+while :
+do
+  printf 'configuration: %s\n' "${config}"
+  bitmarkd --config-file="${config}" "$@"
+  [ $# -ne 0 ] && break
+  rc="$?"
+  printf 'rc: %d\n' "${rc}"
+  run_again 'bitmarkd' || break
+done

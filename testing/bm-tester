@@ -1,0 +1,227 @@
+#!/bin/sh
+# No Arguments:
+#   connect to existing session (if not already connected)
+#   create session and connect if none exists
+# Arguments
+#   a number >= 2 it will delete blocks on all bitmarkds (stop/delete/start)
+
+# bitmarkds to start
+first=1
+last=8
+
+# the tmux session name
+session=LOCAL
+
+# error handler
+ERROR() {
+  printf 'error: '
+  printf "$@"
+  printf '\n'
+  exit 1
+}
+
+# commands required
+list='
+tmux
+pgrep
+killall
+run-bitmarkd
+run-recorderd
+run-discovery
+run-bitcoin
+run-litecoin
+'
+
+for c in ${list}
+do
+  x="$(which "${c}" 2> /dev/null)"
+  [ $? -ne 0 ] && ERROR 'missing program: %s' "${c}"
+  [ -x "${x}" ] || ERROR 'program: "%s" is not executable' "${x}"
+done
+
+
+STOP-ALL-BITMARKD() {
+  local pids
+
+  printf 'stopping bitmarkds'
+  killall bitmarkd
+
+  while :
+  do
+    pids=$(pgrep bitmarkd)
+    [ -z "${pids}" ] && break
+    sleep 1
+    printf '.'
+  done
+  printf 'done\n'
+}
+
+
+DELETE-BLOCKS() {
+  local i block
+
+  block="${1}"
+  i="${first}"
+
+  # delete blocks on each bitmarkd
+  while [ ${i} -le ${last} ]
+  do
+    run-bitmarkd --config=%${i} -- delete-down "${block}"
+    i=$(( i + 1 ))
+  done
+}
+
+
+START-ALL-BITMARKD() {
+  local id command config other
+  tmux list-panes -a -F '#{pane_id} #{pane_title}' | (
+    while read id command config other
+    do
+      case "${command}" in
+        (run-bitmarkd)
+          n="${config##*%}"
+          printf 'start: tab(%s) → bitmarkd: %s\n' "${id}" "${n}"
+          tmux send-keys -t "${id}" 'y' 'C-j'
+          ;;
+        (*)
+          ;;
+      esac
+    done
+  )
+}
+
+
+MAKE-WINDOW() {
+  local session window cmd1 cmd2
+  session="${1}"; shift
+  window="${1}"; shift
+  cmd1="${1}"; shift
+  cmd2="${1}"; shift
+
+  # colour setting
+  tmux set-window-option -t "${session}:${window}" -g window-status-current-bg red
+
+  # notifications
+  tmux set-window-option -t "${session}:${window}" -g monitor-activity on
+  tmux set-window-option -t "${session}:${window}" -g visual-activity on
+
+  if [ -n "${cmd1}" ]
+  then
+    tmux respawn-pane -k -t "${session}:${window}.0" "${cmd1}"
+    tmux select-pane -t "${session}:${window}.0" -T "${cmd1}"
+  fi
+
+  if [ -n "${cmd2}" ]
+  then
+    tmux split-window -d -h -p 50 -t "${session}:${window}.0"
+    tmux respawn-pane -k -t "${session}:${window}.1" "${cmd2}"
+    tmux select-pane -t "${session}:${window}.1" -T "${cmd2}"
+  fi
+}
+
+
+NEW-TEST-SESSION() {
+  local command command_list target window cmd1 cmd2 n m
+
+  command_list='
+coin:run-bitcoin,--server:run-litecoin,--server
+dsc-upd:run-discovery
+rec:run-recorderd
+'
+  n="${first}"
+  while [ "${n}" -le "${last}" ]
+  do
+    command_list="${command_list} BM-${n}:run-bitmarkd,--config=%${n},--sleep=3"
+    if [ "${n}" -lt "${last}" ]
+    then
+      n=$((n + 1))
+      command_list="${command_list}:run-bitmarkd,--config=%${n},--sleep=3"
+    fi
+    n=$((n + 1))
+  done
+
+  command_list="${command_list} shell::"
+
+  target=''
+  for command in ${command_list}
+  do
+    window="${command%%:*}"
+    cmd1="${command#*:}"
+    cmd1="${cmd1%%:*}"
+    cmd2="${command##*:}"
+    [ X"${cmd1}" = X"${cmd2}" ] && cmd2=''
+
+    if [ -z "${target}" ]
+    then
+      tmux new-session -d -s "${session}" -n "${window}"
+    else
+      tmux new-window -a -t "${target}" -n "${window}"
+    fi
+    target="${window}"
+
+    cmd1="$(printf '%s' "${cmd1}" | tr ',' ' ')"
+    cmd2="$(printf '%s' "${cmd2}" | tr ',' ' ')"
+    MAKE-WINDOW "${session}" "${window}" "${cmd1}" "${cmd2}"
+
+  done
+
+  # any mouse mode will stop the X copy/paste from working
+  #tmux set-option -t "${session}" -g mouse-select-window on
+  #tmux set-option -t "${session}" -g mode-mouse on
+
+  tmux set-option -t "${session}" -g status-bg black
+  tmux set-option -t "${session}" -g status-fg white
+  tmux set-option -t "${session}" -g status-left '#[fg=green]#H'
+
+  #set-option -g status-right '#[fg=yellow]#(uptime | cut -d "," -f 2-)'
+  # using inbuilt strftime
+  tmux set-option -t "${session}" -g status-right '#[fg=yellow]%Y-%m-%d %H:%M:%S'
+
+
+  # select the default screen
+  tmux select-window -t "${session}:shell"
+  tmux select-pane -t "${session}:shell.0"
+
+  # display the result
+  tmux attach -t "${session}:shell"
+}
+
+
+# main program
+
+# check if valid blocks parameter is present
+blocks=no
+if [ -n "${1}" ]
+then
+  n="$(printf '%s' -- "${1}" | tr -cd 0-9)"
+  [ X"${n}" != X"${1}" ] && ERROR 'parameter: "%s" is not a number' "${1}"
+  [ ${n} -le 1 ] && ERROR 'parameter: "%d" is too small expect ≥ 2' "${n}"
+  blocks=yes
+fi
+
+# detect if can connect to a detached session
+have_session=no
+for s in $(tmux list-sessions -F '#{session_name}' 2> /dev/null)
+do
+  [ X"${s}" = X"${session}" ] && have_session=yes && break
+done
+if [ X"${have_session}" = X"yes" ]
+then
+  client="$(tmux list-clients -t LOCAL -F '#{client_name}@#{client_termname}' 2> /dev/null)"
+  if [ -n "${client}" ]
+  then
+    [ X"${blocks}" != X"yes" ] && ERROR 'client: "%s" already connected to: "%s"' "${client}" "${session}"
+    # have a running test so stop/delete/restart
+    STOP-ALL-BITMARKD
+    DELETE-BLOCKS "${n}"
+    START-ALL-BITMARKD
+  else
+    tmux attach-session -t "${session}"
+  fi
+
+elif [ X"${blocks}" = X"yes" ]
+then
+  ERROR 'no current test session exists'
+else
+  NEW-TEST-SESSION
+fi

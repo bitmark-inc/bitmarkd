@@ -1,0 +1,7 @@
+#!/bin/sh
+# ensure both local chains get a new block
+
+n=1
+[ -n "${1}" ] && n="${1}"
+run-bitcoin generate "${n}"
+run-litecoin generate "${n}"

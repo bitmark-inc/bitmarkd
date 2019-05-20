@@ -1,0 +1,175 @@
+#!/bin/sh
+# run local litecoin in a terminal
+
+ERROR()
+{
+  printf 'error: '
+  printf "$@"
+  printf '\n'
+  exit 1
+}
+
+USAGE()
+{
+  if [ -n "$1" ]
+  then
+    printf 'error: '
+    printf "$@"
+    printf '\n'
+  fi
+  echo usage: $(basename "$0") '[options] discovery-arguments...'
+  echo '       --help             -h            this message'
+  echo '       --verbose          -v            more messages'
+  echo '       --config=FILE      -c FILE       set configuration file ['"${config}"']'
+  echo '       --server           -s            start server'
+  echo '       --generate         -g            generate all keys'
+  echo '       --debug                          debuging messages'
+  exit 1
+}
+
+
+# main program
+
+xdg_home="${XDG_CONFIG_HOME}"
+[ -z "${xdg_home}" ] && xdg_home="${HOME}/.config"
+[ -d "${xdg_home}" ] || ERROR 'missing directory: "%s" please create first' "${xdg_home}"
+
+verbose=no
+debug=no
+config="${xdg_home}/litecoin/litecoin.conf"
+server=no
+
+getopt=
+for g in /usr/local/bin/getopt /usr/local/opt/gnu-getopt/bin/getopt /usr/bin/getopt
+do
+  [ -x "${g}" ] && getopt="${g}" && break
+done
+[ -x "${getopt}" ] || ERROR 'no suitable getopt was found'
+[ X"$(${getopt} --version 2>&1 | sed 's/^[^(]*[(]//;s/[)][^)]*$//')" = X"enhanced" ] || ERROR 'getopt does not support long options'
+
+args=$(${getopt} -o hvc:gisD --long=help,verbose,config:,generate,info,server,debug -- "$@") || exit 1
+
+# replace the arguments with the parsed values
+eval set -- "${args}"
+
+while :
+do
+  case "$1" in
+    (-v|--verbose)
+      verbose=yes
+      ;;
+
+    (-c|--config)
+      case "$2" in
+        (%[1-9]|%[1-9][0-9])
+          n="${2#%}"
+          config="${xdg_home}/litecoin${n}/litecoin.conf"
+          ;;
+        (%*)
+          ERROR 'unsupported config shortcut: %s' "$2"
+          ;;
+        (*)
+          config="$2"
+          ;;
+      esac
+      shift
+      ;;
+
+    (-g|--generate)
+      generate=yes
+      ;;
+
+    (-i|--info)
+      info=yes
+      ;;
+
+    (-s|--server)
+      server=yes
+      ;;
+
+    (-D|--debug)
+      debug=yes
+      ;;
+
+    (--)
+      shift
+      break
+      ;;
+
+    (-h|--help)
+      USAGE
+      ;;
+
+    (*)
+      USAGE 'invalid option: %s' "$1"
+      ;;
+  esac
+  shift
+done
+
+# verify arguments
+[ -f "${config}" ] || USAGE 'configuration file: "%s" does not exist' "${config}"
+config_dir=$(dirname "${config}")
+
+# enable debuging
+[ X"${debug}" = X"yes" ] && set -x
+
+# determine if a litecoind is running
+pidfile="${config_dir}/regtest/litecoind.pid"
+
+pid2=not-running
+[ -e "${pidfile}" ] && pid2=$(cat -- "${pidfile}")
+
+running=no
+for pid in $(pgrep litecoind)
+do
+  [ X"${pid}" = X"${pid2}" ] && running=yes && break
+done
+
+# run the CLI
+if [ X"${server}" = X"no" ]
+then
+  [ X"${running}" = X"no" ] && ERROR 'litecoind not running'
+  exec litecoin-cli -datadir="${config_dir}" -conf="${config}" "$@"
+  exit 0
+fi
+
+[ X"${running}" = X"yes" ] && ERROR 'litecoind already running: pid=%s' "${pid}"
+
+echo starting litecoind...
+rm -f "${pidfile}"
+rm -f "${config_dir}/debug.log"*
+rm -f "${config_dir}/regtest/debug.log"*
+
+# yes or no detection
+run_again()
+{
+  local yorn junk program
+  program="$1"
+  while :
+  do
+    read -p "Run ${program} again? " yorn junk
+    case "${yorn}" in
+      ([yY]|[yY][eE][sS])
+        return 0
+        ;;
+      ([nN]|[nN][oO])
+        return 1
+        ;;
+      (*)
+        echo 'Please answer yes or no'
+        ;;
+    esac
+  done
+}
+
+# finally run the program
+while :
+do
+  d="$(dirname "${config}")"
+  cd "${d}" || ERROR 'cannot cd to: %s' "${d}"
+    litecoind -datadir="${config_dir}" -conf="${config}" "$@"
+  rc="$?"
+  printf 'rc: %d\n' "${rc}"
+  run_again 'litecoind' || break
+done
