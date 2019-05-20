@@ -18,10 +18,10 @@ require (
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/urfave/cli v1.20.0
 	github.com/yuin/gluamapper v0.0.0-20150323120927-d836955830e7
-	github.com/yuin/gopher-lua v0.0.0-20190206043414-8bfc7677f583
-	golang.org/x/crypto v0.0.0-20190426145343-a29dc8fdc734
-	golang.org/x/net v0.0.0-20190502183928-7f726cade0ab // indirect
-	golang.org/x/sys v0.0.0-20190502175342-a43fa875dd82 // indirect
+	github.com/yuin/gopher-lua v0.0.0-20190514113301-1cd887cd7036
+	golang.org/x/crypto v0.0.0-20190513172903-22d7a77e9e5f
+	golang.org/x/net v0.0.0-20190514140710-3ec191127204 // indirect
+	golang.org/x/sys v0.0.0-20190516110030-61b9204099cb // indirect
 	golang.org/x/text v0.3.2 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
