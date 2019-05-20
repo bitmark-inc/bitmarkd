@@ -259,13 +259,13 @@ PAY() {
 GEN-BTC() {
   local btc_address
   btc_address=$(run-bitcoin getnewaddress)
-  run-bitcoin generatetoaddress "${n}" "${btc_address}"
+  run-bitcoin generatetoaddress 1 "${btc_address}"
 }
 
 GEN-LTC() {
   local ltc_address
   ltc_address=$(run-litecoin getnewaddress)
-  run-litecoin generatetoaddress "${n}" "${ltc_address}"
+  run-litecoin generatetoaddress 1 "${ltc_address}"
 }
 
 SHOW-BALANCE() {
