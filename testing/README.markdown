@@ -2,23 +2,22 @@
 
 Generate an initial configuration setup:
 
-~~~
-sh initial-setup.sh
-~~~
-
-Note that this require `XDG_CONFIG_HOME` to be set properly although
-it can just use `${HOME}/.config`
+Note that this requires `XDG_CONFIG_HOME` to be set properly although
+can just use `export XDG_CONFIG_HOME="${HOME}/.config"` if running on
+non-desktop system.
 
 At the end are printed some TXT records for the local configuration
 
 Setup a local override using dnsmasq or a local unbound server or even
 add them to some real DNS.  Then re-run the configuration with this domain:
 
+run this command:
+
 ~~~
-sh initial-setup.sh nodes.somelocal.domain.tld
+initial-setup.sh nodes.somelocal.domain.tld
 ~~~
 
-That should complete the setup:  to start up run:
+That should complete the setup, to start the network up run:
 
 ~~~
 bm-tester
@@ -35,7 +34,8 @@ And keep running until you get normal nodes (it might take a while the fist time
 
 # bitcoin and litecoin
 
-initial balance with be zero regtest coins so generate 101 blocks
+initial balance with be zero regtest coins so generate 101 blocks (as
+newly minted coins are loked until 100 confirmations have elapsed)
 
 ~~~
 % run-bitcoin getbalance
@@ -61,7 +61,7 @@ create two users for the make-blockchain script
 Create users for all the nodes
 
 ~~~
-sh create-node-users.sh
+create-node-users.sh
 ~~~
 
 # setup bitmark-wallet
@@ -70,7 +70,7 @@ This will create a wallet (if does not already exist) and add another
 25 coins to an existing wallet
 
 ~~~
-sh create-bitmark-wallet.sh
+create-bitmark-wallet.sh
 ~~~
 
 
