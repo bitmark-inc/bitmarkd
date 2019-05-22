@@ -8,7 +8,7 @@ Prerequisites
 
 * Install the go language package for your system
 * Configure environment variables for go system
-* install the ZMQ4 and Argon2 libraries
+* Install the ZMQ4 and Argon2 libraries
 
 
 ## FreeBSD
@@ -21,9 +21,8 @@ pkg install libzmq4 libargon2
 
 (be sure that homebrew is installed correctly)
 ~~~~
-brew install argon2
-
 brew tap bitmark-inc/bitmark
+brew install argon2
 brew install zeromq43
 ~~~~
 
@@ -39,6 +38,23 @@ To compile simply:
 go get github.com/bitmark-inc/bitmarkd
 go install -v github.com/bitmark-inc/bitmarkd/command/bitmarkd
 ~~~~~
+
+<aside class="notice">
+
+Argon2 can achieve better performance if [AVX instructions](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions) is available. If Arong2 is intalled by package managers, the potential optimization is disbled. To leverage AVX instructions, extra flag has to be specified during the compilation process.
+
+```shell
+make OPTTARGET=native
+```
+
+If AVX is not available, make sure Arong2 has no reference to AVX. 
+
+```shell
+make OPTTARGET=generic
+```
+
+</aside>
+
 
 # Set up
 
