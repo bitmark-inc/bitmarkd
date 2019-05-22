@@ -39,22 +39,21 @@ go get github.com/bitmark-inc/bitmarkd
 go install -v github.com/bitmark-inc/bitmarkd/command/bitmarkd
 ~~~~~
 
-<aside class="notice">
+:warning: **Argon2 optimization**
 
-Argon2 can achieve better performance if [AVX instructions](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions) is available. If Arong2 is intalled by package managers, the potential optimization is disbled. To leverage AVX instructions, extra flag has to be specified during the compilation process.
+Argon2 can achieve better performance if [AVX instructions](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions) is available. But the potential optimization is not enabled if Arong2 is intalled by package managers.
+
+To leverage AVX instructions, extra flag has to be specified during the compilation process.
 
 ```shell
 make OPTTARGET=native
 ```
 
-If AVX is not available, make sure Arong2 has no reference to AVX. 
+If AVX is not available, make sure Arong2 has no reference to AVX otherwise bitmarkd will crash. 
 
 ```shell
 make OPTTARGET=generic
 ```
-
-</aside>
-
 
 # Set up
 
