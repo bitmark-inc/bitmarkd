@@ -6,6 +6,7 @@ package messagebus_test
 
 import (
 	"math/rand"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -13,7 +14,25 @@ import (
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 )
 
+func setup(t *testing.T) {
+	t.Logf("running %s\n", t.Name())
+}
+
+func teardown(t *testing.T) {
+	messagebus.Bus.Announce.Release()
+	messagebus.Bus.Blockstore.Release()
+	messagebus.Bus.Connector.Release()
+	messagebus.Bus.TestQueue.Release()
+	messagebus.Bus.Broadcast.Release()
+
+	messagebus.Bus.Broadcast.DropCache()
+
+}
+
 func TestQueue(t *testing.T) {
+
+	setup(t)
+	defer teardown(t)
 
 	items := []messagebus.Message{
 		{
@@ -45,6 +64,9 @@ func TestQueue(t *testing.T) {
 }
 
 func TestBroadcast(t *testing.T) {
+
+	setup(t)
+	defer teardown(t)
 
 	items := []messagebus.Message{
 		{
@@ -113,30 +135,41 @@ func TestBroadcast(t *testing.T) {
 
 func TestCache(t *testing.T) {
 
+	setup(t)
+	defer teardown(t)
+
 	cacheableCmd := []string{"assets", "issues", "transfer", "proof", "block"}
 	uncacheableCmd := []string{"rpc", "peer"}
 	c1 := cacheableCmd[rand.Intn(len(cacheableCmd))]
 	c2 := uncacheableCmd[rand.Intn(len(uncacheableCmd))]
 	c := []string{c1, c2}
-	p := make([]byte, 0)
+	p := []byte{0x05, 0xFA, 0xFE}
 
 	// declare listener
 	queue := messagebus.Bus.Broadcast.Chan(50)
 
-	// send a message is not delivered before
+	// send a message has not been cached before
 	for _, cmd := range c {
 		messagebus.Bus.Broadcast.Send(cmd, p)
 	}
+
+	// wait for background
 	time.Sleep(20 * time.Millisecond)
 
+	s := make([]string, 0)
+	for len(queue) > 0 {
+		m := <-queue
+		s = append(s, m.Command)
+	}
+
+	// verify received values from queue are the ones sent before
+	if len(c) != len(s) {
+		t.Errorf("actual count: %d, expected: %d", len(s), len(c))
+	}
+
 	for i := 0; i < len(c); i += 1 {
-		select {
-		case received := <-queue:
-			if received.Command != c[i] {
-				t.Errorf("actual command : %q, expected: %q", received.Command, c[i])
-			}
-		default:
-			t.Errorf("expect message received but nothing received")
+		if c[i] != s[i] {
+			t.Errorf("actual command: %s, expected: %s", s[i], c[i])
 		}
 	}
 
@@ -150,35 +183,167 @@ func TestCache(t *testing.T) {
 		return false
 	}
 
-	// try to send it again
+	// recreate s
+	s = make([]string, 0)
 	for _, cmd := range c {
 		messagebus.Bus.Broadcast.Send(cmd, p)
 	}
+	// wait for background
 	time.Sleep(20 * time.Millisecond)
 
-	for i := 0; i < len(c); i += 1 {
-		select {
-		case received := <-queue:
-			if !f(uncacheableCmd, received.Command) {
-				t.Errorf("actual: %q, expected in %q", received.Command, uncacheableCmd)
-			}
-		default:
+	for len(queue) > 0 {
+		m := <-queue
+		s = append(s, m.Command)
+	}
+
+	// verify the queue did not contains cache value
+	if len(c) == len(s) {
+		t.Errorf("actual count: %d, expected: %d", len(s), len(c))
+	}
+
+	for i := 0; i < len(s); i += 1 {
+		if !f(uncacheableCmd, s[i]) {
+			t.Errorf("actual: %q, expected in %q", s[i], uncacheableCmd)
 		}
 	}
 
 	// drop cache and resend it
-	params := make([][]byte, 0)
-	messagebus.DropCache(messagebus.Message{Command: c1, Parameters: params})
+	params := [][]byte{p}
+	messagebus.Bus.Broadcast.DropCache(messagebus.Message{Command: c1, Parameters: params})
 	messagebus.Bus.Broadcast.Send(c1, p)
+	// wait for background
 	time.Sleep(20 * time.Millisecond)
 
 	select {
 	case received := <-queue:
 		if received.Command != c1 {
-			t.Errorf("actual command : %q, expected: %q", received.Command, c1)
+			t.Errorf("actual command: %q, expected: %q", received.Command, c1)
 		}
 	default:
 		t.Errorf("actual nothing but expected is %q", c1)
+	}
+
+}
+
+func TestQueueOverflow(t *testing.T) {
+
+	setup(t)
+	defer teardown(t)
+
+	const queueSize = 10
+	cmd := []string{"assets", "issues", "transfer", "proof", "rpc", "peer"}
+	p1 := []byte{0x11, 0x99}
+	p2 := []byte{0xAA, 0xFF}
+	queue := messagebus.Bus.Broadcast.Chan(queueSize)
+
+	// put at least 1 block message
+	messagebus.Bus.Broadcast.Send("block", p1)
+	for i := 0; i < queueSize-1; i += 1 {
+		c := cmd[rand.Intn(len(cmd))]
+		p := make([]byte, rand.Intn(1024))
+		rand.Read(p)
+		messagebus.Bus.Broadcast.Send(c, p)
+	}
+
+	time.Sleep(20 * time.Millisecond)
+
+	// verify the queue is full
+	if queueSize != len(queue) {
+		t.Errorf("len(queue) actual: %d, expected: %d", len(queue), queueSize)
+	}
+
+	// put one more block message into queue
+	messagebus.Bus.Broadcast.Send("block", p2)
+	time.Sleep(20 * time.Millisecond)
+
+	// verify there are 2 block messages in queue
+	count := 0
+	for len(queue) > 0 {
+		m := <-queue
+		if "block" == m.Command {
+			count += 1
+		}
+	}
+	if 2 != count {
+		t.Errorf("block message count actual: %d, expected: %d", count, 2)
+	}
+
+	// make the queue is full
+	for i := 0; i < queueSize; i += 1 {
+		c := cmd[rand.Intn(len(cmd))]
+		p := make([]byte, rand.Intn(1024))
+		rand.Read(p)
+		messagebus.Bus.Broadcast.Send(c, p)
+	}
+
+	time.Sleep(20 * time.Millisecond)
+
+	// verify the queue is full
+	if queueSize != len(queue) {
+		t.Errorf("len(queue) actual: %d, expected: %d", len(queue), queueSize)
+	}
+
+	// put one non-block message to the queue
+	c := cmd[rand.Intn(len(cmd))]
+	messagebus.Bus.Broadcast.Send(c, p2)
+	time.Sleep(20 * time.Millisecond)
+
+	// verify the new message is just dropped
+	for len(queue) > 0 {
+		m := <-queue
+		if c == m.Command && 1 == len(m.Parameters) && reflect.DeepEqual(p2, m.Parameters[0]) {
+			t.Error("Expected new message won't be in queue but actually it's")
+		}
+	}
+
+}
+
+func TestCacheStateQueueOverflow(t *testing.T) {
+
+	setup(t)
+	defer teardown(t)
+
+	const queueSize = 3
+	cmd := []string{"assets", "issues", "transfer", "proof", "rpc", "peer"}
+	p := []byte{0x0A, 0x9F}
+	c := cmd[0]
+
+	// listener
+	queue := messagebus.Bus.Broadcast.Chan(queueSize)
+
+	// make the queue is overflow and continue send one item
+	for i := 0; i < queueSize; i++ {
+		c := cmd[rand.Intn(len(cmd))]
+		p := make([]byte, rand.Intn(1024))
+		rand.Read(p)
+		messagebus.Bus.Broadcast.Send(c, p)
+	}
+
+	// continue to send one more
+	messagebus.Bus.Broadcast.Send(c, p)
+
+	time.Sleep(20 * time.Millisecond)
+
+	// drop one item
+	<-queue
+
+	// then push the last sent item
+	messagebus.Bus.Broadcast.Send(c, p)
+
+	time.Sleep(20 * time.Millisecond)
+
+	// verify it already contains in queue
+	found := false
+	for len(queue) > 0 {
+		m := <-queue
+		if c == m.Command && len(m.Parameters) == 1 && reflect.DeepEqual(p, m.Parameters[0]) {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		t.Errorf("Expected the message command %q is contained in queue, but actually not", c)
 	}
 
 }

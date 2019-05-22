@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"sync"
 )
 
 // internal constants
@@ -31,9 +32,11 @@ type Queue struct {
 // BroadcastQueue - a 1:M queue
 // out is synchronous, so messages to routines not waiting are dropped
 type BroadcastQueue struct {
-	in          chan Message
-	out         []chan Message
-	defaultSize int
+	in               chan Message
+	out              []chan Message
+	defaultSize      int
+	deliveredMessage map[string]Message // cache for the delivered message
+	sync.RWMutex
 }
 
 // the exported message queues and their sizes
@@ -49,9 +52,6 @@ type busses struct {
 
 // Bus - all available message queues
 var Bus busses
-
-// cache for the delivered message
-var deliveredMessage map[string]Message
 
 // initialise all queues with preset size
 func init() {
@@ -86,9 +86,10 @@ func init() {
 
 		case reflect.TypeOf((*BroadcastQueue)(nil)):
 			q := &BroadcastQueue{
-				in:          make(chan Message, queueSize),
-				out:         make([]chan Message, 0, 10),
-				defaultSize: queueSize,
+				in:               make(chan Message, queueSize),
+				out:              make([]chan Message, 0, 10),
+				defaultSize:      queueSize,
+				deliveredMessage: make(map[string]Message),
 			}
 			go q.multicast()
 
@@ -142,7 +143,7 @@ func (queue *BroadcastQueue) Send(command string, parameters ...[]byte) {
 		Parameters: parameters,
 	}
 
-	if isCached(m) {
+	if queue.isCached(m) {
 		// Drop the message that already cached
 		return
 	}
@@ -153,7 +154,7 @@ func (queue *BroadcastQueue) Send(command string, parameters ...[]byte) {
 	if "rpc" == command || "peer" == command {
 		return
 	}
-	cache(m)
+	queue.cache(m)
 }
 
 // Chan - get a new channel to read from a 1:M queue
@@ -167,33 +168,119 @@ func (queue *BroadcastQueue) Chan(size int) <-chan Message {
 	return c
 }
 
+// Release - release the incomming and outgoing queues
+func (queue *BroadcastQueue) Release() {
+	// close all channel
+	close(queue.in)
+	for _, o := range queue.out {
+		close(o)
+	}
+
+	// give them back
+	queue.in = make(chan Message, queue.defaultSize)
+	queue.out = make([]chan Message, 0, 10)
+}
+
 // DropCache - drop the item from cache
-func DropCache(m Message) {
-	if !isCached(m) {
+func (queue *BroadcastQueue) DropCache(msgs ...Message) {
+
+	if nil == msgs {
+		queue.clearCache()
 		return
 	}
 
-	delete(deliveredMessage, m.packHex())
+	for _, m := range msgs {
+
+		if !queue.isCached(m) {
+			continue
+		}
+
+		queue.Lock()
+		delete(queue.deliveredMessage, m.packHex())
+		queue.Unlock()
+	}
+}
+
+// clear the cache
+func (queue *BroadcastQueue) clearCache() {
+	queue.Lock()
+	defer queue.Unlock()
+	queue.deliveredMessage = map[string]Message{}
 }
 
 // cache the delivered message
-func cache(m Message) {
+func (queue *BroadcastQueue) cache(m Message) {
+	queue.Lock()
+	defer queue.Unlock()
+	queue.deliveredMessage[m.packHex()] = m
+}
 
-	if isCached(m) {
-		return
-	}
+// check whether Message is cached
+func (queue *BroadcastQueue) isCached(m Message) bool {
+	queue.RLock()
+	defer queue.RUnlock()
+	_, ok := queue.deliveredMessage[m.packHex()]
+	return ok
+}
 
-	// store the message to cache
-	if nil == deliveredMessage {
-		deliveredMessage = make(map[string]Message)
+// background processing for the 1:M queue
+//
+// if an outgoing queue is full, determine whether it is block message
+// drop lower priority message for taking slot for new one
+func (queue *BroadcastQueue) multicast() {
+loop:
+	for {
+		data, ok := <-queue.in
+		if !ok {
+			// invalid data
+			continue loop
+		}
+		for _, out := range queue.out {
+			select {
+			case out <- data:
+			default:
+				// the outgoing queue is full
+				if "block" == data.Command {
+					// drop lower priority item for taking more slot
+					ci := make([]Message, 0)
+
+					found := false
+					for len(out) > 0 {
+						m := <-out
+						if !found && "block" != m.Command {
+							found = true
+							continue
+						} else {
+							ci = append(ci, m)
+						}
+					}
+
+					if !found {
+						// couldn't find any existing message type block in queue
+						// just drop cache
+						queue.DropCache(data)
+					} else {
+						// reput item to the queue
+						for _, m := range ci {
+							out <- m
+						}
+						out <- data
+					}
+
+				} else {
+					// drop existing cache item
+					queue.DropCache(data)
+				}
+			}
+		}
 	}
-	deliveredMessage[m.packHex()] = m
 }
 
 // pack Message
 func (m Message) pack() []byte {
 	s := make([]byte, 0)
 	s = append(s, []byte(m.Command)...)
+
 	for _, a := range m.Parameters {
 		s = append(s, a...)
 	}
@@ -203,30 +290,4 @@ func (m Message) pack() []byte {
 // pack Message in hex string
 func (m Message) packHex() string {
 	return fmt.Sprintf("%x", m.pack())
-}
-
-// check whether Message is cached
-func isCached(m Message) (isCached bool) {
-	if _, ok := deliveredMessage[m.packHex()]; ok {
-		isCached = true
-	}
-	return
-}
-
-// background processing for the 1:M queue
-//
-// if an outgoing queue is full just drop the message
-// to avoid blocking
-func (queue *BroadcastQueue) multicast() {
-	c := queue.in
-	for {
-		data := <-c
-		for _, out := range queue.out {
-			select {
-			case out <- data:
-			default:
-			}
-		}
-
-	}
 }
