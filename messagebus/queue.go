@@ -168,7 +168,7 @@ func (queue *BroadcastQueue) Chan(size int) <-chan Message {
 	return c
 }
 
-// Release - release the incomming and outgoing queues
+// Release - release the incomming and outgoing queue
 func (queue *BroadcastQueue) Release() {
 	// close all channel
 	close(queue.in)
@@ -181,7 +181,7 @@ func (queue *BroadcastQueue) Release() {
 	queue.out = make([]chan Message, 0, 10)
 }
 
-// DropCache - drop the item from cache
+// DropCache - drop the items from cache
 func (queue *BroadcastQueue) DropCache(msgs ...Message) {
 
 	if nil == msgs {
@@ -201,21 +201,18 @@ func (queue *BroadcastQueue) DropCache(msgs ...Message) {
 	}
 }
 
-// clear the cache
 func (queue *BroadcastQueue) clearCache() {
 	queue.Lock()
 	defer queue.Unlock()
 	queue.deliveredMessage = map[string]Message{}
 }
 
-// cache the delivered message
 func (queue *BroadcastQueue) cache(m Message) {
 	queue.Lock()
 	defer queue.Unlock()
 	queue.deliveredMessage[m.packHex()] = m
 }
 
-// check whether Message is cached
 func (queue *BroadcastQueue) isCached(m Message) bool {
 	queue.RLock()
 	defer queue.RUnlock()
