@@ -68,6 +68,18 @@ func (mr *MockHandleMockRecorder) PutN(key, value interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutN", reflect.TypeOf((*MockHandle)(nil).PutN), key, value)
 }
 
+// putN mocks base method
+func (m *MockHandle) putN(key []byte, value uint64) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "putN", key, value)
+}
+
+// putN indicates an expected call of putN
+func (mr *MockHandleMockRecorder) putN(key, value interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "putN", reflect.TypeOf((*MockHandle)(nil).putN), key, value)
+}
+
 // Delete mocks base method
 func (m *MockHandle) Delete(key []byte) {
 	m.ctrl.T.Helper()
@@ -78,6 +90,18 @@ func (m *MockHandle) Delete(key []byte) {
 func (mr *MockHandleMockRecorder) Delete(key interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockHandle)(nil).Delete), key)
+}
+
+// remove mocks base method
+func (m *MockHandle) remove(key []byte) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "remove", key)
+}
+
+// remove indicates an expected call of remove
+func (mr *MockHandleMockRecorder) remove(key interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "remove", reflect.TypeOf((*MockHandle)(nil).remove), key)
 }
 
 // Get mocks base method
@@ -109,6 +133,21 @@ func (mr *MockHandleMockRecorder) GetN(key interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetN", reflect.TypeOf((*MockHandle)(nil).GetN), key)
 }
 
+// getN mocks base method
+func (m *MockHandle) getN(key []byte) (uint64, bool) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "getN", key)
+	ret0, _ := ret[0].(uint64)
+	ret1, _ := ret[1].(bool)
+	return ret0, ret1
+}
+
+// getN indicates an expected call of getN
+func (mr *MockHandleMockRecorder) getN(key interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "getN", reflect.TypeOf((*MockHandle)(nil).getN), key)
+}
+
 // GetNB mocks base method
 func (m *MockHandle) GetNB(key []byte) (uint64, []byte) {
 	m.ctrl.T.Helper()
@@ -122,6 +161,21 @@ func (m *MockHandle) GetNB(key []byte) (uint64, []byte) {
 func (mr *MockHandleMockRecorder) GetNB(key interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNB", reflect.TypeOf((*MockHandle)(nil).GetNB), key)
+}
+
+// getNB mocks base method
+func (m *MockHandle) getNB(key []byte) (uint64, []byte) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "getNB", key)
+	ret0, _ := ret[0].(uint64)
+	ret1, _ := ret[1].([]byte)
+	return ret0, ret1
+}
+
+// getNB indicates an expected call of getNB
+func (mr *MockHandleMockRecorder) getNB(key interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "getNB", reflect.TypeOf((*MockHandle)(nil).getNB), key)
 }
 
 // Has mocks base method
