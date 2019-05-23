@@ -8,7 +8,7 @@ import (
 
 type Cache interface {
 	Get(string) ([]byte, bool)
-	Set(dbOperation, string, []byte)
+	Set(int, string, []byte)
 	Clear()
 }
 
@@ -29,11 +29,11 @@ type dbCache struct {
 }
 
 type cacheData struct {
-	op    dbOperation
+	op    int
 	value []byte
 }
 
-func newCache() *dbCache {
+func newCache() Cache {
 	return &dbCache{
 		cache: cache.New(defaultTimeout, defaultExpiration),
 	}
@@ -54,7 +54,7 @@ func (c *dbCache) Get(key string) ([]byte, bool) {
 	return data.value, found
 }
 
-func (c *dbCache) Set(op dbOperation, key string, value []byte) {
+func (c *dbCache) Set(op int, key string, value []byte) {
 	cached := cacheData{
 		op:    op,
 		value: value,
