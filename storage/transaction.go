@@ -12,13 +12,14 @@ const (
 // Transaction RDBS transaction
 type Transaction interface {
 	Begin() error
-	Put(Handle, []byte, []byte) error
-	PutN(Handle, []byte, uint64) error
+	Commit() error
 	Delete(Handle, []byte) error
 	Get(Handle, []byte) ([]byte, error)
 	GetN(Handle, []byte) (uint64, bool, error)
 	GetNB(Handle, []byte) (uint64, []byte, error)
-	Commit() error
+	InUse() bool
+	Put(Handle, []byte, []byte) error
+	PutN(Handle, []byte, uint64) error
 }
 
 type TransactionImpl struct {
@@ -39,6 +40,10 @@ func isNilPtr(ptr interface{}) error {
 		return fmt.Errorf(ErrHandleNil)
 	}
 	return nil
+}
+
+func (t *TransactionImpl) InUse() bool {
+	return t.inUse
 }
 
 func (t *TransactionImpl) Begin() error {

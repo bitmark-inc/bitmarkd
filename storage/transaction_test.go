@@ -109,8 +109,8 @@ func newTestHandleMock() *testHandleMock {
 }
 
 func TestPut(t *testing.T) {
-	tx, mockTx := setupTestTransaction(t)
-	mockTx.EXPECT().Begin().Times(1)
+	tx, mockDA := setupTestTransaction(t)
+	mockDA.EXPECT().Begin().Times(1)
 	myMock := newTestHandleMock()
 
 	_ = tx.Begin()
@@ -121,8 +121,8 @@ func TestPut(t *testing.T) {
 }
 
 func TestPutN(t *testing.T) {
-	tx, mockTx := setupTestTransaction(t)
-	mockTx.EXPECT().Begin().Times(1)
+	tx, mockDA := setupTestTransaction(t)
+	mockDA.EXPECT().Begin().Times(1)
 	myMock := newTestHandleMock()
 
 	_ = tx.Begin()
@@ -133,8 +133,8 @@ func TestPutN(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	tx, mockTx := setupTestTransaction(t)
-	mockTx.EXPECT().Begin().Times(1)
+	tx, mockDA := setupTestTransaction(t)
+	mockDA.EXPECT().Begin().Times(1)
 	myMock := newTestHandleMock()
 
 	_ = tx.Begin()
@@ -145,8 +145,8 @@ func TestDelete(t *testing.T) {
 }
 
 func TestGet(t *testing.T) {
-	tx, mockTx := setupTestTransaction(t)
-	mockTx.EXPECT().Begin().Times(1)
+	tx, mockDA := setupTestTransaction(t)
+	mockDA.EXPECT().Begin().Times(1)
 	myMock := newTestHandleMock()
 
 	_ = tx.Begin()
@@ -157,8 +157,8 @@ func TestGet(t *testing.T) {
 }
 
 func TestGetN(t *testing.T) {
-	tx, mockTx := setupTestTransaction(t)
-	mockTx.EXPECT().Begin().Times(1)
+	tx, mockDA := setupTestTransaction(t)
+	mockDA.EXPECT().Begin().Times(1)
 	myMock := newTestHandleMock()
 
 	_ = tx.Begin()
@@ -172,8 +172,8 @@ func TestGetNB(t *testing.T) {
 	setupTestLogger()
 	defer teardownTestLogger()
 
-	tx, mockTx := setupTestTransaction(t)
-	mockTx.EXPECT().Begin().Times(1)
+	tx, mockDA := setupTestTransaction(t)
+	mockDA.EXPECT().Begin().Times(1)
 	myMock := newTestHandleMock()
 
 	_ = tx.Begin()
@@ -203,3 +203,22 @@ func TestIsNilPtr(t *testing.T) {
 	err = isNilPtr(&str)
 	assert.Equal(t, nil, err, "cannot check non-nil pointer")
 }
+
+func TestInUse(t *testing.T) {
+	tx, mock := setupTestTransaction(t)
+	mock.EXPECT().Begin().Times(1)
+
+	inUse := tx.InUse()
+	assert.Equal(t, false, inUse, "Begin not set inUse")
+
+	_ = tx.Begin()
+	inUse = tx.InUse()
+	assert.Equal(t, true, inUse, "Begin not set inUse")
+}
+
+// func TestAbort(t *testing.T) {
+// 	tx, mockDA := setupTestTransaction(t)
+// 	mockDA.EXPECT().Begin().Times(1)
+
+// 	_ = tx.Begin()
+// }
