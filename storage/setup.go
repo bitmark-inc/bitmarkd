@@ -51,9 +51,12 @@ const (
 // holds the database handle
 var poolData struct {
 	sync.RWMutex
-	dbBlocks *leveldb.DB
-	dbIndex  *leveldb.DB
-	trx      Transaction
+	dbBlocks  *leveldb.DB
+	dbIndex   *leveldb.DB
+	trx       Transaction
+	blocksTrx *leveldb.Batch
+	indexTrx  *leveldb.Batch
+	cache     Cache
 }
 
 // pool access modes
@@ -163,8 +166,11 @@ func Initialise(database string, readOnly bool) (bool, bool, error) {
 	poolValue := reflect.ValueOf(&Pool).Elem()
 
 	// databases
-	blockDBAccess := newDB(poolData.dbBlocks)
-	indexDBAccess := newDB(poolData.dbIndex)
+	poolData.blocksTrx = new(leveldb.Batch)
+	poolData.indexTrx = new(leveldb.Batch)
+	poolData.cache = newCache()
+	blockDBAccess := newDA(poolData.dbBlocks, poolData.blocksTrx, poolData.cache)
+	indexDBAccess := newDA(poolData.dbIndex, poolData.indexTrx, poolData.cache)
 	access := []DataAccess{blockDBAccess, indexDBAccess}
 	poolData.trx = newTransaction(access)
 
