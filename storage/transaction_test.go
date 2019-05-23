@@ -4,70 +4,19 @@ import (
 	"os"
 	"testing"
 
+	"github.com/bitmark-inc/bitmarkd/storage/mocks"
 	"github.com/bitmark-inc/logger"
-	"github.com/syndtr/goleveldb/leveldb/iterator"
-	ldb_util "github.com/syndtr/goleveldb/leveldb/util"
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
 	testingDirName = "testing"
 )
 
-var (
-	isPutCalled    = false
-	isDeleteCalled = false
-	isGetCalled    = false
-	ph             = &PoolHandle{
-		prefix:     'a',
-		limit:      []byte{2},
-		dataAccess: &fakeDataAccess{},
-	}
-	f1 *fakeDataAccess
-	f2 *fakeDataAccess
-)
-
-type fakeDataAccess struct {
-	isBeginCalled  bool
-	isCommitCalled bool
-}
-
-func (f *fakeDataAccess) Begin() error {
-	f.isBeginCalled = true
-	return nil
-}
-func (f *fakeDataAccess) Put([]byte, []byte) { isPutCalled = true }
-func (f *fakeDataAccess) Delete([]byte)      { isDeleteCalled = true }
-func (f *fakeDataAccess) Commit() error {
-	f.isCommitCalled = true
-	return nil
-}
-func (f *fakeDataAccess) Get([]byte) ([]byte, error) {
-	isGetCalled = true
-	return []byte{'1', '2', '3', '4', '5', '6', '7', '8', '9'}, nil // to pass getNB
-}
-func (f *fakeDataAccess) Iterator(*ldb_util.Range) iterator.Iterator {
-	return &fakeIterator{}
-}
-func (f *fakeDataAccess) DumpTx() []byte           { return []byte{} }
-func (f *fakeDataAccess) Has([]byte) (bool, error) { return true, nil }
-
-type fakeIterator struct{}
-
-func (f *fakeIterator) Valid() bool                   { return true }
-func (f *fakeIterator) Error() error                  { return nil }
-func (f *fakeIterator) Key() []byte                   { return []byte{} }
-func (f *fakeIterator) Value() []byte                 { return []byte{} }
-func (f *fakeIterator) First() bool                   { return true }
-func (f *fakeIterator) Last() bool                    { return true }
-func (f *fakeIterator) Seek([]byte) bool              { return true }
-func (f *fakeIterator) Next() bool                    { return true }
-func (f *fakeIterator) Prev() bool                    { return true }
-func (f *fakeIterator) Release()                      {}
-func (f *fakeIterator) SetReleaser(ldb_util.Releaser) {}
-
 func setupTestLogger() {
 	removeFiles()
-	os.Mkdir(testingDirName, 0700)
+	_ = os.Mkdir(testingDirName, 0700)
 
 	logging := logger.Configuration{
 		Directory: testingDirName,
@@ -92,148 +41,165 @@ func teardownTestLogger() {
 	removeFiles()
 }
 
-func setupTestTransaction() Transaction {
-	f1 = &fakeDataAccess{}
-	f2 = &fakeDataAccess{}
-	arr := []DataAccess{f1, f2}
+func newTestMockDataAccess(t *testing.T) *mocks.MockDataAccess {
+	ctl := gomock.NewController(t)
+	defer ctl.Finish()
 
-	return &TransactionImpl{
-		inUse:      false,
-		dataAccess: arr,
-	}
+	return mocks.NewMockDataAccess(ctl)
+}
+
+func setupTestTransaction(t *testing.T) (Transaction, *mocks.MockDataAccess) {
+	mock := newTestMockDataAccess(t)
+
+	trx := newTransaction([]DataAccess{mock})
+	return trx, mock
 }
 
 func TestBegin(t *testing.T) {
-	tx := setupTestTransaction()
+	tx, mock := setupTestTransaction(t)
+	mock.EXPECT().Begin().Return(nil).Times(1)
 
 	err := tx.Begin()
-	if nil != err {
-		t.Errorf("first time call should not return any error")
-	}
-
-	if !f1.isBeginCalled || !f2.isBeginCalled {
-		t.Errorf("internal method dataAccess.Begin not called")
-	}
+	assert.Equal(t, nil, err, "first time Begin should not return any error")
 
 	err = tx.Begin()
-	if nil == err {
-		t.Errorf("second time call should return error")
+	assert.NotEqual(t, nil, err, "second time Begin should return error")
+}
+
+// this is ugly, because it uses unexported method, so general gomock cannot be used
+type testHandleMock struct {
+	Handle
+	PutCalled    bool
+	PutNCalled   bool
+	RemoveCalled bool
+	GetCalled    bool
+}
+
+func (m *testHandleMock) Put(key []byte, value []byte)  {}
+func (m *testHandleMock) put(key []byte, value []byte)  { m.PutCalled = true }
+func (m *testHandleMock) PutN(key []byte, value uint64) {}
+func (m *testHandleMock) putN(key []byte, value uint64) { m.PutNCalled = true }
+func (m *testHandleMock) Delete(key []byte)             {}
+func (m *testHandleMock) remove(key []byte)             { m.RemoveCalled = true }
+func (m *testHandleMock) Get(key []byte) []byte {
+	m.GetCalled = true
+	return []byte{}
+}
+func (m *testHandleMock) GetN(key []byte) (uint64, bool) { return uint64(0), true }
+func (m *testHandleMock) getN(key []byte) (uint64, bool) {
+	m.GetCalled = true
+	return uint64(0), true
+}
+func (m *testHandleMock) GetNB(key []byte) (uint64, []byte) { return uint64(0), []byte{} }
+func (m *testHandleMock) getNB(key []byte) (uint64, []byte) {
+	m.GetCalled = true
+	return uint64(0), []byte{}
+}
+func (m *testHandleMock) Has(key []byte) bool { return true }
+func (m *testHandleMock) Begin()              {}
+func (m *testHandleMock) Commit() error       { return nil }
+
+func newTestHandleMock() *testHandleMock {
+	return &testHandleMock{
+		PutCalled:    false,
+		PutNCalled:   false,
+		RemoveCalled: false,
+		GetCalled:    false,
 	}
 }
 
 func TestPut(t *testing.T) {
-	tx := setupTestTransaction()
+	tx, mockTx := setupTestTransaction(t)
+	mockTx.EXPECT().Begin().Times(1)
+	myMock := newTestHandleMock()
+
 	_ = tx.Begin()
-	err := tx.Put(ph, []byte{}, []byte{})
+	err := tx.Put(myMock, []byte{}, []byte{})
 
-	if !isPutCalled {
-		t.Errorf("internal method put is not called")
-	}
-
-	if nil != err {
-		t.Errorf("error message: %s", err.Error())
-	}
+	assert.Equal(t, true, myMock.PutCalled, "internal method put is not called")
+	assert.Equal(t, nil, err, err)
 }
 
 func TestPutN(t *testing.T) {
-	tx := setupTestTransaction()
-	_ = tx.Begin()
-	isPutCalled = false
-	tx.PutN(ph, []byte{}, uint64(0))
+	tx, mockTx := setupTestTransaction(t)
+	mockTx.EXPECT().Begin().Times(1)
+	myMock := newTestHandleMock()
 
-	if !isPutCalled {
-		t.Errorf("internal method putN is not called")
-	}
+	_ = tx.Begin()
+
+	tx.PutN(myMock, []byte{}, uint64(0))
+
+	assert.Equal(t, true, myMock.PutNCalled, "internal method putN not called")
 }
 
 func TestDelete(t *testing.T) {
-	tx := setupTestTransaction()
+	tx, mockTx := setupTestTransaction(t)
+	mockTx.EXPECT().Begin().Times(1)
+	myMock := newTestHandleMock()
+
 	_ = tx.Begin()
-	err := tx.Delete(ph, []byte{})
+	err := tx.Delete(myMock, []byte{})
 
-	if !isDeleteCalled {
-		t.Errorf("internal method remove is not called")
-	}
-
-	if nil != err {
-		t.Errorf("error message: %s", err.Error())
-	}
+	assert.Equal(t, true, myMock.RemoveCalled, "internal method remove not called")
+	assert.Equal(t, nil, err, err)
 }
 
 func TestGet(t *testing.T) {
-	tx := setupTestTransaction()
+	tx, mockTx := setupTestTransaction(t)
+	mockTx.EXPECT().Begin().Times(1)
+	myMock := newTestHandleMock()
+
 	_ = tx.Begin()
-	_, err := tx.Get(ph, []byte{})
+	_, err := tx.Get(myMock, []byte{})
 
-	if !isGetCalled {
-		t.Errorf("internal method get is not called")
-	}
-
-	if nil != err {
-		t.Errorf("error message: %s", err.Error())
-	}
+	assert.Equal(t, true, myMock.GetCalled, "internal method get not called")
+	assert.Equal(t, nil, err, err)
 }
 
 func TestGetN(t *testing.T) {
-	tx := setupTestTransaction()
+	tx, mockTx := setupTestTransaction(t)
+	mockTx.EXPECT().Begin().Times(1)
+	myMock := newTestHandleMock()
+
 	_ = tx.Begin()
-	isGetCalled = false
-	_, _, err := tx.GetN(ph, []byte{})
+	_, _, err := tx.GetN(myMock, []byte{})
 
-	if !isGetCalled {
-		t.Errorf("internal method get is not called")
-	}
-
-	if nil != err {
-		t.Errorf("error message: %s", err.Error())
-	}
+	assert.Equal(t, true, myMock.GetCalled, "internal method get is not called")
+	assert.Equal(t, nil, err, err)
 }
 
 func TestGetNB(t *testing.T) {
 	setupTestLogger()
 	defer teardownTestLogger()
-	tx := setupTestTransaction()
+
+	tx, mockTx := setupTestTransaction(t)
+	mockTx.EXPECT().Begin().Times(1)
+	myMock := newTestHandleMock()
+
 	_ = tx.Begin()
-	isGetCalled = false
-	_, _, err := tx.GetNB(ph, []byte{})
+	_, _, err := tx.GetNB(myMock, []byte{})
 
-	if !isGetCalled {
-		t.Errorf("internal method get is not called")
-	}
-
-	if nil != err {
-		t.Errorf("error message: %s", err.Error())
-	}
+	assert.Equal(t, true, myMock.GetCalled, "internal method get is not called")
+	assert.Equal(t, nil, err, err)
 }
 
 func TestCommit(t *testing.T) {
-	tx := setupTestTransaction()
+	tx, mock := setupTestTransaction(t)
+	mock.EXPECT().Commit().Return(nil).Times(1)
+	mock.EXPECT().Begin().Times(2)
+
 	_ = tx.Begin()
-	_ = tx.Begin()
-	err := tx.Commit()
+	_ = tx.Commit()
 
-	if !f1.isCommitCalled || !f2.isCommitCalled {
-		t.Errorf("not call internal method Commit")
-	}
-
-	if nil != err {
-		t.Errorf("didn't reset inUse")
-	}
-
-	err = tx.Begin()
-	if nil != err {
-		t.Errorf("didn't refresh lock")
-	}
+	err := tx.Begin()
+	assert.Equal(t, nil, err, "did not release lock")
 }
 
 func TestIsNilPtr(t *testing.T) {
 	err := isNilPtr(nil)
-	if nil == err {
-		t.Errorf("cannot check nil pointer")
-	}
+	assert.NotEqual(t, nil, err, "cannot check nil pointer")
 
-	err = isNilPtr(&fakeDataAccess{})
-	if nil != err {
-		t.Errorf("cannot check non-nil pointer")
-	}
+	str := struct{}{}
+	err = isNilPtr(&str)
+	assert.Equal(t, nil, err, "cannot check non-nil pointer")
 }

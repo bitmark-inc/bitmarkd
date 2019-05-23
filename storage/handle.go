@@ -13,8 +13,27 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
+// TODO: Aaron use interface of Handle
+type Handle interface {
+	Put(key []byte, value []byte)
+	put(key []byte, value []byte)
+	PutN(key []byte, value uint64)
+	putN(key []byte, value uint64)
+	Delete(key []byte)
+	remove(key []byte)
+	Get(key []byte) []byte
+	GetN(key []byte) (uint64, bool)
+	getN(key []byte) (uint64, bool)
+	GetNB(key []byte) (uint64, []byte)
+	getNB(key []byte) (uint64, []byte)
+	Has(key []byte) bool
+	Begin()
+	Commit() error
+}
+
 // PoolHandle - the structure of a pool handle
 type PoolHandle struct {
+	Handle
 	prefix     byte
 	limit      []byte
 	dataAccess DataAccess
