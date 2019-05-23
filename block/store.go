@@ -343,8 +343,8 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 	}
 
 	// start db transaction by block & index db
-	storage.Pool.Blocks.BeginDBTransaction()
-	storage.Pool.Transactions.BeginDBTransaction()
+	storage.Pool.Blocks.Begin()
+	storage.Pool.Transactions.Begin()
 
 	// process the transactions into the database
 	// but skip base/block-issue as these are already processed
@@ -556,8 +556,8 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 	storage.Pool.BlockHeaderHash.Put(thisBlockNumberKey, digest[:])
 	globalData.log.Debugf("stored block: %d time elapsed: %f", header.Number, time.Since(start).Seconds())
 
-	storage.Pool.Blocks.WriteDBTransaction()
-	storage.Pool.Transactions.WriteDBTransaction()
+	storage.Pool.Blocks.Commit()
+	storage.Pool.Transactions.Commit()
 
 	// rescan reservoir to drop any invalid transactions
 	if performRescan {
