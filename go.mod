@@ -8,6 +8,7 @@ require (
 	github.com/bitmark-inc/listener v0.2.0
 	github.com/bitmark-inc/logger v0.3.4
 	github.com/fsnotify/fsnotify v1.4.7
+	github.com/golang/mock v1.3.1
 	github.com/golang/protobuf v1.3.1 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
@@ -16,7 +17,9 @@ require (
 	github.com/mitchellh/mapstructure v1.1.2 // indirect
 	github.com/onsi/ginkgo v1.8.0 // indirect
 	github.com/onsi/gomega v1.5.0 // indirect
+	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pebbe/zmq4 v1.0.0
+	github.com/stretchr/testify v1.3.0
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/urfave/cli v1.20.0
 	github.com/yuin/gluamapper v0.0.0-20150323120927-d836955830e7
