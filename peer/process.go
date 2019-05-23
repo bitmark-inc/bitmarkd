@@ -119,14 +119,6 @@ func processSubscription(log *logger.L, command string, arguments [][]byte) {
 			messagebus.Bus.Broadcast.Send("peer", arguments[0:3]...)
 		}
 
-	case "heart":
-		if dataLength < 1 {
-			log.Debugf("heart with too few data: %d items", dataLength)
-			return
-		}
-		log.Infof("received heart: %q", arguments[0])
-		// nothing to forward, this is just to keep communication alive
-
 	default:
 		log.Debugf("received unhandled command: %q arguments: %x", command, arguments)
 

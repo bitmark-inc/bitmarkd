@@ -72,7 +72,8 @@ func (u *Upstream) Destroy() {
 // ResetServer - clear Server side info of Zmq client for reusing the
 // upstream
 func (u *Upstream) ResetServer() {
-	u.GetClient().ResetServer()
+	//	u.GetClient().ResetServer()
+	u.client.ResetServer()
 	u.registered = false
 	u.blockHeight = 0
 }
@@ -186,39 +187,6 @@ func (u *Upstream) GetBlockData(blockNumber uint64) ([]byte, error) {
 	return nil, fault.ErrInvalidPeerResponse
 }
 
-// Ping - ping to check the connection
-func (u *Upstream) Ping() (success bool) {
-
-	// critical section - lock out the runner process
-	u.Lock()
-
-	var data [][]byte
-	err := u.client.Send("P")
-	if nil == err {
-		data, err = u.client.Receive(0)
-	}
-
-	u.Unlock()
-
-	if nil != err {
-		u.log.Errorf("ping to server %s failed with error %s", u.client, err)
-		return
-	}
-
-	if 0 == len(data) {
-		return
-	}
-
-	switch string(data[0]) {
-	case "P":
-		// Ping to peer successfully
-		u.log.Infof("ping to server %s success", u.client)
-		success = true
-	default:
-	}
-	return
-}
-
 // loop to handle upstream communication
 func upstreamRunner(u *Upstream, shutdown <-chan struct{}) {
 	log := u.log
@@ -261,6 +229,10 @@ loop:
 			h, err := getHeight(u.client, u.log)
 			if nil == err {
 				u.blockHeight = h
+
+				publicKey := u.client.GetServerPublicKey()
+				announce.SetPeerTimestamp(publicKey, time.Now())
+
 			} else {
 				u.registered = false
 				log.Errorf("getHeight: error: %s", err)

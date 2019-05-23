@@ -345,8 +345,8 @@ func (client *Client) ReconnectOpenedSocket() error {
 
 	err := client.disconnect()
 	if nil != err {
-		logger.Criticalf("client %s disconnect from remote address with error: %s",
-			client.BasicInfo(),
+		logger.Criticalf("client: %v disconnect from remote address with error: %s",
+			client,
 			err.Error(),
 		)
 		return err
@@ -354,8 +354,8 @@ func (client *Client) ReconnectOpenedSocket() error {
 
 	err = client.socket.Connect(client.address)
 	if nil != err {
-		logger.Criticalf("client %s connect to remote address with error: %s",
-			client.BasicInfo(),
+		logger.Criticalf("client: %v connect to remote address with error: %s",
+			client,
 			client.address,
 			err.Error(),
 		)
@@ -368,7 +368,7 @@ func (client *Client) ReconnectOpenedSocket() error {
 func (client *Client) disconnect() error {
 	var msg string
 	if nil == client.socket {
-		msg = fmt.Sprintf("client %s with empty socket", client.BasicInfo())
+		msg = fmt.Sprintf("client: %v with empty socket", client)
 		logger.Criticalf(msg)
 		return fmt.Errorf(msg)
 	}
@@ -378,15 +378,15 @@ func (client *Client) disconnect() error {
 	}
 
 	if "" == client.address {
-		msg = fmt.Sprintf("client %s with empty address", client.BasicInfo())
+		msg = fmt.Sprintf("client: %v with empty address", client)
 		logger.Criticalf(msg)
 		return fmt.Errorf(msg)
 	}
 
 	err := client.socket.Disconnect(client.address)
 	if nil != err {
-		logger.Criticalf("client %s disconnect socket with error: %s",
-			client.BasicInfo(),
+		logger.Criticalf("client: %v disconnect socket with error: %s",
+			client,
 			err.Error(),
 		)
 		return err
@@ -559,8 +559,8 @@ func ClientFromSocket(socket *zmq.Socket) *Client {
 	return client
 }
 
-// BasicInfo - return a basic information string for debugging purposes
-func (client *Client) BasicInfo() string {
+// GoString - return a basic information string for debugging purposes
+func (client Client) GoString() string {
 	s := fmt.Sprintf("server public key: %x  address: %s  public key: %x  prefix: %s v6: %v socket type: %d  ts: %v  timeout duration: %s",
 		client.serverPublicKey, client.address, client.publicKey, client.prefix, client.v6, client.socketType, client.timestamp, client.timeout.String())
 

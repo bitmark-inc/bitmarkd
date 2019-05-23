@@ -5,8 +5,6 @@
 package peer
 
 import (
-	"sync"
-
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -14,6 +12,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
+	"sync"
 )
 
 // Connection - hardwired connections
@@ -97,9 +96,6 @@ func Initialise(configuration *Configuration, version string) error {
 		return err
 	}
 
-	// if err := globalData.brdc.initialise(privateKey, publicKey, configuration.Broadcast); nil != err {
-	// 	return err
-	// }
 	if err := globalData.lstn.initialise(privateKey, publicKey, configuration.Listen, version); nil != err {
 		return err
 	}
