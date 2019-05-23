@@ -73,10 +73,10 @@ func (p *PoolNB) Has(key []byte) bool {
 	return p.pool.Has(key)
 }
 
-func (p *PoolNB) BeginDBTransaction() {
+func (p *PoolNB) Begin() {
 	p.pool.Begin()
 }
 
-func (p *PoolNB) WriteDBTransaction() {
+func (p *PoolNB) Commit() {
 	p.pool.Commit()
 }

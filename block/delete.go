@@ -39,8 +39,8 @@ func DeleteDownToBlock(finalBlockNumber uint64) error {
 	packedBlock := last.Value
 
 	// start db transaction by block & index db
-	storage.Pool.Blocks.BeginDBTransaction()
-	storage.Pool.Transactions.BeginDBTransaction()
+	storage.Pool.Blocks.Begin()
+	storage.Pool.Transactions.Begin()
 
 outer_loop:
 	for {
@@ -329,8 +329,8 @@ outer_loop:
 		storage.Pool.BlockHeaderHash.Delete(blockNumberKey)
 
 		// commit db transactions
-		storage.Pool.Blocks.WriteDBTransaction()
-		storage.Pool.Transactions.WriteDBTransaction()
+		storage.Pool.Blocks.Commit()
+		storage.Pool.Transactions.Commit()
 
 		// fetch previous block number
 		binary.BigEndian.PutUint64(blockNumberKey, header.Number-1)
