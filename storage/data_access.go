@@ -29,12 +29,12 @@ type DataAccessImpl struct {
 	cache       Cache
 }
 
-func newDB(db *leveldb.DB) DataAccess {
+func newDA(db *leveldb.DB, trx *leveldb.Batch, cache Cache) DataAccess {
 	return &DataAccessImpl{
 		inUse:       false,
 		db:          db,
-		transaction: new(leveldb.Batch),
-		cache:       newCache(),
+		transaction: trx,
+		cache:       cache,
 	}
 }
 
