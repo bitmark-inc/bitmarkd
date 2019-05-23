@@ -12,12 +12,12 @@ const (
 // Transaction RDBS transaction
 type Transaction interface {
 	Begin() error
-	Put(*PoolHandle, []byte, []byte) error
-	PutN(*PoolHandle, []byte, uint64) error
-	Delete(*PoolHandle, []byte) error
-	Get(*PoolHandle, []byte) ([]byte, error)
-	GetN(*PoolHandle, []byte) (uint64, bool, error)
-	GetNB(*PoolHandle, []byte) (uint64, []byte, error)
+	Put(Handle, []byte, []byte) error
+	PutN(Handle, []byte, uint64) error
+	Delete(Handle, []byte) error
+	Get(Handle, []byte) ([]byte, error)
+	GetN(Handle, []byte) (uint64, bool, error)
+	GetNB(Handle, []byte) (uint64, []byte, error)
 	Commit() error
 }
 
@@ -41,57 +41,57 @@ func isNilPtr(ptr interface{}) error {
 	return nil
 }
 
-func (d *TransactionImpl) Begin() error {
-	if d.inUse {
+func (t *TransactionImpl) Begin() error {
+	if t.inUse {
 		return fmt.Errorf("Error, transaction already in use")
 	}
 
-	d.Lock()
-	d.inUse = true
-	d.Unlock()
+	t.Lock()
+	t.inUse = true
+	t.Unlock()
 
-	for _, access := range d.dataAccess {
+	for _, access := range t.dataAccess {
 		access.Begin()
 	}
 
 	return nil
 }
 
-func (d *TransactionImpl) Put(ph *PoolHandle, key []byte, value []byte) error {
-	if nil == ph {
+func (t *TransactionImpl) Put(h Handle, key []byte, value []byte) error {
+	if nil == h {
 		return fmt.Errorf(ErrHandleNil)
 	}
 
-	ph.put(key, value)
+	h.put(key, value)
 	return nil
 }
 
-func (d *TransactionImpl) PutN(ph *PoolHandle, key []byte, value uint64) error {
-	err := isNilPtr(ph)
+func (t *TransactionImpl) PutN(h Handle, key []byte, value uint64) error {
+	err := isNilPtr(h)
 	if nil != err {
 		return err
 	}
 
-	ph.putN(key, value)
+	h.putN(key, value)
 	return nil
 }
 
-func (d *TransactionImpl) Delete(ph *PoolHandle, key []byte) error {
-	err := isNilPtr(ph)
+func (t *TransactionImpl) Delete(h Handle, key []byte) error {
+	err := isNilPtr(h)
 	if nil != err {
 		return err
 	}
 
-	ph.remove(key)
+	h.remove(key)
 	return nil
 }
 
-func (d *TransactionImpl) Commit() error {
-	d.Lock()
-	d.inUse = false
-	defer d.Unlock()
+func (t *TransactionImpl) Commit() error {
+	t.Lock()
+	t.inUse = false
+	defer t.Unlock()
 
-	for _, access := range d.dataAccess {
+	for _, access := range t.dataAccess {
 		err := access.Commit()
 		if nil != err {
 			return err
@@ -100,31 +100,31 @@ func (d *TransactionImpl) Commit() error {
 	return nil
 }
 
-func (d *TransactionImpl) Get(ph *PoolHandle, key []byte) ([]byte, error) {
-	err := isNilPtr(ph)
+func (t *TransactionImpl) Get(h Handle, key []byte) ([]byte, error) {
+	err := isNilPtr(h)
 	if nil != err {
 		return []byte{}, err
 	}
 
-	return ph.Get(key), nil
+	return h.Get(key), nil
 }
 
-func (d *TransactionImpl) GetN(ph *PoolHandle, key []byte) (uint64, bool, error) {
-	err := isNilPtr(ph)
+func (t *TransactionImpl) GetN(h Handle, key []byte) (uint64, bool, error) {
+	err := isNilPtr(h)
 	if nil != err {
 		return uint64(0), false, err
 	}
 
-	num, found := ph.getN(key)
+	num, found := h.getN(key)
 	return num, found, nil
 }
 
-func (d *TransactionImpl) GetNB(ph *PoolHandle, key []byte) (uint64, []byte, error) {
-	err := isNilPtr(ph)
+func (t *TransactionImpl) GetNB(h Handle, key []byte) (uint64, []byte, error) {
+	err := isNilPtr(h)
 	if nil != err {
 		return uint64(0), []byte{}, err
 	}
 
-	num, buffer := ph.getNB(key)
+	num, buffer := h.getNB(key)
 	return num, buffer, nil
 }

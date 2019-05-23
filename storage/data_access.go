@@ -9,7 +9,7 @@ import (
 	ldb_util "github.com/syndtr/goleveldb/leveldb/util"
 )
 
-// Transaction RDBS transaction
+// for Database
 type DataAccess interface {
 	Begin() error
 	Put([]byte, []byte)
