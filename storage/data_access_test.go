@@ -5,6 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/bitmark-inc/bitmarkd/storage/mocks"
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
@@ -14,88 +17,83 @@ const (
 )
 
 var (
-	setCalled       = false
-	getCalled       = false
-	clearCalled     = false
 	db              *leveldb.DB
+	trx             *leveldb.Batch
 	getDefaultValue = []byte{'a'}
 )
 
-type fakeCache struct{}
-
-func (f *fakeCache) Get(key string) ([]byte, bool) {
-	getCalled = true
-	if getDefaultKey == key {
-		return getDefaultValue, true
-	}
-	return []byte{}, false
-}
-func (f *fakeCache) Set(dbOperation, string, []byte) {
-	setCalled = true
-}
-func (f *fakeCache) Clear() {
-	clearCalled = true
-}
-
-func initializeLevelDB() {
+func initialiseVars() {
+	trx = new(leveldb.Batch)
 	if nil == db {
 		db, _ = leveldb.OpenFile(dbName, nil)
 	}
 }
 
-func setupTestDataAccess() DataAccess {
-	return &DataAccessImpl{
-		db:          db,
-		transaction: new(leveldb.Batch),
-		cache:       &fakeCache{},
-	}
+func newMockCache(t *testing.T) *mocks.MockCache {
+	ctl := gomock.NewController(t)
+	defer ctl.Finish()
+
+	return mocks.NewMockCache(ctl)
+}
+
+func setupDummyMockCache(t *testing.T) *mocks.MockCache {
+	mockCache := newMockCache(t)
+	mockCache.EXPECT().Get(gomock.Any()).Return([]byte{}, true).AnyTimes()
+	mockCache.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	mockCache.EXPECT().Clear().AnyTimes()
+
+	return mockCache
+}
+
+func setupTestDataAccess(mockCache *mocks.MockCache) DataAccess {
+	return newDA(db, trx, mockCache)
 }
 
 func removeDir(dirName string) {
 	dirPath, _ := filepath.Abs(dirName)
-	os.RemoveAll(dirPath)
+	_ = os.RemoveAll(dirPath)
 }
 
 func teardownTestDataAccess() {
-	db.Close()
+	_ = db.Close()
 	removeDir(dbName)
 }
 
 func TestMain(m *testing.M) {
-	initializeLevelDB()
+	initialiseVars()
 	result := m.Run()
 	teardownTestDataAccess()
 	os.Exit(result)
 }
 
 func TestBeginShouldErrorWhenAlreadyInTransaction(t *testing.T) {
-	da := setupTestDataAccess()
+	mc := setupDummyMockCache(t)
+	da := setupTestDataAccess(mc)
 
 	err := da.Begin()
-	if nil != err {
-		t.Errorf("Error first time Begin should success")
-	}
+	assert.Equal(t, nil, err, "first time Begin should with not error")
 
 	err = da.Begin()
-	if nil == err {
-		t.Errorf("Error second time Begin should return error")
-	}
+	assert.NotEqual(t, nil, err, "second time Begin should return error")
 }
 
 func TestCommitUnlockInUse(t *testing.T) {
-	da := setupTestDataAccess()
+	mc := setupDummyMockCache(t)
+	da := setupTestDataAccess(mc)
 
 	_ = da.Begin()
-	da.Commit()
+	_ = da.Commit()
 
 	err := da.Begin()
-	if nil != err {
-		t.Errorf("Error Commit didn't reset variable inUse")
-	}
+	assert.Equal(t, nil, err, "did not reset internal inUse ")
 }
 
 func TestCommitResetTransaction(t *testing.T) {
-	da := setupTestDataAccess()
+	mc := newMockCache(t)
+	mc.EXPECT().Get(gomock.Any()).Return([]byte{'b'}, true).Times(1)
+	mc.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	mc.EXPECT().Clear().AnyTimes()
+	da := setupTestDataAccess(mc)
 
 	fixture := struct {
 		key   []byte
@@ -107,17 +105,18 @@ func TestCommitResetTransaction(t *testing.T) {
 
 	_ = da.Begin()
 	da.Put(fixture.key, fixture.value)
-	da.Commit()
+	_ = da.Commit()
 
 	actual := da.DumpTx()
-
-	if 0 != len(actual) {
-		t.Errorf("Error commit didn't reset transaction")
-	}
+	assert.Equal(t, 0, len(actual), "Commit did not reset transaction")
 }
 
 func TestCommitWriteToDB(t *testing.T) {
-	da := setupTestDataAccess()
+	mc := newMockCache(t)
+	mc.EXPECT().Get(gomock.Any()).Return([]byte{'b'}, true).AnyTimes()
+	mc.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	mc.EXPECT().Clear().AnyTimes()
+	da := setupTestDataAccess(mc)
 
 	fixture := struct {
 		key   []byte
@@ -129,17 +128,18 @@ func TestCommitWriteToDB(t *testing.T) {
 
 	_ = da.Begin()
 	da.Put(fixture.key, fixture.value)
-	da.Commit()
+	_ = da.Commit()
 
 	actual, _ := da.Get(fixture.key)
-	if !isSameByteSlice(actual, fixture.value) {
-		t.Errorf("Error commit didn't write to db, expect %v but get %v",
-			fixture.value, actual)
-	}
+	assert.Equal(t, fixture.value, actual, "commit not write to db")
 }
 
 func TestPutActionCached(t *testing.T) {
-	da := setupTestDataAccess()
+	mc := newMockCache(t)
+	mc.EXPECT().Get(gomock.Any()).Return([]byte{}, true).AnyTimes()
+	mc.EXPECT().Set(dbPut, "a", []byte{'b'}).Times(1)
+	mc.EXPECT().Clear().AnyTimes()
+	da := setupTestDataAccess(mc)
 
 	fixture := struct {
 		key   []byte
@@ -151,13 +151,15 @@ func TestPutActionCached(t *testing.T) {
 
 	_ = da.Begin()
 	da.Put(fixture.key, fixture.value)
-	if !setCalled {
-		t.Errorf("Error put action didn't cache data")
-	}
 }
 
 func TestDeleteActionCached(t *testing.T) {
-	da := setupTestDataAccess()
+	mc := newMockCache(t)
+	mc.EXPECT().Get(gomock.Any()).Return([]byte{}, true).AnyTimes()
+	mc.EXPECT().Set(dbPut, "a", []byte{'b'}).Times(1)
+	mc.EXPECT().Set(dbDelete, "a", []byte{}).Times(1)
+	mc.EXPECT().Clear().AnyTimes()
+	da := setupTestDataAccess(mc)
 
 	fixture := struct {
 		key   []byte
@@ -170,13 +172,14 @@ func TestDeleteActionCached(t *testing.T) {
 	_ = da.Begin()
 	da.Put(fixture.key, fixture.value)
 	da.Delete(fixture.key)
-	if !setCalled {
-		t.Errorf("Error put action didn't cache data")
-	}
 }
 
 func TestCommitClearsCache(t *testing.T) {
-	da := setupTestDataAccess()
+	mc := newMockCache(t)
+	mc.EXPECT().Get(gomock.Any()).Return([]byte{}, true).AnyTimes()
+	mc.EXPECT().Set(dbPut, "a", []byte{'b'}).Times(1)
+	mc.EXPECT().Clear().Times(1)
+	da := setupTestDataAccess(mc)
 
 	fixture := struct {
 		key   []byte
@@ -188,14 +191,15 @@ func TestCommitClearsCache(t *testing.T) {
 
 	_ = da.Begin()
 	da.Put(fixture.key, fixture.value)
-	da.Commit()
-	if !clearCalled {
-		t.Errorf("Error clear action didn't reset cache")
-	}
+	_ = da.Commit()
 }
 
 func TestGetActionReadsFromCache(t *testing.T) {
-	da := setupTestDataAccess()
+	mc := newMockCache(t)
+	mc.EXPECT().Get(gomock.Any()).Return(getDefaultValue, true).Times(1)
+	mc.EXPECT().Set(dbPut, getDefaultKey, getDefaultValue).Times(1)
+	mc.EXPECT().Clear().Times(0)
+	da := setupTestDataAccess(mc)
 
 	fixture := struct {
 		key   []byte
@@ -209,24 +213,25 @@ func TestGetActionReadsFromCache(t *testing.T) {
 	da.Put(fixture.key, fixture.value)
 	actual, _ := da.Get(fixture.key)
 
-	if !getCalled {
-		t.Errorf("Error clear action didn't reset cache")
-	}
-
-	if !isSameByteSlice(actual, fixture.value) {
-		t.Errorf("Error cached value, expect %v but get %v", fixture.value, actual)
-	}
+	assert.Equal(t, fixture.value, actual, "wrong cached value")
 }
 
 func TestGetActionReadDBIfNotInCache(t *testing.T) {
-	da := setupTestDataAccess()
+	key := "random"
+	value := []byte{'a', 'b', 'c'}
+
+	mc := newMockCache(t)
+	mc.EXPECT().Get(gomock.Any()).Return(value, true).Times(1)
+	mc.EXPECT().Set(dbPut, key, value).Times(1)
+	mc.EXPECT().Clear().Times(1)
+	da := setupTestDataAccess(mc)
 
 	fixture := struct {
 		key   []byte
 		value []byte
 	}{
-		[]byte("random"),
-		[]byte{'a', 'b', 'c'},
+		[]byte(key),
+		value,
 	}
 
 	_ = da.Begin()
@@ -234,7 +239,5 @@ func TestGetActionReadDBIfNotInCache(t *testing.T) {
 	da.Commit()
 	actual, _ := da.Get(fixture.key)
 
-	if !isSameByteSlice(actual, fixture.value) {
-		t.Errorf("Error get db value, expect %v but get %v", fixture.value, actual)
-	}
+	assert.Equal(t, fixture.value, actual, "db value not set")
 }
