@@ -34,6 +34,18 @@ func (m *MockDataAccess) EXPECT() *MockDataAccessMockRecorder {
 	return m.recorder
 }
 
+// Abort mocks base method
+func (m *MockDataAccess) Abort() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Abort")
+}
+
+// Abort indicates an expected call of Abort
+func (mr *MockDataAccessMockRecorder) Abort() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Abort", reflect.TypeOf((*MockDataAccess)(nil).Abort))
+}
+
 // Begin mocks base method
 func (m *MockDataAccess) Begin() error {
 	m.ctrl.T.Helper()
@@ -48,16 +60,18 @@ func (mr *MockDataAccessMockRecorder) Begin() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Begin", reflect.TypeOf((*MockDataAccess)(nil).Begin))
 }
 
-// Put mocks base method
-func (m *MockDataAccess) Put(arg0, arg1 []byte) {
+// Commit mocks base method
+func (m *MockDataAccess) Commit() error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Put", arg0, arg1)
+	ret := m.ctrl.Call(m, "Commit")
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
-// Put indicates an expected call of Put
-func (mr *MockDataAccessMockRecorder) Put(arg0, arg1 interface{}) *gomock.Call {
+// Commit indicates an expected call of Commit
+func (mr *MockDataAccessMockRecorder) Commit() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Put", reflect.TypeOf((*MockDataAccess)(nil).Put), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Commit", reflect.TypeOf((*MockDataAccess)(nil).Commit))
 }
 
 // Delete mocks base method
@@ -72,18 +86,18 @@ func (mr *MockDataAccessMockRecorder) Delete(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockDataAccess)(nil).Delete), arg0)
 }
 
-// Commit mocks base method
-func (m *MockDataAccess) Commit() error {
+// DumpTx mocks base method
+func (m *MockDataAccess) DumpTx() []byte {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Commit")
-	ret0, _ := ret[0].(error)
+	ret := m.ctrl.Call(m, "DumpTx")
+	ret0, _ := ret[0].([]byte)
 	return ret0
 }
 
-// Commit indicates an expected call of Commit
-func (mr *MockDataAccessMockRecorder) Commit() *gomock.Call {
+// DumpTx indicates an expected call of DumpTx
+func (mr *MockDataAccessMockRecorder) DumpTx() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Commit", reflect.TypeOf((*MockDataAccess)(nil).Commit))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DumpTx", reflect.TypeOf((*MockDataAccess)(nil).DumpTx))
 }
 
 // Get mocks base method
@@ -101,6 +115,35 @@ func (mr *MockDataAccessMockRecorder) Get(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDataAccess)(nil).Get), arg0)
 }
 
+// Has mocks base method
+func (m *MockDataAccess) Has(arg0 []byte) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Has", arg0)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Has indicates an expected call of Has
+func (mr *MockDataAccessMockRecorder) Has(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Has", reflect.TypeOf((*MockDataAccess)(nil).Has), arg0)
+}
+
+// InUse mocks base method
+func (m *MockDataAccess) InUse() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InUse")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// InUse indicates an expected call of InUse
+func (mr *MockDataAccessMockRecorder) InUse() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InUse", reflect.TypeOf((*MockDataAccess)(nil).InUse))
+}
+
 // Iterator mocks base method
 func (m *MockDataAccess) Iterator(arg0 *util.Range) iterator.Iterator {
 	m.ctrl.T.Helper()
@@ -115,31 +158,14 @@ func (mr *MockDataAccessMockRecorder) Iterator(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Iterator", reflect.TypeOf((*MockDataAccess)(nil).Iterator), arg0)
 }
 
-// DumpTx mocks base method
-func (m *MockDataAccess) DumpTx() []byte {
+// Put mocks base method
+func (m *MockDataAccess) Put(arg0, arg1 []byte) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DumpTx")
-	ret0, _ := ret[0].([]byte)
-	return ret0
+	m.ctrl.Call(m, "Put", arg0, arg1)
 }
 
-// DumpTx indicates an expected call of DumpTx
-func (mr *MockDataAccessMockRecorder) DumpTx() *gomock.Call {
+// Put indicates an expected call of Put
+func (mr *MockDataAccessMockRecorder) Put(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DumpTx", reflect.TypeOf((*MockDataAccess)(nil).DumpTx))
-}
-
-// Has mocks base method
-func (m *MockDataAccess) Has(arg0 []byte) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Has", arg0)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Has indicates an expected call of Has
-func (mr *MockDataAccessMockRecorder) Has(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Has", reflect.TypeOf((*MockDataAccess)(nil).Has), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Put", reflect.TypeOf((*MockDataAccess)(nil).Put), arg0, arg1)
 }
