@@ -11,6 +11,7 @@ const (
 
 // Transaction RDBS transaction
 type Transaction interface {
+	Abort()
 	Begin() error
 	Commit() error
 	Delete(Handle, []byte) error
@@ -24,13 +25,11 @@ type Transaction interface {
 
 type TransactionImpl struct {
 	sync.Mutex
-	inUse      bool
 	dataAccess []DataAccess
 }
 
 func newTransaction(access []DataAccess) Transaction {
 	return &TransactionImpl{
-		inUse:      false,
 		dataAccess: access,
 	}
 }
@@ -43,17 +42,18 @@ func isNilPtr(ptr interface{}) error {
 }
 
 func (t *TransactionImpl) InUse() bool {
-	return t.inUse
+	for _, da := range t.dataAccess {
+		if da.InUse() {
+			return true
+		}
+	}
+	return false
 }
 
 func (t *TransactionImpl) Begin() error {
-	if t.inUse {
+	if t.InUse() {
 		return fmt.Errorf("Error, transaction already in use")
 	}
-
-	t.Lock()
-	t.inUse = true
-	t.Unlock()
 
 	for _, access := range t.dataAccess {
 		access.Begin()
@@ -92,10 +92,6 @@ func (t *TransactionImpl) Delete(h Handle, key []byte) error {
 }
 
 func (t *TransactionImpl) Commit() error {
-	t.Lock()
-	t.inUse = false
-	defer t.Unlock()
-
 	for _, access := range t.dataAccess {
 		err := access.Commit()
 		if nil != err {
@@ -132,4 +128,10 @@ func (t *TransactionImpl) GetNB(h Handle, key []byte) (uint64, []byte, error) {
 
 	num, buffer := h.getNB(key)
 	return num, buffer, nil
+}
+
+func (t *TransactionImpl) Abort() {
+	for _, da := range t.dataAccess {
+		da.Abort()
+	}
 }
