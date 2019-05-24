@@ -41,7 +41,7 @@ go install -v github.com/bitmark-inc/bitmarkd/command/bitmarkd
 
 :warning: **Argon2 optimization**
 
-Argon2 can achieve better performance if [AVX instructions](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions) is available. But the potential optimization is not enabled if Arong2 is intalled by package managers.
+Argon2 can achieve better performance if [AVX instructions](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions) is available. But the potential optimization is not enabled if Argon2 is installed by package managers.
 
 To leverage AVX instructions, extra flag has to be specified during the compilation process.
 
@@ -49,7 +49,7 @@ To leverage AVX instructions, extra flag has to be specified during the compilat
 make OPTTARGET=native
 ```
 
-If AVX is not available, make sure Arong2 has no reference to AVX otherwise bitmarkd will crash. 
+If AVX is not available, make sure Argon2 has no reference to AVX otherwise bitmarkd will crash.
 
 ```shell
 make OPTTARGET=generic
@@ -103,7 +103,7 @@ Note that a similar process is needed for the prooferd (mining subsystem)
 * setup git hooks
 
   Link git hooks directory, run command `./scripts/setup-hook.sh` at root of bitmarkd
-  directory. Currently it provides checkings for two stages:
+  directory. Currently it provides checks for two stages:
 
   1. Before commit (`pre-commt`)
 
@@ -114,7 +114,7 @@ Note that a similar process is needed for the prooferd (mining subsystem)
 
   	Runs `go test` for whole directory except `vendor` one. It is
     mandatory to pass this check because generally, new modifications should not
-    break existing logic/behavior.
+    break existing logic/behaviour.
 
     Other optional actions are `sonaqube` and `go tool vet`. These two are
     optional to follow since static code analysis just provide some advice.
