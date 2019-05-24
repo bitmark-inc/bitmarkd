@@ -11,14 +11,16 @@ import (
 
 // for Database
 type DataAccess interface {
+	Abort()
 	Begin() error
-	Put([]byte, []byte)
-	Delete([]byte)
 	Commit() error
-	Get([]byte) ([]byte, error)
-	Iterator(*ldb_util.Range) iterator.Iterator
+	Delete([]byte)
 	DumpTx() []byte
+	Get([]byte) ([]byte, error)
 	Has([]byte) (bool, error)
+	InUse() bool
+	Iterator(*ldb_util.Range) iterator.Iterator
+	Put([]byte, []byte)
 }
 
 type DataAccessImpl struct {
@@ -56,18 +58,17 @@ func (d *DataAccessImpl) Put(key []byte, value []byte) {
 }
 
 func (d *DataAccessImpl) Delete(key []byte) {
+	d.cache.Set(dbDelete, string(key), []byte{})
 	d.transaction.Delete(key)
 }
 
 func (d *DataAccessImpl) Commit() error {
 	err := d.db.Write(d.transaction, nil)
-	d.transaction.Reset()
-	d.cache.Clear()
-	d.Lock()
-	defer d.Unlock()
-
-	d.inUse = false
-	return err
+	d.Abort()
+	if nil != err {
+		return err
+	}
+	return nil
 }
 
 func (d *DataAccessImpl) DumpTx() []byte {
@@ -96,4 +97,17 @@ func (d *DataAccessImpl) Iterator(searchRange *ldb_util.Range) iterator.Iterator
 
 func (d *DataAccessImpl) Has(key []byte) (bool, error) {
 	return d.db.Has(key, nil)
+}
+
+func (d *DataAccessImpl) InUse() bool {
+	return d.inUse
+}
+
+func (d *DataAccessImpl) Abort() {
+	d.Lock()
+	defer d.Unlock()
+
+	d.transaction.Reset()
+	d.cache.Clear()
+	d.inUse = false
 }

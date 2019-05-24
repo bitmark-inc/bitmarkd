@@ -203,22 +203,3 @@ func TestIsNilPtr(t *testing.T) {
 	err = isNilPtr(&str)
 	assert.Equal(t, nil, err, "cannot check non-nil pointer")
 }
-
-func TestInUse(t *testing.T) {
-	tx, mock := setupTestTransaction(t)
-	mock.EXPECT().Begin().Times(1)
-
-	inUse := tx.InUse()
-	assert.Equal(t, false, inUse, "Begin not set inUse")
-
-	_ = tx.Begin()
-	inUse = tx.InUse()
-	assert.Equal(t, true, inUse, "Begin not set inUse")
-}
-
-// func TestAbort(t *testing.T) {
-// 	tx, mockDA := setupTestTransaction(t)
-// 	mockDA.EXPECT().Begin().Times(1)
-
-// 	_ = tx.Begin()
-// }

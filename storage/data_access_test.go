@@ -12,14 +12,14 @@ import (
 )
 
 const (
-	dbName        = "data-access"
-	getDefaultKey = "key"
+	dbName     = "data-access"
+	defaultKey = "key"
 )
 
 var (
-	db              *leveldb.DB
-	trx             *leveldb.Batch
-	getDefaultValue = []byte{'a'}
+	db           *leveldb.DB
+	trx          *leveldb.Batch
+	defaultValue = []byte{'a'}
 )
 
 func initialiseVars() {
@@ -29,15 +29,15 @@ func initialiseVars() {
 	}
 }
 
-func newMockCache(t *testing.T) *mocks.MockCache {
+func newMockCache(t *testing.T) (*mocks.MockCache, *gomock.Controller) {
 	ctl := gomock.NewController(t)
-	defer ctl.Finish()
-
-	return mocks.NewMockCache(ctl)
+	return mocks.NewMockCache(ctl), ctl
 }
 
 func setupDummyMockCache(t *testing.T) *mocks.MockCache {
-	mockCache := newMockCache(t)
+	mockCache, ctl := newMockCache(t)
+	defer ctl.Finish()
+
 	mockCache.EXPECT().Get(gomock.Any()).Return([]byte{}, true).AnyTimes()
 	mockCache.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	mockCache.EXPECT().Clear().AnyTimes()
@@ -89,22 +89,15 @@ func TestCommitUnlockInUse(t *testing.T) {
 }
 
 func TestCommitResetTransaction(t *testing.T) {
-	mc := newMockCache(t)
-	mc.EXPECT().Get(gomock.Any()).Return([]byte{'b'}, true).Times(1)
+	mc, ctl := newMockCache(t)
+	defer ctl.Finish()
+
 	mc.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	mc.EXPECT().Clear().AnyTimes()
 	da := setupTestDataAccess(mc)
 
-	fixture := struct {
-		key   []byte
-		value []byte
-	}{
-		[]byte{'a'},
-		[]byte{'b'},
-	}
-
 	_ = da.Begin()
-	da.Put(fixture.key, fixture.value)
+	da.Put([]byte(defaultKey), defaultValue)
 	_ = da.Commit()
 
 	actual := da.DumpTx()
@@ -112,49 +105,39 @@ func TestCommitResetTransaction(t *testing.T) {
 }
 
 func TestCommitWriteToDB(t *testing.T) {
-	mc := newMockCache(t)
-	mc.EXPECT().Get(gomock.Any()).Return([]byte{'b'}, true).AnyTimes()
+	mc, ctl := newMockCache(t)
+	defer ctl.Finish()
+
+	mc.EXPECT().Get(gomock.Any()).Return(defaultValue, false).AnyTimes()
 	mc.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	mc.EXPECT().Clear().AnyTimes()
 	da := setupTestDataAccess(mc)
 
-	fixture := struct {
-		key   []byte
-		value []byte
-	}{
-		[]byte{'a'},
-		[]byte{'b'},
-	}
-
 	_ = da.Begin()
-	da.Put(fixture.key, fixture.value)
+	da.Put([]byte(defaultKey), defaultValue)
 	_ = da.Commit()
 
-	actual, _ := da.Get(fixture.key)
-	assert.Equal(t, fixture.value, actual, "commit not write to db")
+	actual, _ := da.Get([]byte(defaultKey))
+	assert.Equal(t, defaultValue, actual, "commit not write to db")
 }
 
 func TestPutActionCached(t *testing.T) {
-	mc := newMockCache(t)
+	mc, ctl := newMockCache(t)
+	defer ctl.Finish()
+
 	mc.EXPECT().Get(gomock.Any()).Return([]byte{}, true).AnyTimes()
-	mc.EXPECT().Set(dbPut, "a", []byte{'b'}).Times(1)
+	mc.EXPECT().Set(dbPut, defaultKey, defaultValue).Times(1)
 	mc.EXPECT().Clear().AnyTimes()
 	da := setupTestDataAccess(mc)
 
-	fixture := struct {
-		key   []byte
-		value []byte
-	}{
-		[]byte{'a'},
-		[]byte{'b'},
-	}
-
 	_ = da.Begin()
-	da.Put(fixture.key, fixture.value)
+	da.Put([]byte(defaultKey), defaultValue)
 }
 
 func TestDeleteActionCached(t *testing.T) {
-	mc := newMockCache(t)
+	mc, ctl := newMockCache(t)
+	defer ctl.Finish()
+
 	mc.EXPECT().Get(gomock.Any()).Return([]byte{}, true).AnyTimes()
 	mc.EXPECT().Set(dbPut, "a", []byte{'b'}).Times(1)
 	mc.EXPECT().Set(dbDelete, "a", []byte{}).Times(1)
@@ -175,29 +158,25 @@ func TestDeleteActionCached(t *testing.T) {
 }
 
 func TestCommitClearsCache(t *testing.T) {
-	mc := newMockCache(t)
+	mc, ctl := newMockCache(t)
+	defer ctl.Finish()
+
 	mc.EXPECT().Get(gomock.Any()).Return([]byte{}, true).AnyTimes()
-	mc.EXPECT().Set(dbPut, "a", []byte{'b'}).Times(1)
+	mc.EXPECT().Set(dbPut, defaultKey, defaultValue).Times(1)
 	mc.EXPECT().Clear().Times(1)
 	da := setupTestDataAccess(mc)
 
-	fixture := struct {
-		key   []byte
-		value []byte
-	}{
-		[]byte{'a'},
-		[]byte{'b'},
-	}
-
 	_ = da.Begin()
-	da.Put(fixture.key, fixture.value)
+	da.Put([]byte(defaultKey), defaultValue)
 	_ = da.Commit()
 }
 
 func TestGetActionReadsFromCache(t *testing.T) {
-	mc := newMockCache(t)
-	mc.EXPECT().Get(gomock.Any()).Return(getDefaultValue, true).Times(1)
-	mc.EXPECT().Set(dbPut, getDefaultKey, getDefaultValue).Times(1)
+	mc, ctl := newMockCache(t)
+	defer ctl.Finish()
+
+	mc.EXPECT().Get(gomock.Any()).Return(defaultValue, true).Times(1)
+	mc.EXPECT().Set(dbPut, defaultKey, defaultValue).Times(1)
 	mc.EXPECT().Clear().Times(0)
 	da := setupTestDataAccess(mc)
 
@@ -205,8 +184,8 @@ func TestGetActionReadsFromCache(t *testing.T) {
 		key   []byte
 		value []byte
 	}{
-		[]byte(getDefaultKey),
-		getDefaultValue,
+		[]byte(defaultKey),
+		defaultValue,
 	}
 
 	_ = da.Begin()
@@ -220,24 +199,77 @@ func TestGetActionReadDBIfNotInCache(t *testing.T) {
 	key := "random"
 	value := []byte{'a', 'b', 'c'}
 
-	mc := newMockCache(t)
-	mc.EXPECT().Get(gomock.Any()).Return(value, true).Times(1)
-	mc.EXPECT().Set(dbPut, key, value).Times(1)
+	mc, ctl := newMockCache(t)
+	defer ctl.Finish()
+
+	mc.EXPECT().Get(gomock.Any()).Return(value, false).Times(1)
+	mc.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
 	mc.EXPECT().Clear().Times(1)
 	da := setupTestDataAccess(mc)
 
-	fixture := struct {
-		key   []byte
-		value []byte
-	}{
-		[]byte(key),
-		value,
-	}
+	_ = da.Begin()
+	da.Put([]byte(key), value)
+	da.Commit()
+	actual, _ := da.Get([]byte(key))
+
+	assert.Equal(t, value, actual, "db value not set")
+}
+
+func TestInUse(t *testing.T) {
+	mc, ctl := newMockCache(t)
+	defer ctl.Finish()
+
+	da := setupTestDataAccess(mc)
+
+	inUse := da.InUse()
+	assert.Equal(t, false, inUse, "inUse default not true")
 
 	_ = da.Begin()
-	da.Put(fixture.key, fixture.value)
-	da.Commit()
-	actual, _ := da.Get(fixture.key)
+	inUse = da.InUse()
+	assert.Equal(t, true, inUse, "inUse not set")
+}
 
-	assert.Equal(t, fixture.value, actual, "db value not set")
+func TestAbortResetInUse(t *testing.T) {
+	mc, ctl := newMockCache(t)
+	defer ctl.Finish()
+
+	mc.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
+	mc.EXPECT().Clear().Times(1)
+	da := setupTestDataAccess(mc)
+
+	_ = da.Begin()
+	da.Put([]byte(defaultKey), defaultValue)
+	da.Abort()
+
+	inUse := da.InUse()
+	assert.Equal(t, false, inUse, "inUse is not set")
+}
+
+func TestAbortResetBatch(t *testing.T) {
+	mc, ctl := newMockCache(t)
+	defer ctl.Finish()
+
+	mc.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
+	mc.EXPECT().Clear().Times(1)
+	da := setupTestDataAccess(mc)
+
+	_ = da.Begin()
+	da.Put([]byte(defaultKey), defaultValue)
+	da.Abort()
+
+	dump := da.DumpTx()
+	assert.Equal(t, []byte{}, dump, "batch not reset")
+}
+
+func TestAbortResetCache(t *testing.T) {
+	mc, ctl := newMockCache(t)
+	defer ctl.Finish()
+
+	mc.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
+	mc.EXPECT().Clear().Times(1)
+	da := setupTestDataAccess(mc)
+
+	_ = da.Begin()
+	da.Put([]byte(defaultKey), defaultValue)
+	da.Abort()
 }
