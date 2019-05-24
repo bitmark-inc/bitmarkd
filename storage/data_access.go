@@ -25,18 +25,18 @@ type DataAccess interface {
 
 type DataAccessImpl struct {
 	sync.Mutex
-	inUse       bool
-	db          *leveldb.DB
-	transaction *leveldb.Batch
-	cache       Cache
+	inUse bool
+	db    *leveldb.DB
+	batch *leveldb.Batch
+	cache Cache
 }
 
 func newDA(db *leveldb.DB, trx *leveldb.Batch, cache Cache) DataAccess {
 	return &DataAccessImpl{
-		inUse:       false,
-		db:          db,
-		transaction: trx,
-		cache:       cache,
+		inUse: false,
+		db:    db,
+		batch: trx,
+		cache: cache,
 	}
 }
 
@@ -45,7 +45,7 @@ func (d *DataAccessImpl) Begin() error {
 	defer d.Unlock()
 
 	if d.inUse {
-		return fmt.Errorf("Error, transaction already in use")
+		return fmt.Errorf("Error, batch already in use")
 	}
 
 	d.inUse = true
@@ -54,16 +54,16 @@ func (d *DataAccessImpl) Begin() error {
 
 func (d *DataAccessImpl) Put(key []byte, value []byte) {
 	d.cache.Set(dbPut, string(key), value)
-	d.transaction.Put(key, value)
+	d.batch.Put(key, value)
 }
 
 func (d *DataAccessImpl) Delete(key []byte) {
 	d.cache.Set(dbDelete, string(key), []byte{})
-	d.transaction.Delete(key)
+	d.batch.Delete(key)
 }
 
 func (d *DataAccessImpl) Commit() error {
-	err := d.db.Write(d.transaction, nil)
+	err := d.db.Write(d.batch, nil)
 	d.Abort()
 	if nil != err {
 		return err
@@ -72,7 +72,7 @@ func (d *DataAccessImpl) Commit() error {
 }
 
 func (d *DataAccessImpl) DumpTx() []byte {
-	return d.transaction.Dump()
+	return d.batch.Dump()
 }
 
 func (d *DataAccessImpl) Get(key []byte) ([]byte, error) {
@@ -107,7 +107,7 @@ func (d *DataAccessImpl) Abort() {
 	d.Lock()
 	defer d.Unlock()
 
-	d.transaction.Reset()
+	d.batch.Reset()
 	d.cache.Clear()
 	d.inUse = false
 }
