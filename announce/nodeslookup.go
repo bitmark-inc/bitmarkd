@@ -83,26 +83,43 @@ func getIntervalTime(domain string, log *logger.L) time.Duration {
 		return t
 	}
 
-	if 0 == len(r.Ns) {
-		log.Errorf("dns response has no authority section")
+	if 0 == len(r.Ns) && 0 == len(r.Answer) && 0 == len(r.Extra) {
+		log.Errorf("no section found")
 		return t
 	}
 
-	for _, ns := range r.Ns {
-		if a, ok := ns.(*dns.SOA); ok {
-			ttl := a.Hdr.Ttl
-			if 0 < ttl {
-				log.Infof("TTL record: %d", ttl)
-				ttlSec := time.Duration(ttl) * time.Second
-				if timeInterval > ttlSec {
-					t = ttlSec
-				}
+	sections := [][]dns.RR{r.Answer, r.Ns, r.Extra}
+
+loop:
+	for _, s := range sections {
+		ttl := getTtl(s)
+		if 0 < ttl {
+			log.Infof("got ttl record: %d", ttl)
+			ttlSec := time.Duration(ttl) * time.Second
+			if timeInterval > ttlSec {
+				t = ttlSec
+				break loop
 			}
 		}
 	}
 
 	log.Infof("time to re-fetching node domain: %v", t)
 	return t
+}
+
+// get ttl record from a section
+func getTtl(rrs []dns.RR) uint32 {
+	if 0 == len(rrs) {
+		return 0
+	}
+	for _, rr := range rrs {
+		if soa, ok := rr.(*dns.SOA); ok {
+			return soa.Hdr.Ttl
+		} else {
+			return rr.Header().Ttl
+		}
+	}
+	return 0
 }
 
 // lookup node domain for the peering
