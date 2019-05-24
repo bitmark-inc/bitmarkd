@@ -41,23 +41,26 @@ func teardownTestLogger() {
 	removeFiles()
 }
 
-func newTestMockDataAccess(t *testing.T) *mocks.MockDataAccess {
+func newTestMockDataAccess(t *testing.T) (*mocks.MockDataAccess, *gomock.Controller) {
 	ctl := gomock.NewController(t)
-	defer ctl.Finish()
 
-	return mocks.NewMockDataAccess(ctl)
+	return mocks.NewMockDataAccess(ctl), ctl
 }
 
-func setupTestTransaction(t *testing.T) (Transaction, *mocks.MockDataAccess) {
-	mock := newTestMockDataAccess(t)
+func setupTestTransaction(t *testing.T) (Transaction, *mocks.MockDataAccess, *gomock.Controller) {
+	mock, ctl := newTestMockDataAccess(t)
 
 	trx := newTransaction([]DataAccess{mock})
-	return trx, mock
+	return trx, mock, ctl
 }
 
 func TestBegin(t *testing.T) {
-	tx, mock := setupTestTransaction(t)
+	tx, mock, ctl := setupTestTransaction(t)
+	defer ctl.Finish()
+
 	mock.EXPECT().Begin().Return(nil).Times(1)
+	mock.EXPECT().InUse().Return(false).Times(1)
+	mock.EXPECT().InUse().Return(true).Times(1)
 
 	err := tx.Begin()
 	assert.Equal(t, nil, err, "first time Begin should not return any error")
@@ -109,8 +112,11 @@ func newTestHandleMock() *testHandleMock {
 }
 
 func TestPut(t *testing.T) {
-	tx, mockDA := setupTestTransaction(t)
+	tx, mockDA, ctl := setupTestTransaction(t)
+	defer ctl.Finish()
+
 	mockDA.EXPECT().Begin().Times(1)
+	mockDA.EXPECT().InUse().Return(false).Times(1)
 	myMock := newTestHandleMock()
 
 	_ = tx.Begin()
@@ -121,8 +127,11 @@ func TestPut(t *testing.T) {
 }
 
 func TestPutN(t *testing.T) {
-	tx, mockDA := setupTestTransaction(t)
+	tx, mockDA, ctl := setupTestTransaction(t)
+	defer ctl.Finish()
+
 	mockDA.EXPECT().Begin().Times(1)
+	mockDA.EXPECT().InUse().Return(false).Times(1)
 	myMock := newTestHandleMock()
 
 	_ = tx.Begin()
@@ -133,8 +142,11 @@ func TestPutN(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	tx, mockDA := setupTestTransaction(t)
+	tx, mockDA, ctl := setupTestTransaction(t)
+	defer ctl.Finish()
+
 	mockDA.EXPECT().Begin().Times(1)
+	mockDA.EXPECT().InUse().Return(false).Times(1)
 	myMock := newTestHandleMock()
 
 	_ = tx.Begin()
@@ -145,8 +157,11 @@ func TestDelete(t *testing.T) {
 }
 
 func TestGet(t *testing.T) {
-	tx, mockDA := setupTestTransaction(t)
+	tx, mockDA, ctl := setupTestTransaction(t)
+	defer ctl.Finish()
+
 	mockDA.EXPECT().Begin().Times(1)
+	mockDA.EXPECT().InUse().Return(false).Times(1)
 	myMock := newTestHandleMock()
 
 	_ = tx.Begin()
@@ -157,8 +172,11 @@ func TestGet(t *testing.T) {
 }
 
 func TestGetN(t *testing.T) {
-	tx, mockDA := setupTestTransaction(t)
+	tx, mockDA, ctl := setupTestTransaction(t)
+	defer ctl.Finish()
+
 	mockDA.EXPECT().Begin().Times(1)
+	mockDA.EXPECT().InUse().Return(false).Times(1)
 	myMock := newTestHandleMock()
 
 	_ = tx.Begin()
@@ -172,8 +190,11 @@ func TestGetNB(t *testing.T) {
 	setupTestLogger()
 	defer teardownTestLogger()
 
-	tx, mockDA := setupTestTransaction(t)
+	tx, mockDA, ctl := setupTestTransaction(t)
+	defer ctl.Finish()
+
 	mockDA.EXPECT().Begin().Times(1)
+	mockDA.EXPECT().InUse().Return(false).Times(1)
 	myMock := newTestHandleMock()
 
 	_ = tx.Begin()
@@ -184,9 +205,12 @@ func TestGetNB(t *testing.T) {
 }
 
 func TestCommit(t *testing.T) {
-	tx, mock := setupTestTransaction(t)
+	tx, mock, ctl := setupTestTransaction(t)
+	defer ctl.Finish()
+
 	mock.EXPECT().Commit().Return(nil).Times(1)
 	mock.EXPECT().Begin().Times(2)
+	mock.EXPECT().InUse().Return(false).Times(2)
 
 	_ = tx.Begin()
 	_ = tx.Commit()
@@ -202,4 +226,30 @@ func TestIsNilPtr(t *testing.T) {
 	str := struct{}{}
 	err = isNilPtr(&str)
 	assert.Equal(t, nil, err, "cannot check non-nil pointer")
+}
+
+func TestAbortCallsDataAccessAbort(t *testing.T) {
+	tx, mock, ctl := setupTestTransaction(t)
+	defer ctl.Finish()
+
+	mock.EXPECT().Begin().Times(1)
+	mock.EXPECT().InUse().Return(false).Times(1)
+	mock.EXPECT().Abort().Times(1)
+
+	_ = tx.Begin()
+	tx.Abort()
+}
+
+func TestTxInUse(t *testing.T) {
+	tx, mock, ctl := setupTestTransaction(t)
+	defer ctl.Finish()
+
+	mock.EXPECT().InUse().Return(false).Times(1)
+	mock.EXPECT().InUse().Return(true).Times(1)
+
+	inUse := tx.InUse()
+	assert.Equal(t, false, inUse, "inUse incorrect")
+
+	inUse = tx.InUse()
+	assert.Equal(t, true, inUse, "inUse incorrect")
 }
