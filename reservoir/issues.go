@@ -310,7 +310,6 @@ func TryProof(payId pay.PayId, clientNonce []byte) TrackingStatus {
 
 		globalData.log.Debugf("TryProof: payNonce[%d]: %x", i, payNonce)
 
-		i += 1 // ***** FIX THIS: debug
 		h.Reset()
 		h.Write(payId[:])
 		h.Write(payNonce[:])

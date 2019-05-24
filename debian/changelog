@@ -1,3 +1,9 @@
+bitmarkd (0.10.7-1) unstable; urgency=medium
+
+  * remove extra increment that invalidates 50% of proofs
+
+ -- Christopher Hall <hsw@bitmark.com>  Fri, 24 May 2019 06:47:14 +0000
+
 bitmarkd (0.10.6-1) unstable; urgency=medium
 
   * handle both Litecoin P2SH Base58 address encodings
