@@ -96,6 +96,10 @@ func (d *DataAccessImpl) Iterator(searchRange *ldb_util.Range) iterator.Iterator
 }
 
 func (d *DataAccessImpl) Has(key []byte) (bool, error) {
+	_, found := d.getFromCache(key)
+	if found {
+		return true, nil
+	}
 	return d.db.Has(key, nil)
 }
 

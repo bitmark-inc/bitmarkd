@@ -273,3 +273,18 @@ func TestAbortResetCache(t *testing.T) {
 	da.Put([]byte(defaultKey), defaultValue)
 	da.Abort()
 }
+
+func TestHasCached(t *testing.T) {
+	mc, ctl := newMockCache(t)
+	defer ctl.Finish()
+
+	mc.EXPECT().Set(dbPut, defaultKey, defaultValue).Times(1)
+	mc.EXPECT().Get(defaultKey).Return(defaultValue, true).Times(1)
+	da := setupTestDataAccess(mc)
+
+	_ = da.Begin()
+	da.Put([]byte(defaultKey), defaultValue)
+	has, err := da.Has([]byte(defaultKey))
+	assert.Equal(t, true, has, "cannot cached cached key")
+	assert.Equal(t, nil, err, "has with error")
+}
