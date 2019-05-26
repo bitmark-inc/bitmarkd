@@ -298,9 +298,5 @@ func Begin() (Transaction, error) {
 }
 
 func Commit(trx Transaction) error {
-	err := trx.Commit()
-	if nil != err {
-		return err
-	}
-	return nil
+	return trx.Commit()
 }
