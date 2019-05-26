@@ -78,23 +78,21 @@ type testHandleMock struct {
 	GetCalled    bool
 }
 
-func (m *testHandleMock) Put(key []byte, value []byte)  {}
-func (m *testHandleMock) put(key []byte, value []byte)  { m.PutCalled = true }
-func (m *testHandleMock) PutN(key []byte, value uint64) {}
-func (m *testHandleMock) putN(key []byte, value uint64) { m.PutNCalled = true }
-func (m *testHandleMock) Delete(key []byte)             {}
-func (m *testHandleMock) remove(key []byte)             { m.RemoveCalled = true }
+func (m *testHandleMock) Put(key []byte, value []byte, dummy []byte) {}
+func (m *testHandleMock) put(key []byte, value []byte, dummy []byte) { m.PutCalled = true }
+func (m *testHandleMock) PutN(key []byte, value uint64)              {}
+func (m *testHandleMock) putN(key []byte, value uint64)              { m.PutNCalled = true }
+func (m *testHandleMock) Delete(key []byte)                          {}
+func (m *testHandleMock) remove(key []byte)                          { m.RemoveCalled = true }
 func (m *testHandleMock) Get(key []byte) []byte {
 	m.GetCalled = true
 	return []byte{}
 }
-func (m *testHandleMock) GetN(key []byte) (uint64, bool) { return uint64(0), true }
-func (m *testHandleMock) getN(key []byte) (uint64, bool) {
+func (m *testHandleMock) GetN(key []byte) (uint64, bool) {
 	m.GetCalled = true
 	return uint64(0), true
 }
-func (m *testHandleMock) GetNB(key []byte) (uint64, []byte) { return uint64(0), []byte{} }
-func (m *testHandleMock) getNB(key []byte) (uint64, []byte) {
+func (m *testHandleMock) GetNB(key []byte) (uint64, []byte) {
 	m.GetCalled = true
 	return uint64(0), []byte{}
 }
@@ -120,7 +118,7 @@ func TestPut(t *testing.T) {
 	myMock := newTestHandleMock()
 
 	_ = tx.Begin()
-	err := tx.Put(myMock, []byte{}, []byte{})
+	err := tx.Put(myMock, []byte{}, []byte{}, []byte{})
 
 	assert.Equal(t, true, myMock.PutCalled, "internal method put is not called")
 	assert.Equal(t, nil, err, err)

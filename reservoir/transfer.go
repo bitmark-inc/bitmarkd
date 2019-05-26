@@ -260,7 +260,7 @@ func verifyTransfer(transfer transactionrecord.BitmarkTransfer) (*verifiedTransf
 	}
 
 	// get ownership data
-	ownerData, err := ownership.GetOwnerData(link)
+	ownerData, err := ownership.GetOwnerData(nil, link)
 	if nil != err {
 		globalData.log.Errorf("owner data error: %s", err)
 		return nil, false, err //fault.ErrDoubleTransferAttempt

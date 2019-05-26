@@ -159,7 +159,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 			case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
 				tr := tx.(transactionrecord.BitmarkTransfer)
 				link := tr.GetLink()
-				_, linkOwner := ownership.OwnerOf(link)
+				_, linkOwner := ownership.OwnerOf(nil, link)
 				if nil == linkOwner {
 					return fault.ErrLinkToInvalidOrUnconfirmedTransaction
 				}
@@ -172,7 +172,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 					return fault.ErrDoubleTransferAttempt
 				}
 
-				ownerData, err := ownership.GetOwnerData(link)
+				ownerData, err := ownership.GetOwnerData(nil, link)
 				if nil != err {
 					return fault.ErrDoubleTransferAttempt
 				}
@@ -191,7 +191,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 
 			case *transactionrecord.BlockOwnerTransfer:
 				link := tx.Link
-				_, linkOwner := ownership.OwnerOf(link)
+				_, linkOwner := ownership.OwnerOf(nil, link)
 				_, err = tx.Pack(linkOwner)
 				if nil != err {
 					return err
@@ -216,7 +216,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 
 			case *transactionrecord.BitmarkShare:
 				link := tx.Link
-				_, linkOwner := ownership.OwnerOf(link)
+				_, linkOwner := ownership.OwnerOf(nil, link)
 				if nil == linkOwner {
 					return fault.ErrLinkToInvalidOrUnconfirmedTransaction
 				}
@@ -225,7 +225,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 					return err
 				}
 
-				ownerData, err := ownership.GetOwnerData(link)
+				ownerData, err := ownership.GetOwnerData(nil, link)
 				if nil != err {
 					return fault.ErrDoubleTransferAttempt
 				}
@@ -371,7 +371,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 			issues := storage.Pool.Transactions
 			if !issues.Has(item.txId[:]) {
 				issues.Put(item.txId[:], thisBlockNumberKey, item.packed)
-				ownership.CreateAsset(item.txId, header.Number, tx.AssetId, tx.Owner)
+				ownership.CreateAsset(nil, item.txId, header.Number, tx.AssetId, tx.Owner)
 			}
 
 		case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
@@ -387,7 +387,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 
 			txrs := storage.Pool.Transactions
 			txrs.Put(item.txId[:], thisBlockNumberKey, item.packed)
-			ownership.Transfer(link, item.txId, header.Number, item.linkOwner, tr.GetOwner())
+			ownership.Transfer(nil, link, item.txId, header.Number, item.linkOwner, tr.GetOwner())
 
 		case *transactionrecord.BlockFoundation:
 			// already processed
@@ -416,7 +416,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 			storage.Pool.BlockOwnerPayment.Put(item.blockNumberKey, pkPayments)
 			storage.Pool.BlockOwnerTxIndex.Put(item.txId[:], item.blockNumberKey)
 			storage.Pool.BlockOwnerTxIndex.Delete(link[:])
-			ownership.Transfer(link, item.txId, header.Number, item.linkOwner, tx.Owner)
+			ownership.Transfer(nil, link, item.txId, header.Number, item.linkOwner, tx.Owner)
 
 		case *transactionrecord.BitmarkShare:
 
@@ -431,7 +431,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 
 			txrs := storage.Pool.Transactions
 			txrs.Put(item.txId[:], thisBlockNumberKey, item.packed)
-			ownership.Share(link, item.txId, header.Number, item.linkOwner, tx.Quantity)
+			ownership.Share(nil, link, item.txId, header.Number, item.linkOwner, tx.Quantity)
 
 		case *transactionrecord.ShareGrant:
 
@@ -533,7 +533,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 	// current owner: either foundation or block owner transfer: tx id → owned block
 	storage.Pool.BlockOwnerTxIndex.Put(foundationTxId[:], thisBlockNumberKey)
 
-	ownership.CreateBlock(foundationTxId, header.Number, blockOwner)
+	ownership.CreateBlock(nil, foundationTxId, header.Number, blockOwner)
 
 	expectedBlockNumber := height + 1
 	if expectedBlockNumber != header.Number {

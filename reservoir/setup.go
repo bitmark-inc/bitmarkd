@@ -437,7 +437,7 @@ func rescanItem(item *transactionData) {
 	case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
 		tr := tx.(transactionrecord.BitmarkTransfer)
 		link := tr.GetLink()
-		_, linkOwner := ownership.OwnerOf(link)
+		_, linkOwner := ownership.OwnerOf(nil, link)
 		if nil == linkOwner || !ownership.CurrentlyOwns(linkOwner, link) {
 			internalDeleteByTxId(txId)
 		}
@@ -448,14 +448,14 @@ func rescanItem(item *transactionData) {
 
 	case *transactionrecord.BlockOwnerTransfer:
 		link := tx.Link
-		_, linkOwner := ownership.OwnerOf(link)
+		_, linkOwner := ownership.OwnerOf(nil, link)
 		if nil == linkOwner || !ownership.CurrentlyOwns(linkOwner, link) {
 			internalDeleteByTxId(txId)
 		}
 
 	case *transactionrecord.BitmarkShare:
 		link := tx.Link
-		_, linkOwner := ownership.OwnerOf(link)
+		_, linkOwner := ownership.OwnerOf(nil, link)
 		if nil == linkOwner || !ownership.CurrentlyOwns(linkOwner, link) {
 			internalDeleteByTxId(txId)
 		}
