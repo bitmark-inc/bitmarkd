@@ -288,3 +288,19 @@ func TestHasCached(t *testing.T) {
 	assert.Equal(t, true, has, "cannot cached cached key")
 	assert.Equal(t, nil, err, "has with error")
 }
+
+func TestHasNotCached(t *testing.T) {
+	mc, ctl := newMockCache(t)
+	defer ctl.Finish()
+
+	mc.EXPECT().Get(gomock.Any()).Return(defaultValue, false).Times(1)
+	mc.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
+	mc.EXPECT().Clear().Times(1)
+	da := setupTestDataAccess(mc)
+
+	_ = da.Begin()
+	da.Put([]byte(defaultKey), defaultValue)
+	da.Commit()
+	has, _ := da.Has([]byte(defaultKey))
+	assert.Equal(t, true, has, "didn't check db")
+}
