@@ -46,6 +46,7 @@ var versionKey = []byte{0x00, 'V', 'E', 'R', 'S', 'I', 'O', 'N'}
 const (
 	currentBlockDBVersion = 0x301
 	currentIndexDBVersion = 0x200
+	ErrEmptyTransaction   = "Empty Transaction"
 )
 
 // holds the database handle
@@ -252,7 +253,6 @@ func ReindexDone() error {
 //   databse handle
 //   version number
 func getDB(name string, readOnly bool) (*leveldb.DB, int, error) {
-
 	opt := &ldb_opt.Options{
 		ErrorIfExist:   false,
 		ErrorIfMissing: readOnly,
@@ -282,21 +282,16 @@ func getDB(name string, readOnly bool) (*leveldb.DB, int, error) {
 }
 
 func putVersion(db *leveldb.DB, version int) error {
-
 	currentVersion := make([]byte, 4)
 	binary.BigEndian.PutUint32(currentVersion, uint32(version))
 
 	return db.Put(versionKey, currentVersion, nil)
 }
 
-func Begin() (Transaction, error) {
+func NewTransaction() (Transaction, error) {
 	err := poolData.trx.Begin()
 	if nil != err {
 		return nil, err
 	}
 	return poolData.trx, nil
-}
-
-func Commit(trx Transaction) error {
-	return trx.Commit()
 }
