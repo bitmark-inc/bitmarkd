@@ -104,9 +104,14 @@ type OwnerData interface {
 type PackedOwnerData []byte
 
 // GetOwnerData - fetch and unpack owner data
-func GetOwnerData(txId merkle.Digest) (OwnerData, error) {
+func GetOwnerData(trx storage.Transaction, txId merkle.Digest) (OwnerData, error) {
+	var packed []byte
+	if nil == trx {
+		packed = storage.Pool.OwnerData.Get(txId[:])
+	} else {
+		packed, _ = trx.Get(storage.Pool.OwnerData, txId[:])
+	}
 
-	packed := storage.Pool.OwnerData.Get(txId[:])
 	if nil == packed {
 		return nil, fault.ErrMissingOwnerData
 	}
@@ -115,9 +120,14 @@ func GetOwnerData(txId merkle.Digest) (OwnerData, error) {
 }
 
 // GetOwnerDataB - fetch and unpack owner data
-func GetOwnerDataB(txId []byte) (OwnerData, error) {
+func GetOwnerDataB(trx storage.Transaction, txId []byte) (OwnerData, error) {
+	var packed []byte
+	if nil == trx {
+		packed = storage.Pool.OwnerData.Get(txId)
+	} else {
+		packed, _ = trx.Get(storage.Pool.OwnerData, txId)
+	}
 
-	packed := storage.Pool.OwnerData.Get(txId)
 	if nil == packed {
 		return nil, fault.ErrMissingOwnerData
 	}

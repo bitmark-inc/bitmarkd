@@ -19,7 +19,7 @@ type Transaction interface {
 	GetN(Handle, []byte) (uint64, bool, error)
 	GetNB(Handle, []byte) (uint64, []byte, error)
 	InUse() bool
-	Put(Handle, []byte, []byte) error
+	Put(Handle, []byte, []byte, []byte) error
 	PutN(Handle, []byte, uint64) error
 }
 
@@ -62,12 +62,12 @@ func (t *TransactionImpl) Begin() error {
 	return nil
 }
 
-func (t *TransactionImpl) Put(h Handle, key []byte, value []byte) error {
+func (t *TransactionImpl) Put(h Handle, key []byte, value []byte, dummy []byte) error {
 	if nil == h {
 		return fmt.Errorf(ErrHandleNil)
 	}
 
-	h.put(key, value)
+	h.put(key, value, []byte{})
 	return nil
 }
 
@@ -116,7 +116,7 @@ func (t *TransactionImpl) GetN(h Handle, key []byte) (uint64, bool, error) {
 		return uint64(0), false, err
 	}
 
-	num, found := h.getN(key)
+	num, found := h.GetN(key)
 	return num, found, nil
 }
 
@@ -126,7 +126,7 @@ func (t *TransactionImpl) GetNB(h Handle, key []byte) (uint64, []byte, error) {
 		return uint64(0), []byte{}, err
 	}
 
-	num, buffer := h.getNB(key)
+	num, buffer := h.GetNB(key)
 	return num, buffer, nil
 }
 

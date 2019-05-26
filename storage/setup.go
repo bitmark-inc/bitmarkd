@@ -288,7 +288,7 @@ func putVersion(db *leveldb.DB, version int) error {
 	return db.Put(versionKey, currentVersion, nil)
 }
 
-func NewTransaction() (Transaction, error) {
+func NewDBTransaction() (Transaction, error) {
 	err := poolData.trx.Begin()
 	if nil != err {
 		return nil, err

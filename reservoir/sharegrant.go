@@ -209,7 +209,7 @@ func verifyGrant(grant *transactionrecord.ShareGrant) (*verifiedGrantInfo, bool,
 		return nil, false, fault.ErrDoubleTransferAttempt
 	}
 
-	ownerData, err := ownership.GetOwnerDataB(shareTxId)
+	ownerData, err := ownership.GetOwnerDataB(nil, shareTxId)
 	if nil != err {
 		return nil, false, fault.ErrDoubleTransferAttempt
 	}

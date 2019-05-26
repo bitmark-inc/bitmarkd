@@ -215,7 +215,7 @@ func verifySwap(swap *transactionrecord.ShareSwap) (*verifiedSwapInfo, bool, err
 	if nil == shareTxId {
 		return nil, false, fault.ErrDoubleTransferAttempt
 	}
-	ownerData, err := ownership.GetOwnerDataB(shareTxId)
+	ownerData, err := ownership.GetOwnerDataB(nil, shareTxId)
 	if nil != err {
 		return nil, false, fault.ErrDoubleTransferAttempt
 	}

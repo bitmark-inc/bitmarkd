@@ -16,8 +16,21 @@ type PoolNB struct {
 }
 
 // Put - store a key/value bytes pair to the database
+// TODO: Aaron remove
 func (p *PoolNB) Put(key []byte, nValue []byte, bValue []byte) {
+	if 8 != len(nValue) {
+		logger.Panic("pool.PutNB 1st parameter must be 8 bytes")
+		return
+	}
 
+	data := make([]byte, len(nValue)+len(bValue))
+	copy(data, nValue)
+	copy(data[len(nValue):], bValue)
+	p.pool.Put(key, data)
+}
+
+// Put - store a key/value bytes pair to the database
+func (p *PoolNB) put(key []byte, nValue []byte, bValue []byte) {
 	if 8 != len(nValue) {
 		logger.Panic("pool.PutNB 1st parameter must be 8 bytes")
 		return
@@ -30,8 +43,28 @@ func (p *PoolNB) Put(key []byte, nValue []byte, bValue []byte) {
 }
 
 // Delete - remove a key from the database
+// TODO: Aaron delete
 func (p *PoolNB) Delete(key []byte) {
 	p.pool.Delete(key)
+}
+
+// Delete - remove a key from the database
+func (p *PoolNB) remove(key []byte) {
+	p.pool.remove(key)
+}
+
+func (p *PoolNB) putN(key []byte, value uint64) {
+	return
+}
+
+// for interface
+func (p *PoolNB) Get(key []byte) []byte {
+	return []byte{}
+}
+
+// for interface only
+func (p *PoolNB) GetN(key []byte) (uint64, bool) {
+	return uint64(0), false
 }
 
 // // GetN - read a record and decode first 8 bytes as big endian uint64
@@ -77,6 +110,6 @@ func (p *PoolNB) Begin() {
 	p.pool.Begin()
 }
 
-func (p *PoolNB) Commit() {
-	p.pool.Commit()
+func (p *PoolNB) Commit() error {
+	return p.pool.Commit()
 }
