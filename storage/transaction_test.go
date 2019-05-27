@@ -10,10 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const (
-	testingDirName = "testing"
-)
-
 func setupTestLogger() {
 	removeFiles()
 	_ = os.Mkdir(testingDirName, 0700)
@@ -31,10 +27,6 @@ func setupTestLogger() {
 
 	// start logging
 	_ = logger.Initialise(logging)
-}
-
-func removeFiles() {
-	os.RemoveAll(testingDirName)
 }
 
 func teardownTestLogger() {
