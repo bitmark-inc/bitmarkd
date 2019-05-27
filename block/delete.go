@@ -332,6 +332,7 @@ outer_loop:
 
 			data = data[n:]
 			if 0 == len(data) {
+				trx.Commit()
 				break inner_loop
 			}
 
@@ -373,6 +374,7 @@ outer_loop:
 		if nil == packedBlock {
 			// all blocks deleted
 			blockheader.SetGenesis()
+			trx.Commit()
 			break outer_loop
 		}
 
