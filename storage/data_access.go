@@ -64,7 +64,6 @@ func (d *DataAccessImpl) Delete(key []byte) {
 
 func (d *DataAccessImpl) Commit() error {
 	err := d.db.Write(d.batch, nil)
-	d.Abort()
 	if nil != err {
 		return err
 	}
