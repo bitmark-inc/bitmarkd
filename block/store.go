@@ -343,8 +343,10 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 	}
 
 	// start db transaction by block & index db
-	storage.Pool.Blocks.Begin()
-	storage.Pool.Transactions.Begin()
+	trx, err := storage.NewDBTransaction()
+	if nil != err {
+		return err
+	}
 
 	// process the transactions into the database
 	// but skip base/block-issue as these are already processed
@@ -356,22 +358,29 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 
 		case *transactionrecord.OldBaseData:
 			// already processed
+			trx.Abort()
 			logger.Panicf("should not occur: %+v", tx)
 
 		case *transactionrecord.AssetData:
 			assetId := tx.AssetId()
 			asset.Delete(assetId) // delete from pending cache
 			assets := storage.Pool.Assets
-			if !assets.Has(assetId[:]) {
-				assets.Put(assetId[:], thisBlockNumberKey, item.packed)
+			if !trx.Has(assets, assetId[:]) {
+				trx.Put(assets, assetId[:], thisBlockNumberKey, item.packed)
 			}
 
 		case *transactionrecord.BitmarkIssue:
 			reservoir.DeleteByTxId(item.txId) // delete from pending cache
 			issues := storage.Pool.Transactions
-			if !issues.Has(item.txId[:]) {
-				issues.Put(item.txId[:], thisBlockNumberKey, item.packed)
-				ownership.CreateAsset(nil, item.txId, header.Number, tx.AssetId, tx.Owner)
+			if !trx.Has(issues, item.txId[:]) {
+				trx.Put(issues, item.txId[:], thisBlockNumberKey, item.packed)
+				ownership.CreateAsset(
+					trx,
+					item.txId,
+					header.Number,
+					tx.AssetId,
+					tx.Owner,
+				)
 			}
 
 		case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
@@ -386,10 +395,17 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 			reservoir.DeleteByLink(link)
 
 			txrs := storage.Pool.Transactions
-			txrs.Put(item.txId[:], thisBlockNumberKey, item.packed)
-			ownership.Transfer(nil, link, item.txId, header.Number, item.linkOwner, tr.GetOwner())
+			trx.Put(txrs, item.txId[:], thisBlockNumberKey, item.packed)
+			ownership.Transfer(trx,
+				link,
+				item.txId,
+				header.Number,
+				item.linkOwner,
+				tr.GetOwner(),
+			)
 
 		case *transactionrecord.BlockFoundation:
+			trx.Abort()
 			// already processed
 			logger.Panicf("should not occur: %+v", tx)
 
@@ -407,16 +423,27 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 			// not to be confused with this block's packed payments
 			pkPayments, err := tx.Payments.Pack(mode.IsTesting())
 			if nil != err {
+				trx.Abort()
 				// packing was checked earlier, an error here is memory corruption
 				logger.Panicf("pack, should not error: %s", err)
 			}
 
 			txrs := storage.Pool.Transactions
-			txrs.Put(item.txId[:], thisBlockNumberKey, item.packed)
-			storage.Pool.BlockOwnerPayment.Put(item.blockNumberKey, pkPayments)
-			storage.Pool.BlockOwnerTxIndex.Put(item.txId[:], item.blockNumberKey)
-			storage.Pool.BlockOwnerTxIndex.Delete(link[:])
-			ownership.Transfer(nil, link, item.txId, header.Number, item.linkOwner, tx.Owner)
+			trx.Put(txrs, item.txId[:], thisBlockNumberKey, item.packed)
+			trx.Put(
+				storage.Pool.BlockOwnerPayment,
+				item.blockNumberKey,
+				pkPayments,
+				[]byte{},
+			)
+			trx.Put(
+				storage.Pool.BlockOwnerTxIndex,
+				item.txId[:],
+				item.blockNumberKey,
+				[]byte{},
+			)
+			trx.Delete(storage.Pool.BlockOwnerTxIndex, link[:])
+			ownership.Transfer(trx, link, item.txId, header.Number, item.linkOwner, tx.Owner)
 
 		case *transactionrecord.BitmarkShare:
 
@@ -430,8 +457,8 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 			reservoir.DeleteByLink(link)
 
 			txrs := storage.Pool.Transactions
-			txrs.Put(item.txId[:], thisBlockNumberKey, item.packed)
-			ownership.Share(nil, link, item.txId, header.Number, item.linkOwner, tx.Quantity)
+			trx.Put(txrs, item.txId[:], thisBlockNumberKey, item.packed)
+			ownership.Share(trx, link, item.txId, header.Number, item.linkOwner, tx.Quantity)
 
 		case *transactionrecord.ShareGrant:
 
@@ -440,14 +467,15 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 			oKey := append(tx.Owner.Bytes(), tx.ShareId[:]...)
 			rKey := append(tx.Recipient.Bytes(), tx.ShareId[:]...)
 
-			oAccountBalance, ok := storage.Pool.ShareQuantity.GetN(oKey)
+			oAccountBalance, ok, _ := trx.GetN(storage.Pool.ShareQuantity, oKey)
 			if !ok {
+				trx.Abort()
 				// check was earlier
 				logger.Panic("read owner balance should not fail")
 			}
 
 			// if record does not exists the balance is zero
-			rAccountBalance, _ := storage.Pool.ShareQuantity.GetN(rKey)
+			rAccountBalance, _, _ := trx.GetN(storage.Pool.ShareQuantity, rKey)
 
 			// owner, share → recipient
 			oAccountBalance -= tx.Quantity
@@ -457,13 +485,18 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 
 			// update balances
 			if 0 == oAccountBalance {
-				share.Delete(oKey)
+				trx.Delete(share, oKey)
 			} else {
-				share.PutN(oKey, oAccountBalance)
+				trx.PutN(share, oKey, oAccountBalance)
 			}
-			share.PutN(rKey, rAccountBalance)
+			trx.PutN(share, rKey, rAccountBalance)
 
-			storage.Pool.Transactions.Put(item.txId[:], thisBlockNumberKey, item.packed)
+			trx.Put(
+				storage.Pool.Transactions,
+				item.txId[:],
+				thisBlockNumberKey,
+				item.packed,
+			)
 
 		case *transactionrecord.ShareSwap:
 
@@ -476,19 +509,27 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 
 			ownerOneShareOneAccountBalance, ok := storage.Pool.ShareQuantity.GetN(ownerOneShareOneKey)
 			if !ok {
+				trx.Abort()
 				// check was earlier
 				logger.Panic("read owner one share one balance should not fail")
 			}
 
 			ownerTwoShareTwoAccountBalance, ok := storage.Pool.ShareQuantity.GetN(ownerTwoShareTwoKey)
 			if !ok {
+				trx.Abort()
 				// check was earlier
 				logger.Panic("read owner two share two balance should not fail")
 			}
 
 			// if record does not exist the balance is zero
-			ownerOneShareTwoAccountBalance, ok := storage.Pool.ShareQuantity.GetN(ownerOneShareTwoKey)
-			ownerTwoShareOneAccountBalance, ok := storage.Pool.ShareQuantity.GetN(ownerTwoShareOneKey)
+			ownerOneShareTwoAccountBalance, ok, _ := trx.GetN(
+				storage.Pool.ShareQuantity,
+				ownerOneShareTwoKey,
+			)
+			ownerTwoShareOneAccountBalance, ok, _ := trx.GetN(
+				storage.Pool.ShareQuantity,
+				ownerTwoShareOneKey,
+			)
 
 			// owner 1, share 1 → owner 2
 			ownerOneShareOneAccountBalance -= tx.QuantityOne
@@ -501,42 +542,64 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 			share := storage.Pool.ShareQuantity
 			// update database share one
 			if 0 == ownerOneShareOneAccountBalance {
-				share.Delete(ownerOneShareOneKey)
+				trx.Delete(share, ownerOneShareOneKey)
 			} else {
-				share.PutN(ownerOneShareOneKey, ownerOneShareOneAccountBalance)
+				trx.PutN(share, ownerOneShareOneKey, ownerOneShareOneAccountBalance)
 			}
-			share.PutN(ownerTwoShareOneKey, ownerTwoShareOneAccountBalance)
+			trx.PutN(share, ownerTwoShareOneKey, ownerTwoShareOneAccountBalance)
 
 			// update database share two
 			if 0 == ownerTwoShareTwoAccountBalance {
-				share.Delete(ownerTwoShareTwoKey)
+				trx.Delete(share, ownerTwoShareTwoKey)
 			} else {
-				share.PutN(ownerTwoShareTwoKey, ownerTwoShareTwoAccountBalance)
+				trx.PutN(share, ownerTwoShareTwoKey, ownerTwoShareTwoAccountBalance)
 			}
-			share.PutN(ownerOneShareTwoKey, ownerOneShareTwoAccountBalance)
+			trx.PutN(share, ownerOneShareTwoKey, ownerOneShareTwoAccountBalance)
 
-			storage.Pool.Transactions.Put(item.txId[:], thisBlockNumberKey, item.packed)
+			trx.Put(
+				storage.Pool.Transactions,
+				item.txId[:],
+				thisBlockNumberKey,
+				item.packed,
+			)
 
 		default:
+			trx.Abort()
 			globalData.log.Criticalf("unhandled transaction: %v", tx)
 			logger.Panicf("unhandled transaction: %v", tx)
 		}
 	}
 
 	// payment data
-	storage.Pool.BlockOwnerPayment.Put(thisBlockNumberKey, packedPayments)
+	trx.Put(
+		storage.Pool.BlockOwnerPayment,
+		thisBlockNumberKey,
+		packedPayments,
+		[]byte{},
+	)
 
 	// create the foundation record
 	foundationTxId := blockrecord.FoundationTxId(header, digest)
-	storage.Pool.Transactions.Put(foundationTxId[:], thisBlockNumberKey, packedFoundation)
+	trx.Put(
+		storage.Pool.Transactions,
+		foundationTxId[:],
+		thisBlockNumberKey,
+		packedFoundation,
+	)
 
 	// current owner: either foundation or block owner transfer: tx id → owned block
-	storage.Pool.BlockOwnerTxIndex.Put(foundationTxId[:], thisBlockNumberKey)
+	trx.Put(
+		storage.Pool.BlockOwnerTxIndex,
+		foundationTxId[:],
+		thisBlockNumberKey,
+		[]byte{},
+	)
 
-	ownership.CreateBlock(nil, foundationTxId, header.Number, blockOwner)
+	ownership.CreateBlock(trx, foundationTxId, header.Number, blockOwner)
 
 	expectedBlockNumber := height + 1
 	if expectedBlockNumber != header.Number {
+		trx.Abort()
 		logger.Panicf("block.Store: out of sequence block: actual: %d  expected: %d", header.Number, expectedBlockNumber)
 	}
 
@@ -552,12 +615,21 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 	blockNumber := make([]byte, 8)
 	binary.BigEndian.PutUint64(blockNumber, header.Number)
 
-	storage.Pool.Blocks.Put(blockNumber, packedBlock)
-	storage.Pool.BlockHeaderHash.Put(thisBlockNumberKey, digest[:])
+	trx.Put(
+		storage.Pool.Blocks,
+		blockNumber,
+		packedBlock,
+		[]byte{},
+	)
+	trx.Put(
+		storage.Pool.BlockHeaderHash,
+		thisBlockNumberKey,
+		digest[:],
+		[]byte{},
+	)
 	globalData.log.Debugf("stored block: %d time elapsed: %f", header.Number, time.Since(start).Seconds())
 
-	storage.Pool.Blocks.Commit()
-	storage.Pool.Transactions.Commit()
+	trx.Commit()
 
 	// rescan reservoir to drop any invalid transactions
 	if performRescan {
