@@ -147,10 +147,10 @@ func CheckSwapBalances(
 	oKeyOne := append(swap.OwnerOne.Bytes(), swap.ShareIdOne[:]...)
 	var balanceOne uint64
 	var ok bool
-	if nil != trx {
-		balanceOne, ok, _ = trx.GetN(storage.Pool.ShareQuantity, oKeyOne)
-	} else {
+	if nil == trx {
 		balanceOne, ok = storage.Pool.ShareQuantity.GetN(oKeyOne)
+	} else {
+		balanceOne, ok, _ = trx.GetN(storage.Pool.ShareQuantity, oKeyOne)
 	}
 
 	// check if sufficient funds
@@ -160,10 +160,10 @@ func CheckSwapBalances(
 
 	oKeyTwo := append(swap.OwnerTwo.Bytes(), swap.ShareIdTwo[:]...)
 	var balanceTwo uint64
-	if nil != trx {
-		balanceTwo, ok, _ = trx.GetN(storage.Pool.ShareQuantity, oKeyTwo)
-	} else {
+	if nil == trx {
 		balanceTwo, ok = storage.Pool.ShareQuantity.GetN(oKeyTwo)
+	} else {
+		balanceTwo, ok, _ = trx.GetN(storage.Pool.ShareQuantity, oKeyTwo)
 	}
 
 	// check if sufficient funds

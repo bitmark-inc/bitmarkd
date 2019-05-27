@@ -229,7 +229,8 @@ func CreateAsset(
 	issueTxId merkle.Digest,
 	issueBlockNumber uint64,
 	assetId transactionrecord.AssetIdentifier,
-	newOwner *account.Account) {
+	newOwner *account.Account,
+) {
 	// ensure single threaded
 	toLock.Lock()
 	defer toLock.Unlock()
@@ -314,9 +315,8 @@ func CurrentlyOwns(
 ) bool {
 	dKey := append(owner.Bytes(), txId[:]...)
 
-	if nil != trx {
-		return trx.Has(storage.Pool.OwnerTxIndex, dKey)
-	} else {
+	if nil == trx {
 		return storage.Pool.OwnerTxIndex.Has(dKey)
 	}
+	return trx.Has(storage.Pool.OwnerTxIndex, dKey)
 }
