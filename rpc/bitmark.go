@@ -169,7 +169,7 @@ loop:
 
 		case *transactionrecord.OldBaseData:
 			if 0 == i {
-				h.IsOwner = ownership.CurrentlyOwns(tx.Owner, id)
+				h.IsOwner = ownership.CurrentlyOwns(nil, tx.Owner, id)
 			}
 
 			provenance = append(provenance, h)
@@ -177,7 +177,7 @@ loop:
 
 		case *transactionrecord.BlockFoundation:
 			if 0 == i {
-				h.IsOwner = ownership.CurrentlyOwns(tx.Owner, id)
+				h.IsOwner = ownership.CurrentlyOwns(nil, tx.Owner, id)
 			}
 
 			provenance = append(provenance, h)
@@ -185,7 +185,7 @@ loop:
 
 		case *transactionrecord.BitmarkIssue:
 			if 0 == i {
-				h.IsOwner = ownership.CurrentlyOwns(tx.Owner, id)
+				h.IsOwner = ownership.CurrentlyOwns(nil, tx.Owner, id)
 			}
 			provenance = append(provenance, h)
 
@@ -214,7 +214,7 @@ loop:
 			tr := tx.(transactionrecord.BitmarkTransfer)
 
 			if 0 == i {
-				h.IsOwner = ownership.CurrentlyOwns(tr.GetOwner(), id)
+				h.IsOwner = ownership.CurrentlyOwns(nil, tr.GetOwner(), id)
 			}
 
 			provenance = append(provenance, h)

@@ -106,6 +106,12 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 
 	txs := make([]txn, header.TransactionCount)
 
+	// start db transaction by block & index db
+	trx, err := storage.NewDBTransaction()
+	if nil != err {
+		return err
+	}
+
 	// transaction validation (must return error and not panic)
 	// ========================================================
 	{
@@ -159,7 +165,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 			case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
 				tr := tx.(transactionrecord.BitmarkTransfer)
 				link := tr.GetLink()
-				_, linkOwner := ownership.OwnerOf(nil, link)
+				_, linkOwner := ownership.OwnerOf(trx, link)
 				if nil == linkOwner {
 					return fault.ErrLinkToInvalidOrUnconfirmedTransaction
 				}
@@ -168,11 +174,11 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 					return err
 				}
 
-				if !ownership.CurrentlyOwns(linkOwner, link) {
+				if !ownership.CurrentlyOwns(trx, linkOwner, link) {
 					return fault.ErrDoubleTransferAttempt
 				}
 
-				ownerData, err := ownership.GetOwnerData(nil, link)
+				ownerData, err := ownership.GetOwnerData(trx, link)
 				if nil != err {
 					return fault.ErrDoubleTransferAttempt
 				}
@@ -191,17 +197,17 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 
 			case *transactionrecord.BlockOwnerTransfer:
 				link := tx.Link
-				_, linkOwner := ownership.OwnerOf(nil, link)
+				_, linkOwner := ownership.OwnerOf(trx, link)
 				_, err = tx.Pack(linkOwner)
 				if nil != err {
 					return err
 				}
-				if !ownership.CurrentlyOwns(linkOwner, link) {
+				if !ownership.CurrentlyOwns(trx, linkOwner, link) {
 					return fault.ErrDoubleTransferAttempt
 				}
 
 				// get the block number that is being transferred by this record
-				thisBN := storage.Pool.BlockOwnerTxIndex.Get(link[:])
+				thisBN, _ := trx.Get(storage.Pool.BlockOwnerTxIndex, link[:])
 				if nil == thisBN {
 					return fault.ErrLinkToInvalidOrUnconfirmedTransaction
 				}
@@ -216,7 +222,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 
 			case *transactionrecord.BitmarkShare:
 				link := tx.Link
-				_, linkOwner := ownership.OwnerOf(nil, link)
+				_, linkOwner := ownership.OwnerOf(trx, link)
 				if nil == linkOwner {
 					return fault.ErrLinkToInvalidOrUnconfirmedTransaction
 				}
@@ -225,7 +231,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 					return err
 				}
 
-				ownerData, err := ownership.GetOwnerData(nil, link)
+				ownerData, err := ownership.GetOwnerData(trx, link)
 				if nil != err {
 					return fault.ErrDoubleTransferAttempt
 				}
@@ -241,7 +247,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 				if nil != err {
 					return err
 				}
-				_, err = reservoir.CheckGrantBalance(tx)
+				_, err = reservoir.CheckGrantBalance(trx, tx)
 				if nil != err {
 					return err
 				}
@@ -251,7 +257,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 				if nil != err {
 					return err
 				}
-				_, _, err = reservoir.CheckSwapBalances(tx)
+				_, _, err = reservoir.CheckSwapBalances(trx, tx)
 				if nil != err {
 					return err
 				}
@@ -261,6 +267,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 				// i.e. one or more case blocks are missing
 				//      above _MUST_ code all transaction types
 				// (this is the only panic condition in the validation code)
+				trx.Abort()
 				globalData.log.Errorf("unhandled transaction: %v", tx)
 				logger.Panicf("block/store: unhandled transaction: %v", tx)
 			}
@@ -340,12 +347,6 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 
 	if len(txs) < txStart {
 		return fault.ErrTransactionCountOutOfRange
-	}
-
-	// start db transaction by block & index db
-	trx, err := storage.NewDBTransaction()
-	if nil != err {
-		return err
 	}
 
 	// process the transactions into the database

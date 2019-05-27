@@ -438,7 +438,7 @@ func rescanItem(item *transactionData) {
 		tr := tx.(transactionrecord.BitmarkTransfer)
 		link := tr.GetLink()
 		_, linkOwner := ownership.OwnerOf(nil, link)
-		if nil == linkOwner || !ownership.CurrentlyOwns(linkOwner, link) {
+		if nil == linkOwner || !ownership.CurrentlyOwns(nil, linkOwner, link) {
 			internalDeleteByTxId(txId)
 		}
 
@@ -449,19 +449,19 @@ func rescanItem(item *transactionData) {
 	case *transactionrecord.BlockOwnerTransfer:
 		link := tx.Link
 		_, linkOwner := ownership.OwnerOf(nil, link)
-		if nil == linkOwner || !ownership.CurrentlyOwns(linkOwner, link) {
+		if nil == linkOwner || !ownership.CurrentlyOwns(nil, linkOwner, link) {
 			internalDeleteByTxId(txId)
 		}
 
 	case *transactionrecord.BitmarkShare:
 		link := tx.Link
 		_, linkOwner := ownership.OwnerOf(nil, link)
-		if nil == linkOwner || !ownership.CurrentlyOwns(linkOwner, link) {
+		if nil == linkOwner || !ownership.CurrentlyOwns(nil, linkOwner, link) {
 			internalDeleteByTxId(txId)
 		}
 
 	case *transactionrecord.ShareGrant:
-		_, err := CheckGrantBalance(tx)
+		_, err := CheckGrantBalance(nil, tx)
 		if nil != err {
 			internalDeleteByTxId(txId)
 		} else {
@@ -470,7 +470,7 @@ func rescanItem(item *transactionData) {
 		}
 
 	case *transactionrecord.ShareSwap:
-		_, _, err := CheckSwapBalances(tx)
+		_, _, err := CheckSwapBalances(nil, tx)
 		if nil != err {
 			internalDeleteByTxId(txId)
 		} else {
