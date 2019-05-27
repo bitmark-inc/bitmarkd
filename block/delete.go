@@ -49,6 +49,7 @@ outer_loop:
 		header, digest, data, err := blockrecord.ExtractHeader(packedBlock, 0)
 		if nil != err {
 			log.Criticalf("failed to unpack block: %d from storage  error: %s", binary.BigEndian.Uint64(last.Key), err)
+			trx.Abort()
 			return err
 		}
 
@@ -104,6 +105,7 @@ outer_loop:
 				link := tr.GetLink()
 				blockNumber, linkOwner := ownership.OwnerOf(trx, link)
 				if nil == linkOwner {
+					trx.Abort()
 					log.Criticalf("missing transaction record for: %v", link)
 					logger.Panic("Transactions database is corrupt")
 				}
@@ -121,16 +123,19 @@ outer_loop:
 				reservoir.DeleteByTxId(txId)
 				blockNumber, linkOwner := ownership.OwnerOf(trx, tx.Link)
 				if nil == linkOwner {
+					trx.Abort()
 					log.Criticalf("missing transaction record for: %v", tx.Link)
 					logger.Panic("Transactions database is corrupt")
 				}
 				ownerdata, err := ownership.GetOwnerDataB(trx, txId[:])
 				if nil != err {
+					trx.Abort()
 					log.Criticalf("missing ownership for: %s", txId)
 					logger.Panic("Ownership database is corrupt")
 				}
 				blockOwnerdata, ok := ownerdata.(*ownership.BlockOwnerData)
 				if !ok {
+					trx.Abort()
 					log.Criticalf("expected block ownership but read: %+v", ownerdata)
 					logger.Panic("Ownership database is corrupt")
 				}
@@ -145,6 +150,7 @@ outer_loop:
 
 				blockTransaction, _, err := transactionrecord.Packed(previous).Unpack(mode.IsTesting())
 				if nil != err {
+					trx.Abort()
 					logger.Criticalf("invalid error: %s", txId, err)
 					logger.Panic("Transaction database is corrupt")
 				}
@@ -152,11 +158,13 @@ outer_loop:
 				case *transactionrecord.BlockFoundation:
 					err := transactionrecord.CheckPayments(prevTx.Version, mode.IsTesting(), prevTx.Payments)
 					if nil != err {
+						trx.Abort()
 						logger.Criticalf("invalid tx id: %s  error: %s", txId, err)
 						logger.Panic("Transaction database is corrupt")
 					}
 					packedPayments, err := prevTx.Payments.Pack(mode.IsTesting())
 					if nil != err {
+						trx.Abort()
 						logger.Criticalf("invalid tx id: %s  error: %s", txId, err)
 						logger.Panic("Transaction database is corrupt")
 					}
@@ -168,11 +176,13 @@ outer_loop:
 				case *transactionrecord.BlockOwnerTransfer:
 					err := transactionrecord.CheckPayments(prevTx.Version, mode.IsTesting(), prevTx.Payments)
 					if nil != err {
+						trx.Abort()
 						logger.Criticalf("invalid tx id: %s  error: %s", txId, err)
 						logger.Panic("Transaction database is corrupt")
 					}
 					packedPayments, err := prevTx.Payments.Pack(mode.IsTesting())
 					if nil != err {
+						trx.Abort()
 						logger.Criticalf("invalid tx id: %s  error: %s", txId, err)
 						logger.Panic("Transaction database is corrupt")
 					}
@@ -182,6 +192,7 @@ outer_loop:
 					trx.Delete(storage.Pool.BlockOwnerTxIndex, txId[:])
 
 				default:
+					trx.Abort()
 					logger.Criticalf("invalid block transfer link: %+v", prevTx)
 					logger.Panic("Transaction database is corrupt")
 				}
@@ -190,17 +201,20 @@ outer_loop:
 				txId := packedTransaction.MakeLink()
 				blockNumber, linkOwner := ownership.OwnerOf(trx, tx.Link)
 				if nil == linkOwner {
+					trx.Abort()
 					log.Criticalf("missing transaction record for: %v", tx.Link)
 					logger.Panic("Transactions database is corrupt")
 				}
 
 				ownerData, err := ownership.GetOwnerData(trx, txId)
 				if nil != err {
+					trx.Abort()
 					logger.Criticalf("invalid ownerData for tx id: %s", txId)
 					logger.Panic("Ownership database is corrupt")
 				}
 				shareData, ok := ownerData.(*ownership.ShareOwnerData)
 				if !ok {
+					trx.Abort()
 					logger.Criticalf("invalid ownerData: %+v for tx id: %s", ownerData, txId)
 					logger.Panic("Ownership database is corrupt")
 				}
@@ -232,6 +246,7 @@ outer_loop:
 				// this cannot be zero
 				rAccountBalance, ok, _ := trx.GetN(storage.Pool.ShareQuantity, rKey)
 				if !ok {
+					trx.Abort()
 					log.Criticalf("missing balance record for: %v share id: %x", tx.Recipient, tx.ShareId)
 					logger.Panic("ShareQuantity database is corrupt")
 				}
@@ -267,11 +282,13 @@ outer_loop:
 				// these balances cannot be zero
 				ownerOneShareTwoAccountBalance, ok, _ := trx.GetN(storage.Pool.ShareQuantity, ownerOneShareTwoKey)
 				if !ok {
+					trx.Abort()
 					log.Criticalf("missing balance record for owner 1: %v share id 2: %x", tx.OwnerOne, tx.ShareIdTwo)
 					logger.Panic("ShareQuantity database is corrupt")
 				}
 				ownerTwoShareOneAccountBalance, ok, _ := trx.GetN(storage.Pool.ShareQuantity, ownerTwoShareOneKey)
 				if !ok {
+					trx.Abort()
 					log.Criticalf("missing balance record for owner 2: %v share id 1: %x", tx.OwnerTwo, tx.ShareIdOne)
 					logger.Panic("ShareQuantity database is corrupt")
 				}
@@ -301,6 +318,7 @@ outer_loop:
 				trx.PutN(storage.Pool.ShareQuantity, ownerTwoShareTwoKey, ownerTwoShareTwoAccountBalance)
 
 			default:
+				trx.Abort()
 				logger.Panicf("unexpected transaction: %v", transaction)
 			}
 
@@ -318,6 +336,7 @@ outer_loop:
 		foundationTxId := blockrecord.FoundationTxId(header, digest)
 		trx.Delete(storage.Pool.Transactions, foundationTxId[:])
 		if nil == blockOwner {
+			trx.Abort()
 			log.Criticalf("nil block owner for block: %d", header.Number)
 		} else {
 			ownership.Transfer(trx, foundationTxId, foundationTxId, 0, blockOwner, nil)
