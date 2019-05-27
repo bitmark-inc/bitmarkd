@@ -6,6 +6,7 @@ package block
 
 import (
 	"encoding/binary"
+	"fmt"
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/account"
@@ -106,12 +107,6 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 
 	txs := make([]txn, header.TransactionCount)
 
-	// start db transaction by block & index db
-	trx, err := storage.NewDBTransaction()
-	if nil != err {
-		return err
-	}
-
 	// transaction validation (must return error and not panic)
 	// ========================================================
 	{
@@ -121,7 +116,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 		localAssets := make(map[transactionrecord.AssetIdentifier]struct{})
 
 		// check all transactions are valid
-		for i := uint16(0); i < header.TransactionCount; i += 1 {
+		for i := uint16(0); i < header.TransactionCount; i++ {
 			transaction, n, err := transactionrecord.Packed(data).Unpack(mode.IsTesting())
 			if nil != err {
 				return err
@@ -165,7 +160,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 			case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned:
 				tr := tx.(transactionrecord.BitmarkTransfer)
 				link := tr.GetLink()
-				_, linkOwner := ownership.OwnerOf(trx, link)
+				_, linkOwner := ownership.OwnerOf(nil, link)
 				if nil == linkOwner {
 					return fault.ErrLinkToInvalidOrUnconfirmedTransaction
 				}
@@ -174,11 +169,11 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 					return err
 				}
 
-				if !ownership.CurrentlyOwns(trx, linkOwner, link) {
+				if !ownership.CurrentlyOwns(nil, linkOwner, link) {
 					return fault.ErrDoubleTransferAttempt
 				}
 
-				ownerData, err := ownership.GetOwnerData(trx, link)
+				ownerData, err := ownership.GetOwnerData(nil, link)
 				if nil != err {
 					return fault.ErrDoubleTransferAttempt
 				}
@@ -197,17 +192,17 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 
 			case *transactionrecord.BlockOwnerTransfer:
 				link := tx.Link
-				_, linkOwner := ownership.OwnerOf(trx, link)
+				_, linkOwner := ownership.OwnerOf(nil, link)
 				_, err = tx.Pack(linkOwner)
 				if nil != err {
 					return err
 				}
-				if !ownership.CurrentlyOwns(trx, linkOwner, link) {
+				if !ownership.CurrentlyOwns(nil, linkOwner, link) {
 					return fault.ErrDoubleTransferAttempt
 				}
 
 				// get the block number that is being transferred by this record
-				thisBN, _ := trx.Get(storage.Pool.BlockOwnerTxIndex, link[:])
+				thisBN := storage.Pool.BlockOwnerTxIndex.Get(link[:])
 				if nil == thisBN {
 					return fault.ErrLinkToInvalidOrUnconfirmedTransaction
 				}
@@ -222,7 +217,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 
 			case *transactionrecord.BitmarkShare:
 				link := tx.Link
-				_, linkOwner := ownership.OwnerOf(trx, link)
+				_, linkOwner := ownership.OwnerOf(nil, link)
 				if nil == linkOwner {
 					return fault.ErrLinkToInvalidOrUnconfirmedTransaction
 				}
@@ -231,7 +226,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 					return err
 				}
 
-				ownerData, err := ownership.GetOwnerData(trx, link)
+				ownerData, err := ownership.GetOwnerData(nil, link)
 				if nil != err {
 					return fault.ErrDoubleTransferAttempt
 				}
@@ -247,7 +242,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 				if nil != err {
 					return err
 				}
-				_, err = reservoir.CheckGrantBalance(trx, tx)
+				_, err = reservoir.CheckGrantBalance(nil, tx)
 				if nil != err {
 					return err
 				}
@@ -257,7 +252,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 				if nil != err {
 					return err
 				}
-				_, _, err = reservoir.CheckSwapBalances(trx, tx)
+				_, _, err = reservoir.CheckSwapBalances(nil, tx)
 				if nil != err {
 					return err
 				}
@@ -267,7 +262,6 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 				// i.e. one or more case blocks are missing
 				//      above _MUST_ code all transaction types
 				// (this is the only panic condition in the validation code)
-				trx.Abort()
 				globalData.log.Errorf("unhandled transaction: %v", tx)
 				logger.Panicf("block/store: unhandled transaction: %v", tx)
 			}
@@ -347,6 +341,12 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 
 	if len(txs) < txStart {
 		return fault.ErrTransactionCountOutOfRange
+	}
+
+	trx, err := storage.NewDBTransaction()
+	if nil != err {
+		fmt.Printf("aaron create transaction error\n")
+		return err
 	}
 
 	// process the transactions into the database
@@ -555,14 +555,23 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 			} else {
 				trx.PutN(share, ownerTwoShareTwoKey, ownerTwoShareTwoAccountBalance)
 			}
-			trx.PutN(share, ownerOneShareTwoKey, ownerOneShareTwoAccountBalance)
+			err = trx.PutN(share, ownerOneShareTwoKey, ownerOneShareTwoAccountBalance)
+			if nil != err {
+				fmt.Printf("Aaron db put error: %v\n", err)
+				return err
+			}
 
-			trx.Put(
+			err = trx.Put(
 				storage.Pool.Transactions,
 				item.txId[:],
 				thisBlockNumberKey,
 				item.packed,
 			)
+
+			if nil != err {
+				fmt.Printf("Aaron db put error: %v\n", err)
+				return err
+			}
 
 		default:
 			trx.Abort()
@@ -572,12 +581,17 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 	}
 
 	// payment data
-	trx.Put(
+	err = trx.Put(
 		storage.Pool.BlockOwnerPayment,
 		thisBlockNumberKey,
 		packedPayments,
 		[]byte{},
 	)
+
+	if nil != err {
+		fmt.Printf("Aaron db put error: %v\n", err)
+		return err
+	}
 
 	// create the foundation record
 	foundationTxId := blockrecord.FoundationTxId(header, digest)
@@ -589,12 +603,17 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 	)
 
 	// current owner: either foundation or block owner transfer: tx id → owned block
-	trx.Put(
+	err = trx.Put(
 		storage.Pool.BlockOwnerTxIndex,
 		foundationTxId[:],
 		thisBlockNumberKey,
 		[]byte{},
 	)
+
+	if nil != err {
+		fmt.Printf("Aaron db put error: %v\n", err)
+		return err
+	}
 
 	ownership.CreateBlock(trx, foundationTxId, header.Number, blockOwner)
 
@@ -609,6 +628,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 	// return early if rebuilding, otherwise store and update DB
 	if globalData.rebuild {
 		globalData.log.Debugf("rebuilt block: %d time elapsed: %f", header.Number, time.Since(start).Seconds())
+		trx.Commit()
 		return nil
 	}
 
@@ -616,21 +636,34 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 	blockNumber := make([]byte, 8)
 	binary.BigEndian.PutUint64(blockNumber, header.Number)
 
-	trx.Put(
+	err = trx.Put(
 		storage.Pool.Blocks,
 		blockNumber,
 		packedBlock,
 		[]byte{},
 	)
-	trx.Put(
+	if nil != err {
+		return err
+	}
+
+	err = trx.Put(
 		storage.Pool.BlockHeaderHash,
 		thisBlockNumberKey,
 		digest[:],
 		[]byte{},
 	)
+
+	if nil != err {
+		fmt.Printf("Aaron db put error: %v\n", err)
+		return err
+	}
 	globalData.log.Debugf("stored block: %d time elapsed: %f", header.Number, time.Since(start).Seconds())
 
-	trx.Commit()
+	err = trx.Commit()
+	if nil != err {
+		fmt.Printf("Aaron commit error: %v\n", err)
+		return err
+	}
 
 	// rescan reservoir to drop any invalid transactions
 	if performRescan {
