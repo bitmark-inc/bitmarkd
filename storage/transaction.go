@@ -63,12 +63,17 @@ func (t *TransactionImpl) Begin() error {
 	return nil
 }
 
-func (t *TransactionImpl) Put(h Handle, key []byte, value []byte, dummy []byte) error {
+func (t *TransactionImpl) Put(
+	h Handle,
+	key []byte,
+	value []byte,
+	additional []byte,
+) error {
 	if nil == h {
 		return fmt.Errorf(ErrHandleNil)
 	}
 
-	h.put(key, value, []byte{})
+	h.put(key, value, additional)
 	return nil
 }
 
