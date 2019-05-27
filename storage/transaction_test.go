@@ -76,6 +76,7 @@ type testHandleMock struct {
 	PutNCalled   bool
 	RemoveCalled bool
 	GetCalled    bool
+	HasCalled    bool
 }
 
 func (m *testHandleMock) Put(key []byte, value []byte, dummy []byte) {}
@@ -96,9 +97,12 @@ func (m *testHandleMock) GetNB(key []byte) (uint64, []byte) {
 	m.GetCalled = true
 	return uint64(0), []byte{}
 }
-func (m *testHandleMock) Has(key []byte) bool { return true }
-func (m *testHandleMock) Begin()              {}
-func (m *testHandleMock) Commit() error       { return nil }
+func (m *testHandleMock) Has(key []byte) bool {
+	m.HasCalled = true
+	return true
+}
+func (m *testHandleMock) Begin()        {}
+func (m *testHandleMock) Commit() error { return nil }
 
 func newTestHandleMock() *testHandleMock {
 	return &testHandleMock{
@@ -106,6 +110,7 @@ func newTestHandleMock() *testHandleMock {
 		PutNCalled:   false,
 		RemoveCalled: false,
 		GetCalled:    false,
+		HasCalled:    false,
 	}
 }
 
@@ -250,4 +255,17 @@ func TestTxInUse(t *testing.T) {
 
 	inUse = tx.InUse()
 	assert.Equal(t, true, inUse, "inUse incorrect")
+}
+
+func TestHas(t *testing.T) {
+	tx, mock, ctl := setupTestTransaction(t)
+	defer ctl.Finish()
+
+	mock.EXPECT().InUse().Return(false).Times(1)
+	mock.EXPECT().Begin().Times(1)
+	myMock := newTestHandleMock()
+
+	_ = tx.Begin()
+	tx.Has(myMock, []byte(defaultKey))
+	assert.Equal(t, true, myMock.HasCalled, "not call internal method Has")
 }

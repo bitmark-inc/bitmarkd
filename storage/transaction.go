@@ -18,6 +18,7 @@ type Transaction interface {
 	Get(Handle, []byte) ([]byte, error)
 	GetN(Handle, []byte) (uint64, bool, error)
 	GetNB(Handle, []byte) (uint64, []byte, error)
+	Has(Handle, []byte) bool
 	InUse() bool
 	Put(Handle, []byte, []byte, []byte) error
 	PutN(Handle, []byte, uint64) error
@@ -134,4 +135,8 @@ func (t *TransactionImpl) Abort() {
 	for _, da := range t.dataAccess {
 		da.Abort()
 	}
+}
+
+func (t *TransactionImpl) Has(h Handle, key []byte) bool {
+	return h.Has(key)
 }
