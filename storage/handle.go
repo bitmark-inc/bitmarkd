@@ -47,17 +47,6 @@ func (p *PoolHandle) prefixKey(key []byte) []byte {
 	return append(prefixedKey, key...)
 }
 
-// TODO: Aaron delete it
-func (p *PoolHandle) Put(key []byte, value []byte) {
-	poolData.RLock()
-	defer poolData.RUnlock()
-	if nil == p.dataAccess {
-		logger.Panic("pool.Put nil database")
-		return
-	}
-	p.dataAccess.Put(p.prefixKey(key), value)
-}
-
 // Put - store a key/value bytes pair to the database
 func (p *PoolHandle) put(key []byte, value []byte, dummy []byte) {
 	poolData.RLock()
@@ -70,26 +59,10 @@ func (p *PoolHandle) put(key []byte, value []byte, dummy []byte) {
 }
 
 // PutN - store a uint8 as an 8 byte sequence
-// TODO: Aaron delete
-func (p *PoolHandle) PutN(key []byte, value uint64) {
-	buffer := make([]byte, 8)
-	binary.BigEndian.PutUint64(buffer, value)
-	p.Put(key, buffer)
-}
-
-// PutN - store a uint8 as an 8 byte sequence
 func (p *PoolHandle) putN(key []byte, value uint64) {
 	buffer := make([]byte, 8)
 	binary.BigEndian.PutUint64(buffer, value)
-	p.Put(key, buffer)
-}
-
-// Delete - remove a key from the database
-// TODO: Aaron delete it
-func (p *PoolHandle) Delete(key []byte) {
-	poolData.RLock()
-	defer poolData.RUnlock()
-	p.dataAccess.Delete(p.prefixKey(key))
+	p.put(key, buffer, []byte{})
 }
 
 func (p *PoolHandle) remove(key []byte) {

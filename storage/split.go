@@ -16,20 +16,6 @@ type PoolNB struct {
 }
 
 // Put - store a key/value bytes pair to the database
-// TODO: Aaron remove
-func (p *PoolNB) Put(key []byte, nValue []byte, bValue []byte) {
-	if 8 != len(nValue) {
-		logger.Panic("pool.PutNB 1st parameter must be 8 bytes")
-		return
-	}
-
-	data := make([]byte, len(nValue)+len(bValue))
-	copy(data, nValue)
-	copy(data[len(nValue):], bValue)
-	p.pool.Put(key, data)
-}
-
-// Put - store a key/value bytes pair to the database
 func (p *PoolNB) put(key []byte, nValue []byte, bValue []byte) {
 	if 8 != len(nValue) {
 		logger.Panic("pool.PutNB 1st parameter must be 8 bytes")
@@ -39,13 +25,7 @@ func (p *PoolNB) put(key []byte, nValue []byte, bValue []byte) {
 	data := make([]byte, len(nValue)+len(bValue))
 	copy(data, nValue)
 	copy(data[len(nValue):], bValue)
-	p.pool.Put(key, data)
-}
-
-// Delete - remove a key from the database
-// TODO: Aaron delete
-func (p *PoolNB) Delete(key []byte) {
-	p.pool.Delete(key)
+	p.pool.put(key, data, []byte{})
 }
 
 // Delete - remove a key from the database

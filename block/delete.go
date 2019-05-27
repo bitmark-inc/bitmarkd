@@ -169,9 +169,19 @@ outer_loop:
 						logger.Panic("Transaction database is corrupt")
 					}
 					// payment data
-					storage.Pool.BlockOwnerPayment.Put(blockNumberKey, packedPayments)
-					storage.Pool.BlockOwnerTxIndex.Put(tx.Link[:], blockNumberKey)
-					storage.Pool.BlockOwnerTxIndex.Delete(txId[:])
+					trx.Put(
+						storage.Pool.BlockOwnerPayment,
+						blockNumberKey,
+						packedPayments,
+						[]byte{},
+					)
+					trx.Put(
+						storage.Pool.BlockOwnerTxIndex,
+						tx.Link[:],
+						blockNumberKey,
+						[]byte{},
+					)
+					trx.Delete(storage.Pool.BlockOwnerTxIndex, txId[:])
 
 				case *transactionrecord.BlockOwnerTransfer:
 					err := transactionrecord.CheckPayments(prevTx.Version, mode.IsTesting(), prevTx.Payments)
@@ -226,7 +236,7 @@ outer_loop:
 
 				fKey := append(linkOwner.Bytes(), shareId[:]...)
 				trx.Delete(storage.Pool.Shares, shareId[:])
-				storage.Pool.ShareQuantity.Delete(fKey)
+				trx.Delete(storage.Pool.ShareQuantity, fKey)
 
 				ownership.Transfer(trx, txId, tx.Link, blockNumber, linkOwner, linkOwner)
 
