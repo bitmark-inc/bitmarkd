@@ -77,7 +77,7 @@ func TestBeginShouldErrorWhenAlreadyInTransaction(t *testing.T) {
 	assert.NotEqual(t, nil, err, "second time Begin should return error")
 }
 
-func TestCommitUnlockInUse(t *testing.T) {
+func TestCommitDidNotUnlockInUse(t *testing.T) {
 	mc := setupDummyMockCache(t)
 	da := setupTestDataAccess(mc)
 
@@ -85,7 +85,7 @@ func TestCommitUnlockInUse(t *testing.T) {
 	_ = da.Commit()
 
 	err := da.Begin()
-	assert.Equal(t, nil, err, "did not reset internal inUse ")
+	assert.NotEqual(t, nil, err, "did not reset internal inUse ")
 }
 
 func TestCommitResetTransaction(t *testing.T) {
@@ -99,6 +99,7 @@ func TestCommitResetTransaction(t *testing.T) {
 	_ = da.Begin()
 	da.Put([]byte(defaultKey), defaultValue)
 	_ = da.Commit()
+	da.Abort()
 
 	actual := da.DumpTx()
 	assert.Equal(t, 0, len(actual), "Commit did not reset transaction")
@@ -169,6 +170,7 @@ func TestCommitClearsCache(t *testing.T) {
 	_ = da.Begin()
 	da.Put([]byte(defaultKey), defaultValue)
 	_ = da.Commit()
+	da.Abort()
 }
 
 func TestGetActionReadsFromCache(t *testing.T) {
@@ -210,6 +212,7 @@ func TestGetActionReadDBIfNotInCache(t *testing.T) {
 	_ = da.Begin()
 	da.Put([]byte(key), value)
 	da.Commit()
+	da.Abort()
 	actual, _ := da.Get([]byte(key))
 
 	assert.Equal(t, value, actual, "db value not set")
@@ -301,6 +304,7 @@ func TestHasNotCached(t *testing.T) {
 	_ = da.Begin()
 	da.Put([]byte(defaultKey), defaultValue)
 	da.Commit()
+	da.Abort()
 	has, _ := da.Has([]byte(defaultKey))
 	assert.Equal(t, true, has, "didn't check db")
 }
