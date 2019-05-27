@@ -38,26 +38,17 @@ func DeleteDownToBlock(finalBlockNumber uint64) error {
 
 	packedBlock := last.Value
 
-	// start db transaction by block & index db
-	trx, err := storage.NewDBTransaction()
-	if nil != err {
-		return err
-	}
-
 outer_loop:
 	for {
 		header, digest, data, err := blockrecord.ExtractHeader(packedBlock, 0)
 		if nil != err {
 			log.Criticalf("failed to unpack block: %d from storage  error: %s", binary.BigEndian.Uint64(last.Key), err)
-			trx.Abort()
 			return err
 		}
 
 		// finished
 		if header.Number < finalBlockNumber {
-
 			blockheader.Set(header.Number, digest, header.Version, header.Timestamp)
-
 			log.Infof("finish: _NOT_ Deleting: %d", header.Number)
 			return nil
 		}
@@ -70,8 +61,15 @@ outer_loop:
 		// handle packed transactions
 	inner_loop:
 		for i := 1; true; i += 1 {
+			// start db transaction by block & index db
+			trx, err := storage.NewDBTransaction()
+			if nil != err {
+				return err
+			}
+
 			transaction, n, err := transactionrecord.Packed(data).Unpack(mode.IsTesting())
 			if nil != err {
+				trx.Abort()
 				log.Errorf("tx[%d]: error: %s", i, err)
 				return err
 			}
@@ -336,6 +334,15 @@ outer_loop:
 			if 0 == len(data) {
 				break inner_loop
 			}
+
+			// commit db transactions
+			trx.Commit()
+		}
+
+		// start db transaction by block & index db
+		trx, err := storage.NewDBTransaction()
+		if nil != err {
+			return err
 		}
 
 		// block number key for deletion
@@ -359,9 +366,6 @@ outer_loop:
 		// and delete its hash
 		trx.Delete(storage.Pool.BlockHeaderHash, blockNumberKey)
 
-		// commit db transactions
-		trx.Commit()
-
 		// fetch previous block number
 		binary.BigEndian.PutUint64(blockNumberKey, header.Number-1)
 		packedBlock = storage.Pool.Blocks.Get(blockNumberKey)
@@ -372,6 +376,8 @@ outer_loop:
 			break outer_loop
 		}
 
+		// commit db transactions
+		trx.Commit()
 	}
 	return nil
 }

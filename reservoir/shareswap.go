@@ -135,15 +135,23 @@ func StoreSwap(swap *transactionrecord.ShareSwap) (*SwapInfo, bool, error) {
 }
 
 // CheckSwapBalances - check sufficient balance on both accounts to be able to execute a swap request
-func CheckSwapBalances(swap *transactionrecord.ShareSwap) (uint64, uint64, error) {
-
+func CheckSwapBalances(
+	trx storage.Transaction,
+	swap *transactionrecord.ShareSwap,
+) (uint64, uint64, error) {
 	// check incoming quantity
 	if 0 == swap.QuantityOne || 0 == swap.QuantityTwo {
 		return 0, 0, fault.ErrShareQuantityTooSmall
 	}
 
 	oKeyOne := append(swap.OwnerOne.Bytes(), swap.ShareIdOne[:]...)
-	balanceOne, ok := storage.Pool.ShareQuantity.GetN(oKeyOne)
+	var balanceOne uint64
+	var ok bool
+	if nil != trx {
+		balanceOne, ok, _ = trx.GetN(storage.Pool.ShareQuantity, oKeyOne)
+	} else {
+		balanceOne, ok = storage.Pool.ShareQuantity.GetN(oKeyOne)
+	}
 
 	// check if sufficient funds
 	if !ok || balanceOne < swap.QuantityOne {
@@ -151,7 +159,12 @@ func CheckSwapBalances(swap *transactionrecord.ShareSwap) (uint64, uint64, error
 	}
 
 	oKeyTwo := append(swap.OwnerTwo.Bytes(), swap.ShareIdTwo[:]...)
-	balanceTwo, ok := storage.Pool.ShareQuantity.GetN(oKeyTwo)
+	var balanceTwo uint64
+	if nil != trx {
+		balanceTwo, ok, _ = trx.GetN(storage.Pool.ShareQuantity, oKeyTwo)
+	} else {
+		balanceTwo, ok = storage.Pool.ShareQuantity.GetN(oKeyTwo)
+	}
 
 	// check if sufficient funds
 	if !ok || balanceTwo < swap.QuantityTwo {
@@ -170,7 +183,7 @@ func verifySwap(swap *transactionrecord.ShareSwap) (*verifiedSwapInfo, bool, err
 		return nil, false, fault.ErrRecordHasExpired
 	}
 
-	balanceOne, balanceTwo, err := CheckSwapBalances(swap)
+	balanceOne, balanceTwo, err := CheckSwapBalances(nil, swap)
 	if nil != err {
 		return nil, false, err
 	}

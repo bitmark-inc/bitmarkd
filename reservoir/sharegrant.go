@@ -141,7 +141,7 @@ func makeSpendKey(owner *account.Account, shareId merkle.Digest) spendKey {
 }
 
 // CheckGrantBalance - check sufficient balance to be able to execute a grant request
-func CheckGrantBalance(grant *transactionrecord.ShareGrant) (uint64, error) {
+func CheckGrantBalance(trx storage.Transaction, grant *transactionrecord.ShareGrant) (uint64, error) {
 
 	// check incoming quantity
 	if 0 == grant.Quantity {
@@ -149,7 +149,13 @@ func CheckGrantBalance(grant *transactionrecord.ShareGrant) (uint64, error) {
 	}
 
 	oKey := append(grant.Owner.Bytes(), grant.ShareId[:]...)
-	balance, ok := storage.Pool.ShareQuantity.GetN(oKey)
+	var balance uint64
+	var ok bool
+	if nil != trx {
+		balance, ok, _ = trx.GetN(storage.Pool.ShareQuantity, oKey)
+	} else {
+		balance, ok = storage.Pool.ShareQuantity.GetN(oKey)
+	}
 
 	// check if sufficient funds
 	if !ok || balance < grant.Quantity {
@@ -167,7 +173,7 @@ func verifyGrant(grant *transactionrecord.ShareGrant) (*verifiedGrantInfo, bool,
 		return nil, false, fault.ErrRecordHasExpired
 	}
 
-	balance, err := CheckGrantBalance(grant)
+	balance, err := CheckGrantBalance(nil, grant)
 	if nil != err {
 		return nil, false, err
 	}
