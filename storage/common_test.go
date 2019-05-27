@@ -2,13 +2,12 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package storage_test
+package storage
 
 import (
 	"os"
 	"testing"
 
-	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/logger"
 )
 
@@ -45,12 +44,12 @@ func setup(t *testing.T) {
 	_ = logger.Initialise(logging)
 
 	// open database
-	_, mustReindex, err := storage.Initialise(databaseFileName, false)
+	_, mustReindex, err := Initialise(databaseFileName, false)
 	if nil != err {
 		t.Fatalf("storage initialise error: %s", err)
 	}
 	if mustReindex {
-		err := storage.ReindexDone()
+		err := ReindexDone()
 		if nil != err {
 			t.Fatalf("storage reindex done error: %s", err)
 		}
@@ -59,7 +58,7 @@ func setup(t *testing.T) {
 
 // post test cleanup
 func teardown(t *testing.T) {
-	storage.Finalise()
+	Finalise()
 	removeFiles()
 	logger.Finalise()
 }
@@ -71,10 +70,10 @@ type stringElement struct {
 }
 
 // make an element array
-func makeElements(input []stringElement) []storage.Element {
-	output := make([]storage.Element, 0, len(input))
+func makeElements(input []stringElement) []Element {
+	output := make([]Element, 0, len(input))
 	for _, e := range input {
-		output = append(output, storage.Element{
+		output = append(output, Element{
 			Key:   []byte(e.key),
 			Value: []byte(e.value),
 		})

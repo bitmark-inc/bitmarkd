@@ -2,7 +2,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package storage_test
+package storage
 
 import (
 	"bytes"
@@ -10,21 +10,19 @@ import (
 	"fmt"
 	"testing"
 	"time"
-
-	"github.com/bitmark-inc/bitmarkd/storage"
 )
 
 // helper to add to pool
-func poolPut(t *testing.T, p *storage.PoolHandle, key string, data string) {
+func poolPut(t *testing.T, p *PoolHandle, key string, data string) {
 	p.Begin()
-	p.Put([]byte(key), []byte(data))
+	p.put([]byte(key), []byte(data), []byte{})
 	p.Commit()
 }
 
 // helper to remove from pool
-func poolDelete(t *testing.T, p *storage.PoolHandle, key string) {
+func poolDelete(t *testing.T, p *PoolHandle, key string) {
 	p.Begin()
-	p.Delete([]byte(key))
+	p.remove([]byte(key))
 	p.Commit()
 }
 
@@ -33,7 +31,7 @@ func TestPool(t *testing.T) {
 	setup(t)
 	defer teardown(t)
 
-	p := storage.Pool.TestData
+	p := Pool.TestData
 
 	// ensure that pool was empty
 	checkAgain(t, true)
@@ -61,12 +59,12 @@ func TestPool(t *testing.T) {
 	checkAgain(t, false)
 
 	// check that restarting database keeps data
-	storage.Finalise()
-	storage.Initialise(databaseFileName, false)
+	Finalise()
+	Initialise(databaseFileName, false)
 	checkAgain(t, false)
 }
 
-func checkResults(t *testing.T, p *storage.PoolHandle) {
+func checkResults(t *testing.T, p *PoolHandle) {
 
 	// ensure we get all of the pool
 	cursor := p.NewFetchCursor()
@@ -136,7 +134,7 @@ func checkResults(t *testing.T, p *storage.PoolHandle) {
 
 func checkAgain(t *testing.T, empty bool) {
 
-	p := storage.Pool.TestData
+	p := Pool.TestData
 
 	// cache will be empty
 	cursor := p.NewFetchCursor()
@@ -211,7 +209,7 @@ func doWriteRead(t *testing.T) {
 	setup(t)
 	defer teardown(t)
 
-	p := storage.Pool.TestData
+	p := Pool.TestData
 
 	key := rb(127)
 
@@ -239,15 +237,15 @@ loop:
 		data := rb(156)
 
 		p.Begin()
-		p.Delete(key)
+		p.remove(key)
 		p.Commit()
 		d := p.Get(key)
 
 		a := p.Get(key)
 		fmt.Printf("a: %x\n", a)
 		p.Begin()
-		p.Put(key, data)
-		p.Delete(oldkey)
+		p.put(key, data, []byte{})
+		p.remove(oldkey)
 		p.Commit()
 		b := p.Get(key)
 		fmt.Printf("b: %x\n", b)
@@ -268,7 +266,7 @@ loop:
 
 func bg(key *[]byte, stop <-chan struct{}) {
 
-	p := storage.Pool.TestData
+	p := Pool.TestData
 
 	for {
 		select {
@@ -282,11 +280,11 @@ func bg(key *[]byte, stop <-chan struct{}) {
 		data2 := rb(165)
 
 		p.Begin()
-		p.Delete(key2)
-		p.Put(key2, data1)
+		p.remove(key2)
+		p.put(key2, data1, []byte{})
 		p.Get(*key)
 		p.Get(key2)
-		p.Put(key2, data2)
+		p.put(key2, data2, []byte{})
 		p.Get(key2)
 		p.Get(*key)
 		p.Commit()
@@ -295,7 +293,7 @@ func bg(key *[]byte, stop <-chan struct{}) {
 
 func jr(key *[]byte, stop <-chan struct{}) {
 
-	p := storage.Pool.TestData
+	p := Pool.TestData
 
 	for {
 		select {
