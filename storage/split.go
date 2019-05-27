@@ -34,7 +34,7 @@ func (p *PoolNB) remove(key []byte) {
 }
 
 func (p *PoolNB) putN(key []byte, value uint64) {
-	return
+	logger.Panic("PoolNB has not putN method")
 }
 
 // for interface
