@@ -206,6 +206,7 @@ func TestCommit(t *testing.T) {
 	mock.EXPECT().Commit().Return(nil).Times(1)
 	mock.EXPECT().Begin().Times(2)
 	mock.EXPECT().InUse().Return(false).Times(2)
+	mock.EXPECT().Abort().Times(1)
 
 	_ = tx.Begin()
 	_ = tx.Commit()

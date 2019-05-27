@@ -99,6 +99,7 @@ func (t *TransactionImpl) Commit() error {
 			return err
 		}
 	}
+	t.Abort()
 	return nil
 }
 
