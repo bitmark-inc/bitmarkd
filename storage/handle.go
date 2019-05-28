@@ -92,7 +92,6 @@ func (p *PoolHandle) Get(key []byte) []byte {
 //
 // second parameter is false if record was not found
 // panics if not 8 (or more) bytes in the record
-// TODO: Aaron delete
 func (p *PoolHandle) GetN(key []byte) (uint64, bool) {
 	buffer := p.Get(key)
 	if nil == buffer {
