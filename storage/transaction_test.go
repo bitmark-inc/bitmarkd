@@ -89,9 +89,15 @@ func (m *testHandleMock) Has(key []byte) bool {
 	m.HasCalled = true
 	return true
 }
-func (m *testHandleMock) put(key []byte, value []byte, dummy []byte) { m.PutCalled = true }
-func (m *testHandleMock) putN(key []byte, value uint64)              { m.PutNCalled = true }
-func (m *testHandleMock) remove(key []byte)                          { m.RemoveCalled = true }
+func (m *testHandleMock) put(key []byte, value []byte, dummy []byte) {
+	m.PutCalled = true
+}
+func (m *testHandleMock) putN(key []byte, value uint64) {
+	m.PutNCalled = true
+}
+func (m *testHandleMock) remove(key []byte) {
+	m.RemoveCalled = true
+}
 
 func newTestHandleMock() *testHandleMock {
 	return &testHandleMock{
