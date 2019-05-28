@@ -71,12 +71,8 @@ type testHandleMock struct {
 	HasCalled    bool
 }
 
-func (m *testHandleMock) Put(key []byte, value []byte, dummy []byte) {}
-func (m *testHandleMock) put(key []byte, value []byte, dummy []byte) { m.PutCalled = true }
-func (m *testHandleMock) PutN(key []byte, value uint64)              {}
-func (m *testHandleMock) putN(key []byte, value uint64)              { m.PutNCalled = true }
-func (m *testHandleMock) Delete(key []byte)                          {}
-func (m *testHandleMock) remove(key []byte)                          { m.RemoveCalled = true }
+func (m *testHandleMock) Begin()        {}
+func (m *testHandleMock) Commit() error { return nil }
 func (m *testHandleMock) Get(key []byte) []byte {
 	m.GetCalled = true
 	return []byte{}
@@ -93,8 +89,9 @@ func (m *testHandleMock) Has(key []byte) bool {
 	m.HasCalled = true
 	return true
 }
-func (m *testHandleMock) Begin()        {}
-func (m *testHandleMock) Commit() error { return nil }
+func (m *testHandleMock) put(key []byte, value []byte, dummy []byte) { m.PutCalled = true }
+func (m *testHandleMock) putN(key []byte, value uint64)              { m.PutNCalled = true }
+func (m *testHandleMock) remove(key []byte)                          { m.RemoveCalled = true }
 
 func newTestHandleMock() *testHandleMock {
 	return &testHandleMock{
