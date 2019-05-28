@@ -31,7 +31,7 @@ func recoverBlockHeaderHash(blockNumberBytes []byte, packedBlock []byte) error {
 
 	blockNumber := binary.BigEndian.Uint64(blockNumberBytes)
 
-	blockHeaderHashBytes := storage.Pool.BlockHeaderHash.Get(blockNumberBytes)
+	blockHeaderHashBytes, _ := trx.Get(storage.Pool.BlockHeaderHash, blockNumberBytes)
 	if blockHeaderHashBytes == nil {
 		digest, err := blockrecord.ComputeHeaderHash(packedBlock)
 		if nil != err {
@@ -40,6 +40,7 @@ func recoverBlockHeaderHash(blockNumberBytes []byte, packedBlock []byte) error {
 
 		trx.Put(storage.Pool.BlockHeaderHash, blockNumberBytes, digest[:], []byte{})
 	}
+	trx.Commit()
 
 	globalData.log.Debugf("rebuilt block: %d", blockNumber)
 
