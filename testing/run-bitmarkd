@@ -48,12 +48,24 @@ generate_items='gen-peer-identity gen-rpc-cert gen-proof-identity'
 sleep=
 
 getopt=
-for g in /usr/local/bin/getopt /usr/local/opt/gnu-getopt/bin/getopt /usr/bin/getopt
-do
-  [ -x "${g}" ] && getopt="${g}" && break
-done
-[ -x "${getopt}" ] || ERROR 'no suitable getopt was found'
-[ X"$(${getopt} --version 2>&1 | sed 's/^[^(]*[(]//;s/[)][^)]*$//')" = X"enhanced" ] || ERROR 'getopt does not support long options'
+case "$(uname)" in
+  (FreeBSD)
+    getopt=/usr/local/bin/getopt
+    ;;
+  (NetBSD)
+    getopt=/usr/pkg/bin/getopt
+    ;;
+  (Darwin)
+    getopt=/usr/local/opt/gnu-getopt/bin/getopt
+    ;;
+  (Linux)
+    getopt=/usr/bin/getopt
+    ;;
+  (*)
+    ERROR 'OS: %s is not supported' "$(uname)"
+    ;;
+esac
+[ -x "${getopt}" ] || ERROR 'getopt: "%s" is not executable or not installed' "${getopt}"
 
 args=$(${getopt} -o hvc:grf:s:D --long=help,verbose,config:,generate,reset,from:,sleep:,debug -- "$@") || exit 1
 
