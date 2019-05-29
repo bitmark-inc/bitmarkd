@@ -71,7 +71,7 @@ type InfoArguments struct{}
 type InfoReply struct {
 	Chain               string    `json:"chain"`
 	Mode                string    `json:"mode"`
-	Blocks              BlockInfo `json:"blocks"`
+	Block               BlockInfo `json:"block"`
 	RPCs                uint64    `json:"rpcs"`
 	Peers               uint64    `json:"peers"`
 	TransactionCounters Counters  `json:"transactionCounters"`
@@ -105,7 +105,7 @@ func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 	incoming, outgoing := peer.GetCounts()
 	reply.Chain = mode.ChainName()
 	reply.Mode = mode.String()
-	reply.Blocks = BlockInfo{
+	reply.Block = BlockInfo{
 		Height: blockheader.Height(),
 		Hash:   block.LastBlockHash(),
 	}

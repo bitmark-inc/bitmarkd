@@ -107,11 +107,12 @@ READY() {
   printf '\bOK\n'
 
   blocks_q='
-    (.blocks | type) as $t |
-    if $t == "number" then
+    (.block  | type) as $tb |
+    (.blocks | type) as $ts |
+    if $ts == "number" then
       .blocks
-    elif $t == "object" then
-      .blocks.height
+    elif $tb == "object" then
+      .block.height
     else
       "INVALID"
     end

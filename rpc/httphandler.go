@@ -153,7 +153,7 @@ func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 	type theReply struct {
 		Chain               string     `json:"chain"`
 		Mode                string     `json:"mode"`
-		Blocks              blockInfo  `json:"blocks"`
+		Block               blockInfo  `json:"block"`
 		RPCs                uint64     `json:"rpcs"`
 		Peers               peerCounts `json:"peers"`
 		TransactionCounters Counters   `json:"transactionCounters"`
@@ -166,7 +166,7 @@ func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 	reply := theReply{
 		Chain: mode.ChainName(),
 		Mode:  mode.String(),
-		Blocks: blockInfo{
+		Block: blockInfo{
 			LRCount: lrCount{
 				Local:  blockheader.Height(),
 				Remote: peer.BlockHeight(),

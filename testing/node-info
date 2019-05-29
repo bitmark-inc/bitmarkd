@@ -117,8 +117,8 @@ printf '\n'
 filter='
   def rj($f;$w): ("          "+($f|tostring))[-$w:];
   def lj($f;$w): (($f|tostring)+"          ")[:$w];
-  "\u001b[1;32mb: \u001b[1;33m" + (.node.blocks.count.local|tostring) +
-  "\u001b[0;33m " + (.node.blocks.hash[56:64]) +
+  "\u001b[1;32mb: \u001b[1;33m" + (.node.block.count.local|tostring) +
+  "\u001b[0;33m " + (.node.block.hash[56:64]) +
   "  \u001b[" + (if .node.mode=="Normal" then "1;32" else "0;31" end) + "m" + .node.mode[0:6] +
   "  \u001b[0;36m" + .node.chain +
   "  \u001b[1;34mp: " + rj(.node.transactionCounters.pending;3) +

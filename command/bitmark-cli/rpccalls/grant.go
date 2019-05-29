@@ -65,7 +65,7 @@ func (client *Client) Grant(grantConfig *GrantData) (*GrantSingleSignedReply, er
 		if nil != err {
 			return nil, err
 		}
-		grantConfig.BeforeBlock = info.Blocks.Height + 100 // allow plenty of time to mine
+		grantConfig.BeforeBlock = info.Block.Height + 100 // allow plenty of time to mine
 	}
 
 	packed, grant, err := makeGrantOneSignature(client.testnet, shareId, grantConfig.Quantity, grantConfig.Owner, grantConfig.Recipient, grantConfig.BeforeBlock)
