@@ -5,10 +5,11 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	iterator "github.com/syndtr/goleveldb/leveldb/iterator"
 	util "github.com/syndtr/goleveldb/leveldb/util"
-	reflect "reflect"
 )
 
 // MockDataAccess is a mock of DataAccess interface

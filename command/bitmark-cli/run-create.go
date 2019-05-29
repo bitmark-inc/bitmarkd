@@ -6,11 +6,13 @@ package main
 
 import (
 	"fmt"
+	"strings"
+
+	"github.com/urfave/cli"
+
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/rpccalls"
 	"github.com/bitmark-inc/bitmarkd/keypair"
-	"github.com/urfave/cli"
-	"strings"
 )
 
 func runCreate(c *cli.Context) error {

@@ -8,9 +8,10 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"testing"
+
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"testing"
 )
 
 // Test account functionality

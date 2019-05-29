@@ -189,10 +189,11 @@ func (queue *BroadcastQueue) DropCache(msgs ...Message) {
 		return
 	}
 
+clean_cache:
 	for _, m := range msgs {
 
 		if !queue.isCached(m) {
-			continue
+			continue clean_cache
 		}
 
 		queue.Lock()
@@ -242,11 +243,12 @@ loop:
 					ci := make([]Message, 0)
 
 					found := false
+				append_ci:
 					for len(out) > 0 {
 						m := <-out
 						if !found && "block" != m.Command {
 							found = true
-							continue
+							continue append_ci
 						} else {
 							ci = append(ci, m)
 						}

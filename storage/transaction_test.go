@@ -4,10 +4,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/bitmark-inc/bitmarkd/storage/mocks"
-	"github.com/bitmark-inc/logger"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/bitmark-inc/bitmarkd/storage/mocks"
+	"github.com/bitmark-inc/logger"
 )
 
 func setupTestLogger() {

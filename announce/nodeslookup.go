@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/miekg/dns"
 
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
-	"github.com/miekg/dns"
 )
 
 const (
