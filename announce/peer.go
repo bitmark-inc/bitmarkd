@@ -181,8 +181,8 @@ func (p pubkey) String() string {
 	return fmt.Sprintf("%x", []byte(p))
 }
 
-// SetPeerTimestamp - set the timestamp for the peer with given public key
-func SetPeerTimestamp(publicKey []byte, timestamp time.Time) {
+// setPeerTimestamp - set the timestamp for the peer with given public key
+func setPeerTimestamp(publicKey []byte, timestamp time.Time) {
 	globalData.Lock()
 	defer globalData.Unlock()
 
