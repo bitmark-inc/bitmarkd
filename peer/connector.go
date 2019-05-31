@@ -254,7 +254,7 @@ func (conn *connector) runStateMachine() bool {
 		clientCount := 0
 
 		conn.allClients(func(client *upstream.Upstream, e *list.Element) {
-			if client.IsOK() {
+			if client.IsConnected() {
 
 				clientCount += 1
 			}
@@ -367,8 +367,7 @@ func (conn *connector) runStateMachine() bool {
 		// check peers
 		clientCount := 0
 		conn.allClients(func(client *upstream.Upstream, e *list.Element) {
-			if client.IsOK() {
-
+			if client.IsConnected() {
 				clientCount += 1
 			}
 		})

@@ -32,7 +32,7 @@ type Upstream struct {
 	sync.RWMutex
 	log         *logger.L
 	client      *zmqutil.Client
-	registered  bool
+	connected   bool
 	blockHeight uint64
 	shutdown    chan<- struct{}
 }
@@ -53,7 +53,7 @@ func New(privateKey []byte, publicKey []byte, timeout time.Duration) (*Upstream,
 	u := &Upstream{
 		log:         logger.New(fmt.Sprintf("upstream@%d", n)),
 		client:      client,
-		registered:  false,
+		connected:   false,
 		blockHeight: 0,
 		shutdown:    shutdown,
 	}
@@ -73,7 +73,7 @@ func (u *Upstream) Destroy() {
 func (u *Upstream) ResetServer() {
 	//	u.GetClient().ResetServer()
 	u.client.ResetServer()
-	u.registered = false
+	u.connected = false
 	u.blockHeight = 0
 }
 
@@ -85,9 +85,9 @@ func (u *Upstream) IsConnectedTo(serverPublicKey []byte) bool {
 	return u.client.IsConnectedTo(serverPublicKey)
 }
 
-// IsOK - check if registered and have a valid connection
-func (u *Upstream) IsOK() bool {
-	return u.registered
+// IsConnected - check if registered and have a valid connection
+func (u *Upstream) IsConnected() bool {
+	return u.connected
 }
 
 // ConnectedTo - if registered return the connection data
@@ -102,7 +102,7 @@ func (u *Upstream) Connect(address *util.Connection, serverPublicKey []byte) err
 	u.Lock()
 	err := u.client.Connect(address, serverPublicKey, mode.ChainName())
 	if nil == err {
-		err = register(u.client, u.log)
+		err = requestConnect(u.client, u.log)
 	}
 	u.Unlock()
 	return err
@@ -194,8 +194,7 @@ func upstreamRunner(u *Upstream, shutdown <-chan struct{}) {
 
 	// use default queue size
 	queue := messagebus.Bus.Broadcast.Chan(-1)
-
-	timer := time.After(cycleInterval)
+	connectCheckTimer := time.After(cycleInterval)
 
 loop:
 	for {
@@ -204,37 +203,35 @@ loop:
 		select {
 		case <-shutdown:
 			break loop
-
-		case <-timer:
-			timer = time.After(cycleInterval)
+		case <-connectCheckTimer:
+			connectCheckTimer = time.After(cycleInterval)
 			u.Lock()
-			if !u.registered {
-				err := register(u.client, u.log)
+			if !u.connected {
+				err := requestConnect(u.client, u.log)
 				if fault.ErrNotConnected == err {
-					log.Infof("register: %s", err)
+					log.Infof("connected: %s", err)
 					u.Unlock()
 					continue loop // try again later
 				} else if nil != err {
-					log.Warnf("register: serverKey: %x register error: %s  ", u.GetClient().GetServerPublicKey(), err)
+					log.Warnf("serverKey: %x connect to %X error: %s  ", u.GetClient().GetServerPublicKey(), err)
 					err := u.client.Reconnect()
 					if nil != err {
-						log.Errorf("register: reconnect error: %s", err)
+						log.Errorf("reconnect error: %s", err)
 					}
 					u.Unlock()
 					continue loop // try again later
 				}
-				u.registered = true
 			}
-
 			h, err := getHeight(u.client, u.log)
 			if nil == err {
+				u.connected = true
 				u.blockHeight = h
-
 				publicKey := u.client.GetServerPublicKey()
-				announce.SetPeerTimestamp(publicKey, time.Now())
-
+				timestamp := make([]byte, 8)
+				binary.BigEndian.PutUint64(timestamp, uint64(time.Now().Unix()))
+				messagebus.Bus.Announce.Send("updatetime", publicKey, timestamp)
 			} else {
-				u.registered = false
+				u.connected = false
 				log.Errorf("getHeight: error: %s", err)
 				err := u.client.Reconnect()
 				if nil != err {
@@ -246,7 +243,7 @@ loop:
 		case item := <-queue:
 			log.Debugf("from queue: %q  %x", item.Command, item.Parameters)
 
-			if u.registered {
+			if u.connected {
 				u.Lock()
 				err := push(u.client, u.log, &item)
 				if nil != err {
@@ -266,7 +263,7 @@ loop:
 }
 
 // register with server and check chain information
-func register(client *zmqutil.Client, log *logger.L) error {
+func requestConnect(client *zmqutil.Client, log *logger.L) error {
 
 	log.Debugf("register: client: %s", client)
 
@@ -275,7 +272,6 @@ func register(client *zmqutil.Client, log *logger.L) error {
 		log.Errorf("register: %s send error: %s", client, err)
 		return err
 	}
-
 	data, err := client.Receive(0)
 	if nil != err {
 		log.Errorf("register: %s receive error: %s", client, err)
@@ -288,24 +284,23 @@ func register(client *zmqutil.Client, log *logger.L) error {
 
 	switch string(data[0]) {
 	case "E":
-		return fmt.Errorf("register error: %q", data[1])
+		return fmt.Errorf("connection refused. register error: %q", data[1])
 	case "R":
 		if len(data) < 5 {
-			return fmt.Errorf("register response incorrect: %x", data)
+			return fmt.Errorf("connection refused. register response incorrect: %x", data)
 		}
 		chain := mode.ChainName()
 		received := string(data[1])
 		if received != chain {
-			log.Criticalf("expected chain: %q but received: %q", chain, received)
-			logger.Panicf("expected chain: %q but received: %q", chain, received)
+			log.Criticalf("connection refused. Expected chain: %q but received: %q", chain, received)
+			return fmt.Errorf("connection refused.  expected chain: %q but received: %q ", chain, received)
 		}
-
 		timestamp := binary.BigEndian.Uint64(data[4])
-		log.Infof("register replied: public key: %x:  listeners: %x  timestamp: %d", data[2], data[3], timestamp)
+		log.Infof("connection refused. register replied: public key: %x:  listeners: %x  timestamp: %d", data[2], data[3], timestamp)
 		announce.AddPeer(data[2], data[3], timestamp) // publicKey, broadcasts, listeners
 		return nil
 	default:
-		return fmt.Errorf("rpc unexpected response: %q", data[0])
+		return fmt.Errorf("connection refused. rpc unexpected response: %q", data[0])
 	}
 }
 

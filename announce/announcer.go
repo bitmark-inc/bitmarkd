@@ -51,12 +51,19 @@ loop:
 		select {
 		case <-shutdown:
 			break loop
-
 		case item := <-queue:
 			log.Infof("received control: %s  parameters: %x", item.Command, item.Parameters)
 			switch item.Command {
 			case "reconnect":
 				determineConnections(log)
+			case "updatetime":
+				if len(item.Parameters[0]) != 0 {
+					timestamp := binary.BigEndian.Uint64(item.Parameters[1])
+					if timestamp != 0 {
+						ts := time.Unix(int64(timestamp), 0)
+						setPeerTimestamp(item.Parameters[0], ts)
+					}
+				}
 			default:
 			}
 
