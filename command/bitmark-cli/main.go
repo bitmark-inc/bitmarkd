@@ -33,7 +33,7 @@ func main() {
 
 	app := cli.NewApp()
 	app.Name = "bitmark-cli"
-	// app.Usage = ""
+	app.Usage = "connect to bitmark network to send transactions and perform queries"
 	app.Version = version
 	app.HideVersion = true
 
@@ -72,15 +72,8 @@ func main() {
 	}
 	app.Commands = []cli.Command{
 		{
-			Name:      "generate",
-			Usage:     "generate key pair, will not store in config file",
-			ArgsUsage: "\n   (* = required)",
-			Flags:     []cli.Flag{},
-			Action:    runGenerate,
-		},
-		{
 			Name:      "setup",
-			Usage:     "Initialise bitmark-cli configuration",
+			Usage:     "initialise bitmark-cli configuration",
 			ArgsUsage: "\n   (* = required, + = select one)",
 			Flags: []cli.Flag{
 				cli.StringFlag{
@@ -410,13 +403,13 @@ func main() {
 		},
 		{
 			Name:      "fingerprint",
-			Usage:     "fingerprint a file (compatible to desktop app)",
+			Usage:     "fingerprint a file (version 01 SHA3-512 algorithm)",
 			ArgsUsage: "\n   (* = required)",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "file, f",
 					Value: "",
-					Usage: " `FILE` of data to fingerprint",
+					Usage: "*`FILE` of data to fingerprint",
 				},
 			},
 			Action: runFingerprint,
@@ -429,10 +422,40 @@ func main() {
 				cli.StringFlag{
 					Name:  "file, f",
 					Value: "",
-					Usage: " `FILE` of data to sign",
+					Usage: "*`FILE` of data to sign",
 				},
 			},
 			Action: runSign,
+		},
+		{
+			Name:      "verify",
+			Usage:     "verify file signature file",
+			ArgsUsage: "\n   (* = required)",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "file, f",
+					Value: "",
+					Usage: "*`FILE` of data to sign",
+				},
+				cli.StringFlag{
+					Name:  "owner, o",
+					Value: "",
+					Usage: "*owner `ACCOUNT` that signed the file",
+				},
+				cli.StringFlag{
+					Name:  "signature, s",
+					Value: "",
+					Usage: "*signature from a sign command `HEX`",
+				},
+			},
+			Action: runVerify,
+		},
+		{
+			Name:      "generate",
+			Usage:     "generate key pair, will not store in config file",
+			ArgsUsage: "\n   (* = required)",
+			Flags:     []cli.Flag{},
+			Action:    runGenerate,
 		},
 		{
 			Name:  "version",

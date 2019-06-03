@@ -14,6 +14,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/keypair"
 )
 
 var (
@@ -183,6 +184,7 @@ func checkTransferTx(txId string) (string, error) {
 	return txId, nil
 }
 
+// contains private and public keys
 func checkTransferFrom(from string, config *configuration.Configuration) (*encrypt.IdentityType, error) {
 	if "" == from {
 		from = config.DefaultIdentity
@@ -191,12 +193,18 @@ func checkTransferFrom(from string, config *configuration.Configuration) (*encry
 	return getIdentity(from, config)
 }
 
-// transfer to is required field
-func checkTransferTo(to string) (string, error) {
+// transfer to is required field but only has a public key
+func checkTransferTo(to string, config *configuration.Configuration) (string, *keypair.KeyPair, error) {
 	if "" == to {
-		return "", ErrRequiredTransferTo
+		return "", nil, ErrRequiredTransferTo
 	}
-	return to, nil
+
+	newOwnerKeyPair, err := encrypt.PublicKeyFromString(to, config.Identities, config.TestNet)
+	if nil != err {
+		return "", nil, err
+	}
+
+	return to, newOwnerKeyPair, nil
 }
 
 // coin address to is required field
@@ -226,7 +234,20 @@ func checkReceipt(receipt string) (string, error) {
 	return receipt, nil
 }
 
-// note: this returns apointer to tha actial config.Identity[i]
+// signature is required field ensure 64 hex bytes
+func checkSignature(s string) ([]byte, error) {
+	if 128 != len(s) {
+		return nil, ErrRequiredTxId
+	}
+	h, err := hex.DecodeString(s)
+	if nil != err {
+		return nil, err
+
+	}
+	return h, nil
+}
+
+// note: this returns a pointer to the actual config.Identity[i]
 //       so permanent modifications can be made to the identity
 func getIdentity(name string, config *configuration.Configuration) (*encrypt.IdentityType, error) {
 	for i, identity := range config.Identities {

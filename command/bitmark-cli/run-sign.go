@@ -97,3 +97,54 @@ func runSign(c *cli.Context) error {
 	}
 	return nil
 }
+
+func runVerify(c *cli.Context) error {
+
+	m := c.App.Metadata["config"].(*metadata)
+
+	fileName, err := checkFileName(c.String("file"))
+	if nil != err {
+		return err
+	}
+
+	owner, ownerKeyPair, err := checkTransferTo(c.String("owner"), m.config)
+	if nil != err {
+		return err
+	}
+
+	signature, err := checkSignature(c.String("signature"))
+	if nil != err {
+		return err
+	}
+
+	if m.verbose {
+		fmt.Fprintf(m.e, "file: %s\n", fileName)
+		fmt.Fprintf(m.e, "signer: %s\n", owner)
+		fmt.Fprintf(m.e, "signature: %x\n", signature)
+	}
+
+	file, err := os.Open(fileName)
+	if nil != err {
+		return err
+	}
+
+	data, err := ioutil.ReadAll(file)
+
+	ok := ed25519.Verify(ownerKeyPair.PublicKey, data, signature)
+	if m.verbose {
+		fmt.Fprintf(m.e, "verified: %q\n", ok)
+	} else {
+
+		out := struct {
+			Identity string `json:"identity"`
+			FileName string `json:"file_name"`
+			Verified bool   `json:"verified"`
+		}{
+			Identity: owner,
+			FileName: fileName,
+			Verified: ok,
+		}
+		printJson(m.w, out)
+	}
+	return nil
+}

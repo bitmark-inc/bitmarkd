@@ -15,6 +15,7 @@ import (
 
 	"golang.org/x/crypto/ed25519"
 
+	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/keypair"
 	"github.com/bitmark-inc/go-argon2"
@@ -31,6 +32,7 @@ var (
 	ErrKeyLength              = fault.InvalidError("key length is invalid")
 	ErrNotFoundIdentity       = fault.NotFoundError("identity name not found")
 	ErrUnableToRegenerateKeys = fault.InvalidError("unable to regenerate keys")
+	ErrWrongNetwork           = fault.InvalidError("account is for the wrong network")
 	ErrWrongPassword          = fault.InvalidError("wrong password")
 )
 
@@ -335,8 +337,8 @@ func VerifyPassword(password string, identity *IdentityType) (*keypair.KeyPair, 
 	return &keyPair, nil
 }
 
-// PublicKeyFromIdentity - convert an identity tag string to a public key
-func PublicKeyFromIdentity(name string, identities []IdentityType) (*keypair.KeyPair, error) {
+// PublicKeyFromString - convert an Identity, Base58 or Hex string string to a public key byte slice
+func PublicKeyFromString(name string, identities []IdentityType, testnet bool) (*keypair.KeyPair, error) {
 
 loop:
 	for _, identity := range identities {
@@ -353,5 +355,27 @@ loop:
 		}
 		return &keyPair, nil
 	}
+
+	// try name as a base58 value
+	acc, err := account.AccountFromBase58(name)
+	if nil == err {
+		if acc.IsTesting() != testnet {
+			return nil, ErrWrongNetwork
+		}
+		keyPair := keypair.KeyPair{
+			PublicKey: acc.PublicKeyBytes(),
+		}
+		return &keyPair, nil
+	}
+
+	// try if it is a hex public key
+	newPublicKey, err := hex.DecodeString(name)
+	if nil == err && len(newPublicKey) == PublicKeySize {
+		keyPair := keypair.KeyPair{
+			PublicKey: newPublicKey,
+		}
+		return &keyPair, nil
+	}
+
 	return nil, ErrNotFoundIdentity
 }

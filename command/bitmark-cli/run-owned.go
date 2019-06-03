@@ -5,14 +5,12 @@
 package main
 
 import (
-	"encoding/hex"
 	"fmt"
 
 	"github.com/urfave/cli"
 
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/rpccalls"
-	"github.com/bitmark-inc/bitmarkd/keypair"
 )
 
 func runOwned(c *cli.Context) error {
@@ -43,26 +41,9 @@ func runOwned(c *cli.Context) error {
 		fmt.Fprintf(m.e, "count: %d\n", count)
 	}
 
-	var ownerKeyPair *keypair.KeyPair
-
-	// ***** FIX THIS: possibly add base58 keys @@@@@
-	publicKey, err := hex.DecodeString(owner)
+	ownerKeyPair, err := encrypt.PublicKeyFromString(owner, m.config.Identities, m.config.TestNet)
 	if nil != err {
-
-		ownerKeyPair, err = encrypt.PublicKeyFromIdentity(owner, m.config.Identities)
-		if nil != err {
-			return err
-		}
-	} else {
-		ownerKeyPair = &keypair.KeyPair{}
-		if len(publicKey) != encrypt.PublicKeySize {
-			return err
-		}
-		ownerKeyPair.PublicKey = publicKey
-	}
-	// just in case some internal breakage
-	if nil == ownerKeyPair {
-		return ErrNilKeyPair
+		return err
 	}
 
 	client, err := rpccalls.NewClient(m.testnet, m.config.Connect, m.verbose, m.e)

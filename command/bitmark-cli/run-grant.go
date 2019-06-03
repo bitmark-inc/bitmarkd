@@ -5,7 +5,6 @@
 package main
 
 import (
-	"encoding/hex"
 	"fmt"
 
 	"github.com/urfave/cli"
@@ -19,7 +18,7 @@ func runGrant(c *cli.Context) error {
 
 	m := c.App.Metadata["config"].(*metadata)
 
-	to, err := checkTransferTo(c.String("receiver"))
+	to, newOwnerKeyPair, err := checkTransferTo(c.String("receiver"), m.config)
 	if nil != err {
 		return err
 	}
@@ -58,7 +57,7 @@ func runGrant(c *cli.Context) error {
 
 	// check owner password
 	if "" != agent {
-		password, err := passwordFromAgent(from.Name, "Grant Shareal Bitmark", agent, clearCache)
+		password, err := passwordFromAgent(from.Name, "Grant Shared Bitmark", agent, clearCache)
 		if nil != err {
 			return err
 		}
@@ -80,28 +79,6 @@ func runGrant(c *cli.Context) error {
 	}
 	// just in case some internal breakage
 	if nil == ownerKeyPair {
-		return ErrNilKeyPair
-	}
-
-	var newOwnerKeyPair *keypair.KeyPair
-
-	// ***** FIX THIS: possibly add base58 keys @@@@@
-	newPublicKey, err := hex.DecodeString(to)
-	if nil != err {
-
-		newOwnerKeyPair, err = encrypt.PublicKeyFromIdentity(to, m.config.Identities)
-		if nil != err {
-			return err
-		}
-	} else {
-		newOwnerKeyPair = &keypair.KeyPair{}
-		if len(newPublicKey) != encrypt.PublicKeySize {
-			return err
-		}
-		newOwnerKeyPair.PublicKey = newPublicKey
-	}
-	// just in case some internal breakage
-	if nil == newOwnerKeyPair {
 		return ErrNilKeyPair
 	}
 
