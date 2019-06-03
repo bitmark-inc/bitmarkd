@@ -36,7 +36,7 @@ USAGE()
   echo '       --remote=NAME      -r NAME       set remote name ['"${remote}"']'
   echo '       --url=URL-PREFIX   -p URL-PREFIX set URL prefix ['"${url}"']'
   echo '       --user=NAME        -u NAME       set blockchain user'
-  echo '       --network=NET      -n NET        set blockchain network (local/test/bitmark) ['"${network}"']'
+  echo '       --network=NET      -n NET        set blockchain network [bitmark|testing|local]: ['"${network}"']'
   echo '       --file=FILE        -f FILE       set alternative logfile ['"${logfile}"']'
   echo '       --list             -l            list properties for user'
   echo '       --status=FILE      -s FILE       check status from a specific logfile'
@@ -250,7 +250,7 @@ verbose=no
 debug=no
 url=
 remote=origin
-network=test
+network=testing
 user=
 logfile="bmr-${network}-$(date '+%Y%m%d_%H%M%S').log"
 list=no
@@ -301,12 +301,12 @@ do
 
     (-n|--network)
       case "${2}" in
-        (local|test|bitmark)
+        (local|testing|bitmark)
           network="${2}"
           logfile="bmr-${network}-$(date '+%Y%m%d_%H%M%S').log"
           ;;
         (*)
-          USAGE 'invalid network: %s' "${2}"
+          USAGE 'invalid network: "%s" use: [bitmark|testing|local]' "${2}"
           ;;
       esac
       shift

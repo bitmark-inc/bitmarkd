@@ -36,7 +36,7 @@ USAGE()
   echo usage: $(basename "$0") '[options] index-numbers...'
   echo '       --help                -h            this message'
   echo '       --verbose             -v            more messages'
-  echo '       --chain=chain         -c CHAIN      set the chain [local|testing|bitmark]: ['"${network}"']'
+  echo '       --chain=chain         -c CHAIN      set the chain [bitmark|testing|local]: ['"${network}"']'
   echo '       --nodes=DOMAIN        -n DOMAIN     set the nodes [none|chain|nodes.domain.tld]: ['"${nodes}"']'
   echo '       --connect=K:H:P       -C K:H:P      connect to specific bitmarkd public_key:host:port'
   echo '       --bitcoin=DIR|FILE    -b DIR|FILE   set bitcoin access from bitcoin.conf'
@@ -117,12 +117,12 @@ do
       testnet_only=''
       livenet_only="${comment_string}"
       case "$2" in
-        (live|bitmark)
+        (bitmark)
           chain=bitmark
           testnet_only="${comment_string}"
           livenet_only=''
           ;;
-        (test|testing)
+        (testing)
           chain=testing
           ;;
         (local)
