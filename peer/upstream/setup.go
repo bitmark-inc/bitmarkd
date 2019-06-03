@@ -397,8 +397,11 @@ func push(client *zmqutil.Client, log *logger.L, item *messagebus.Message) error
 func (u *Upstream) startPolling(stopPollingSig <-chan struct{}) {
 	u.log.Debug("start polling…")
 
-	poller := zmq.NewPoller()
 	m := u.client.GetMonitorSocket()
+	if nil == m {
+		return
+	}
+	poller := zmq.NewPoller()
 	poller.Add(m, zmq.POLLIN)
 
 loop:
