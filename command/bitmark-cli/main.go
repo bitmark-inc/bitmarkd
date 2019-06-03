@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/urfave/cli"
 
@@ -450,21 +451,17 @@ func main() {
 		w := c.App.Writer
 		verbose := c.GlobalBool("verbose")
 
-		// to suppress reading config file if certain commands
+		// to suppress reading config params for certain commands
 		command := c.Args().Get(0)
-		if "version" == command {
+		switch command {
+		case "help", "h", "version":
 			return nil
 		}
 
 		// only want one of these
-		network := c.GlobalString("network")
+		network := strings.ToLower(c.GlobalString("network"))
 		switch network {
-		case "bitmark", "live":
-			network = "bitmark"
-		case "testing", "test":
-			network = "testing"
-		case "local", "regression":
-			network = "local"
+		case "bitmark", "testing", "local":
 		default:
 			return fmt.Errorf("network: %q can only be bitmark/testing/local", network)
 		}
