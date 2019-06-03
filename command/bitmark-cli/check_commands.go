@@ -21,7 +21,8 @@ var (
 	ErrRequiredAssetFingerprint = fault.InvalidError("asset fingerprint is required")
 	ErrRequiredAssetMetadata    = fault.InvalidError("asset metadata is required")
 	ErrRequiredAssetName        = fault.InvalidError("asset name is required")
-	ErrRequiredConnect          = fault.InvalidError("connect is required")
+	ErrRequiredConnect          = fault.InvalidError("connect is required use: HOST:PORT or IPv4:PORT or [IPv6]:PORT")
+	ErrRequiredConnectPort      = fault.InvalidError("connect requires :PORT-NUMBER suffix")
 	ErrRequiredCurrencyAddress  = fault.InvalidError("currency address is required")
 	ErrRequiredDescription      = fault.InvalidError("description is required")
 	ErrRequiredFileName         = fault.InvalidError("file name is required")
@@ -54,8 +55,25 @@ func checkFileName(fileName string) (string, error) {
 
 // connect is required.
 func checkConnect(connect string) (string, error) {
+	connect = strings.TrimSpace(connect)
 	if "" == connect {
 		return "", ErrRequiredConnect
+	}
+
+	s := []string{}
+
+	if '[' == connect[0] { // IPv6
+		s = strings.Split(connect, "]:")
+	} else { // Ipv4 or host
+		s = strings.Split(connect, ":")
+	}
+	if 2 != len(s) {
+		return "", ErrRequiredConnectPort
+	}
+
+	port, err := strconv.Atoi(s[1])
+	if nil != err || port < 1 || port > 65535 {
+		return "", ErrRequiredConnectPort
 	}
 
 	return connect, nil

@@ -45,14 +45,9 @@ func main() {
 			Usage: " verbose result",
 		},
 		cli.StringFlag{
-			Name:  "config, c",
-			Value: "",
-			Usage: "bitmark-cli configuration `FILE`",
-		},
-		cli.StringFlag{
 			Name:  "network, n",
 			Value: "",
-			Usage: " bitmark|testing|local. Connect to bitmark `NETWORK`",
+			Usage: " connect to bitmark `NETWORK` [bitmark|testing|local]",
 		},
 		cli.StringFlag{
 			Name:  "identity, i",
@@ -87,14 +82,6 @@ func main() {
 			Usage:     "Initialise bitmark-cli configuration",
 			ArgsUsage: "\n   (* = required, + = select one)",
 			Flags: []cli.Flag{
-				cli.BoolFlag{
-					Name:  "testnet, t",
-					Usage: "+setup for test network",
-				},
-				cli.BoolFlag{
-					Name:  "livenet, l",
-					Usage: "+setup for live network",
-				},
 				cli.StringFlag{
 					Name:  "connect, c",
 					Value: "",
@@ -470,31 +457,30 @@ func main() {
 		}
 
 		// only want one of these
-		file := c.GlobalString("config")
 		network := c.GlobalString("network")
-		if "" == file && "" == network {
-			return fmt.Errorf("either config or network must be set")
-		}
-		if "" != file && "" != network {
-			return fmt.Errorf("do not set both config and network")
-		}
-		if "" == file {
-
-			p := os.Getenv("XDG_CONFIG_HOME")
-			if "" == p {
-				return fmt.Errorf("XDG_CONFIG_HOME environment is not set")
-			}
-			dir, err := checkFileExists(p)
-			if nil != err {
-				return err
-			}
-			if !dir {
-				return fmt.Errorf("not a directory: %q", p)
-			}
-			file = path.Join(p, app.Name, network+"-"+app.Name+".json")
+		switch network {
+		case "bitmark", "live":
+			network = "bitmark"
+		case "testing", "test":
+			network = "testing"
+		case "local", "regression":
+			network = "local"
+		default:
+			return fmt.Errorf("network: %q can only be bitmark/testing/local", network)
 		}
 
-		// try to access file in: XDG_CONFIG_HOME
+		p := os.Getenv("XDG_CONFIG_HOME")
+		if "" == p {
+			return fmt.Errorf("XDG_CONFIG_HOME environment is not set")
+		}
+		dir, err := checkFileExists(p)
+		if nil != err {
+			return err
+		}
+		if !dir {
+			return fmt.Errorf("not a directory: %q", p)
+		}
+		file := path.Join(p, app.Name, network+"-"+app.Name+".json")
 
 		if verbose {
 			fmt.Fprintf(e, "file: %q\n", file)
@@ -509,6 +495,7 @@ func main() {
 			c.App.Metadata["config"] = &metadata{
 				file:    file,
 				save:    false,
+				testnet: network != "bitmark",
 				verbose: verbose,
 				e:       e,
 				w:       w,

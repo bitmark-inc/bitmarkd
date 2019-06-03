@@ -18,17 +18,11 @@ import (
 func runSetup(c *cli.Context) error {
 
 	m := c.App.Metadata["config"].(*metadata)
+	testnet := m.testnet
 
 	name, err := checkName(c.GlobalString("identity"))
 	if nil != err {
 		return err
-	}
-
-	testnet := c.Bool("testnet")
-	livenet := c.Bool("livenet")
-
-	if testnet == livenet {
-		return fmt.Errorf("only one of testnet/livenet can be set")
 	}
 
 	connect, err := checkConnect(c.String("connect"))
@@ -50,7 +44,6 @@ func runSetup(c *cli.Context) error {
 	if m.verbose {
 		fmt.Fprintf(m.e, "config: %s\n", m.file)
 		fmt.Fprintf(m.e, "testnet: %t\n", testnet)
-		fmt.Fprintf(m.e, "livenet: %t\n", livenet)
 		fmt.Fprintf(m.e, "connect: %s\n", connect)
 		fmt.Fprintf(m.e, "identity: %s\n", name)
 		fmt.Fprintf(m.e, "description: %s\n", description)
