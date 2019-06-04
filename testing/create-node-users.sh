@@ -20,7 +20,7 @@ xdg_home="${XDG_CONFIG_HOME}"
 [ -d "${xdg_home}" ] || ERROR 'missing directory: "%s" please create first' "${xdg_home}"
 
 # create first and second users
-bitmark-cli --network=local --identity=first --password="${password}" setup --testnet --connect=127.0.0.1:2130 --description='first user'
+bitmark-cli --network=local --identity=first --password="${password}" setup --connect=127.0.0.1:2130 --description='first user'
 bitmark-cli --network=local --identity=second --password="${password}" add --description='second user'
 
 # create users for all bitmarkds
