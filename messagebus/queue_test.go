@@ -10,6 +10,7 @@ import (
 	"sync"
 	"testing"
 	"time"
+
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 )
 
@@ -333,11 +334,13 @@ func TestCacheStateQueueOverflow(t *testing.T) {
 
 	// verify it already contains in queue
 	found := false
+
+searchLoop:
 	for len(queue) > 0 {
 		m := <-queue
 		if c == m.Command && len(m.Parameters) == 1 && reflect.DeepEqual(p, m.Parameters[0]) {
 			found = true
-			break "***BREAK MISSING LABEL***"
+			break searchLoop
 		}
 	}
 
