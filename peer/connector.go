@@ -218,7 +218,7 @@ loop:
 			//connectToUpstream(conn.log, conn.clients, conn.dynamicStart, item.Command, item.Parameters[0], item.Parameters[1])
 			switch item.Command {
 			case "@D": // internal command: delete a peer
-				conn.releseServerKey(item.Parameters[0])
+				conn.releaseServerKey(item.Parameters[0])
 				conn.log.Infof("connector receive server public key: %x", item.Parameters[0])
 			default:
 				conn.connectUpstream(item.Command, item.Parameters[0], item.Parameters[1])
@@ -489,7 +489,7 @@ func (conn *connector) connectUpstream(priority string, serverPublicKey []byte, 
 	return err
 }
 
-func (conn *connector) releseServerKey(serverPublicKey []byte) error {
+func (conn *connector) releaseServerKey(serverPublicKey []byte) error {
 	log := conn.log
 	conn.searchClients(func(client *upstream.Upstream, e *list.Element) bool {
 		if bytes.Equal(serverPublicKey, client.GetClient().GetServerPublicKey()) {

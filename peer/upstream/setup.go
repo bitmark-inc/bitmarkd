@@ -236,7 +236,7 @@ loop:
 				if !u.connected {
 					err := requestConnect(u.client, u.log)
 					if nil != err {
-						log.Warnf("serverKey: %x connect to %X error: %s  ", u.GetClient().GetServerPublicKey(), err)
+						log.Warnf("serverKey: %x connect error: %s  ", u.GetClient().GetServerPublicKey(), err)
 						u.Unlock()
 						continue loop // try again later
 					}
