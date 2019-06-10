@@ -132,7 +132,7 @@ func runVerify(c *cli.Context) error {
 
 	ok := ed25519.Verify(ownerKeyPair.PublicKey, data, signature)
 	if m.verbose {
-		fmt.Fprintf(m.e, "verified: %q\n", ok)
+		fmt.Fprintf(m.e, "verified: %t\n", ok)
 	} else {
 
 		out := struct {
