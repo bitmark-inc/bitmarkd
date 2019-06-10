@@ -45,23 +45,33 @@ type NothingPrivateKey struct {
 
 // seed parameters
 var (
-	seedHeader       = []byte{0x5a, 0xfe, 0x01}
-	seedHeaderLength = len(seedHeader)
-	seedNonce        = [24]byte{
+	seedHeader   = []byte{0x5a, 0xfe}
+	seedHeaderV1 = append(seedHeader, []byte{0x01}...)
+	seedHeaderV2 = append(seedHeader, []byte{0x02}...)
+)
+
+// for seed v1 only
+var (
+	seedNonce = [24]byte{
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	}
-	seedCountBM = [16]byte{
+	authSeedIndex = [16]byte{
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0xe7,
 	}
 )
 
 const (
+	seedHeaderLength   = 3
 	seedPrefixLength   = 1
-	seedKeyLength      = 32
+	secretKeyV1Length  = 32
+	secretKeyV2Length  = 17
 	seedChecksumLength = 4
+
+	base58EncodedSeedV1Length = 40
+	base58EncodedSeedV2Length = 24
 )
 
 // PrivateKeyFromBase58Seed - this converts a Base58 encoded seed string and returns a private key
@@ -70,51 +80,89 @@ const (
 // interface type to allow individual methods to be called.
 func PrivateKeyFromBase58Seed(seedBase58Encoded string) (*PrivateKey, error) {
 
+	// verify length
 	seed := util.FromBase58(seedBase58Encoded)
-	if 0 == len(seed) {
-		return nil, fault.ErrCannotDecodeSeed
-	}
-
-	// Compute seed length
-	keyLength := len(seed) - seedHeaderLength - seedChecksumLength
-	if seedKeyLength+seedPrefixLength != keyLength {
+	seedLength := len(seed)
+	if base58EncodedSeedV1Length != seedLength && base58EncodedSeedV2Length != seedLength {
 		return nil, fault.ErrInvalidSeedLength
 	}
 
-	// Check seed header
-	if !bytes.Equal(seedHeader, seed[:seedHeaderLength]) {
-		return nil, fault.ErrInvalidSeedHeader
-	}
-
-	// Checksum
-	checksumStart := len(seed) - checksumLength
-	checksum := sha3.Sum256(seed[:checksumStart])
-	if !bytes.Equal(checksum[:seedChecksumLength], seed[checksumStart:]) {
+	// verify checksum
+	digest := sha3.Sum256(seed[:seedLength-checksumLength])
+	checksumStart := seedLength - seedChecksumLength
+	expectedChecksum := digest[:seedChecksumLength]
+	actualChecksum := seed[checksumStart:]
+	if !bytes.Equal(expectedChecksum, actualChecksum) {
 		return nil, fault.ErrChecksumMismatch
 	}
 
-	var secretKey [seedKeyLength]byte
-	copy(secretKey[:], seed[seedHeaderLength+seedPrefixLength:])
+	header := seed[:seedHeaderLength]
+	var encryptedSk []byte // encrypted seed for generate key pair
+	var isTest bool        // denote the network is test net
 
-	prefix := seed[seedHeaderLength : seedHeaderLength+seedPrefixLength]
+	switch {
+	case bytes.Equal(seedHeaderV1, header):
+		// copy the secret key from seed
+		var sk [secretKeyV1Length]byte
+		secretStart := seedHeaderLength + seedPrefixLength
+		copy(sk[:], seed[secretStart:])
 
-	// first byte of prefix is test/live indication
-	isTest := prefix[0] == 0x01
+		prefix := seed[seedHeaderLength:secretStart]
+		// first byte of prefix is test/live indication
+		isTest = prefix[0] == 0x01
 
-	encrypted := secretbox.Seal([]byte{}, seedCountBM[:], &seedNonce, &secretKey)
+		encryptedSk = secretbox.Seal([]byte{}, authSeedIndex[:], &seedNonce, &sk)
 
-	_, priv, err := ed25519.GenerateKey(bytes.NewBuffer(encrypted))
+	case bytes.Equal(seedHeaderV2, header):
+		sk := seed[seedHeaderLength:checksumStart]
+
+		// verify valid secret key
+		if secretKeyV2Length != len(sk) || 0 != sk[16]&0x0f {
+			return nil, fault.ErrInvalidSeedLength
+		}
+
+		// parse network
+		mode := sk[0]&0x80 | sk[1]&0x40 | sk[2]&0x20 | sk[3]&0x10
+		isTest = mode == sk[15]&0xf0^0xf0
+
+		// add the seed 4 times to hash value
+		hash := sha3.NewShake256()
+		for i := 0; i < 4; i++ {
+			n, err := hash.Write(sk)
+			if err != nil {
+				return nil, err
+			}
+			if secretKeyV2Length != n {
+				return nil, fault.InvalidError("secret key is not written successfully")
+			}
+		}
+
+		const encryptedLength = 32
+		encryptedSk = make([]byte, encryptedLength)
+		n, err := hash.Read(encryptedSk)
+		if nil != err {
+			return nil, err
+		}
+		if encryptedLength != n {
+			return nil, fault.InvalidError("encrypted secret is not read successfully")
+		}
+
+	default:
+		return nil, fault.ErrInvalidSeedHeader
+	}
+
+	// generate key pair from encrypted secret key
+	_, priv, err := ed25519.GenerateKey(bytes.NewBuffer(encryptedSk))
 	if nil != err {
 		return nil, err
 	}
 
-	privateKey := &PrivateKey{
+	return &PrivateKey{
 		PrivateKeyInterface: &ED25519PrivateKey{
 			Test:       isTest,
 			PrivateKey: priv,
 		},
-	}
-	return privateKey, nil
+	}, nil
 }
 
 // PrivateKeyFromBase58 - this converts a Base58 encoded string and returns an private key
