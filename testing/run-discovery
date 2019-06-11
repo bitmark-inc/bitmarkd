@@ -42,11 +42,14 @@ generate_items='generate-identity'
 
 getopt=
 case "$(uname)" in
-  (FreeBSD)
+  (FreeBSD|DragonFly)
     getopt=/usr/local/bin/getopt
     ;;
   (NetBSD)
     getopt=/usr/pkg/bin/getopt
+    ;;
+  (OpenBSD)
+    getopt=/usr/local/bin/gnugetopt
     ;;
   (Darwin)
     getopt=/usr/local/opt/gnu-getopt/bin/getopt

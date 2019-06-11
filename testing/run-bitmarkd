@@ -49,11 +49,14 @@ sleep=
 
 getopt=
 case "$(uname)" in
-  (FreeBSD)
+  (FreeBSD|DragonFly)
     getopt=/usr/local/bin/getopt
     ;;
   (NetBSD)
     getopt=/usr/pkg/bin/getopt
+    ;;
+  (OpenBSD)
+    getopt=/usr/local/bin/gnugetopt
     ;;
   (Darwin)
     getopt=/usr/local/opt/gnu-getopt/bin/getopt
@@ -208,6 +211,7 @@ run_again()
 while :
 do
   printf 'configuration: %s\n' "${config}"
+  export GODEBUG=madvdontneed=1
   bitmarkd --config-file="${config}" "$@"
   [ $# -ne 0 ] && break
   rc="$?"

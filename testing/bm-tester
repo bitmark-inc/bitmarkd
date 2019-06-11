@@ -9,6 +9,7 @@
 first=1
 last=8
 
+
 # the tmux session name
 session=LOCAL
 

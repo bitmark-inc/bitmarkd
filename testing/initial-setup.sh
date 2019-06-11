@@ -25,23 +25,36 @@ SEP() {
   printf '==================================================\n'
 }
 
+# sets global ok to no if any error
 CHECK_PROGRAM() {
-  local p x
-  for p in "$@"
+  local alt p x i flag
+  for alt in "$@"
   do
-    printf '%-32s ' "${p}"
-    x=$(which "${p}")
-    if [ $? -ne 0 ]
-    then
-      printf 'is not on the path\n'
-      ok=no
-    elif [ ! -x "${x}" ]
-    then
-      printf 'is not executable\n'
-      ok=no
-    else
-      printf '*OK*\n'
-    fi
+    flag=no
+    i=0
+    alt="${alt}:"
+    # search alternatives
+    while :
+    do
+      i=$((i + 1))
+      p="${alt%%:*}"
+      [ -z "${p}" ] && break
+      alt="${alt#*:}"
+      printf '%2d: %-32s ' "${i}" "${p}"
+      x=$(which "${p}")
+      if [ $? -ne 0 ]
+      then
+        printf 'is not on the path\n'
+      elif [ ! -x "${x}" ]
+      then
+        printf 'is not executable\n'
+      else
+        printf '*OK*\n'
+        flag=yes
+        break
+      fi
+    done
+    [ X"${flag}" = X"no" ] && ok=no
   done
 }
 
@@ -62,7 +75,7 @@ samples="${this_dir}/samples"
 # check programs
 ok=yes
 CHECK_PROGRAM bitmarkd bitmark-cli recorderd discovery bitmark-wallet
-CHECK_PROGRAM bitcoind bitcoin-cli litecoind litecoin-cli jq lua52 genbtcltc
+CHECK_PROGRAM bitcoind bitcoin-cli litecoind litecoin-cli jq lua52:lua5.2 genbtcltc
 CHECK_PROGRAM restart-all-bitmarkds run-recorderd bm-tester
 CHECK_PROGRAM generate-bitmarkd-configuration run-bitcoin run-bitmarkd
 CHECK_PROGRAM make-blockchain run-discovery node-info
