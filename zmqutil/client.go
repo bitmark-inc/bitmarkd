@@ -9,7 +9,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -317,15 +316,6 @@ func (client *Client) Connect(conn *util.Connection, serverPublicKey []byte, pre
 // IsConnected - check if connected to a node
 func (client *Client) IsConnected() bool {
 	return "" != client.address && nil != client.socket
-}
-
-// HasValidAddress - check whether it has valid address
-func (client *Client) HasValidAddress() bool {
-	if "" == client.address {
-		return false
-	}
-	h := strings.Replace(client.address, tcpPrefix, "", 1)
-	return nil != util.ConnectionFromCanonical(h)
 }
 
 // IsConnectedTo - check if connected to a specific node
