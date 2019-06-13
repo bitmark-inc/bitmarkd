@@ -411,9 +411,6 @@ func TestPackBitmarkTransferCountersignedFail(t *testing.T) {
 	// manually countersign the record and attach countersignature to "expected"
 	signature = ed25519.Sign(ownerTwo.privateKey, expected) // wrong signature
 	r.Countersignature = signature
-	l = util.ToVarint64(uint64(len(signature)))
-	expected = append(expected, l...)
-	expected = append(expected, signature...)
 
 	// test the packer
 	_, err = r.Pack(ownerTwoAccount)
