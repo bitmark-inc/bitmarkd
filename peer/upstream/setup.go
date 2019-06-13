@@ -7,7 +7,6 @@ package upstream
 import (
 	"encoding/binary"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -26,19 +25,17 @@ import (
 
 const (
 	cycleInterval = 30 * time.Second
-	monitorSignal = "inproc://upstream-monitor-signal-%s"
 )
 
 // Upstream - structure to hold an upstream connection
 type Upstream struct {
 	sync.RWMutex
 
-	log            *logger.L
-	client         *zmqutil.Client
-	connected      bool
-	blockHeight    uint64
-	shutdown       chan<- struct{}
-	stopPollingSig chan struct{}
+	log         *logger.L
+	client      *zmqutil.Client
+	connected   bool
+	blockHeight uint64
+	shutdown    chan<- struct{}
 }
 
 // atomically incremented counter for log names
@@ -46,7 +43,8 @@ var upstreamCounter counter.Counter
 
 // New - create a connection to an upstream server
 func New(privateKey []byte, publicKey []byte, timeout time.Duration) (*Upstream, error) {
-	client, err := zmqutil.NewClient(zmq.REQ, privateKey, publicKey, timeout)
+
+	client, event, err := zmqutil.NewClient(zmq.REQ, privateKey, publicKey, timeout, zmq.EVENT_ALL)
 	if nil != err {
 		return nil, err
 	}
@@ -54,23 +52,22 @@ func New(privateKey []byte, publicKey []byte, timeout time.Duration) (*Upstream,
 	n := upstreamCounter.Increment()
 
 	shutdown := make(chan struct{})
-	stopPollingSig := make(chan struct{})
+
 	u := &Upstream{
-		log:            logger.New(fmt.Sprintf("upstream@%d", n)),
-		client:         client,
-		connected:      false,
-		blockHeight:    0,
-		shutdown:       shutdown,
-		stopPollingSig: stopPollingSig,
+		log:         logger.New(fmt.Sprintf("upstream@%d", n)),
+		client:      client,
+		connected:   false,
+		blockHeight: 0,
+		shutdown:    shutdown,
 	}
-	go upstreamRunner(u, shutdown)
+	go u.runner(shutdown)
+	go u.poller(shutdown, event)
 	return u, nil
 }
 
-// Destroy - shutdown a connection
+// Destroy - shutdown a connection and terminate its background processes
 func (u *Upstream) Destroy() {
 	if nil != u {
-		u.stopPolling()
 		close(u.shutdown)
 	}
 }
@@ -78,8 +75,7 @@ func (u *Upstream) Destroy() {
 // ResetServer - clear Server side info of Zmq client for reusing the
 // upstream
 func (u *Upstream) ResetServer() {
-	//	u.GetClient().ResetServer()
-	u.client.ResetServer()
+	u.client.Close()
 	u.connected = false
 	u.blockHeight = 0
 }
@@ -109,16 +105,7 @@ func (u *Upstream) Connect(address *util.Connection, serverPublicKey []byte) err
 
 	err := u.client.Connect(address, serverPublicKey, mode.ChainName())
 	if nil == err {
-		// start monitoring, skip any error
-		u.monitorDisconnectSig()
-
-		// start polling the socket
-		c := u.stopPollingSig
-		go u.startPolling(c)
-
-		// register the peer connection
 		err = requestConnect(u.client, u.log)
-
 		if nil == err {
 			u.Lock()
 			u.connected = true
@@ -128,9 +115,9 @@ func (u *Upstream) Connect(address *util.Connection, serverPublicKey []byte) err
 	return err
 }
 
-// GetClient - return the internal ZeroMQ client data
-func (u *Upstream) GetClient() *zmqutil.Client {
-	return u.client
+// ServerPublicKey - return the internal ZeroMQ client data
+func (u *Upstream) ServerPublicKey() []byte {
+	return u.client.ServerPublicKey()
 }
 
 // GetHeight - fetch height from last polled value
@@ -207,7 +194,7 @@ func (u *Upstream) GetBlockData(blockNumber uint64) ([]byte, error) {
 }
 
 // loop to handle upstream communication
-func upstreamRunner(u *Upstream, shutdown <-chan struct{}) {
+func (u *Upstream) runner(shutdown <-chan struct{}) {
 	log := u.log
 
 	log.Debug("starting…")
@@ -232,22 +219,21 @@ loop:
 			u.log.Debugf("client socket connected: %t", clientConnected)
 
 			if clientConnected {
-				// register if needed
+
 				if !u.connected {
 					err := requestConnect(u.client, u.log)
 					if nil != err {
-						log.Warnf("serverKey: %x connect error: %s  ", u.GetClient().GetServerPublicKey(), err)
+						log.Warnf("serverKey: %x connect error: %s  ", u.client.ServerPublicKey(), err)
 						u.Unlock()
 						continue loop // try again later
 					}
 					u.connected = true
 				}
 
-				// get block height
-				h, err := getHeight(u.client, u.log)
+				h, err := height(u.client, u.log)
 				if nil == err {
 					u.blockHeight = h
-					publicKey := u.client.GetServerPublicKey()
+					publicKey := u.client.ServerPublicKey()
 					timestamp := make([]byte, 8)
 					binary.BigEndian.PutUint64(timestamp, uint64(time.Now().Unix()))
 					messagebus.Bus.Announce.Send("updatetime", publicKey, timestamp)
@@ -311,7 +297,7 @@ func requestConnect(client *zmqutil.Client, log *logger.L) error {
 		chain := mode.ChainName()
 		received := string(data[1])
 		if received != chain {
-			log.Criticalf("connection refused. Expected chain: %q but received: %q", chain, received)
+			log.Errorf("connection refused. Expected chain: %q but received: %q", chain, received)
 			return fmt.Errorf("connection refused.  expected chain: %q but received: %q ", chain, received)
 		}
 		timestamp := binary.BigEndian.Uint64(data[4])
@@ -324,7 +310,7 @@ func requestConnect(client *zmqutil.Client, log *logger.L) error {
 }
 
 // must have lock held before calling this
-func getHeight(client *zmqutil.Client, log *logger.L) (uint64, error) {
+func height(client *zmqutil.Client, log *logger.L) (uint64, error) {
 
 	log.Infof("getHeight: client: %s", client)
 
@@ -394,68 +380,31 @@ func push(client *zmqutil.Client, log *logger.L, item *messagebus.Message) error
 // start polling the socket
 //
 // it should be called as a goroutine to avoid blocking
-func (u *Upstream) startPolling(stopPollingSig <-chan struct{}) {
-	u.log.Debug("start polling…")
+func (u *Upstream) poller(shutdown <-chan struct{}, event <-chan zmqutil.Event) {
 
-	m := u.client.GetMonitorSocket()
-	if nil == m {
-		return
-	}
-	poller := zmq.NewPoller()
-	poller.Add(m, zmq.POLLIN)
+	log := u.log
+
+	log.Debug("start polling…")
 
 loop:
 	for {
 		select {
-		case <-stopPollingSig:
+		case <-shutdown:
 			break loop
-
-		default:
-			sockets, _ := poller.Poll(-1)
-			for _, socket := range sockets {
-				switch s := socket.Socket; s {
-				case m:
-					u.handleEvent(s)
-				default:
-				}
-			}
+		case e := <-event:
+			u.handleEvent(e)
 		}
 	}
-	u.log.Debug("stopped polling")
-}
-
-func (u *Upstream) stopPolling() {
-	if nil == u.stopPollingSig {
-		return
-	}
-	u.log.Debug("stopping polling…")
-	close(u.stopPollingSig)
-	u.stopPollingSig = nil
-}
-
-// start monitoring the disconnect signal on client socket
-func (u *Upstream) monitorDisconnectSig() error {
-	addr := u.client.String()
-	if "" == addr {
-		return fault.InvalidError("invalid address")
-	}
-	sig := fmt.Sprintf(monitorSignal, strings.Replace(addr, "tcp://", "", 1))
-	u.log.Debugf("monitor socket with signal: %q", sig)
-	return u.client.StartMonitoring(sig, zmq.EVENT_DISCONNECTED)
+	log.Debug("stopped polling")
 }
 
 // process the socket events
-func (u *Upstream) handleEvent(socket *zmq.Socket) {
-	ev, addr, v, err := socket.RecvEvent(0)
-	if nil != err {
-		u.log.Errorf("receive event error: %s", err)
-		return
-	}
-	u.log.Debugf("event: %q  address: %q  value: %d", ev, addr, v)
+func (u *Upstream) handleEvent(event zmqutil.Event) {
 
-	switch ev {
+	u.log.Debugf("event: %q  address: %q  value: %d", event.Event, event.Address, event.Value)
+
+	switch event.Event {
 	case zmq.EVENT_DISCONNECTED:
-		// reconnect to server
 		u.Lock()
 		u.reconnect()
 		u.Unlock()
@@ -471,23 +420,15 @@ func (u *Upstream) reconnect() error {
 
 	u.connected = false
 
-	// stop polling
-	u.stopPolling()
-
 	// try to reconnect
-	u.log.Infof("reconnecting to [%s]…", u.client.String())
+	u.log.Infof("reconnecting to [%s]…", u.client)
 	err := u.client.Reconnect()
 	if nil != err {
-		u.log.Errorf("reconnect to [%s] error: %s", u.client.String(), err)
+		u.log.Errorf("reconnect to [%s] error: %s", u.client, err)
 		return err
 	}
 
-	u.log.Infof("reconnect to [%s] successfully", u.client.String())
-
-	// start polling again after reconnect
-	stopPollingSig := make(chan struct{})
-	go u.startPolling(stopPollingSig)
-	u.stopPollingSig = stopPollingSig
+	u.log.Infof("reconnect to [%s] successfully", u.client)
 
 	return nil
 }

@@ -9,8 +9,6 @@ import (
 	"container/list"
 	"encoding/hex"
 	"fmt"
-	"time"
-
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -20,6 +18,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/peer/upstream"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
+	"time"
 )
 
 // various timeouts
@@ -185,7 +184,7 @@ func (conn *connector) PrintUpstreams(prefix string) string {
 	upstreams := ""
 	conn.allClients(func(client *upstream.Upstream, e *list.Element) {
 		counter = counter + 1
-		upstreams = fmt.Sprintf("%s%supstream%d: %v\n", upstreams, prefix, counter, client.GetClient())
+		upstreams = fmt.Sprintf("%s%supstream%d: %v\n", upstreams, prefix, counter, client)
 	})
 	return upstreams
 }
@@ -492,7 +491,7 @@ func (conn *connector) connectUpstream(priority string, serverPublicKey []byte, 
 func (conn *connector) releaseServerKey(serverPublicKey []byte) error {
 	log := conn.log
 	conn.searchClients(func(client *upstream.Upstream, e *list.Element) bool {
-		if bytes.Equal(serverPublicKey, client.GetClient().GetServerPublicKey()) {
+		if bytes.Equal(serverPublicKey, client.ServerPublicKey()) {
 			if e == nil { // static Clients
 				log.Infof("refuse to delete static peer: %x", serverPublicKey)
 			} else { // dynamic Clients

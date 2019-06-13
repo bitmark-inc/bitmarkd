@@ -15,6 +15,7 @@ import (
 
 	zmq "github.com/pebbe/zmq4"
 
+	"github.com/bitmark-inc/bitmarkd/counter"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
@@ -36,16 +37,19 @@ type Client struct {
 	v6              bool
 	socketType      zmq.Type
 	socket          *zmq.Socket
-	monitor         *monitor
 	timeout         time.Duration
 	timestamp       time.Time
+	number          uint64
+	monitorEvents   zmq.Event
+	monitorShutdown chan struct{}
+	monitorStopped  chan struct{}
+	queue           chan Event
 }
 
-// monitor - structure for socket monitoring
-type monitor struct {
-	socket *zmq.Socket
-	signal string
-	event  zmq.Event
+type Event struct {
+	Event   zmq.Event
+	Address string
+	Value   int
 }
 
 const (
@@ -53,26 +57,36 @@ const (
 	privateKeySize = 32
 	identifierSize = 32
 	tcpPrefix      = "tcp://"
+	monitorFormat  = "inproc://client%d-%d-monitor"
+	signalFormat   = "inproc://client%d-%d-signal"
 )
 
-type globalClientDataType struct {
-	sync.Mutex
-	clients map[*zmq.Socket]*Client
-}
+// atomically incremented counter for monitor names
+var clientCounter counter.Counter
 
-var globalClientData = globalClientDataType{
-	clients: make(map[*zmq.Socket]*Client),
-}
+// atomically incremented counter for monitor revisions
+// to allow ZeroMQ to finish closing the old name when generating a new one
+var sequenceCounter counter.Counter
 
 // NewClient - create a client socket ususlly of type zmq.REQ or zmq.SUB
-func NewClient(socketType zmq.Type, privateKey []byte, publicKey []byte, timeout time.Duration) (*Client, error) {
+func NewClient(
+	socketType zmq.Type,
+	privateKey []byte,
+	publicKey []byte,
+	timeout time.Duration,
+	events zmq.Event,
+) (*Client, <-chan Event, error) {
 
 	if len(publicKey) != publicKeySize {
-		return nil, fault.ErrInvalidPublicKey
+		return nil, nil, fault.ErrInvalidPublicKey
 	}
 	if len(privateKey) != privateKeySize {
-		return nil, fault.ErrInvalidPrivateKey
+		return nil, nil, fault.ErrInvalidPrivateKey
 	}
+
+	n := clientCounter.Increment()
+
+	queue := make(chan Event, 1)
 
 	client := &Client{
 		publicKey:       make([]byte, publicKeySize),
@@ -82,17 +96,17 @@ func NewClient(socketType zmq.Type, privateKey []byte, publicKey []byte, timeout
 		v6:              false,
 		socketType:      socketType,
 		socket:          nil,
-		monitor: &monitor{
-			socket: nil,
-			signal: "",
-			event:  0,
-		},
-		timeout:   timeout,
-		timestamp: time.Now(),
+		timeout:         timeout,
+		timestamp:       time.Now(),
+		number:          n,
+		monitorEvents:   events,
+		monitorShutdown: nil,
+		monitorStopped:  nil,
+		queue:           queue,
 	}
 	copy(client.privateKey, privateKey)
 	copy(client.publicKey, publicKey)
-	return client, nil
+	return client, queue, nil
 }
 
 // create a socket and connect to specific server with public key
@@ -103,15 +117,6 @@ func (client *Client) openSocket() error {
 	socket, err := zmq.NewSocket(client.socketType)
 	if nil != err {
 		return err
-	}
-
-	if client.monitor.isInitialised() {
-		monitor, err := NewMonitor(socket, client.monitor.signal, client.monitor.event)
-		if nil != err {
-			return err
-		}
-
-		client.monitor.socket = monitor
 	}
 
 	// create a secure random identifier
@@ -242,10 +247,11 @@ func (client *Client) openSocket() error {
 
 	client.socket = socket
 
-	// register client globally
-	globalClientData.Lock()
-	globalClientData.clients[socket] = client
-	globalClientData.Unlock()
+	if 0 != client.monitorEvents {
+		client.monitorShutdown = make(chan struct{})
+		client.monitorStopped = make(chan struct{})
+		go client.poller(client.monitorShutdown, client.monitorStopped)
+	}
 
 	return nil
 failure:
@@ -267,20 +273,18 @@ func (client *Client) closeSocket() error {
 	if "" != client.address {
 		client.socket.Disconnect(client.address)
 	}
-	client.monitor.disconnect()
 
-	// unregister client globally
-	globalClientData.Lock()
-	delete(globalClientData.clients, client.socket)
-	globalClientData.Unlock()
-
-	// close socket
+	// close sockets
 	err := client.socket.Close()
 	client.socket = nil
-
-	if nil == err {
-		err = client.monitor.close()
-		client.monitor.socket = nil
+	if nil != client.monitorShutdown {
+		close(client.monitorShutdown)
+		client.monitorShutdown = nil
+		<-client.monitorStopped
+		client.monitorStopped = nil
+		// small delay to allow any background socket closing
+		// and to restrict rate of reconnection
+		time.Sleep(5 * time.Millisecond)
 	}
 
 	return err
@@ -310,34 +314,6 @@ func (client *Client) Connect(conn *util.Connection, serverPublicKey []byte, pre
 	return client.openSocket()
 }
 
-// StartMonitoring - start monitoring the socket
-//
-// it has to be called after the target socket is created
-func (client *Client) StartMonitoring(signal string, event zmq.Event) error {
-	client.Lock()
-	defer client.Unlock()
-
-	if nil == client.socket {
-		return fault.InvalidError("socket is nil")
-	}
-
-	// disconnect the current monitor
-	err := client.monitor.disconnect()
-	if nil != err {
-		return err
-	}
-
-	s, err := NewMonitor(client.socket, signal, event)
-	if nil != err {
-		return err
-	}
-
-	client.monitor.socket = s
-	client.monitor.signal = signal
-	client.monitor.event = event
-	return nil
-}
-
 // IsConnected - check if connected to a node
 func (client *Client) IsConnected() bool {
 	return "" != client.address && nil != client.socket
@@ -357,113 +333,27 @@ func (client *Client) IsConnectedTo(serverPublicKey []byte) bool {
 	return bytes.Equal(client.serverPublicKey, serverPublicKey)
 }
 
-// // check if not connected to any node
-// func (client *Client) IsDisconnected() bool {
-// 	return "" == client.address
-// }
-
-// // get the age of connection
-// func (client *Client) Age() time.Duration {
-// 	return time.Since(client.timestamp)
-// }
-
 // Reconnect - close and reopen the connection
 func (client *Client) Reconnect() error {
-	_, err := client.ReconnectReturningSocket()
-	return err
-}
-
-// ReconnectReturningSocket - close and reopen the connection
-func (client *Client) ReconnectReturningSocket() (*zmq.Socket, error) {
 
 	err := client.closeSocket()
 	if nil != err {
-		return nil, err
+		return err
 	}
 	err = client.openSocket()
 	if nil != err {
-		return nil, err
-	}
-	return client.socket, nil
-}
-
-// ReconnectOpenedSocket - disconnect and reconnect the current socket
-func (client *Client) ReconnectOpenedSocket() error {
-	client.Lock()
-	defer client.Unlock()
-
-	if "" == client.address {
-		msg := "client address empty"
-		logger.Critical(msg)
-		return fmt.Errorf(msg)
-	}
-
-	err := client.disconnect()
-	if nil != err {
-		logger.Criticalf("client: %v disconnect from remote address with error: %s",
-			client,
-			err.Error(),
-		)
 		return err
 	}
-
-	err = client.socket.Connect(client.address)
-	if nil != err {
-		logger.Criticalf("client: %v connect to remote address with error: %s",
-			client,
-			client.address,
-			err.Error(),
-		)
-		return err
-	}
-
-	// reconnect the monitor socket
-	if nil != client.monitor.socket {
-		client.monitor.socket.Connect(client.monitor.signal)
-	}
-
 	return nil
-}
-
-func (client *Client) disconnect() error {
-	var msg string
-	if nil == client.socket {
-		msg = fmt.Sprintf("client: %v with empty socket", client)
-		logger.Criticalf(msg)
-		return fmt.Errorf(msg)
-	}
-
-	if "" == client.address {
-		msg = fmt.Sprintf("client: %v with empty address", client)
-		logger.Criticalf(msg)
-		return fmt.Errorf(msg)
-	}
-
-	err := client.socket.Disconnect(client.address)
-	if nil != err {
-		logger.Criticalf("client: %v disconnect socket with error: %s",
-			client,
-			err.Error(),
-		)
-		return err
-	}
-
-	err = client.monitor.disconnect()
-	if nil != err {
-		return err
-	}
-
-	return nil
-}
-
-// GetSocket - return the currently attached ZeroMQ socket
-func (client *Client) GetSocket() *zmq.Socket {
-	return client.socket
 }
 
 // Close - disconnect old address and close
 func (client *Client) Close() error {
-	return client.closeSocket()
+	err := client.closeSocket()
+	client.serverPublicKey = make([]byte, publicKeySize)
+	client.address = ""
+	client.v6 = false
+	return err
 }
 
 // CloseClients - disconnect old addresses and close all
@@ -572,18 +462,13 @@ func (client *Client) Receive(flags zmq.Flag) ([][]byte, error) {
 	return data, err
 }
 
-// String - return a string description of a client
-func (client *Client) String() string {
-	return client.address
-}
-
 // Connected - representation of a connected server
 type Connected struct {
 	Address string `json:"address"`
 	Server  string `json:"server"`
 }
 
-// ConnectedTo - return string representation of client
+// ConnectedTo - return representation of client connection
 func (client *Client) ConnectedTo() *Connected {
 
 	if "" == client.address {
@@ -595,60 +480,103 @@ func (client *Client) ConnectedTo() *Connected {
 	}
 }
 
-// ClientFromSocket - find the client corresponding to a socket
-func ClientFromSocket(socket *zmq.Socket) *Client {
-	globalClientData.Lock()
-	client := globalClientData.clients[socket]
-	globalClientData.Unlock()
-	return client
+// String - return a string description of a client
+func (client *Client) String() string {
+	return client.address
 }
 
 // GoString - return a basic information string for debugging purposes
 func (client *Client) GoString() string {
-	s := fmt.Sprintf("server public key: %x  address: %s  public key: %x  prefix: %s v6: %v socket type: %d  ts: %v  timeout duration: %s",
-		client.serverPublicKey, client.address, client.publicKey, client.prefix, client.v6, client.socketType, client.timestamp, client.timeout.String())
+	s := fmt.Sprintf(
+		"server public key: %x  address: %s  public key: %x  prefix: %s  v6: %t  socket type: %d  ts: %v  timeout duration: %s",
+		client.serverPublicKey,
+		client.address,
+		client.publicKey,
+		client.prefix,
+		client.v6,
+		client.socketType,
+		client.timestamp,
+		client.timeout.String())
 
 	return s
 }
 
-// GetServerPublicKey - return server's public key
-func (client *Client) GetServerPublicKey() []byte {
+// ServerPublicKey - return server's public key
+func (client *Client) ServerPublicKey() []byte {
 	return client.serverPublicKey
 }
 
-// ResetServer - clear server fields for reusing the client
-func (client *Client) ResetServer() error {
-	err := client.closeSocket()
+func (client *Client) poller(shutdown <-chan struct{}, stopped chan<- struct{}) {
+
+	n := sequenceCounter.Increment()
+	monitorConnection := fmt.Sprintf(monitorFormat, client.number, n)
+	monitorSignal := fmt.Sprintf(signalFormat, client.number, n)
+
+	sigReceive, sigSend, err := NewSignalPair(monitorSignal)
+	if nil != err {
+		logger.Panicf("cannot create signal for: %s  error: %s", monitorSignal, err)
+	}
+
+	m, err := NewMonitor(client.socket, monitorConnection, client.monitorEvents)
+	if nil != err {
+		logger.Panicf("cannot create monitor for: %s  error: %s", monitorConnection, err)
+	}
+
+	go func(m *zmq.Socket, queue chan<- Event) {
+		poller := NewPoller()
+
+		poller.Add(m, zmq.POLLIN)
+
+		poller.Add(sigReceive, zmq.POLLIN)
+
+	loop:
+		//log.Debug("start polling…")
+		for {
+			//log.Debug("waiting…")
+
+			sockets, _ := poller.Poll(-1)
+			for _, socket := range sockets {
+				switch s := socket.Socket; s {
+				case sigReceive:
+					break loop
+				default:
+					handleEvent(s, queue)
+				}
+			}
+		}
+
+		poller.Remove(sigReceive)
+		poller.Remove(m)
+		sigReceive.Close()
+		m.Close()
+		close(stopped)
+		//log.Debug("stopped polling")
+	}(m, client.queue)
+
+	// wait here for signal
+	<-shutdown
+
+	sigSend.SendMessage("stop")
+	sigSend.Close()
+}
+
+// process the socket events
+func handleEvent(s *zmq.Socket, queue chan<- Event) error {
+	ev, addr, v, err := s.RecvEvent(0)
 	if nil != err {
 		return err
 	}
-	client.serverPublicKey = make([]byte, publicKeySize)
-	client.address = ""
-	client.v6 = false
-	return nil
-}
 
-// GetMonitorSocket - get the monitor socket
-//
-// return the monitor socket if it has been created, nil otherwise
-func (client *Client) GetMonitorSocket() *zmq.Socket {
-	return client.monitor.socket
-}
-
-func (m *monitor) isInitialised() bool {
-	return "" != m.signal && 0 != m.event
-}
-
-func (m *monitor) close() error {
-	if nil != m.socket {
-		return m.socket.Close()
+	e := Event{
+		Event:   ev,
+		Address: addr,
+		Value:   v,
 	}
-	return nil
-}
 
-func (m *monitor) disconnect() error {
-	if nil != m.socket {
-		return m.socket.Disconnect(m.signal)
+	select {
+	case queue <- e:
+	default:
 	}
+
 	return nil
 }
