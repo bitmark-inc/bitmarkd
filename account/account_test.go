@@ -176,7 +176,7 @@ loop:
 		}
 		t.Logf("%d: from JSON: %#v", index, a)
 
-		buffer, err := json.Marshal(a)
+		buffer, _ := json.Marshal(a)
 		t.Logf("%d: account to JSON: %s", index, buffer)
 		if j != string(buffer) {
 			t.Errorf("%d: marshal JSON:failed: expected %s  actual: %s", index, j, buffer)
