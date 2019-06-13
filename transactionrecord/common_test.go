@@ -209,7 +209,7 @@ loop:
 		// test the unpacker with bad records
 		// one less than whole record to avoid any success
 		//p := append(transactionrecord.Packed{}, packed[:i]...)
-		p := make(transactionrecord.Packed, i, i)
+		p := make(transactionrecord.Packed, i)
 		copy(p, packed[:i])
 		unpacked, n, err := p.Unpack(true)
 		if nil != err {
