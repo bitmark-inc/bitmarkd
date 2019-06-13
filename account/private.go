@@ -205,7 +205,7 @@ func PrivateKeyFromBytes(privateKeyBytes []byte) (*PrivateKey, error) {
 
 	// compute algorithm
 	keyAlgorithm := keyVariant >> algorithmShift
-	if keyAlgorithm < 0 || keyAlgorithm >= algorithmLimit {
+	if keyAlgorithm >= algorithmLimit {
 		return nil, fault.ErrInvalidKeyType
 	}
 
