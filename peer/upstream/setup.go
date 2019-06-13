@@ -31,11 +31,12 @@ const (
 type Upstream struct {
 	sync.RWMutex
 
-	log         *logger.L
-	client      *zmqutil.Client
-	connected   bool
-	blockHeight uint64
-	shutdown    chan<- struct{}
+	log               *logger.L
+	client            *zmqutil.Client
+	connected         bool
+	blockHeight       uint64
+	shutdown          chan<- struct{}
+	connGuaranteeStop chan struct{}
 }
 
 // atomically incremented counter for log names
@@ -259,6 +260,7 @@ loop:
 		}
 	}
 	log.Info("shutting down…")
+	u.stopConnGuarantee()
 	u.client.Close()
 	log.Info("stopped")
 }
@@ -373,6 +375,44 @@ func push(client *zmqutil.Client, log *logger.L, item *messagebus.Message) error
 	}
 }
 
+func (u *Upstream) startConnGuarantee(stop chan struct{}) {
+	u.Lock()
+	if nil != u.connGuaranteeStop {
+		u.stopConnGuarantee()
+	}
+
+	u.connGuaranteeStop = stop
+	u.Unlock()
+	connected := false
+	u.log.Debug("connection guarantee started")
+loop:
+	for {
+		select {
+		case <-stop:
+			break loop
+
+		default:
+			u.Lock()
+			if connected {
+				u.stopConnGuarantee()
+			} else {
+				connected = nil == u.reconnect()
+			}
+			u.Unlock()
+		}
+	}
+	u.log.Debug("connection guarantee stopped")
+}
+
+func (u *Upstream) stopConnGuarantee() {
+	stop := u.connGuaranteeStop
+	if nil == stop {
+		return
+	}
+	close(stop)
+	stop = nil
+}
+
 // start polling the socket
 //
 // it should be called as a goroutine to avoid blocking
@@ -401,9 +441,8 @@ func (u *Upstream) handleEvent(event zmqutil.Event) {
 
 	switch event.Event {
 	case zmq.EVENT_DISCONNECTED:
-		u.Lock()
-		u.reconnect()
-		u.Unlock()
+		stop := make(chan struct{})
+		go u.startConnGuarantee(stop)
 
 	default:
 	}
@@ -416,7 +455,6 @@ func (u *Upstream) reconnect() error {
 
 	u.connected = false
 
-	// try to reconnect
 	u.log.Infof("reconnecting to [%s]…", u.client)
 	err := u.client.Reconnect()
 	if nil != err {
