@@ -45,7 +45,7 @@ func (d *DataAccessImpl) Begin() error {
 	defer d.Unlock()
 
 	if d.inUse {
-		return fmt.Errorf("Error, batch already in use")
+		return fmt.Errorf("batch already in use")
 	}
 
 	d.inUse = true
