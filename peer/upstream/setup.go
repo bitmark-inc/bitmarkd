@@ -242,11 +242,7 @@ loop:
 					log.Errorf("highestBlock: reconnect error: %s", err)
 				}
 
-			} else if u.client.HasValidAddress() {
-				// reconnect again
-				u.reconnect()
 			}
-
 			u.Unlock()
 
 		case item := <-queue:
@@ -301,7 +297,7 @@ func requestConnect(client *zmqutil.Client, log *logger.L) error {
 			return fmt.Errorf("connection refused.  expected chain: %q but received: %q ", chain, received)
 		}
 		timestamp := binary.BigEndian.Uint64(data[4])
-		log.Infof("connection refused. register replied: public key: %x:  listeners: %x  timestamp: %d", data[2], data[3], timestamp)
+		log.Infof("connection establised. register replied: public key: %x:  listeners: %x  timestamp: %d", data[2], data[3], timestamp)
 		announce.AddPeer(data[2], data[3], timestamp) // publicKey, broadcasts, listeners
 		return nil
 	default:

@@ -16,6 +16,7 @@ type ProcessError GenericError
 type RecordError GenericError
 type ValueError GenericError
 type ValidationError GenericError
+type CompositeError GenericError
 
 // common errors - keep in alphabetic order
 var (
@@ -148,6 +149,7 @@ func (e ProcessError) Error() string    { return string(e) }
 func (e RecordError) Error() string     { return string(e) }
 func (e ValueError) Error() string      { return string(e) }
 func (e ValidationError) Error() string { return string(e) }
+func (e CompositeError) Error() string  { return string(e) }
 
 // determine the class of an error
 func IsErrExists(e error) bool     { _, ok := e.(ExistsError); return ok }
@@ -158,3 +160,4 @@ func IsErrProcess(e error) bool    { _, ok := e.(ProcessError); return ok }
 func IsErrRecord(e error) bool     { _, ok := e.(RecordError); return ok }
 func IsErrValue(e error) bool      { _, ok := e.(ValueError); return ok }
 func IsErrValidation(e error) bool { _, ok := e.(ValidationError); return ok }
+func IsErrComposite(e error) bool  { _, ok := e.(CompositeError); return ok }
