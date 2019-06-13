@@ -12,8 +12,6 @@ type Cache interface {
 	Clear()
 }
 
-type dbOperation int
-
 const (
 	dbPut = iota
 	dbDelete
