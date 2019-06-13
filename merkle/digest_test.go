@@ -47,7 +47,7 @@ func TestScanFmt(t *testing.T) {
 		t.Errorf("digest(LE) = %#v expected %x#v", d, expected)
 	}
 
-	s := fmt.Sprintf("%s", d)
+	s := d.String()
 	if s != stringDigest {
 		t.Errorf("string: digest = %s expected %s", s, stringDigest)
 	}
@@ -127,7 +127,7 @@ func TestLink(t *testing.T) {
 
 	textLink := "4bf8131ca2a32eadc097e14b48ecc7c87288a7b6b79757c8290834bacfda16aa"
 
-	if string(expectedLink) != textLink {
+	if expectedLink.String() != textLink {
 		t.Errorf("link(%%s): %s  expected: %s", expectedLink, textLink)
 	}
 
