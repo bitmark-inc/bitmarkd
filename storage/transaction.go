@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	ErrHandleNil = "Error handle is nil"
+	ErrHandleNil = "handle is nil"
 )
 
 // Transaction RDBS transaction
@@ -53,7 +53,7 @@ func (t *TransactionImpl) InUse() bool {
 
 func (t *TransactionImpl) Begin() error {
 	if t.InUse() {
-		return fmt.Errorf("Error, transaction already in use")
+		return fmt.Errorf("transaction already in use")
 	}
 
 	for _, access := range t.dataAccess {
