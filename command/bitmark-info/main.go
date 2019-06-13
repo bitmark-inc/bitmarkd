@@ -18,17 +18,6 @@ import (
 // RPCEmptyArguments - null parameters for RPC call
 type RPCEmptyArguments struct{}
 
-// Connected - connection information
-type Connected struct {
-	Address string `json:"address"`
-	Server  string `json:"server"`
-}
-
-// ConnClient - list of connections
-type ConnClient struct {
-	Clients []Connected `json:"clients"`
-}
-
 // RPCClient - client connection for RPC calls
 type RPCClient struct {
 	Client *rpc.Client
