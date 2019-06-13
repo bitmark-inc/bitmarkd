@@ -76,7 +76,7 @@ func ConnectionFromIPandPort(ip net.IP, port uint16) *Connection {
 	}
 }
 
-// ConnectionFromCanonical - convert a cononical strin to a connection
+// ConnectionFromCanonical - convert a cononical string to a connection
 //
 // return the connection if string is canonical, otherwise nil
 func ConnectionFromCanonical(s string) *Connection {
@@ -90,7 +90,7 @@ func ConnectionFromCanonical(s string) *Connection {
 	}
 
 	ip := net.ParseIP(s[0 : i-1])
-	port, err := strconv.ParseInt(s[i+1:len(s)], 10, 16)
+	port, err := strconv.ParseInt(s[i+1:], 10, 16)
 	if nil == ip || nil != err {
 		return nil
 	}
