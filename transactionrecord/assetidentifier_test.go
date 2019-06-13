@@ -68,7 +68,7 @@ func TestAssetIdentifier(t *testing.T) {
 
 	textAssetIdentifier := "37de3195b879cf5692a564e7f19bd6203e3fd8cffa8064ebe86ec8fff8dbf326ffa4d65cfef8350db4d72d93406f54fa0d06ce98005a939995ed05cc34fb7344"
 
-	if fmt.Sprintf("%s", expectedAssetIdentifier) != textAssetIdentifier {
+	if string(expectedAssetIdentifier) != textAssetIdentifier {
 		t.Errorf("asset id(%%s): %s  expected: %s", expectedAssetIdentifier, textAssetIdentifier)
 	}
 
