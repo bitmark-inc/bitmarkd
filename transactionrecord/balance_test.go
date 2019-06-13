@@ -136,21 +136,6 @@ func TestPackShareBalanceValueNotZero(t *testing.T) {
 		Quantity: 0,
 	}
 
-	expected := []byte{
-		0x08, 0x20, 0x79, 0xa6, 0x7b, 0xe2, 0xb3, 0xd3,
-		0x13, 0xbd, 0x49, 0x03, 0x63, 0xfb, 0x0d, 0x27,
-		0x90, 0x1c, 0x46, 0xed, 0x53, 0xd3, 0xf7, 0xb2,
-		0x1f, 0x60, 0xd4, 0x8b, 0xc4, 0x24, 0x39, 0xb0,
-		0x60, 0x84, 0x00,
-	}
-
-	// manually sign the record and attach signature to "expected"
-	signature := ed25519.Sign(ownerOne.privateKey, expected)
-	r.Signature = signature
-	l := util.ToVarint64(uint64(len(signature)))
-	expected = append(expected, l...)
-	expected = append(expected, signature...)
-
 	// test the packer
 	_, err = r.Pack(ownerOneAccount)
 	if fault.ErrShareQuantityTooSmall != err {
