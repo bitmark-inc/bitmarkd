@@ -40,7 +40,6 @@ func TestInitialReciprocal(t *testing.T) {
 type testItem struct {
 	bits       uint64
 	reciprocal float64
-	stratum    float64
 	big        string
 	bigf       string
 }
