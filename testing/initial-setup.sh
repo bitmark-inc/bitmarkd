@@ -75,11 +75,14 @@ samples="${this_dir}/samples"
 # check programs
 ok=yes
 CHECK_PROGRAM bitmarkd bitmark-cli recorderd discovery bitmark-wallet
-CHECK_PROGRAM bitcoind bitcoin-cli litecoind litecoin-cli jq lua52:lua5.2 genbtcltc
-CHECK_PROGRAM restart-all-bitmarkds run-recorderd bm-tester
-CHECK_PROGRAM generate-bitmarkd-configuration run-bitcoin run-bitmarkd
-CHECK_PROGRAM make-blockchain run-discovery node-info
-CHECK_PROGRAM run-litecoin
+CHECK_PROGRAM bitcoind bitcoin-cli
+CHECK_PROGRAM litecoind litecoin-cli
+CHECK_PROGRAM awk jq lua52:lua5.2
+CHECK_PROGRAM genbtcltc restart-all-bitmarkds bm-tester
+CHECK_PROGRAM generate-bitmarkd-configuration
+CHECK_PROGRAM run-bitcoin run-litecoin run-discovery
+CHECK_PROGRAM run-bitmarkd run-recorderd
+CHECK_PROGRAM make-blockchain node-info
 
 # fail if something is missing
 [ X"${ok}" = X"no" ] && ERROR 'missing programs'

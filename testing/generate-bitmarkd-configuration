@@ -104,7 +104,7 @@ case "$(uname)" in
     ;;
 esac
 [ -x "${getopt}" ] || ERROR 'getopt: "%s" is not executable or not installed' "${getopt}"
-[ -x "${lua}" ] || ERROR 'lua: "%s" is not executable or not installed' "${lua}"
+[ -x "$(which ${lua})" ] || ERROR 'lua: "%s" is not executable or not installed' "${lua}"
 
 args=$(${getopt} -o hvc:n:C:b:l:d:kmuD --long=help,verbose,chain:,nodes:,connect:,bitcoin:,litecoin:,discovery:,console,more,update,debug -- "$@") || exit 1
 
@@ -242,18 +242,45 @@ done
 [ X"${debug}" = X"yes" ] && set -x
 
 get_url() {
-  local conf ip port path json
+  local conf ip port path ip_port
   conf="$1"; shift
   ip="$1"; shift
   port="$1"; shift
   path="$1"; shift
 
-  json=$(ucl_tool --format=compact_json --in="${conf}")
+  ip_port=$(awk '
+    BEGIN {
+        bind = "'"${ip}"'"
+        port = "'"${port}"'"
+    }
 
-  ip=$(printf '%s' "${json}" | jq --raw-output '(.rpcbind // "'"${ip}"'")')
-  port=$(printf '%s' "${json}" | jq --raw-output '(.rpcport // "'"${port}"'")')
+    /^[[:space:]]*rpcbind[[:space:]]*=/ {
+        bind = $0
+        sub("^.*=[[:space:]]*", "", bind)
+        sub("[[:space:]]*$", "", bind)
+    }
 
-  printf 'http://%s:%s%s' "${ip}" "${port}" "${path}"
+    /^[[:space:]]*rpcport[[:space:]]*=/ {
+        port = $0
+        sub("^.*=[[:space:]]*", "", port)
+        sub("[[:space:]]*$", "", port)
+    }
+
+    END {
+        s = ":"
+        if ("[" == substr(bind,0,1)) {
+            s = "]:"
+        }
+        split(bind, a, s)
+        if (length(a) > 1) {
+            print bind
+        } else {
+            print bind ":" port
+        }
+    }
+  ' "${conf}")
+
+  printf 'http://%s%s' "${ip_port}" "${path}"
 }
 
 get_endpoint() {
