@@ -145,7 +145,7 @@ func TestPackShareBalanceValueNotZero(t *testing.T) {
 	}
 
 	// manually sign the record and attach signature to "expected"
-	signature := ed25519.Sign(ownerTwo.privateKey, expected)
+	signature := ed25519.Sign(ownerOne.privateKey, expected)
 	r.Signature = signature
 
 	// test the packer
