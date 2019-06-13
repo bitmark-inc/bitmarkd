@@ -224,7 +224,7 @@ print_loop:
 		fmt.Printf("%d: %sKey: %s%x%s\n", i, ck1, ck2, e.Key, ce)
 		if ascii {
 			prefix := fmt.Sprintf("%d: %sVal: %s", i, cv1, cv2)
-			suffix := fmt.Sprintf("%s", ce)
+			suffix := ce
 			hexDump(prefix, suffix, e.Value)
 
 		} else {
