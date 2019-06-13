@@ -87,7 +87,7 @@ func AccountFromBase58(accountBase58Encoded string) (*Account, error) {
 
 	// compute algorithm
 	keyAlgorithm := keyVariant >> algorithmShift
-	if keyAlgorithm < 0 || keyAlgorithm >= algorithmLimit {
+	if keyAlgorithm >= algorithmLimit {
 		return nil, fault.ErrInvalidKeyType
 	}
 
