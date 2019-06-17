@@ -1,0 +1,54 @@
+# Golang CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-go/ for more details
+version: 2
+jobs:
+  build:
+    docker:
+      # specify the version
+      - image: circleci/golang:1.12
+        environment:
+          - GO111MODULE: "on"
+
+    working_directory: /go/src/github.com/bitmark-inc/bitmarkd
+    steps:
+      - checkout
+      - run: sudo sh -c 'mkdir -p /etc/apt/source.list.d/'
+      - run:
+          name: Add repo testing
+          command: |
+            sudo sh -c 'echo "deb http://ftp.de.debian.org/debian/ testing main contrib non-free" >> /etc/apt/sources.list.d/testing.list'
+            sudo sh -c 'echo "deb-src http://ftp.de.debian.org/debian/ testing main contrib non-free" >> /etc/apt/sources.list.d/testing.list'
+            sudo sh -c 'echo "deb http://security.debian.org/ testing/updates  main contrib non-free" >> /etc/apt/source.list.d/testing.list'
+      - run:
+          name: Add repo stable 
+          command: |
+            sudo sh -c 'echo "deb http://ftp.de.debian.org/debian/ stable main contrib non-free" >> /etc/apt/sources.list.d/stable.list'
+            sudo sh -c 'echo "deb-src http://ftp.de.debian.org/debian/ stable main contrib non-free" >> /etc/apt/sources.list.d/stable.list'
+            sudo sh -c 'echo "deb http://security.debian.org/ stable/updates  main contrib non-free" >> /etc/apt/source.list.d/stable.list'
+      - run:
+          name: Prepare environment
+          command: |
+            sudo apt-get update
+            sudo apt-get -t testing install libargon2-1 libargon2-dev
+            sudo apt-get install uuid-dev libzmq3-dev
+            sudo apt-get -t testing install pkg-config
+            go get github.com/bitmark-inc/go-argon2/
+            go get -v -t -d ./...
+            go get -v golang.org/x/lint/golint
+            go get github.com/fzipp/gocyclo
+            go get -u github.com/client9/misspell/cmd/misspell
+            go get github.com/securego/gosec/cmd/gosec
+            go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
+      - run:
+          name: golint
+          command: golint ./...
+      - run:
+          name: misspell
+          command: misspell ./...
+      - run:
+          name: gosec
+          command: gosec -exclude=G104,G204,G402,G304 ./...
+      - run:
+          name: golangcli-lint
+          command: golangci-lint run
