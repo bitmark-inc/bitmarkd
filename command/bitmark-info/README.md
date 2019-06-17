@@ -17,7 +17,7 @@ For querying node info, use
 $ bitmark-info [ip address]:[port]
 ```
 
-Also, you can select which kind of infomation you want to query. The
+Also, you can select which kind of information you want to query. The
 folllowing types are options of information types (TYPE):
 
 1. node (node info, the default value)
