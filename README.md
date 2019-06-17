@@ -27,12 +27,38 @@ brew install zeromq43
 ~~~~
 
 ## Ubuntu
-(tested on distribution 18.04)
+(tested on version 18.04)
 
 Install following packages
    `sudo apt install libargon2-0-dev uuid-dev libzmq3-dev`
 
-To compile simply:
+## Debian
+(tested on version 9)
+
+First we need to add access to testing package's repo as well as to our current version, in this case stable.
+~~~
+root@debian-bitmarkd:/# cat /etc/apt/sources.list.d/stable.list 
+deb     http://ftp.de.debian.org/debian/    stable main contrib non-free
+deb-src http://ftp.de.debian.org/debian/    stable main contrib non-free
+deb     http://security.debian.org/         stable/updates  main contrib non-free
+
+root@debian-bitmarkd:/# cat /etc/apt/sources.list.d/testing.list 
+deb     http://ftp.de.debian.org/debian/    testing main contrib non-free
+deb-src http://ftp.de.debian.org/debian/    testing main contrib non-free
+deb     http://security.debian.org/         testing/updates  main contrib non-free
+~~~
+
+Now install libargon2 using the following.
+```
+apt-get -t testing install libargon2-dev
+```
+
+For the other packages, you can decide if you want install from stable or testing, both versions works:
+```
+apt install uuid-dev libzmq3-dev
+```
+
+## To manually compile, simply:
 
 ~~~~~
 go get github.com/bitmark-inc/bitmarkd
