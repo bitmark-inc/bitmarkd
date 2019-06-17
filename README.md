@@ -50,7 +50,7 @@ deb     http://security.debian.org/         testing/updates  main contrib non-fr
 
 Now install libargon2 using the following.
 ```
-apt-get -t testing install libargon2-dev
+apt-get -t testing install libargon2-dev libargon2-1
 ```
 
 For the other packages, you can decide if you want install from stable or testing, both versions works:
