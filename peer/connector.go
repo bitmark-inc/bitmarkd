@@ -63,6 +63,9 @@ type connector struct {
 
 // initialise the connector
 func (conn *connector) initialise(privateKey []byte, publicKey []byte, connect []Connection, dynamicEnabled bool, preferIPv6 bool) error {
+	// error code for goto fail
+	var errX error = nil
+
 	log := logger.New("connector")
 	conn.log = log
 
@@ -83,24 +86,27 @@ func (conn *connector) initialise(privateKey []byte, publicKey []byte, connect [
 		address, err := util.NewConnection(c.Address)
 		if nil != err {
 			log.Errorf("client[%d]=address: %q  error: %s", i, c.Address, err)
+			errX = err
 			goto fail
 		}
 		serverPublicKey, err := hex.DecodeString(c.PublicKey)
 		if nil != err {
 			log.Errorf("client[%d]=public: %q  error: %s", i, c.PublicKey, err)
+			errX = err
 			goto fail
 		}
 
 		// prevent connection to self
 		if bytes.Equal(publicKey, serverPublicKey) {
-			err = fault.ErrConnectingToSelfForbidden
-			log.Errorf("client[%d]=public: %q  error: %s", i, c.PublicKey, err)
+			errX = fault.ErrConnectingToSelfForbidden
+			log.Errorf("client[%d]=public: %q  error: %s", i, c.PublicKey, errX)
 			goto fail
 		}
 
 		client, err := upstream.New(privateKey, publicKey, connectorTimeout)
 		if nil != err {
 			log.Errorf("client[%d]=%q  error: %s", i, address, err)
+			errX = err
 			goto fail
 		}
 
@@ -110,6 +116,7 @@ func (conn *connector) initialise(privateKey []byte, publicKey []byte, connect [
 		err = client.Connect(address, serverPublicKey)
 		if nil != err {
 			log.Errorf("connect[%d]=%q  error: %s", i, address, err)
+			errX = err
 			goto fail
 		}
 		log.Infof("public key: %x  at: %q", serverPublicKey, c.Address)
@@ -120,6 +127,7 @@ func (conn *connector) initialise(privateKey []byte, publicKey []byte, connect [
 		client, err := upstream.New(privateKey, publicKey, connectorTimeout)
 		if nil != err {
 			log.Errorf("client[%d]  error: %s", i, err)
+			errX = err
 			goto fail
 		}
 
@@ -137,7 +145,7 @@ func (conn *connector) initialise(privateKey []byte, publicKey []byte, connect [
 	// error handling
 fail:
 	conn.destroy()
-	return err
+	return errX
 }
 
 func (conn *connector) allClients(f func(client *upstream.Upstream, e *list.Element)) {
