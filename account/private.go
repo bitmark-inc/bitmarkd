@@ -157,12 +157,13 @@ func PrivateKeyFromBase58Seed(seedBase58Encoded string) (*PrivateKey, error) {
 		return nil, err
 	}
 
-	return &PrivateKey{
+	privateKey := &PrivateKey{
 		PrivateKeyInterface: &ED25519PrivateKey{
 			Test:       isTest,
 			PrivateKey: priv,
 		},
-	}, nil
+	}
+	return privateKey, nil
 }
 
 // PrivateKeyFromBase58 - this converts a Base58 encoded string and returns an private key
