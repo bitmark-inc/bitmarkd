@@ -37,7 +37,7 @@ type ClientIntf interface {
 	ConnectedTo() *Connected
 	GoString() string
 	GetMonitorSocket() *zmq.Socket
-	GetServerPublicKey() []byte
+	ServerPublicKey() []byte
 	ResetServer() error
 	StartMonitoring(signal string, event zmq.Event) error
 	HasValidAddress() bool

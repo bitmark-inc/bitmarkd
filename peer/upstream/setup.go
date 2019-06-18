@@ -7,18 +7,15 @@ package upstream
 import (
 	"encoding/binary"
 	"fmt"
-	"sync"
 	"time"
 
 	zmq "github.com/pebbe/zmq4"
 
 	"github.com/bitmark-inc/bitmarkd/announce"
-	"github.com/bitmark-inc/bitmarkd/blockdigest"
+	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/counter"
-	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/mode"
-	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
 )
@@ -27,22 +24,11 @@ const (
 	cycleInterval = 30 * time.Second
 )
 
-// Upstream - structure to hold an upstream connection
-type Upstream struct {
-	sync.RWMutex
-
-	log         *logger.L
-	client      *zmqutil.Client
-	connected   bool
-	blockHeight uint64
-	shutdown    chan<- struct{}
-}
-
 // atomically incremented counter for log names
 var upstreamCounter counter.Counter
 
 // New - create a connection to an upstream server
-func New(privateKey []byte, publicKey []byte, timeout time.Duration) (*Upstream, error) {
+func New(privateKey []byte, publicKey []byte, timeout time.Duration) (UpstreamIntf, error) {
 
 	client, event, err := zmqutil.NewClient(zmq.REQ, privateKey, publicKey, timeout, zmq.EVENT_ALL)
 	if nil != err {
@@ -52,145 +38,17 @@ func New(privateKey []byte, publicKey []byte, timeout time.Duration) (*Upstream,
 	n := upstreamCounter.Increment()
 
 	shutdown := make(chan struct{})
-
+	upstreamStr := fmt.Sprintf("upstream@%d", n)
 	u := &Upstream{
-		log:         logger.New(fmt.Sprintf("upstream@%d", n)),
-		client:      client,
-		connected:   false,
-		blockHeight: 0,
-		shutdown:    shutdown,
+		name:      upstreamStr,
+		log:       logger.New(upstreamStr),
+		client:    client,
+		connected: false,
+		shutdown:  shutdown,
 	}
 	go u.runner(shutdown)
 	go u.poller(shutdown, event)
 	return u, nil
-}
-
-// Destroy - shutdown a connection and terminate its background processes
-func (u *Upstream) Destroy() {
-	if nil != u {
-		close(u.shutdown)
-	}
-}
-
-// ResetServer - clear Server side info of Zmq client for reusing the
-// upstream
-func (u *Upstream) ResetServer() {
-	u.client.Close()
-	u.connected = false
-	u.blockHeight = 0
-}
-
-// IsConnectedTo - check the current destination
-//
-// does not mean actually connected, as could be in a timeout and
-// reconnect state
-func (u *Upstream) IsConnectedTo(serverPublicKey []byte) bool {
-	return u.client.IsConnectedTo(serverPublicKey)
-}
-
-// IsConnected - check if registered and have a valid connection
-func (u *Upstream) IsConnected() bool {
-	return u.connected
-}
-
-// ConnectedTo - if registered return the connection data
-func (u *Upstream) ConnectedTo() *zmqutil.Connected {
-	return u.client.ConnectedTo()
-}
-
-// Connect - connect (or reconnect) to a specific server
-func (u *Upstream) Connect(address *util.Connection, serverPublicKey []byte) error {
-	u.log.Infof("connecting to address: %s", address)
-	u.log.Infof("connecting to server: %x", serverPublicKey)
-
-	err := u.client.Connect(address, serverPublicKey, mode.ChainName())
-	if nil == err {
-		err = requestConnect(u.client, u.log)
-		if nil == err {
-			u.Lock()
-			u.connected = true
-			u.Unlock()
-		}
-	}
-	return err
-}
-
-// ServerPublicKey - return the internal ZeroMQ client data
-func (u *Upstream) ServerPublicKey() []byte {
-	return u.client.ServerPublicKey()
-}
-
-// GetHeight - fetch height from last polled value
-func (u *Upstream) GetHeight() uint64 {
-	return u.blockHeight
-}
-
-// GetBlockDigest - fetch block digest from a specific block number
-func (u *Upstream) GetBlockDigest(blockNumber uint64) (blockdigest.Digest, error) {
-	parameter := make([]byte, 8)
-	binary.BigEndian.PutUint64(parameter, blockNumber)
-
-	// critical section - lock out the runner process
-	u.Lock()
-	var data [][]byte
-	err := u.client.Send("H", parameter)
-	if nil == err {
-		data, err = u.client.Receive(0)
-	}
-	u.Unlock()
-
-	if nil != err {
-		return blockdigest.Digest{}, err
-	}
-
-	if 2 != len(data) {
-		return blockdigest.Digest{}, fault.ErrInvalidPeerResponse
-	}
-
-	switch string(data[0]) {
-	case "E":
-		return blockdigest.Digest{}, fault.ErrorFromRunes(data[1])
-	case "H":
-		d := blockdigest.Digest{}
-		if blockdigest.Length == len(data[1]) {
-			err := blockdigest.DigestFromBytes(&d, data[1])
-			return d, err
-		}
-	default:
-	}
-	return blockdigest.Digest{}, fault.ErrInvalidPeerResponse
-}
-
-// GetBlockData - fetch block data from a specific block number
-func (u *Upstream) GetBlockData(blockNumber uint64) ([]byte, error) {
-	parameter := make([]byte, 8)
-	binary.BigEndian.PutUint64(parameter, blockNumber)
-
-	// critical section - lock out the runner process
-	u.Lock()
-	var data [][]byte
-	err := u.client.Send("B", parameter)
-	if nil == err {
-		data, err = u.client.Receive(0)
-	}
-	u.Unlock()
-
-	if nil != err {
-		return nil, err
-	}
-
-	if 2 != len(data) {
-		return nil, fault.ErrInvalidPeerResponse
-	}
-
-	switch string(data[0]) {
-	case "E":
-		return nil, fault.ErrorFromRunes(data[1])
-	case "B":
-		return data[1], nil
-	default:
-	}
-	return nil, fault.ErrInvalidPeerResponse
 }
 
 // loop to handle upstream communication
@@ -223,31 +81,47 @@ loop:
 				if !u.connected {
 					err := requestConnect(u.client, u.log)
 					if nil != err {
-						log.Warnf("serverKey: %x connect error: %s  ", u.client.ServerPublicKey(), err)
+						log.Warnf("serverKey: %x connect error: %s  ", u.ServerPublicKey(), err)
 						u.Unlock()
 						continue loop // try again later
 					}
 					u.connected = true
 				}
 
-				h, err := height(u.client, u.log)
+				remoteHeight, err := height(u.client, u.log)
 				if nil == err {
-					u.blockHeight = h
-					publicKey := u.client.ServerPublicKey()
+					u.lastResponseTime = time.Now()
+					u.remoteHeight = remoteHeight
+					publicKey := u.ServerPublicKey()
 					timestamp := make([]byte, 8)
 					binary.BigEndian.PutUint64(timestamp, uint64(time.Now().Unix()))
 					messagebus.Bus.Announce.Send("updatetime", publicKey, timestamp)
-
 				} else {
 					log.Errorf("highestBlock: reconnect error: %s", err)
 				}
-
 			} else if u.client.HasValidAddress() {
-				// reconnect again
 				u.reconnect()
 			}
-
 			u.Unlock()
+
+			// need some refactor
+			// GetBlockDigest has lock inside, so it cannot be put into
+			// previous code block
+			// two variables of clientConnected & u.connected seems to have similar
+			// meaning, these two variables are not independent, e.g.
+			// situation of clientConnected = false, u.connected = true should not exist
+			if clientConnected && u.connected {
+				localHeight := blockheader.Height()
+				digest, err := u.RemoteDigestOfHeight(localHeight)
+				if nil != err {
+					log.Errorf("getBlockDigest error: %s", err)
+					continue
+				}
+				u.Lock()
+				u.localHeight = localHeight
+				u.remoteDigestOfLocalHeight = digest
+				u.Unlock()
+			}
 
 		case item := <-queue:
 			log.Debugf("from queue: %q  %x", item.Command, item.Parameters)
@@ -268,7 +142,7 @@ loop:
 }
 
 // register with server and check chain information
-func requestConnect(client *zmqutil.Client, log *logger.L) error {
+func requestConnect(client zmqutil.ClientIntf, log *logger.L) error {
 
 	log.Debugf("register: client: %s", client)
 
@@ -302,7 +176,8 @@ func requestConnect(client *zmqutil.Client, log *logger.L) error {
 		}
 		timestamp := binary.BigEndian.Uint64(data[4])
 		log.Infof("connection refused. register replied: public key: %x:  listeners: %x  timestamp: %d", data[2], data[3], timestamp)
-		announce.AddPeer(data[2], data[3], timestamp) // publicKey, broadcasts, listeners
+		// publicKey, broadcasts, listeners
+		announce.AddPeer(data[2], data[3], timestamp)
 		return nil
 	default:
 		return fmt.Errorf("connection refused. rpc unexpected response: %q", data[0])
@@ -310,7 +185,7 @@ func requestConnect(client *zmqutil.Client, log *logger.L) error {
 }
 
 // must have lock held before calling this
-func height(client *zmqutil.Client, log *logger.L) (uint64, error) {
+func height(client zmqutil.ClientIntf, log *logger.L) (uint64, error) {
 
 	log.Infof("getHeight: client: %s", client)
 
@@ -345,7 +220,7 @@ func height(client *zmqutil.Client, log *logger.L) (uint64, error) {
 }
 
 // must have lock held before calling this
-func push(client *zmqutil.Client, log *logger.L, item *messagebus.Message) error {
+func push(client zmqutil.ClientIntf, log *logger.L, item *messagebus.Message) error {
 
 	log.Infof("push: client: %s  %q %x", client, item.Command, item.Parameters)
 
@@ -375,60 +250,4 @@ func push(client *zmqutil.Client, log *logger.L, item *messagebus.Message) error
 	default:
 		return fmt.Errorf("rpc unexpected response: %q", data[0])
 	}
-}
-
-// start polling the socket
-//
-// it should be called as a goroutine to avoid blocking
-func (u *Upstream) poller(shutdown <-chan struct{}, event <-chan zmqutil.Event) {
-
-	log := u.log
-
-	log.Debug("start polling…")
-
-loop:
-	for {
-		select {
-		case <-shutdown:
-			break loop
-		case e := <-event:
-			u.handleEvent(e)
-		}
-	}
-	log.Debug("stopped polling")
-}
-
-// process the socket events
-func (u *Upstream) handleEvent(event zmqutil.Event) {
-
-	u.log.Debugf("event: %q  address: %q  value: %d", event.Event, event.Address, event.Value)
-
-	switch event.Event {
-	case zmq.EVENT_DISCONNECTED:
-		u.Lock()
-		u.reconnect()
-		u.Unlock()
-
-	default:
-	}
-}
-
-// reconnect to server
-//
-// need to hold the lock before calling
-func (u *Upstream) reconnect() error {
-
-	u.connected = false
-
-	// try to reconnect
-	u.log.Infof("reconnecting to [%s]…", u.client)
-	err := u.client.Reconnect()
-	if nil != err {
-		u.log.Errorf("reconnect to [%s] error: %s", u.client, err)
-		return err
-	}
-
-	u.log.Infof("reconnect to [%s] successfully", u.client)
-
-	return nil
 }
