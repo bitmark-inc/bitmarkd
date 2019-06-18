@@ -23,17 +23,20 @@ const (
 	algorithmLimit = iota
 )
 
-// miscellaneous constants
+// number of bytes in checksum
+const checksumLength = 4
+
+// 4 least significant bits in key
+// define specific flags
 const (
-	checksumLength = 4
-
-	// bits in key code starting from LSB
-	publicKeyCode = 0x01
-	testKeyCode   = 0x02
-
-	algorithmShift = 4 // shift 4 bits to get algorithm
-
+	publicKeyCode = 0x01 // clear => private key
+	testKeyCode   = 0x02 // clear => live network key
+	_             = 0x04 // spare bit
+	_             = 0x08 // spare bit
 )
+
+// shift 4 bits right to get algorithm from key type
+const algorithmShift = 4
 
 // Account - base type for accounts
 type Account struct {
