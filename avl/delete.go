@@ -216,8 +216,8 @@ func (tree *Tree) Delete(key Item) interface{} {
 
 // internal delete routine
 func delete(key Item, pp **Node) (interface{}, bool, bool) {
-	var value interface{} = nil
-	var h, removed bool = false
+	var value interface{}
+	var h, removed bool
 
 	if nil == *pp { // key not in tree
 		return nil, false, h

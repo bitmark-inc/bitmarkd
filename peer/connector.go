@@ -64,7 +64,7 @@ type connector struct {
 // initialise the connector
 func (conn *connector) initialise(privateKey []byte, publicKey []byte, connect []Connection, dynamicEnabled bool, preferIPv6 bool) error {
 	// error code for goto fail
-	var error errX = nil
+	var errX error = nil
 
 	log := logger.New("connector")
 	conn.log = log

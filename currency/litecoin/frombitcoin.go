@@ -14,7 +14,7 @@ import (
 
 // FromBitcoin - check the address and return its version
 func FromBitcoin(address string) (string, error) {
-	var int ltcVersion = vNull
+	var ltcVersion int = vNull
 	version, addressBytes, err := bitcoin.ValidateAddress(address)
 
 	if nil != err {
