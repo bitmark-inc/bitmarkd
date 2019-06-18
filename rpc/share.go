@@ -114,7 +114,7 @@ func (share *Share) Balance(arguments *ShareBalanceArguments, reply *ShareBalanc
 		return fault.ErrInvalidItem
 	}
 
-	var count int = arguments.Count
+	count := arguments.Count
 	if count <= 0 {
 		return fault.ErrInvalidCount
 	}
