@@ -92,10 +92,10 @@ func validateBlockOwnerRecord(txId merkle.Digest, payments currency.Map) error {
 	return nil
 }
 
-// isTxWipedOut will check whether a transaction is cleaned up from the index db
+// isTxWipedOut will check whether a transaction is deleted up from the index db
 func isTxWipedOut(txId merkle.Digest) bool {
 	if storage.Pool.OwnerData.Has(txId[:]) {
-		globalData.log.Error("tx data is not cleaned")
+		globalData.log.Error("tx data is not deleted")
 		return false
 	}
 
@@ -110,13 +110,13 @@ func isTxWipedOut(txId merkle.Digest) bool {
 	case *transactionrecord.BitmarkIssue:
 		txIndexKey := append(tx.Owner.Bytes(), txId[:]...)
 		if storage.Pool.OwnerTxIndex.Has(txIndexKey) {
-			globalData.log.Error("owner tx index is not cleaned")
+			globalData.log.Error("owner tx index is not deleted")
 			return false
 		}
 	case transactionrecord.BitmarkTransfer:
 		txIndexKey := append(tx.GetOwner().Bytes(), txId[:]...)
 		if storage.Pool.OwnerTxIndex.Has(txIndexKey) {
-			globalData.log.Error("owner tx index is not cleaned")
+			globalData.log.Error("owner tx index is not deleted")
 			return false
 		}
 	default:
@@ -167,10 +167,10 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 				return fault.ErrTransactionIsNotIndexed
 			}
 
-			globalData.log.Debugf("validate whether the previous ownership cleaned. txId: %s", txId)
+			globalData.log.Debugf("validate whether the previous ownership deleted. txId: %s", txId)
 			if storage.Pool.BlockOwnerTxIndex.Has(tx.Link[:]) {
-				globalData.log.Error("ownership is not cleaned")
-				return fault.ErrOwnershipIsNotCleaned
+				globalData.log.Error("ownership is not deleted")
+				return fault.ErrPreviousOwnershipWasNotDeleted
 			}
 
 			if _, ok := priorBlockOwnerTxs[txId.String()]; !ok {
@@ -215,7 +215,7 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 
 			globalData.log.Debugf("validate whether the prior transaction wiped out. txId: %s", txId)
 			if !isTxWipedOut(tx.GetLink()) {
-				return fault.ErrTransactionIsNotCleaned
+				return fault.ErrPreviousTransactionWasNotDeleted
 			}
 
 			if _, ok := priorTxOwnerTxs[txId.String()]; !ok && nil != tx.GetOwner() {
@@ -236,7 +236,7 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 			}
 		default:
 			globalData.log.Errorf("unexpected transaction record: %+v", tx)
-			return fault.ErrUnexpectedTransaction
+			return fault.ErrUnexpectedTransactionRecord
 		}
 		data = data[n:]
 	}

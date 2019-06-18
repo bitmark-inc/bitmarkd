@@ -149,7 +149,7 @@ func (u *Upstream) GetBlockDigest(blockNumber uint64) (blockdigest.Digest, error
 
 	switch string(data[0]) {
 	case "E":
-		return blockdigest.Digest{}, fault.InvalidError(string(data[1]))
+		return blockdigest.Digest{}, fault.ErrorFromRunes(data[1])
 	case "H":
 		d := blockdigest.Digest{}
 		if blockdigest.Length == len(data[1]) {
@@ -185,7 +185,7 @@ func (u *Upstream) GetBlockData(blockNumber uint64) ([]byte, error) {
 
 	switch string(data[0]) {
 	case "E":
-		return nil, fault.InvalidError(string(data[1]))
+		return nil, fault.ErrorFromRunes(data[1])
 	case "B":
 		return data[1], nil
 	default:

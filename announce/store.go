@@ -56,7 +56,7 @@ func (item *PeerItem) UnmarshalText(data []byte) error {
 
 	ll := listenerLength / 19
 	if 0 == listenerOffset || ll < 1 || ll > 2 {
-		return fault.ErrInvalidIPAddress
+		return fault.ErrInvalidIpAddress
 	}
 	listener := make([]byte, listenerLength)
 	n += listenerOffset

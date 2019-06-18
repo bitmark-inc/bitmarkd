@@ -39,7 +39,7 @@ func TestInvalidAssetIdentifiers(t *testing.T) {
 	for i, textAssetIdentifier := range invalid {
 		var link transactionrecord.AssetIdentifier
 		n, err := fmt.Sscan(textAssetIdentifier, &link)
-		if fault.ErrNotAssetIdentifier != err {
+		if fault.ErrNotAssetId != err {
 			t.Errorf("%d: testing: %q", i, textAssetIdentifier)
 			t.Errorf("%d: expected ErrNotAssetIdentifier but got: %v", i, err)
 			return
@@ -162,7 +162,7 @@ func TestAssetIdentifierFromBytes(t *testing.T) {
 	}
 
 	err = transactionrecord.AssetIdentifierFromBytes(&assetId, valid[1:])
-	if fault.ErrNotAssetIdentifier != err {
+	if fault.ErrNotAssetId != err {
 		t.Fatalf("AssetIdentifierFromBytes error: %s", err)
 	}
 }

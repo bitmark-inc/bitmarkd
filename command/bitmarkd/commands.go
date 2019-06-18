@@ -421,12 +421,12 @@ scan_connections:
 func splitConnection(hostPort string) (bool, string, int, error) {
 	host, port, err := net.SplitHostPort(hostPort)
 	if nil != err {
-		return false, "", 0, fault.ErrInvalidIPAddress
+		return false, "", 0, fault.ErrInvalidIpAddress
 	}
 
 	IP := net.ParseIP(strings.Trim(host, " "))
 	if nil == IP {
-		return false, "", 0, fault.ErrInvalidIPAddress
+		return false, "", 0, fault.ErrInvalidIpAddress
 	}
 
 	numericPort, err := strconv.Atoi(strings.Trim(port, " "))

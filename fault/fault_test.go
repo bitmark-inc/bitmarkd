@@ -2,27 +2,25 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package fault_test
+package fault
 
 import (
 	"testing"
-
-	"github.com/bitmark-inc/bitmarkd/fault"
 )
 
 var (
-	ErrExistsOne   = fault.ExistsError("exists one ")
-	ErrExistsTwo   = fault.ExistsError("exists two")
-	ErrInvalidOne  = fault.InvalidError("invalid one")
-	ErrInvalidTwo  = fault.InvalidError("invalid two")
-	ErrLengthOne   = fault.LengthError("length one")
-	ErrLengthTwo   = fault.LengthError("length two")
-	ErrNotFoundOne = fault.NotFoundError("not found one")
-	ErrNotFoundTwo = fault.NotFoundError("not found two")
-	ErrProcessOne  = fault.ProcessError("process one")
-	ErrProcessTwo  = fault.ProcessError("process two")
-	ErrRecordOne   = fault.RecordError("record one")
-	ErrRecordTwo   = fault.RecordError("record two")
+	ErrExistsOne   = existsError("exists one ")
+	ErrExistsTwo   = existsError("exists two")
+	ErrInvalidOne  = invalidError("invalid one")
+	ErrInvalidTwo  = invalidError("invalid two")
+	ErrLengthOne   = lengthError("length one")
+	ErrLengthTwo   = lengthError("length two")
+	ErrNotFoundOne = notFoundError("not found one")
+	ErrNotFoundTwo = notFoundError("not found two")
+	ErrProcessOne  = processError("process one")
+	ErrProcessTwo  = processError("process two")
+	ErrRecordOne   = recordError("record one")
+	ErrRecordTwo   = recordError("record two")
 )
 
 // test that various not found errors can be subclassed
@@ -52,22 +50,22 @@ func TestAddress(t *testing.T) {
 
 	for i, e := range errorList {
 		err := e.err
-		if fault.IsErrExists(err) != e.exists {
+		if IsErrExists(err) != e.exists {
 			t.Errorf("%d: expected 'exists' == %v for err = %v", i, e.exists, err)
 		}
-		if fault.IsErrInvalid(err) != e.invalid {
+		if IsErrInvalid(err) != e.invalid {
 			t.Errorf("%d: expected 'invalid' == %v for err = %v", i, e.invalid, err)
 		}
-		if fault.IsErrLength(err) != e.length {
+		if IsErrLength(err) != e.length {
 			t.Errorf("%d: expected 'length' == %v for err = %v", i, e.length, err)
 		}
-		if fault.IsErrNotFound(err) != e.notFound {
+		if IsErrNotFound(err) != e.notFound {
 			t.Errorf("%d: expected 'not found' == %v for err = %v", i, e.notFound, err)
 		}
-		if fault.IsErrProcess(err) != e.process {
+		if IsErrProcess(err) != e.process {
 			t.Errorf("%d: expected 'process' == %v for err = %v", i, e.process, err)
 		}
-		if fault.IsErrRecord(err) != e.record {
+		if IsErrRecord(err) != e.record {
 			t.Errorf("%d: expected 'record' for err = %v", i, err)
 		}
 	}
