@@ -17,6 +17,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/keypair"
 )
 
+<<<<<<< HEAD
 const (
 	ErrAssetMetadataMustBeMap   = fault.InvalidError("asset metadata must be map")
 	ErrRequiredAssetFingerprint = fault.InvalidError("asset fingerprint is required")
@@ -36,10 +37,12 @@ const (
 	ErrRequiredTxId             = fault.InvalidError("transaction id is required")
 )
 
+=======
+>>>>>>> master
 // identity is required, but not check the config file
 func checkName(name string) (string, error) {
 	if "" == name {
-		return "", ErrRequiredIdentity
+		return "", fault.ErrRequiredIdentity
 	}
 
 	return name, nil
@@ -48,7 +51,7 @@ func checkName(name string) (string, error) {
 // check for non-blank file name
 func checkFileName(fileName string) (string, error) {
 	if "" == fileName {
-		return "", ErrRequiredFileName
+		return "", fault.ErrRequiredFileName
 	}
 
 	return fileName, nil
@@ -58,7 +61,7 @@ func checkFileName(fileName string) (string, error) {
 func checkConnect(connect string) (string, error) {
 	connect = strings.TrimSpace(connect)
 	if "" == connect {
-		return "", ErrRequiredConnect
+		return "", fault.ErrRequiredConnect
 	}
 
 	s := []string{}
@@ -69,12 +72,12 @@ func checkConnect(connect string) (string, error) {
 		s = strings.Split(connect, ":")
 	}
 	if 2 != len(s) {
-		return "", ErrRequiredConnectPort
+		return "", fault.ErrRequiredConnectPort
 	}
 
 	port, err := strconv.Atoi(s[1])
 	if nil != err || port < 1 || port > 65535 {
-		return "", ErrRequiredConnectPort
+		return "", fault.ErrRequiredConnectPort
 	}
 
 	return connect, nil
@@ -83,7 +86,7 @@ func checkConnect(connect string) (string, error) {
 // description is required
 func checkDescription(description string) (string, error) {
 	if "" == description {
-		return "", ErrRequiredDescription
+		return "", fault.ErrRequiredDescription
 	}
 
 	return description, nil
@@ -107,7 +110,7 @@ func checkOptionalKey(key string) (string, error) {
 	case encrypt.PrivateKeySize: // have the full key (private + public)
 	case encrypt.PublicKeyOffset: // just have the private part
 	default:
-		return "", ErrKeyLength
+		return "", fault.ErrInvalidKeyLength
 	}
 	return key, nil
 }
@@ -116,7 +119,7 @@ func checkOptionalKey(key string) (string, error) {
 // if present must 64 hex chars
 func checkPublicKey(key string) (string, error) {
 	if "" == key {
-		return "", ErrRequiredPublicKey
+		return "", fault.ErrRequiredPublicKey
 
 	}
 	k, err := hex.DecodeString(key)
@@ -126,14 +129,14 @@ func checkPublicKey(key string) (string, error) {
 	switch len(k) {
 	case encrypt.PublicKeySize: // have the full key
 	default:
-		return "", ErrKeyLength
+		return "", fault.ErrInvalidKeyLength
 	}
 	return key, nil
 }
 
 func checkIdentity(name string, config *configuration.Configuration) (*encrypt.IdentityType, error) {
 	if "" == name {
-		return nil, ErrRequiredIdentity
+		return nil, fault.ErrRequiredIdentity
 	}
 
 	return getIdentity(name, config)
@@ -142,7 +145,7 @@ func checkIdentity(name string, config *configuration.Configuration) (*encrypt.I
 // asset fingerprint is required field
 func checkAssetFingerprint(fingerprint string) (string, error) {
 	if "" == fingerprint {
-		return "", ErrRequiredAssetFingerprint
+		return "", fault.ErrRequiredAssetFingerprint
 	}
 	return fingerprint, nil
 }
@@ -150,14 +153,14 @@ func checkAssetFingerprint(fingerprint string) (string, error) {
 // asset metadata is required field
 func checkAssetMetadata(meta string) (string, error) {
 	if "" == meta {
-		return "", ErrRequiredAssetMetadata
+		return "", fault.ErrRequiredAssetMetadata
 	}
 	meta, err := strconv.Unquote(`"` + meta + `"`)
 	if nil != err {
 		return "", err
 	}
 	if 1 == len(strings.Split(meta, "\u0000"))%2 {
-		return "", ErrAssetMetadataMustBeMap
+		return "", fault.ErrAssetMetadataMustBeMap
 	}
 	return meta, nil
 }
@@ -165,7 +168,7 @@ func checkAssetMetadata(meta string) (string, error) {
 // txid is required field ensure 32 hex bytes
 func checkTxId(txId string) (string, error) {
 	if 64 != len(txId) {
-		return "", ErrRequiredTxId
+		return "", fault.ErrRequiredTxId
 	}
 	_, err := hex.DecodeString(txId)
 	if nil != err {
@@ -178,7 +181,7 @@ func checkTxId(txId string) (string, error) {
 // transfer tx is required field
 func checkTransferTx(txId string) (string, error) {
 	if "" == txId {
-		return "", ErrRequiredTransferTx
+		return "", fault.ErrRequiredTransferTx
 	}
 
 	return txId, nil
@@ -196,7 +199,7 @@ func checkTransferFrom(from string, config *configuration.Configuration) (*encry
 // transfer to is required field but only has a public key
 func checkTransferTo(to string, config *configuration.Configuration) (string, *keypair.KeyPair, error) {
 	if "" == to {
-		return "", nil, ErrRequiredTransferTo
+		return "", nil, fault.ErrRequiredTransferTo
 	}
 
 	newOwnerKeyPair, err := encrypt.PublicKeyFromString(to, config.Identities, config.TestNet)
@@ -210,16 +213,37 @@ func checkTransferTo(to string, config *configuration.Configuration) (string, *k
 // coin address to is required field
 func checkCoinAddress(c currency.Currency, address string, testnet bool) (string, error) {
 	if "" == address {
-		return "", ErrRequiredCurrencyAddress
+		return "", fault.ErrRequiredCurrencyAddress
 	}
 	err := c.ValidateAddress(address, testnet)
 	return address, err
 }
 
+<<<<<<< HEAD
+=======
+// pay id is required field
+func checkPayId(payId string) (string, error) {
+	if "" == payId {
+		return "", fault.ErrRequiredPayId
+	}
+
+	return payId, nil
+}
+
+// receipt is required field
+func checkReceipt(receipt string) (string, error) {
+	if "" == receipt {
+		return "", fault.ErrRequiredReceipt
+	}
+
+	return receipt, nil
+}
+
+>>>>>>> master
 // signature is required field ensure 64 hex bytes
 func checkSignature(s string) ([]byte, error) {
 	if 128 != len(s) {
-		return nil, ErrRequiredTxId
+		return nil, fault.ErrRequiredTxId
 	}
 	h, err := hex.DecodeString(s)
 	if nil != err {
@@ -238,7 +262,7 @@ func getIdentity(name string, config *configuration.Configuration) (*encrypt.Ide
 		}
 	}
 
-	return nil, ErrNotFoundIdentity
+	return nil, fault.ErrIdentityNameNotFound
 }
 
 // check if file exists

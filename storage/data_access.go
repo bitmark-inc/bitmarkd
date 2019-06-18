@@ -63,11 +63,7 @@ func (d *DataAccessImpl) Delete(key []byte) {
 }
 
 func (d *DataAccessImpl) Commit() error {
-	err := d.db.Write(d.batch, nil)
-	if nil != err {
-		return err
-	}
-	return nil
+	return d.db.Write(d.batch, nil)
 }
 
 func (d *DataAccessImpl) DumpTx() []byte {

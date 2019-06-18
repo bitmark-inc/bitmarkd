@@ -17,11 +17,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 
-var (
-	ErrMakeSwapFail  = fault.ProcessError("make swap failed")
-	ErrNotSwapRecord = fault.InvalidError("not swap record")
-)
-
 // SwapData - data for a swap request
 type SwapData struct {
 	ShareIdOne  string
@@ -81,7 +76,7 @@ func (client *Client) Swap(swapConfig *SwapData) (*SwapSingleSignedReply, error)
 		return nil, err
 	}
 	if nil == swap {
-		return nil, ErrMakeSwapFail
+		return nil, fault.ErrMakeSwapFailed
 	}
 
 	client.printJson("Swap Request", swap)
@@ -149,7 +144,7 @@ func makeSwapOneSignature(testnet bool, shareIdOne merkle.Digest, quantityOne ui
 	// pack without signature
 	packed, err := r.Pack(ownerOneAddress)
 	if nil == err {
-		return nil, nil, ErrMakeSwapFail
+		return nil, nil, fault.ErrMakeSwapFailed
 	} else if fault.ErrInvalidSignature != err {
 		return nil, nil, err
 	}
@@ -161,7 +156,7 @@ func makeSwapOneSignature(testnet bool, shareIdOne merkle.Digest, quantityOne ui
 	// include first signature by packing again
 	packed, err = r.Pack(ownerOneAddress)
 	if nil == err {
-		return nil, nil, ErrMakeSwapFail
+		return nil, nil, fault.ErrMakeSwapFailed
 	} else if fault.ErrInvalidSignature != err {
 		return nil, nil, err
 	}

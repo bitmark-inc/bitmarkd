@@ -73,7 +73,7 @@ func transfer(
 ) {
 	// get count for current owner record
 	dKey := append(currentOwner.Bytes(), previousTxId[:]...)
-	dCount, _ := trx.Get(storage.Pool.OwnerTxIndex, dKey)
+	dCount := trx.Get(storage.Pool.OwnerTxIndex, dKey)
 	if nil == dCount {
 		logger.Criticalf("ownership.Transfer: dKey: %x", dKey)
 		logger.Criticalf("ownership.Transfer: block number: %d", transferBlockNumber)
@@ -201,7 +201,7 @@ func create(
 ) {
 	// increment the count for owner
 	nKey := owner.Bytes()
-	count, _ := trx.Get(storage.Pool.OwnerNextCount, nKey)
+	count := trx.Get(storage.Pool.OwnerNextCount, nKey)
 	if nil == count {
 		count = []byte{0, 0, 0, 0, 0, 0, 0, 0}
 	} else if uint64ByteSize != len(count) {
@@ -275,7 +275,7 @@ func OwnerOf(trx storage.Transaction, txId merkle.Digest) (uint64, *account.Acco
 	if nil == trx {
 		blockNumber, packed = storage.Pool.Transactions.GetNB(txId[:])
 	} else {
-		blockNumber, packed, _ = trx.GetNB(storage.Pool.Transactions, txId[:])
+		blockNumber, packed = trx.GetNB(storage.Pool.Transactions, txId[:])
 	}
 
 	if nil == packed {

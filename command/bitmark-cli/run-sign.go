@@ -14,6 +14,7 @@ import (
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/keypair"
 )
 
@@ -67,7 +68,7 @@ func runSign(c *cli.Context) error {
 	}
 	// just in case some internal breakage
 	if nil == ownerKeyPair {
-		return ErrNilKeyPair
+		return fault.ErrKeyPairCannotBeNil
 	}
 
 	file, err := os.Open(fileName)

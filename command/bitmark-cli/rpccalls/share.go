@@ -15,10 +15,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 
-var (
-	ErrMakeShareFail = fault.ProcessError("make share failed")
-)
-
 // ShareData - data for a share request
 type ShareData struct {
 	Owner    *keypair.KeyPair
@@ -50,7 +46,7 @@ func (client *Client) Share(shareConfig *ShareData) (*ShareReply, error) {
 		return nil, err
 	}
 	if nil == share {
-		return nil, ErrMakeShareFail
+		return nil, fault.ErrMakeShareFailed
 	}
 
 	client.printJson("Share Request", share)
@@ -99,7 +95,7 @@ func makeShare(testnet bool, link merkle.Digest, quantity uint64, owner *keypair
 	// pack without signature
 	packed, err := r.Pack(ownerAddress)
 	if nil == err {
-		return nil, ErrMakeShareFail
+		return nil, fault.ErrMakeShareFailed
 	} else if fault.ErrInvalidSignature != err {
 		return nil, err
 	}

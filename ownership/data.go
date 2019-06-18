@@ -109,7 +109,7 @@ func GetOwnerData(trx storage.Transaction, txId merkle.Digest) (OwnerData, error
 	if nil == trx {
 		packed = storage.Pool.OwnerData.Get(txId[:])
 	} else {
-		packed, _ = trx.Get(storage.Pool.OwnerData, txId[:])
+		packed = trx.Get(storage.Pool.OwnerData, txId[:])
 	}
 
 	if nil == packed {
@@ -125,7 +125,7 @@ func GetOwnerDataB(trx storage.Transaction, txId []byte) (OwnerData, error) {
 	if nil == trx {
 		packed = storage.Pool.OwnerData.Get(txId)
 	} else {
-		packed, _ = trx.Get(storage.Pool.OwnerData, txId)
+		packed = trx.Get(storage.Pool.OwnerData, txId)
 	}
 
 	if nil == packed {

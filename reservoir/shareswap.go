@@ -150,7 +150,7 @@ func CheckSwapBalances(
 	if nil == trx {
 		balanceOne, ok = storage.Pool.ShareQuantity.GetN(oKeyOne)
 	} else {
-		balanceOne, ok, _ = trx.GetN(storage.Pool.ShareQuantity, oKeyOne)
+		balanceOne, ok = trx.GetN(storage.Pool.ShareQuantity, oKeyOne)
 	}
 
 	// check if sufficient funds
@@ -163,7 +163,7 @@ func CheckSwapBalances(
 	if nil == trx {
 		balanceTwo, ok = storage.Pool.ShareQuantity.GetN(oKeyTwo)
 	} else {
-		balanceTwo, ok, _ = trx.GetN(storage.Pool.ShareQuantity, oKeyTwo)
+		balanceTwo, ok = trx.GetN(storage.Pool.ShareQuantity, oKeyTwo)
 	}
 
 	// check if sufficient funds

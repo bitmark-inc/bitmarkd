@@ -17,11 +17,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 
-var (
-	ErrMakeGrantFail  = fault.ProcessError("make grant failed")
-	ErrNotGrantRecord = fault.InvalidError("not grant record")
-)
-
 // GrantData - data for a grant request
 type GrantData struct {
 	ShareId     string
@@ -73,7 +68,7 @@ func (client *Client) Grant(grantConfig *GrantData) (*GrantSingleSignedReply, er
 		return nil, err
 	}
 	if nil == grant {
-		return nil, ErrMakeGrantFail
+		return nil, fault.ErrMakeGrantFailed
 	}
 
 	client.printJson("Grant Request", grant)
@@ -139,7 +134,7 @@ func makeGrantOneSignature(testnet bool, shareId merkle.Digest, quantity uint64,
 	// pack without signature
 	packed, err := r.Pack(ownerAddress)
 	if nil == err {
-		return nil, nil, ErrMakeGrantFail
+		return nil, nil, fault.ErrMakeGrantFailed
 	} else if fault.ErrInvalidSignature != err {
 		return nil, nil, err
 	}
@@ -151,7 +146,7 @@ func makeGrantOneSignature(testnet bool, shareId merkle.Digest, quantity uint64,
 	// include first signature by packing again
 	packed, err = r.Pack(ownerAddress)
 	if nil == err {
-		return nil, nil, ErrMakeGrantFail
+		return nil, nil, fault.ErrMakeGrantFailed
 	} else if fault.ErrInvalidSignature != err {
 		return nil, nil, err
 	}

@@ -468,7 +468,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 			oKey := append(tx.Owner.Bytes(), tx.ShareId[:]...)
 			rKey := append(tx.Recipient.Bytes(), tx.ShareId[:]...)
 
-			oAccountBalance, ok, _ := trx.GetN(storage.Pool.ShareQuantity, oKey)
+			oAccountBalance, ok := trx.GetN(storage.Pool.ShareQuantity, oKey)
 			if !ok {
 				trx.Abort()
 				// check was earlier
@@ -476,7 +476,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 			}
 
 			// if record does not exists the balance is zero
-			rAccountBalance, _, _ := trx.GetN(storage.Pool.ShareQuantity, rKey)
+			rAccountBalance, _ := trx.GetN(storage.Pool.ShareQuantity, rKey)
 
 			// owner, share → recipient
 			oAccountBalance -= tx.Quantity
@@ -523,11 +523,11 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 			}
 
 			// if record does not exist the balance is zero
-			ownerOneShareTwoAccountBalance, ok, _ := trx.GetN(
+			ownerOneShareTwoAccountBalance, ok := trx.GetN(
 				storage.Pool.ShareQuantity,
 				ownerOneShareTwoKey,
 			)
-			ownerTwoShareOneAccountBalance, ok, _ := trx.GetN(
+			ownerTwoShareOneAccountBalance, ok := trx.GetN(
 				storage.Pool.ShareQuantity,
 				ownerTwoShareOneKey,
 			)
@@ -555,23 +555,13 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 			} else {
 				trx.PutN(share, ownerTwoShareTwoKey, ownerTwoShareTwoAccountBalance)
 			}
-			err = trx.PutN(share, ownerOneShareTwoKey, ownerOneShareTwoAccountBalance)
-			if nil != err {
-				fmt.Printf("Aaron db put error: %v\n", err)
-				return err
-			}
-
-			err = trx.Put(
+			trx.PutN(share, ownerOneShareTwoKey, ownerOneShareTwoAccountBalance)
+			trx.Put(
 				storage.Pool.Transactions,
 				item.txId[:],
 				thisBlockNumberKey,
 				item.packed,
 			)
-
-			if nil != err {
-				fmt.Printf("Aaron db put error: %v\n", err)
-				return err
-			}
 
 		default:
 			trx.Abort()
@@ -581,17 +571,12 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 	}
 
 	// payment data
-	err = trx.Put(
+	trx.Put(
 		storage.Pool.BlockOwnerPayment,
 		thisBlockNumberKey,
 		packedPayments,
 		[]byte{},
 	)
-
-	if nil != err {
-		fmt.Printf("Aaron db put error: %v\n", err)
-		return err
-	}
 
 	// create the foundation record
 	foundationTxId := blockrecord.FoundationTxId(header, digest)
@@ -603,17 +588,12 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 	)
 
 	// current owner: either foundation or block owner transfer: tx id → owned block
-	err = trx.Put(
+	trx.Put(
 		storage.Pool.BlockOwnerTxIndex,
 		foundationTxId[:],
 		thisBlockNumberKey,
 		[]byte{},
 	)
-
-	if nil != err {
-		fmt.Printf("Aaron db put error: %v\n", err)
-		return err
-	}
 
 	ownership.CreateBlock(trx, foundationTxId, header.Number, blockOwner)
 
@@ -636,27 +616,20 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 	blockNumber := make([]byte, 8)
 	binary.BigEndian.PutUint64(blockNumber, header.Number)
 
-	err = trx.Put(
+	trx.Put(
 		storage.Pool.Blocks,
 		blockNumber,
 		packedBlock,
 		[]byte{},
 	)
-	if nil != err {
-		return err
-	}
 
-	err = trx.Put(
+	trx.Put(
 		storage.Pool.BlockHeaderHash,
 		thisBlockNumberKey,
 		digest[:],
 		[]byte{},
 	)
 
-	if nil != err {
-		fmt.Printf("Aaron db put error: %v\n", err)
-		return err
-	}
 	globalData.log.Debugf("stored block: %d time elapsed: %f", header.Number, time.Since(start).Seconds())
 
 	err = trx.Commit()

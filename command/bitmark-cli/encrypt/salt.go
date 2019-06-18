@@ -17,10 +17,6 @@ const (
 	saltSize = 16
 )
 
-var (
-	ErrUnmarshalTextFail = fault.ProcessError("unmarshal text failed")
-)
-
 // Salt - type to hold a salt value
 type Salt [saltSize]byte
 
@@ -65,7 +61,7 @@ func (salt *Salt) UnmarshalText(s []byte) error {
 
 	if saltSize != byteCount {
 		fmt.Printf("invalid byte\n")
-		return ErrUnmarshalTextFail
+		return fault.ErrUnmarshalTextFailed
 	}
 	copy(salt[:], buffer)
 	return nil

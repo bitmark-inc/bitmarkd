@@ -31,7 +31,7 @@ func recoverBlockHeaderHash(blockNumberBytes []byte, packedBlock []byte) error {
 
 	blockNumber := binary.BigEndian.Uint64(blockNumberBytes)
 
-	blockHeaderHashBytes, _ := trx.Get(storage.Pool.BlockHeaderHash, blockNumberBytes)
+	blockHeaderHashBytes := trx.Get(storage.Pool.BlockHeaderHash, blockNumberBytes)
 	if blockHeaderHashBytes == nil {
 		digest, err := blockrecord.ComputeHeaderHash(packedBlock)
 		if nil != err {
