@@ -64,13 +64,14 @@ outer_loop:
 			// start db transaction by block & index db
 			trx, err := storage.NewDBTransaction()
 			if nil != err {
+				log.Errorf("cannot create transaction: error: %s", i, err)
 				return err
 			}
 
 			transaction, n, err := transactionrecord.Packed(data).Unpack(mode.IsTesting())
 			if nil != err {
 				trx.Abort()
-				log.Errorf("tx[%d]: error: %s", i, err)
+				log.Warnf("invalid tx[%d]: error: %s", i, err)
 				return err
 			}
 
@@ -144,7 +145,7 @@ outer_loop:
 				binary.BigEndian.PutUint64(blockNumberKey, blockOwnerdata.IssueBlockNumber())
 
 				// put block ownership back
-				_, previous, _ := trx.GetNB(storage.Pool.Transactions, tx.Link[:])
+				_, previous := trx.GetNB(storage.Pool.Transactions, tx.Link[:])
 
 				blockTransaction, _, err := transactionrecord.Packed(previous).Unpack(mode.IsTesting())
 				if nil != err {
@@ -249,10 +250,10 @@ outer_loop:
 				rKey := append(tx.Recipient.Bytes(), tx.ShareId[:]...)
 
 				// this could be zero
-				oAccountBalance, _, _ := trx.GetN(storage.Pool.ShareQuantity, oKey)
+				oAccountBalance, _ := trx.GetN(storage.Pool.ShareQuantity, oKey)
 
 				// this cannot be zero
-				rAccountBalance, ok, _ := trx.GetN(storage.Pool.ShareQuantity, rKey)
+				rAccountBalance, ok := trx.GetN(storage.Pool.ShareQuantity, rKey)
 				if !ok {
 					trx.Abort()
 					log.Criticalf("missing balance record for: %v share id: %x", tx.Recipient, tx.ShareId)
@@ -284,17 +285,17 @@ outer_loop:
 				ownerTwoShareTwoKey := append(tx.OwnerTwo.Bytes(), tx.ShareIdTwo[:]...)
 
 				// either of these balances could be zero
-				ownerOneShareOneAccountBalance, _, _ := trx.GetN(storage.Pool.ShareQuantity, ownerOneShareOneKey)
-				ownerTwoShareTwoAccountBalance, _, _ := trx.GetN(storage.Pool.ShareQuantity, ownerTwoShareTwoKey)
+				ownerOneShareOneAccountBalance, _ := trx.GetN(storage.Pool.ShareQuantity, ownerOneShareOneKey)
+				ownerTwoShareTwoAccountBalance, _ := trx.GetN(storage.Pool.ShareQuantity, ownerTwoShareTwoKey)
 
 				// these balances cannot be zero
-				ownerOneShareTwoAccountBalance, ok, _ := trx.GetN(storage.Pool.ShareQuantity, ownerOneShareTwoKey)
+				ownerOneShareTwoAccountBalance, ok := trx.GetN(storage.Pool.ShareQuantity, ownerOneShareTwoKey)
 				if !ok {
 					trx.Abort()
 					log.Criticalf("missing balance record for owner 1: %v share id 2: %x", tx.OwnerOne, tx.ShareIdTwo)
 					logger.Panic("ShareQuantity database is corrupt")
 				}
-				ownerTwoShareOneAccountBalance, ok, _ := trx.GetN(storage.Pool.ShareQuantity, ownerTwoShareOneKey)
+				ownerTwoShareOneAccountBalance, ok := trx.GetN(storage.Pool.ShareQuantity, ownerTwoShareOneKey)
 				if !ok {
 					trx.Abort()
 					log.Criticalf("missing balance record for owner 2: %v share id 1: %x", tx.OwnerTwo, tx.ShareIdOne)

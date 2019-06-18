@@ -5,23 +5,19 @@ import (
 	"sync"
 )
 
-const (
-	ErrHandleNil = "handle is nil"
-)
-
 // Transaction RDBS transaction
 type Transaction interface {
 	Abort()
 	Begin() error
 	Commit() error
-	Delete(Handle, []byte) error
-	Get(Handle, []byte) ([]byte, error)
-	GetN(Handle, []byte) (uint64, bool, error)
-	GetNB(Handle, []byte) (uint64, []byte, error)
+	Delete(Handle, []byte)
+	Get(Handle, []byte) []byte
+	GetN(Handle, []byte) (uint64, bool)
+	GetNB(Handle, []byte) (uint64, []byte)
 	Has(Handle, []byte) bool
 	InUse() bool
-	Put(Handle, []byte, []byte, []byte) error
-	PutN(Handle, []byte, uint64) error
+	Put(Handle, []byte, []byte, []byte)
+	PutN(Handle, []byte, uint64)
 }
 
 type TransactionImpl struct {
@@ -33,13 +29,6 @@ func newTransaction(access []DataAccess) Transaction {
 	return &TransactionImpl{
 		dataAccess: access,
 	}
-}
-
-func isNilPtr(ptr interface{}) error {
-	if nil == ptr {
-		return fmt.Errorf(ErrHandleNil)
-	}
-	return nil
 }
 
 func (t *TransactionImpl) InUse() bool {
@@ -68,33 +57,16 @@ func (t *TransactionImpl) Put(
 	key []byte,
 	value []byte,
 	additional []byte,
-) error {
-	if nil == h {
-		return fmt.Errorf(ErrHandleNil)
-	}
-
+) {
 	h.put(key, value, additional)
-	return nil
 }
 
-func (t *TransactionImpl) PutN(h Handle, key []byte, value uint64) error {
-	err := isNilPtr(h)
-	if nil != err {
-		return err
-	}
-
+func (t *TransactionImpl) PutN(h Handle, key []byte, value uint64) {
 	h.putN(key, value)
-	return nil
 }
 
-func (t *TransactionImpl) Delete(h Handle, key []byte) error {
-	err := isNilPtr(h)
-	if nil != err {
-		return err
-	}
-
+func (t *TransactionImpl) Delete(h Handle, key []byte) {
 	h.remove(key)
-	return nil
 }
 
 func (t *TransactionImpl) Commit() error {
@@ -108,33 +80,18 @@ func (t *TransactionImpl) Commit() error {
 	return nil
 }
 
-func (t *TransactionImpl) Get(h Handle, key []byte) ([]byte, error) {
-	err := isNilPtr(h)
-	if nil != err {
-		return []byte{}, err
-	}
-
-	return h.Get(key), nil
+func (t *TransactionImpl) Get(h Handle, key []byte) []byte {
+	return h.Get(key)
 }
 
-func (t *TransactionImpl) GetN(h Handle, key []byte) (uint64, bool, error) {
-	err := isNilPtr(h)
-	if nil != err {
-		return uint64(0), false, err
-	}
-
+func (t *TransactionImpl) GetN(h Handle, key []byte) (uint64, bool) {
 	num, found := h.GetN(key)
-	return num, found, nil
+	return num, found
 }
 
-func (t *TransactionImpl) GetNB(h Handle, key []byte) (uint64, []byte, error) {
-	err := isNilPtr(h)
-	if nil != err {
-		return uint64(0), []byte{}, err
-	}
-
+func (t *TransactionImpl) GetNB(h Handle, key []byte) (uint64, []byte) {
 	num, buffer := h.GetNB(key)
-	return num, buffer, nil
+	return num, buffer
 }
 
 func (t *TransactionImpl) Abort() {

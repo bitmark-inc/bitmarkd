@@ -27,15 +27,6 @@ const (
 	PublicKeyOffset = PrivateKeySize - PublicKeySize
 )
 
-var (
-	ErrInvalidPrivateKey      = fault.InvalidError("invalid private key")
-	ErrKeyLength              = fault.InvalidError("key length is invalid")
-	ErrNotFoundIdentity       = fault.NotFoundError("identity name not found")
-	ErrUnableToRegenerateKeys = fault.InvalidError("unable to regenerate keys")
-	ErrWrongNetwork           = fault.InvalidError("account is for the wrong network")
-	ErrWrongPassword          = fault.InvalidError("wrong password")
-)
-
 // IdentityType - full access to data (includes private data)
 type IdentityType struct {
 	Name             string         `json:"name"`
@@ -102,10 +93,10 @@ func MakeKeyPair(privateKeyStr string, password string, test bool) (*EncryptedKe
 				return nil, nil, err
 			}
 			if !bytes.Equal(privateKey, prv) {
-				return nil, nil, ErrUnableToRegenerateKeys
+				return nil, nil, fault.ErrUnableToRegenerateKeys
 			}
 			if !bytes.Equal(publicKey, pub) {
-				return nil, nil, ErrUnableToRegenerateKeys
+				return nil, nil, fault.ErrUnableToRegenerateKeys
 			}
 
 		} else if len(privateKey) == PublicKeyOffset {
@@ -116,12 +107,12 @@ func MakeKeyPair(privateKeyStr string, password string, test bool) (*EncryptedKe
 				return nil, nil, err
 			}
 			if !bytes.Equal(privateKey, prv[:PublicKeyOffset]) {
-				return nil, nil, ErrUnableToRegenerateKeys
+				return nil, nil, fault.ErrUnableToRegenerateKeys
 			}
 			privateKey = prv
 			publicKey = pub
 		} else {
-			return nil, nil, ErrInvalidPrivateKey
+			return nil, nil, fault.ErrInvalidPrivateKey
 		}
 
 	}
@@ -198,7 +189,7 @@ func encryptPrivateKey(plaintext []byte, key []byte) ([]byte, error) {
 	}
 
 	if len(plaintext) != PrivateKeySize {
-		return nil, ErrKeyLength
+		return nil, fault.ErrInvalidKeyLength
 	}
 
 	ciphertext := make([]byte, aes.BlockSize+PrivateKeySize)
@@ -219,7 +210,7 @@ func decryptPrivateKey(ciphertext []byte, key []byte) ([]byte, error) {
 	}
 
 	if len(ciphertext) != aes.BlockSize+PrivateKeySize {
-		return nil, ErrKeyLength
+		return nil, fault.ErrInvalidKeyLength
 	}
 
 	iv := ciphertext[:aes.BlockSize]
@@ -316,7 +307,7 @@ func VerifyPassword(password string, identity *IdentityType) (*keypair.KeyPair, 
 	}
 
 	if !checkSignature(publicKey, privateKey) {
-		return nil, ErrWrongPassword
+		return nil, fault.ErrWrongPassword
 	}
 
 	ciphertext, err = hex.DecodeString(identity.Seed)
@@ -360,7 +351,7 @@ loop:
 	acc, err := account.AccountFromBase58(name)
 	if nil == err {
 		if acc.IsTesting() != testnet {
-			return nil, ErrWrongNetwork
+			return nil, fault.ErrWrongNetworkForPublicKey
 		}
 		keyPair := keypair.KeyPair{
 			PublicKey: acc.PublicKeyBytes(),
@@ -377,5 +368,5 @@ loop:
 		return &keyPair, nil
 	}
 
-	return nil, ErrNotFoundIdentity
+	return nil, fault.ErrIdentityNameNotFound
 }

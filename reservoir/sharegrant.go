@@ -154,7 +154,7 @@ func CheckGrantBalance(trx storage.Transaction, grant *transactionrecord.ShareGr
 	if nil == trx {
 		balance, ok = storage.Pool.ShareQuantity.GetN(oKey)
 	} else {
-		balance, ok, _ = trx.GetN(storage.Pool.ShareQuantity, oKey)
+		balance, ok = trx.GetN(storage.Pool.ShareQuantity, oKey)
 	}
 
 	// check if sufficient funds

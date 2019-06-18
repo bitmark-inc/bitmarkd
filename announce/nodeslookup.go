@@ -62,12 +62,12 @@ func getIntervalTime(domain string, log *logger.L) time.Duration {
 	conf, err := dns.ClientConfigFromFile(configFile)
 
 	if nil != err {
-		log.Errorf("reading %s error: %s", configFile, err)
+		log.Warnf("reading %s error: %s", configFile, err)
 		return t
 	}
 
 	if 0 == len(conf.Servers) {
-		log.Errorf("cannot get dns name server")
+		log.Warnf("cannot get dns name server")
 		return t
 	}
 
@@ -79,12 +79,12 @@ func getIntervalTime(domain string, log *logger.L) time.Duration {
 
 	r, _, err := c.Exchange(&msg, server)
 	if nil != err {
-		log.Errorf("exchange with dns server error: %s", err)
+		log.Warnf("exchange with dns server error: %s", err)
 		return t
 	}
 
 	if 0 == len(r.Ns) && 0 == len(r.Answer) && 0 == len(r.Extra) {
-		log.Errorf("no section found")
+		log.Debugf("no SOA record found found")
 		return t
 	}
 
@@ -127,7 +127,7 @@ func lookupNodesDomain(domain string, log *logger.L) error {
 
 	if "" == domain {
 		log.Error("invalid node domain")
-		return fault.InvalidError("invalid node domain")
+		return fault.ErrInvalidNodeDomain
 	}
 
 	texts, err := net.LookupTXT(domain)
@@ -141,7 +141,7 @@ func lookupNodesDomain(domain string, log *logger.L) error {
 		t = strings.TrimSpace(t)
 		tag, err := parseTag(t)
 		if nil != err {
-			log.Infof("ignore TXT[%d]: %q  error: %s", i, t, err)
+			log.Debugf("ignore TXT[%d]: %q  error: %s", i, t, err)
 		} else {
 			log.Infof("process TXT[%d]: %q", i, t)
 			log.Infof("result[%d]: IPv4: %q  IPv6: %q  rpc: %d  connect: %d", i, tag.ipv4, tag.ipv6, tag.rpcPort, tag.connectPort)

@@ -11,13 +11,7 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bitmark-inc/bitmarkd/account"
-	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
-)
-
-var (
-	ErrKeyLength        = fault.InvalidError("key length is invalid")
-	ErrNotFoundIdentity = fault.NotFoundError("identity name not found")
 )
 
 // KeyPair - structure to hold public and private keys and the seed

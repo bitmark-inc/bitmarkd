@@ -59,7 +59,7 @@ func NewConnections(hostPort []string) ([]*Connection, error) {
 	}
 	c := make([]*Connection, len(hostPort))
 	for i, hp := range hostPort {
-		err := error(nil)
+		var err error
 		c[i], err = NewConnection(hp)
 		if nil != err {
 			return nil, err
