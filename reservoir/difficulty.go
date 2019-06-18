@@ -33,9 +33,8 @@ const (
 // ScaledDifficulty - produce a scaled difficulty based on the number
 // of items in a block to be processed and include a quantity discount
 func ScaledDifficulty(count int) *difficulty.Difficulty {
-
+	var float64 factor = 1.0
 	d := difficulty.New()
-	factor := 1.0
 
 	switch {
 	case count <= 1:

@@ -14,14 +14,12 @@ import (
 
 // FromBitcoin - check the address and return its version
 func FromBitcoin(address string) (string, error) {
-
+	var int ltcVersion = vNull
 	version, addressBytes, err := bitcoin.ValidateAddress(address)
 
 	if nil != err {
 		return "", err
 	}
-
-	ltcVersion := vNull
 
 	switch version {
 	case bitcoin.Livenet:

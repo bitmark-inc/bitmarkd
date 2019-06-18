@@ -249,7 +249,7 @@ connection_setup:
 	}
 
 	// erase the private key from memory
-	privateKey = []byte{}
+	privateKey = nil
 
 	// abort if no clients were connected
 

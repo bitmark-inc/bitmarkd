@@ -49,7 +49,7 @@ func TestBlockDigestFromHex(t *testing.T) {
 
 	leBlock := r.leVersion + r.leTransactionCount + r.leNumber + r.lePrevious + r.leMerkle + r.leTimestamp + r.leDifficultyBits + r.leNonce
 
-	leBinaryBlock, err := hex.DecodeString(leBlock)
+	leBinaryBlock, _ := hex.DecodeString(leBlock)
 
 	d := blockdigest.NewDigest(leBinaryBlock)
 

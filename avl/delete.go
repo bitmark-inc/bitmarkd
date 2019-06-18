@@ -216,12 +216,13 @@ func (tree *Tree) Delete(key Item) interface{} {
 
 // internal delete routine
 func delete(key Item, pp **Node) (interface{}, bool, bool) {
-	h := false
+	var value interface{} = nil
+	var h, removed bool = false
+
 	if nil == *pp { // key not in tree
 		return nil, false, h
 	}
-	value := interface{}(nil)
-	removed := false
+
 	switch (*pp).key.Compare(key) {
 	case +1: // (*pp).key > key
 		value, removed, h = delete(key, &(*pp).left)

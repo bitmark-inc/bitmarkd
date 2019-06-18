@@ -11,6 +11,8 @@ import (
 	"github.com/bitmark-inc/bitmarkd/merkle"
 )
 
+const block328656TransactionCount = 1199
+
 // hex -> link
 // prepend the prefix to allow easier conversion of sample data
 func hexToLink(t *testing.T, s string) *merkle.Digest {
@@ -308,9 +310,10 @@ func TestMinimumMerkleFromTransactions(t *testing.T) {
 // merkle hashing
 // use the big block of sample data below
 func TestMinimumMerkleFromManyTransactions(t *testing.T) {
+	var txCount, nextChunkSize int
 
 	// transactions
-	txCount := block328656TransactionCount - 1 // len(hexTx)
+	txCount = block328656TransactionCount - 1 // len(hexTx)
 	tx := make([]merkle.Digest, txCount)
 
 	// convert all transactions (skip tx[0] == base)
@@ -320,7 +323,7 @@ func TestMinimumMerkleFromManyTransactions(t *testing.T) {
 	}
 
 	// extract the required merkle data
-	nextChunkSize := block328656TransactionCount
+	nextChunkSize = block328656TransactionCount
 	totalCount := len(block328656MerkleTree)
 	expected := make([]merkle.Digest, 5000)
 
@@ -365,7 +368,6 @@ loop:
 
 // data from:
 //   http://blockexplorer.com/rawblock/0000000000000000001436c6d5f9118a6a2f00087629dbf6fac3e5cd9672f0b6
-const block328656TransactionCount = 1199
 
 var block328656MerkleTree = []string{
 	// transaction ids
