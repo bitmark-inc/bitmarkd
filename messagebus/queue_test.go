@@ -305,8 +305,6 @@ func TestCacheStateQueueOverflow(t *testing.T) {
 
 	const queueSize = 3
 	cmd := []string{"assets", "issues", "transfer", "proof", "rpc", "peer"}
-	p := []byte{0x0A, 0x9F}
-	c := cmd[0]
 
 	// listener
 	queue := messagebus.Bus.Broadcast.Chan(queueSize)
@@ -318,6 +316,9 @@ func TestCacheStateQueueOverflow(t *testing.T) {
 		rand.Read(p)
 		messagebus.Bus.Broadcast.Send(c, p)
 	}
+
+	p := []byte{0x0A, 0x9F}
+	c := cmd[0]
 
 	// continue to send one more
 	messagebus.Bus.Broadcast.Send(c, p)

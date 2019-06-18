@@ -77,9 +77,9 @@ func addRPC(fingerprint fingerprintType, rpcs []byte, timestamp uint64, local bo
 			timestamp:   ts,
 			local:       local,
 		}
-		i := len(globalData.rpcList)
+		n := len(globalData.rpcList)
 		globalData.rpcList = append(globalData.rpcList, e)
-		globalData.rpcIndex[fingerprint] = i
+		globalData.rpcIndex[fingerprint] = n
 		return true
 	}
 
