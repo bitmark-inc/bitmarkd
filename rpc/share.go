@@ -102,7 +102,7 @@ type ShareBalanceReply struct {
 
 // Balance - list balances for an account
 func (share *Share) Balance(arguments *ShareBalanceArguments, reply *ShareBalanceReply) error {
-	var int count
+	var count int
 
 	if err := rateLimit(share.limiter); nil != err {
 		return err
