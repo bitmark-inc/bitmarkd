@@ -102,8 +102,6 @@ type ShareBalanceReply struct {
 
 // Balance - list balances for an account
 func (share *Share) Balance(arguments *ShareBalanceArguments, reply *ShareBalanceReply) error {
-	var count int
-
 	if err := rateLimit(share.limiter); nil != err {
 		return err
 	}
@@ -116,7 +114,7 @@ func (share *Share) Balance(arguments *ShareBalanceArguments, reply *ShareBalanc
 		return fault.ErrInvalidItem
 	}
 
-	count = arguments.Count
+	var count int = arguments.Count
 	if count <= 0 {
 		return fault.ErrInvalidCount
 	}
