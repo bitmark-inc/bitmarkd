@@ -91,7 +91,7 @@ func TestCanonicalIP(t *testing.T) {
 		}
 		if strings.Contains(err.Error(), "no such host") {
 			// expected error
-		} else if fault.ErrInvalidIPAddress != err {
+		} else if fault.ErrInvalidIpAddress != err {
 			t.Fatalf("NewConnection failed on:[%d] %q  error: %s", i, d, err)
 		}
 	}
