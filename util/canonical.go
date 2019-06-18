@@ -23,7 +23,7 @@ type Connection struct {
 func NewConnection(hostPort string) (*Connection, error) {
 	host, port, err := net.SplitHostPort(hostPort)
 	if nil != err {
-		return nil, fault.ErrInvalidIPAddress
+		return nil, fault.ErrInvalidIpAddress
 	}
 
 	IP := net.ParseIP(strings.Trim(host, " "))
@@ -33,7 +33,7 @@ func NewConnection(hostPort string) (*Connection, error) {
 			return nil, err
 		}
 		if len(ips) < 1 {
-			return nil, fault.ErrInvalidIPAddress
+			return nil, fault.ErrInvalidIpAddress
 		}
 		IP = ips[0]
 	}

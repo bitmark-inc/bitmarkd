@@ -60,7 +60,7 @@ func (assetId *AssetIdentifier) Scan(state fmt.ScanState, verb rune) error {
 		return err
 	}
 	if len(token) != hex.EncodedLen(AssetIdentifierLength) {
-		return fault.ErrNotAssetIdentifier
+		return fault.ErrNotAssetId
 	}
 
 	byteCount, err := hex.Decode(assetId[:], token)
@@ -69,7 +69,7 @@ func (assetId *AssetIdentifier) Scan(state fmt.ScanState, verb rune) error {
 	}
 
 	if AssetIdentifierLength != byteCount {
-		return fault.ErrNotAssetIdentifier
+		return fault.ErrNotAssetId
 	}
 	return nil
 }
@@ -92,7 +92,7 @@ func (assetId *AssetIdentifier) UnmarshalText(s []byte) error {
 		return err
 	}
 	if AssetIdentifierLength != byteCount {
-		return fault.ErrNotAssetIdentifier
+		return fault.ErrNotAssetId
 	}
 	return nil
 }
@@ -100,7 +100,7 @@ func (assetId *AssetIdentifier) UnmarshalText(s []byte) error {
 // AssetIdentifierFromBytes - convert and validate little endian binary byte slice to a assetId
 func AssetIdentifierFromBytes(assetId *AssetIdentifier, buffer []byte) error {
 	if AssetIdentifierLength != len(buffer) {
-		return fault.ErrNotAssetIdentifier
+		return fault.ErrNotAssetId
 	}
 	copy(assetId[:], buffer)
 	return nil

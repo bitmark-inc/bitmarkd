@@ -84,7 +84,7 @@ words:
 				}
 				IP := net.ParseIP(address)
 				if nil == IP {
-					err = fault.ErrInvalidIPAddress
+					err = fault.ErrInvalidIpAddress
 					break addresses
 				} else {
 					err = nil
