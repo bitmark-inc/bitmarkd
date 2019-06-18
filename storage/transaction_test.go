@@ -119,10 +119,9 @@ func TestPut(t *testing.T) {
 	myMock := newTestHandleMock()
 
 	_ = tx.Begin()
-	err := tx.Put(myMock, []byte{}, []byte{}, []byte{})
+	tx.Put(myMock, []byte{}, []byte{}, []byte{})
 
 	assert.Equal(t, true, myMock.PutCalled, "internal method put is not called")
-	assert.Equal(t, nil, err, err)
 }
 
 func TestPutN(t *testing.T) {
@@ -149,10 +148,9 @@ func TestDelete(t *testing.T) {
 	myMock := newTestHandleMock()
 
 	_ = tx.Begin()
-	err := tx.Delete(myMock, []byte{})
+	tx.Delete(myMock, []byte{})
 
 	assert.Equal(t, true, myMock.RemoveCalled, "internal method remove not called")
-	assert.Equal(t, nil, err, err)
 }
 
 func TestGet(t *testing.T) {
@@ -164,10 +162,9 @@ func TestGet(t *testing.T) {
 	myMock := newTestHandleMock()
 
 	_ = tx.Begin()
-	_, err := tx.Get(myMock, []byte{})
+	_ = tx.Get(myMock, []byte{})
 
 	assert.Equal(t, true, myMock.GetCalled, "internal method get not called")
-	assert.Equal(t, nil, err, err)
 }
 
 func TestGetN(t *testing.T) {
@@ -179,10 +176,9 @@ func TestGetN(t *testing.T) {
 	myMock := newTestHandleMock()
 
 	_ = tx.Begin()
-	_, _, err := tx.GetN(myMock, []byte{})
+	_, _ = tx.GetN(myMock, []byte{})
 
 	assert.Equal(t, true, myMock.GetCalled, "internal method get is not called")
-	assert.Equal(t, nil, err, err)
 }
 
 func TestGetNB(t *testing.T) {
@@ -197,10 +193,9 @@ func TestGetNB(t *testing.T) {
 	myMock := newTestHandleMock()
 
 	_ = tx.Begin()
-	_, _, err := tx.GetNB(myMock, []byte{})
+	_, _ = tx.GetNB(myMock, []byte{})
 
 	assert.Equal(t, true, myMock.GetCalled, "internal method get is not called")
-	assert.Equal(t, nil, err, err)
 }
 
 func TestCommit(t *testing.T) {
@@ -217,15 +212,6 @@ func TestCommit(t *testing.T) {
 
 	err := tx.Begin()
 	assert.Equal(t, nil, err, "did not release lock")
-}
-
-func TestIsNilPtr(t *testing.T) {
-	err := isNilPtr(nil)
-	assert.NotEqual(t, nil, err, "cannot check nil pointer")
-
-	str := struct{}{}
-	err = isNilPtr(&str)
-	assert.Equal(t, nil, err, "cannot check non-nil pointer")
 }
 
 func TestAbortCallsDataAccessAbort(t *testing.T) {
