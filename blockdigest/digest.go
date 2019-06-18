@@ -59,6 +59,15 @@ func (digest Digest) Cmp(difficulty *big.Int) int {
 	return result.SetBytes(bigEndian[:]).Cmp(difficulty)
 }
 
+func (d Digest) SmallerDigestThan(target Digest) bool {
+	for i := len(d) - 1; i >= 0; i-- {
+		if d[i] < target[i] {
+			return true
+		}
+	}
+	return false
+}
+
 // internal function to return a reversed byte order copy of a digest
 func reversed(d Digest) []byte {
 	result := make([]byte, Length)
