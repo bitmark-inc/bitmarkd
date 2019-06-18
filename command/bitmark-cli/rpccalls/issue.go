@@ -147,11 +147,6 @@ func makeIssue(testnet bool, issueConfig *IssueData, nonce uint64) (*transaction
 	return issue, err
 }
 
-func makeIssueTxId(testnet bool, issueConfig *IssueData, nonce uint64) (*merkle.Digest, error) {
-	digest, _, err := internalMakeIssue(testnet, issueConfig, nonce, true)
-	return digest, err
-}
-
 func internalMakeIssue(testnet bool, issueConfig *IssueData, nonce uint64, generateDigest bool) (*merkle.Digest, *transactionrecord.BitmarkIssue, error) {
 
 	issuerAddress := makeAddress(issueConfig.Issuer, testnet)

@@ -9,7 +9,7 @@ import (
 )
 
 // common errors - keep in alphabetic order
-var (
+const (
 	ErrKeyLength        = fault.InvalidError("key length is invalid")
 	ErrNotFoundIdentity = fault.NotFoundError("identity name not found")
 	ErrInvalidNetwork   = fault.InvalidError("invalid network")

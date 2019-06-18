@@ -164,10 +164,6 @@ func (c *ConfigReaderData) updateCpuCount(count uint32) {
 	}
 }
 
-func (c *ConfigReaderData) cpuCount() uint32 {
-	return totalCPUCount
-}
-
 func (c *ConfigReaderData) OptimalThreadCount() uint32 {
 	if !c.initialized {
 		return uint32(minThreadCount)

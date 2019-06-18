@@ -338,22 +338,6 @@ func (j *JobCalendarData) parseClockStr(clock string) (TimeData, error) {
 	}, nil
 }
 
-func (j *JobCalendarData) convertStr2Hour(str string) (uint32, error) {
-	r := NumberRange{
-		max: 24,
-		min: 0,
-	}
-	return j.convertStr2NumberWithLimit(str, r)
-}
-
-func (j *JobCalendarData) convertStr2Minute(str string) (uint32, error) {
-	r := NumberRange{
-		max: 60,
-		min: 0,
-	}
-	return j.convertStr2NumberWithLimit(str, r)
-}
-
 func (j *JobCalendarData) convertStr2NumberWithLimit(str string, numRange NumberRange) (uint32, error) {
 	num, err := strconv.Atoi(str)
 	if err != nil || uint32(num) < numRange.min || uint32(num) > numRange.max {

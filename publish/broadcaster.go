@@ -19,7 +19,6 @@ import (
 const (
 	broadcasterZapDomain = "broadcaster"
 	heartbeatInterval    = 60 * time.Second
-	heartbeatTimeout     = 2 * heartbeatInterval
 )
 
 type broadcaster struct {

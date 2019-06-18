@@ -17,7 +17,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/keypair"
 )
 
-var (
+const (
 	ErrAssetMetadataMustBeMap   = fault.InvalidError("asset metadata must be map")
 	ErrRequiredAssetFingerprint = fault.InvalidError("asset fingerprint is required")
 	ErrRequiredAssetMetadata    = fault.InvalidError("asset metadata is required")
@@ -214,24 +214,6 @@ func checkCoinAddress(c currency.Currency, address string, testnet bool) (string
 	}
 	err := c.ValidateAddress(address, testnet)
 	return address, err
-}
-
-// pay id is required field
-func checkPayId(payId string) (string, error) {
-	if "" == payId {
-		return "", ErrRequiredPayId
-	}
-
-	return payId, nil
-}
-
-// receipt is required field
-func checkReceipt(receipt string) (string, error) {
-	if "" == receipt {
-		return "", ErrRequiredReceipt
-	}
-
-	return receipt, nil
 }
 
 // signature is required field ensure 64 hex bytes
