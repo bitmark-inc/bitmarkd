@@ -17,28 +17,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/keypair"
 )
 
-<<<<<<< HEAD
-const (
-	ErrAssetMetadataMustBeMap   = fault.InvalidError("asset metadata must be map")
-	ErrRequiredAssetFingerprint = fault.InvalidError("asset fingerprint is required")
-	ErrRequiredAssetMetadata    = fault.InvalidError("asset metadata is required")
-	ErrRequiredAssetName        = fault.InvalidError("asset name is required")
-	ErrRequiredConnect          = fault.InvalidError("connect is required use: HOST:PORT or IPv4:PORT or [IPv6]:PORT")
-	ErrRequiredConnectPort      = fault.InvalidError("connect requires :PORT-NUMBER suffix")
-	ErrRequiredCurrencyAddress  = fault.InvalidError("currency address is required")
-	ErrRequiredDescription      = fault.InvalidError("description is required")
-	ErrRequiredFileName         = fault.InvalidError("file name is required")
-	ErrRequiredIdentity         = fault.InvalidError("identity is required")
-	ErrRequiredPayId            = fault.InvalidError("payment id is required")
-	ErrRequiredPublicKey        = fault.InvalidError("public key is required")
-	ErrRequiredReceipt          = fault.InvalidError("receipt id is required")
-	ErrRequiredTransferTo       = fault.InvalidError("transfer to is required")
-	ErrRequiredTransferTx       = fault.InvalidError("transaction hex data is required")
-	ErrRequiredTxId             = fault.InvalidError("transaction id is required")
-)
-
-=======
->>>>>>> master
 // identity is required, but not check the config file
 func checkName(name string) (string, error) {
 	if "" == name {
@@ -219,27 +197,6 @@ func checkCoinAddress(c currency.Currency, address string, testnet bool) (string
 	return address, err
 }
 
-<<<<<<< HEAD
-=======
-// pay id is required field
-func checkPayId(payId string) (string, error) {
-	if "" == payId {
-		return "", fault.ErrRequiredPayId
-	}
-
-	return payId, nil
-}
-
-// receipt is required field
-func checkReceipt(receipt string) (string, error) {
-	if "" == receipt {
-		return "", fault.ErrRequiredReceipt
-	}
-
-	return receipt, nil
-}
-
->>>>>>> master
 // signature is required field ensure 64 hex bytes
 func checkSignature(s string) ([]byte, error) {
 	if 128 != len(s) {
