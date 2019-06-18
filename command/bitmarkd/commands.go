@@ -183,14 +183,11 @@ func processConfigCommand(arguments []string, options *Configuration) bool {
 	command := "help"
 	if len(arguments) > 0 {
 		command = arguments[0]
-		arguments = arguments[1:]
 	}
 
 	switch command {
-
 	case "dns-txt", "txt":
 		dnsTXT(options)
-
 	default: // unknown commands fall through to data command
 		return false
 	}

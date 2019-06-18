@@ -54,7 +54,6 @@ const (
 	minFingerprintLength = 1
 	maxFingerprintLength = 1024
 	maxSignatureLength   = 1024
-	maxTimestampLength   = len("2014-06-21T14:32:16Z")
 )
 
 // OldBaseData - the unpacked Proofer Data structure (OBSOLETE)

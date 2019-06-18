@@ -30,8 +30,6 @@ const (
 	// bits in key code starting from LSB
 	publicKeyCode = 0x01
 	testKeyCode   = 0x02
-	spare1KeyCode = 0x04
-	spare2KeyCode = 0x08
 
 	algorithmShift = 4 // shift 4 bits to get algorithm
 

@@ -79,8 +79,6 @@ type rpcData struct {
 
 	listener *listener.MultiListener
 
-	httpServer *httpHandler
-
 	// set once during initialise
 	initialised bool
 }

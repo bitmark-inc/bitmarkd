@@ -197,24 +197,6 @@ func checkCoinAddress(c currency.Currency, address string, testnet bool) (string
 	return address, err
 }
 
-// pay id is required field
-func checkPayId(payId string) (string, error) {
-	if "" == payId {
-		return "", fault.ErrPayIdIsRequired
-	}
-
-	return payId, nil
-}
-
-// receipt is required field
-func checkReceipt(receipt string) (string, error) {
-	if "" == receipt {
-		return "", fault.ErrReceiptIdIsRequired
-	}
-
-	return receipt, nil
-}
-
 // signature is required field ensure 64 hex bytes
 func checkSignature(s string) ([]byte, error) {
 	if 128 != len(s) {
