@@ -17,11 +17,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 
-var (
-	ErrMakeTransferFail  = fault.ProcessError("make transfer failed")
-	ErrNotTransferRecord = fault.InvalidError("not transfer record")
-)
-
 // TransferData - data for a transfer request
 type TransferData struct {
 	Owner    *keypair.KeyPair
@@ -64,7 +59,7 @@ func (client *Client) Transfer(transferConfig *TransferData) (*TransferReply, er
 		return nil, err
 	}
 	if nil == transfer {
-		return nil, ErrMakeTransferFail
+		return nil, fault.ErrMakeTransferFailed
 	}
 
 	client.printJson("Transfer Request", transfer)
@@ -114,7 +109,7 @@ func (client *Client) SingleSignedTransfer(transferConfig *TransferData) (*Trans
 		return nil, err
 	}
 	if nil == transfer {
-		return nil, ErrMakeTransferFail
+		return nil, fault.ErrMakeTransferFailed
 	}
 
 	client.printJson("Transfer Request", transfer)
@@ -177,7 +172,7 @@ func makeTransferUnratified(testnet bool, link merkle.Digest, owner *keypair.Key
 	// pack without signature
 	packed, err := r.Pack(ownerAddress)
 	if nil == err {
-		return nil, ErrMakeTransferFail
+		return nil, fault.ErrMakeTransferFailed
 	} else if fault.ErrInvalidSignature != err {
 		return nil, err
 	}
@@ -209,7 +204,7 @@ func makeTransferOneSignature(testnet bool, link merkle.Digest, owner *keypair.K
 	// pack without signature
 	packed, err := r.Pack(ownerAddress)
 	if nil == err {
-		return nil, nil, ErrMakeTransferFail
+		return nil, nil, fault.ErrMakeTransferFailed
 	} else if fault.ErrInvalidSignature != err {
 		return nil, nil, err
 	}
@@ -221,7 +216,7 @@ func makeTransferOneSignature(testnet bool, link merkle.Digest, owner *keypair.K
 	// include first signature by packing again
 	packed, err = r.Pack(ownerAddress)
 	if nil == err {
-		return nil, nil, ErrMakeTransferFail
+		return nil, nil, fault.ErrMakeTransferFailed
 	} else if fault.ErrInvalidSignature != err {
 		return nil, nil, err
 	}

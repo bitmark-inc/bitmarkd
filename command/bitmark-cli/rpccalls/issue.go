@@ -23,10 +23,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 
-var (
-	ErrMakeIssueFail = fault.ProcessError("make issue failed")
-)
-
 // IssueData - data for an issue request
 type IssueData struct {
 	Issuer    *keypair.KeyPair
@@ -67,7 +63,7 @@ func (client *Client) Issue(issueConfig *IssueData) (*IssueReply, error) {
 			return nil, err
 		}
 		if nil == issue {
-			return nil, ErrMakeIssueFail
+			return nil, fault.ErrMakeIssueFailed
 		}
 		issues[i] = issue
 	}
@@ -166,7 +162,7 @@ func internalMakeIssue(testnet bool, issueConfig *IssueData, nonce uint64, gener
 	// pack without signature
 	packed, err := r.Pack(issuerAddress)
 	if nil == err {
-		return nil, nil, ErrMakeTransferFail
+		return nil, nil, fault.ErrMakeIssueFailed
 	} else if fault.ErrInvalidSignature != err {
 		return nil, nil, err
 	}

@@ -20,10 +20,6 @@ type CountersignData struct {
 	NewOwner    *keypair.KeyPair
 }
 
-var (
-	ErrNotCountersignableRecord = fault.InvalidError("not countersignable record")
-)
-
 // Countersign - countersign a transfer
 func (client *Client) Countersign(countersignConfig *CountersignData) (interface{}, error) {
 
@@ -59,6 +55,6 @@ func (client *Client) Countersign(countersignConfig *CountersignData) (interface
 		return client.CountersignSwap(tx)
 
 	default:
-		return nil, ErrNotCountersignableRecord
+		return nil, fault.ErrNotACountersignableRecord
 	}
 }

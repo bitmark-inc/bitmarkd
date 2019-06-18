@@ -11,6 +11,7 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/keypair"
 )
 
@@ -39,7 +40,7 @@ func runKeyPair(c *cli.Context) error {
 	}
 	//just in case some internal breakage
 	if nil == keyPair {
-		return ErrNilKeyPair
+		return fault.ErrKeyPairCannotBeNil
 	}
 
 	type KeyPairDisplay struct {

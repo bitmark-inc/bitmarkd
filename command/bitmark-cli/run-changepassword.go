@@ -10,6 +10,7 @@ import (
 	"github.com/urfave/cli"
 
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/keypair"
 )
 
@@ -38,7 +39,7 @@ func runChangePassword(c *cli.Context) error {
 	}
 	//just in case some internal breakage
 	if nil == keyPair {
-		return ErrNilKeyPair
+		return fault.ErrKeyPairCannotBeNil
 	}
 
 	// prompt new password and pwd confirm for private key encryption

@@ -133,7 +133,7 @@ func PrivateKeyFromBase58Seed(seedBase58Encoded string) (*PrivateKey, error) {
 				return nil, err
 			}
 			if secretKeyV2Length != n {
-				return nil, fault.InvalidError("secret key is not written successfully")
+				return nil, fault.ErrCannotDecodeSeed
 			}
 		}
 
@@ -144,7 +144,7 @@ func PrivateKeyFromBase58Seed(seedBase58Encoded string) (*PrivateKey, error) {
 			return nil, err
 		}
 		if encryptedLength != n {
-			return nil, fault.InvalidError("encrypted secret is not read successfully")
+			return nil, fault.ErrCannotDecodeSeed
 		}
 
 	default:

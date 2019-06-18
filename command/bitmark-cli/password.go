@@ -15,11 +15,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/keypair"
 )
 
-var (
-	ErrPasswordLength   = fault.InvalidError("password length is invalid")
-	ErrVerifiedPassword = fault.InvalidError("verified password is different")
-)
-
 var passwordConsole *terminal.Terminal
 
 func getTerminal() (*terminal.Terminal, int, *terminal.State) {
@@ -53,19 +48,19 @@ func promptPasswordReader() (string, error) {
 
 	passwordLen := len(password)
 	if passwordLen < 8 {
-		return "", ErrPasswordLength
+		return "", fault.ErrInvalidPasswordLength
 	}
 
 	console, fd, state = getTerminal()
 	verifyPassword, err := console.ReadPassword("Verify password: ")
 	if nil != err {
 		fmt.Printf("verify failed: %s\n", err)
-		return "", ErrVerifiedPassword
+		return "", fault.ErrPasswordMismatch
 	}
 	terminal.Restore(fd, state)
 
 	if password != verifyPassword {
-		return "", ErrVerifiedPassword
+		return "", fault.ErrPasswordMismatch
 	}
 
 	return password, nil

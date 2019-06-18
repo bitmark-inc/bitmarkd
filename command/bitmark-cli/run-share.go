@@ -11,6 +11,7 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/rpccalls"
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/keypair"
 )
 
@@ -69,7 +70,7 @@ func runShare(c *cli.Context) error {
 	}
 	// just in case some internal breakage
 	if nil == ownerKeyPair {
-		return ErrNilKeyPair
+		return fault.ErrKeyPairCannotBeNil
 	}
 
 	client, err := rpccalls.NewClient(m.testnet, m.config.Connect, m.verbose, m.e)

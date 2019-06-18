@@ -18,11 +18,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 
-var (
-	ErrMakeBlockTransferFail  = fault.ProcessError("make block transfer failed")
-	ErrNotBlockTransferRecord = fault.InvalidError("not block transfer record")
-)
-
 // BlockTransferData - data for a block transfer request
 type BlockTransferData struct {
 	Payments currency.Map
@@ -59,7 +54,7 @@ func (client *Client) SingleSignedBlockTransfer(blockTransferConfig *BlockTransf
 		return nil, err
 	}
 	if nil == blockTransfer {
-		return nil, ErrMakeBlockTransferFail
+		return nil, fault.ErrMakeBlockTransferFailed
 	}
 
 	client.printJson("BlockTransfer Request", blockTransfer)
@@ -122,7 +117,7 @@ func makeBlockTransferOneSignature(testnet bool, link merkle.Digest, payments cu
 	// pack without signature
 	packed, err := r.Pack(ownerAddress)
 	if nil == err {
-		return nil, nil, ErrMakeBlockTransferFail
+		return nil, nil, fault.ErrMakeBlockTransferFailed
 	} else if fault.ErrInvalidSignature != err {
 		return nil, nil, err
 	}
@@ -134,7 +129,7 @@ func makeBlockTransferOneSignature(testnet bool, link merkle.Digest, payments cu
 	// include first signature by packing again
 	packed, err = r.Pack(ownerAddress)
 	if nil == err {
-		return nil, nil, ErrMakeBlockTransferFail
+		return nil, nil, fault.ErrMakeBlockTransferFailed
 	} else if fault.ErrInvalidSignature != err {
 		return nil, nil, err
 	}
