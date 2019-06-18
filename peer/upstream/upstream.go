@@ -21,21 +21,22 @@ import (
 
 type UpstreamIntf interface {
 	ActiveInPastSeconds(time.Duration) bool
+	CachedRemoteDigestOfLocalHeight() blockdigest.Digest
+	CachedRemoteHeight() uint64
+	Client() zmqutil.ClientIntf
 	Connect(*util.Connection, []byte) error
 	ConnectedTo() *zmqutil.Connected
 	Destroy()
+	GetBlockData(uint64) ([]byte, error)
 	IsConnectedTo([]byte) bool
 	IsConnected() bool
-	GetBlockData(uint64) ([]byte, error)
-	RemoteAddr() (string, error)
 	LocalHeight() uint64
+	Name() string
+	RemoteAddr() (string, error)
 	RemoteDigestOfHeight(uint64) (blockdigest.Digest, error)
 	RemoteHeight() (uint64, error)
-	CachedRemoteHeight() uint64
-	CachedRemoteDigestOfLocalHeight() blockdigest.Digest
-	Name() string
-	ServerPublicKey() []byte
 	ResetServer()
+	ServerPublicKey() []byte
 }
 
 // Upstream - structure to hold an upstream connection
@@ -266,6 +267,7 @@ func (u *Upstream) reconnect() error {
 	}
 
 	u.log.Infof("reconnect to [%s] successfully", u.client)
+	return nil
 }
 
 // start polling the socket
@@ -320,4 +322,9 @@ func (u *Upstream) CachedRemoteHeight() uint64 {
 // LocalHeight - local block height
 func (u *Upstream) LocalHeight() uint64 {
 	return u.localHeight
+}
+
+// Client - zmq client
+func (u *Upstream) Client() zmqutil.ClientIntf {
+	return u.client
 }

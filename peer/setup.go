@@ -44,7 +44,7 @@ type peerData struct {
 	lstn listener  // for RPC responses
 	conn connector // for RPC requests
 
-	connectorClients []*upstream.Upstream
+	connectorClients []upstream.UpstreamIntf
 
 	publicKey []byte
 

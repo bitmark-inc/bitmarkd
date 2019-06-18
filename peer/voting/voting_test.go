@@ -134,7 +134,7 @@ func TestVoteByWhenOverMinHeight(t *testing.T) {
 
 	mock.EXPECT().CachedRemoteHeight().Return(testHeight).Times(1)
 	mock.EXPECT().CachedRemoteDigestOfLocalHeight().Return(defaultDigest).Times(1)
-	mock.EXPECT().GetClient().Return(mock2).Times(2)
+	mock.EXPECT().Client().Return(mock2).Times(2)
 	mock.EXPECT().CachedRemoteHeight().Return(largerHeight).Times(1)
 	mock.EXPECT().CachedRemoteDigestOfLocalHeight().Return(defaultDigest).Times(1)
 	mock.EXPECT().Name().Return("test").Times(2)
@@ -162,7 +162,7 @@ func TestVoteByWhenBelowMinHeight(t *testing.T) {
 
 	mock2.EXPECT().String().Return("testing").Times(1)
 
-	mock.EXPECT().GetClient().Return(mock2).Times(1)
+	mock.EXPECT().Client().Return(mock2).Times(1)
 	mock.EXPECT().CachedRemoteHeight().Return(testHeight).Times(1)
 	mock.EXPECT().CachedRemoteDigestOfLocalHeight().Return(defaultDigest).Times(1)
 	mock.EXPECT().Name().Return("test").Times(1)
@@ -183,12 +183,12 @@ func TestElectedCandidateWhenMajority(t *testing.T) {
 	defer ctl3.Finish()
 
 	ctl1, mock1 := newTestVotingUpstream(t)
-	mock1.EXPECT().GetClient().Return(mockZmq).AnyTimes()
+	mock1.EXPECT().Client().Return(mockZmq).AnyTimes()
 	mock1.EXPECT().CachedRemoteHeight().Return(testHeight).Times(1)
 	defer ctl1.Finish()
 
 	ctl2, mock2 := newTestVotingUpstream(t)
-	mock2.EXPECT().GetClient().Return(mockZmq).AnyTimes()
+	mock2.EXPECT().Client().Return(mockZmq).AnyTimes()
 	defer ctl2.Finish()
 
 	// shorter chain with more votes

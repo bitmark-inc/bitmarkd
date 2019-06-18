@@ -88,7 +88,7 @@ func (v *VotingImpl) existVoteForDigest(digest blockdigest.Digest) bool {
 func (v *VotingImpl) VoteBy(candidate upstream.UpstreamIntf) {
 	height := candidate.CachedRemoteHeight()
 	digest := candidate.CachedRemoteDigestOfLocalHeight()
-	remoteAddr := candidate.GetClient().String()
+	remoteAddr := candidate.Client().String()
 	upstream := candidate.Name()
 	v.log.Infof(
 		"%s connects to remote %s, cached remote height: %d with digest: %x",

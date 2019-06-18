@@ -9,6 +9,8 @@ import (
 	"container/list"
 	"encoding/hex"
 	"fmt"
+	"time"
+
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -19,7 +21,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/peer/voting"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
-	"time"
 )
 
 // various timeouts
@@ -209,11 +210,6 @@ func (conn *connector) PrintUpstreams(prefix string) string {
 	conn.allClients(func(client upstream.UpstreamIntf, e *list.Element) {
 		counter++
 		upstreams = fmt.Sprintf("%s%supstream%d: %v\n", upstreams, prefix, counter, client)
-			upstreams,
-			prefix,
-			counter,
-			client.GetClient(),
-		)
 	})
 	return upstreams
 }
@@ -446,12 +442,12 @@ func (conn *connector) runStateMachine() bool {
 
 		if conn.hasBetterChain(height) {
 			conn.toState(cStateForkDetect)
-				continueLooping = true
-			} else {
+			continueLooping = true
+		} else {
 			conn.samples++
-				if conn.samples > samplelingLimit {
+			if conn.samples > samplelingLimit {
 				conn.toState(cStateForkDetect)
-					continueLooping = true
+				continueLooping = true
 			}
 		}
 	}
@@ -479,21 +475,22 @@ func (c *connector) hasSamllerDigestThanLocal(localHeight uint64) bool {
 	if c.theClient.LocalHeight() != localHeight {
 		c.log.Warnf("remote height %d is different than local height %d")
 		return false
-				}
+	}
 
 	localDigest, err := blockheader.DigestForBlock(localHeight)
 	if nil != err {
 		return false
-			}
+	}
 
 	return remoteDigest.SmallerDigestThan(localDigest)
-		}
+}
 
 func (c *connector) validRemoteChain() bool {
 	localHeight := blockheader.Height()
 	if nil == c.theClient {
 		c.log.Debug("invalid chain: remote client empty")
 		return false
+		/**/
 	}
 
 	if c.height >= localHeight {
@@ -503,7 +500,7 @@ func (c *connector) validRemoteChain() bool {
 
 	c.log.Info("invalid chain, unexpected error")
 	return false
-	}
+}
 
 func (c *connector) getHeightAndClient() (uint64, upstream.UpstreamIntf) {
 	c.votes.Reset()
@@ -519,7 +516,7 @@ func (c *connector) getHeightAndClient() (uint64, upstream.UpstreamIntf) {
 	if nil != err {
 		c.log.Warnf("%s socket not connected", winnerName)
 		return uint64(0), nil
-}
+	}
 
 	c.log.Debugf("winner %s majority height %d, connect to %s",
 		winnerName,
@@ -546,7 +543,7 @@ func (c *connector) elected() (upstream.UpstreamIntf, uint64) {
 	if nil != err {
 		c.log.Errorf("get elected with error: %s", err.Error())
 		return nil, uint64(0)
-}
+	}
 
 	remoteAddr, err := elected.RemoteAddr()
 	if nil != err {
