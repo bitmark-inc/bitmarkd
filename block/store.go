@@ -312,7 +312,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 		blockOwner = tx.Owner
 
 	case *transactionrecord.OldBaseData:
-		var err error = tx.Currency.ValidateAddress(tx.PaymentAddress, mode.IsTesting())
+		err := tx.Currency.ValidateAddress(tx.PaymentAddress, mode.IsTesting())
 		if nil != err {
 			return err
 		}
