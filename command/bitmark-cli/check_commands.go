@@ -42,8 +42,8 @@ func checkConnect(connect string) (string, error) {
 		return "", fault.ErrConnectIsRequired
 	}
 
-	//lint:SA4006 ignore this lint till somebody revisit this code
 	// XXX: We should not need to []string{} variable s
+	//lint:SA4006 ignore this lint till somebody revisit this code
 	s := []string{}
 	if '[' == connect[0] { // IPv6
 		s = strings.Split(connect, "]:")
