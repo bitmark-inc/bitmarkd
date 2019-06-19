@@ -161,6 +161,8 @@ func TestDeleteProofer(t *testing.T) {
 	go func() {
 		for i := 0; i < count; i++ {
 			select {
+			//lint:ignore S1000 for the test code it is OK to use for and select
+			//     instead of for range
 			case <-p.stopChannel:
 				received++
 				wg.Done()
