@@ -228,6 +228,7 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 			// add the prior tx id into map
 			priorTxOwnerTxs[tx.GetLink().String()] = struct{}{}
 
+		//lint:ignore SA4020 XXX: unreachable case clause here
 		case *transactionrecord.BitmarkShare, *transactionrecord.ShareGrant, *transactionrecord.ShareSwap:
 			globalData.log.Debugf("validate whether the share transaction indexed. txId: %s", txId)
 			if !storage.Pool.Transactions.Has(txId[:]) {
