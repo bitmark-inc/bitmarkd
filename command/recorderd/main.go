@@ -249,6 +249,7 @@ connection_setup:
 	}
 
 	// erase the private key from memory
+	//lint:ignore SA4006 we want to make sure we clean privateKey
 	privateKey = []byte{}
 
 	// abort if no clients were connected
