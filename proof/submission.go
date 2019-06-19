@@ -54,7 +54,7 @@ func (sub *submission) initialise(configuration *Configuration) error {
 	}
 
 	// create connections
-	c, err := util.NewConnections(configuration.Submit)
+	c, _ := util.NewConnections(configuration.Submit)
 
 	// allocate IPv4 and IPv6 sockets
 	sub.socket4, sub.socket6, err = zmqutil.NewBind(log, zmq.REP, submissionZapDomain, privateKey, publicKey, c)
