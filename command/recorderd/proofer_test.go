@@ -72,9 +72,7 @@ func TestNextProoferID(t *testing.T) {
 
 	for i, s := range expected {
 		p.proofIDs = make([]bool, len(s.ids))
-		for idx, boolean := range s.ids {
-			p.proofIDs[idx] = boolean
-		}
+		copy(p.proofIDs, s.ids)
 
 		actual, err := p.nextProoferID()
 		if actual != errorProoferID && nil != err {
