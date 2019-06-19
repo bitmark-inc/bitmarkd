@@ -159,7 +159,7 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 	log.Tracef("server private: %x", privateKey)
 
 	// create connections
-	c := util.NewConnections(configuration.Publish)
+	c, _ := util.NewConnections(configuration.Publish)
 
 	// allocate IPv4 and IPv6 sockets
 	pub.socket4, pub.socket6, err = zmqutil.NewBind(log, zmq.PUB, publisherZapDomain, privateKey, publicKey, c)
