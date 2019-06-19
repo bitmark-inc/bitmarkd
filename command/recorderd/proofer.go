@@ -331,7 +331,7 @@ func (p *ProoferData) ProofThread(log *logger.L, threadNum uint32) error {
 			MaximumSeconds := 120 * time.Second
 
 			var item PublishedItem
-			err = json.Unmarshal(block, &item)
+			json.Unmarshal(block, &item)
 			log.Infof("received item: %v", item)
 
 			// attempt to determine nonce
