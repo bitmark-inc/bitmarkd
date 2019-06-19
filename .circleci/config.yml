@@ -51,4 +51,4 @@ jobs:
           command: gosec -exclude=G104,G204,G402,G304 ./...
       - run:
           name: golangcli-lint
-          command: golangci-lint run --no-config --disable=ineffassign
+          command: golangci-lint run --no-config --disable=ineffassign,errcheck,govet

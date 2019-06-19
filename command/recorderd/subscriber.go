@@ -110,7 +110,7 @@ func Subscribe(
 
 			// ***** FIX THIS: just debugging? or really split block into multiple nonce ranges
 			var item PublishedItem
-			err = json.Unmarshal([]byte(data), &item)
+			json.Unmarshal([]byte(data), &item)
 			log.Infof("received : %v", item)
 
 			// initial try just forward block

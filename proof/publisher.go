@@ -159,7 +159,7 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 	log.Tracef("server private: %x", privateKey)
 
 	// create connections
-	c, err := util.NewConnections(configuration.Publish)
+	c, _ := util.NewConnections(configuration.Publish)
 
 	// allocate IPv4 and IPv6 sockets
 	pub.socket4, pub.socket6, err = zmqutil.NewBind(log, zmq.PUB, publisherZapDomain, privateKey, publicKey, c)
@@ -266,7 +266,7 @@ func (pub *publisher) process() {
 
 	// 64 bit nonce (8 bytes)
 	randomBytes := make([]byte, 8)
-	_, err = rand.Read(randomBytes)
+	rand.Read(randomBytes)
 	nonce := blockrecord.NonceType(binary.LittleEndian.Uint64(randomBytes))
 
 	bits := difficulty.Current

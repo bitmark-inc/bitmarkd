@@ -201,6 +201,8 @@ func makeProof(payId pay.PayId, payNonce reservoir.PayNonce, difficulty string, 
 		h.Sum(digest[:0])
 		if 0 == digest[0]|digest[1] {
 			if verbose {
+				//lint:ignore S1012 XXX: Somebody needs to double check if it is
+				//     possible to use time.Since
 				hps := float64(hashCount) / time.Now().Sub(start).Seconds() / 1.0e6
 				fmt.Fprintf(handle, "%f MH/s: possible nonce: %x  with digest: %x\n", hps, nonceBuffer, digest)
 			}

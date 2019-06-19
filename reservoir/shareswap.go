@@ -61,8 +61,8 @@ func StoreSwap(swap *transactionrecord.ShareSwap) (*SwapInfo, bool, error) {
 	spendKeyOne := makeSpendKey(swap.OwnerOne, swap.ShareIdOne)
 	spendKeyTwo := makeSpendKey(swap.OwnerTwo, swap.ShareIdTwo)
 
-	spendOne, ok := globalData.spend[spendKeyOne]
-	spendTwo, ok := globalData.spend[spendKeyTwo]
+	spendOne := globalData.spend[spendKeyOne]
+	spendTwo := globalData.spend[spendKeyTwo]
 
 	result := &SwapInfo{
 		RemainingOne: verifyResult.balanceOne - spendOne,

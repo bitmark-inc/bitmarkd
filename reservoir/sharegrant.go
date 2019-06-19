@@ -59,7 +59,7 @@ func StoreGrant(grant *transactionrecord.ShareGrant) (*GrantInfo, bool, error) {
 
 	spendKey := makeSpendKey(grant.Owner, grant.ShareId)
 
-	spend, ok := globalData.spend[spendKey]
+	spend := globalData.spend[spendKey]
 
 	result := &GrantInfo{
 		Remaining: verifyResult.balance - spend,

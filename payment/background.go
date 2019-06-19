@@ -204,8 +204,7 @@ func (d *discoverer) assignHandler(data [][]byte) {
 		return
 	}
 
-	currency := string(data[0])
-	globalData.handlers[currency].processIncomingTx(data[1])
+	globalData.handlers[string(data[0])].processIncomingTx(data[1])
 }
 
 // checker periodically extracts possible txs in the latest block

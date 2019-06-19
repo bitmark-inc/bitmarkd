@@ -47,7 +47,7 @@ func TestScanFmt(t *testing.T) {
 		t.Errorf("digest(LE) = %#v expected %x#v", d, expected)
 	}
 
-	s := fmt.Sprintf("%s", d)
+	s := d.String()
 	if s != stringDigest {
 		t.Errorf("string: digest = %s expected %s", s, stringDigest)
 	}
