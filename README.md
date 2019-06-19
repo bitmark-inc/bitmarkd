@@ -3,6 +3,7 @@
 [![Made by](https://img.shields.io/badge/Made%20by-Bitmark%20Inc-lightgrey.svg)](https://bitmark.com)
 [![GoDoc](https://godoc.org/github.com/bitmark-inc/bitmarkd?status.svg)](https://godoc.org/github.com/bitmark-inc/bitmarkd)
 [![Go Report Card](https://goreportcard.com/badge/github.com/bitmark-inc/bitmarkd)](https://goreportcard.com/report/github.com/bitmark-inc/bitmarkd)
+[![CircleCI](https://circleci.com/gh/bitmark-inc/bitmarkd.svg?style=svg)](https://circleci.com/gh/bitmark-inc/bitmarkd)
 
 Prerequisites
 

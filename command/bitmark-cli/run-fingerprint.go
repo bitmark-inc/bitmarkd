@@ -37,6 +37,9 @@ func runFingerprint(c *cli.Context) error {
 	}
 
 	data, err := ioutil.ReadAll(file)
+	if nil != err {
+		return err
+	}
 
 	fingerprint := sha3.Sum512(data)
 	strFP := fmt.Sprintf("%02x%x", fingerprintVersion, fingerprint)

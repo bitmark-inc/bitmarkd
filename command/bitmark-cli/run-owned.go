@@ -26,9 +26,6 @@ func runOwned(c *cli.Context) error {
 	}
 
 	start := c.Uint64("start")
-	if start < 0 {
-		return fmt.Errorf("invalid start: %d", start)
-	}
 
 	count := c.Int("count")
 	if count <= 0 {
