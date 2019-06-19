@@ -77,6 +77,9 @@ func runSign(c *cli.Context) error {
 	}
 
 	data, err := ioutil.ReadAll(file)
+	if nil != err {
+		return err
+	}
 
 	signature := ed25519.Sign(ownerKeyPair.PrivateKey, data)
 	s := hex.EncodeToString(signature)
@@ -130,6 +133,9 @@ func runVerify(c *cli.Context) error {
 	}
 
 	data, err := ioutil.ReadAll(file)
+	if nil != err {
+		return err
+	}
 
 	ok := ed25519.Verify(ownerKeyPair.PublicKey, data, signature)
 	if m.verbose {
