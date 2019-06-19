@@ -167,11 +167,8 @@ func (v *VotingImpl) countVotes() error {
 }
 
 func (v *VotingImpl) sufficientVotes() bool {
-	fmt.Printf("highest num votes: %d\n", v.result.highestNumVotes)
-	fmt.Printf("half min clients: %f\n", math.Ceil(minimumClients/2))
-	fmt.Printf("highest < half min: %t\n", float64(v.result.highestNumVotes) < math.Ceil(minimumClients/2))
-	if !v.result.draw && float64(v.result.highestNumVotes) < math.Ceil(minimumClients/2) {
-		return false
+	if !v.result.draw {
+		return float64(v.result.highestNumVotes) >= math.Ceil(minimumClients/2)
 	}
 
 	return v.sufficientVotesInDraw()
