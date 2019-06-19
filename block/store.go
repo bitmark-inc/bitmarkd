@@ -326,7 +326,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 			packedFoundation = append(txs[0].packed, txs[1].packed...)
 		} else {
 			// else if single base block generate corresponding Litecoin address
-			currencies[currency.Litecoin], err = litecoin.FromBitcoin(tx.PaymentAddress)
+			currencies[currency.Litecoin], _ = litecoin.FromBitcoin(tx.PaymentAddress)
 			packedFoundation = txs[0].packed
 		}
 		packedPayments, err = currencies.Pack(mode.IsTesting())
@@ -523,11 +523,11 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 			}
 
 			// if record does not exist the balance is zero
-			ownerOneShareTwoAccountBalance, ok := trx.GetN(
+			ownerOneShareTwoAccountBalance, _ := trx.GetN(
 				storage.Pool.ShareQuantity,
 				ownerOneShareTwoKey,
 			)
-			ownerTwoShareOneAccountBalance, ok := trx.GetN(
+			ownerTwoShareOneAccountBalance, _ := trx.GetN(
 				storage.Pool.ShareQuantity,
 				ownerTwoShareOneKey,
 			)
