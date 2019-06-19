@@ -136,7 +136,6 @@ func (j *JobManagerData) resetAllEvent() {
 	j.channels.startEventChannel <- struct{}{}
 	j.channels.stopEventChannel <- struct{}{}
 	j.wg.Wait()
-	return
 }
 
 func (j *JobManagerData) Start() {
