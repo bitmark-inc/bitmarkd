@@ -261,6 +261,7 @@ connection_setup:
 
 	// turn Signals into channel messages
 	ch := make(chan os.Signal)
+	//lint:ignore SA1017 XXX: signal.Notify should be buffered here
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-ch
 	log.Infof("received signal: %v", sig)
