@@ -185,10 +185,7 @@ func (v *VotingImpl) sufficientVotesInDraw() bool {
 			drawVotes += counts
 		}
 	}
-	if float64(drawVotes) >= math.Ceil(minimumClients/2) {
-		return true
-	}
-	return false
+	return float64(drawVotes) >= math.Ceil(minimumClients/2)
 }
 
 func (v *VotingImpl) updateTemporarilyVoteSummary(voters []*voters) {
