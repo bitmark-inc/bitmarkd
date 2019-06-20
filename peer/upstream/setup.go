@@ -99,7 +99,7 @@ loop:
 				} else {
 					log.Errorf("highestBlock: reconnect error: %s", err)
 				}
-			} else if u.client.HasValidAddress() {
+			} else if u.client.HasAddress() {
 				u.reconnect()
 			}
 			u.Unlock()
@@ -115,7 +115,7 @@ loop:
 				digest, err := u.RemoteDigestOfHeight(localHeight)
 				if nil != err {
 					log.Errorf("getBlockDigest error: %s", err)
-					continue
+					continue loop
 				}
 				u.Lock()
 				u.localHeight = localHeight

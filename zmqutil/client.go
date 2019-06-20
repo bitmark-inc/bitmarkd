@@ -9,7 +9,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -40,7 +39,7 @@ type ClientIntf interface {
 	ServerPublicKey() []byte
 	ResetServer() error
 	StartMonitoring(signal string, event zmq.Event) error
-	HasValidAddress() bool
+	HasAddress() bool
 }
 
 // Client - structure to hold a client connection
@@ -343,13 +342,9 @@ func (client *Client) IsConnected() bool {
 	return "" != client.address && nil != client.socket
 }
 
-// HasValidAddress - check whether it has valid address
-func (client *Client) HasValidAddress() bool {
-	if "" == client.address {
-		return false
-	}
-	h := strings.Replace(client.address, tcpPrefix, "", 1)
-	return nil != util.ConnectionFromCanonical(h)
+// HasAddress - check whether it has an address
+func (client *Client) HasAddress() bool {
+	return "" != client.address
 }
 
 // IsConnectedTo - check if connected to a specific node

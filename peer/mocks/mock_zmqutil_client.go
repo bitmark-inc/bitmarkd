@@ -7,10 +7,11 @@ package mocks
 import (
 	reflect "reflect"
 
-	util "github.com/bitmark-inc/bitmarkd/util"
-	zmqutil "github.com/bitmark-inc/bitmarkd/zmqutil"
 	gomock "github.com/golang/mock/gomock"
 	zmq4 "github.com/pebbe/zmq4"
+
+	util "github.com/bitmark-inc/bitmarkd/util"
+	zmqutil "github.com/bitmark-inc/bitmarkd/zmqutil"
 )
 
 // MockClientIntf is a mock of ClientIntf interface
@@ -134,18 +135,18 @@ func (mr *MockClientIntfMockRecorder) GoString() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GoString", reflect.TypeOf((*MockClientIntf)(nil).GoString))
 }
 
-// HasValidAddress mocks base method
-func (m *MockClientIntf) HasValidAddress() bool {
+// HasAddress mocks base method
+func (m *MockClientIntf) HasAddress() bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HasValidAddress")
+	ret := m.ctrl.Call(m, "HasAddress")
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
-// HasValidAddress indicates an expected call of HasValidAddress
-func (mr *MockClientIntfMockRecorder) HasValidAddress() *gomock.Call {
+// HasAddress indicates an expected call of HasAddress
+func (mr *MockClientIntfMockRecorder) HasAddress() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasValidAddress", reflect.TypeOf((*MockClientIntf)(nil).HasValidAddress))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasAddress", reflect.TypeOf((*MockClientIntf)(nil).HasAddress))
 }
 
 // IsConnected mocks base method

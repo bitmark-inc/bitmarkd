@@ -5,7 +5,6 @@
 package util
 
 import (
-	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -75,41 +74,6 @@ func ConnectionFromIPandPort(ip net.IP, port uint16) *Connection {
 		ip:   ip,
 		port: port,
 	}
-}
-
-// ConnectionFromCanonical - convert a canonical string to a connection
-//
-// return the connection if string is canonical, otherwise nil
-func ConnectionFromCanonical(s string) *Connection {
-	if "" == s {
-		return nil
-	}
-
-	i := strings.LastIndex(s, ":")
-	if -1 == i {
-		return nil
-	}
-
-	bracketTruncatedIP := truncateIPv6Bracket(s[0 : i-1])
-	ip := net.ParseIP(bracketTruncatedIP)
-	fmt.Printf("ip: %x\n", ip)
-	port, err := strconv.ParseInt(s[i+1:], 10, 16)
-	if nil == ip || nil != err {
-		return nil
-	}
-
-	return &Connection{
-		ip:   ip,
-		port: uint16(port),
-	}
-	}
-
-func truncateIPv6Bracket(ip string) string {
-	if strings.Contains(ip, "[") {
-		tmpStr := strings.Replace(ip, "[", "", -1)
-		return strings.Replace(tmpStr, "]", "", -1)
-	}
-	return ip
 }
 
 // CanonicalIPandPort - make the IP:Port into canonical string

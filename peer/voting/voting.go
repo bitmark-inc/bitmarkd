@@ -6,7 +6,6 @@ package voting
 
 import (
 	"fmt"
-	"math"
 
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -15,8 +14,8 @@ import (
 )
 
 const (
-	loggerCategory         = "voting"
-	minimumClients float64 = 5
+	loggerCategory = "voting"
+	minimumClients = 5
 )
 
 type Voting interface {
@@ -168,7 +167,7 @@ func (v *VotingImpl) countVotes() error {
 
 func (v *VotingImpl) sufficientVotes() bool {
 	if !v.result.draw {
-		return float64(v.result.highestNumVotes) >= math.Ceil(minimumClients/2)
+		return v.result.highestNumVotes >= (1+minimumClients)/2
 	}
 
 	return v.sufficientVotesInDraw()
@@ -182,7 +181,7 @@ func (v *VotingImpl) sufficientVotesInDraw() bool {
 			drawVotes += counts
 		}
 	}
-	return float64(drawVotes) >= math.Ceil(minimumClients/2)
+	return drawVotes >= (1+minimumClients)/2
 }
 
 func (v *VotingImpl) updateTemporarilyVoteSummary(voters []*voters) {
@@ -238,11 +237,12 @@ func (v *VotingImpl) smallerDigestWinnerFrom(
 	v.log.Debug("select candidate with smaller digest")
 
 	elected := candidates[0]
+election:
 	for i := 1; i < len(candidates); i++ {
 		targetDigest := candidates[i].CachedRemoteDigestOfLocalHeight()
 		electedDigest := elected.CachedRemoteDigestOfLocalHeight()
 		if v.allZeros(electedDigest) || v.allZeros(targetDigest) {
-			continue
+			continue election
 		}
 		if !electedDigest.SmallerDigestThan(targetDigest) {
 			v.log.Debugf("digest %v is larger than %v", electedDigest, targetDigest)
