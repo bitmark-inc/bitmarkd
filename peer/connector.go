@@ -9,6 +9,8 @@ import (
 	"container/list"
 	"encoding/hex"
 	"fmt"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/block"
@@ -57,6 +59,8 @@ type ConnectorIntf interface {
 
 type connector struct {
 	ConnectorIntf
+
+	sync.RWMutex
 	log        *logger.L
 	preferIPv6 bool
 
@@ -97,56 +101,100 @@ func (conn *connector) initialise(
 	}
 	conn.staticClients = make([]upstream.UpstreamIntf, staticCount)
 
-	// error code for goto fail
-	errX := error(nil)
-
 	// initially connect all static sockets
+	wg := sync.WaitGroup{}
+	errCh := make(chan error, len(connect))
+
+	conn.log.Debugf("static connection count: %d", len(connect))
+
 	for i, c := range connect {
-		address, err := util.NewConnection(c.Address)
-		if nil != err {
-			log.Errorf("client[%d]=address: %q  error: %s", i, c.Address, err)
-			errX = err
-			goto fail
-		}
-		serverPublicKey, err := hex.DecodeString(c.PublicKey)
-		if nil != err {
-			log.Errorf("client[%d]=public: %q  error: %s", i, c.PublicKey, err)
-			errX = err
-			goto fail
-		}
+		wg.Add(1)
 
-		// prevent connection to self
-		if bytes.Equal(publicKey, serverPublicKey) {
-			errX = fault.ErrConnectingToSelfForbidden
-			log.Errorf("client[%d]=public: %q  error: %s", i, c.PublicKey, errX)
-			goto fail
-		}
+		// start new goroutine for each connection
+		go func(conn *connector, c Connection, i int, wg *sync.WaitGroup, ch chan error) {
 
-		client, err := upstream.New(privateKey, publicKey, connectorTimeout)
-		if nil != err {
-			log.Errorf("client[%d]=%q  error: %s", i, address, err)
-			errX = err
-			goto fail
-		}
+			// error function call
+			errF := func(wg *sync.WaitGroup, ch chan error, e error) {
+				ch <- e
+				wg.Done()
+			}
 
-		conn.staticClients[i] = client
-		globalData.connectorClients = append(globalData.connectorClients, client)
+			// for canonicaling the error
+			canonicalErrF := func(c Connection, e error) error {
+				return fmt.Errorf("client: %q error: %s", c.Address, e)
+			}
 
-		err = client.Connect(address, serverPublicKey)
-		if nil != err {
-			log.Errorf("connect[%d]=%q  error: %s", i, address, err)
-			errX = err
-			goto fail
-		}
-		log.Infof("public key: %x  at: %q", serverPublicKey, c.Address)
+			address, err := util.NewConnection(c.Address)
+			if nil != err {
+				log.Errorf("client[%d]=address: %q  error: %s", i, c.Address, err)
+				errF(wg, ch, canonicalErrF(c, err))
+				return
+			}
+			serverPublicKey, err := hex.DecodeString(c.PublicKey)
+			if nil != err {
+				log.Errorf("client[%d]=public: %q  error: %s", i, c.PublicKey, err)
+				errF(wg, ch, canonicalErrF(c, err))
+				return
+			}
+
+			// prevent connection to self
+			if bytes.Equal(publicKey, serverPublicKey) {
+				err := fault.ErrConnectingToSelfForbidden
+				log.Errorf("client[%d]=public: %q  error: %s", i, c.PublicKey, err)
+				errF(wg, ch, canonicalErrF(c, err))
+				return
+			}
+
+			client, err := upstream.New(privateKey, publicKey, connectorTimeout)
+			if nil != err {
+				log.Errorf("client[%d]=%q  error: %s", i, address, err)
+				errF(wg, ch, canonicalErrF(c, err))
+				return
+			}
+
+			conn.Lock()
+			conn.staticClients[i] = client
+			globalData.connectorClients = append(globalData.connectorClients, client)
+			conn.Unlock()
+
+			err = client.Connect(address, serverPublicKey)
+			if nil != err {
+				log.Errorf("connect[%d]=%q  error: %s", i, address, err)
+				errF(wg, ch, canonicalErrF(c, err))
+				return
+			}
+			log.Infof("public key: %x  at: %q", serverPublicKey, c.Address)
+			wg.Done()
+
+		}(conn, c, i, &wg, errCh)
+	}
+
+	conn.log.Debug("waiting for all static connections...")
+	wg.Wait()
+
+	// drop error channel for getting all errors
+	errs := make([]error, 0)
+	for len(errCh) > 0 {
+		errs = append(errs, <-errCh)
+	}
+
+	// error code for goto fail
+	err := error(nil)
+
+	if len(errs) == 1 {
+		err = errs[0]
+		goto fail
+	} else if len(errs) > 1 {
+		err = compositeError(errs)
+		goto fail
 	}
 
 	// just create sockets for dynamic clients
 	for i := 0; i < maximumDynamicClients; i++ {
-		client, err := upstream.New(privateKey, publicKey, connectorTimeout)
+		client, e := upstream.New(privateKey, publicKey, connectorTimeout)
 		if nil != err {
-			log.Errorf("client[%d]  error: %s", i, err)
-			errX = err
+			log.Errorf("client[%d]  error: %s", i, e)
+			err = e
 			goto fail
 		}
 
@@ -167,7 +215,25 @@ func (conn *connector) initialise(
 fail:
 	conn.destroy()
 
-	return errX
+	return err
+}
+
+// combine multi error into one
+func compositeError(errors []error) error {
+	if nil == errors || 0 == len(errors) {
+		return nil
+	}
+	var ce strings.Builder
+	ce.WriteString("composite error: [")
+	len := len(errors)
+	for i, e := range errors {
+		ce.WriteString(e.Error())
+		if i < len-1 {
+			ce.WriteString(", ")
+		}
+	}
+	ce.WriteString("]")
+	return fmt.Errorf(ce.String())
 }
 
 func (conn *connector) allClients(
