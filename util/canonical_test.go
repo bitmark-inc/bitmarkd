@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/stretchr/testify/assert"
 )
 
 // Test IP address detection
@@ -234,16 +233,4 @@ func TestCanonicalUnpack(t *testing.T) {
 			}
 		}
 	}
-}
-
-func TestTruncateIPv6BracketWhenNoBracket(t *testing.T) {
-	testStr := "1:2:3:4"
-	actual := truncateIPv6Bracket(testStr)
-	assert.Equal(t, testStr, actual, "truncate wrong string")
-}
-
-func TestTruncateIPv6BracketWithBracket(t *testing.T) {
-	testStr := "[1:2:3:4]:1234"
-	actual := truncateIPv6Bracket(testStr)
-	assert.Equal(t, "1:2:3:4:1234", actual, "truncate wrong string")
 }
