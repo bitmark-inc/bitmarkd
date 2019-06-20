@@ -43,9 +43,10 @@ const (
 // the queue
 type jobQueueType struct {
 	sync.RWMutex // to allow locking
-	entries      [queueSize]*entryType
-	count        uint16
-	clear        bool
+
+	entries [queueSize]*entryType
+	count   uint16
+	clear   bool
 }
 
 // the queue storage
@@ -67,6 +68,10 @@ func enqueueToJobQueue(item *PublishedItem, txdata []byte) {
 	jobQueue.count += 1 // wraps (uint16)
 	item.Job = fmt.Sprintf("%04x", jobQueue.count)
 	n := jobQueue.count % queueSize
+	if nil != jobQueue.entries[n] {
+		jobQueue.entries[n].transactions = nil
+		jobQueue.entries[n] = nil
+	}
 	jobQueue.entries[n] = &entryType{
 		item:         item,
 		transactions: txdata,
@@ -126,7 +131,10 @@ search:
 cleanup:
 	// erase the queue
 	for i := range jobQueue.entries {
-		jobQueue.entries[i] = nil
+		if nil != jobQueue.entries[i] {
+			jobQueue.entries[i].transactions = nil
+			jobQueue.entries[i] = nil
+		}
 	}
 	jobQueue.clear = true
 
