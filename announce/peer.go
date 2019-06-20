@@ -161,7 +161,7 @@ retry_loop:
 }
 
 // SendRegistration - send a peer registration request to a client channel
-func SendRegistration(client *zmqutil.Client, fn string) error {
+func SendRegistration(client zmqutil.ClientIntf, fn string) error {
 	chain := mode.ChainName()
 
 	// get a big endian timestamp

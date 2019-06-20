@@ -168,6 +168,10 @@ var (
 	ErrWrongNetworkForPrivateKey             = invalidError("wrong network for private key")
 	ErrWrongNetworkForPublicKey              = invalidError("wrong network for public key")
 	ErrWrongPassword                         = invalidError("wrong password")
+    ErrVotesEmptyWinner                      = invalidError("votes with empty winner")
+	ErrVotesZeroCount                        = invalidError("votes with zero count")
+	ErrVotesZeroHeight                       = invalidError("votes with zero height")
+	ErrVotesInsufficient                     = invalidError("insufficient votes")
 )
 
 // the error interface base method

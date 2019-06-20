@@ -2,7 +2,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package util_test
+package util
 
 import (
 	"encoding/hex"
@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/util"
+	"github.com/stretchr/testify/assert"
 )
 
 // Test IP address detection
@@ -38,7 +38,7 @@ func TestCanonical(t *testing.T) {
 	for i, d := range testData {
 
 		// create a connection item
-		c, err := util.NewConnection(d.in)
+		c, err := NewConnection(d.in)
 		if nil != err {
 			t.Fatalf("NewConnection failed on:[%d] %q  error: %s", i, d.in, err)
 		}
@@ -84,7 +84,7 @@ func TestCanonicalIP(t *testing.T) {
 	}
 
 	for i, d := range testData {
-		c, err := util.NewConnection(d)
+		c, err := NewConnection(d)
 		if nil == err {
 			s, v6 := c.CanonicalIPandPort("")
 			t.Fatalf("eroneoulssly converted:[%d]: %q  to(%t): %q", i, d, v6, s)
@@ -107,7 +107,7 @@ func TestCanonicalPort(t *testing.T) {
 	}
 
 	for i, d := range testData {
-		c, err := util.NewConnection(d)
+		c, err := NewConnection(d)
 		if nil == err {
 			s, v6 := c.CanonicalIPandPort("")
 			t.Fatalf("eroneoulssly converted:[%d]: %q  to(%t): %q", i, d, v6, s)
@@ -119,7 +119,7 @@ func TestCanonicalPort(t *testing.T) {
 }
 
 // helper
-func makePacked(h string) util.PackedConnection {
+func makePacked(h string) PackedConnection {
 	b, err := hex.DecodeString(h)
 	if nil != err {
 		panic(err)
@@ -131,7 +131,7 @@ func makePacked(h string) util.PackedConnection {
 func TestCanonicalUnpack(t *testing.T) {
 
 	type item struct {
-		packed    util.PackedConnection
+		packed    PackedConnection
 		addresses []string
 		v4        string
 		v6        string
@@ -234,4 +234,16 @@ func TestCanonicalUnpack(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestTruncateIPv6BracketWhenNoBracket(t *testing.T) {
+	testStr := "1:2:3:4"
+	actual := truncateIPv6Bracket(testStr)
+	assert.Equal(t, testStr, actual, "truncate wrong string")
+}
+
+func TestTruncateIPv6BracketWithBracket(t *testing.T) {
+	testStr := "[1:2:3:4]:1234"
+	actual := truncateIPv6Bracket(testStr)
+	assert.Equal(t, "1:2:3:4:1234", actual, "truncate wrong string")
 }
