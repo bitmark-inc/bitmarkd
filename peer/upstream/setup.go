@@ -58,7 +58,7 @@ func (u *Upstream) runner(shutdown <-chan struct{}) {
 	log.Debug("starting…")
 
 	// use default queue size
-	queue := messagebus.Bus.Broadcast.Chan(-1)
+	queue := messagebus.Bus.Broadcast.Chan(messagebus.Default)
 	cycleTimer := time.After(cycleInterval)
 
 loop:
@@ -227,8 +227,6 @@ func push(client zmqutil.ClientIntf, log *logger.L, item *messagebus.Message) er
 	err := client.Send(item.Command, item.Parameters)
 	if nil != err {
 		log.Errorf("push: %s send error: %s", client, err)
-		// Drop the message from cache for retrying later
-		messagebus.Bus.Broadcast.DropCache(*item)
 		return err
 	}
 
