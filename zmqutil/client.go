@@ -21,12 +21,36 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
+type ClientIntf interface {
+	Connect(conn *util.Connection, serverPublicKey []byte, prefix string) error
+	IsConnected() bool
+	IsConnectedTo(serverPublicKey []byte) bool
+	Reconnect() error
+	ReconnectReturningSocket() (*zmq.Socket, error)
+	ReconnectOpenedSocket() error
+	GetSocket() *zmq.Socket
+	Close() error
+	Send(items ...interface{}) error
+	Receive(flags zmq.Flag) ([][]byte, error)
+	BeginPolling(poller *Poller, events zmq.State) *zmq.Socket
+	String() string
+	ConnectedTo() *Connected
+	GoString() string
+	GetMonitorSocket() *zmq.Socket
+	ServerPublicKey() []byte
+	ResetServer() error
+	StartMonitoring(signal string, event zmq.Event) error
+	HasValidAddress() bool
+}
+
 // Client - structure to hold a client connection
 //
 // prefix:
 //   REQ socket this adds an item before send
 //   SUB socket this adds/changes subscription
 type Client struct {
+	ClientIntf
+
 	sync.Mutex
 
 	publicKey       []byte
