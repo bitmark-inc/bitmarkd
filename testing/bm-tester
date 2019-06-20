@@ -124,6 +124,9 @@ MAKE-WINDOW() {
 NEW-TEST-SESSION() {
   local command command_list target window cmd1 cmd2 n m
 
+  # format: "tab1 tab2 tab3"
+  #   tabN: tab-name:prog1,arg,arg:prog2,arg,arg
+  # if two progs then split window vertically
   command_list='
 coin:run-bitcoin,--server:run-litecoin,--server
 dsc-upd:run-discovery
@@ -141,7 +144,8 @@ rec:run-recorderd
     n=$((n + 1))
   done
 
-  command_list="${command_list} shell::"
+  # some status tabs and an extra shell
+  command_list="${command_list} info:node-info,-r top:top,-U,${USER},-o,res,-n,20,-i cmd:: shell::"
 
   target=''
   for command in ${command_list}
