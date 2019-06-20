@@ -72,45 +72,26 @@ loop:
 		case <-cycleTimer:
 			cycleTimer = time.After(cycleInterval)
 
-			u.Lock()
-			clientConnected := u.client.IsConnected()
-			u.log.Debugf("client socket connected: %t", clientConnected)
+			u.RLock()
+			if u.connected {
+				u.RUnlock()
 
-			if clientConnected {
-
-				if !u.connected {
-					err := requestConnect(u.client, u.log)
-					if nil != err {
-						log.Warnf("serverKey: %x connect error: %s  ", u.ServerPublicKey(), err)
-						u.Unlock()
-						continue loop // try again later
-					}
-					u.connected = true
-				}
-
-				remoteHeight, err := height(u.client, u.log)
+				remoteHeight, err := u.height()
 				if nil == err {
 					u.lastResponseTime = time.Now()
+
+					u.Lock()
 					u.remoteHeight = remoteHeight
-					publicKey := u.ServerPublicKey()
+					u.Unlock()
+
+					publicKey := u.client.ServerPublicKey()
 					timestamp := make([]byte, 8)
 					binary.BigEndian.PutUint64(timestamp, uint64(time.Now().Unix()))
 					messagebus.Bus.Announce.Send("updatetime", publicKey, timestamp)
 				} else {
-					log.Errorf("highestBlock: reconnect error: %s", err)
+					log.Warnf("highest block error: %s", err)
 				}
-			} else if u.client.HasAddress() {
-				u.reconnect()
-			}
-			u.Unlock()
 
-			// XXX: need some refactor
-			// GetBlockDigest has lock inside, so it cannot be put into
-			// previous code block
-			// two variables of clientConnected & u.connected seems to have similar
-			// meaning, these two variables are not independent, e.g.
-			// situation of clientConnected = false, u.connected = true should not exist
-			if clientConnected && u.connected {
 				localHeight := blockheader.Height()
 				digest, err := u.RemoteDigestOfHeight(localHeight)
 				if nil != err {
@@ -121,6 +102,8 @@ loop:
 				u.localHeight = localHeight
 				u.remoteDigestOfLocalHeight = digest
 				u.Unlock()
+			} else {
+				log.Warn("upstream has not connected")
 			}
 
 		case item := <-queue:
@@ -128,10 +111,12 @@ loop:
 
 			u.Lock()
 			if u.connected {
-				err := push(u.client, u.log, &item)
+				err := u.push(&item)
 				if nil != err {
 					log.Errorf("push: error: %s", err)
 				}
+			} else {
+				log.Warn("upstream has not connected")
 			}
 			u.Unlock()
 		}
@@ -141,9 +126,74 @@ loop:
 	log.Info("stopped")
 }
 
-// register with server and check chain information
-func requestConnect(client zmqutil.ClientIntf, log *logger.L) error {
+// start polling the socket
+//
+// it should be called as a goroutine to avoid blocking
+func (u *Upstream) poller(shutdown <-chan struct{}, event <-chan zmqutil.Event) {
 
+	log := u.log
+
+	log.Debug("start polling…")
+	var disconnected bool // flag to check unexpect disconnection
+
+loop:
+	for {
+		select {
+		case <-shutdown:
+			break loop
+		case e := <-event:
+			u.handleEvent(e, &disconnected)
+		}
+	}
+	log.Debug("stopped polling")
+}
+
+// process the socket events
+func (u *Upstream) handleEvent(event zmqutil.Event, disconnected *bool) {
+	log := u.log
+
+	switch event.Event {
+	case zmq.EVENT_DISCONNECTED, zmq.EVENT_CLOSED, zmq.EVENT_CONNECT_RETRIED:
+		log.Warnf("socket %q is disconnected. event: %q", event.Address, event.Event)
+		*disconnected = true
+
+		u.Lock()
+		u.connected = false
+		u.Unlock()
+
+	case zmq.EVENT_CONNECTED:
+		log.Infof("socket %q is connected", event.Address)
+
+		if *disconnected {
+			// the socket is automatically recovered after disconnected by zmq is not useful.
+			// the request by this socket always return error `resource temporarily unavailable`
+			// try to close/open the socket makes the socket works as expectation.
+			log.Infof("reconnecting to %q", event.Address)
+			err := u.client.Reconnect()
+			if nil != err {
+				u.log.Warnf("reconnect error: %s", err)
+				return
+			}
+			log.Infof("reconnect to %q successful", event.Address)
+			*disconnected = false
+		}
+
+		err := u.requestConnect()
+		if nil == err {
+			u.Lock()
+			u.connected = true
+			u.Unlock()
+		} else {
+			u.log.Debugf("request peer connection error: %s", err)
+		}
+	}
+
+}
+
+// register with server and check chain information
+func (u *Upstream) requestConnect() error {
+	log := u.log
+	client := u.client
 	log.Debugf("register: client: %s", client)
 
 	err := announce.SendRegistration(client, "R")
@@ -175,9 +225,8 @@ func requestConnect(client zmqutil.ClientIntf, log *logger.L) error {
 			return fmt.Errorf("connection refused.  expected chain: %q but received: %q ", chain, received)
 		}
 		timestamp := binary.BigEndian.Uint64(data[4])
-		log.Infof("connection refused. register replied: public key: %x:  listeners: %x  timestamp: %d", data[2], data[3], timestamp)
-		// publicKey, broadcasts, listeners
-		announce.AddPeer(data[2], data[3], timestamp)
+		log.Infof("connection establised. register replied: public key: %x:  listeners: %x  timestamp: %d", data[2], data[3], timestamp)
+		announce.AddPeer(data[2], data[3], timestamp) // publicKey, broadcasts, listeners
 		return nil
 	default:
 		return fmt.Errorf("connection refused. rpc unexpected response: %q", data[0])
@@ -185,8 +234,9 @@ func requestConnect(client zmqutil.ClientIntf, log *logger.L) error {
 }
 
 // must have lock held before calling this
-func height(client zmqutil.ClientIntf, log *logger.L) (uint64, error) {
-
+func (u *Upstream) height() (uint64, error) {
+	log := u.log
+	client := u.client
 	log.Infof("getHeight: client: %s", client)
 
 	err := client.Send("N")
@@ -220,8 +270,9 @@ func height(client zmqutil.ClientIntf, log *logger.L) (uint64, error) {
 }
 
 // must have lock held before calling this
-func push(client zmqutil.ClientIntf, log *logger.L, item *messagebus.Message) error {
-
+func (u *Upstream) push(item *messagebus.Message) error {
+	log := u.log
+	client := u.client
 	log.Infof("push: client: %s  %q %x", client, item.Command, item.Parameters)
 
 	err := client.Send(item.Command, item.Parameters)

@@ -38,8 +38,6 @@ type ClientIntf interface {
 	GetMonitorSocket() *zmq.Socket
 	ServerPublicKey() []byte
 	ResetServer() error
-	StartMonitoring(signal string, event zmq.Event) error
-	HasAddress() bool
 }
 
 // Client - structure to hold a client connection
@@ -340,11 +338,6 @@ func (client *Client) Connect(conn *util.Connection, serverPublicKey []byte, pre
 // IsConnected - check if connected to a node
 func (client *Client) IsConnected() bool {
 	return "" != client.address && nil != client.socket
-}
-
-// HasAddress - check whether it has an address
-func (client *Client) HasAddress() bool {
-	return "" != client.address
 }
 
 // IsConnectedTo - check if connected to a specific node

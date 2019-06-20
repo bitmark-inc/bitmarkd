@@ -16,7 +16,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
-	zmq "github.com/pebbe/zmq4"
 )
 
 type UpstreamIntf interface {
@@ -108,17 +107,7 @@ func (u *Upstream) ConnectedTo() *zmqutil.Connected {
 func (u *Upstream) Connect(address *util.Connection, serverPublicKey []byte) error {
 	u.log.Infof("connecting to address: %s", address)
 	u.log.Infof("connecting to server: %x", serverPublicKey)
-
-	err := u.client.Connect(address, serverPublicKey, mode.ChainName())
-	if nil == err {
-		err = requestConnect(u.client, u.log)
-		if nil == err {
-			u.Lock()
-			u.connected = true
-			u.Unlock()
-		}
-	}
-	return err
+	return u.client.Connect(address, serverPublicKey, mode.ChainName())
 }
 
 // ServerPublicKey - return the internal ZeroMQ client data
@@ -234,61 +223,6 @@ func (u *Upstream) RemoteHeight() (uint64, error) {
 // CachedRemoteDigestOfLocalHeight - cached remote digest of local block height
 func (u *Upstream) CachedRemoteDigestOfLocalHeight() blockdigest.Digest {
 	return u.remoteDigestOfLocalHeight
-}
-
-// process the socket events
-func (u *Upstream) handleEvent(event zmqutil.Event) {
-
-	u.log.Debugf("event: %q  address: %q  value: %d", event.Event, event.Address, event.Value)
-
-	switch event.Event {
-	case zmq.EVENT_DISCONNECTED:
-		u.Lock()
-		u.reconnect()
-		u.Unlock()
-
-	default:
-	}
-}
-
-// reconnect to server
-//
-// need to hold the lock before calling
-func (u *Upstream) reconnect() error {
-
-	u.connected = false
-
-	// try to reconnect
-	u.log.Infof("reconnecting to [%s]…", u.client)
-	err := u.client.Reconnect()
-	if nil != err {
-		u.log.Errorf("reconnect to [%s] error: %s", u.client, err)
-		return err
-	}
-
-	u.log.Infof("reconnect to [%s] successfully", u.client)
-	return nil
-}
-
-// start polling the socket
-//
-// it should be called as a goroutine to avoid blocking
-func (u *Upstream) poller(shutdown <-chan struct{}, event <-chan zmqutil.Event) {
-
-	log := u.log
-
-	log.Debug("start polling…")
-
-loop:
-	for {
-		select {
-		case <-shutdown:
-			break loop
-		case e := <-event:
-			u.handleEvent(e)
-		}
-	}
-	log.Debug("stopped polling")
 }
 
 // RemoteAddr - remote client address
