@@ -104,7 +104,7 @@ loop:
 			}
 			u.Unlock()
 
-			// need some refactor
+			// XXX: need some refactor
 			// GetBlockDigest has lock inside, so it cannot be put into
 			// previous code block
 			// two variables of clientConnected & u.connected seems to have similar
