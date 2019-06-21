@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: ISC
 package storage
 
 import (
