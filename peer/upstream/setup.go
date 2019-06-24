@@ -104,22 +104,24 @@ loop:
 				u.remoteDigestOfLocalHeight = digest
 				u.Unlock()
 			} else {
+				u.RUnlock()
 				log.Warn("upstream has not connected")
 			}
 
 		case item := <-queue:
 			log.Debugf("from queue: %q  %x", item.Command, item.Parameters)
 
-			u.Lock()
+			u.RLock()
 			if u.connected {
+				u.RUnlock()
 				err := u.push(&item)
 				if nil != err {
 					log.Errorf("push: error: %s", err)
 				}
 			} else {
+				u.RUnlock()
 				log.Warn("upstream has not connected")
 			}
-			u.Unlock()
 		}
 	}
 	log.Info("shutting down…")
@@ -197,12 +199,16 @@ func (u *Upstream) requestConnect() error {
 	client := u.client
 	log.Debugf("register: client: %s", client)
 
+	u.RLock()
 	err := announce.SendRegistration(client, "R")
 	if nil != err {
+		u.RUnlock()
 		log.Errorf("register: %s send error: %s", client, err)
 		return err
 	}
 	data, err := client.Receive(0)
+	u.RUnlock()
+
 	if nil != err {
 		log.Errorf("register: %s receive error: %s", client, err)
 		return err
@@ -234,19 +240,22 @@ func (u *Upstream) requestConnect() error {
 	}
 }
 
-// must have lock held before calling this
 func (u *Upstream) height() (uint64, error) {
 	log := u.log
 	client := u.client
 	log.Infof("getHeight: client: %s", client)
 
+	u.RLock()
 	err := client.Send("N")
 	if nil != err {
+		u.RUnlock()
 		log.Errorf("getHeight: %s send error: %s", client, err)
 		return 0, err
 	}
 
 	data, err := client.Receive(0)
+	u.RUnlock()
+
 	if nil != err {
 		log.Errorf("push: %s receive error: %s", client, err)
 		return 0, err
@@ -270,19 +279,22 @@ func (u *Upstream) height() (uint64, error) {
 	}
 }
 
-// must have lock held before calling this
 func (u *Upstream) push(item *messagebus.Message) error {
 	log := u.log
 	client := u.client
 	log.Infof("push: client: %s  %q %x", client, item.Command, item.Parameters)
 
+	u.RLock()
 	err := client.Send(item.Command, item.Parameters)
 	if nil != err {
+		u.RUnlock()
 		log.Errorf("push: %s send error: %s", client, err)
 		return err
 	}
 
 	data, err := client.Receive(0)
+	u.RUnlock()
+
 	if nil != err {
 		log.Errorf("push: %s receive error: %s", client, err)
 		return err
