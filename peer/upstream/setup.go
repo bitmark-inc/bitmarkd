@@ -113,15 +113,14 @@ loop:
 
 			u.RLock()
 			if u.connected {
-				u.RUnlock()
 				err := u.push(&item)
 				if nil != err {
 					log.Errorf("push: error: %s", err)
 				}
 			} else {
-				u.RUnlock()
 				log.Warn("upstream has not connected")
 			}
+			u.RUnlock()
 		}
 	}
 	log.Info("shutting down…")
