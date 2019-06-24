@@ -214,34 +214,38 @@ def n($f): (($f|tostring)+"          ")[:10] + " ";
 
 # read a logfile and print its status
 SHOW-STATUS() {
-  local file w0 w1 w2 w3 w4 w5 w6 junk status n e
+  local file w0 w1 w2 w3 w4 w5 w6 junk status count errors unconfirmed
   file="${1}"
   [ -z "${file}" ] && return 1
   [ -f "${file}" ] || return 1
 
   cat "${file}" | (
-    n=0
-    e=0
+    count=0
+    errors=0
+    unconfirmed=0
     while read w0 w1 w2 w3 w4 w5 w6 junk
     do
       # LOG '%6d: commit: %s   date: %s  issue_id: %s' "${i}" "${commit}" "${timestamp}" "${issue_id}"
       [ X"${w1}" = X"commit:" ] || continue
-      n=$((n + 1))
+      count=$((count + 1))
       case "${w5}" in
         (issue_id:)
           CLI "${user}" status -t "${w6}"
           SET status '.status'
           printf '%6d: commit: %s  status: %s\n' "${n}" "${w2}" "${status}"
+          [ X"Confirmed" = X"${status}" ] || unconfirmed=$((unconfirmed + 1))
           ;;
         (error:)
-          e=$((e + 1))
+          errors=$((errors + 1))
           printf '%6d: commit: %s  error: %s\n' "${n}" "${w2}" "${w6} ${junk}"
           ;;
         (*)
           ;;
       esac
     done
-    printf 'total records: %6d:  errors: %6d\n' "${n}" "${e}"
+    printf 'total records: %6d\n' "${count}"
+    printf 'failed issue:  %6d\n' "${errors}"
+    printf 'not confirmed: %6d\n' "${unconfirmed}"
   )
 }
 
