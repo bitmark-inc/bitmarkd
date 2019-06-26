@@ -6,7 +6,6 @@
 package main
 
 import (
-	"crypto/rand"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -17,13 +16,10 @@ import (
 	"strconv"
 	"strings"
 
-	"golang.org/x/crypto/sha3"
-
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/bitmark-inc/logger"
@@ -462,7 +458,7 @@ func getFilenameWithDirectory(arguments []string, name string) string {
 }
 
 func makeSigningKey(testnet bool, fileName string) error {
-	seed, err := generateEncodedSeed(testnet)
+	seed, err := account.GenerateEncodedSeedV2(testnet)
 	if nil != err {
 		return err
 	}
@@ -473,42 +469,4 @@ func makeSigningKey(testnet bool, fileName string) error {
 	}
 
 	return nil
-}
-
-func generateEncodedSeed(testnet bool) (string, error) {
-
-	// space for 128 bit, extend to 132 bit later
-	sk := make([]byte, 16, account.SecretKeyV2Length)
-
-	n, err := rand.Read(sk)
-	if nil != err {
-		return "", err
-	}
-
-	if 16 != n {
-		return "", fmt.Errorf("got %d bytes, expected is 16 bytes", n)
-	}
-
-	// extend to 132 bits
-	sk = append(sk, sk[15]&0xf0)
-
-	if account.SecretKeyV2Length != len(sk) {
-		return "", fmt.Errorf("actual seed length is %d bytes, expected is %d bytes", len(sk), account.SecretKeyV2Length)
-	}
-
-	// network flag
-	mode := sk[0]&0x80 | sk[1]&0x40 | sk[2]&0x20 | sk[3]&0x10
-	if testnet {
-		mode = mode ^ 0xf0
-	}
-	sk[15] = mode | sk[15]&0x0f
-
-	// encode seed to base58
-	seed := make([]byte, 0)
-	seed = append(seed, account.SeedHeaderV2...)
-	seed = append(seed, sk...)
-	digest := sha3.Sum256(seed)
-	checksum := digest[:account.SeedChecksumLength]
-	seed = append(seed, checksum...)
-	return util.ToBase58(seed), nil
 }
