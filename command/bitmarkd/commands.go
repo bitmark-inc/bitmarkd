@@ -19,6 +19,7 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
+	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -58,8 +59,7 @@ func processSetupCommand(arguments []string) bool {
 		privateKeyFilename := getFilenameWithDirectory(arguments, peerPrivateKeyFilename)
 		err := zmqutil.MakeKeyPair(publicKeyFilename, privateKeyFilename)
 		if nil != err {
-			fmt.Printf("cannot generate private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
-			fmt.Printf("error generating server key pair: %s\n", err)
+			fmt.Printf("generate private key: %q and public key: %q error: %s\n", privateKeyFilename, publicKeyFilename, err)
 			exitwithstatus.Exit(1)
 		}
 		fmt.Printf("generated private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
@@ -67,6 +67,7 @@ func processSetupCommand(arguments []string) bool {
 	case "gen-rpc-cert", "rpc":
 		certificateFilename := getFilenameWithDirectory(arguments, rpcCertificateKeyFilename)
 		privateKeyFilename := getFilenameWithDirectory(arguments, rpcPrivateKeyFilename)
+
 		addresses := []string{}
 		if len(arguments) >= 2 {
 			for _, a := range arguments[1:] {
@@ -75,10 +76,10 @@ func processSetupCommand(arguments []string) bool {
 				}
 			}
 		}
+
 		err := makeSelfSignedCertificate("rpc", certificateFilename, privateKeyFilename, 0 != len(addresses), addresses)
 		if nil != err {
-			fmt.Printf("cannot generate RPC key: %q and certificate: %q\n", privateKeyFilename, certificateFilename)
-			fmt.Printf("error generating RPC key/certificate: %s\n", err)
+			fmt.Printf("generate RPC key: %q and certificate: %q error: %s\n", privateKeyFilename, certificateFilename, err)
 			exitwithstatus.Exit(1)
 		}
 		fmt.Printf("generated RPC key: %q and certificate: %q\n", privateKeyFilename, certificateFilename)
@@ -86,28 +87,32 @@ func processSetupCommand(arguments []string) bool {
 	case "gen-proof-identity", "proof":
 		publicKeyFilename := getFilenameWithDirectory(arguments, proofPublicKeyFilename)
 		privateKeyFilename := getFilenameWithDirectory(arguments, proofPrivateKeyFilename)
-		liveSigningKeyFilename := getFilenameWithDirectory(arguments, proofLiveSigningKeyFilename)
-		testSigningKeyFilename := getFilenameWithDirectory(arguments, proofTestSigningKeyFilename)
 		err := zmqutil.MakeKeyPair(publicKeyFilename, privateKeyFilename)
 		if nil != err {
-			fmt.Printf("cannot generate private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
-			fmt.Printf("error generating server key pair: %s\n", err)
+			fmt.Printf("generate private key: %q and public key: %q error: %s\n", privateKeyFilename, publicKeyFilename, err)
 			exitwithstatus.Exit(1)
 		}
 
-		if err := makeSigningKey(false, liveSigningKeyFilename); err != nil {
-			fmt.Printf("cannot generate the signing key for livenet: %q\n", liveSigningKeyFilename)
-			fmt.Printf("error generatingthe signing key for livenet: %s\n", err)
-			exitwithstatus.Exit(1)
+		liveSigningKeyFilename := getFilenameWithDirectory(arguments, proofLiveSigningKeyFilename)
+		testSigningKeyFilename := getFilenameWithDirectory(arguments, proofTestSigningKeyFilename)
+
+		if err := makeSigningKey(false, liveSigningKeyFilename); nil != err {
+			fmt.Printf("generate the signing key for livenet: %q error: %s\n", liveSigningKeyFilename, err)
+			goto singing_key_failed
 		}
-		if err := makeSigningKey(true, testSigningKeyFilename); err != nil {
-			fmt.Printf("cannot generate the signing key for testnet: %q\n", testSigningKeyFilename)
-			fmt.Printf("error generatingthe signing key for testnet: %s\n", err)
-			exitwithstatus.Exit(1)
+		if err := makeSigningKey(true, testSigningKeyFilename); nil != err {
+			fmt.Printf(" generate the signing key for testnet: %q error: %s\n", testSigningKeyFilename, err)
+			goto singing_key_failed
 		}
 
 		fmt.Printf("generated private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
 		fmt.Printf("generated signing keys: %q and %q\n", liveSigningKeyFilename, testSigningKeyFilename)
+		goto done
+
+	singing_key_failed:
+		_ = os.Remove(publicKeyFilename)
+		_ = os.Remove(privateKeyFilename)
+		exitwithstatus.Exit(1)
 
 	case "dns-txt", "txt":
 		return false // defer processing until configuration is read
@@ -173,6 +178,7 @@ func processSetupCommand(arguments []string) bool {
 		exitwithstatus.Exit(1)
 	}
 
+done:
 	// indicate processing complete and prefor normal exit from main
 	return true
 }
@@ -455,23 +461,54 @@ func getFilenameWithDirectory(arguments []string, name string) string {
 	return filepath.Join(dir, name)
 }
 
-func makeSigningKey(test bool, fileName string) error {
-	seedCore := make([]byte, 32)
-	if _, err := rand.Read(seedCore); err != nil {
-		return fmt.Errorf("failed to generate signing core error: %s", err)
+func makeSigningKey(testnet bool, fileName string) error {
+	seed, err := generateEncodedSeed(testnet)
+	if nil != err {
+		return err
 	}
-	seed := []byte{0x5a, 0xfe, 0x01, 0x00} // header + network(live)
-	if test {
-		seed[3] = 0x01 // change network to testing
-	}
-	seed = append(seed, seedCore...)
-	checksum := sha3.Sum256(seed)
-	seed = append(seed, checksum[:4]...)
 
-	data := "SEED:" + util.ToBase58(seed) + "\n"
-	if err := ioutil.WriteFile(fileName, []byte(data), 0600); err != nil {
+	data := "SEED:" + seed + "\n"
+	if err = ioutil.WriteFile(fileName, []byte(data), 0600); nil != err {
 		return fmt.Errorf("error writing signing key file error: %s", err)
 	}
 
 	return nil
+}
+
+func generateEncodedSeed(testnet bool) (string, error) {
+
+	// space for 128 bit, extend to 132 bit later
+	sk := make([]byte, 16, account.SecretKeyV2Length)
+
+	n, err := rand.Read(sk)
+	if nil != err {
+		return "", err
+	}
+
+	if 16 != n {
+		return "", fmt.Errorf("got %d bytes, expected is 16 bytes", n)
+	}
+
+	// extend to 132 bits
+	sk = append(sk, sk[15]&0xf0)
+
+	if account.SecretKeyV2Length != len(sk) {
+		return "", fmt.Errorf("actual seed length is %d bytes, expected is %d bytes", len(sk), account.SecretKeyV2Length)
+	}
+
+	// network flag
+	mode := sk[0]&0x80 | sk[1]&0x40 | sk[2]&0x20 | sk[3]&0x10
+	if testnet {
+		mode = mode ^ 0xf0
+	}
+	sk[15] = mode | sk[15]&0x0f
+
+	// encode seed to base58
+	seed := make([]byte, 0)
+	seed = append(seed, account.SeedHeaderV2...)
+	seed = append(seed, sk...)
+	digest := sha3.Sum256(seed)
+	checksum := digest[:account.SeedChecksumLength]
+	seed = append(seed, checksum...)
+	return util.ToBase58(seed), nil
 }

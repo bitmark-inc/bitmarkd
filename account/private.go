@@ -47,8 +47,8 @@ type NothingPrivateKey struct {
 // seed parameters
 var (
 	seedHeader   = []byte{0x5a, 0xfe}
-	seedHeaderV1 = append(seedHeader, []byte{0x01}...)
-	seedHeaderV2 = append(seedHeader, []byte{0x02}...)
+	SeedHeaderV1 = append(seedHeader, []byte{0x01}...)
+	SeedHeaderV2 = append(seedHeader, []byte{0x02}...)
 )
 
 // for seed v1 only
@@ -67,12 +67,12 @@ var (
 const (
 	seedHeaderLength   = 3
 	seedPrefixLength   = 1
-	secretKeyV1Length  = 32
-	secretKeyV2Length  = 17
-	seedChecksumLength = 4
+	SecretKeyV1Length  = 32
+	SecretKeyV2Length  = 17
+	SeedChecksumLength = 4
 
-	base58EncodedSeedV1Length = 40
-	base58EncodedSeedV2Length = 24
+	SeedV1Length = 40
+	SeedV2Length = 24
 )
 
 // PrivateKeyFromBase58Seed - this converts a Base58 encoded seed string and returns a private key
@@ -84,47 +84,47 @@ func PrivateKeyFromBase58Seed(seedBase58Encoded string) (*PrivateKey, error) {
 	// verify length
 	seed := util.FromBase58(seedBase58Encoded)
 	seedLength := len(seed)
-	if base58EncodedSeedV1Length != seedLength && base58EncodedSeedV2Length != seedLength {
+	if SeedV1Length != seedLength && SeedV2Length != seedLength {
 		return nil, fault.ErrInvalidSeedLength
 	}
 
 	// verify checksum
 	digest := sha3.Sum256(seed[:seedLength-checksumLength])
-	checksumStart := seedLength - seedChecksumLength
-	expectedChecksum := digest[:seedChecksumLength]
+	checksumStart := seedLength - SeedChecksumLength
+	expectedChecksum := digest[:SeedChecksumLength]
 	actualChecksum := seed[checksumStart:]
 	if !bytes.Equal(expectedChecksum, actualChecksum) {
 		return nil, fault.ErrChecksumMismatch
 	}
 
 	header := seed[:seedHeaderLength]
-	var encryptedSk []byte // encrypted seed for generate key pair
-	var isTest bool        // denote the network is test net
+	var encryptedSk []byte // encrypted secret key for generate key pair
+	var testnet bool       // denote the network is test net
 
 	switch {
-	case bytes.Equal(seedHeaderV1, header):
+	case bytes.Equal(SeedHeaderV1, header):
 		// copy the secret key from seed
-		var sk [secretKeyV1Length]byte
+		var sk [SecretKeyV1Length]byte
 		secretStart := seedHeaderLength + seedPrefixLength
 		copy(sk[:], seed[secretStart:])
 
 		prefix := seed[seedHeaderLength:secretStart]
 		// first byte of prefix is test/live indication
-		isTest = prefix[0] == 0x01
+		testnet = prefix[0] == 0x01
 
 		encryptedSk = secretbox.Seal([]byte{}, authSeedIndex[:], &seedNonce, &sk)
 
-	case bytes.Equal(seedHeaderV2, header):
+	case bytes.Equal(SeedHeaderV2, header):
 		sk := seed[seedHeaderLength:checksumStart]
 
 		// verify valid secret key
-		if secretKeyV2Length != len(sk) || 0 != sk[16]&0x0f {
+		if SecretKeyV2Length != len(sk) || 0 != sk[16]&0x0f {
 			return nil, fault.ErrInvalidSeedLength
 		}
 
 		// parse network
 		mode := sk[0]&0x80 | sk[1]&0x40 | sk[2]&0x20 | sk[3]&0x10
-		isTest = mode == sk[15]&0xf0^0xf0
+		testnet = mode == sk[15]&0xf0^0xf0
 
 		// add the seed 4 times to hash value
 		hash := sha3.NewShake256()
@@ -133,18 +133,18 @@ func PrivateKeyFromBase58Seed(seedBase58Encoded string) (*PrivateKey, error) {
 			if err != nil {
 				return nil, err
 			}
-			if secretKeyV2Length != n {
+			if SecretKeyV2Length != n {
 				return nil, fault.ErrCannotDecodeSeed
 			}
 		}
 
-		const encryptedLength = 32
-		encryptedSk = make([]byte, encryptedLength)
+		const encryptedSkLength = 32
+		encryptedSk = make([]byte, encryptedSkLength)
 		n, err := hash.Read(encryptedSk)
 		if nil != err {
 			return nil, err
 		}
-		if encryptedLength != n {
+		if encryptedSkLength != n {
 			return nil, fault.ErrCannotDecodeSeed
 		}
 
@@ -160,7 +160,7 @@ func PrivateKeyFromBase58Seed(seedBase58Encoded string) (*PrivateKey, error) {
 
 	privateKey := &PrivateKey{
 		PrivateKeyInterface: &ED25519PrivateKey{
-			Test:       isTest,
+			Test:       testnet,
 			PrivateKey: priv,
 		},
 	}
