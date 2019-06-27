@@ -232,12 +232,12 @@ SHOW-STATUS() {
         (issue_id:)
           CLI "${user}" status -t "${w6}"
           SET status '.status'
-          printf '%6d: commit: %s  status: %s\n' "${n}" "${w2}" "${status}"
-          [ X"Confirmed" = X"${status}" ] || unconfirmed=$((unconfirmed + 1))
+          printf '%6d: commit: %s  status: %s\n' "${count}" "${w2}" "${status}"
+          [ X"Confirmed" != X"${status}" ] && unconfirmed=$((unconfirmed + 1))
           ;;
         (error:)
           errors=$((errors + 1))
-          printf '%6d: commit: %s  error: %s\n' "${n}" "${w2}" "${w6} ${junk}"
+          printf '%6d: commit: %s  error: %s\n' "${count}" "${w2}" "${w6} ${junk}"
           ;;
         (*)
           ;;

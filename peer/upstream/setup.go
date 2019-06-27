@@ -105,7 +105,7 @@ loop:
 				u.Unlock()
 			} else {
 				u.RUnlock()
-				log.Warn("upstream has not connected")
+				log.Trace("upstream not connected")
 			}
 
 		case item := <-queue:
@@ -120,7 +120,7 @@ loop:
 				}
 			} else {
 				u.RUnlock()
-				log.Warn("upstream has not connected")
+				log.Trace("upstream not connected")
 			}
 		}
 	}
