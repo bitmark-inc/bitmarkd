@@ -7,6 +7,8 @@ package account
 
 import (
 	"bytes"
+	"crypto/rand"
+	"fmt"
 
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/nacl/secretbox"
@@ -71,8 +73,8 @@ const (
 	secretKeyV2Length  = 17
 	seedChecksumLength = 4
 
-	base58EncodedSeedV1Length = 40
-	base58EncodedSeedV2Length = 24
+	seedV1Length = 40
+	seedV2Length = 24
 )
 
 // PrivateKeyFromBase58Seed - this converts a Base58 encoded seed string and returns a private key
@@ -84,7 +86,7 @@ func PrivateKeyFromBase58Seed(seedBase58Encoded string) (*PrivateKey, error) {
 	// verify length
 	seed := util.FromBase58(seedBase58Encoded)
 	seedLength := len(seed)
-	if base58EncodedSeedV1Length != seedLength && base58EncodedSeedV2Length != seedLength {
+	if seedV1Length != seedLength && seedV2Length != seedLength {
 		return nil, fault.ErrInvalidSeedLength
 	}
 
@@ -98,8 +100,8 @@ func PrivateKeyFromBase58Seed(seedBase58Encoded string) (*PrivateKey, error) {
 	}
 
 	header := seed[:seedHeaderLength]
-	var encryptedSk []byte // encrypted seed for generate key pair
-	var isTest bool        // denote the network is test net
+	var ed25519Seed []byte // the ed25519 seed for generate key pair
+	var testnet bool       // denote the network is test net
 
 	switch {
 	case bytes.Equal(seedHeaderV1, header):
@@ -110,9 +112,9 @@ func PrivateKeyFromBase58Seed(seedBase58Encoded string) (*PrivateKey, error) {
 
 		prefix := seed[seedHeaderLength:secretStart]
 		// first byte of prefix is test/live indication
-		isTest = prefix[0] == 0x01
+		testnet = prefix[0] == 0x01
 
-		encryptedSk = secretbox.Seal([]byte{}, authSeedIndex[:], &seedNonce, &sk)
+		ed25519Seed = secretbox.Seal([]byte{}, authSeedIndex[:], &seedNonce, &sk)
 
 	case bytes.Equal(seedHeaderV2, header):
 		sk := seed[seedHeaderLength:checksumStart]
@@ -124,7 +126,7 @@ func PrivateKeyFromBase58Seed(seedBase58Encoded string) (*PrivateKey, error) {
 
 		// parse network
 		mode := sk[0]&0x80 | sk[1]&0x40 | sk[2]&0x20 | sk[3]&0x10
-		isTest = mode == sk[15]&0xf0^0xf0
+		testnet = mode == sk[15]&0xf0^0xf0
 
 		// add the seed 4 times to hash value
 		hash := sha3.NewShake256()
@@ -138,13 +140,12 @@ func PrivateKeyFromBase58Seed(seedBase58Encoded string) (*PrivateKey, error) {
 			}
 		}
 
-		const encryptedLength = 32
-		encryptedSk = make([]byte, encryptedLength)
-		n, err := hash.Read(encryptedSk)
+		ed25519Seed = make([]byte, ed25519.SeedSize)
+		n, err := hash.Read(ed25519Seed)
 		if nil != err {
 			return nil, err
 		}
-		if encryptedLength != n {
+		if ed25519.SeedSize != n {
 			return nil, fault.ErrCannotDecodeSeed
 		}
 
@@ -153,14 +154,14 @@ func PrivateKeyFromBase58Seed(seedBase58Encoded string) (*PrivateKey, error) {
 	}
 
 	// generate key pair from encrypted secret key
-	_, priv, err := ed25519.GenerateKey(bytes.NewBuffer(encryptedSk))
+	_, priv, err := ed25519.GenerateKey(bytes.NewBuffer(ed25519Seed))
 	if nil != err {
 		return nil, err
 	}
 
 	privateKey := &PrivateKey{
 		PrivateKeyInterface: &ED25519PrivateKey{
-			Test:       isTest,
+			Test:       testnet,
 			PrivateKey: priv,
 		},
 	}
@@ -402,4 +403,43 @@ func (privateKey *NothingPrivateKey) String() string {
 // MarshalText - convert an privateKey to its Base58 JSON form
 func (privateKey NothingPrivateKey) MarshalText() ([]byte, error) {
 	return []byte(privateKey.String()), nil
+}
+
+// GenerateEncodedSeedV2 generate base58 seed v2
+func GenerateEncodedSeedV2(testnet bool) (string, error) {
+
+	// space for 128 bit, extend to 132 bit later
+	sk := make([]byte, 16, secretKeyV2Length)
+
+	n, err := rand.Read(sk)
+	if nil != err {
+		return "", err
+	}
+
+	if 16 != n {
+		return "", fmt.Errorf("got %d bytes, expected is 16 bytes", n)
+	}
+
+	// extend to 132 bits
+	sk = append(sk, sk[15]&0xf0)
+
+	if secretKeyV2Length != len(sk) {
+		return "", fmt.Errorf("actual seed length is %d bytes, expected is %d bytes", len(sk), secretKeyV2Length)
+	}
+
+	// network flag
+	mode := sk[0]&0x80 | sk[1]&0x40 | sk[2]&0x20 | sk[3]&0x10
+	if testnet {
+		mode = mode ^ 0xf0
+	}
+	sk[15] = mode | sk[15]&0x0f
+
+	// encode seed to base58
+	seed := make([]byte, 0)
+	seed = append(seed, seedHeaderV2...)
+	seed = append(seed, sk...)
+	digest := sha3.Sum256(seed)
+	checksum := digest[:seedChecksumLength]
+	seed = append(seed, checksum...)
+	return util.ToBase58(seed), nil
 }
