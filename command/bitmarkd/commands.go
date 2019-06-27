@@ -94,20 +94,22 @@ func processSetupCommand(arguments []string) bool {
 
 		if err := makeSigningKey(false, liveSigningKeyFilename); nil != err {
 			fmt.Printf("generate the signing key for livenet: %q error: %s\n", liveSigningKeyFilename, err)
-			goto singing_key_failed
+			goto signing_key_failed
 		}
 		if err := makeSigningKey(true, testSigningKeyFilename); nil != err {
 			fmt.Printf(" generate the signing key for testnet: %q error: %s\n", testSigningKeyFilename, err)
-			goto singing_key_failed
+			goto signing_key_failed
 		}
 
 		fmt.Printf("generated private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
 		fmt.Printf("generated signing keys: %q and %q\n", liveSigningKeyFilename, testSigningKeyFilename)
 		goto done
 
-	singing_key_failed:
+	signing_key_failed:
 		_ = os.Remove(publicKeyFilename)
 		_ = os.Remove(privateKeyFilename)
+		_ = os.Remove(liveSigningKeyFilename)
+		_ = os.Remove(testSigningKeyFilename)
 		exitwithstatus.Exit(1)
 
 	case "dns-txt", "txt":

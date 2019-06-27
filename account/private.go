@@ -441,5 +441,7 @@ func GenerateEncodedSeedV2(testnet bool) (string, error) {
 	digest := sha3.Sum256(seed)
 	checksum := digest[:seedChecksumLength]
 	seed = append(seed, checksum...)
-	return util.ToBase58(seed), nil
+	result := util.ToBase58(seed)
+
+	return result, nil
 }
