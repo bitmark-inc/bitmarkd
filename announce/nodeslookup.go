@@ -59,57 +59,61 @@ func getIntervalTime(domain string, log *logger.L) time.Duration {
 	t := timeInterval
 
 	// reading default configuration file
-	configFile := "/etc/resolv.conf"
+	const configFile = "/etc/resolv.conf"
 	conf, err := dns.ClientConfigFromFile(configFile)
 
 	if nil != err {
 		log.Warnf("reading %s error: %s", configFile, err)
-		return t
+		goto done
 	}
 
 	if 0 == len(conf.Servers) {
 		log.Warnf("cannot get dns name server")
-		return t
+		goto done
 	}
-
-	server := net.JoinHostPort(conf.Servers[0], conf.Port) // use the first dns name server
-	log.Debugf("DNS Name server: %s", server)
-	c := dns.Client{}
-	msg := dns.Msg{}
-	msg.SetQuestion(domain+".", dns.TypeSOA) // fixed for type SOA
-
-	r, _, err := c.Exchange(&msg, server)
-	if nil != err {
-		log.Warnf("exchange with dns server error: %s", err)
-		return t
-	}
-
-	if 0 == len(r.Ns) && 0 == len(r.Answer) && 0 == len(r.Extra) {
-		log.Debugf("no SOA record found found")
-		return t
-	}
-
-	sections := [][]dns.RR{r.Answer, r.Ns, r.Extra}
 
 loop:
-	for _, s := range sections {
-		ttl := getTtl(s)
-		if 0 < ttl {
-			log.Infof("got ttl record: %d", ttl)
-			ttlSec := time.Duration(ttl) * time.Second
-			if timeInterval > ttlSec {
-				t = ttlSec
-				break loop
+	for _, server := range conf.Servers {
+
+		s := net.JoinHostPort(server, conf.Port)
+		log.Debugf("dns resolver server: %q", s)
+		c := dns.Client{}
+		msg := dns.Msg{}
+		msg.SetQuestion(domain+".", dns.TypeSOA) // fixed for type SOA
+
+		r, _, err := c.Exchange(&msg, s)
+		if nil != err {
+			log.Debugf("exchange with dns server %q error: %s", s, err)
+			continue loop
+		}
+
+		if 0 == len(r.Ns) && 0 == len(r.Answer) && 0 == len(r.Extra) {
+			log.Debugf("no resource record found by dns server %q", s)
+			continue loop
+		}
+
+		sections := [][]dns.RR{r.Answer, r.Ns, r.Extra}
+
+		for _, s := range sections {
+			ttl := getTTL(s)
+			if 0 < ttl {
+				log.Infof("got TTL record: %d", ttl)
+				ttlSec := time.Duration(ttl) * time.Second
+				if timeInterval > ttlSec {
+					t = ttlSec
+					break loop
+				}
 			}
 		}
 	}
 
+done:
 	log.Infof("time to re-fetching node domain: %v", t)
 	return t
 }
 
-// get ttl record from a section
-func getTtl(rrs []dns.RR) uint32 {
+// get TTL record from a resource record
+func getTTL(rrs []dns.RR) uint32 {
 	if 0 == len(rrs) {
 		return 0
 	}
