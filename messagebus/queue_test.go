@@ -91,10 +91,12 @@ func TestBroadcast(t *testing.T) {
 	const listeners = 5
 
 	var l [listeners]int
-	var wg sync.WaitGroup
+	var wgFirst sync.WaitGroup
+	var wgStop sync.WaitGroup
 
 	for i := 0; i < listeners; i += 1 {
-		wg.Add(1)
+		wgFirst.Add(1)
+		wgStop.Add(1)
 
 		// queue created outside to avoid having spurious sleeps
 		// to wait for goroutines to start
@@ -104,7 +106,7 @@ func TestBroadcast(t *testing.T) {
 		go func(n int, queue <-chan messagebus.Message) {
 		loop:
 			for {
-				for _, item := range items {
+				for i, item := range items {
 					received := <-queue
 					if DONE == received.Command {
 						break loop
@@ -114,9 +116,12 @@ func TestBroadcast(t *testing.T) {
 					} else {
 						l[n] += 1
 					}
+					if 0 == i {
+						wgFirst.Done()
+					}
 				}
 			}
-			wg.Done()
+			wgStop.Done()
 		}(i, queue)
 
 	}
@@ -132,10 +137,13 @@ func TestBroadcast(t *testing.T) {
 		messagebus.Bus.Broadcast.Send(item.Command)
 	}
 
+	// wait for at least one item removed from all queues
+	wgFirst.Wait()
+
 	messagebus.Bus.Broadcast.Send(DONE)
 
-	// wait for completion
-	wg.Wait()
+	// wait for final completion
+	wgStop.Wait()
 
 	// check right number of items received
 	for i, n := range l {
