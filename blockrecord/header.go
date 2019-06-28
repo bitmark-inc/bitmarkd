@@ -15,6 +15,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/storage"
+	"github.com/bitmark-inc/logger"
 )
 
 // PackedHeader - use fixed size byte array for header to simplify
@@ -75,6 +76,14 @@ type Header struct {
 	Timestamp        uint64                 `json:"timestamp,string"`
 	Difficulty       *difficulty.Difficulty `json:"difficulty"`
 	Nonce            NonceType              `json:"nonce"`
+}
+
+var log *logger.L
+
+// Initialise - initialize logger
+func Initialise() {
+	log = logger.New("blockrecord")
+	log.Info("starting")
 }
 
 // ExtractHeader - extract a header from the front of a []byte

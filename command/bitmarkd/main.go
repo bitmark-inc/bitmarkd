@@ -17,6 +17,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
+	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/payment"
@@ -187,6 +188,9 @@ func main() {
 		exitwithstatus.Message("blockheader initialise error: %s", err)
 	}
 	defer blockheader.Finalise()
+
+	log.Info("initialise blockrecord")
+	blockrecord.Initialise()
 
 	// block data storage - depends on storage and mode
 	log.Info("initialise block")

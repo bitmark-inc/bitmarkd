@@ -260,6 +260,7 @@ M.logging = {
         -- asset-expiry = "info",
         -- bitcoin = "info",
         -- block = "info",
+        -- blockrecord = "info",
         -- blockstore = "info",
         -- broadcaster = "info",
         -- checker = "info",
