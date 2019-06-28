@@ -16,11 +16,11 @@ func TestSalt(t *testing.T) {
 		t.Errorf("makeSalt fail: %s", err)
 	}
 
-	t.Logf("salt: %v\n", salt)
+	//t.Logf("salt: %s\n", salt) // enable for debugging
 
 	marshalSalt := salt.MarshalText()
 
-	t.Logf("salt: %q\n", marshalSalt)
+	//t.Logf("salt: %s\n", marshalSalt) // enable for debugging
 
 	salt2 := new(Salt)
 	salt2.UnmarshalText(marshalSalt)

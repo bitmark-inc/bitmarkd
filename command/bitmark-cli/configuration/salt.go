@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	saltSize = 16
+	saltSize = 32
 )
 
 // Salt - type to hold a salt value

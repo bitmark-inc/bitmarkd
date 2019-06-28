@@ -460,7 +460,7 @@ func getFilenameWithDirectory(arguments []string, name string) string {
 }
 
 func makeSigningKey(testnet bool, fileName string) error {
-	seed, err := account.GenerateEncodedSeedV2(testnet)
+	seed, err := account.NewSeedV2(testnet)
 	if nil != err {
 		return err
 	}

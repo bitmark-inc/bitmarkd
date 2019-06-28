@@ -47,6 +47,7 @@ var (
 	ErrConnectingToSelfForbidden             = processError("connecting to self forbidden")
 	ErrConnectIsRequired                     = invalidError("connect is required")
 	ErrConnectRequiresPortNumberSuffix       = invalidError("connect requires port number suffix")
+	ErrCryptoFailed                          = processError("crypto failed")
 	ErrCurrencyAddressIsRequired             = invalidError("currency address is required")
 	ErrCurrencyIsNotSupportedByProofer       = invalidError("currency is not supported by proofer")
 	ErrDataInconsistent                      = validationError("data inconsistent")
