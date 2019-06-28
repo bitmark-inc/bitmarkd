@@ -173,6 +173,9 @@ var (
 	ErrVotesZeroCount                        = invalidError("votes with zero count")
 	ErrVotesZeroHeight                       = invalidError("votes with zero height")
 	ErrVotesInsufficient                     = invalidError("insufficient votes")
+	ErrDifficultyNotRightBlock               = invalidError("difficulty should not adjust at this block")
+	ErrDifficultyTimespan                    = invalidError("previous block time larger than after block time")
+	ErrDifficultyNotMatch                    = invalidError("incoming difficulty not match local calculated difficulty")
 )
 
 // the error interface base method

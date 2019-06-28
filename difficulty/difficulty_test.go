@@ -12,6 +12,11 @@ import (
 	"testing"
 
 	"github.com/bitmark-inc/bitmarkd/difficulty"
+	"github.com/stretchr/testify/assert"
+)
+
+const (
+	blocksForDifficultyAdjust = 12 * 60
 )
 
 // test difficulty initiialisation
@@ -23,18 +28,6 @@ func TestInitialBits(t *testing.T) {
 
 	if actual != expected {
 		t.Errorf("actual: %d  expected: %d", actual, expected)
-	}
-}
-
-// test difficulty initiialisation
-func TestInitialReciprocal(t *testing.T) {
-
-	expected := difficulty.MinimumReciprocal
-
-	actual := difficulty.Current.Reciprocal()
-
-	if actual != expected {
-		t.Errorf("actual: %g  expected: %g  diff: %g", actual, expected, actual-expected)
 	}
 }
 
@@ -146,7 +139,7 @@ func TestUint64(t *testing.T) {
 	for i, item := range tests {
 
 		d.SetBits(item.bits)
-		actual := d.Reciprocal()
+		actual := d.Value()
 
 		if actual != item.reciprocal {
 			t.Errorf("%d: actual: %20.10f  reciprocal: %20.10f  diff: %g", i, actual, item.reciprocal, actual-item.reciprocal)
@@ -178,7 +171,7 @@ func TestBytes(t *testing.T) {
 	d.SetBytes(bits)
 
 	expected := float64(10000)
-	actual := d.Reciprocal()
+	actual := d.Value()
 
 	bits2 := d.Bits()
 
@@ -223,7 +216,7 @@ func TestReciprocal(t *testing.T) {
 
 	for i, item := range tests {
 
-		d.SetReciprocal(item.reciprocal)
+		d.Set(item.reciprocal)
 		actual := d.Bits()
 
 		if actual != item.bits {
@@ -254,36 +247,46 @@ func TestReciprocal(t *testing.T) {
 	}
 }
 
-// test decay
-func TestDecay(t *testing.T) {
+func TestIsAdjustBlockWhenStrtInterval(t *testing.T) {
+	height := uint64(blocksForDifficultyAdjust * 200000)
+	actual := difficulty.IsAdjustBlock(height)
+	assert.Equal(t, true, actual, "fail to check starting of difficulty timespan")
+}
 
-	initialReciprocal := 217.932
+func TestIsAdjustBlockWhenMiddleInterval(t *testing.T) {
+	height := uint64(blocksForDifficultyAdjust*200000 + 1)
+	actual := difficulty.IsAdjustBlock(height)
+	assert.Equal(t, false, actual, "fail to check middle of difficulty timespan")
+}
 
-	d := difficulty.New()
-	d.SetReciprocal(initialReciprocal)
+func TestPrevTimespanBlockBeginAndEndWhenAtMiddle(t *testing.T) {
+	height := uint64(blocksForDifficultyAdjust*3 + 10)
+	begin, end := difficulty.PrevTimespanBlockBeginAndEnd(height)
 
-	percent := 100.0
+	assert.Equal(t, uint64(blocksForDifficultyAdjust*3-1-difficulty.AdjustTimespanInBlocks), begin, "fail to get begin block")
+	assert.Equal(t, uint64(blocksForDifficultyAdjust*3-1), end, "fail to get end block")
+}
 
-	// loop for three half lives to test at 50% 25% and 12.5%
-	for j := 0; j < 3; j += 1 {
+func TestPrevTimespanBlockBeginAndEndWhenAtStart(t *testing.T) {
+	height := uint64(blocksForDifficultyAdjust * 3)
+	start, end := difficulty.PrevTimespanBlockBeginAndEnd(height)
 
-		// this decay the value by one half life
-		for i := 0; i < difficulty.HalfLife; i += 1 {
-			d.Decay()
-		}
+	assert.Equal(t, uint64(blocksForDifficultyAdjust*3-1-difficulty.AdjustTimespanInBlocks), start, "fail to get begin block")
+	assert.Equal(t, uint64(blocksForDifficultyAdjust*3-1), end, "fail to get end block")
+}
 
-		percent /= 2.0
-		expected := initialReciprocal * percent / 100.0
-		actual := d.Reciprocal()
+func TestPrevTimespanBlockBeginAndEndWhenInFirstTimespan(t *testing.T) {
+	height := uint64(blocksForDifficultyAdjust + 10)
+	begin, end := difficulty.PrevTimespanBlockBeginAndEnd(height)
 
-		// the decay is fairly coarse so allow a resoable tolerance before issuing error
-		diff := actual - expected
-		diffPercent := 100.0 * diff / initialReciprocal
-		if math.Abs(diffPercent) > 0.5 {
-			t.Errorf("%5.2f%%: actual: %f  expected: %f", percent, actual, expected)
-			t.Errorf("%5.2f%%: diff: %g", percent, diff)
-			t.Errorf("%5.2f%%: relative: %6.2f%%", percent, 100*actual/initialReciprocal)
-			t.Errorf("%5.2f%%: error:    %6.2f%%", percent, diffPercent)
-		}
-	}
+	assert.Equal(t, uint64(2), begin, "fail to get begin block")
+	assert.Equal(t, uint64(blocksForDifficultyAdjust-1), end, "fail to get end block")
+}
+
+func TestHashrate(t *testing.T) {
+	difficulty.Current.Set(4)
+	actual := difficulty.Hashrate()
+
+	expected := 8.533 // 1024 / 120
+	assert.Equal(t, expected, actual, "error calculate network hashrate")
 }
