@@ -267,10 +267,9 @@ func (pub *publisher) process() {
 
 	// 64 bit nonce (8 bytes)
 	randomBytes := make([]byte, 8)
-	rand.Read(randomBytes)
+	_, _ = rand.Read(randomBytes)
 	nonce := blockrecord.NonceType(binary.LittleEndian.Uint64(randomBytes))
 
-	bits := difficulty.Current
 	timestamp := uint64(time.Now().Unix())
 
 	// PreviousBlock is all zero
@@ -281,7 +280,7 @@ func (pub *publisher) process() {
 			TransactionCount: uint16(transactionCount),
 			MerkleRoot:       merkleRoot,
 			Timestamp:        timestamp,
-			Difficulty:       bits,
+			Difficulty:       difficulty.Current,
 			Nonce:            nonce,
 		},
 		TxZero: packedBI,
@@ -291,6 +290,17 @@ func (pub *publisher) process() {
 	pub.log.Tracef("message: %v", message)
 
 	message.Header.PreviousBlock, message.Header.Number = blockheader.GetNew()
+
+	pub.log.Debugf("current difficulty: %f", message.Header.Difficulty.Value())
+	if difficulty.IsAdjustBlock(message.Header.Number) {
+		newDifficulty, _ := blockrecord.DifficultyByPreviousTimespanAtBlock(message.Header.Number)
+
+		diff := difficulty.New()
+		diff.Set(newDifficulty)
+		message.Header.Difficulty = diff
+
+		pub.log.Debugf("difficulty adjust block %d, new difficulty: %f", message.Header.Number, newDifficulty)
+	}
 
 	// add job to the queue
 	enqueueToJobQueue(message, transactions)
