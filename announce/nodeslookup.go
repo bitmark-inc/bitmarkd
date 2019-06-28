@@ -57,6 +57,7 @@ loop:
 func getIntervalTime(domain string, log *logger.L) time.Duration {
 
 	t := timeInterval
+	var servers []string // dns name server
 
 	// reading default configuration file
 	const configFile = "/etc/resolv.conf"
@@ -72,11 +73,17 @@ func getIntervalTime(domain string, log *logger.L) time.Duration {
 		goto done
 	}
 
+	servers = conf.Servers
+	// limit the nameservers to lookup
+	// https://www.freebsd.org/cgi/man.cgi?resolv.conf
+	if len(servers) > 3 {
+		servers = servers[:3]
+	}
+
 loop:
-	for _, server := range conf.Servers {
+	for _, server := range servers {
 
 		s := net.JoinHostPort(server, conf.Port)
-		log.Debugf("dns resolver server: %q", s)
 		c := dns.Client{}
 		msg := dns.Msg{}
 		msg.SetQuestion(domain+".", dns.TypeSOA) // fixed for type SOA
@@ -94,10 +101,10 @@ loop:
 
 		sections := [][]dns.RR{r.Answer, r.Ns, r.Extra}
 
-		for _, s := range sections {
-			ttl := getTTL(s)
+		for _, section := range sections {
+			ttl := getTTL(section)
 			if 0 < ttl {
-				log.Infof("got TTL record: %d", ttl)
+				log.Infof("got TTL record from server %q value %d", s, ttl)
 				ttlSec := time.Duration(ttl) * time.Second
 				if timeInterval > ttlSec {
 					t = ttlSec
