@@ -15,10 +15,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const (
-	blocksForDifficultyAdjust = 12 * 60
-)
-
 // test difficulty initiialisation
 func TestInitialBits(t *testing.T) {
 
@@ -248,39 +244,39 @@ func TestReciprocal(t *testing.T) {
 }
 
 func TestIsAdjustBlockWhenStrtInterval(t *testing.T) {
-	height := uint64(blocksForDifficultyAdjust * 200000)
+	height := uint64(difficulty.AdjustTimespanInBlocks * 200000)
 	actual := difficulty.IsAdjustBlock(height)
 	assert.Equal(t, true, actual, "fail to check starting of difficulty timespan")
 }
 
 func TestIsAdjustBlockWhenMiddleInterval(t *testing.T) {
-	height := uint64(blocksForDifficultyAdjust*200000 + 1)
+	height := uint64(difficulty.AdjustTimespanInBlocks*200000 + 1)
 	actual := difficulty.IsAdjustBlock(height)
 	assert.Equal(t, false, actual, "fail to check middle of difficulty timespan")
 }
 
 func TestPrevTimespanBlockBeginAndEndWhenAtMiddle(t *testing.T) {
-	height := uint64(blocksForDifficultyAdjust*3 + 10)
+	height := uint64(difficulty.AdjustTimespanInBlocks*3 + 10)
 	begin, end := difficulty.PrevTimespanBlockBeginAndEnd(height)
 
-	assert.Equal(t, uint64(blocksForDifficultyAdjust*3-1-difficulty.AdjustTimespanInBlocks), begin, "fail to get begin block")
-	assert.Equal(t, uint64(blocksForDifficultyAdjust*3-1), end, "fail to get end block")
+	assert.Equal(t, uint64(difficulty.AdjustTimespanInBlocks*3-1-difficulty.AdjustTimespanInBlocks), begin, "fail to get begin block")
+	assert.Equal(t, uint64(difficulty.AdjustTimespanInBlocks*3-1), end, "fail to get end block")
 }
 
 func TestPrevTimespanBlockBeginAndEndWhenAtStart(t *testing.T) {
-	height := uint64(blocksForDifficultyAdjust * 3)
+	height := uint64(difficulty.AdjustTimespanInBlocks * 3)
 	start, end := difficulty.PrevTimespanBlockBeginAndEnd(height)
 
-	assert.Equal(t, uint64(blocksForDifficultyAdjust*3-1-difficulty.AdjustTimespanInBlocks), start, "fail to get begin block")
-	assert.Equal(t, uint64(blocksForDifficultyAdjust*3-1), end, "fail to get end block")
+	assert.Equal(t, uint64(difficulty.AdjustTimespanInBlocks*3-1-difficulty.AdjustTimespanInBlocks), start, "fail to get begin block")
+	assert.Equal(t, uint64(difficulty.AdjustTimespanInBlocks*3-1), end, "fail to get end block")
 }
 
 func TestPrevTimespanBlockBeginAndEndWhenInFirstTimespan(t *testing.T) {
-	height := uint64(blocksForDifficultyAdjust + 10)
+	height := uint64(difficulty.AdjustTimespanInBlocks + 10)
 	begin, end := difficulty.PrevTimespanBlockBeginAndEnd(height)
 
 	assert.Equal(t, uint64(2), begin, "fail to get begin block")
-	assert.Equal(t, uint64(blocksForDifficultyAdjust-1), end, "fail to get end block")
+	assert.Equal(t, uint64(difficulty.AdjustTimespanInBlocks-1), end, "fail to get end block")
 }
 
 func TestHashrate(t *testing.T) {

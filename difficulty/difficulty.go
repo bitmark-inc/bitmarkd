@@ -21,8 +21,8 @@ const (
 	OneUint64                     uint64  = 0x00ffffffffffffff
 	minimumReciprocal             float64 = 1.0
 	ExpectedBlockSpacingInSecond          = 2 * 60
-	adjustTimespanInSecond                = 24 * 60 * 60
-	AdjustTimespanInBlocks                = adjustTimespanInSecond / ExpectedBlockSpacingInSecond
+	AdjustTimespanInBlocks                = 200
+	adjustTimespanInSecond                = ExpectedBlockSpacingInSecond * AdjustTimespanInBlocks
 	nextDifficultyRatioUpperbound         = 4
 	nextDifficultyRaioLowerbound          = 0.25
 	firstBlock                            = 2
