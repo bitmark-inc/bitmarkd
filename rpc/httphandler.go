@@ -159,6 +159,7 @@ func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 		Peers               peerCounts `json:"peers"`
 		TransactionCounters Counters   `json:"transactionCounters"`
 		Difficulty          float64    `json:"difficulty"`
+		Hashrate            float64    `json:hashrate,omitempty`
 		Version             string     `json:"version"`
 		Uptime              string     `json:"uptime"`
 		PublicKey           string     `json:"publicKey"`
@@ -176,11 +177,13 @@ func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 		},
 		RPCs: connectionCount.Uint64(),
 		// Miners : mine.ConnectionCount(),
-		Difficulty: difficulty.Current.Reciprocal(),
+		Difficulty: difficulty.Current.Value(),
+		Hashrate:   difficulty.Hashrate(),
 		Version:    s.version,
 		Uptime:     time.Since(s.start).String(),
 		PublicKey:  hex.EncodeToString(peer.PublicKey()),
 	}
+
 	reply.Peers.Incoming, reply.Peers.Outgoing = peer.GetCounts()
 	reply.TransactionCounters.Pending, reply.TransactionCounters.Verified = reservoir.ReadCounters()
 

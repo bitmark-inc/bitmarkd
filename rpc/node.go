@@ -77,6 +77,7 @@ type InfoReply struct {
 	Peers               uint64    `json:"peers"`
 	TransactionCounters Counters  `json:"transactionCounters"`
 	Difficulty          float64   `json:"difficulty"`
+	Hashrate            float64   `json:"hashrate,omitempty"`
 	Version             string    `json:"version"`
 	Uptime              string    `json:"uptime"`
 	PublicKey           string    `json:"publicKey"`
@@ -113,7 +114,8 @@ func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 	reply.RPCs = connectionCount.Uint64()
 	reply.Peers = incoming + outgoing
 	reply.TransactionCounters.Pending, reply.TransactionCounters.Verified = reservoir.ReadCounters()
-	reply.Difficulty = difficulty.Current.Reciprocal()
+	reply.Difficulty = difficulty.Current.Value()
+	reply.Hashrate = difficulty.Hashrate()
 	reply.Version = node.version
 	reply.Uptime = time.Since(node.start).String()
 	reply.PublicKey = hex.EncodeToString(peer.PublicKey())
