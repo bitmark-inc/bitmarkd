@@ -3,7 +3,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package encrypt
+package configuration
 
 import (
 	"crypto/rand"
@@ -13,22 +13,24 @@ import (
 	"golang.org/x/crypto/nacl/secretbox"
 
 	"github.com/bitmark-inc/bitmarkd/account"
-	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/go-argon2"
 )
 
-type Result struct {
-	Account    *account.Account
-	PrivateKey *account.PrivateKey
-	Seed       string
+type Private struct {
+	PrivateKey  *account.PrivateKey `json:"privateKey"`
+	Seed        string              `json:"seed"`
+	Description string              `json:"description"`
 }
 
-// DecryptIdentity - check if password unlocks data in the configuration file
-func DecryptIdentity(password string, identity *configuration.Identity) (*Result, error) {
+// decryptIdentity - check if password unlocks data in the configuration file
+func decryptIdentity(password string, identity *Identity) (*Private, error) {
 
 	salt := new(Salt)
-	salt.UnmarshalText([]byte(identity.Salt))
+	err := salt.UnmarshalText([]byte(identity.Salt))
+	if nil != err || "" == identity.Data {
+		return nil, fault.ErrNotPrivateKey
+	}
 
 	key, err := generateKey(password, salt)
 	if nil != err {
@@ -37,12 +39,7 @@ func DecryptIdentity(password string, identity *configuration.Identity) (*Result
 
 	seed, err := decryptData(identity.Data, key)
 	if nil != err {
-		return nil, err
-	}
-
-	acc, err := account.AccountFromBase58(identity.Account)
-	if nil != err {
-		return nil, err
+		return nil, fault.ErrWrongPassword
 	}
 
 	privateKey, err := account.PrivateKeyFromBase58Seed(seed)
@@ -50,10 +47,10 @@ func DecryptIdentity(password string, identity *configuration.Identity) (*Result
 		return nil, err
 	}
 
-	r := Result{
-		Account:    acc,
-		PrivateKey: privateKey,
-		Seed:       seed,
+	r := Private{
+		PrivateKey:  privateKey,
+		Seed:        seed,
+		Description: identity.Description,
 	}
 	return &r, nil
 }

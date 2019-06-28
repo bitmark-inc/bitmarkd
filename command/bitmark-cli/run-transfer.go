@@ -10,10 +10,7 @@ import (
 
 	"github.com/urfave/cli"
 
-	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/rpccalls"
-	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/keypair"
 )
 
 func runTransfer(c *cli.Context) error {
@@ -25,12 +22,12 @@ func runTransfer(c *cli.Context) error {
 		return err
 	}
 
-	to, newOwnerKeyPair, err := checkTransferTo(c.String("receiver"), m.config)
+	to, recipient, err := checkRecipient(c.String("receiver"), m.config)
 	if nil != err {
 		return err
 	}
 
-	from, err := checkTransferFrom(c.GlobalString("identity"), m.config)
+	from, owner, err := checkOwnerWithPasswordPrompt(c.GlobalString("identity"), m.config, c)
 	if nil != err {
 		return err
 	}
@@ -38,52 +35,18 @@ func runTransfer(c *cli.Context) error {
 	if m.verbose {
 		fmt.Fprintf(m.e, "txid: %s\n", txId)
 		fmt.Fprintf(m.e, "receiver: %s\n", to)
-		fmt.Fprintf(m.e, "sender: %s\n", from.Name)
+		fmt.Fprintf(m.e, "sender: %s\n", from)
 	}
 
-	var ownerKeyPair *keypair.KeyPair
-
-	// get global password items
-	agent := c.GlobalString("use-agent")
-	clearCache := c.GlobalBool("zero-agent-cache")
-	password := c.GlobalString("password")
-
-	// check owner password
-	if "" != agent {
-		password, err := passwordFromAgent(from.Name, "Transfer Bitmark", agent, clearCache)
-		if nil != err {
-			return err
-		}
-		ownerKeyPair, err = encrypt.VerifyPassword(password, from)
-		if nil != err {
-			return err
-		}
-	} else if "" != password {
-		ownerKeyPair, err = encrypt.VerifyPassword(password, from)
-		if nil != err {
-			return err
-		}
-	} else {
-		ownerKeyPair, err = promptAndCheckPassword(from)
-		if nil != err {
-			return err
-		}
-
-	}
-	// just in case some internal breakage
-	if nil == ownerKeyPair {
-		return fault.ErrKeyPairCannotBeNil
-	}
-
-	client, err := rpccalls.NewClient(m.testnet, m.config.Connect, m.verbose, m.e)
+	client, err := rpccalls.NewClient(m.testnet, m.config.Connections[0], m.verbose, m.e)
 	if nil != err {
 		return err
 	}
 	defer client.Close()
 
 	transferConfig := &rpccalls.TransferData{
-		Owner:    ownerKeyPair,
-		NewOwner: newOwnerKeyPair,
+		Owner:    owner,
+		NewOwner: recipient,
 		TxId:     txId,
 	}
 

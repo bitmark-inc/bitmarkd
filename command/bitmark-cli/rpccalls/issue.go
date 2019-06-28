@@ -15,8 +15,8 @@ import (
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/sha3"
 
+	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/keypair"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
@@ -26,7 +26,7 @@ import (
 
 // IssueData - data for an issue request
 type IssueData struct {
-	Issuer    *keypair.KeyPair
+	Issuer    *configuration.Private
 	AssetId   *transactionrecord.AssetIdentifier
 	Quantity  int
 	FreeIssue bool
@@ -146,17 +146,17 @@ func makeIssue(testnet bool, issueConfig *IssueData, nonce uint64) (*transaction
 
 func internalMakeIssue(testnet bool, issueConfig *IssueData, nonce uint64, generateDigest bool) (*merkle.Digest, *transactionrecord.BitmarkIssue, error) {
 
-	issuerAddress := makeAddress(issueConfig.Issuer, testnet)
+	issuerAccount := issueConfig.Issuer.PrivateKey.Account()
 
 	r := transactionrecord.BitmarkIssue{
 		AssetId:   *issueConfig.AssetId,
-		Owner:     issuerAddress,
+		Owner:     issuerAccount,
 		Nonce:     nonce,
 		Signature: nil,
 	}
 
 	// pack without signature
-	packed, err := r.Pack(issuerAddress)
+	packed, err := r.Pack(issuerAccount)
 	if nil == err {
 		return nil, nil, fault.ErrMakeIssueFailed
 	} else if fault.ErrInvalidSignature != err {
@@ -164,11 +164,11 @@ func internalMakeIssue(testnet bool, issueConfig *IssueData, nonce uint64, gener
 	}
 
 	// manually sign the record and attach signature
-	signature := ed25519.Sign(issueConfig.Issuer.PrivateKey, packed)
+	signature := ed25519.Sign(issueConfig.Issuer.PrivateKey.PrivateKeyBytes(), packed)
 	r.Signature = signature[:]
 
 	// check that signature is correct by packing again
-	pkFull, err := r.Pack(issuerAddress)
+	pkFull, err := r.Pack(issuerAccount)
 	if nil != err {
 		return nil, nil, err
 	}

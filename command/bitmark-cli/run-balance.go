@@ -10,7 +10,6 @@ import (
 
 	"github.com/urfave/cli"
 
-	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/rpccalls"
 )
 
@@ -20,38 +19,30 @@ func runBalance(c *cli.Context) error {
 
 	shareId := c.String("share-id")
 
-	owner := c.String("owner")
-	if "" == owner {
-		owner = c.GlobalString("identity")
-		if "" == owner {
-			owner = m.config.DefaultIdentity
-		}
-	}
-
 	count := c.Int("count")
 	if count <= 0 {
 		return fmt.Errorf("invalid count: %d", count)
 	}
 
-	if m.verbose {
-		fmt.Fprintf(m.e, "owner: %s\n", owner)
-		fmt.Fprintf(m.e, "shareId: %s\n", shareId)
-		fmt.Fprintf(m.e, "count: %d\n", count)
-	}
-
-	ownerKeyPair, err := encrypt.PublicKeyFromString(owner, m.config.Identities, m.config.TestNet)
+	name, owner, err := checkRecipient(c.String("owner"), m.config)
 	if nil != err {
 		return err
 	}
 
-	client, err := rpccalls.NewClient(m.testnet, m.config.Connect, m.verbose, m.e)
+	if m.verbose {
+		fmt.Fprintf(m.e, "owner: %s\n", name)
+		fmt.Fprintf(m.e, "shareId: %s\n", shareId)
+		fmt.Fprintf(m.e, "count: %d\n", count)
+	}
+
+	client, err := rpccalls.NewClient(m.testnet, m.config.Connections[0], m.verbose, m.e)
 	if nil != err {
 		return err
 	}
 	defer client.Close()
 
 	balanceConfig := &rpccalls.BalanceData{
-		Owner:   ownerKeyPair,
+		Owner:   owner,
 		ShareId: shareId,
 		Count:   count,
 	}

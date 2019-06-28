@@ -10,8 +10,8 @@ import (
 
 	"golang.org/x/crypto/ed25519"
 
+	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/keypair"
 	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
@@ -21,7 +21,7 @@ type AssetData struct {
 	Name        string
 	Metadata    string
 	Quantity    int
-	Registrant  *keypair.KeyPair
+	Registrant  *configuration.Private
 	Fingerprint string
 }
 
@@ -86,28 +86,27 @@ func (client *Client) MakeAsset(assetConfig *AssetData) (*AssetResult, error) {
 
 	client.printJson("Asset Get Reply", getReply)
 
-	registrantAddress := makeAddress(assetConfig.Registrant, client.testnet)
-
+	registrant := assetConfig.Registrant.PrivateKey.Account()
 	r := transactionrecord.AssetData{
 		Name:        assetConfig.Name,
 		Fingerprint: assetConfig.Fingerprint,
 		Metadata:    assetConfig.Metadata,
-		Registrant:  registrantAddress,
+		Registrant:  registrant,
 		Signature:   nil,
 	}
 
 	// pack without signature
-	packed, err := r.Pack(registrantAddress)
+	packed, err := r.Pack(registrant)
 	if fault.ErrInvalidSignature != err {
 		return nil, err
 	}
 
 	// manually sign the record and attach signature
-	signature := ed25519.Sign(assetConfig.Registrant.PrivateKey, packed)
+	signature := ed25519.Sign(assetConfig.Registrant.PrivateKey.PrivateKeyBytes(), packed)
 	r.Signature = signature[:]
 
 	// check that signature is correct by packing again
-	if _, err = r.Pack(registrantAddress); nil != err {
+	if _, err = r.Pack(registrant); nil != err {
 		return nil, err
 	}
 

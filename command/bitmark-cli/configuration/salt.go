@@ -3,12 +3,11 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package encrypt
+package configuration
 
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"fmt"
 	"io"
 
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -61,7 +60,6 @@ func (salt *Salt) UnmarshalText(s []byte) error {
 	}
 
 	if saltSize != byteCount {
-		fmt.Printf("invalid byte\n")
 		return fault.ErrUnmarshalTextFailed
 	}
 	copy(salt[:], buffer)

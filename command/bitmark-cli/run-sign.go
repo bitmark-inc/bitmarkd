@@ -13,10 +13,6 @@ import (
 
 	"github.com/urfave/cli"
 	"golang.org/x/crypto/ed25519"
-
-	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
-	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/keypair"
 )
 
 func runSign(c *cli.Context) error {
@@ -28,48 +24,14 @@ func runSign(c *cli.Context) error {
 		return err
 	}
 
-	from, err := checkTransferFrom(c.GlobalString("identity"), m.config)
+	from, owner, err := checkOwnerWithPasswordPrompt(c.GlobalString("identity"), m.config, c)
 	if nil != err {
 		return err
 	}
 
 	if m.verbose {
 		fmt.Fprintf(m.e, "file: %s\n", fileName)
-		fmt.Fprintf(m.e, "signer: %s\n", from.Name)
-	}
-
-	var ownerKeyPair *keypair.KeyPair
-
-	// get global password items
-	agent := c.GlobalString("use-agent")
-	clearCache := c.GlobalBool("zero-agent-cache")
-	password := c.GlobalString("password")
-
-	// check owner password
-	if "" != agent {
-		password, err := passwordFromAgent(from.Name, "Transfer Bitmark", agent, clearCache)
-		if nil != err {
-			return err
-		}
-		ownerKeyPair, err = encrypt.VerifyPassword(password, from)
-		if nil != err {
-			return err
-		}
-	} else if "" != password {
-		ownerKeyPair, err = encrypt.VerifyPassword(password, from)
-		if nil != err {
-			return err
-		}
-	} else {
-		ownerKeyPair, err = promptAndCheckPassword(from)
-		if nil != err {
-			return err
-		}
-
-	}
-	// just in case some internal breakage
-	if nil == ownerKeyPair {
-		return fault.ErrKeyPairCannotBeNil
+		fmt.Fprintf(m.e, "signer: %s\n", from)
 	}
 
 	file, err := os.Open(fileName)
@@ -82,7 +44,7 @@ func runSign(c *cli.Context) error {
 		return err
 	}
 
-	signature := ed25519.Sign(ownerKeyPair.PrivateKey, data)
+	signature := ed25519.Sign(owner.PrivateKey.PrivateKeyBytes(), data)
 	s := hex.EncodeToString(signature)
 
 	if m.verbose {
@@ -94,7 +56,7 @@ func runSign(c *cli.Context) error {
 			FileName  string `json:"file_name"`
 			Signature string `json:"signature"`
 		}{
-			Identity:  from.Name,
+			Identity:  from,
 			FileName:  fileName,
 			Signature: s,
 		}
@@ -112,7 +74,7 @@ func runVerify(c *cli.Context) error {
 		return err
 	}
 
-	owner, ownerKeyPair, err := checkTransferTo(c.String("owner"), m.config)
+	from, owner, err := checkRecipient(c.String("owner"), m.config)
 	if nil != err {
 		return err
 	}
@@ -124,7 +86,7 @@ func runVerify(c *cli.Context) error {
 
 	if m.verbose {
 		fmt.Fprintf(m.e, "file: %s\n", fileName)
-		fmt.Fprintf(m.e, "signer: %s\n", owner)
+		fmt.Fprintf(m.e, "signer: %s\n", from)
 		fmt.Fprintf(m.e, "signature: %x\n", signature)
 	}
 
@@ -138,7 +100,7 @@ func runVerify(c *cli.Context) error {
 		return err
 	}
 
-	ok := ed25519.Verify(ownerKeyPair.PublicKey, data, signature)
+	ok := ed25519.Verify(owner.PublicKeyBytes(), data, signature)
 	if m.verbose {
 		fmt.Fprintf(m.e, "verified: %t\n", ok)
 	} else {
@@ -148,7 +110,7 @@ func runVerify(c *cli.Context) error {
 			FileName string `json:"file_name"`
 			Verified bool   `json:"verified"`
 		}{
-			Identity: owner,
+			Identity: from,
 			FileName: fileName,
 			Verified: ok,
 		}

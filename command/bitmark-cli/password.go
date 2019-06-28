@@ -11,9 +11,7 @@ import (
 
 	"golang.org/x/crypto/ssh/terminal"
 
-	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/keypair"
 )
 
 var passwordConsole *terminal.Terminal
@@ -38,14 +36,15 @@ func getTerminal() (*terminal.Terminal, int, *terminal.State) {
 	return passwordConsole, 0, oldState
 }
 
-func promptPasswordReader() (string, error) {
+func promptNewPassword() (string, error) {
 	console, fd, state := getTerminal()
-	password, err := console.ReadPassword("Set identity password(length >= 8): ")
+	password, err := console.ReadPassword("Set new password (length >= 8): ")
+	terminal.Restore(fd, state)
+
 	if nil != err {
 		fmt.Printf("Get password fail: %s\n", err)
 		return "", err
 	}
-	terminal.Restore(fd, state)
 
 	passwordLen := len(password)
 	if passwordLen < 8 {
@@ -53,12 +52,13 @@ func promptPasswordReader() (string, error) {
 	}
 
 	console, fd, state = getTerminal()
-	verifyPassword, err := console.ReadPassword("Verify password: ")
+	verifyPassword, err := console.ReadPassword("Confirm new password: ")
+	terminal.Restore(fd, state)
+
 	if nil != err {
 		fmt.Printf("verify failed: %s\n", err)
 		return "", fault.ErrPasswordMismatch
 	}
-	terminal.Restore(fd, state)
 
 	if password != verifyPassword {
 		return "", fault.ErrPasswordMismatch
@@ -67,27 +67,15 @@ func promptPasswordReader() (string, error) {
 	return password, nil
 }
 
-func promptCheckPasswordReader() (string, error) {
+func promptPassword(name string) (string, error) {
 	console, fd, state := getTerminal()
-	password, err := console.ReadPassword("password: ")
-	if nil != err {
-		fmt.Printf("Get password fail: %s\n", err)
-		return "", err
-	}
+	password, err := console.ReadPassword("Password for: " + name + ": ")
 	terminal.Restore(fd, state)
 
+	if nil != err {
+		fmt.Printf("read password error: %s\n", err)
+		return "", err
+	}
+
 	return password, nil
-}
-
-func promptAndCheckPassword(issuer *encrypt.IdentityType) (*keypair.KeyPair, error) {
-	password, err := promptCheckPasswordReader()
-	if nil != err {
-		return nil, err
-	}
-
-	keyPair, err := encrypt.VerifyPassword(password, issuer)
-	if nil != err {
-		return nil, err
-	}
-	return keyPair, nil
 }

@@ -143,7 +143,7 @@ READY() {
   printf 'waiting for sync -'
   while :
   do
-    CLI -n "${user_1}" bitmarkInfo 2> /dev/null
+    CLI -n "${user_1}" bitmarkd 2> /dev/null
     mode=$(GET .mode)
     [ X"${mode}" = X"Normal" ] && break
     SPINNER 1

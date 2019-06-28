@@ -10,8 +10,9 @@ import (
 
 	"golang.org/x/crypto/ed25519"
 
+	"github.com/bitmark-inc/bitmarkd/account"
+	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/keypair"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/rpc"
@@ -20,15 +21,15 @@ import (
 
 // TransferData - data for a transfer request
 type TransferData struct {
-	Owner    *keypair.KeyPair
-	NewOwner *keypair.KeyPair
+	Owner    *configuration.Private
+	NewOwner *account.Account
 	TxId     string
 }
 
 // TransferCountersignData - countersign data request
 type TransferCountersignData struct {
 	Transfer string
-	NewOwner *keypair.KeyPair
+	NewOwner *configuration.Private
 }
 
 // TransferReply - JSON data to output after transfer completes
@@ -159,19 +160,18 @@ func (client *Client) CountersignTransfer(transfer *transactionrecord.BitmarkTra
 	return &response, nil
 }
 
-func makeTransferUnratified(testnet bool, link merkle.Digest, owner *keypair.KeyPair, newOwner *keypair.KeyPair) (transactionrecord.BitmarkTransfer, error) {
+func makeTransferUnratified(testnet bool, link merkle.Digest, owner *configuration.Private, newOwner *account.Account) (transactionrecord.BitmarkTransfer, error) {
 
-	newOwnerAddress := makeAddress(newOwner, testnet)
 	r := transactionrecord.BitmarkTransferUnratified{
 		Link:      link,
-		Owner:     newOwnerAddress,
+		Owner:     newOwner,
 		Signature: nil,
 	}
 
-	ownerAddress := makeAddress(owner, testnet)
+	ownerAccount := owner.PrivateKey.Account()
 
 	// pack without signature
-	packed, err := r.Pack(ownerAddress)
+	packed, err := r.Pack(ownerAccount)
 	if nil == err {
 		return nil, fault.ErrMakeTransferFailed
 	} else if fault.ErrInvalidSignature != err {
@@ -179,31 +179,30 @@ func makeTransferUnratified(testnet bool, link merkle.Digest, owner *keypair.Key
 	}
 
 	// attach signature
-	signature := ed25519.Sign(owner.PrivateKey, packed)
+	signature := ed25519.Sign(owner.PrivateKey.PrivateKeyBytes(), packed)
 	r.Signature = signature[:]
 
 	// check that signature is correct by packing again
-	_, err = r.Pack(ownerAddress)
+	_, err = r.Pack(ownerAccount)
 	if nil != err {
 		return nil, err
 	}
 	return &r, nil
 }
 
-func makeTransferOneSignature(testnet bool, link merkle.Digest, owner *keypair.KeyPair, newOwner *keypair.KeyPair) ([]byte, transactionrecord.BitmarkTransfer, error) {
+func makeTransferOneSignature(testnet bool, link merkle.Digest, owner *configuration.Private, newOwner *account.Account) ([]byte, transactionrecord.BitmarkTransfer, error) {
 
-	newOwnerAddress := makeAddress(newOwner, testnet)
 	r := transactionrecord.BitmarkTransferCountersigned{
 		Link:             link,
-		Owner:            newOwnerAddress,
+		Owner:            newOwner,
 		Signature:        nil,
 		Countersignature: nil,
 	}
 
-	ownerAddress := makeAddress(owner, testnet)
+	ownerAccount := owner.PrivateKey.Account()
 
 	// pack without signature
-	packed, err := r.Pack(ownerAddress)
+	packed, err := r.Pack(ownerAccount)
 	if nil == err {
 		return nil, nil, fault.ErrMakeTransferFailed
 	} else if fault.ErrInvalidSignature != err {
@@ -211,11 +210,11 @@ func makeTransferOneSignature(testnet bool, link merkle.Digest, owner *keypair.K
 	}
 
 	// attach signature
-	signature := ed25519.Sign(owner.PrivateKey, packed)
+	signature := ed25519.Sign(owner.PrivateKey.PrivateKeyBytes(), packed)
 	r.Signature = signature[:]
 
 	// include first signature by packing again
-	packed, err = r.Pack(ownerAddress)
+	packed, err = r.Pack(ownerAccount)
 	if nil == err {
 		return nil, nil, fault.ErrMakeTransferFailed
 	} else if fault.ErrInvalidSignature != err {

@@ -11,10 +11,7 @@ import (
 
 	"github.com/urfave/cli"
 
-	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/rpccalls"
-	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/keypair"
 )
 
 func runCreate(c *cli.Context) error {
@@ -22,11 +19,6 @@ func runCreate(c *cli.Context) error {
 	m := c.App.Metadata["config"].(*metadata)
 
 	assetName := c.String("asset")
-
-	issuer, err := checkIdentity(c.GlobalString("identity"), m.config)
-	if nil != err {
-		return err
-	}
 
 	fingerprint, err := checkAssetFingerprint(c.String("fingerprint"))
 	if nil != err {
@@ -48,8 +40,13 @@ func runCreate(c *cli.Context) error {
 		return fmt.Errorf("invalid free-issue quantity: %d only 1 is allowed", quantity)
 	}
 
+	name, registrant, err := checkOwnerWithPasswordPrompt(c.GlobalString("identity"), m.config, c)
+	if nil != err {
+		return err
+	}
+
 	if m.verbose {
-		fmt.Fprintf(m.e, "issuer: %s\n", issuer.Name)
+		fmt.Fprintf(m.e, "issuer: %s\n", name)
 		fmt.Fprintf(m.e, "assetName: %q\n", assetName)
 		fmt.Fprintf(m.e, "fingerprint: %q\n", fingerprint)
 		fmt.Fprintf(m.e, "metadata:\n")
@@ -60,40 +57,7 @@ func runCreate(c *cli.Context) error {
 		fmt.Fprintf(m.e, "quantity: %d\n", quantity)
 	}
 
-	var registrant *keypair.KeyPair
-
-	// get global password items
-	agent := c.GlobalString("use-agent")
-	clearCache := c.GlobalBool("zero-agent-cache")
-	password := c.GlobalString("password")
-
-	// check password
-	if "" != agent {
-		password, err := passwordFromAgent(issuer.Name, "Create Bitmark", agent, clearCache)
-		if nil != err {
-			return err
-		}
-		registrant, err = encrypt.VerifyPassword(password, issuer)
-		if nil != err {
-			return err
-		}
-	} else if "" != password {
-		registrant, err = encrypt.VerifyPassword(password, issuer)
-		if nil != err {
-			return err
-		}
-	} else {
-		registrant, err = promptAndCheckPassword(issuer)
-		if nil != err {
-			return err
-		}
-	}
-	// just in case some internal breakage
-	if nil == registrant {
-		return fault.ErrKeyPairCannotBeNil
-	}
-
-	client, err := rpccalls.NewClient(m.testnet, m.config.Connect, m.verbose, m.e)
+	client, err := rpccalls.NewClient(m.testnet, m.config.Connections[0], m.verbose, m.e)
 	if nil != err {
 		return err
 	}

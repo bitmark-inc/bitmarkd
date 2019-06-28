@@ -10,7 +10,6 @@ import (
 
 	"github.com/urfave/cli"
 
-	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/rpccalls"
 )
 
@@ -18,11 +17,11 @@ func runOwned(c *cli.Context) error {
 
 	m := c.App.Metadata["config"].(*metadata)
 
-	owner := c.String("owner")
-	if "" == owner {
-		owner = c.GlobalString("identity")
-		if "" == owner {
-			owner = m.config.DefaultIdentity
+	ownerId := c.String("owner")
+	if "" == ownerId {
+		ownerId = c.GlobalString("identity")
+		if "" == ownerId {
+			ownerId = m.config.DefaultIdentity
 		}
 	}
 
@@ -34,24 +33,24 @@ func runOwned(c *cli.Context) error {
 	}
 
 	if m.verbose {
-		fmt.Fprintf(m.e, "owner: %s\n", owner)
+		fmt.Fprintf(m.e, "owner: %s\n", ownerId)
 		fmt.Fprintf(m.e, "start: %d\n", start)
 		fmt.Fprintf(m.e, "count: %d\n", count)
 	}
 
-	ownerKeyPair, err := encrypt.PublicKeyFromString(owner, m.config.Identities, m.config.TestNet)
+	owner, err := m.config.Account(ownerId)
 	if nil != err {
 		return err
 	}
 
-	client, err := rpccalls.NewClient(m.testnet, m.config.Connect, m.verbose, m.e)
+	client, err := rpccalls.NewClient(m.testnet, m.config.Connections[0], m.verbose, m.e)
 	if nil != err {
 		return err
 	}
 	defer client.Close()
 
 	ownedConfig := &rpccalls.OwnedData{
-		Owner: ownerKeyPair,
+		Owner: owner,
 		Start: start,
 		Count: count,
 	}
