@@ -51,6 +51,13 @@ outer_loop:
 		if header.Number < finalBlockNumber {
 			blockheader.Set(header.Number, digest, header.Version, header.Timestamp)
 			log.Infof("finish: _NOT_ Deleting: %d", header.Number)
+
+			nextDifficulty, prevDifficulty, err := blockrecord.AdjustDifficultyAtBlock(header.Number)
+			if err != nil {
+				log.Criticalf("failed to adjust difficulty with error: %s", err)
+				return err
+			}
+			log.Infof("set new difficulty to %f, prevouis difficulty %f", nextDifficulty, prevDifficulty)
 			return nil
 		}
 

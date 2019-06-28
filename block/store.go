@@ -16,6 +16,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/currency/litecoin"
+	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/mode"
@@ -35,7 +36,7 @@ const (
 )
 
 // StoreIncoming - store an incoming block checking to make sure it is valid first
-func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
+func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
 	start := time.Now()
 
 	globalData.Lock()
@@ -52,7 +53,36 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 	// extract incoming block record, checking for correct sequence
 	header, digest, data, err := blockrecord.ExtractHeader(packedBlock, height+1)
 	if nil != err {
+		globalData.log.Errorf("extract header error: %s", err)
 		return err
+	}
+
+	if blockrecord.ValidDifficultyAppliedVersion(header.Version) {
+		if difficulty.IsAdjustBlock(header.Number) {
+			nextDifficulty, prevDifficulty, err := blockrecord.AdjustDifficultyAtBlock(header.Number)
+			// if any error happens for storing block, reset difficulty back to old value
+			defer func() {
+				if err != nil {
+					difficulty.Current.Set(prevDifficulty)
+				}
+			}()
+
+			if err != nil {
+				globalData.log.Errorf("adjust difficulty with error: %s", err)
+				return err
+			}
+			globalData.log.Debugf("previous difficulty: %f, current difficulty: %f", prevDifficulty, nextDifficulty)
+		}
+	}
+
+	if ok := blockrecord.ValidIncomingDifficuty(header.Difficulty); !ok {
+		globalData.log.Infof("incoming block difficulty %f different from local %f", header.Difficulty.Value(), difficulty.Current.Value())
+		return fault.ErrDifficultyNotMatch
+	}
+
+	if ok := digest.ValidByDifficulty(header.Difficulty); !ok {
+		globalData.log.Warnf("digest error: %s", fault.ErrInvalidBlockHeaderDifficulty)
+		return fault.ErrInvalidBlockHeaderDifficulty
 	}
 
 	// ensure correct linkage
@@ -79,17 +109,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) error {
 		d := previousTimestamp - header.Timestamp
 		globalData.log.Warnf("prev: %d  next: %d  diff: %d  block: %d  version: %d", previousTimestamp, header.Timestamp, d, header.Number, header.Version)
 
-		// allow more tolerance for old blocks up to a few minutes back in time
-		fail := false
-		switch header.Version {
-		case 1:
-			fail = d > 240*60 // seconds
-		case 2:
-			fail = d > 10*60 // seconds
-		default:
-			fail = true
-		}
-		if fail {
+		if ok := blockrecord.ValidBlockTimeSpacingAtVersion(header.Version, d); !ok {
 			return fault.ErrInvalidBlockHeaderTimestamp
 		}
 	}
