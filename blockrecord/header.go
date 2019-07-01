@@ -217,7 +217,7 @@ func FoundationTxId(header *Header, digest blockdigest.Digest) merkle.Digest {
 	return merkle.NewDigest(append(digest[:], leBlockNumber...))
 }
 
-// AdjustDifficultyAtBlock - adjust difficulty at block
+// AdjustDifficultyAtBlock - adjust difficulty at block, returns next difficulty, current difficulty, error
 func AdjustDifficultyAtBlock(height uint64) (float64, float64, error) {
 	currentDifficulty := difficulty.Current.Value()
 	nextDifficulty, err := DifficultyByPreviousTimespanAtBlock(height)
