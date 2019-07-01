@@ -61,8 +61,8 @@ func (digest Digest) Cmp(difficulty *big.Int) int {
 	return result.SetBytes(bigEndian[:]).Cmp(difficulty)
 }
 
-// ValidByDifficulty - is digest valid by difficulty
-func (d Digest) ValidByDifficulty(diff *difficulty.Difficulty) bool {
+// IsValidByDifficulty - is digest valid by difficulty
+func (d Digest) IsValidByDifficulty(diff *difficulty.Difficulty) bool {
 	reversedDigest := reversed(d)
 	bigEndian := new(big.Int)
 	bigEndian.SetBytes(reversedDigest[:])

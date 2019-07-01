@@ -57,7 +57,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
 		return err
 	}
 
-	if blockrecord.ValidDifficultyAppliedVersion(header.Version) {
+	if blockrecord.IsDifficultyAppliedVersion(header.Version) {
 		if difficulty.IsAdjustBlock(header.Number) {
 			nextDifficulty, prevDifficulty, err := blockrecord.AdjustDifficultyAtBlock(header.Number)
 			// if any error happens for storing block, reset difficulty back to old value
@@ -75,29 +75,24 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
 		}
 	}
 
-	if ok := blockrecord.ValidIncomingDifficuty(header.Difficulty); !ok {
+	if err := blockrecord.ValidIncomingDifficuty(header.Difficulty); err != nil {
 		globalData.log.Infof("incoming block difficulty %f different from local %f", header.Difficulty.Value(), difficulty.Current.Value())
-		return fault.ErrDifficultyNotMatch
+		return err
 	}
 
-	if ok := digest.ValidByDifficulty(header.Difficulty); !ok {
+	if ok := digest.IsValidByDifficulty(header.Difficulty); !ok {
 		globalData.log.Warnf("digest error: %s", fault.ErrInvalidBlockHeaderDifficulty)
 		return fault.ErrInvalidBlockHeaderDifficulty
 	}
 
 	// ensure correct linkage
-	if previousBlock != header.PreviousBlock {
-		return fault.ErrPreviousBlockDigestDoesNotMatch
+	if err := blockrecord.ValidBlockLinkage(previousBlock, header.PreviousBlock); err != nil {
+		return err
 	}
 
 	// check version
-	if header.Version < 1 {
-		return fault.ErrInvalidBlockHeaderVersion
-	}
-
-	// block version must be the same or higher
-	if previousVersion > header.Version {
-		return fault.ErrBlockVersionMustNotDecrease
+	if err := blockrecord.ValidHeaderVersion(previousVersion, header.Version); err != nil {
+		return err
 	}
 
 	// create database key for block number
@@ -109,8 +104,8 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
 		d := previousTimestamp - header.Timestamp
 		globalData.log.Warnf("prev: %d  next: %d  diff: %d  block: %d  version: %d", previousTimestamp, header.Timestamp, d, header.Number, header.Version)
 
-		if ok := blockrecord.ValidBlockTimeSpacingAtVersion(header.Version, d); !ok {
-			return fault.ErrInvalidBlockHeaderTimestamp
+		if err := blockrecord.ValidBlockTimeSpacingAtVersion(header.Version, d); err != nil {
+			return err
 		}
 	}
 

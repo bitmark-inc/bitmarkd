@@ -183,7 +183,7 @@ func TestSmallerDigest(t *testing.T) {
 	assert.Equal(t, true, actual, "smaller digest compared wrong")
 }
 
-func TestValidByDifficultyWhenValid(t *testing.T) {
+func TestIsValidByDifficultyWhenValid(t *testing.T) {
 	digest := blockdigest.Digest{
 		0x8d, 0xbe, 0xc8, 0x88, 0xe5, 0xf1, 0x27, 0x13,
 		0xa2, 0x8b, 0x0f, 0x4a, 0xd2, 0xcf, 0x94, 0xd7,
@@ -194,11 +194,11 @@ func TestValidByDifficultyWhenValid(t *testing.T) {
 	diff := difficulty.New()
 	diff.Set(2)
 
-	actual := digest.ValidByDifficulty(diff)
+	actual := digest.IsValidByDifficulty(diff)
 	assert.Equal(t, true, actual, "valid digest cannot be validated by difficulty")
 }
 
-func TestValidByDifficultyWhenInValid(t *testing.T) {
+func TestIsValidByDifficultyWhenInValid(t *testing.T) {
 	digest := blockdigest.Digest{
 		0xff, 0xff, 0xff, 0xff,
 		0xff, 0xff, 0xff, 0xff,
@@ -213,6 +213,6 @@ func TestValidByDifficultyWhenInValid(t *testing.T) {
 	diff := difficulty.New()
 	diff.Set(2)
 
-	actual := digest.ValidByDifficulty(diff)
+	actual := digest.IsValidByDifficulty(diff)
 	assert.Equal(t, false, actual, "invalid digest cannot be validated by difficulty")
 }
