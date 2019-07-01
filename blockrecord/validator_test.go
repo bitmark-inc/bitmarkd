@@ -78,7 +78,7 @@ func TestValidHeaderVersionWhenIncomingLarger(t *testing.T) {
 	assert.Equal(t, nil, actual, "fail to validate incoming version larger")
 }
 
-func TestValidHeaderVersionWhenIncomingSamer(t *testing.T) {
+func TestValidHeaderVersionWhenIncomingSame(t *testing.T) {
 	actual := blockrecord.ValidHeaderVersion(uint16(100), uint16(100))
 	assert.Equal(t, nil, actual, "fail to validate incoming version same")
 }
