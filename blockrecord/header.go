@@ -80,7 +80,7 @@ type Header struct {
 
 var log *logger.L
 
-// Initialise - initialize logger
+// Initialise - initialize
 func Initialise() {
 	log = logger.New("blockrecord")
 	log.Info("starting")
