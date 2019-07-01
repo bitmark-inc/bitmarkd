@@ -283,6 +283,11 @@ func TestHashrate(t *testing.T) {
 	difficulty.Current.Set(4)
 	actual := difficulty.Hashrate()
 
-	expected := 8.533 // 1024 / 120
+	// difficulty 4, log2(4) = 2
+	// total bits of empty zero will 8+2 = 10 bits
+	// possible hashes for a correct one is pow(2, 10) = 1024 hashes
+	// expected time for a block is 120 seconds
+	// hash rate = hashes / time = 1024 / 120 = 8.533
+	expected := 8.533
 	assert.Equal(t, expected, actual, "error calculate network hashrate")
 }
