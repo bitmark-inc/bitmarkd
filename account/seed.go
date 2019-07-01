@@ -42,9 +42,10 @@ const (
 	seedHeaderLength = 3
 	seedPrefixLength = 1
 
-	secretKeyV1Length  = 32
-	secretKeyV2Length  = 17
-	seedChecksumLength = 4
+	secretKeyV1Length        = 32
+	secretKeyV2Length        = 17
+	secretKeyV2EntropyLength = 16
+	seedChecksumLength       = 4
 
 	seedV1Length = 40
 	seedV2Length = 24
@@ -150,7 +151,7 @@ func NewBase58EncodedSeedV1(testnet bool) (string, error) {
 		return "", err
 	}
 	if secretKeyV1Length != n {
-		panic("too few random bytes")
+		return "", fmt.Errorf("got: %d bytes, expected: %d bytes", n, secretKeyV1Length)
 	}
 	net := 0x00
 	if testnet {
@@ -169,15 +170,15 @@ func NewBase58EncodedSeedV1(testnet bool) (string, error) {
 func NewBase58EncodedSeedV2(testnet bool) (string, error) {
 
 	// space for 128 bit, extend to 132 bit later
-	sk := make([]byte, 16, secretKeyV2Length)
+	sk := make([]byte, secretKeyV2EntropyLength, secretKeyV2Length)
 
 	n, err := rand.Read(sk)
 	if nil != err {
 		return "", err
 	}
 
-	if 16 != n {
-		return "", fmt.Errorf("got %d bytes, expected is 16 bytes", n)
+	if secretKeyV2EntropyLength != n {
+		return "", fmt.Errorf("got: %d bytes, expected: %d bytes", n, secretKeyV2EntropyLength)
 	}
 
 	// extend to 132 bits
