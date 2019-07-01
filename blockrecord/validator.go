@@ -15,9 +15,9 @@ const (
 	blockTimeSpacingInitial = 240 * 60
 	blockTimeSpacingCurrent = 10 * 60
 
-	initialVersion               = 1
-	modififiedTimeSpacingVersion = 2
-	difficultyAppliedVersion     = 3
+	initialVersion             = 1
+	modifiedTimeSpacingVersion = 2
+	difficultyAppliedVersion   = 3
 )
 
 // ValidBlockTimeSpacingAtVersion - valid block time spacing based on different version
@@ -26,7 +26,7 @@ func ValidBlockTimeSpacingAtVersion(version uint16, timeSpacing uint64) error {
 		return fault.ErrInvalidBlockHeaderTimestamp
 	}
 
-	if version >= modififiedTimeSpacingVersion && timeSpacing > blockTimeSpacingCurrent {
+	if version >= modifiedTimeSpacingVersion && timeSpacing > blockTimeSpacingCurrent {
 		return fault.ErrInvalidBlockHeaderTimestamp
 	}
 
