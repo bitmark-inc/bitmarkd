@@ -8,7 +8,6 @@ package configuration
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"io"
 
 	"github.com/bitmark-inc/bitmarkd/fault"
 )
@@ -23,8 +22,8 @@ type Salt [saltSize]byte
 // MakeSalt - create a salt using secure random number generator
 func MakeSalt() (*Salt, error) {
 	salt := new(Salt)
-	if _, err := io.ReadFull(rand.Reader, salt[:]); err != nil {
-		return salt, err
+	if _, err := rand.Read(salt[:]); err != nil {
+		return nil, err
 	}
 	return salt, nil
 }

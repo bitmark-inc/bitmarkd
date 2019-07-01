@@ -8,7 +8,6 @@ package configuration
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"io"
 
 	"golang.org/x/crypto/nacl/secretbox"
 
@@ -106,7 +105,7 @@ func encryptData(data string, secretKey *[32]byte) (string, error) {
 	// same key. Since the nonce here is 192 bits long, a random value
 	// provides a sufficiently small probability of repeats.
 	var nonce [24]byte
-	if _, err := io.ReadFull(rand.Reader, nonce[:]); err != nil {
+	if _, err := rand.Read(nonce[:]); err != nil {
 		return "", fault.ErrCryptoFailed
 	}
 
