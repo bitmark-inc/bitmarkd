@@ -267,7 +267,11 @@ func (pub *publisher) process() {
 
 	// 64 bit nonce (8 bytes)
 	randomBytes := make([]byte, 8)
-	_, _ = rand.Read(randomBytes)
+	_, err = rand.Read(randomBytes)
+	if err != nil {
+		pub.log.Errorf("random number generate with error: %s", err)
+		logger.Panicf("random number generate with error: %s", err)
+	}
 	nonce := blockrecord.NonceType(binary.LittleEndian.Uint64(randomBytes))
 
 	timestamp := uint64(time.Now().Unix())
