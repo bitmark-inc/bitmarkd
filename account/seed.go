@@ -141,11 +141,11 @@ func PrivateKeyFromBase58Seed(seedBase58Encoded string) (*PrivateKey, error) {
 	return privateKey, nil
 }
 
-// NewSeedV1 - generate base58 seed v1
-func NewSeedV1(testnet bool) (string, error) {
+// NewBase58EncodedSeedV1 - generate base58 seed v1
+func NewBase58EncodedSeedV1(testnet bool) (string, error) {
 	// generate new seed
-	seedCore := make([]byte, secretKeyV1Length)
-	n, err := rand.Read(seedCore)
+	sk := make([]byte, secretKeyV1Length)
+	n, err := rand.Read(sk)
 	if nil != err {
 		return "", err
 	}
@@ -156,17 +156,17 @@ func NewSeedV1(testnet bool) (string, error) {
 	if testnet {
 		net = 0x01
 	}
-	packedSeed := append(seedHeaderV1, byte(net))
-	packedSeed = append(packedSeed, seedCore...)
-	checksum := sha3.Sum256(packedSeed)
-	packedSeed = append(packedSeed, checksum[:seedChecksumLength]...)
+	seed := append(seedHeaderV1, byte(net))
+	seed = append(seed, sk...)
+	checksum := sha3.Sum256(seed)
+	seed = append(seed, checksum[:seedChecksumLength]...)
 
-	seed := util.ToBase58(packedSeed)
-	return seed, nil
+	base58Encodedseed := util.ToBase58(seed)
+	return base58Encodedseed, nil
 }
 
-// NewSeedV2 - generate base58 seed v2
-func NewSeedV2(testnet bool) (string, error) {
+// NewBase58EncodedSeedV2 - generate base58 seed v2
+func NewBase58EncodedSeedV2(testnet bool) (string, error) {
 
 	// space for 128 bit, extend to 132 bit later
 	sk := make([]byte, 16, secretKeyV2Length)
@@ -195,12 +195,12 @@ func NewSeedV2(testnet bool) (string, error) {
 	sk[15] = mode | sk[15]&0x0f
 
 	// encode seed to base58
-	packedSeed := append(seedHeaderV2, sk...)
-	digest := sha3.Sum256(packedSeed)
+	seed := append(seedHeaderV2, sk...)
+	digest := sha3.Sum256(seed)
 	checksum := digest[:seedChecksumLength]
-	packedSeed = append(packedSeed, checksum...)
+	seed = append(seed, checksum...)
 
-	seed := util.ToBase58(packedSeed)
+	base58EncodedSeed := util.ToBase58(seed)
 
-	return seed, nil
+	return base58EncodedSeed, nil
 }

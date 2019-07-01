@@ -124,7 +124,7 @@ func checkSeed(seed string, new bool, testnet bool) (string, error) {
 
 	if new && "" == seed {
 		var err error
-		seed, err = account.NewSeedV2(testnet)
+		seed, err = account.NewBase58EncodedSeedV2(testnet)
 		if nil != err {
 			return "", err
 		}
