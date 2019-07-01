@@ -269,7 +269,7 @@ func (pub *publisher) process() {
 	randomBytes := make([]byte, 8)
 	_, err = rand.Read(randomBytes)
 	if err != nil {
-		pub.log.Errorf("random number generate with error: %s", err)
+		pub.log.Criticalf("random number generate with error: %s", err)
 		logger.Panicf("random number generate with error: %s", err)
 	}
 	nonce := blockrecord.NonceType(binary.LittleEndian.Uint64(randomBytes))
