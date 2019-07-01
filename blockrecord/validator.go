@@ -61,8 +61,8 @@ func ValidHeaderVersion(currentVersion uint16, incomingVersion uint16) error {
 }
 
 // ValidBlockLinkage - valid incoming block linkage
-func ValidBlockLinkage(currentDigest blockdigest.Digest, incomingDigest blockdigest.Digest) error {
-	if currentDigest != incomingDigest {
+func ValidBlockLinkage(currentDigest blockdigest.Digest, incomingDigestOfPreviousBlock blockdigest.Digest) error {
+	if currentDigest != incomingDigestOfPreviousBlock {
 		return fault.ErrPreviousBlockDigestDoesNotMatch
 	}
 
