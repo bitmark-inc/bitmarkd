@@ -287,7 +287,7 @@ func TestHashrate(t *testing.T) {
 	// total bits of empty zero will 8+2 = 10 bits
 	// possible hashes for a correct one is pow(2, 10) = 1024 hashes
 	// expected time for a block is 120 seconds
-	// hash rate = hashes / time = 1024 / 120 = 8.533
-	expected := 8.533
+	// hash rate = hashes / time = 1024 / 120
+	expected := math.Floor((float64(1024)/120)*1000) / 1000
 	assert.Equal(t, expected, hashrate, "network hashrate")
 }
