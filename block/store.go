@@ -57,22 +57,20 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
 		return err
 	}
 
-	if blockrecord.IsDifficultyAppliedVersion(header.Version) {
-		if difficulty.IsAdjustBlock(header.Number) {
-			nextDifficulty, prevDifficulty, err := blockrecord.AdjustDifficultyAtBlock(header.Number)
-			// if any error happens for storing block, reset difficulty back to old value
-			defer func() {
-				if err != nil {
-					difficulty.Current.Set(prevDifficulty)
-				}
-			}()
-
+	if blockrecord.IsDifficultyAppliedVersion(header.Version) && difficulty.IsAdjustBlock(header.Number) {
+		nextDifficulty, prevDifficulty, err := blockrecord.AdjustDifficultyAtBlock(header.Number)
+		// if any error happens for storing block, reset difficulty back to old value
+		defer func(prevDifficulty float64) {
 			if err != nil {
-				globalData.log.Errorf("adjust difficulty with error: %s", err)
-				return err
+				difficulty.Current.Set(prevDifficulty)
 			}
-			globalData.log.Debugf("previous difficulty: %f, current difficulty: %f", prevDifficulty, nextDifficulty)
+		}(prevDifficulty)
+
+		if err != nil {
+			globalData.log.Errorf("adjust difficulty with error: %s", err)
+			return err
 		}
+		globalData.log.Debugf("previous difficulty: %f, current difficulty: %f", prevDifficulty, nextDifficulty)
 	}
 
 	if err := blockrecord.ValidIncomingDifficuty(header.Difficulty); err != nil {
