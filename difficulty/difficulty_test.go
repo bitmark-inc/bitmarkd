@@ -245,14 +245,14 @@ func TestReciprocal(t *testing.T) {
 
 func TestIsAdjustBlockWhenStrtInterval(t *testing.T) {
 	height := uint64(difficulty.AdjustTimespanInBlocks * 200000)
-	actual := difficulty.IsAdjustBlock(height)
-	assert.Equal(t, true, actual, "fail to check starting of difficulty timespan")
+	ok := difficulty.IsAdjustBlock(height)
+	assert.Equal(t, true, ok, "starting of difficulty timespan")
 }
 
 func TestIsAdjustBlockWhenMiddleInterval(t *testing.T) {
 	height := uint64(difficulty.AdjustTimespanInBlocks*200000 + 1)
-	actual := difficulty.IsAdjustBlock(height)
-	assert.Equal(t, false, actual, "fail to check middle of difficulty timespan")
+	ok := difficulty.IsAdjustBlock(height)
+	assert.Equal(t, false, ok, "middle of difficulty timespan")
 }
 
 func TestPrevTimespanBlockBeginAndEndWhenAtMiddle(t *testing.T) {
@@ -260,15 +260,15 @@ func TestPrevTimespanBlockBeginAndEndWhenAtMiddle(t *testing.T) {
 	begin, end := difficulty.PrevTimespanBlockBeginAndEnd(height)
 
 	assert.Equal(t, uint64(difficulty.AdjustTimespanInBlocks*3-1-difficulty.AdjustTimespanInBlocks), begin, "fail to get begin block")
-	assert.Equal(t, uint64(difficulty.AdjustTimespanInBlocks*3-1), end, "fail to get end block")
+	assert.Equal(t, uint64(difficulty.AdjustTimespanInBlocks*3-1), end, "get end block at middle")
 }
 
 func TestPrevTimespanBlockBeginAndEndWhenAtStart(t *testing.T) {
 	height := uint64(difficulty.AdjustTimespanInBlocks * 3)
-	start, end := difficulty.PrevTimespanBlockBeginAndEnd(height)
+	begin, end := difficulty.PrevTimespanBlockBeginAndEnd(height)
 
-	assert.Equal(t, uint64(difficulty.AdjustTimespanInBlocks*3-1-difficulty.AdjustTimespanInBlocks), start, "fail to get begin block")
-	assert.Equal(t, uint64(difficulty.AdjustTimespanInBlocks*3-1), end, "fail to get end block")
+	assert.Equal(t, uint64(difficulty.AdjustTimespanInBlocks*3-1-difficulty.AdjustTimespanInBlocks), begin, "fail to get begin block")
+	assert.Equal(t, uint64(difficulty.AdjustTimespanInBlocks*3-1), end, "get end block at start")
 }
 
 func TestPrevTimespanBlockBeginAndEndWhenInFirstTimespan(t *testing.T) {
@@ -276,12 +276,12 @@ func TestPrevTimespanBlockBeginAndEndWhenInFirstTimespan(t *testing.T) {
 	begin, end := difficulty.PrevTimespanBlockBeginAndEnd(height)
 
 	assert.Equal(t, uint64(2), begin, "fail to get begin block")
-	assert.Equal(t, uint64(difficulty.AdjustTimespanInBlocks-1), end, "fail to get end block")
+	assert.Equal(t, uint64(difficulty.AdjustTimespanInBlocks-1), end, "get end block in first timespan")
 }
 
 func TestHashrate(t *testing.T) {
 	difficulty.Current.Set(4)
-	actual := difficulty.Hashrate()
+	hashrate := difficulty.Hashrate()
 
 	// difficulty 4, log2(4) = 2
 	// total bits of empty zero will 8+2 = 10 bits
@@ -289,5 +289,5 @@ func TestHashrate(t *testing.T) {
 	// expected time for a block is 120 seconds
 	// hash rate = hashes / time = 1024 / 120 = 8.533
 	expected := 8.533
-	assert.Equal(t, expected, actual, "error calculate network hashrate")
+	assert.Equal(t, expected, hashrate, "network hashrate")
 }

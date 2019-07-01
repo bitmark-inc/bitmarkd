@@ -195,7 +195,7 @@ func TestIsValidByDifficultyWhenValid(t *testing.T) {
 	diff.Set(2)
 
 	actual := digest.IsValidByDifficulty(diff)
-	assert.Equal(t, true, actual, "valid digest cannot be validated by difficulty")
+	assert.Equal(t, true, actual, "valid digest by difficulty")
 }
 
 func TestIsValidByDifficultyWhenInValid(t *testing.T) {
@@ -213,6 +213,6 @@ func TestIsValidByDifficultyWhenInValid(t *testing.T) {
 	diff := difficulty.New()
 	diff.Set(2)
 
-	actual := digest.IsValidByDifficulty(diff)
-	assert.Equal(t, false, actual, "invalid digest cannot be validated by difficulty")
+	ok := digest.IsValidByDifficulty(diff)
+	assert.Equal(t, false, ok, "invalid digest by difficulty")
 }
