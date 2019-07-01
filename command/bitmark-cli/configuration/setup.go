@@ -129,8 +129,8 @@ func (config *Configuration) AddIdentity(name string, description string, seed s
 	return nil
 }
 
-// AddIdentityRO - store public-only identity
-func (config *Configuration) AddIdentityRO(name string, description string, acc string) error {
+// AddReceiveOnlyIdentity - store public-only identity
+func (config *Configuration) AddReceiveOnlyIdentity(name string, description string, acc string) error {
 
 	if _, ok := config.Identities[name]; ok {
 		return fault.ErrIdentityNameAlreadyExists

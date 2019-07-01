@@ -53,7 +53,7 @@ func runSetup(c *cli.Context) error {
 	configDir := path.Dir(m.file)
 	d, err := checkFileExists(configDir)
 	if nil != err {
-		if err := os.MkdirAll(configDir, 0750); nil != err {
+		if err = os.MkdirAll(configDir, 0750); nil != err {
 			return err
 		}
 	} else if !d {
@@ -69,11 +69,10 @@ func runSetup(c *cli.Context) error {
 
 	password := c.GlobalString("password")
 	if "" == password {
-		p, err := promptNewPassword()
+		password, err = promptNewPassword()
 		if nil != err {
 			return err
 		}
-		password = p
 	}
 
 	err = config.AddIdentity(name, description, seed, password)

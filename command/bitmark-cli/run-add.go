@@ -48,11 +48,10 @@ func runAdd(c *cli.Context) error {
 
 		password := c.GlobalString("password")
 		if "" == password {
-			p, err := promptNewPassword()
+			password, err = promptNewPassword()
 			if nil != err {
 				return err
 			}
-			password = p
 		}
 
 		err = m.config.AddIdentity(name, description, seed, password)
@@ -61,7 +60,7 @@ func runAdd(c *cli.Context) error {
 		}
 
 	} else if "" == seed && "" != acc && !new {
-		err = m.config.AddIdentityRO(name, description, acc)
+		err = m.config.AddReceiveOnlyIdentity(name, description, acc)
 		if nil != err {
 			return err
 		}
