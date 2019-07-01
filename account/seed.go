@@ -146,13 +146,11 @@ func PrivateKeyFromBase58Seed(seedBase58Encoded string) (*PrivateKey, error) {
 func NewBase58EncodedSeedV1(testnet bool) (string, error) {
 	// generate new seed
 	sk := make([]byte, secretKeyV1Length)
-	n, err := rand.Read(sk)
+	_, err := rand.Read(sk)
 	if nil != err {
 		return "", err
 	}
-	if secretKeyV1Length != n {
-		return "", fmt.Errorf("got: %d bytes, expected: %d bytes", n, secretKeyV1Length)
-	}
+
 	net := 0x00
 	if testnet {
 		net = 0x01
@@ -172,13 +170,9 @@ func NewBase58EncodedSeedV2(testnet bool) (string, error) {
 	// space for 128 bit, extend to 132 bit later
 	sk := make([]byte, secretKeyV2EntropyLength, secretKeyV2Length)
 
-	n, err := rand.Read(sk)
+	_, err := rand.Read(sk)
 	if nil != err {
 		return "", err
-	}
-
-	if secretKeyV2EntropyLength != n {
-		return "", fmt.Errorf("got: %d bytes, expected: %d bytes", n, secretKeyV2EntropyLength)
 	}
 
 	// extend to 132 bits
