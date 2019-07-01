@@ -10,18 +10,22 @@ import (
 )
 
 const (
-	blockTimeSpacingV1 = 240 * 60
-	blockTimeSpacingV2 = 10 * 60
+	blockTimeSpacingInitial = 240 * 60
+	blockTimeSpacingCurrent = 10 * 60
+
+	initiailVersion              = 1
+	modififiedTimeSpacingVersion = 2
+	difficultyAppliedVersion     = 3
 )
 
 // ValidBlockTimeSpacingAtVersion - valid block time spacing based on different version
 func ValidBlockTimeSpacingAtVersion(version uint16, timeSpacing uint64) bool {
-	if version == 1 {
-		return timeSpacing <= blockTimeSpacingV1
+	if version == initiailVersion {
+		return timeSpacing <= blockTimeSpacingInitial
 	}
 
-	if version >= 2 {
-		return timeSpacing <= blockTimeSpacingV2
+	if version >= modififiedTimeSpacingVersion {
+		return timeSpacing <= blockTimeSpacingCurrent
 	}
 
 	return false
@@ -34,5 +38,5 @@ func ValidIncomingDifficuty(incoming *difficulty.Difficulty) bool {
 
 // ValidDifficultyAppliedVersion - is difficulty rule applied at header version
 func ValidDifficultyAppliedVersion(version uint16) bool {
-	return version >= 3
+	return version >= difficultyAppliedVersion
 }
