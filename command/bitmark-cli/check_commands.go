@@ -128,9 +128,8 @@ func checkSeed(seed string, new bool, testnet bool) (string, error) {
 		if nil != err {
 			return "", err
 		}
-	} else if strings.HasPrefix(seed, "SEED:") {
-		seed = seed[5:]
 	}
+	seed = strings.TrimPrefix(seed, "SEED:")
 
 	// failed to get a seed
 	if "" == seed {
