@@ -191,6 +191,7 @@ func main() {
 
 	log.Info("initialise blockrecord")
 	blockrecord.Initialise()
+	defer blockrecord.Finalise()
 
 	// block data storage - depends on storage and mode
 	log.Info("initialise block")

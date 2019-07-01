@@ -86,6 +86,12 @@ func Initialise() {
 	log.Info("starting")
 }
 
+// Finalise - shutdown blockrecord logger
+func Finalise() {
+	log.Info("shutting down")
+	log.Flush()
+}
+
 // ExtractHeader - extract a header from the front of a []byte
 // if checkHeight non-zero then verify correct block number first
 // to reduce hashing load for obviously incorrect blocks
