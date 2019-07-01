@@ -54,7 +54,7 @@ outer_loop:
 
 			nextDifficulty, prevDifficulty, err := blockrecord.AdjustDifficultyAtBlock(header.Number)
 			if err != nil {
-				log.Criticalf("failed to adjust difficulty with error: %s", err)
+				log.Errorf("failed to adjust difficulty with error: %s", err)
 				return err
 			}
 			log.Infof("set new difficulty to %f, previous difficulty %f", nextDifficulty, prevDifficulty)
