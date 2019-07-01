@@ -57,7 +57,7 @@ outer_loop:
 				log.Criticalf("failed to adjust difficulty with error: %s", err)
 				return err
 			}
-			log.Infof("set new difficulty to %f, prevouis difficulty %f", nextDifficulty, prevDifficulty)
+			log.Infof("set new difficulty to %f, previous difficulty %f", nextDifficulty, prevDifficulty)
 			return nil
 		}
 

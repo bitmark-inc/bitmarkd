@@ -215,11 +215,11 @@ func FoundationTxId(header *Header, digest blockdigest.Digest) merkle.Digest {
 func AdjustDifficultyAtBlock(height uint64) (float64, float64, error) {
 	currentDifficulty := difficulty.Current.Value()
 	nextDifficulty, err := DifficultyByPreviousTimespanAtBlock(height)
-	log.Debugf("adjust difficulty at block %d, current difficulty: %f, new difficulty: %f", height, currentDifficulty, nextDifficulty)
 	if err != nil {
 		log.Errorf("get difficulty value with error: %s", err)
 		return float64(0), currentDifficulty, err
 	}
+	log.Debugf("adjust difficulty at block %d, current difficulty: %f, new difficulty: %f", height, currentDifficulty, nextDifficulty)
 	difficulty.Current.Set(nextDifficulty)
 	return nextDifficulty, currentDifficulty, nil
 }
@@ -267,7 +267,7 @@ func prevDifficultyBaseAtBlock(height uint64) (float64, error) {
 func prevDifficultyTimespan(height uint64) (uint64, error) {
 	beginBlock, endBlock := difficulty.PrevTimespanBlockBeginAndEnd(height)
 	log.Debugf("height %d, timespan from block %d - %d", height, beginBlock, endBlock)
-	duration, err := timespnaOfBlockFromBeginToEnd(beginBlock, endBlock)
+	duration, err := timespanOfBlockFromBeginToEnd(beginBlock, endBlock)
 	if err != nil {
 		log.Errorf("get timespan from block %d - %d with error: %s", beginBlock, endBlock, err)
 		return uint64(0), err
@@ -275,7 +275,7 @@ func prevDifficultyTimespan(height uint64) (uint64, error) {
 	return duration, nil
 }
 
-func timespnaOfBlockFromBeginToEnd(beginBlock uint64, endBlock uint64) (uint64, error) {
+func timespanOfBlockFromBeginToEnd(beginBlock uint64, endBlock uint64) (uint64, error) {
 	beginTime, err := timestampOfBlock(beginBlock)
 	if err != nil {
 		log.Errorf("block %d timestamp with error: %s", beginBlock, err)

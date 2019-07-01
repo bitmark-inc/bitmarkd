@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	blockTimeSpacingInitial = 240 * 60
-	blockTimeSpacingCurrent = 10 * 60
+	blockTimeSpacingInitialInSecond = 240 * 60
+	blockTimeSpacingCurrentInSecond = 10 * 60
 
 	initialVersion             = 1
 	modifiedTimeSpacingVersion = 2
@@ -22,11 +22,11 @@ const (
 
 // ValidBlockTimeSpacingAtVersion - valid block time spacing based on different version
 func ValidBlockTimeSpacingAtVersion(version uint16, timeSpacing uint64) error {
-	if version == initialVersion && timeSpacing > blockTimeSpacingInitial {
+	if version == initialVersion && timeSpacing > blockTimeSpacingInitialInSecond {
 		return fault.ErrInvalidBlockHeaderTimestamp
 	}
 
-	if version >= modifiedTimeSpacingVersion && timeSpacing > blockTimeSpacingCurrent {
+	if version >= modifiedTimeSpacingVersion && timeSpacing > blockTimeSpacingCurrentInSecond {
 		return fault.ErrInvalidBlockHeaderTimestamp
 	}
 
