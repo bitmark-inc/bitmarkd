@@ -13,21 +13,22 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/bitmark-inc/bitmarkd/difficulty/filters"
 	"github.com/bitmark-inc/logger"
 )
 
 // the default values
 const (
-	OneUint64         uint64  = 0x00ffffffffffffff
-	MinimumReciprocal float64 = 1.0
+	OneUint64                     uint64  = 0x00ffffffffffffff
+	minimumReciprocal             float64 = 1.0
+	ExpectedBlockSpacingInSecond          = 2 * 60
+	AdjustTimespanInBlocks                = 200
+	adjustTimespanInSecond                = ExpectedBlockSpacingInSecond * AdjustTimespanInBlocks
+	nextDifficultyRatioUpperbound         = 4
+	nextDifficultyRaioLowerbound          = 0.25
+	firstBlock                            = 2
+	minMutiplyOfTimespanPeriod            = 2
+	defaultEmptyBits                      = 8
 )
-
-// HalfLife - number of block times to decay the difficulty by 50%
-const HalfLife = 100
-
-// the decay constant
-const decayLambda float64 = math.Ln2 / HalfLife
 
 // Difficulty - Type for difficulty
 //
@@ -41,11 +42,10 @@ const decayLambda float64 = math.Ln2 / HalfLife
 //   value: 01 ff  ff ff  ff ff  ff ff
 //   represents the 256 bit value: 007f ffff ffff ffff c000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000
 type Difficulty struct {
-	m          *sync.RWMutex  // pointer since MarshallJSON is pass by value
-	big        big.Int        // master value 256 bit integer expanded from bits
-	reciprocal float64        // cache: floating point reciprocal difficulty
-	bits       uint64         // cache: compat difficulty (encoded value)
-	filter     filters.Filter // filter for difficulty auto-adjust
+	m          *sync.RWMutex // pointer since MarshallJSON is pass by value
+	big        big.Int       // master value 256 bit integer expanded from bits
+	reciprocal float64       // cache: floating point reciprocal difficulty
+	bits       uint64        // cache: compat difficulty (encoded value)
 }
 
 // Current - current difficulty
@@ -58,13 +58,6 @@ var constOne = []byte{
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 }
-
-// var constOne = []byte{
-// 	0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-// 	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-// 	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-// 	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-// }
 
 var one big.Int        // for reciprocal calculation
 var floatOne big.Float // for reciprocal calculation
@@ -83,9 +76,9 @@ func New() *Difficulty {
 	return d.internalReset()
 }
 
-// Reciprocal - Get 1/difficulty as normal floating-point value
-// this is the Pdiff value
-func (difficulty *Difficulty) Reciprocal() float64 {
+// Value - difficulty value (floating point, it's Pdiff value)
+// This value is a reciprocal, difficulty.value = 1 / difficulty.bits
+func (difficulty *Difficulty) Value() float64 {
 	difficulty.m.RLock()
 	defer difficulty.m.RUnlock()
 	return difficulty.reciprocal
@@ -124,11 +117,8 @@ func (difficulty *Difficulty) internalReset() *Difficulty {
 	if nil == difficulty.m {
 		difficulty.m = new(sync.RWMutex)
 	}
-	if nil == difficulty.filter {
-		difficulty.filter = filters.NewCamm(MinimumReciprocal, 21, 41)
-	}
 	difficulty.big.Set(&one)
-	difficulty.reciprocal = MinimumReciprocal
+	difficulty.reciprocal = minimumReciprocal
 	difficulty.bits = OneUint64
 	return difficulty
 }
@@ -172,16 +162,16 @@ func (difficulty *Difficulty) SetBits(u uint64) *Difficulty {
 	return difficulty
 }
 
-// SetReciprocal - set the difficulty value from a reciprocal value
-func (difficulty *Difficulty) SetReciprocal(f float64) {
+// Set - set difficulty value
+func (difficulty *Difficulty) Set(f float64) {
 	difficulty.m.Lock()
 	defer difficulty.m.Unlock()
-	difficulty.internalSetReciprocal(f)
+	difficulty.convertDifficultyIntoReciprocal(f)
 }
 
 // ensure write locked before calling this
-func (difficulty *Difficulty) internalSetReciprocal(f float64) float64 {
-	if f < MinimumReciprocal {
+func (difficulty *Difficulty) convertDifficultyIntoReciprocal(f float64) float64 {
+	if f < minimumReciprocal {
 		difficulty.internalReset()
 		return difficulty.reciprocal
 	}
@@ -201,7 +191,7 @@ func (difficulty *Difficulty) internalSetReciprocal(f float64) float64 {
 	buffer := d.Bytes() // no more than 32 bytes (256 bits)
 
 	if len(buffer) > 32 {
-		logger.Criticalf("difficulty.internalSetReciprocal(%g) invalid value", f)
+		logger.Criticalf("difficulty.convertDifficultyIntoReciprocal(%g) invalid value", f)
 		logger.Panic("difficulty.SetBits: failed - needs more than 256 bits")
 	}
 
@@ -282,41 +272,6 @@ func (difficulty *Difficulty) SetBytes(b []byte) *Difficulty {
 	return difficulty.SetBits(u)
 }
 
-// Adjust - adjustment based on error from desired cycle time
-// call as difficulty.Adjust(expectedMinutes, actualMinutes)
-func (difficulty *Difficulty) Adjust(expectedMinutes float64, actualMinutes float64) float64 {
-	difficulty.m.Lock()
-	defer difficulty.m.Unlock()
-
-	// if k > 1 then difficulty is too low
-	k := expectedMinutes / actualMinutes
-
-	newReciprocal := k * difficulty.reciprocal
-
-	// protect against underflow
-	if newReciprocal < MinimumReciprocal {
-		newReciprocal = MinimumReciprocal
-	}
-
-	// compute filter
-	newReciprocal = difficulty.filter.Process(newReciprocal)
-
-	// adjust difficulty
-	return difficulty.internalSetReciprocal(newReciprocal)
-}
-
-// Decay - exponential decay of difficulty
-// call each expected block period to decay the current difficulty
-func (difficulty *Difficulty) Decay() float64 {
-	difficulty.m.Lock()
-	defer difficulty.m.Unlock()
-
-	newReciprocal := difficulty.reciprocal - decayLambda*difficulty.reciprocal
-
-	// adjust difficulty
-	return difficulty.internalSetReciprocal(newReciprocal)
-}
-
 // MarshalText - convert a difficulty to little endian hex for JSON
 func (difficulty Difficulty) MarshalText() ([]byte, error) {
 
@@ -339,4 +294,62 @@ func (difficulty *Difficulty) UnmarshalText(s []byte) error {
 	difficulty.internalReset()
 	difficulty.SetBytes(buffer)
 	return nil
+}
+
+// NextDifficultyByPreviousTimespan - next difficulty calculated by previous timespan
+func NextDifficultyByPreviousTimespan(prevTimespanSecond uint64, currentDifficulty float64) float64 {
+	ratio := adjustRatioByLastTimespan(prevTimespanSecond)
+
+	nextDifficulty := ratio * currentDifficulty
+
+	if nextDifficulty < minimumReciprocal {
+		nextDifficulty = minimumReciprocal
+	}
+
+	return nextDifficulty
+}
+
+func adjustRatioByLastTimespan(actualTimespanSecond uint64) float64 {
+	if actualTimespanSecond>>2 >= adjustTimespanInSecond {
+		return nextDifficultyRatioUpperbound
+	}
+
+	if actualTimespanSecond<<2 <= adjustTimespanInSecond {
+		return nextDifficultyRaioLowerbound
+	}
+	return float64(adjustTimespanInSecond) / float64(actualTimespanSecond)
+}
+
+// IsAdjustBlock - is block the one to adjust difficulty
+func IsAdjustBlock(height uint64) bool {
+	return height%AdjustTimespanInBlocks == 0
+}
+
+// PrevTimespanBlockBeginAndEnd - previous begin & end block of difficulty timespan
+func PrevTimespanBlockBeginAndEnd(height uint64) (uint64, uint64) {
+	if remainder := height % AdjustTimespanInBlocks; remainder != 0 {
+		return prevBeginBlockWhenAtBeginOfNextTimespan(height - remainder)
+	}
+	return prevBeginBlockWhenAtBeginOfNextTimespan(height)
+}
+
+func prevBeginBlockWhenAtBeginOfNextTimespan(height uint64) (uint64, uint64) {
+	quotient := height / AdjustTimespanInBlocks
+	if quotient >= minMutiplyOfTimespanPeriod {
+		return height - 1 - AdjustTimespanInBlocks, height - 1
+	}
+
+	// below calculation only fits when adjust period in blocks larger than 2
+	end := AdjustTimespanInBlocks - 1
+	if end <= firstBlock {
+		end = AdjustTimespanInBlocks
+	}
+	return uint64(firstBlock), uint64(end)
+}
+
+// Hashrate - calculate hashrate from current difficulty, round value to decimal with 3 digits
+func Hashrate() float64 {
+	zeroBitCount := math.Floor(defaultEmptyBits + math.Log2(Current.Value()))
+	rate := math.Pow(2, zeroBitCount) / ExpectedBlockSpacingInSecond
+	return math.Floor(rate*1000) / 1000
 }

@@ -7,7 +7,6 @@ package blockrecord
 
 import (
 	"encoding/binary"
-	"math/big"
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
@@ -15,6 +14,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/storage"
+	"github.com/bitmark-inc/logger"
 )
 
 // PackedHeader - use fixed size byte array for header to simplify
@@ -26,9 +26,10 @@ type PackedBlock []byte
 
 // currently supported block version (used by proofer)
 const (
-	Version            = 2
-	MinimumVersion     = 1
-	MinimumBlockNumber = 2 // 1 => genesis block
+	Version                    = 3
+	MinimumVersion             = 1
+	MinimumBlockNumber         = 2 // 1 => genesis block
+	MinimumDifficultyBaseBlock = 3
 )
 
 // maximum transactions in a block
@@ -77,6 +78,20 @@ type Header struct {
 	Nonce            NonceType              `json:"nonce"`
 }
 
+var log *logger.L
+
+// Initialise - initialize
+func Initialise() {
+	log = logger.New("blockrecord")
+	log.Info("starting")
+}
+
+// Finalise - shutdown blockrecord logger
+func Finalise() {
+	log.Info("shutting down")
+	log.Flush()
+}
+
 // ExtractHeader - extract a header from the front of a []byte
 // if checkHeight non-zero then verify correct block number first
 // to reduce hashing load for obviously incorrect blocks
@@ -108,22 +123,7 @@ func ExtractHeader(block []byte, checkHeight uint64) (*Header, blockdigest.Diges
 		digest = blockdigest.NewDigest(packedHeader[:])
 	}
 
-	blockDifficulty := header.Difficulty.BigInt()
-	currentDifficulty := difficulty.Current.BigInt()
-
-	n := big.NewInt(10) // range ± N%
-	l := big.NewInt(0)
-	h := big.NewInt(0)
-	h.Quo(currentDifficulty, n)
-	l.Sub(currentDifficulty, h) // current - N%
-	h.Add(currentDifficulty, h) // current + N%
-
-	if blockDifficulty.Cmp(l) < 0 || blockDifficulty.Cmp(h) > 0 || digest.Cmp(blockDifficulty) > 0 {
-		return nil, blockdigest.Digest{}, nil, fault.ErrInvalidBlockHeaderDifficulty
-	}
-
 	return header, digest, block[totalBlockSize:], nil
-
 }
 
 // ComputeHeaderHash - return the hash of a block's header
@@ -215,4 +215,125 @@ func FoundationTxId(header *Header, digest blockdigest.Digest) merkle.Digest {
 	leBlockNumber := make([]byte, 8)
 	binary.LittleEndian.PutUint64(leBlockNumber, header.Number)
 	return merkle.NewDigest(append(digest[:], leBlockNumber...))
+}
+
+// AdjustDifficultyAtBlock - adjust difficulty at block, returns next difficulty, current difficulty, error
+func AdjustDifficultyAtBlock(height uint64) (float64, float64, error) {
+	currentDifficulty := difficulty.Current.Value()
+	nextDifficulty, err := DifficultyByPreviousTimespanAtBlock(height)
+	if err != nil {
+		log.Errorf("get difficulty value with error: %s", err)
+		return float64(0), currentDifficulty, err
+	}
+	log.Debugf("adjust difficulty at block %d, current difficulty: %f, new difficulty: %f", height, currentDifficulty, nextDifficulty)
+	difficulty.Current.Set(nextDifficulty)
+	return nextDifficulty, currentDifficulty, nil
+}
+
+// DifficultyByPreviousTimespanAtBlock - next difficulty value by previous timespan
+func DifficultyByPreviousTimespanAtBlock(height uint64) (float64, error) {
+	actualTimespan, err := prevDifficultyTimespan(height)
+	if err != nil {
+		return float64(0), err
+	}
+	prevDifficulty, err := prevDifficultyBaseAtBlock(height)
+	log.Infof(
+		"previous difficulty %f, expect timespan %d seconds, actual timespan %d seconds",
+		prevDifficulty,
+		difficulty.ExpectedBlockSpacingInSecond*difficulty.AdjustTimespanInBlocks,
+		actualTimespan,
+	)
+	if err != nil {
+		return float64(0), err
+	}
+	return difficulty.NextDifficultyByPreviousTimespan(actualTimespan, prevDifficulty), nil
+}
+
+func prevDifficultyBaseAtBlock(height uint64) (float64, error) {
+	var baseBlockHeight uint64
+	if difficulty.IsAdjustBlock(height) {
+		baseBlockHeight = height - 1
+	} else {
+		baseBlockHeight = height - difficulty.AdjustTimespanInBlocks
+	}
+
+	// in case some block start from initial
+	if baseBlockHeight <= MinimumBlockNumber || height <= difficulty.AdjustTimespanInBlocks {
+		baseBlockHeight = MinimumDifficultyBaseBlock
+	}
+
+	diff, err := difficultyOfBlock(baseBlockHeight)
+	log.Debugf("block %d difficulty %f", baseBlockHeight, diff)
+	if err != nil {
+		return float64(0), err
+	}
+	return diff, nil
+}
+
+func prevDifficultyTimespan(height uint64) (uint64, error) {
+	beginBlock, endBlock := difficulty.PrevTimespanBlockBeginAndEnd(height)
+	log.Debugf("height %d, timespan from block %d - %d", height, beginBlock, endBlock)
+	duration, err := timespanOfBlockFromBeginToEnd(beginBlock, endBlock)
+	if err != nil {
+		log.Errorf("get timespan from block %d - %d with error: %s", beginBlock, endBlock, err)
+		return uint64(0), err
+	}
+	return duration, nil
+}
+
+func timespanOfBlockFromBeginToEnd(beginBlock uint64, endBlock uint64) (uint64, error) {
+	beginTime, err := timestampOfBlock(beginBlock)
+	if err != nil {
+		log.Errorf("block %d timestamp with error: %s", beginBlock, err)
+		return uint64(0), err
+	}
+	log.Debugf("block %d timestamp %d", beginBlock, beginTime)
+
+	endTime, err := timestampOfBlock(endBlock)
+	if err != nil {
+		log.Errorf("block %d timestamp with error: %s", endBlock, err)
+		return uint64(0), err
+	}
+	log.Debugf("block %d timestamp %d", endBlock, endTime)
+
+	if endTime <= beginTime {
+		log.Error("block end time earlier than block begin time")
+		return uint64(0), fault.ErrDifficultyTimespan
+	}
+
+	return endTime - beginTime, nil
+}
+
+func timestampOfBlock(height uint64) (uint64, error) {
+	blockKey := make([]byte, 8)
+	binary.BigEndian.PutUint64(blockKey, height)
+
+	packed := storage.Pool.Blocks.Get(blockKey)
+	if nil == packed {
+		return uint64(0), fault.ErrBlockNotFound
+	}
+
+	header, _, _, err := ExtractHeader(packed, 0)
+	if err != nil {
+		return uint64(0), err
+	}
+
+	return header.Timestamp, nil
+}
+
+func difficultyOfBlock(height uint64) (float64, error) {
+	blockKey := make([]byte, 8)
+	binary.BigEndian.PutUint64(blockKey, height)
+
+	packed := storage.Pool.Blocks.Get(blockKey)
+	if nil == packed {
+		return float64(0), fault.ErrBlockNotFound
+	}
+
+	header, _, _, err := ExtractHeader(packed, 0)
+	if err != nil {
+		return float64(0), err
+	}
+
+	return header.Difficulty.Value(), nil
 }

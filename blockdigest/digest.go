@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/go-argon2"
 	"github.com/bitmark-inc/logger"
@@ -58,6 +59,14 @@ func (digest Digest) Cmp(difficulty *big.Int) int {
 	bigEndian := reversed(digest)
 	result := new(big.Int)
 	return result.SetBytes(bigEndian[:]).Cmp(difficulty)
+}
+
+// IsValidByDifficulty - is digest valid by difficulty
+func (d Digest) IsValidByDifficulty(diff *difficulty.Difficulty) bool {
+	reversedDigest := reversed(d)
+	bigEndian := new(big.Int)
+	bigEndian.SetBytes(reversedDigest[:])
+	return bigEndian.Cmp(diff.BigInt()) <= 0
 }
 
 func (d Digest) SmallerDigestThan(target Digest) bool {

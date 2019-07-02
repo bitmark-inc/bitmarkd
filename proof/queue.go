@@ -14,6 +14,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/logger"
 )
 
 // PublishedItem - to send to proofer
@@ -80,7 +81,7 @@ func enqueueToJobQueue(item *PublishedItem, txdata []byte) {
 	jobQueue.Unlock()
 }
 
-func matchToJobQueue(received *SubmittedItem) (success bool) {
+func matchToJobQueue(received *SubmittedItem, log *logger.L) (success bool) {
 	jobQueue.Lock()
 	defer jobQueue.Unlock()
 
@@ -114,12 +115,14 @@ search:
 		ph := entry.item.Header.Pack()
 		digest := ph.Digest()
 
-		// get current difficulty
-		difficulty := entry.item.Header.Difficulty.BigInt()
+		diff := entry.item.Header.Difficulty
+		log.Debugf("incoming block difficulty: %f", diff.Value())
 
-		if digest.Cmp(difficulty) > 0 {
+		if !digest.IsValidByDifficulty(diff) {
+			log.Infof("digest %s, difficulty %064x, digest not match difficulty criteria", digest.String(), diff.BigInt())
 			return
 		}
+
 		packedBlock := ph[:] //make([]byte,len(ph)+len(entry.item.Base)+len(entry.transactions))
 		packedBlock = append(packedBlock, entry.item.TxZero...)
 		packedBlock = append(packedBlock, entry.transactions...)

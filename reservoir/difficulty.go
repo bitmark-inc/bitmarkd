@@ -52,6 +52,6 @@ func ScaledDifficulty(count int) *difficulty.Difficulty {
 	if mode.IsTesting() {
 		initialDifficulty = initialTestingDifficulty
 	}
-	d.SetReciprocal(float64(count) * initialDifficulty * factor)
+	d.Set(float64(count) * initialDifficulty * factor)
 	return d
 }

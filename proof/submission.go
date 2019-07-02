@@ -135,7 +135,7 @@ func (sub *submission) process(socket *zmq.Socket) {
 
 		log.Infof("received message: %v", request)
 
-		ok = matchToJobQueue(&request)
+		ok = matchToJobQueue(&request, log)
 
 		log.Infof("maches: %v", ok)
 	}

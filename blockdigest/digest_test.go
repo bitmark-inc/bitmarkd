@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
+	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -180,4 +181,38 @@ func TestSmallerDigest(t *testing.T) {
 
 	actual = smallerDigest.SmallerDigestThan(largerDigest)
 	assert.Equal(t, true, actual, "smaller digest compared wrong")
+}
+
+func TestIsValidByDifficultyWhenValid(t *testing.T) {
+	digest := blockdigest.Digest{
+		0x8d, 0xbe, 0xc8, 0x88, 0xe5, 0xf1, 0x27, 0x13,
+		0xa2, 0x8b, 0x0f, 0x4a, 0xd2, 0xcf, 0x94, 0xd7,
+		0xf5, 0x6f, 0xb7, 0x1b, 0xd1, 0x74, 0xe1, 0x16,
+		0xf4, 0x43, 0x69, 0x26, 0xd9, 0x28, 0x0c, 0x00,
+	}
+
+	diff := difficulty.New()
+	diff.Set(2)
+
+	actual := digest.IsValidByDifficulty(diff)
+	assert.Equal(t, true, actual, "valid digest by difficulty")
+}
+
+func TestIsValidByDifficultyWhenInValid(t *testing.T) {
+	digest := blockdigest.Digest{
+		0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff,
+		0x11, 0x11, 0x11, 0x11,
+		0x11, 0x11, 0x11, 0x11,
+		0x11, 0x11, 0x11, 0x11,
+		0x11, 0x11, 0x11, 0x11,
+		0x11, 0x11, 0x11, 0x11,
+		0xff, 0xff, 0xff, 0x00,
+	}
+
+	diff := difficulty.New()
+	diff.Set(2)
+
+	ok := digest.IsValidByDifficulty(diff)
+	assert.Equal(t, false, ok, "invalid digest by difficulty")
 }
