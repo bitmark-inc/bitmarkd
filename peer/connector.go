@@ -383,6 +383,9 @@ func (conn *connector) runStateMachine() bool {
 			log.Infof("new chain from %s, height %d, digest %x", conn.theClient.Name(), conn.height, conn.theClient.CachedRemoteDigestOfLocalHeight())
 			log.Info("enter fork detect state")
 			conn.nextState()
+		} else if conn.isSameChain() {
+			log.Info("remote same chain")
+			conn.toState(cStateRebuild)
 		} else {
 			log.Info("remote chain invalid, stop looping for now")
 			continueLooping = false
@@ -527,9 +530,27 @@ func (conn *connector) runStateMachine() bool {
 	return continueLooping
 }
 
+func (c *connector) isSameChain() bool {
+	if c.theClient == nil {
+		c.log.Debug("remote client empty")
+		return false
+	}
+
+	localDigest, err := blockheader.DigestForBlock(blockheader.Height())
+	if nil != err {
+		return false
+	}
+
+	if c.height == blockheader.Height() && c.theClient.CachedRemoteDigestOfLocalHeight() == localDigest {
+		return true
+	}
+
+	return false
+}
+
 func (c *connector) hasBetterChain(localHeight uint64) bool {
 	if c.theClient == nil {
-		c.log.Info("remote client empty")
+		c.log.Debug("remote client empty")
 		return false
 	}
 
@@ -551,7 +572,7 @@ func (c *connector) hasSamllerDigestThanLocal(localHeight uint64) bool {
 	remoteDigest := c.theClient.CachedRemoteDigestOfLocalHeight()
 	// if upstream update during processing
 	if c.theClient.LocalHeight() != localHeight {
-		c.log.Warnf("remote height %d is different than local height %d")
+		c.log.Warnf("remote height %d is different than local height %d", c.theClient.LocalHeight(), localHeight)
 		return false
 	}
 
