@@ -10,8 +10,9 @@ import (
 
 	"golang.org/x/crypto/ed25519"
 
+	"github.com/bitmark-inc/bitmarkd/account"
+	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/keypair"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/rpc"
@@ -22,17 +23,17 @@ import (
 type SwapData struct {
 	ShareIdOne  string
 	QuantityOne uint64
-	OwnerOne    *keypair.KeyPair
+	OwnerOne    *configuration.Private
 	ShareIdTwo  string
 	QuantityTwo uint64
-	OwnerTwo    *keypair.KeyPair
+	OwnerTwo    *account.Account
 	BeforeBlock uint64
 }
 
 // SwapCountersignData - data for countersigning
 type SwapCountersignData struct {
 	Swap      string
-	Recipient *keypair.KeyPair
+	Recipient *configuration.Private
 }
 
 // SwapReply - JSON data to output after swap completes
@@ -125,25 +126,24 @@ func (client *Client) CountersignSwap(swap *transactionrecord.ShareSwap) (*SwapR
 	return &response, nil
 }
 
-func makeSwapOneSignature(testnet bool, shareIdOne merkle.Digest, quantityOne uint64, ownerOne *keypair.KeyPair, shareIdTwo merkle.Digest, quantityTwo uint64, ownerTwo *keypair.KeyPair, beforeBlock uint64) ([]byte, *transactionrecord.ShareSwap, error) {
+func makeSwapOneSignature(testnet bool, shareIdOne merkle.Digest, quantityOne uint64, ownerOne *configuration.Private, shareIdTwo merkle.Digest, quantityTwo uint64, ownerTwo *account.Account, beforeBlock uint64) ([]byte, *transactionrecord.ShareSwap, error) {
 
-	ownerOneAddress := makeAddress(ownerOne, testnet)
-	ownerTwoAddress := makeAddress(ownerTwo, testnet)
+	ownerOneAccount := ownerOne.PrivateKey.Account()
 
 	r := transactionrecord.ShareSwap{
 		ShareIdOne:       shareIdOne,
 		QuantityOne:      quantityOne,
-		OwnerOne:         ownerOneAddress,
+		OwnerOne:         ownerOneAccount,
 		ShareIdTwo:       shareIdTwo,
 		QuantityTwo:      quantityTwo,
-		OwnerTwo:         ownerTwoAddress,
+		OwnerTwo:         ownerTwo,
 		BeforeBlock:      beforeBlock,
 		Signature:        nil,
 		Countersignature: nil,
 	}
 
 	// pack without signature
-	packed, err := r.Pack(ownerOneAddress)
+	packed, err := r.Pack(ownerOneAccount)
 	if nil == err {
 		return nil, nil, fault.ErrMakeSwapFailed
 	} else if fault.ErrInvalidSignature != err {
@@ -151,11 +151,11 @@ func makeSwapOneSignature(testnet bool, shareIdOne merkle.Digest, quantityOne ui
 	}
 
 	// attach signature
-	signature := ed25519.Sign(ownerOne.PrivateKey, packed)
+	signature := ed25519.Sign(ownerOne.PrivateKey.PrivateKeyBytes(), packed)
 	r.Signature = signature[:]
 
 	// include first signature by packing again
-	packed, err = r.Pack(ownerOneAddress)
+	packed, err = r.Pack(ownerOneAccount)
 	if nil == err {
 		return nil, nil, fault.ErrMakeSwapFailed
 	} else if fault.ErrInvalidSignature != err {

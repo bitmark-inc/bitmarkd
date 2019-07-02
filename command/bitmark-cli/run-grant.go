@@ -10,22 +10,14 @@ import (
 
 	"github.com/urfave/cli"
 
-	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/rpccalls"
-	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/keypair"
 )
 
 func runGrant(c *cli.Context) error {
 
 	m := c.App.Metadata["config"].(*metadata)
 
-	to, newOwnerKeyPair, err := checkTransferTo(c.String("receiver"), m.config)
-	if nil != err {
-		return err
-	}
-
-	from, err := checkTransferFrom(c.GlobalString("identity"), m.config)
+	to, recipient, err := checkRecipient(c.String("receiver"), m.config)
 	if nil != err {
 		return err
 	}
@@ -42,49 +34,20 @@ func runGrant(c *cli.Context) error {
 
 	beforeBlock := c.Uint64("before-block")
 
+	from, owner, err := checkOwnerWithPasswordPrompt(c.GlobalString("identity"), m.config, c)
+	if nil != err {
+		return err
+	}
+
 	if m.verbose {
 		fmt.Fprintf(m.e, "shareId: %s\n", shareId)
 		fmt.Fprintf(m.e, "quantity: %d\n", quantity)
-		fmt.Fprintf(m.e, "sender: %s\n", from.Name)
+		fmt.Fprintf(m.e, "sender: %s\n", from)
 		fmt.Fprintf(m.e, "receiver: %s\n", to)
 		fmt.Fprintf(m.e, "beforeBlock: %d\n", beforeBlock)
 	}
 
-	var ownerKeyPair *keypair.KeyPair
-
-	// get global password items
-	agent := c.GlobalString("use-agent")
-	clearCache := c.GlobalBool("zero-agent-cache")
-	password := c.GlobalString("password")
-
-	// check owner password
-	if "" != agent {
-		password, err := passwordFromAgent(from.Name, "Grant Shared Bitmark", agent, clearCache)
-		if nil != err {
-			return err
-		}
-		ownerKeyPair, err = encrypt.VerifyPassword(password, from)
-		if nil != err {
-			return err
-		}
-	} else if "" != password {
-		ownerKeyPair, err = encrypt.VerifyPassword(password, from)
-		if nil != err {
-			return err
-		}
-	} else {
-		ownerKeyPair, err = promptAndCheckPassword(from)
-		if nil != err {
-			return err
-		}
-
-	}
-	// just in case some internal breakage
-	if nil == ownerKeyPair {
-		return fault.ErrKeyPairCannotBeNil
-	}
-
-	client, err := rpccalls.NewClient(m.testnet, m.config.Connect, m.verbose, m.e)
+	client, err := rpccalls.NewClient(m.testnet, m.config.Connections[0], m.verbose, m.e)
 	if nil != err {
 		return err
 	}
@@ -93,8 +56,8 @@ func runGrant(c *cli.Context) error {
 	grantConfig := &rpccalls.GrantData{
 		ShareId:     shareId,
 		Quantity:    quantity,
-		Owner:       ownerKeyPair,
-		Recipient:   newOwnerKeyPair,
+		Owner:       owner,
+		Recipient:   recipient,
 		BeforeBlock: beforeBlock,
 	}
 

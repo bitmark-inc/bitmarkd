@@ -10,15 +10,15 @@ import (
 
 	"golang.org/x/crypto/ed25519"
 
+	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/keypair"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 
 // CountersignData - data for a countersignature request
 type CountersignData struct {
 	Transaction string
-	NewOwner    *keypair.KeyPair
+	NewOwner    *configuration.Private
 }
 
 // Countersign - countersign a transfer
@@ -36,7 +36,7 @@ func (client *Client) Countersign(countersignConfig *CountersignData) (interface
 	}
 
 	// attach signature
-	signature := ed25519.Sign(countersignConfig.NewOwner.PrivateKey, b)
+	signature := ed25519.Sign(countersignConfig.NewOwner.PrivateKey.PrivateKeyBytes(), b)
 
 	switch tx := r.(type) {
 	case *transactionrecord.BitmarkTransferCountersigned:

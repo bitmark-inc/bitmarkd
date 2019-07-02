@@ -6,26 +6,27 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/urfave/cli"
 
-	"github.com/bitmark-inc/bitmarkd/keypair"
+	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/rpccalls"
 )
 
-func runGenerate(c *cli.Context) error {
+func runBitmarkdInfo(c *cli.Context) error {
 
 	m := c.App.Metadata["config"].(*metadata)
 
-	rawKeyPair, _, err := keypair.MakeRawKeyPair(m.testnet)
+	client, err := rpccalls.NewClient(m.testnet, m.config.Connections[0], m.verbose, m.e)
+	if nil != err {
+		return err
+	}
+	defer client.Close()
+
+	response, err := client.GetBitmarkInfo()
 	if nil != err {
 		return err
 	}
 
-	if m.verbose {
-		fmt.Fprintf(m.e, "rawKeyPair: %#v\n", rawKeyPair)
-	}
+	printJson(m.w, response)
 
-	printJson(m.w, rawKeyPair)
 	return nil
 }

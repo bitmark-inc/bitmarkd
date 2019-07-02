@@ -26,7 +26,7 @@ func runTransactionStatus(c *cli.Context) error {
 		fmt.Fprintf(m.e, "txid: %s\n", txId)
 	}
 
-	client, err := rpccalls.NewClient(m.testnet, m.config.Connect, m.verbose, m.e)
+	client, err := rpccalls.NewClient(m.testnet, m.config.Connections[0], m.verbose, m.e)
 	if nil != err {
 		return err
 	}

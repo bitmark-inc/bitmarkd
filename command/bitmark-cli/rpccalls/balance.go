@@ -6,14 +6,14 @@
 package rpccalls
 
 import (
-	"github.com/bitmark-inc/bitmarkd/keypair"
+	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/rpc"
 )
 
 // BalanceData - the parameters for a balance request
 type BalanceData struct {
-	Owner   *keypair.KeyPair
+	Owner   *account.Account
 	ShareId string
 	Count   int
 }
@@ -28,9 +28,8 @@ func (client *Client) GetBalance(balanceConfig *BalanceData) (*rpc.ShareBalanceR
 		}
 	}
 
-	ownerAddress := makeAddress(balanceConfig.Owner, client.testnet)
 	balanceArgs := rpc.ShareBalanceArguments{
-		Owner:   ownerAddress,
+		Owner:   balanceConfig.Owner,
 		ShareId: shareId,
 		Count:   balanceConfig.Count,
 	}

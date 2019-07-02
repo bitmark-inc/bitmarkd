@@ -6,13 +6,13 @@
 package rpccalls
 
 import (
-	"github.com/bitmark-inc/bitmarkd/keypair"
+	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/rpc"
 )
 
 // OwnedData - data for an ownership request
 type OwnedData struct {
-	Owner *keypair.KeyPair
+	Owner *account.Account
 	Start uint64
 	Count int
 }
@@ -20,9 +20,8 @@ type OwnedData struct {
 // GetOwned - obtain list of owned bitmarks
 func (client *Client) GetOwned(ownedConfig *OwnedData) (*rpc.OwnerBitmarksReply, error) {
 
-	ownerAddress := makeAddress(ownedConfig.Owner, client.testnet)
 	ownedArgs := rpc.OwnerBitmarksArguments{
-		Owner: ownerAddress,
+		Owner: ownedConfig.Owner,
 		Start: ownedConfig.Start,
 		Count: ownedConfig.Count,
 	}

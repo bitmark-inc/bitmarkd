@@ -8,8 +8,8 @@ package rpccalls
 import (
 	"golang.org/x/crypto/ed25519"
 
+	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/keypair"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/rpc"
@@ -18,8 +18,8 @@ import (
 
 // ShareData - data for a share request
 type ShareData struct {
-	Owner    *keypair.KeyPair
-	NewOwner *keypair.KeyPair
+	Owner    *configuration.Private
+	NewOwner *configuration.Private
 	TxId     string
 	Quantity uint64
 }
@@ -83,7 +83,7 @@ func (client *Client) Share(shareConfig *ShareData) (*ShareReply, error) {
 	return &response, nil
 }
 
-func makeShare(testnet bool, link merkle.Digest, quantity uint64, owner *keypair.KeyPair) (*transactionrecord.BitmarkShare, error) {
+func makeShare(testnet bool, link merkle.Digest, quantity uint64, owner *configuration.Private) (*transactionrecord.BitmarkShare, error) {
 
 	r := transactionrecord.BitmarkShare{
 		Link:      link,
@@ -91,10 +91,10 @@ func makeShare(testnet bool, link merkle.Digest, quantity uint64, owner *keypair
 		Signature: nil,
 	}
 
-	ownerAddress := makeAddress(owner, testnet)
+	ownerAccount := owner.PrivateKey.Account()
 
 	// pack without signature
-	packed, err := r.Pack(ownerAddress)
+	packed, err := r.Pack(ownerAccount)
 	if nil == err {
 		return nil, fault.ErrMakeShareFailed
 	} else if fault.ErrInvalidSignature != err {
@@ -102,11 +102,11 @@ func makeShare(testnet bool, link merkle.Digest, quantity uint64, owner *keypair
 	}
 
 	// attach signature
-	signature := ed25519.Sign(owner.PrivateKey, packed)
+	signature := ed25519.Sign(owner.PrivateKey.PrivateKeyBytes(), packed)
 	r.Signature = signature[:]
 
 	// check that signature is correct by packing again
-	_, err = r.Pack(ownerAddress)
+	_, err = r.Pack(ownerAccount)
 	if nil != err {
 		return nil, err
 	}

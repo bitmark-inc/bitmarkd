@@ -6,14 +6,11 @@
 package main
 
 import (
-	"encoding/hex"
 	"fmt"
 
 	"github.com/urfave/cli"
 
-	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/rpccalls"
-	"github.com/bitmark-inc/bitmarkd/keypair"
 )
 
 func runProvenance(c *cli.Context) error {
@@ -35,7 +32,7 @@ func runProvenance(c *cli.Context) error {
 		fmt.Fprintf(m.e, "count: %d\n", count)
 	}
 
-	client, err := rpccalls.NewClient(m.testnet, m.config.Connect, m.verbose, m.e)
+	client, err := rpccalls.NewClient(m.testnet, m.config.Connections[0], m.verbose, m.e)
 	if nil != err {
 		return err
 	}
@@ -43,23 +40,8 @@ func runProvenance(c *cli.Context) error {
 
 	// map for adding identity name to provenance records
 	ids := make(map[string]string)
-	for _, id := range m.config.Identities {
-		pub, err := hex.DecodeString(id.PublicKey)
-		if nil != err {
-			return err
-		}
-
-		keyPair := &keypair.KeyPair{
-			PublicKey: pub,
-		}
-
-		a := &account.Account{
-			AccountInterface: &account.ED25519Account{
-				Test:      m.testnet,
-				PublicKey: keyPair.PublicKey[:],
-			},
-		}
-		ids[a.String()] = id.Name
+	for name, id := range m.config.Identities {
+		ids[id.Account] = name
 	}
 
 	provenanceConfig := &rpccalls.ProvenanceData{
