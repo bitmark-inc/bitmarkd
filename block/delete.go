@@ -12,6 +12,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
+	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/ownership"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
@@ -52,13 +53,16 @@ outer_loop:
 			blockheader.Set(header.Number, digest, header.Version, header.Timestamp)
 			log.Infof("finish: _NOT_ Deleting: %d", header.Number)
 
-			nextDifficulty, prevDifficulty, err := blockrecord.AdjustDifficultyAtBlock(header.Number)
-			if err != nil {
-				log.Errorf("failed to adjust difficulty with error: %s", err)
-				return err
+			if header.Number >= difficulty.AdjustTimespanInBlocks {
+				nextDifficulty, prevDifficulty, err := blockrecord.AdjustDifficultyAtBlock(header.Number)
+				if err != nil {
+					log.Errorf("failed to adjust difficulty with error: %s", err)
+					return err
+				}
+				log.Infof("set new difficulty to %f, previous difficulty %f", nextDifficulty, prevDifficulty)
+				return nil
 			}
-			log.Infof("set new difficulty to %f, previous difficulty %f", nextDifficulty, prevDifficulty)
-			return nil
+
 		}
 
 		log.Infof("Delete block: %d  transactions: %d", header.Number, header.TransactionCount)
