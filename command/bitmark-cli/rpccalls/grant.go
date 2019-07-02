@@ -10,8 +10,9 @@ import (
 
 	"golang.org/x/crypto/ed25519"
 
+	"github.com/bitmark-inc/bitmarkd/account"
+	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/keypair"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/rpc"
@@ -22,15 +23,15 @@ import (
 type GrantData struct {
 	ShareId     string
 	Quantity    uint64
-	Owner       *keypair.KeyPair
-	Recipient   *keypair.KeyPair
+	Owner       *configuration.Private
+	Recipient   *account.Account
 	BeforeBlock uint64
 }
 
 // GrantCountersignData - data to be countersigned
 type GrantCountersignData struct {
 	Grant     string
-	Recipient *keypair.KeyPair
+	Recipient *configuration.Private
 }
 
 // GrantReply - JSON data to output after grant completes
@@ -117,23 +118,22 @@ func (client *Client) CountersignGrant(grant *transactionrecord.ShareGrant) (*Gr
 	return &response, nil
 }
 
-func makeGrantOneSignature(testnet bool, shareId merkle.Digest, quantity uint64, owner *keypair.KeyPair, recipient *keypair.KeyPair, beforeBlock uint64) ([]byte, *transactionrecord.ShareGrant, error) {
+func makeGrantOneSignature(testnet bool, shareId merkle.Digest, quantity uint64, owner *configuration.Private, recipient *account.Account, beforeBlock uint64) ([]byte, *transactionrecord.ShareGrant, error) {
 
-	ownerAddress := makeAddress(owner, testnet)
-	recipientAddress := makeAddress(recipient, testnet)
+	ownerAccount := owner.PrivateKey.Account()
 
 	r := transactionrecord.ShareGrant{
 		ShareId:          shareId,
 		Quantity:         quantity,
-		Owner:            ownerAddress,
-		Recipient:        recipientAddress,
+		Owner:            ownerAccount,
+		Recipient:        recipient,
 		BeforeBlock:      beforeBlock,
 		Signature:        nil,
 		Countersignature: nil,
 	}
 
 	// pack without signature
-	packed, err := r.Pack(ownerAddress)
+	packed, err := r.Pack(ownerAccount)
 	if nil == err {
 		return nil, nil, fault.ErrMakeGrantFailed
 	} else if fault.ErrInvalidSignature != err {
@@ -141,11 +141,11 @@ func makeGrantOneSignature(testnet bool, shareId merkle.Digest, quantity uint64,
 	}
 
 	// attach signature
-	signature := ed25519.Sign(owner.PrivateKey, packed)
+	signature := ed25519.Sign(owner.PrivateKey.PrivateKeyBytes(), packed)
 	r.Signature = signature[:]
 
 	// include first signature by packing again
-	packed, err = r.Pack(ownerAddress)
+	packed, err = r.Pack(ownerAccount)
 	if nil == err {
 		return nil, nil, fault.ErrMakeGrantFailed
 	} else if fault.ErrInvalidSignature != err {

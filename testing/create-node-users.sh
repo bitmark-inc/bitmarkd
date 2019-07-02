@@ -20,14 +20,14 @@ xdg_home="${XDG_CONFIG_HOME}"
 [ -d "${xdg_home}" ] || ERROR 'missing directory: "%s" please create first' "${xdg_home}"
 
 # create first and second users
-bitmark-cli --network=local --identity=first --password="${password}" setup --connect=127.0.0.1:2130 --description='first user'
-bitmark-cli --network=local --identity=second --password="${password}" add --description='second user'
+bitmark-cli --network=local --identity=first --password="${password}" setup --connect=127.0.0.1:2130 --description='first user' --new
+bitmark-cli --network=local --identity=second --password="${password}" add --description='second user' --new
 
 # create users for all bitmarkds
 for i in 1 2 3 4 5 6 7 8 9
 do
   id="node-${i}"
-  pk="${xdg_home}/bitmarkd${i}/proof.test"
-  [ -f "${pk}" ] || ERROR 'missing file: %s' "${pk}"
-  bitmark-cli --network=local --identity="${id}" --password="${password}" add --description="node ${i}" --privateKey="$(cat "${pk}")"
+  seed="${xdg_home}/bitmarkd${i}/proof.test"
+  [ -f "${seed}" ] || ERROR 'missing file: %s' "${seed}"
+  bitmark-cli --network=local --identity="${id}" --password="${password}" add --description="node ${i}" --seed="$(cat "${seed}")"
 done

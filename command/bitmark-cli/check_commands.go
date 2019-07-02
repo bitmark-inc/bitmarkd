@@ -11,11 +11,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/urfave/cli"
+
+	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
-	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/keypair"
 )
 
 // identity is required, but not check the config file
@@ -72,56 +73,6 @@ func checkDescription(description string) (string, error) {
 	return description, nil
 }
 
-// private key is optional,
-// if present must be either 64 or 128 hex chars
-// or SEED:<base58-seed>
-func checkOptionalKey(key string) (string, error) {
-	if "" == key {
-		return "", nil
-	}
-	if strings.HasPrefix(key, "SEED:") {
-		return key, nil
-	}
-	k, err := hex.DecodeString(key)
-	if nil != err {
-		return "", err
-	}
-	switch len(k) {
-	case encrypt.PrivateKeySize: // have the full key (private + public)
-	case encrypt.PublicKeyOffset: // just have the private part
-	default:
-		return "", fault.ErrInvalidKeyLength
-	}
-	return key, nil
-}
-
-// prublic key is require,
-// if present must 64 hex chars
-func checkPublicKey(key string) (string, error) {
-	if "" == key {
-		return "", fault.ErrPublicKeyIsRequired
-
-	}
-	k, err := hex.DecodeString(key)
-	if nil != err {
-		return "", err
-	}
-	switch len(k) {
-	case encrypt.PublicKeySize: // have the full key
-	default:
-		return "", fault.ErrInvalidKeyLength
-	}
-	return key, nil
-}
-
-func checkIdentity(name string, config *configuration.Configuration) (*encrypt.IdentityType, error) {
-	if "" == name {
-		return nil, fault.ErrIdentityNameIsRequired
-	}
-
-	return getIdentity(name, config)
-}
-
 // asset fingerprint is required field
 func checkAssetFingerprint(fingerprint string) (string, error) {
 	if "" == fingerprint {
@@ -167,30 +118,82 @@ func checkTransferTx(txId string) (string, error) {
 	return txId, nil
 }
 
-// contains private and public keys
-func checkTransferFrom(from string, config *configuration.Configuration) (*encrypt.IdentityType, error) {
-	if "" == from {
-		from = config.DefaultIdentity
+// make sure a seed can be decoded
+// strip the "SEED:" prefix if given
+func checkSeed(seed string, new bool, testnet bool) (string, error) {
+
+	if new && "" == seed {
+		var err error
+		seed, err = account.NewBase58EncodedSeedV2(testnet)
+		if nil != err {
+			return "", err
+		}
+	}
+	seed = strings.TrimPrefix(seed, "SEED:")
+
+	// failed to get a seed
+	if "" == seed {
+		return "", fault.ErrIncompatibleOptions
 	}
 
-	return getIdentity(from, config)
+	// ensure can decode
+	_, err := account.PrivateKeyFromBase58Seed(seed)
+	if nil != err {
+		return "", err
+	}
+	return seed, nil
 }
 
-// transfer to is required field but only has a public key
-func checkTransferTo(to string, config *configuration.Configuration) (string, *keypair.KeyPair, error) {
-	if "" == to {
-		return "", nil, fault.ErrTransferToIsRequired
+// get decrypted identity - prompts for password or uses agent
+// only use owner to sign things
+func checkOwnerWithPasswordPrompt(name string, config *configuration.Configuration, c *cli.Context) (string, *configuration.Private, error) {
+	if "" == name {
+		name = config.DefaultIdentity
 	}
 
-	newOwnerKeyPair, err := encrypt.PublicKeyFromString(to, config.Identities, config.TestNet)
+	var err error
+
+	// get global password items
+	agent := c.GlobalString("use-agent")
+	clearCache := c.GlobalBool("zero-agent-cache")
+	password := c.GlobalString("password")
+
+	// check owner password
+	if "" != agent {
+		password, err = passwordFromAgent(name, "Password for bitmark-cli", agent, clearCache)
+		if nil != err {
+			return "", nil, err
+		}
+	} else if "" == password {
+		password, err = promptPassword(name)
+		if nil != err {
+			return "", nil, err
+		}
+
+	}
+	owner, err := config.Private(password, name)
+	if nil != err {
+		return "", nil, err
+	}
+	return name, owner, nil
+}
+
+// recipient is required field convert to an account
+// used for any non-signing account process (e.g. provenance listing)
+func checkRecipient(recipient string, config *configuration.Configuration) (string, *account.Account, error) {
+	if "" == recipient {
+		return "", nil, fault.ErrRecipientIsRequired
+	}
+
+	newOwner, err := config.Account(recipient)
 	if nil != err {
 		return "", nil, err
 	}
 
-	return to, newOwnerKeyPair, nil
+	return recipient, newOwner, nil
 }
 
-// coin address to is required field
+// coin address is a required field
 func checkCoinAddress(c currency.Currency, address string, testnet bool) (string, error) {
 	if "" == address {
 		return "", fault.ErrCurrencyAddressIsRequired
@@ -210,18 +213,6 @@ func checkSignature(s string) ([]byte, error) {
 
 	}
 	return h, nil
-}
-
-// note: this returns a pointer to the actual config.Identity[i]
-//       so permanent modifications can be made to the identity
-func getIdentity(name string, config *configuration.Configuration) (*encrypt.IdentityType, error) {
-	for i, identity := range config.Identities {
-		if name == identity.Name {
-			return &config.Identities[i], nil
-		}
-	}
-
-	return nil, fault.ErrIdentityNameNotFound
 }
 
 // check if file exists

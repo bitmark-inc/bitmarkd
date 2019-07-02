@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/urfave/cli"
 
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
-	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/encrypt"
 )
 
 func runSetup(c *cli.Context) error {
@@ -36,8 +36,7 @@ func runSetup(c *cli.Context) error {
 		return err
 	}
 
-	// optional existing hex key value
-	privateKey, err := checkOptionalKey(c.String("privateKey"))
+	seed, err := checkSeed(c.String("seed"), c.Bool("new"), m.testnet)
 	if nil != err {
 		return err
 	}
@@ -54,26 +53,34 @@ func runSetup(c *cli.Context) error {
 	configDir := path.Dir(m.file)
 	d, err := checkFileExists(configDir)
 	if nil != err {
-		if err := os.MkdirAll(configDir, 0750); nil != err {
+		if err = os.MkdirAll(configDir, 0750); nil != err {
 			return err
 		}
 	} else if !d {
 		return fmt.Errorf("path: %q is not a directory", configDir)
 	}
 
-	configData := &configuration.Configuration{
+	config := &configuration.Configuration{
 		DefaultIdentity: name,
 		TestNet:         testnet,
-		Connect:         connect,
-		Identities:      make([]encrypt.IdentityType, 0),
+		Connections:     strings.Split(connect, ","),
+		Identities:      make(map[string]configuration.Identity),
 	}
 
-	err = addIdentity(configData, name, description, privateKey, c.GlobalString("password"), testnet)
+	password := c.GlobalString("password")
+	if "" == password {
+		password, err = promptNewPassword()
+		if nil != err {
+			return err
+		}
+	}
+
+	err = config.AddIdentity(name, description, seed, password)
 	if nil != err {
 		return err
 	}
 
-	m.config = configData
+	m.config = config
 	m.save = true
 
 	return nil

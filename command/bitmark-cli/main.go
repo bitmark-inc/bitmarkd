@@ -87,10 +87,14 @@ func main() {
 					Value: "",
 					Usage: "*identity description `STRING`",
 				},
+				cli.BoolFlag{
+					Name:  "new, n",
+					Usage: "+generate a new seed and account",
+				},
 				cli.StringFlag{
-					Name:  "privateKey, k",
+					Name:  "seed, s",
 					Value: "",
-					Usage: " using existing privateKey/seed `KEY`",
+					Usage: "+recover account from existing `SEED`",
 				},
 			},
 			Action: runSetup,
@@ -98,17 +102,26 @@ func main() {
 		{
 			Name:      "add",
 			Usage:     "add a new identity to config file, set it as default",
-			ArgsUsage: "\n   (* = required)",
+			ArgsUsage: "\n   (* = required, + = select one )",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "description, d",
 					Value: "",
 					Usage: "*identity description `STRING`",
 				},
+				cli.BoolFlag{
+					Name:  "new, n",
+					Usage: "+generate a new seed and account",
+				},
 				cli.StringFlag{
-					Name:  "privateKey, k",
+					Name:  "seed, s",
 					Value: "",
-					Usage: " using existing privateKey/seed `KEY`",
+					Usage: "+recover account from existing `SEED`",
+				},
+				cli.StringFlag{
+					Name:  "account, a",
+					Value: "",
+					Usage: "+add read-only `ACCOUNT`",
 				},
 			},
 			Action: runAdd,
@@ -370,32 +383,19 @@ func main() {
 			Action: runTransactionStatus,
 		},
 		{
-			Name:      "account",
-			Usage:     "display account from a public key",
-			ArgsUsage: "\n   (* = required)",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "publickey, p",
-					Value: "",
-					Usage: "*hex public `KEY`",
-				},
-			},
-			Action: runAccount,
+			Name:   "list",
+			Usage:  "list bitmark-cli identities",
+			Action: runList,
 		},
 		{
-			Name:   "info",
-			Usage:  "display bitmark-cli status",
-			Action: runInfo,
+			Name:   "bitmarkd",
+			Usage:  "display bitmarkd information",
+			Action: runBitmarkdInfo,
 		},
 		{
-			Name:   "bitmarkInfo",
-			Usage:  "display bitmarkd status",
-			Action: runBitmarkInfo,
-		},
-		{
-			Name:   "keypair",
-			Usage:  "get default identity's raw key pair",
-			Action: runKeyPair,
+			Name:   "seed",
+			Usage:  "decrypt and displey default identity's recovery seed",
+			Action: runSeed,
 		},
 		{
 			Name:   "password",
@@ -452,13 +452,6 @@ func main() {
 			Action: runVerify,
 		},
 		{
-			Name:      "generate",
-			Usage:     "generate key pair, will not store in config file",
-			ArgsUsage: "\n   (* = required)",
-			Flags:     []cli.Flag{},
-			Action:    runGenerate,
-		},
-		{
 			Name:  "version",
 			Usage: "display bitmark-cli version",
 			Action: func(c *cli.Context) error {
@@ -501,7 +494,7 @@ func main() {
 		if !dir {
 			return fmt.Errorf("not a directory: %q", p)
 		}
-		file := path.Join(p, app.Name, network+"-"+app.Name+".json")
+		file := path.Join(p, app.Name, network+"-cli.json")
 
 		if verbose {
 			fmt.Fprintf(e, "file: %q\n", file)
@@ -528,7 +521,7 @@ func main() {
 				fmt.Fprintf(e, "reading config file: %s\n", file)
 			}
 
-			configuration, err := configuration.GetConfiguration(file)
+			configuration, err := configuration.Load(file)
 			if nil != err {
 				return err
 			}

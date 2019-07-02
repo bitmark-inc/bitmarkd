@@ -10,9 +10,10 @@ import (
 
 	"golang.org/x/crypto/ed25519"
 
+	"github.com/bitmark-inc/bitmarkd/account"
+	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/keypair"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/rpc"
@@ -22,8 +23,8 @@ import (
 // BlockTransferData - data for a block transfer request
 type BlockTransferData struct {
 	Payments currency.Map
-	Owner    *keypair.KeyPair
-	NewOwner *keypair.KeyPair
+	Owner    *configuration.Private
+	NewOwner *account.Account
 	TxId     string
 }
 
@@ -101,22 +102,21 @@ func (client *Client) CountersignBlockTransfer(blockTransfer *transactionrecord.
 	return &response, nil
 }
 
-func makeBlockTransferOneSignature(testnet bool, link merkle.Digest, payments currency.Map, owner *keypair.KeyPair, newOwner *keypair.KeyPair) ([]byte, *transactionrecord.BlockOwnerTransfer, error) {
+func makeBlockTransferOneSignature(testnet bool, link merkle.Digest, payments currency.Map, owner *configuration.Private, newOwner *account.Account) ([]byte, *transactionrecord.BlockOwnerTransfer, error) {
 
-	newOwnerAddress := makeAddress(newOwner, testnet)
 	r := transactionrecord.BlockOwnerTransfer{
 		Link:             link,
 		Version:          1,
 		Payments:         payments,
-		Owner:            newOwnerAddress,
+		Owner:            newOwner,
 		Signature:        nil,
 		Countersignature: nil,
 	}
 
-	ownerAddress := makeAddress(owner, testnet)
+	ownerAccount := owner.PrivateKey.Account()
 
 	// pack without signature
-	packed, err := r.Pack(ownerAddress)
+	packed, err := r.Pack(ownerAccount)
 	if nil == err {
 		return nil, nil, fault.ErrMakeBlockTransferFailed
 	} else if fault.ErrInvalidSignature != err {
@@ -124,11 +124,11 @@ func makeBlockTransferOneSignature(testnet bool, link merkle.Digest, payments cu
 	}
 
 	// attach signature
-	signature := ed25519.Sign(owner.PrivateKey, packed)
+	signature := ed25519.Sign(owner.PrivateKey.PrivateKeyBytes(), packed)
 	r.Signature = signature[:]
 
 	// include first signature by packing again
-	packed, err = r.Pack(ownerAddress)
+	packed, err = r.Pack(ownerAccount)
 	if nil == err {
 		return nil, nil, fault.ErrMakeBlockTransferFailed
 	} else if fault.ErrInvalidSignature != err {

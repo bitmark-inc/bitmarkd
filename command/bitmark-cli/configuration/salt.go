@@ -3,19 +3,17 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package encrypt
+package configuration
 
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"fmt"
-	"io"
 
 	"github.com/bitmark-inc/bitmarkd/fault"
 )
 
 const (
-	saltSize = 16
+	saltSize = 32
 )
 
 // Salt - type to hold a salt value
@@ -24,8 +22,8 @@ type Salt [saltSize]byte
 // MakeSalt - create a salt using secure random number generator
 func MakeSalt() (*Salt, error) {
 	salt := new(Salt)
-	if _, err := io.ReadFull(rand.Reader, salt[:]); err != nil {
-		return salt, err
+	if _, err := rand.Read(salt[:]); err != nil {
+		return nil, err
 	}
 	return salt, nil
 }
@@ -61,7 +59,6 @@ func (salt *Salt) UnmarshalText(s []byte) error {
 	}
 
 	if saltSize != byteCount {
-		fmt.Printf("invalid byte\n")
 		return fault.ErrUnmarshalTextFailed
 	}
 	copy(salt[:], buffer)
