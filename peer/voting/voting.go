@@ -91,11 +91,11 @@ func (v *VotingImpl) VoteBy(candidate upstream.UpstreamIntf) {
 	remoteAddr := candidate.Client().String()
 	upstream := candidate.Name()
 	v.log.Infof(
-		"%s connects to remote %s, cached remote height: %d with digest: %x",
+		"%s connects to remote %s, cached remote height: %d with digest: %s",
 		upstream,
 		remoteAddr,
 		height,
-		digest,
+		digest.String(),
 	)
 
 	if !v.validHeight(height) {
