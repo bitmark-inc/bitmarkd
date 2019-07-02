@@ -425,7 +425,13 @@ func (conn *connector) runStateMachine() bool {
 						conn.toState(cStateHighestBlock)
 						break check_digests
 					}
-					conn.startBlockNumber = h + 1
+
+					if height > h {
+						conn.startBlockNumber = h + 1
+					} else {
+						conn.startBlockNumber = h
+					}
+
 					log.Infof("fork from block number: %d", conn.startBlockNumber)
 
 					// remove old blocks
