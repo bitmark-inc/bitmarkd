@@ -379,7 +379,7 @@ func (conn *connector) runStateMachine() bool {
 
 	case cStateHighestBlock:
 		conn.height, conn.theClient = conn.getHeightAndClient()
-		if conn.validRemoteChain() {
+		if conn.hasBetterChain(blockheader.Height()) {
 			log.Infof("new chain from %s, height %d, digest %x", conn.theClient.Name(), conn.height, conn.theClient.CachedRemoteDigestOfLocalHeight())
 			log.Info("enter fork detect state")
 			conn.nextState()
@@ -522,6 +522,11 @@ func (conn *connector) runStateMachine() bool {
 }
 
 func (c *connector) hasBetterChain(localHeight uint64) bool {
+	if c.theClient == nil {
+		c.log.Info("remote client empty")
+		return false
+	}
+
 	if c.height < localHeight {
 		c.log.Debugf("remote height %d is shorter than local height %d", c.height, localHeight)
 		return false
@@ -550,23 +555,6 @@ func (c *connector) hasSamllerDigestThanLocal(localHeight uint64) bool {
 	}
 
 	return remoteDigest.SmallerDigestThan(localDigest)
-}
-
-func (c *connector) validRemoteChain() bool {
-	localHeight := blockheader.Height()
-	if nil == c.theClient {
-		c.log.Debug("invalid chain: remote client empty")
-		return false
-		/**/
-	}
-
-	if c.height >= localHeight {
-		c.log.Debugf("valid chain: remote height %d, local height: %d", c.height, localHeight)
-		return true
-	}
-
-	c.log.Info("invalid chain, unexpected error")
-	return false
 }
 
 func (c *connector) getHeightAndClient() (uint64, upstream.UpstreamIntf) {
