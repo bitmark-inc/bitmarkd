@@ -100,7 +100,7 @@ MAKE-WINDOW() {
   cmd2="${1}"; shift
 
   # colour setting
-  tmux set-window-option -t "${session}:${window}" -g window-status-current-bg red
+  tmux set-window-option -t "${session}:${window}" -g window-status-current-style bg=red
 
   # notifications
   tmux set-window-option -t "${session}:${window}" -g monitor-activity on
