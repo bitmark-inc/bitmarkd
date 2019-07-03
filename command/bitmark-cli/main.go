@@ -394,7 +394,7 @@ func main() {
 		},
 		{
 			Name:   "seed",
-			Usage:  "decrypt and displey default identity's recovery seed",
+			Usage:  "decrypt and display default identity's recovery seed",
 			Action: runSeed,
 		},
 		{
