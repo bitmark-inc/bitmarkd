@@ -618,7 +618,7 @@ func (c *connector) elected() (upstream.UpstreamIntf, uint64) {
 
 	digest := elected.CachedRemoteDigestOfLocalHeight()
 	c.log.Infof(
-		"digest %x elected with %d votes, remote addr: %s, height: %d",
+		"digest: %s elected with %d votes, remote addr: %s, height: %d",
 		digest,
 		c.votes.NumVoteOfDigest(digest),
 		remoteAddr,
