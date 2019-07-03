@@ -63,7 +63,7 @@ func (u *Upstream) ActiveInPastSeconds(sec time.Duration) bool {
 	active := limit.Before(u.lastResponseTime)
 	difference := now.Sub(u.lastResponseTime).Seconds()
 
-	u.log.Debugf("active: %t, last response time %s, difference %d seconds",
+	u.log.Debugf("active: %t, last response time %s, difference %f seconds",
 		active,
 		u.lastResponseTime.Format("2006-01-02, 15:04:05 -0700"),
 		difference,
