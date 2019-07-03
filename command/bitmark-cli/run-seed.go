@@ -6,8 +6,11 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/urfave/cli"
 
+	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 )
 
@@ -16,6 +19,7 @@ type seedResult struct {
 	*configuration.Private
 	Name    string `json:"name"`
 	Account string `json:"account"`
+	Phrase  string `json:"recovery_phrase"`
 }
 
 // to decrypt and show the secret data
@@ -28,10 +32,16 @@ func runSeed(c *cli.Context) error {
 		return err
 	}
 
+	phrase, err := account.Base58EncodedSeedToPhrase(owner.Seed)
+	if nil != err {
+		return err
+	}
+
 	result := seedResult{
 		Private: owner,
 		Name:    name,
 		Account: owner.PrivateKey.Account().String(),
+		Phrase:  strings.Join(phrase, " "),
 	}
 
 	printJson(m.w, result)
