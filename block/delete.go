@@ -60,9 +60,8 @@ outer_loop:
 					return err
 				}
 				log.Infof("set new difficulty to %f, previous difficulty %f", nextDifficulty, prevDifficulty)
-				return nil
 			}
-
+			return nil
 		}
 
 		log.Infof("Delete block: %d  transactions: %d", header.Number, header.TransactionCount)
