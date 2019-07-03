@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/jollyjoker992/bitmarkd/account"
 )
 
 type seedTestItem struct {

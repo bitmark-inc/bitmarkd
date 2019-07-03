@@ -6,6 +6,7 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/urfave/cli"
@@ -37,6 +38,11 @@ func runSeed(c *cli.Context) error {
 		return err
 	}
 
+	if c.Bool("recovery") {
+		fmt.Printf("recovery phrase:\n%s", prettyPhrase(phrase))
+		return nil
+	}
+
 	result := seedResult{
 		Private: owner,
 		Name:    name,
@@ -46,4 +52,21 @@ func runSeed(c *cli.Context) error {
 
 	printJson(m.w, result)
 	return nil
+}
+
+// convert slice of string phrase to pretty string format
+func prettyPhrase(phrase []string) string {
+	var builder strings.Builder
+
+	for i, p := range phrase {
+		builder.WriteString(p)
+		breakline := (i+1)%6 == 0
+		if breakline {
+			builder.WriteString("\n")
+		} else if i < len(phrase)-1 {
+			builder.WriteString(" ")
+		}
+	}
+
+	return builder.String()
 }
