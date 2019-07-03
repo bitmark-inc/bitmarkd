@@ -429,11 +429,7 @@ func (conn *connector) runStateMachine() bool {
 						break check_digests
 					}
 
-					if height > h {
-						conn.startBlockNumber = h + 1
-					} else {
-						conn.startBlockNumber = h
-					}
+					conn.startBlockNumber = h + 1
 
 					log.Infof("fork from block number: %d", conn.startBlockNumber)
 
