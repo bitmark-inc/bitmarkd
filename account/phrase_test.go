@@ -1,9 +1,11 @@
-package account
+package account_test
 
 import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/bitmark-inc/bitmarkd/account"
 )
 
 type item struct {
@@ -32,7 +34,7 @@ var validItems = []item{
 
 func TestValidBase58EncodedSeedToPhrase(t *testing.T) {
 	for _, item := range validItems {
-		phrase, err := Base58EncodedSeedToPhrase(item.base58Seed)
+		phrase, err := account.Base58EncodedSeedToPhrase(item.base58Seed)
 		if nil != err {
 			t.Errorf("actual error: %s, expected no error", err)
 		}
