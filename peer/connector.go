@@ -398,6 +398,7 @@ func (conn *connector) runStateMachine() bool {
 			log.Debug("remote without better chain, enter state rebuild")
 			conn.toState(cStateRebuild)
 		} else {
+			mode.Set(mode.Resynchronise)
 			// first block number
 			conn.startBlockNumber = genesis.BlockNumber + 1
 			conn.nextState() // assume success
