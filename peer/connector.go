@@ -380,7 +380,7 @@ func (conn *connector) runStateMachine() bool {
 	case cStateHighestBlock:
 		conn.height, conn.theClient = conn.getHeightAndClient()
 		if conn.hasBetterChain(blockheader.Height()) {
-			log.Infof("new chain from %s, height %d, digest %x", conn.theClient.Name(), conn.height, conn.theClient.CachedRemoteDigestOfLocalHeight())
+			log.Infof("new chain from %s, height %d, digest %s", conn.theClient.Name(), conn.height, conn.theClient.CachedRemoteDigestOfLocalHeight().String())
 			log.Info("enter fork detect state")
 			conn.nextState()
 		} else if conn.isSameChain() {
