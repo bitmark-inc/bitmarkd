@@ -12,6 +12,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/genesis"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/logger"
@@ -107,7 +108,8 @@ func ExtractHeader(block []byte, checkHeight uint64) (*Header, blockdigest.Diges
 		return nil, blockdigest.Digest{}, nil, err
 	}
 
-	if checkHeight > 0 && header.Number != checkHeight {
+	if checkHeight > genesis.BlockNumber && header.Number != checkHeight {
+		log.Errorf("check height %d, incoming block height %d, error: %s", checkHeight, header.Number, fault.ErrHeightOutOfSequence)
 		return nil, blockdigest.Digest{}, nil, fault.ErrHeightOutOfSequence
 	}
 

@@ -74,7 +74,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
 	}
 
 	if err := blockrecord.ValidIncomingDifficuty(header.Difficulty); err != nil {
-		globalData.log.Infof("incoming block difficulty %f different from local %f", header.Difficulty.Value(), difficulty.Current.Value())
+		globalData.log.Errorf("incoming block difficulty %f different from local %f", header.Difficulty.Value(), difficulty.Current.Value())
 		return err
 	}
 
