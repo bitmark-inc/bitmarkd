@@ -402,11 +402,11 @@ func (conn *connector) runStateMachine() bool {
 			// first block number
 			conn.startBlockNumber = genesis.BlockNumber + 1
 			conn.nextState() // assume success
-			log.Infof("block number: %d", height)
+			log.Infof("local block number: %d", height)
 
 			// check digests of descending blocks (to detect a fork)
 		check_digests:
-			for h := height; h > genesis.BlockNumber; h -= 1 {
+			for h := height; h >= genesis.BlockNumber; h -= 1 {
 				digest, err := blockheader.DigestForBlock(h)
 				if nil != err {
 					log.Infof("block number: %d  local digest error: %s", h, err)
@@ -420,28 +420,18 @@ func (conn *connector) runStateMachine() bool {
 					break check_digests
 				} else if d == digest {
 					if height-h >= forkProtection {
-						log.Errorf(
-							"fork protection at: %d - %d >= %d",
-							height,
-							h,
-							forkProtection,
-						)
+						log.Errorf("fork protection at: %d - %d >= %d", height, h, forkProtection)
 						conn.toState(cStateHighestBlock)
 						break check_digests
 					}
 
 					conn.startBlockNumber = h + 1
-
 					log.Infof("fork from block number: %d", conn.startBlockNumber)
 
 					// remove old blocks
 					err := block.DeleteDownToBlock(conn.startBlockNumber)
 					if nil != err {
-						log.Errorf(
-							"delete down to block number: %d  error: %s",
-							conn.startBlockNumber,
-							err,
-						)
+						log.Errorf("delete down to block number: %d  error: %s", conn.startBlockNumber, err)
 						conn.toState(cStateHighestBlock) // retry
 					}
 					break check_digests
@@ -466,11 +456,7 @@ func (conn *connector) runStateMachine() bool {
 			log.Infof("fetch block number: %d", conn.startBlockNumber)
 			packedBlock, err := conn.theClient.GetBlockData(conn.startBlockNumber)
 			if nil != err {
-				log.Errorf(
-					"fetch block number: %d  error: %s",
-					conn.startBlockNumber,
-					err,
-				)
+				log.Errorf("fetch block number: %d  error: %s", conn.startBlockNumber, err)
 				conn.toState(cStateHighestBlock) // retry
 				break fetch_blocks
 			}
