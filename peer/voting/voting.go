@@ -99,7 +99,7 @@ func (v *VotingImpl) VoteBy(candidate upstream.UpstreamIntf) {
 	)
 
 	if !v.validHeight(height) {
-		v.log.Warnf(
+		v.log.Infof(
 			"remote cached height: %d, below minimum height %d, discard",
 			height,
 			v.minHeight,
