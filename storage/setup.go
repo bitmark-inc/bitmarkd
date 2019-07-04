@@ -125,7 +125,7 @@ func Initialise(database string, readOnly bool) (bool, bool, error) {
 
 		mustMigrate = true
 
-		logger.Criticalf("block database version: %d < current version: %d", blocksVersion, currentBlockDBVersion)
+		//logger.Criticalf("block database version: %d < current version: %d", blocksVersion, currentBlockDBVersion)
 
 	} else if 0 == blocksVersion {
 
@@ -145,7 +145,7 @@ func Initialise(database string, readOnly bool) (bool, bool, error) {
 		poolData.dbIndex.Close()
 		poolData.dbIndex = nil
 
-		logger.Criticalf("drop index database: %s", indexDatabase)
+		//logger.Criticalf("drop index database: %s", indexDatabase)
 
 		// erase the index completely
 		err = os.RemoveAll(indexDatabase)
