@@ -60,6 +60,10 @@ outer_loop:
 					return err
 				}
 				log.Infof("set new difficulty to %f, previous difficulty %f", nextDifficulty, prevDifficulty)
+			} else {
+				// in case fork happens around first difficulty adjust, difficulty might be changed and
+				// delete down blocks below adjustment block, leave difficulty different than other nodes
+				blockrecord.ResetDifficulty()
 			}
 			return nil
 		}

@@ -18,6 +18,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/stretchr/testify/assert"
 )
 
 type recordsTestType struct {
@@ -226,4 +227,12 @@ loop:
 		}
 		t.Errorf("unpack: unexpected success: header[:%d]: %+v", i, h)
 	}
+}
+
+func TestResetDifficulty(t *testing.T) {
+	difficulty.Current.Set(2)
+	blockrecord.ResetDifficulty()
+
+	difficulty := difficulty.Current.Value()
+	assert.Equal(t, float64(1), difficulty, "not reset difficulty")
 }
