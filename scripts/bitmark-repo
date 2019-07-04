@@ -84,7 +84,7 @@ CLI() {
         ('terminated with error: not available during synchronise')
           sleep 30
           ;;
-        ('terminated with error: connection is shut down')
+        ('terminated with error: connection is shut down'|'terminated with error: EOF')
           sleep 30
           ;;
         ('terminated with error: dial '*)
