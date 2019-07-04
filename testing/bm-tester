@@ -41,7 +41,7 @@ do
 done
 
 
-STOP-ALL-BITMARKD() {
+STOP_ALL_BITMARKD() {
   local pids
 
   printf 'stopping bitmarkds'
@@ -58,7 +58,7 @@ STOP-ALL-BITMARKD() {
 }
 
 
-DELETE-BLOCKS() {
+DELETE_BLOCKS() {
   local i block
 
   block="${1}"
@@ -73,7 +73,7 @@ DELETE-BLOCKS() {
 }
 
 
-START-ALL-BITMARKD() {
+START_ALL_BITMARKD() {
   local id command config other
   tmux list-panes -a -F '#{pane_id} #{pane_title}' | (
     while read id command config other
@@ -92,7 +92,7 @@ START-ALL-BITMARKD() {
 }
 
 
-MAKE-WINDOW() {
+MAKE_WINDOW() {
   local session window cmd1 cmd2
   session="${1}"; shift
   window="${1}"; shift
@@ -121,7 +121,7 @@ MAKE-WINDOW() {
 }
 
 
-NEW-TEST-SESSION() {
+NEW_TEST_SESSION() {
   local command command_list target window cmd1 cmd2 n m
 
   # format: "tab1 tab2 tab3"
@@ -166,7 +166,7 @@ rec:run-recorderd
 
     cmd1="$(printf '%s' "${cmd1}" | tr ',' ' ')"
     cmd2="$(printf '%s' "${cmd2}" | tr ',' ' ')"
-    MAKE-WINDOW "${session}" "${window}" "${cmd1}" "${cmd2}"
+    MAKE_WINDOW "${session}" "${window}" "${cmd1}" "${cmd2}"
 
   done
 
@@ -217,9 +217,9 @@ then
   then
     [ X"${blocks}" != X"yes" ] && ERROR 'client: "%s" already connected to: "%s"' "${client}" "${session}"
     # have a running test so stop/delete/restart
-    STOP-ALL-BITMARKD
-    DELETE-BLOCKS "${n}"
-    START-ALL-BITMARKD
+    STOP_ALL_BITMARKD
+    DELETE_BLOCKS "${n}"
+    START_ALL_BITMARKD
   else
     tmux attach-session -t "${session}"
   fi
@@ -228,5 +228,5 @@ elif [ X"${blocks}" = X"yes" ]
 then
   ERROR 'no current test session exists'
 else
-  NEW-TEST-SESSION
+  NEW_TEST_SESSION
 fi

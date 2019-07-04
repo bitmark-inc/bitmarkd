@@ -21,7 +21,7 @@ func runBitmarkdInfo(c *cli.Context) error {
 	}
 	defer client.Close()
 
-	response, err := client.GetBitmarkInfo()
+	response, err := client.GetBitmarkInfoCompat()
 	if nil != err {
 		return err
 	}
