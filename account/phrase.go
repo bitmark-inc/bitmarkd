@@ -63,7 +63,7 @@ func Base58EncodedSeedToPhrase(encodedSeed string) ([]string, error) {
 	}
 
 	if phraseLength != len(phrase) {
-		return nil, fault.ErrInvalidPhraseLength
+		return nil, fault.ErrInvalidRecoveryPhraseLength
 	}
 
 	return phrase, nil
