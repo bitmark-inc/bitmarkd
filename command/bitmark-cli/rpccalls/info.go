@@ -9,9 +9,19 @@ import (
 	"github.com/bitmark-inc/bitmarkd/rpc"
 )
 
-// GetBitmarkInfo - request status from bitmarkd
+// GetBitmarkInfo - request status from bitmarkd (must be matching version)
 func (client *Client) GetBitmarkInfo() (*rpc.InfoReply, error) {
 	var reply rpc.InfoReply
+	if err := client.client.Call("Node.Info", rpc.InfoArguments{}, &reply); err != nil {
+		return nil, err
+	}
+
+	return &reply, nil
+}
+
+// GetBitmarkInfoCompat - request status from bitmarkd (any version)
+func (client *Client) GetBitmarkInfoCompat() (*interface{}, error) {
+	var reply interface{}
 	if err := client.client.Call("Node.Info", rpc.InfoArguments{}, &reply); err != nil {
 		return nil, err
 	}
