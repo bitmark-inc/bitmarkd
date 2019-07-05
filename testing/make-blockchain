@@ -252,7 +252,7 @@ PAY() {
   then
     eval env WALLET_PASSWORD='1234567890' ${pay} | jq .
     printf '\n'
-    eval GEN-${currency}
+    eval GEN_${currency}
   fi
   WAIT "${txid}"
 }

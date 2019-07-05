@@ -98,6 +98,7 @@ case "$(uname)" in
     ;;
   (Linux)
     getopt=/usr/bin/getopt
+    lua=lua5.2
     ;;
   (*)
     ERROR 'OS: %s is not supported' "$(uname)"
