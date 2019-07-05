@@ -393,8 +393,14 @@ func main() {
 			Action: runBitmarkdInfo,
 		},
 		{
-			Name:   "seed",
-			Usage:  "decrypt and displey default identity's recovery seed",
+			Name:  "seed",
+			Usage: "decrypt and display default identity's recovery seed",
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  "recovery, r",
+					Usage: "display recovery phrase",
+				},
+			},
 			Action: runSeed,
 		},
 		{
