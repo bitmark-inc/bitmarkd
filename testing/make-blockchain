@@ -35,7 +35,7 @@ btc_2="2N95f5yThatYUrwMnAqoxXL5UNs8HYmeinL"  # priv='cTPAdf5MNmc8Fycf9NSkzRQjXJY
 ltc_2="Qb7NQ3PjhvVBLJYTzTc834txdokHmHfLiS"   # priv='cN9tHtJSz35wyHh4XFot7iKpeLmUqApMQcT2dkFHxF1Rxtarm6Pw'
 
 
-# BTC or LTC - set in NEW-CHAIN
+# BTC or LTC - set in NEW_CHAIN
 currency=LTC
 
 # wallet network local/test/bitmark
@@ -81,7 +81,7 @@ VERBOSE() {
   printf '\n'
 }
 
-SET-CURRENCY() {
+SET_CURRENCY() {
   case "${1}" in
     ([bB][tT][cC])
       currency=BTC
@@ -257,19 +257,19 @@ PAY() {
   WAIT "${txid}"
 }
 
-GEN-BTC() {
+GEN_BTC() {
   local btc_address
   btc_address=$(run-bitcoin getnewaddress)
   run-bitcoin generatetoaddress 1 "${btc_address}"
 }
 
-GEN-LTC() {
+GEN_LTC() {
   local ltc_address
   ltc_address=$(run-litecoin getnewaddress)
   run-litecoin generatetoaddress 1 "${ltc_address}"
 }
 
-SHOW-BALANCE() {
+SHOW_BALANCE() {
   local q i user
   q='
 def s($f): ("          "+($f|tostring))[-10:] + " ";
@@ -293,7 +293,7 @@ def n($f): (($f|tostring)+"          ")[:10] + " ";
   printf '\n'
 }
 
-SHOW-OWNERSHIP() {
+SHOW_OWNERSHIP() {
   local q i user
   q='
 def s($f): ("          "+($f|tostring))[-10:] + " ";
@@ -327,7 +327,7 @@ def n($f): (($f|tostring)+"          ")[:10] + " ";
   printf '\n'
 }
 
-OWNER-OF-BLOCK() {
+OWNER_OF_BLOCK() {
   local block_number q i user txid
   block_number="${1}"; shift
   [ -z "${block_number}" ] && block_number=2
@@ -367,7 +367,7 @@ OWNER-OF-BLOCK() {
 
 # ------------------------------------------------------------------------------------------
 
-NEW-CHAIN() {
+NEW_CHAIN() {
 
   BITMARKD
   if [ "${blocks}" != 1 ]
@@ -399,7 +399,7 @@ NEW-CHAIN() {
 
   PAY "${txid}" "${pay}"
 
-  SHOW-OWNERSHIP
+  SHOW_OWNERSHIP
 
   # ------------------------------------------------------------------------------------------
   # Unratified transfer
@@ -431,8 +431,8 @@ NEW-CHAIN() {
 
   # ------------------------------------------------------------------------------------------
 
-  SHOW-OWNERSHIP
-  SHOW-BALANCE
+  SHOW_OWNERSHIP
+  SHOW_BALANCE
 
   # ------------------------------------------------------------------------------------------
   # Grant
@@ -450,7 +450,7 @@ NEW-CHAIN() {
 
   # ------------------------------------------------------------------------------------------
 
-  SHOW-BALANCE
+  SHOW_BALANCE
 
   # ------------------------------------------------------------------------------------------
   # Issue 2
@@ -461,7 +461,7 @@ NEW-CHAIN() {
   VERBOSE 'issue: %s' "${issue_id}"
 
   WAIT "${issue_id}"
-  SHOW-OWNERSHIP
+  SHOW_OWNERSHIP
 
   # ------------------------------------------------------------------------------------------
   # Share
@@ -476,8 +476,8 @@ NEW-CHAIN() {
 
   # ------------------------------------------------------------------------------------------
 
-  SHOW-OWNERSHIP
-  SHOW-BALANCE
+  SHOW_OWNERSHIP
+  SHOW_BALANCE
 
   # ------------------------------------------------------------------------------------------
   # Swap
@@ -493,24 +493,24 @@ NEW-CHAIN() {
 
   PAY "${txid}" "${pay}"
 
-  SHOW-BALANCE
+  SHOW_BALANCE
 
   # ------------------------------------------------------------------------------------------
   # transfer some block to new owners
   # ------------------------------------------------------------------------------------------
 
-  DO-BLOCKS
+  DO_BLOCKS
 
   # ------------------------------------------------------------------------------------------
   # multiple issues
   # ------------------------------------------------------------------------------------------
 
-  DO-ISSUES
+  DO_ISSUES
 
   # ------------------------------------------------------------------------------------------
 }
 
-DO-ISSUES() {
+DO_ISSUES() {
 
   BITMARKD
   if [ "${blocks}" -le 1 ]
@@ -518,11 +518,11 @@ DO-ISSUES() {
     ERROR 'need longer block chain, not height: %s' "${blocks}"
   fi
 
-  ISSUE-NN 10 4 2 1 2
-  ISSUE-NN 10 6 1 2 1
+  ISSUE_NN 10 4 2 1 2
+  ISSUE_NN 10 6 1 2 1
 }
 
-ISSUE-NN() {
+ISSUE_NN() {
   local qty tr asset name meta fp user_x user_y n
 
   qty="${1}" ; shift
@@ -531,20 +531,20 @@ ISSUE-NN() {
   user_x="${1}" ; shift
   user_y="${1}" ; shift
 
-  [ -z "${qty}" -o -z "${tr}" -o -z "${asset}" -o -z "${user_x}" -o -z "${user_y}" ] && ERROR 'ISSUE-TEN: parameters cannot be empty'
-  [ "${qty}" -lt "${tr}" ] && ERROR 'ISSUE-TEN: qty: %d < tranfer: %d' "${qty}" "${tr}"
+  [ -z "${qty}" -o -z "${tr}" -o -z "${asset}" -o -z "${user_x}" -o -z "${user_y}" ] && ERROR 'ISSUE_NN: parameters cannot be empty'
+  [ "${qty}" -lt "${tr}" ] && ERROR 'ISSUE_NN: qty: %d < tranfer: %d' "${qty}" "${tr}"
 
   eval name=\"\${asset_name_${asset}}\"
   eval meta=\"\${asset_meta_${asset}}\"
   eval fp=\"\${asset_fp_${asset}}\"
 
-  [ -z "${name}" -o -z "${meta}" -o -z "${fp}" ] && ERROR 'ISSUE-TEN: asset cannot be empty'
+  [ -z "${name}" -o -z "${meta}" -o -z "${fp}" ] && ERROR 'ISSUE_NN: asset cannot be empty'
 
   eval user_x=\"\${user_${user_x}}\"
   eval user_y=\"\${user_${user_y}}\"
 
-  [ -z "${user_x}" -o -z "${user_y}" ] && ERROR 'ISSUE-TEN: users cannot be empty'
-  [ X"${user_x}" = X"${user_y}" ] && ERROR 'ISSUE-TEN: userss cannot be identical'
+  [ -z "${user_x}" -o -z "${user_y}" ] && ERROR 'ISSUE_NN: users cannot be empty'
+  [ X"${user_x}" = X"${user_y}" ] && ERROR 'ISSUE_NN: userss cannot be identical'
 
   # ------------------------------------------------------------------------------------------
   # multiple issues
@@ -563,7 +563,7 @@ ISSUE-NN() {
 
   PAY "${issue_id}" "${pay}"
 
-  SHOW-OWNERSHIP
+  SHOW_OWNERSHIP
 
   # ------------------------------------------------------------------------------------------
   # Countersigned transfer
@@ -587,12 +587,12 @@ ISSUE-NN() {
 
   done
 
-  SHOW-OWNERSHIP
+  SHOW_OWNERSHIP
 
   # ------------------------------------------------------------------------------------------
 }
 
-DO-BLOCKS() {
+DO_BLOCKS() {
 
   BITMARKD
   if [ "${blocks}" -le 1 ]
@@ -604,23 +604,23 @@ DO-BLOCKS() {
   # Block Ownership Transfers
   # ------------------------------------------------------------------------------------------
 
-  BLOCK-TRANSFER 2 "${user_1}" "${btc_1}" "${ltc_1}"
-  BLOCK-TRANSFER 3 "${user_1}" "${btc_1}" "${ltc_1}"
-  BLOCK-TRANSFER 4 "${user_2}" "${btc_2}" "${ltc_2}"
-  BLOCK-TRANSFER 5 "${user_2}" "${btc_2}" "${ltc_2}"
+  BLOCK_TRANSFER 2 "${user_1}" "${btc_1}" "${ltc_1}"
+  BLOCK_TRANSFER 3 "${user_1}" "${btc_1}" "${ltc_1}"
+  BLOCK_TRANSFER 4 "${user_2}" "${btc_2}" "${ltc_2}"
+  BLOCK_TRANSFER 5 "${user_2}" "${btc_2}" "${ltc_2}"
 
   # secon transfer
-  BLOCK-TRANSFER 3 "${user_2}" "${btc_2}" "${ltc_2}"
-  BLOCK-TRANSFER 5 "${user_1}" "${btc_1}" "${ltc_1}"
+  BLOCK_TRANSFER 3 "${user_2}" "${btc_2}" "${ltc_2}"
+  BLOCK_TRANSFER 5 "${user_1}" "${btc_1}" "${ltc_1}"
 
   # ------------------------------------------------------------------------------------------
 
-  SHOW-OWNERSHIP
+  SHOW_OWNERSHIP
 
   # ------------------------------------------------------------------------------------------
 }
 
-BLOCK-TRANSFER() {
+BLOCK_TRANSFER() {
   local n to_user btc_address ltc_address
   n="${1}"; shift
   to_user="${1}"; shift
@@ -632,7 +632,7 @@ BLOCK-TRANSFER() {
   # Find owner
   # ------------------------------------------------------------------------------------------
 
-  OWNER-OF-BLOCK "${n}"
+  OWNER_OF_BLOCK "${n}"
 
   # ------------------------------------------------------------------------------------------
   # block owner transfer
@@ -674,29 +674,29 @@ done
 # decode command
 case "${1}" in
   (new)
-    SET-CURRENCY "${2}"
-    NEW-CHAIN
+    SET_CURRENCY "${2}"
+    NEW_CHAIN
     ;;
   (bt)
-    SET-CURRENCY "${2}"
-    DO-BLOCKS
+    SET_CURRENCY "${2}"
+    DO_BLOCKS
     ;;
   (issue)
-    SET-CURRENCY "${2}"
-    DO-ISSUES
+    SET_CURRENCY "${2}"
+    DO_ISSUES
     ;;
   (balance)
     BITMARKD
-    SHOW-BALANCE
+    SHOW_BALANCE
     ;;
   (ownership)
     BITMARKD
-    SHOW-OWNERSHIP
+    SHOW_OWNERSHIP
     ;;
   (show)
     BITMARKD
-    SHOW-OWNERSHIP
-    SHOW-BALANCE
+    SHOW_OWNERSHIP
+    SHOW_BALANCE
     ;;
   (*)
     USAGE 'invalid argument: %s' "${1}"

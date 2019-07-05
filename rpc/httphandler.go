@@ -159,7 +159,7 @@ func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 		Peers               peerCounts `json:"peers"`
 		TransactionCounters Counters   `json:"transactionCounters"`
 		Difficulty          float64    `json:"difficulty"`
-		Hashrate            float64    `json:hashrate,omitempty`
+		Hashrate            float64    `json:"hashrate,omitempty"`
 		Version             string     `json:"version"`
 		Uptime              string     `json:"uptime"`
 		PublicKey           string     `json:"publicKey"`

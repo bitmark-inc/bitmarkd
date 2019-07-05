@@ -57,50 +57,22 @@ const (
 // interface type to allow individual methods to be called.
 func PrivateKeyFromBase58Seed(seedBase58Encoded string) (*PrivateKey, error) {
 
-	// verify length
-	seed := util.FromBase58(seedBase58Encoded)
-	seedLength := len(seed)
-	if seedV1Length != seedLength && seedV2Length != seedLength {
-		return nil, fault.ErrInvalidSeedLength
+	sk, testnet, err := parseBase58Seed(seedBase58Encoded)
+	if nil != err {
+		return nil, err
 	}
 
-	// verify checksum
-	digest := sha3.Sum256(seed[:seedLength-checksumLength])
-	checksumStart := seedLength - seedChecksumLength
-	expectedChecksum := digest[:seedChecksumLength]
-	actualChecksum := seed[checksumStart:]
-	if !bytes.Equal(expectedChecksum, actualChecksum) {
-		return nil, fault.ErrChecksumMismatch
-	}
+	skLength := len(sk)
 
-	header := seed[:seedHeaderLength]
-	var ed25519Seed []byte // the ed25519 seed for generate key pair
-	var testnet bool       // denote the network is test net
+	var ed25519Seed []byte // ed25519 seed to generate key pair
 
-	switch {
-	case bytes.Equal(seedHeaderV1, header):
-		// copy the secret key from seed
-		var sk [secretKeyV1Length]byte
-		secretStart := seedHeaderLength + seedPrefixLength
-		copy(sk[:], seed[secretStart:])
+	switch skLength {
+	case secretKeyV1Length:
+		var skV1 [secretKeyV1Length]byte
+		copy(skV1[:], sk)
+		ed25519Seed = secretbox.Seal([]byte{}, authSeedIndex[:], &seedNonce, &skV1)
 
-		prefix := seed[seedHeaderLength:secretStart]
-		// first byte of prefix is test/live indication
-		testnet = prefix[0] == 0x01
-
-		ed25519Seed = secretbox.Seal([]byte{}, authSeedIndex[:], &seedNonce, &sk)
-
-	case bytes.Equal(seedHeaderV2, header):
-		sk := seed[seedHeaderLength:checksumStart]
-
-		// verify valid secret key
-		if secretKeyV2Length != len(sk) || 0 != sk[16]&0x0f {
-			return nil, fault.ErrInvalidSeedLength
-		}
-
-		// parse network
-		mode := sk[0]&0x80 | sk[1]&0x40 | sk[2]&0x20 | sk[3]&0x10
-		testnet = mode == sk[15]&0xf0^0xf0
+	case secretKeyV2Length:
 
 		// add the seed 4 times to hash value
 		hash := sha3.NewShake256()
@@ -140,6 +112,61 @@ func PrivateKeyFromBase58Seed(seedBase58Encoded string) (*PrivateKey, error) {
 		},
 	}
 	return privateKey, nil
+}
+
+// parse the base58 encoded seed
+//
+// return the secretkey(aka seed core), testnet and the error
+func parseBase58Seed(seedBase58Encoded string) ([]byte, bool, error) {
+	// verify length
+	seed := util.FromBase58(seedBase58Encoded)
+	seedLength := len(seed)
+	if seedV1Length != seedLength && seedV2Length != seedLength {
+		return nil, false, fault.ErrInvalidSeedLength
+	}
+
+	// verify checksum
+	digest := sha3.Sum256(seed[:seedLength-checksumLength])
+	checksumStart := seedLength - seedChecksumLength
+	expectedChecksum := digest[:seedChecksumLength]
+	actualChecksum := seed[checksumStart:]
+	if !bytes.Equal(expectedChecksum, actualChecksum) {
+		return nil, false, fault.ErrChecksumMismatch
+	}
+
+	header := seed[:seedHeaderLength]
+	var sk []byte
+	var testnet bool
+
+	switch {
+	case bytes.Equal(seedHeaderV1, header):
+		// copy the secret key from seed
+		sk = make([]byte, secretKeyV1Length)
+		secretStart := seedHeaderLength + seedPrefixLength
+		copy(sk[:], seed[secretStart:])
+
+		prefix := seed[seedHeaderLength:secretStart]
+		// first byte of prefix is test/live indication
+		testnet = prefix[0] == 0x01
+
+	case bytes.Equal(seedHeaderV2, header):
+
+		sk = seed[seedHeaderLength:checksumStart]
+
+		// verify valid secret key
+		if secretKeyV2Length != len(sk) || 0 != sk[16]&0x0f {
+			return nil, false, fault.ErrInvalidSeedLength
+		}
+
+		// parse network
+		mode := sk[0]&0x80 | sk[1]&0x40 | sk[2]&0x20 | sk[3]&0x10
+		testnet = mode == sk[15]&0xf0^0xf0
+
+	default:
+		return nil, false, fault.ErrInvalidSeedHeader
+	}
+
+	return sk, testnet, nil
 }
 
 // NewBase58EncodedSeedV1 - generate base58 seed v1
