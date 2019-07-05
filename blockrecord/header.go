@@ -232,6 +232,11 @@ func AdjustDifficultyAtBlock(height uint64) (float64, float64, error) {
 	return nextDifficulty, currentDifficulty, nil
 }
 
+// ResetDifficulty - reset difficulty to initial value
+func ResetDifficulty() {
+	difficulty.Current.SetBits(difficulty.OneUint64)
+}
+
 // DifficultyByPreviousTimespanAtBlock - next difficulty value by previous timespan
 func DifficultyByPreviousTimespanAtBlock(height uint64) (float64, error) {
 	actualTimespan, err := prevDifficultyTimespan(height)
