@@ -68,3 +68,13 @@ func ValidBlockLinkage(currentDigest blockdigest.Digest, incomingDigestOfPreviou
 
 	return nil
 }
+
+// most time next height is increased by 1 from current height,
+// but it is also valid when incoming block is same height with smaller digest
+func validNextHeightFromExpected(expectedNextHeight uint64, nextHeight uint64) error {
+	if nextHeight < expectedNextHeight-1 || nextHeight > expectedNextHeight {
+		return fault.ErrHeightOutOfSequence
+	}
+
+	return nil
+}

@@ -108,9 +108,12 @@ func ExtractHeader(block []byte, checkHeight uint64) (*Header, blockdigest.Diges
 		return nil, blockdigest.Digest{}, nil, err
 	}
 
-	if checkHeight > genesis.BlockNumber && header.Number != checkHeight {
-		log.Errorf("check height %d, incoming block height %d, error: %s", checkHeight, header.Number, fault.ErrHeightOutOfSequence)
-		return nil, blockdigest.Digest{}, nil, fault.ErrHeightOutOfSequence
+	if checkHeight > genesis.BlockNumber {
+		err := validNextHeightFromExpected(checkHeight, header.Number)
+		if nil != err {
+			log.Errorf("check height %d, incoming block height %d, error: %s", checkHeight, header.Number, err)
+			return nil, blockdigest.Digest{}, nil, err
+		}
 	}
 
 	var digest blockdigest.Digest
