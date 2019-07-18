@@ -22,23 +22,17 @@ import (
 )
 
 type ClientIntf interface {
+	Close() error
 	Connect(conn *util.Connection, serverPublicKey []byte, prefix string) error
+	ConnectedTo() *Connected
+	GoString() string
 	IsConnected() bool
 	IsConnectedTo(serverPublicKey []byte) bool
 	Reconnect() error
-	ReconnectReturningSocket() (*zmq.Socket, error)
-	ReconnectOpenedSocket() error
-	GetSocket() *zmq.Socket
-	Close() error
-	Send(items ...interface{}) error
 	Receive(flags zmq.Flag) ([][]byte, error)
-	BeginPolling(poller *Poller, events zmq.State) *zmq.Socket
-	String() string
-	ConnectedTo() *Connected
-	GoString() string
-	GetMonitorSocket() *zmq.Socket
+	Send(items ...interface{}) error
 	ServerPublicKey() []byte
-	ResetServer() error
+	String() string
 }
 
 // Client - structure to hold a client connection
