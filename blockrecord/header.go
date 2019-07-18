@@ -222,6 +222,10 @@ func FoundationTxId(header *Header, digest blockdigest.Digest) merkle.Digest {
 // AdjustDifficultyAtBlock - adjust difficulty at block, returns next difficulty, current difficulty, error
 func AdjustDifficultyAtBlock(height uint64) (float64, float64, error) {
 	currentDifficulty := difficulty.Current.Value()
+	if MinimumBlockNumber >= height {
+		return currentDifficulty, currentDifficulty, nil
+	}
+
 	nextDifficulty, err := DifficultyByPreviousTimespanAtBlock(height)
 	if err != nil {
 		log.Errorf("get difficulty value with error: %s", err)

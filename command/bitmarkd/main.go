@@ -217,6 +217,17 @@ func main() {
 		return
 	}
 
+	// adjust difficulty to fit current status
+	_, _, blockHeaderVersion, _ := blockheader.Get()
+	if blockrecord.IsDifficultyAppliedVersion(blockHeaderVersion) {
+		log.Info("initialise difficulty based on existing blocks")
+		_, _, err = blockrecord.AdjustDifficultyAtBlock(blockheader.Height())
+		if nil != err {
+			log.Criticalf("initialise difficulty error: %s", err)
+			exitwithstatus.Message("initialise difficulty error: %s", err)
+		}
+	}
+
 	// reservoir and block are both ready
 	// so can restore any previously saved transactions
 	// before any peer services are started
