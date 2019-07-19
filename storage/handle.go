@@ -14,7 +14,6 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-// TODO: Aaron use interface of Handle
 type Handle interface {
 	Begin()
 	Commit() error

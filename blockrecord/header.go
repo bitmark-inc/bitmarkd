@@ -108,9 +108,12 @@ func ExtractHeader(block []byte, checkHeight uint64) (*Header, blockdigest.Diges
 		return nil, blockdigest.Digest{}, nil, err
 	}
 
-	if checkHeight > genesis.BlockNumber && header.Number != checkHeight {
-		log.Errorf("check height %d, incoming block height %d, error: %s", checkHeight, header.Number, fault.ErrHeightOutOfSequence)
-		return nil, blockdigest.Digest{}, nil, fault.ErrHeightOutOfSequence
+	if checkHeight > genesis.BlockNumber {
+		err := validNextHeightFromExpected(checkHeight, header.Number)
+		if nil != err {
+			log.Errorf("check height %d, incoming block height %d, error: %s", checkHeight, header.Number, err)
+			return nil, blockdigest.Digest{}, nil, err
+		}
 	}
 
 	var digest blockdigest.Digest
@@ -220,8 +223,13 @@ func FoundationTxId(header *Header, digest blockdigest.Digest) merkle.Digest {
 }
 
 // AdjustDifficultyAtBlock - adjust difficulty at block, returns next difficulty, current difficulty, error
+// make sure header version is correct before calling this function
 func AdjustDifficultyAtBlock(height uint64) (float64, float64, error) {
 	currentDifficulty := difficulty.Current.Value()
+	if MinimumBlockNumber >= height {
+		return currentDifficulty, currentDifficulty, nil
+	}
+
 	nextDifficulty, err := DifficultyByPreviousTimespanAtBlock(height)
 	if err != nil {
 		log.Errorf("get difficulty value with error: %s", err)

@@ -19,6 +19,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/chain"
+	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/peer"
@@ -215,6 +216,17 @@ func main() {
 	// these commands are allowed to access the internal database
 	if len(arguments) > 0 && processDataCommand(log, arguments, masterConfiguration) {
 		return
+	}
+
+	// adjust difficulty to fit current status
+	height, _, blockHeaderVersion, _ := blockheader.Get()
+	if blockrecord.IsDifficultyAppliedVersion(blockHeaderVersion) && difficulty.AdjustTimespanInBlocks < height {
+		log.Info("initialise difficulty based on existing blocks")
+		_, _, err = blockrecord.AdjustDifficultyAtBlock(blockheader.Height())
+		if nil != err {
+			log.Criticalf("initialise difficulty error: %s", err)
+			exitwithstatus.Message("initialise difficulty error: %s", err)
+		}
 	}
 
 	// reservoir and block are both ready

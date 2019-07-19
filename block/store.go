@@ -7,7 +7,6 @@ package block
 
 import (
 	"encoding/binary"
-	"fmt"
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/account"
@@ -359,7 +358,6 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
 
 	trx, err := storage.NewDBTransaction()
 	if nil != err {
-		fmt.Printf("aaron create transaction error\n")
 		return err
 	}
 
@@ -648,7 +646,6 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
 
 	err = trx.Commit()
 	if nil != err {
-		fmt.Printf("Aaron commit error: %v\n", err)
 		return err
 	}
 
