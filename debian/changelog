@@ -1,3 +1,14 @@
+bitmarkd (0.11.0-alpha.1-1) unstable; urgency=medium
+
+  * alpha version for testing
+  * revised fork protection
+  * new database layout
+  * cli refactored
+  * support for seed V2
+  * code tidying and CI checking added
+
+ -- Christopher Hall <hsw@bitmark.com>  Mon, 22 Jul 2019 02:15:20 +0000
+
 bitmarkd (0.10.6-1) unstable; urgency=medium
 
   * handle both Litecoin P2SH Base58 address encodings
