@@ -56,25 +56,32 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
 		return err
 	}
 
-	if blockrecord.IsDifficultyAppliedVersion(header.Version) && difficulty.IsAdjustBlock(header.Number) {
-		nextDifficulty, prevDifficulty, err := blockrecord.AdjustDifficultyAtBlock(header.Number)
-		// if any error happens for storing block, reset difficulty back to old value
-		defer func(prevDifficulty float64) {
-			if err != nil {
-				difficulty.Current.Set(prevDifficulty)
-			}
-		}(prevDifficulty)
-
-		if err != nil {
-			globalData.log.Errorf("adjust difficulty with error: %s", err)
-			return err
-		}
-		globalData.log.Infof("previous difficulty: %f, current difficulty: %f", prevDifficulty, nextDifficulty)
+	// incoming version should always be larger or equal to current
+	if err := blockrecord.ValidHeaderVersion(previousVersion, header.Version); err != nil {
+		return err
 	}
 
-	if err := blockrecord.ValidIncomingDifficuty(header.Difficulty); err != nil {
-		globalData.log.Errorf("incoming block difficulty %f different from local %f", header.Difficulty.Value(), difficulty.Current.Value())
-		return err
+	if blockrecord.IsDifficultyAppliedVersion(header.Version) {
+		if difficulty.IsAdjustBlock(header.Number) {
+			nextDifficulty, prevDifficulty, err := blockrecord.AdjustDifficultyAtBlock(header.Number)
+			// if any error happens for storing block, reset difficulty back to old value
+			defer func(prevDifficulty float64) {
+				if err != nil {
+					difficulty.Current.Set(prevDifficulty)
+				}
+			}(prevDifficulty)
+
+			if err != nil {
+				globalData.log.Errorf("adjust difficulty with error: %s", err)
+				return err
+			}
+			globalData.log.Infof("previous difficulty: %f, current difficulty: %f", prevDifficulty, nextDifficulty)
+		}
+
+		if err := blockrecord.ValidIncomingDifficuty(header.Difficulty); err != nil {
+			globalData.log.Errorf("incoming block difficulty %f different from local %f", header.Difficulty.Value(), difficulty.Current.Value())
+			return err
+		}
 	}
 
 	if ok := digest.IsValidByDifficulty(header.Difficulty); !ok {
@@ -84,11 +91,6 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
 
 	// ensure correct linkage
 	if err := blockrecord.ValidBlockLinkage(previousBlock, header.PreviousBlock); err != nil {
-		return err
-	}
-
-	// check version
-	if err := blockrecord.ValidHeaderVersion(previousVersion, header.Version); err != nil {
 		return err
 	}
 
