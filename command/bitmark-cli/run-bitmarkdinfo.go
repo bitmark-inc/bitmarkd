@@ -15,7 +15,7 @@ func runBitmarkdInfo(c *cli.Context) error {
 
 	m := c.App.Metadata["config"].(*metadata)
 
-	client, err := rpccalls.NewClient(m.testnet, m.config.Connections[0], m.verbose, m.e)
+	client, err := rpccalls.NewClient(m.testnet, m.config.Connections[m.connectionOffset], m.verbose, m.e)
 	if nil != err {
 		return err
 	}

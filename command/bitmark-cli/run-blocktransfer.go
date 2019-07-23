@@ -53,7 +53,7 @@ func runBlockTransfer(c *cli.Context) error {
 		fmt.Fprintf(m.e, "sender: %s\n", from)
 	}
 
-	client, err := rpccalls.NewClient(m.testnet, m.config.Connections[0], m.verbose, m.e)
+	client, err := rpccalls.NewClient(m.testnet, m.config.Connections[m.connectionOffset], m.verbose, m.e)
 	if nil != err {
 		return err
 	}

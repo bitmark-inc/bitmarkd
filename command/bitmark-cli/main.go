@@ -18,13 +18,14 @@ import (
 )
 
 type metadata struct {
-	file    string
-	config  *configuration.Configuration
-	save    bool
-	testnet bool
-	verbose bool
-	e       io.Writer
-	w       io.Writer
+	file             string
+	config           *configuration.Configuration
+	connectionOffset int
+	save             bool
+	testnet          bool
+	verbose          bool
+	e                io.Writer
+	w                io.Writer
 }
 
 // set by the linker: go build -ldflags "-X main.version=M.N" ./...
@@ -50,6 +51,11 @@ func main() {
 			Name:  "network, n",
 			Value: "",
 			Usage: " connect to bitmark `NETWORK` [bitmark|testing|local]",
+		},
+		cli.IntFlag{
+			Name:  "connection, c",
+			Value: 0,
+			Usage: " connection offset `N` [0]",
 		},
 		cli.StringFlag{
 			Name:  "identity, i",
@@ -531,15 +537,20 @@ func main() {
 			if nil != err {
 				return err
 			}
+			connectionOffset := c.GlobalInt("connection")
+			if connectionOffset < 0 || connectionOffset >= len(configuration.Connections) {
+				return fmt.Errorf("connection: %d outside: %d to %d", connectionOffset, 0, len(configuration.Connections)-1)
+			}
 
 			c.App.Metadata["config"] = &metadata{
-				file:    file,
-				config:  configuration,
-				testnet: configuration.TestNet,
-				save:    false,
-				verbose: verbose,
-				e:       e,
-				w:       w,
+				file:             file,
+				config:           configuration,
+				connectionOffset: connectionOffset,
+				testnet:          configuration.TestNet,
+				save:             false,
+				verbose:          verbose,
+				e:                e,
+				w:                w,
 			}
 		}
 
