@@ -34,8 +34,12 @@ func ValidBlockTimeSpacingAtVersion(version uint16, timeSpacing uint64) error {
 }
 
 // ValidIncomingDifficuty - valid incoming difficulty
-func ValidIncomingDifficuty(incoming *difficulty.Difficulty) error {
-	if incoming.Value() != difficulty.Current.Value() {
+func ValidIncomingDifficuty(header *Header) error {
+	if !IsDifficultyAppliedVersion(header.Version) {
+		return nil
+	}
+
+	if header.Difficulty.Value() != difficulty.Current.Value() {
 		return fault.ErrDifficultyNotMatch
 	}
 	return nil
@@ -44,6 +48,18 @@ func ValidIncomingDifficuty(incoming *difficulty.Difficulty) error {
 // IsDifficultyAppliedVersion - is difficulty rule applied at header version
 func IsDifficultyAppliedVersion(version uint16) bool {
 	return version >= difficultyAppliedVersion
+}
+
+// IsBlockToAdjustDifficulty - is block the one to adjust difficulty
+func IsBlockToAdjustDifficulty(height uint64, version uint16) bool {
+	if !IsDifficultyAppliedVersion(version) {
+		return false
+	}
+	return isDifficultyAdjustmentBlock(height)
+}
+
+func isDifficultyAdjustmentBlock(height uint64) bool {
+	return 0 == height%difficulty.AdjustTimespanInBlocks
 }
 
 // ValidHeaderVersion - valid incoming block version

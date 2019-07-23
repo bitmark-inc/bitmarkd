@@ -320,11 +320,6 @@ func adjustRatioByLastTimespan(actualTimespanSecond uint64) float64 {
 	return float64(adjustTimespanInSecond) / float64(actualTimespanSecond)
 }
 
-// IsAdjustBlock - is block the one to adjust difficulty
-func IsAdjustBlock(height uint64) bool {
-	return height%AdjustTimespanInBlocks == 0
-}
-
 // PrevTimespanBlockBeginAndEnd - previous begin & end block of difficulty timespan
 func PrevTimespanBlockBeginAndEnd(height uint64) (uint64, uint64) {
 	if remainder := height % AdjustTimespanInBlocks; remainder != 0 {

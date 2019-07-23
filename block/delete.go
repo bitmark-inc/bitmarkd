@@ -53,17 +53,19 @@ outer_loop:
 			blockheader.Set(header.Number, digest, header.Version, header.Timestamp)
 			log.Infof("finish: _NOT_ Deleting: %d", header.Number)
 
-			if header.Number >= difficulty.AdjustTimespanInBlocks {
-				nextDifficulty, prevDifficulty, err := blockrecord.AdjustDifficultyAtBlock(header.Number)
-				if err != nil {
-					log.Errorf("failed to adjust difficulty with error: %s", err)
-					return err
+			if blockrecord.IsDifficultyAppliedVersion(header.Version) {
+				if header.Number >= difficulty.AdjustTimespanInBlocks {
+					nextDifficulty, prevDifficulty, err := blockrecord.AdjustDifficultyAtBlock(header.Number)
+					if err != nil {
+						log.Errorf("failed to adjust difficulty with error: %s", err)
+						return err
+					}
+					log.Infof("set new difficulty to %f, previous difficulty %f", nextDifficulty, prevDifficulty)
+				} else {
+					// in case fork happens around first difficulty adjust, difficulty might be changed and
+					// delete down blocks below adjustment block, leave difficulty different than other nodes
+					blockrecord.ResetDifficulty()
 				}
-				log.Infof("set new difficulty to %f, previous difficulty %f", nextDifficulty, prevDifficulty)
-			} else {
-				// in case fork happens around first difficulty adjust, difficulty might be changed and
-				// delete down blocks below adjustment block, leave difficulty different than other nodes
-				blockrecord.ResetDifficulty()
 			}
 			return nil
 		}
