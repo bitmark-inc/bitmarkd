@@ -61,27 +61,25 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
 		return err
 	}
 
-	if blockrecord.IsDifficultyAppliedVersion(header.Version) {
-		if difficulty.IsAdjustBlock(header.Number) {
-			nextDifficulty, prevDifficulty, err := blockrecord.AdjustDifficultyAtBlock(header.Number)
-			// if any error happens for storing block, reset difficulty back to old value
-			defer func(prevDifficulty float64) {
-				if err != nil {
-					difficulty.Current.Set(prevDifficulty)
-				}
-			}(prevDifficulty)
-
+	if blockrecord.IsBlockToAdjustDifficulty(header.Number, header.Version) {
+		nextDifficulty, prevDifficulty, err := blockrecord.AdjustDifficultyAtBlock(header.Number)
+		// if any error happens for storing block, reset difficulty back to old value
+		defer func(prevDifficulty float64) {
 			if err != nil {
-				globalData.log.Errorf("adjust difficulty with error: %s", err)
-				return err
+				difficulty.Current.Set(prevDifficulty)
 			}
-			globalData.log.Infof("previous difficulty: %f, current difficulty: %f", prevDifficulty, nextDifficulty)
-		}
+		}(prevDifficulty)
 
-		if err := blockrecord.ValidIncomingDifficuty(header.Difficulty); err != nil {
-			globalData.log.Errorf("incoming block difficulty %f different from local %f", header.Difficulty.Value(), difficulty.Current.Value())
+		if err != nil {
+			globalData.log.Errorf("adjust difficulty with error: %s", err)
 			return err
 		}
+		globalData.log.Infof("previous difficulty: %f, current difficulty: %f", prevDifficulty, nextDifficulty)
+	}
+
+	if err := blockrecord.ValidIncomingDifficuty(header); err != nil {
+		globalData.log.Errorf("incoming block difficulty %f different from local %f", header.Difficulty.Value(), difficulty.Current.Value())
+		return err
 	}
 
 	if ok := digest.IsValidByDifficulty(header.Difficulty); !ok {

@@ -243,18 +243,6 @@ func TestReciprocal(t *testing.T) {
 	}
 }
 
-func TestIsAdjustBlockWhenStrtInterval(t *testing.T) {
-	height := uint64(difficulty.AdjustTimespanInBlocks * 200000)
-	ok := difficulty.IsAdjustBlock(height)
-	assert.Equal(t, true, ok, "starting of difficulty timespan")
-}
-
-func TestIsAdjustBlockWhenMiddleInterval(t *testing.T) {
-	height := uint64(difficulty.AdjustTimespanInBlocks*200000 + 1)
-	ok := difficulty.IsAdjustBlock(height)
-	assert.Equal(t, false, ok, "middle of difficulty timespan")
-}
-
 func TestPrevTimespanBlockBeginAndEndWhenAtMiddle(t *testing.T) {
 	height := uint64(difficulty.AdjustTimespanInBlocks*3 + 10)
 	begin, end := difficulty.PrevTimespanBlockBeginAndEnd(height)

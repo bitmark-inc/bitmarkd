@@ -296,7 +296,7 @@ func (pub *publisher) process() {
 	message.Header.PreviousBlock, message.Header.Number = blockheader.GetNew()
 
 	pub.log.Debugf("current difficulty: %f", message.Header.Difficulty.Value())
-	if difficulty.IsAdjustBlock(message.Header.Number) {
+	if blockrecord.IsBlockToAdjustDifficulty(message.Header.Number, message.Header.Version) {
 		newDifficulty, _ := blockrecord.DifficultyByPreviousTimespanAtBlock(message.Header.Number)
 
 		diff := difficulty.New()

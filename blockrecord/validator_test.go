@@ -7,13 +7,28 @@ package blockrecord_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/stretchr/testify/assert"
 )
+
+func setupHeader() *blockrecord.Header {
+	return &blockrecord.Header{
+		Version:          uint16(3),
+		TransactionCount: uint16(0),
+		Number:           uint64(5),
+		PreviousBlock:    blockdigest.Digest{},
+		MerkleRoot:       merkle.NewDigest([]byte{}),
+		Timestamp:        uint64(time.Now().Unix()),
+		Difficulty:       difficulty.New(),
+		Nonce:            blockrecord.NonceType(1),
+	}
+}
 
 func TestValidBlockTimeSpacingWhenInitialVersionValid(t *testing.T) {
 	err := blockrecord.ValidBlockTimeSpacingAtVersion(1, 10)
@@ -35,20 +50,42 @@ func TestValidBlockTimeSpacingWhenCurrentVersionInvalid(t *testing.T) {
 	assert.Equal(t, fault.ErrInvalidBlockHeaderTimestamp, err, "invalid current block time spacing")
 }
 
-func TestValidIncomingDifficutyWhenValid(t *testing.T) {
+func TestValidIncomingDifficutyWhenDifficultyNotAppliedAndInvalid(t *testing.T) {
+	difficulty.Current.Set(2)
+	incoming := difficulty.New()
+	incoming.Set(4)
+
+	header := setupHeader()
+	header.Difficulty = incoming
+	header.Version = 2
+
+	err := blockrecord.ValidIncomingDifficuty(header)
+
+	assert.Equal(t, nil, err, "invalid difficulty header checking")
+}
+
+func TestValidIncomingDifficutyWhenDifficultyAppliedAndValid(t *testing.T) {
 	difficulty.Current.Set(2)
 	incoming := difficulty.New()
 	incoming.Set(2)
-	err := blockrecord.ValidIncomingDifficuty(incoming)
+
+	header := setupHeader()
+	header.Difficulty = incoming
+
+	err := blockrecord.ValidIncomingDifficuty(header)
 
 	assert.Equal(t, nil, err, "valid incoming difficulty")
 }
 
-func TestValidIncomingDifficutyWhenInValid(t *testing.T) {
+func TestValidIncomingDifficutyWhenDifficultyAppliedAndInValid(t *testing.T) {
 	difficulty.Current.Set(2)
 	incoming := difficulty.New()
 	incoming.Set(4)
-	err := blockrecord.ValidIncomingDifficuty(incoming)
+
+	header := setupHeader()
+	header.Difficulty = incoming
+
+	err := blockrecord.ValidIncomingDifficuty(header)
 
 	assert.Equal(t, fault.ErrDifficultyNotMatch, err, "invalid incoming difficulty")
 }
@@ -119,4 +156,22 @@ func TestValidBlockLinkageWhenValid(t *testing.T) {
 
 	err := blockrecord.ValidBlockLinkage(current, incoming)
 	assert.Equal(t, nil, err, "incoming digest same")
+}
+
+func TestIsBlockToAdjustDifficultyWhenDifficultyNotAppliedAndAtStartInterval(t *testing.T) {
+	height := uint64(difficulty.AdjustTimespanInBlocks * 200000)
+	ok := blockrecord.IsBlockToAdjustDifficulty(height, 2)
+	assert.Equal(t, false, ok, "middle of difficulty timespan")
+}
+
+func TestIsBlockToAdjustDifficultyWhenDifficultyAppliedAndAtStrtInterval(t *testing.T) {
+	height := uint64(difficulty.AdjustTimespanInBlocks * 200000)
+	ok := blockrecord.IsBlockToAdjustDifficulty(height, 3)
+	assert.Equal(t, true, ok, "starting of difficulty timespan")
+}
+
+func TestIsBlockToAdjustDifficultyWhenDifficultyAppliedAndAtMiddleInterval(t *testing.T) {
+	height := uint64(difficulty.AdjustTimespanInBlocks*200000 + 1)
+	ok := blockrecord.IsBlockToAdjustDifficulty(height, 3)
+	assert.Equal(t, false, ok, "middle of difficulty timespan")
 }
