@@ -266,7 +266,7 @@ func DifficultyByPreviousTimespanAtBlock(height uint64) (float64, error) {
 
 func prevDifficultyBaseAtBlock(height uint64) (float64, error) {
 	var baseBlockHeight uint64
-	if isDifficultyAdjustBlock(height) {
+	if isDifficultyAdjustmentBlock(height) {
 		baseBlockHeight = height - 1
 	} else {
 		baseBlockHeight = height - difficulty.AdjustTimespanInBlocks
