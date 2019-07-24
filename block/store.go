@@ -11,6 +11,7 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/asset"
+	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/currency"
@@ -35,7 +36,7 @@ const (
 )
 
 // StoreIncoming - store an incoming block checking to make sure it is valid first
-func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
+func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType) (err error) {
 	start := time.Now()
 
 	globalData.Lock()
@@ -49,11 +50,36 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
 	// get current block header
 	height, previousBlock, previousVersion, previousTimestamp := blockheader.Get()
 
+	shouldFastSync := packedNextBlock != nil
+
 	// extract incoming block record, checking for correct sequence
-	header, digest, data, err := blockrecord.ExtractHeader(packedBlock, height+1)
-	if nil != err {
-		globalData.log.Errorf("extract header error: %s", err)
-		return err
+	var digest blockdigest.Digest
+	var header *blockrecord.Header
+	var data []byte
+
+	if shouldFastSync {
+		h, _, d, err := blockrecord.ExtractHeader(packedBlock, height+1, true)
+		if nil != err {
+			globalData.log.Errorf("extract header error: %s", err)
+			return err
+		}
+		nextH, _, _, err := blockrecord.ExtractHeader(packedNextBlock, height+2, true)
+		if nil != err {
+			globalData.log.Errorf("extract header error: %s", err)
+			return err
+		}
+		header = h
+		digest = nextH.PreviousBlock
+		data = d
+	} else {
+		h, di, d, err := blockrecord.ExtractHeader(packedBlock, height+1, false)
+		if nil != err {
+			globalData.log.Errorf("extract header error: %s", err)
+			return err
+		}
+		header = h
+		digest = di
+		data = d
 	}
 
 	// incoming version should always be larger or equal to current
@@ -82,14 +108,16 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
 		return err
 	}
 
-	if ok := digest.IsValidByDifficulty(header.Difficulty); !ok {
-		globalData.log.Warnf("digest error: %s", fault.ErrInvalidBlockHeaderDifficulty)
-		return fault.ErrInvalidBlockHeaderDifficulty
-	}
+	if !shouldFastSync {
+		if ok := digest.IsValidByDifficulty(header.Difficulty); !ok {
+			globalData.log.Warnf("digest error: %s", fault.ErrInvalidBlockHeaderDifficulty)
+			return fault.ErrInvalidBlockHeaderDifficulty
+		}
 
-	// ensure correct linkage
-	if err := blockrecord.ValidBlockLinkage(previousBlock, header.PreviousBlock); err != nil {
-		return err
+		// ensure correct linkage
+		if err := blockrecord.ValidBlockLinkage(previousBlock, header.PreviousBlock); err != nil {
+			return err
+		}
 	}
 
 	// create database key for block number
@@ -591,7 +619,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
 	)
 
 	// create the foundation record
-	foundationTxId := blockrecord.FoundationTxId(header, digest)
+	foundationTxId := blockrecord.FoundationTxId(header.Number, digest)
 	trx.Put(
 		storage.Pool.Transactions,
 		foundationTxId[:],

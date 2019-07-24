@@ -442,6 +442,8 @@ func (conn *connector) runStateMachine() bool {
 	case cStateFetchBlocks:
 
 		continueLooping = false
+		var packedBlock []byte
+		var packedNextBlock []byte
 
 	fetch_blocks:
 		for n := 0; n < fetchBlocksPerCycle; n++ {
@@ -454,14 +456,29 @@ func (conn *connector) runStateMachine() bool {
 			}
 
 			log.Infof("fetch block number: %d", conn.startBlockNumber)
-			packedBlock, err := conn.theClient.GetBlockData(conn.startBlockNumber)
+			if packedNextBlock == nil {
+				p, err := conn.theClient.GetBlockData(conn.startBlockNumber)
+				if nil != err {
+					log.Errorf("fetch block number: %d  error: %s", conn.startBlockNumber, err)
+					conn.toState(cStateHighestBlock) // retry
+					break fetch_blocks
+				}
+				packedBlock = p
+			} else {
+				packedBlock = packedNextBlock
+			}
+
+			// get next block
+			nextBlock, err := conn.theClient.GetBlockData(conn.startBlockNumber + 1)
 			if nil != err {
-				log.Errorf("fetch block number: %d  error: %s", conn.startBlockNumber, err)
+				log.Errorf("fetch block number: %d  error: %s", conn.startBlockNumber+1, err)
 				conn.toState(cStateHighestBlock) // retry
 				break fetch_blocks
 			}
+			packedNextBlock = nextBlock
+
 			log.Debugf("store block number: %d", conn.startBlockNumber)
-			err = block.StoreIncoming(packedBlock, block.NoRescanVerified)
+			err = block.StoreIncoming(packedBlock, nil, block.NoRescanVerified)
 			if nil != err {
 				log.Errorf(
 					"store block number: %d  error: %s",

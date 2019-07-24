@@ -127,7 +127,7 @@ loop:
 		if nil != err {
 			return err
 		}
-		block.StoreIncoming(buffer, block.NoRescanVerified)
+		block.StoreIncoming(buffer, nil, block.NoRescanVerified)
 	}
 	return nil
 }

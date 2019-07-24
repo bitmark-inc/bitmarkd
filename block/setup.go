@@ -144,7 +144,7 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 			globalData.log.Warnf("not processing base record: %+v", tx)
 		case *transactionrecord.BlockFoundation:
 			// use foundationTxId instead of txId for block foundation check
-			foundationTxId := blockrecord.FoundationTxId(header, digest)
+			foundationTxId := blockrecord.FoundationTxId(header.Number, digest)
 
 			globalData.log.Debugf("validate whether the foundation transaction indexed. foundationTxId: %s", foundationTxId)
 			if !storage.Pool.Transactions.Has(foundationTxId[:]) {
@@ -270,7 +270,7 @@ func validateAndReturnLastBlock(last storage.Element) (*blockrecord.Header, bloc
 		var data []byte
 		var err error
 
-		h, d, data, err := blockrecord.ExtractHeader(blockData, 0)
+		h, d, data, err := blockrecord.ExtractHeader(blockData, 0, false)
 		if err != nil {
 			globalData.log.Error("can not extract header")
 			return h, d, err
@@ -405,7 +405,7 @@ func LastBlockHash() string {
 
 	if last, ok := storage.Pool.Blocks.LastElement(); ok {
 
-		_, digest, _, err := blockrecord.ExtractHeader(last.Value, 0)
+		_, digest, _, err := blockrecord.ExtractHeader(last.Value, 0, false)
 		if nil != err {
 			log.Criticalf("failed to unpack block: %d from storage error: %s", binary.BigEndian.Uint64(last.Key), err)
 			return ""
