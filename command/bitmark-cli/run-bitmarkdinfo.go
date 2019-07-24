@@ -25,6 +25,7 @@ func runBitmarkdInfo(c *cli.Context) error {
 	if nil != err {
 		return err
 	}
+	response["_connection"] = m.config.Connections[m.connectionOffset]
 
 	printJson(m.w, response)
 

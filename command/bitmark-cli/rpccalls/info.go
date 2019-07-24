@@ -20,11 +20,11 @@ func (client *Client) GetBitmarkInfo() (*rpc.InfoReply, error) {
 }
 
 // GetBitmarkInfoCompat - request status from bitmarkd (any version)
-func (client *Client) GetBitmarkInfoCompat() (*interface{}, error) {
-	var reply interface{}
+func (client *Client) GetBitmarkInfoCompat() (map[string]interface{}, error) {
+	var reply map[string]interface{}
 	if err := client.client.Call("Node.Info", rpc.InfoArguments{}, &reply); err != nil {
 		return nil, err
 	}
 
-	return &reply, nil
+	return reply, nil
 }
