@@ -1,0 +1,172 @@
+#!/bin/sh
+# graph the node with graphviz
+
+ERROR()
+{
+  printf 'error: '
+  printf "$@"
+  printf '\n'
+  exit 1
+}
+
+USAGE()
+{
+  if [ -n "$1" ]
+  then
+    printf 'error: '
+    printf "$@"
+    printf '\n'
+  fi
+  echo usage: $(basename "$0") '[options] host:port'
+  echo '       --help             -h            this message'
+  echo '       --verbose          -v            more messages'
+  echo '       --output=FILE      -o FILE       the output PNG file ['"${output}"']'
+  echo '       --debug            -D            debuging messages'
+  exit 1
+}
+
+VERBOSE()
+{
+  [ X"${verbose}" = X"yes" ] && printf "$@"
+}
+
+# main program
+verbose=no
+debug=no
+output=graph.png
+
+getopt=
+case "$(uname)" in
+  (FreeBSD|DragonFly)
+    getopt=/usr/local/bin/getopt
+    ;;
+  (NetBSD)
+    getopt=/usr/pkg/bin/getopt
+    ;;
+  (OpenBSD)
+    getopt=/usr/local/bin/gnugetopt
+    ;;
+  (Darwin)
+    getopt=/usr/local/opt/gnu-getopt/bin/getopt
+    ;;
+  (Linux)
+    getopt=/usr/bin/getopt
+    ;;
+  (*)
+    ERROR 'OS: %s is not supported' "$(uname)"
+    ;;
+esac
+[ -x "${getopt}" ] || ERROR 'getopt: "%s" is not executable or not installed' "${getopt}"
+
+args=$(${getopt} -o hvo:D --long=help,verbose,output:,debug -- "$@") || exit 1
+
+# replace the arguments with the parsed values
+eval set -- "${args}"
+
+while :
+do
+  case "$1" in
+    (-v|--verbose)
+      verbose=yes
+      ;;
+
+    (-o|--output)
+      output="${2}"
+      [ -z "${output}" ] && USAGE 'missing output file'
+      shift
+      ;;
+
+    (-D|--debug)
+      debug=yes
+      ;;
+
+    (--)
+      shift
+      break
+      ;;
+
+    (-h|--help)
+      USAGE
+      ;;
+
+    (*)
+      USAGE 'invalid option: %s' "$1"
+      ;;
+  esac
+  shift
+done
+
+# verify arguments
+[ $# -eq 0 ] && USAGE 'missing argument'
+[ $# -gt 1 ] && USAGE 'invalid extraneous arguments'
+
+# enable debuging
+[ X"${debug}" = X"yes" ] && set -x
+
+server="${1}"
+
+VERBOSE 'server: %s\n' "${server}"
+
+r=$(curl -sk "https://${server}/bitmarkd/peers?count=100" "https://${server}/bitmarkd/connections?count=100" "https://${server}/bitmarkd/details")
+rc="$?"
+
+if [ -z "${r}" -o "${rc}" -ne 0 ]
+then
+  #printf 'timeout: rc: %s  r: "%s"\n' "${rc}" "${r}"
+  ERROR 'cannot retrieve data from: %s' "${server}"
+fi
+
+filter='
+{p:.[0]|map(.publicKey),c:.[1].connectedTo|map(.server),d:.[2].publicKey} |
+(reduce .p[] as $p (""; . + $p + " -> ") + .p[0]) + "\n" +
+(.d as $pk | reduce .c[] as $c (""; . + $pk + " -> " + $c + "\n"))
+'
+
+
+filter='
+  (.[0] | map(.publicKey)) as $p |
+  (reduce .[0][] as $p ({}; . + {($p.publicKey):($p.listeners[0]) | ltrimstr("127.0.0.1:")})) as $m |
+  (.[1].connectedTo | map(.server)) as $ct |
+  (.[2].publicKey) as $pk |
+{
+  p:($p | map($m[.])),
+  ct:($ct | map($m[.])),
+  pk:$m[$pk]
+}
+'
+
+filter_ring='
+(reduce .p[] as $p (""; . + $p + " -> ") + .p[0]) + "\n"
+'
+
+filter_links='
+.pk as $pk |
+(reduce .ct[] as $ct (""; . + $pk + " -> " + $ct + "\n"))
+'
+
+data=$(printf '%s' "${r}" | jq --slurp "${filter}" 2> /dev/null)
+
+{
+  cat <<EOF
+digraph {
+  subgraph {
+    edge [color=green,style=dashed,arrowhead=none,arrowtail=none]
+EOF
+
+  printf '%s' "${data}" | jq --raw-output "${filter_ring}" #2> /dev/null
+  cat <<EOF
+  }
+}
+EOF
+} | circo | grep -v '^}$' | {
+  cat
+  cat <<EOF
+  subgraph {
+    edge [color=hotpink,style=bold]
+EOF
+  printf '%s' "${data}" | jq --raw-output "${filter_links}" #2> /dev/null
+  cat <<EOF
+  }
+}
+EOF
+} | neato -n -o"${output}" -Tpng
