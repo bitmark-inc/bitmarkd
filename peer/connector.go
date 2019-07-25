@@ -354,25 +354,13 @@ func (conn *connector) runStateMachine() bool {
 	switch conn.state {
 	case cStateConnecting:
 		mode.Set(mode.Resynchronise)
-		clientCount := conn.getConnectedClientCount()
+		globalData.clientCount = conn.getConnectedClientCount()
+		log.Infof("connections: %d", globalData.clientCount)
 
-		conn.allClients(func(client upstream.UpstreamIntf, e *list.Element) {
-			if client.IsConnected() {
-
-				clientCount += 1
-			}
-		})
-
-		log.Infof("connections: %d", clientCount)
-		globalData.clientCount = clientCount
-		if clientCount >= minimumClients {
+		if isConnectionEnough(globalData.clientCount) {
 			conn.nextState()
 		} else {
-			log.Warnf(
-				"connections: %d below minimum client count: %d",
-				clientCount,
-				minimumClients,
-			)
+			log.Warnf("connections: %d below minimum client count: %d", globalData.clientCount, minimumClients)
 			messagebus.Bus.Announce.Send("reconnect")
 		}
 		continueLooping = false
@@ -486,10 +474,15 @@ func (conn *connector) runStateMachine() bool {
 
 	case cStateSampling:
 		// check peers
-		clientCount := conn.getConnectedClientCount()
+		globalData.clientCount = conn.getConnectedClientCount()
+		if !isConnectionEnough(globalData.clientCount) {
+			log.Warnf("connections: %d below minimum client count: %d", globalData.clientCount, minimumClients)
+			continueLooping = true
+			conn.toState(cStateConnecting)
+			return continueLooping
+		}
 
-		log.Infof("connections: %d", clientCount)
-		globalData.clientCount = clientCount
+		log.Infof("connections: %d", globalData.clientCount)
 
 		// check height
 		conn.height, conn.theClient = conn.getHeightAndClient()
@@ -513,9 +506,13 @@ func (conn *connector) runStateMachine() bool {
 	return continueLooping
 }
 
-func (c *connector) isSameChain() bool {
-	if c.theClient == nil {
-		c.log.Debug("remote client empty")
+func isConnectionEnough(count int) bool {
+	return minimumClients <= count
+}
+
+func (conn *connector) isSameChain() bool {
+	if conn.theClient == nil {
+		conn.log.Debug("remote client empty")
 		return false
 	}
 
@@ -524,25 +521,25 @@ func (c *connector) isSameChain() bool {
 		return false
 	}
 
-	if c.height == blockheader.Height() && c.theClient.CachedRemoteDigestOfLocalHeight() == localDigest {
+	if conn.height == blockheader.Height() && conn.theClient.CachedRemoteDigestOfLocalHeight() == localDigest {
 		return true
 	}
 
 	return false
 }
 
-func (c *connector) hasBetterChain(localHeight uint64) bool {
-	if c.theClient == nil {
-		c.log.Debug("remote client empty")
+func (conn *connector) hasBetterChain(localHeight uint64) bool {
+	if conn.theClient == nil {
+		conn.log.Debug("remote client empty")
 		return false
 	}
 
-	if c.height < localHeight {
-		c.log.Debugf("remote height %d is shorter than local height %d", c.height, localHeight)
+	if conn.height < localHeight {
+		conn.log.Debugf("remote height %d is shorter than local height %d", conn.height, localHeight)
 		return false
 	}
 
-	if c.height == localHeight && !c.hasSamllerDigestThanLocal(localHeight) {
+	if conn.height == localHeight && !conn.hasSamllerDigestThanLocal(localHeight) {
 		return false
 	}
 
@@ -551,11 +548,11 @@ func (c *connector) hasBetterChain(localHeight uint64) bool {
 
 // different chain but with same height, possible fork exist
 // choose the chain that has smaller digest
-func (c *connector) hasSamllerDigestThanLocal(localHeight uint64) bool {
-	remoteDigest := c.theClient.CachedRemoteDigestOfLocalHeight()
+func (conn *connector) hasSamllerDigestThanLocal(localHeight uint64) bool {
+	remoteDigest := conn.theClient.CachedRemoteDigestOfLocalHeight()
 	// if upstream update during processing
-	if c.theClient.LocalHeight() != localHeight {
-		c.log.Warnf("remote height %d is different than local height %d", c.theClient.LocalHeight(), localHeight)
+	if conn.theClient.LocalHeight() != localHeight {
+		conn.log.Warnf("remote height %d is different than local height %d", conn.theClient.LocalHeight(), localHeight)
 		return false
 	}
 
@@ -567,11 +564,11 @@ func (c *connector) hasSamllerDigestThanLocal(localHeight uint64) bool {
 	return remoteDigest.SmallerDigestThan(localDigest)
 }
 
-func (c *connector) getHeightAndClient() (uint64, upstream.UpstreamIntf) {
-	c.votes.Reset()
-	c.votes.SetMinHeight(blockheader.Height())
-	c.startElection()
-	elected, height := c.elected()
+func (conn *connector) getHeightAndClient() (uint64, upstream.UpstreamIntf) {
+	conn.votes.Reset()
+	conn.votes.SetMinHeight(blockheader.Height())
+	conn.startElection()
+	elected, height := conn.elected()
 	if uint64(0) == height {
 		return uint64(0), nil
 	}
@@ -579,11 +576,11 @@ func (c *connector) getHeightAndClient() (uint64, upstream.UpstreamIntf) {
 	winnerName := elected.Name()
 	remoteAddr, err := elected.RemoteAddr()
 	if nil != err {
-		c.log.Warnf("%s socket not connected", winnerName)
+		conn.log.Warnf("%s socket not connected", winnerName)
 		return uint64(0), nil
 	}
 
-	c.log.Debugf("winner %s majority height %d, connect to %s",
+	conn.log.Debugf("winner %s majority height %d, connect to %s",
 		winnerName,
 		height,
 		remoteAddr,
@@ -595,32 +592,32 @@ func (c *connector) getHeightAndClient() (uint64, upstream.UpstreamIntf) {
 	return height, elected
 }
 
-func (c *connector) startElection() {
-	c.allClients(func(client upstream.UpstreamIntf, e *list.Element) {
+func (conn *connector) startElection() {
+	conn.allClients(func(client upstream.UpstreamIntf, e *list.Element) {
 		if client.IsConnected() && client.ActiveInPastSeconds(activePastSec) {
-			c.votes.VoteBy(client)
+			conn.votes.VoteBy(client)
 		}
 	})
 }
 
-func (c *connector) elected() (upstream.UpstreamIntf, uint64) {
-	elected, height, err := c.votes.ElectedCandidate()
+func (conn *connector) elected() (upstream.UpstreamIntf, uint64) {
+	elected, height, err := conn.votes.ElectedCandidate()
 	if nil != err {
-		c.log.Errorf("get elected with error: %s", err.Error())
+		conn.log.Errorf("get elected with error: %s", err.Error())
 		return nil, uint64(0)
 	}
 
 	remoteAddr, err := elected.RemoteAddr()
 	if nil != err {
-		c.log.Errorf("get client string with error: %s", err.Error())
+		conn.log.Errorf("get client string with error: %s", err.Error())
 		return nil, uint64(0)
 	}
 
 	digest := elected.CachedRemoteDigestOfLocalHeight()
-	c.log.Infof(
+	conn.log.Infof(
 		"digest: %s elected with %d votes, remote addr: %s, height: %d",
 		digest,
-		c.votes.NumVoteOfDigest(digest),
+		conn.votes.NumVoteOfDigest(digest),
 		remoteAddr,
 		height,
 	)
@@ -712,17 +709,17 @@ func (conn *connector) releaseServerKey(serverPublicKey []byte) error {
 	return nil
 }
 
-func (c *connector) nextState() {
-	c.state++
+func (conn *connector) nextState() {
+	conn.state++
 }
 
-func (c *connector) toState(newState connectorState) {
-	c.state = newState
+func (conn *connector) toState(newState connectorState) {
+	conn.state = newState
 }
 
-func (c *connector) getConnectedClientCount() int {
+func (conn *connector) getConnectedClientCount() int {
 	clientCount := 0
-	c.allClients(func(client upstream.UpstreamIntf, e *list.Element) {
+	conn.allClients(func(client upstream.UpstreamIntf, e *list.Element) {
 		if client.IsConnected() {
 			clientCount++
 		}
