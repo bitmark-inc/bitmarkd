@@ -1,7 +1,7 @@
 #!/bin/sh
 # generate all LOCAL bitmarkd configuration configurations
 
-all='1 2 3 4 5 6 7 8 9'
+all=$(seq 1 12)
 console='1 2 8'
 more='1 2 8'
 
