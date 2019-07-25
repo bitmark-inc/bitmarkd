@@ -320,11 +320,14 @@ loop:
 					item.Parameters[0],
 				)
 			default:
-				_ = conn.connectUpstream(
+				err := conn.connectUpstream(
 					item.Command,
 					item.Parameters[0],
 					item.Parameters[1],
 				)
+				if nil != err {
+					conn.log.Warnf("connect upstream error: %s", err)
+				}
 			}
 		}
 	}

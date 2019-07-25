@@ -164,7 +164,7 @@ func (u *Upstream) handleEvent(event zmqutil.Event, disconnected *bool) {
 		u.connected = false
 		u.Unlock()
 
-	case zmq.EVENT_CONNECTED:
+	case zmq.EVENT_CONNECTED, zmq.EVENT_CONNECT_DELAYED:
 		log.Infof("socket %q is connected", event.Address)
 
 		if *disconnected {
@@ -189,6 +189,8 @@ func (u *Upstream) handleEvent(event zmqutil.Event, disconnected *bool) {
 		} else {
 			u.log.Debugf("request peer connection error: %s", err)
 		}
+	default:
+		log.Warnf("socket %q unhandled event: %q", event.Address, event.Event)
 	}
 
 }
