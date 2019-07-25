@@ -1,3 +1,11 @@
+bitmarkd (0.11.0-alpha.3-1) unstable; urgency=medium
+
+  * fix connection even handling
+  * add connection parameter to CLI to select the host:port
+    from list in configuration file
+
+ -- Christopher Hall <hsw@bitmark.com>  Thu, 25 Jul 2019 08:20:19 +0000
+
 bitmarkd (0.11.0-alpha.2-1) unstable; urgency=medium
 
   * check header version to constrain difficulty calculation
