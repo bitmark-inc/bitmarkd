@@ -354,25 +354,13 @@ func (conn *connector) runStateMachine() bool {
 	switch conn.state {
 	case cStateConnecting:
 		mode.Set(mode.Resynchronise)
-		clientCount := conn.getConnectedClientCount()
+		globalData.clientCount = conn.getConnectedClientCount()
+		log.Infof("connections: %d", globalData.clientCount)
 
-		conn.allClients(func(client upstream.UpstreamIntf, e *list.Element) {
-			if client.IsConnected() {
-
-				clientCount += 1
-			}
-		})
-
-		log.Infof("connections: %d", clientCount)
-		globalData.clientCount = clientCount
-		if clientCount >= minimumClients {
+		if isConnectionEnough(globalData.clientCount) {
 			conn.nextState()
 		} else {
-			log.Warnf(
-				"connections: %d below minimum client count: %d",
-				clientCount,
-				minimumClients,
-			)
+			log.Warnf("connections: %d below minimum client count: %d", globalData.clientCount, minimumClients)
 			messagebus.Bus.Announce.Send("reconnect")
 		}
 		continueLooping = false
@@ -486,10 +474,15 @@ func (conn *connector) runStateMachine() bool {
 
 	case cStateSampling:
 		// check peers
-		clientCount := conn.getConnectedClientCount()
+		globalData.clientCount = conn.getConnectedClientCount()
+		if !isConnectionEnough(globalData.clientCount) {
+			log.Warnf("connections: %d below minimum client count: %d", globalData.clientCount, minimumClients)
+			continueLooping = true
+			conn.toState(cStateConnecting)
+			return continueLooping
+		}
 
-		log.Infof("connections: %d", clientCount)
-		globalData.clientCount = clientCount
+		log.Infof("connections: %d", globalData.clientCount)
 
 		// check height
 		conn.height, conn.theClient = conn.getHeightAndClient()
@@ -511,6 +504,10 @@ func (conn *connector) runStateMachine() bool {
 		}
 	}
 	return continueLooping
+}
+
+func isConnectionEnough(count int) bool {
+	return minimumClients <= count
 }
 
 func (conn *connector) isSameChain() bool {
