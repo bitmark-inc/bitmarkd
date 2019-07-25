@@ -137,7 +137,7 @@ func (u *Upstream) poller(shutdown <-chan struct{}, event <-chan zmqutil.Event) 
 	log := u.log
 
 	log.Debug("start polling…")
-	var disconnected bool // flag to check unexpect disconnection
+	var disconnected bool // flag to check unexpected disconnection
 
 loop:
 	for {
