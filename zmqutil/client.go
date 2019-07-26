@@ -21,6 +21,27 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
+// re-export zmq constants
+const (
+	EVENT_CONNECTED       = zmq.EVENT_CONNECTED
+	EVENT_CONNECT_DELAYED = zmq.EVENT_CONNECT_DELAYED
+	EVENT_CONNECT_RETRIED = zmq.EVENT_CONNECT_RETRIED
+	EVENT_LISTENING       = zmq.EVENT_LISTENING
+	EVENT_BIND_FAILED     = zmq.EVENT_BIND_FAILED
+	EVENT_ACCEPTED        = zmq.EVENT_ACCEPTED
+	EVENT_ACCEPT_FAILED   = zmq.EVENT_ACCEPT_FAILED
+	EVENT_CLOSED          = zmq.EVENT_CLOSED
+	EVENT_CLOSE_FAILED    = zmq.EVENT_CLOSE_FAILED
+	EVENT_DISCONNECTED    = zmq.EVENT_DISCONNECTED
+	EVENT_MONITOR_STOPPED = zmq.EVENT_MONITOR_STOPPED
+	EVENT_ALL             = zmq.EVENT_ALL
+	// ***** FIX THIS: not defined by zmq
+	EVENT_HANDSHAKE_FAILED_NO_DETAIL = 0x0800
+	EVENT_HANDSHAKE_SUCCEEDED        = 0x1000
+	EVENT_HANDSHAKE_FAILED_PROTOCOL  = 0x2000
+	EVENT_HANDSHAKE_FAILED_AUTH      = 0x4000
+)
+
 type ClientIntf interface {
 	Close() error
 	Connect(conn *util.Connection, serverPublicKey []byte, prefix string) error

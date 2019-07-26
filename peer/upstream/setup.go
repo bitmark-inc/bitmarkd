@@ -153,13 +153,14 @@ loop:
 func (u *Upstream) handleEvent(event zmqutil.Event, disconnected *bool) {
 	log := u.log
 
-	// missing zmq.EVENT_*
-	const (
-		ZMQ_EVENT_HANDSHAKE_SUCCEEDED = 0x1000 // ***** FIX THIS: need to upstream to pebbe/zmq4
-	)
-
 	switch event.Event {
-	case zmq.EVENT_DISCONNECTED, zmq.EVENT_CLOSED, zmq.EVENT_CONNECT_RETRIED:
+	case zmqutil.EVENT_DISCONNECTED,
+		zmqutil.EVENT_CLOSED,
+		zmqutil.EVENT_CONNECT_RETRIED,
+		zmqutil.EVENT_HANDSHAKE_FAILED_NO_DETAIL,
+		zmqutil.EVENT_HANDSHAKE_FAILED_PROTOCOL,
+		zmqutil.EVENT_HANDSHAKE_FAILED_AUTH:
+
 		log.Warnf("socket %q is disconnected. event: %q", event.Address, event.Event)
 		*disconnected = true
 
@@ -167,7 +168,7 @@ func (u *Upstream) handleEvent(event zmqutil.Event, disconnected *bool) {
 		u.connected = false
 		u.Unlock()
 
-	case zmq.EVENT_CONNECTED, zmq.EVENT_CONNECT_DELAYED, ZMQ_EVENT_HANDSHAKE_SUCCEEDED:
+	case zmqutil.EVENT_CONNECTED, zmqutil.EVENT_CONNECT_DELAYED, zmqutil.EVENT_HANDSHAKE_SUCCEEDED:
 		log.Infof("socket %q is connected", event.Address)
 
 		if *disconnected {
