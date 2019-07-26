@@ -86,9 +86,7 @@ loop:
 					u.Unlock()
 
 					publicKey := u.client.ServerPublicKey()
-					timestamp := make([]byte, 8)
-					binary.BigEndian.PutUint64(timestamp, uint64(time.Now().Unix()))
-					messagebus.Bus.Announce.Send("updatetime", publicKey, timestamp)
+					messagebus.Bus.Announce.Send("updatetime", publicKey)
 				} else {
 					log.Warnf("highest block error: %s", err)
 				}

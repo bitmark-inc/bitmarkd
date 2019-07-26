@@ -8,9 +8,10 @@ package announce
 import (
 	"bytes"
 	"encoding/binary"
+	"time"
+
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/logger"
-	"time"
 )
 
 const (
@@ -57,13 +58,7 @@ loop:
 			case "reconnect":
 				determineConnections(log)
 			case "updatetime":
-				if len(item.Parameters[0]) >= 2 {
-					timestamp := binary.BigEndian.Uint64(item.Parameters[1])
-					if timestamp != 0 {
-						ts := time.Unix(int64(timestamp), 0)
-						setPeerTimestamp(item.Parameters[0], ts)
-					}
-				}
+				setPeerTimestamp(item.Parameters[0], time.Now())
 			default:
 			}
 
