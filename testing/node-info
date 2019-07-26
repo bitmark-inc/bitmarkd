@@ -156,8 +156,8 @@ ONCE() {
     "  \u001b[1;34mp: " + rj(.node.transactionCounters.pending;3) +
     "  \u001b[1;31mv: " + rj(.node.transactionCounters.verified;3) +
     "  \u001b[1;35msw: " + (.node.version|tostring) +
-    "  \u001b[1;34min: " + (.node.peers.incoming|tostring) +
-    "  \u001b[1;31mout: " + (.node.peers.outgoing|tostring) +
+    "  \u001b[1;34min: " + rj(.node.peers.incoming;2) +
+    "  \u001b[1;31mout: " + rj(.node.peers.outgoing;2) +
     "  \u001b[1;33mc: [" + (.conn|map($keys[.server])|map(if . == null then 0 else . end) |
       reduce .[] as $n (
         "................" | split("");
