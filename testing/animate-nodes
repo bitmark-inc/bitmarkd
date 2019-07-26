@@ -1,0 +1,123 @@
+#!/bin/sh
+# graph the node with graphviz
+
+ERROR()
+{
+  printf 'error: '
+  printf "$@"
+  printf '\n'
+  exit 1
+}
+
+USAGE()
+{
+  if [ -n "$1" ]
+  then
+    printf 'error: '
+    printf "$@"
+    printf '\n'
+  fi
+  echo usage: $(basename "$0") '[options]'
+  echo '       --help             -h            this message'
+  echo '       --verbose          -v            more messages'
+  echo '       --output=FILE      -o FILE       the output PNG file ['"${output}"']'
+  echo '       --debug            -D            debuging messages'
+  exit 1
+}
+
+VERBOSE()
+{
+  [ X"${verbose}" = X"yes" ] && printf "$@"
+}
+
+# main program
+verbose=no
+debug=no
+output=nodes.mpeg
+
+getopt=
+case "$(uname)" in
+  (FreeBSD|DragonFly)
+    getopt=/usr/local/bin/getopt
+    ;;
+  (NetBSD)
+    getopt=/usr/pkg/bin/getopt
+    ;;
+  (OpenBSD)
+    getopt=/usr/local/bin/gnugetopt
+    ;;
+  (Darwin)
+    getopt=/usr/local/opt/gnu-getopt/bin/getopt
+    ;;
+  (Linux)
+    getopt=/usr/bin/getopt
+    ;;
+  (*)
+    ERROR 'OS: %s is not supported' "$(uname)"
+    ;;
+esac
+[ -x "${getopt}" ] || ERROR 'getopt: "%s" is not executable or not installed' "${getopt}"
+
+args=$(${getopt} -o hvo:D --long=help,verbose,output:,debug -- "$@") || exit 1
+
+# replace the arguments with the parsed values
+eval set -- "${args}"
+
+while :
+do
+  case "$1" in
+    (-v|--verbose)
+      verbose=yes
+      ;;
+
+    (-o|--output)
+      output="${2}"
+      [ -z "${output}" ] && USAGE 'missing output file'
+      shift
+      ;;
+
+    (-D|--debug)
+      debug=yes
+      ;;
+
+    (--)
+      shift
+      break
+      ;;
+
+    (-h|--help)
+      USAGE
+      ;;
+
+    (*)
+      USAGE 'invalid option: %s' "$1"
+      ;;
+  esac
+  shift
+done
+
+# verify arguments
+#[ $# -eq 0 ] && USAGE 'missing argument'
+[ $# -ne 0 ] && USAGE 'invalid extraneous arguments'
+
+# enable debuging
+[ X"${debug}" = X"yes" ] && set -x
+
+# create frames
+rm -f frame-*.png
+for f in $(seq 1 100)
+do
+  rm -f graph-*.png
+  for i in $(seq 21 32)
+  do
+    graph-nodes --output="$(printf 'graph-%02d.png' "${i}")" "127.0.0.1:${i}31"
+  done
+
+  frame="$(printf 'frame-%03d.png' "${f}")"
+
+  VERBOSE 'frame: %s\n' "${frame}"
+  montage graph-*.png -geometry 300x300+2+2 -tile 4x3 "${frame}"
+  sleep 2
+done
+
+convert -delay 50 frame-*.png -adjoin "${output}"
