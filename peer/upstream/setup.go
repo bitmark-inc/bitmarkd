@@ -86,9 +86,7 @@ loop:
 					u.Unlock()
 
 					publicKey := u.client.ServerPublicKey()
-					timestamp := make([]byte, 8)
-					binary.BigEndian.PutUint64(timestamp, uint64(time.Now().Unix()))
-					messagebus.Bus.Announce.Send("updatetime", publicKey, timestamp)
+					messagebus.Bus.Announce.Send("updatetime", publicKey)
 				} else {
 					log.Warnf("highest block error: %s", err)
 				}
@@ -137,7 +135,7 @@ func (u *Upstream) poller(shutdown <-chan struct{}, event <-chan zmqutil.Event) 
 	log := u.log
 
 	log.Debug("start polling…")
-	var disconnected bool // flag to check unexpect disconnection
+	var disconnected bool // flag to check unexpected disconnection
 
 loop:
 	for {
@@ -156,7 +154,13 @@ func (u *Upstream) handleEvent(event zmqutil.Event, disconnected *bool) {
 	log := u.log
 
 	switch event.Event {
-	case zmq.EVENT_DISCONNECTED, zmq.EVENT_CLOSED, zmq.EVENT_CONNECT_RETRIED:
+	case zmqutil.EVENT_DISCONNECTED,
+		zmqutil.EVENT_CLOSED,
+		zmqutil.EVENT_CONNECT_RETRIED,
+		zmqutil.EVENT_HANDSHAKE_FAILED_NO_DETAIL,
+		zmqutil.EVENT_HANDSHAKE_FAILED_PROTOCOL,
+		zmqutil.EVENT_HANDSHAKE_FAILED_AUTH:
+
 		log.Warnf("socket %q is disconnected. event: %q", event.Address, event.Event)
 		*disconnected = true
 
@@ -164,7 +168,7 @@ func (u *Upstream) handleEvent(event zmqutil.Event, disconnected *bool) {
 		u.connected = false
 		u.Unlock()
 
-	case zmq.EVENT_CONNECTED:
+	case zmqutil.EVENT_CONNECTED, zmqutil.EVENT_CONNECT_DELAYED, zmqutil.EVENT_HANDSHAKE_SUCCEEDED:
 		log.Infof("socket %q is connected", event.Address)
 
 		if *disconnected {
@@ -189,6 +193,8 @@ func (u *Upstream) handleEvent(event zmqutil.Event, disconnected *bool) {
 		} else {
 			u.log.Debugf("request peer connection error: %s", err)
 		}
+	default:
+		log.Warnf("socket %q unhandled event: %q (0x%x) value: %d", event.Address, event.Event, int(event.Event), event.Value)
 	}
 
 }

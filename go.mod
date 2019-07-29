@@ -7,12 +7,13 @@ require (
 	github.com/bitmark-inc/go-argon2 v0.1.4
 	github.com/bitmark-inc/listener v0.2.0
 	github.com/bitmark-inc/logger v0.3.4
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/golang/mock v1.3.1
-	github.com/golang/protobuf v1.3.1 // indirect
+	github.com/golang/protobuf v1.3.2 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
-	github.com/miekg/dns v1.1.9
+	github.com/miekg/dns v1.1.15
 	github.com/mitchellh/mapstructure v1.1.2 // indirect
 	github.com/onsi/ginkgo v1.8.0 // indirect
 	github.com/onsi/gomega v1.5.0 // indirect
@@ -23,9 +24,9 @@ require (
 	github.com/urfave/cli v1.20.0
 	github.com/yuin/gluamapper v0.0.0-20150323120927-d836955830e7
 	github.com/yuin/gopher-lua v0.0.0-20190514113301-1cd887cd7036
-	golang.org/x/crypto v0.0.0-20190513172903-22d7a77e9e5f
-	golang.org/x/net v0.0.0-20190514140710-3ec191127204 // indirect
-	golang.org/x/sys v0.0.0-20190516110030-61b9204099cb // indirect
+	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
+	golang.org/x/net v0.0.0-20190724013045-ca1201d0de80 // indirect
+	golang.org/x/sys v0.0.0-20190712062909-fae7ac547cb7 // indirect
 	golang.org/x/text v0.3.2 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect

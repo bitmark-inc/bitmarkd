@@ -7,7 +7,7 @@
 
 # bitmarkds to start
 first=1
-last=8
+last=12
 
 
 # the tmux session name

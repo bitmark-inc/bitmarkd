@@ -653,9 +653,9 @@ M.logging = {
     -- the default value for DEFAULT is "critical"
     levels = {
         -- DEFAULT = "debug",
-        -- DEFAULT = "error",
-        -- DEFAULT = "warn",
         -- DEFAULT = "info",
+        -- DEFAULT = "warn",
+        -- DEFAULT = "error",
         DEFAULT = "${log_default}",
 
         -- some specific logging channels: (there may be others)
@@ -665,15 +665,19 @@ M.logging = {
         -- asset-expiry = "info",
         -- bitcoin = "info",
         -- block = "info",
+        -- blockheader = "info",
+        -- blockrecord = "info",
         -- blockstore = "info",
         -- broadcaster = "info",
         -- checker = "info",
         -- connector = "info",
         -- discoverer = "info",
+        -- expiration = "info",
         -- listener = "info",
         -- litecoin = "info",
         -- main = "info",
         -- mode = "info",
+        -- nodeslookup = "info",
         -- payment = "info",
         -- peer = "info",
         -- proof = "info",
@@ -683,8 +687,17 @@ M.logging = {
         -- reservoir = "info",
         -- rpc = "info",
         -- submission = "info",
-        -- upstream@N = "info", -- replace <N> by number 0…
-    }
+        -- ["upstream@1"] = "info",
+        -- ["upstream@2"] = "info",
+        -- ["upstream@3"] = "info",
+        -- ["upstream@4"] = "info",
+        -- ["upstream@5"] = "info",
+        -- ["upstream@6"] = "info",
+        -- ["upstream@7"] = "info",
+        -- ["upstream@8"] = "info",
+        -- ["upstream@9"] = "info",
+        -- ["upstream@10"] = "info",
+   }
 }
 
 
