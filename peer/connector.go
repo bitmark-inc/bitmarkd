@@ -81,8 +81,9 @@ type connector struct {
 	samples          int                   // counter to detect missed block broadcast
 	votes            voting.Voting
 
-	blockPerCycle   int // number of blocks to fetch per cycle
-	blockCycleIndex int // current index of block is fetching in cycle
+	blockPerCycle   int    // number of blocks to fetch per cycle
+	blockCycleIndex int    // current index of block is fetching in cycle
+	pivotPoint      uint64 // block number to stop fast syncing
 }
 
 // initialise the connector
@@ -396,11 +397,12 @@ func (conn *connector) runStateMachine() bool {
 			log.Debug("remote without better chain, enter state rebuild")
 			conn.toState(cStateRebuild)
 		} else {
-			mode.Set(mode.Fastsynchronise)
+			// determine pivot point to stop fast sync
+			conn.pivotPoint = conn.height - 1024
+			log.Debugf("Pivot point for fast sync: %d", conn.pivotPoint)
+
 			// first block number
 			conn.startBlockNumber = genesis.BlockNumber + 1
-			conn.blockPerCycle = fastSyncFetchBlocksPerCycle
-			conn.blockCycleIndex = 0
 			conn.nextState() // assume success
 			log.Infof("local block number: %d", height)
 
@@ -445,6 +447,9 @@ func (conn *connector) runStateMachine() bool {
 		var packedBlock []byte
 		var packedNextBlock []byte
 
+		// Check fast sync state on each loop
+		conn.enableFastSyncIfNeeded()
+
 	fetch_blocks:
 		for conn.blockCycleIndex = 0; conn.blockCycleIndex < conn.blockPerCycle; conn.blockCycleIndex++ {
 			log.Debugf("block cycle index: %d", conn.blockCycleIndex)
@@ -469,7 +474,7 @@ func (conn *connector) runStateMachine() bool {
 			}
 
 			// get next block
-			if conn.blockCycleIndex%fastSyncSkipPerBlocks != 0 {
+			if conn.blockCycleIndex%fastSyncSkipPerBlocks != 0 && mode.Is(mode.Fastsynchronise) {
 				nextBlock, err := conn.theClient.GetBlockData(conn.startBlockNumber + 1)
 				if nil != err {
 					log.Errorf("fetch block number: %d  error: %s", conn.startBlockNumber+1, err)
@@ -479,7 +484,6 @@ func (conn *connector) runStateMachine() bool {
 				packedNextBlock = nextBlock
 			} else {
 				packedNextBlock = nil
-				log.Debugf("skip fast sync at block: %d", conn.startBlockNumber)
 			}
 
 			log.Debugf("store block number: %d", conn.startBlockNumber)
@@ -759,4 +763,23 @@ func (conn *connector) getConnectedClientCount() int {
 		}
 	})
 	return clientCount
+}
+
+func (conn *connector) enableFastSyncIfNeeded() {
+	// Security check, stop if pivot point isn't set
+	if conn.pivotPoint == 0 {
+		return
+	}
+
+	// Determine if it's still good for fast sync
+	pivotPointDistance := conn.pivotPoint - conn.startBlockNumber
+	if pivotPointDistance < fastSyncFetchBlocksPerCycle {
+		// Stop fast sync from this point
+		// since we don't have enough blocks to have full fast sync cycle
+		mode.Set(mode.Normal)
+		conn.blockCycleIndex = fetchBlocksPerCycle
+	} else {
+		mode.Set(mode.Fastsynchronise)
+		conn.blockPerCycle = fastSyncFetchBlocksPerCycle
+	}
 }
