@@ -51,6 +51,10 @@ const (
 
 	// client should exist at least 1 response with in this number
 	activePastSec = 60
+
+	// fast sync option to fetch block
+	fastSyncFetchBlocksPerCycle = 2048
+	fastSyncSkipPerBlocks       = 100
 )
 
 type ConnectorIntf interface {
@@ -76,6 +80,9 @@ type connector struct {
 	height           uint64                // block number on best node
 	samples          int                   // counter to detect missed block broadcast
 	votes            voting.Voting
+
+	blockPerCycle   int // number of blocks to fetch per cycle
+	blockCycleIndex int // current index of block is fetching in cycle
 }
 
 // initialise the connector
@@ -389,9 +396,11 @@ func (conn *connector) runStateMachine() bool {
 			log.Debug("remote without better chain, enter state rebuild")
 			conn.toState(cStateRebuild)
 		} else {
-			mode.Set(mode.Resynchronise)
+			mode.Set(mode.Fastsynchronise)
 			// first block number
 			conn.startBlockNumber = genesis.BlockNumber + 1
+			conn.blockPerCycle = fastSyncFetchBlocksPerCycle
+			conn.blockCycleIndex = 0
 			conn.nextState() // assume success
 			log.Infof("local block number: %d", height)
 
@@ -437,8 +446,8 @@ func (conn *connector) runStateMachine() bool {
 		var packedNextBlock []byte
 
 	fetch_blocks:
-		for n := 0; n < fetchBlocksPerCycle; n++ {
-
+		for conn.blockCycleIndex = 0; conn.blockCycleIndex < conn.blockPerCycle; conn.blockCycleIndex++ {
+			log.Debugf("block cycle index: %d", conn.blockCycleIndex)
 			if conn.startBlockNumber > conn.height {
 				// just in case block height has changed
 				conn.toState(cStateHighestBlock)
@@ -460,16 +469,21 @@ func (conn *connector) runStateMachine() bool {
 			}
 
 			// get next block
-			nextBlock, err := conn.theClient.GetBlockData(conn.startBlockNumber + 1)
-			if nil != err {
-				log.Errorf("fetch block number: %d  error: %s", conn.startBlockNumber+1, err)
-				conn.toState(cStateHighestBlock) // retry
-				break fetch_blocks
+			if conn.blockCycleIndex%fastSyncSkipPerBlocks != 0 {
+				nextBlock, err := conn.theClient.GetBlockData(conn.startBlockNumber + 1)
+				if nil != err {
+					log.Errorf("fetch block number: %d  error: %s", conn.startBlockNumber+1, err)
+					conn.toState(cStateHighestBlock) // retry
+					break fetch_blocks
+				}
+				packedNextBlock = nextBlock
+			} else {
+				packedNextBlock = nil
+				log.Debugf("skip fast sync at block: %d", conn.startBlockNumber)
 			}
-			packedNextBlock = nextBlock
 
 			log.Debugf("store block number: %d", conn.startBlockNumber)
-			err = block.StoreIncoming(packedBlock, nil, block.NoRescanVerified)
+			err := block.StoreIncoming(packedBlock, packedNextBlock, block.NoRescanVerified)
 			if nil != err {
 				log.Errorf(
 					"store block number: %d  error: %s",
