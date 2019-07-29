@@ -135,7 +135,7 @@ func (u *Upstream) poller(shutdown <-chan struct{}, event <-chan zmqutil.Event) 
 	log := u.log
 
 	log.Debug("start polling…")
-	var disconnected bool // flag to check unexpected disconnection
+	disconnected := false
 
 loop:
 	for {
@@ -161,17 +161,15 @@ func (u *Upstream) handleEvent(event zmqutil.Event, disconnected *bool) {
 		zmqutil.EVENT_HANDSHAKE_FAILED_PROTOCOL,
 		zmqutil.EVENT_HANDSHAKE_FAILED_AUTH:
 
-		log.Warnf("socket %q is disconnected. event: %q", event.Address, event.Event)
-		*disconnected = true
-
-		u.Lock()
-		u.connected = false
-		u.Unlock()
-
-	case zmqutil.EVENT_CONNECTED, zmqutil.EVENT_CONNECT_DELAYED, zmqutil.EVENT_HANDSHAKE_SUCCEEDED:
-		log.Infof("socket %q is connected", event.Address)
+		log.Warnf("socket %q is disconnected. event: %q (0x%x)", event.Address, event.Event, int(event.Event))
 
 		if *disconnected {
+			*disconnected = true
+
+			u.Lock()
+			u.connected = false
+			u.Unlock()
+
 			// the socket is automatically recovered after disconnected by zmq is not useful.
 			// the request by this socket always return error `resource temporarily unavailable`
 			// try to close/open the socket makes the socket works as expectation.
@@ -182,11 +180,17 @@ func (u *Upstream) handleEvent(event zmqutil.Event, disconnected *bool) {
 				return
 			}
 			log.Infof("reconnect to %q successful", event.Address)
-			*disconnected = false
 		}
 
-		err := u.requestConnect()
+	case zmqutil.EVENT_CONNECT_DELAYED, zmqutil.EVENT_HANDSHAKE_SUCCEEDED:
+		log.Infof("socket %q is connected. event: %q (0x%x)", event.Address, event.Event, int(event.Event))
+
+	case zmqutil.EVENT_CONNECTED:
+		log.Infof("socket %q is connected. event: %q (0x%x)", event.Address, event.Event, int(event.Event))
+
+		err := u.requestBlockchinInfo()
 		if nil == err {
+			*disconnected = false
 			u.Lock()
 			u.connected = true
 			u.Unlock()
@@ -200,7 +204,7 @@ func (u *Upstream) handleEvent(event zmqutil.Event, disconnected *bool) {
 }
 
 // register with server and check chain information
-func (u *Upstream) requestConnect() error {
+func (u *Upstream) requestBlockchinInfo() error {
 	log := u.log
 	client := u.client
 	log.Debugf("register: client: %s", client)

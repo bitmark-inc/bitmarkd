@@ -123,7 +123,7 @@ func NewClient(
 
 	n := clientCounter.Increment()
 
-	queue := make(chan Event, 1)
+	queue := make(chan Event, 10)
 
 	client := &Client{
 		publicKey:       make([]byte, publicKeySize),
@@ -244,6 +244,18 @@ func (client *Client) openSocket() error {
 		goto failure
 	}
 	err = socket.SetTcpKeepaliveIntvl(60)
+	if nil != err {
+		goto failure
+	}
+
+	// set approx reconnect tries to 2 minutes
+	// and disable exponential back-off
+	// should give around 20 retries in the announce timeout
+	err = socket.SetReconnectIvl(2 * time.Minute)
+	if nil != err {
+		goto failure
+	}
+	err = socket.SetReconnectIvlMax(0)
 	if nil != err {
 		goto failure
 	}
