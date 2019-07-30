@@ -148,9 +148,6 @@ func restorePeers(peerFile string) error {
 	}
 
 	for _, peer := range peers {
-		if IsPeerExpiredFromTime(peer.Timestamp) {
-			continue
-		}
 		addPeer(peer.PublicKey, peer.Listeners, peer.Timestamp)
 	}
 	return nil
