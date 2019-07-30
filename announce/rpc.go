@@ -57,21 +57,12 @@ func addRPC(fingerprint fingerprintType, rpcs []byte, timestamp uint64, local bo
 
 	// if new item
 	if !ok {
-
-		ts := time.Now()
-
-		// disallow future timestamps: require timestamp ≤ Now
-		if timestamp != 0 && timestamp <= uint64(ts.Unix()) {
-			ts = time.Unix(int64(timestamp), 0)
-		}
-
-		// ignore expired request
-		if time.Since(ts) >= announceExpiry {
+		ts := resetFutureTimestampToNow(timestamp)
+		if isPeerExpiredFromTime(ts) {
 			return false
 		}
 
 		// ***** FIX THIS: add more validation here
-
 		e := &rpcEntry{
 			address:     rpcs,
 			fingerprint: fingerprint,
