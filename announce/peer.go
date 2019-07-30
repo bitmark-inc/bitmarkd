@@ -55,6 +55,11 @@ func SetPeer(publicKey []byte, listeners []byte) error {
 	return nil
 }
 
+// IsPeerExpiredFromTime - is peer expired from time
+func IsPeerExpiredFromTime(timestamp uint64) bool {
+	return time.Unix(int64(timestamp), 0).Add(announceExpiry).Before(time.Now())
+}
+
 // AddPeer - add a peer announcement to the in-memory tree
 // returns:
 //   true  if this was a new/updated entry
