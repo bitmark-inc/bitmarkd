@@ -1,3 +1,10 @@
+bitmarkd (0.11.0-alpha.4-1) unstable; urgency=medium
+
+  * fix connection event handlers
+  * increase from 5 to 11 connections
+
+ -- Christopher Hall <hsw@bitmark.com>  Tue, 30 Jul 2019 03:33:58 +0000
+
 bitmarkd (0.11.0-alpha.3-1) unstable; urgency=medium
 
   * fix connection even handling
