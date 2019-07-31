@@ -81,9 +81,9 @@ type connector struct {
 	samples          int                   // counter to detect missed block broadcast
 	votes            voting.Voting
 
-	fastsync        bool   // fast sync mode enabled?
-	blockPerCycle   int    // number of blocks to fetch per cycle
-	blockCycleIndex int    // current index of block is fetching in cycle
+	fastsyncEnabled bool   // fast sync mode enabled?
+	blocksPerCycle  uint64 // number of blocks to fetch per cycle
+	blockCycleIndex uint64 // current index of block is fetching in cycle
 	pivotPoint      uint64 // block number to stop fast syncing
 }
 
@@ -102,7 +102,7 @@ func (conn *connector) initialise(
 
 	conn.preferIPv6 = preferIPv6
 
-	conn.fastsync = fastsync
+	conn.fastsyncEnabled = fastsync
 
 	log.Info("initialising…")
 
@@ -410,37 +410,55 @@ func (conn *connector) runStateMachine() bool {
 			conn.nextState() // assume success
 			log.Infof("local block number: %d", height)
 
-			// check digests of descending blocks (to detect a fork)
-		check_digests:
-			for h := height; h >= genesis.BlockNumber; h -= 1 {
-				digest, err := blockheader.DigestForBlock(h)
+			if mode.Is(mode.Fastsynchronise) {
+				// potentially there is a block forgery in current cycle
+				startPoint := conn.startBlockNumber - conn.blockCycleIndex
+				log.Warnf("found corrupted block %d in fast sync cycle %d - %d", conn.blockCycleIndex, startPoint, startPoint+conn.blocksPerCycle)
+
+				// revert whole block cycle
+				conn.startBlockNumber = startPoint
+				log.Infof("revert to block %d and start normal sync from now on", startPoint)
+				err := block.DeleteDownToBlock(conn.startBlockNumber)
 				if nil != err {
-					log.Infof("block number: %d  local digest error: %s", h, err)
+					log.Errorf("delete down to block number: %d  error: %s", conn.startBlockNumber, err)
 					conn.toState(cStateHighestBlock) // retry
-					break check_digests
 				}
-				d, err := conn.theClient.RemoteDigestOfHeight(h)
-				if nil != err {
-					log.Infof("block number: %d  fetch digest error: %s", h, err)
-					conn.toState(cStateHighestBlock) // retry
-					break check_digests
-				} else if d == digest {
-					if height-h >= forkProtection {
-						log.Errorf("fork protection at: %d - %d >= %d", height, h, forkProtection)
-						conn.toState(cStateHighestBlock)
+
+				// disable fast sync
+				conn.fastsyncEnabled = false
+			} else {
+				// check digests of descending blocks (to detect a fork)
+			check_digests:
+				for h := height; h >= genesis.BlockNumber; h -= 1 {
+					digest, err := blockheader.DigestForBlock(h)
+					if nil != err {
+						log.Infof("block number: %d  local digest error: %s", h, err)
+						conn.toState(cStateHighestBlock) // retry
 						break check_digests
 					}
-
-					conn.startBlockNumber = h + 1
-					log.Infof("fork from block number: %d", conn.startBlockNumber)
-
-					// remove old blocks
-					err := block.DeleteDownToBlock(conn.startBlockNumber)
+					d, err := conn.theClient.RemoteDigestOfHeight(h)
 					if nil != err {
-						log.Errorf("delete down to block number: %d  error: %s", conn.startBlockNumber, err)
+						log.Infof("block number: %d  fetch digest error: %s", h, err)
 						conn.toState(cStateHighestBlock) // retry
+						break check_digests
+					} else if d == digest {
+						if height-h >= forkProtection {
+							log.Errorf("fork protection at: %d - %d >= %d", height, h, forkProtection)
+							conn.toState(cStateHighestBlock)
+							break check_digests
+						}
+
+						conn.startBlockNumber = h + 1
+						log.Infof("fork from block number: %d", conn.startBlockNumber)
+
+						// remove old blocks
+						err := block.DeleteDownToBlock(conn.startBlockNumber)
+						if nil != err {
+							log.Errorf("delete down to block number: %d  error: %s", conn.startBlockNumber, err)
+							conn.toState(cStateHighestBlock) // retry
+						}
+						break check_digests
 					}
-					break check_digests
 				}
 			}
 		}
@@ -452,10 +470,15 @@ func (conn *connector) runStateMachine() bool {
 		var packedNextBlock []byte
 
 		// Check fast sync state on each loop
-		conn.enableFastSyncIfNeeded()
+		if conn.fastsyncEnabled &&
+			conn.pivotPoint >= conn.startBlockNumber+fastSyncFetchBlocksPerCycle {
+			conn.setFastSyncEnable(true)
+		} else {
+			conn.setFastSyncEnable(false)
+		}
 
 	fetch_blocks:
-		for conn.blockCycleIndex = 0; conn.blockCycleIndex < conn.blockPerCycle; conn.blockCycleIndex++ {
+		for conn.blockCycleIndex = 0; conn.blockCycleIndex < conn.blocksPerCycle; conn.blockCycleIndex++ {
 			log.Debugf("block cycle index: %d", conn.blockCycleIndex)
 			if conn.startBlockNumber > conn.height {
 				// just in case block height has changed
@@ -769,23 +792,13 @@ func (conn *connector) getConnectedClientCount() int {
 	return clientCount
 }
 
-func (conn *connector) enableFastSyncIfNeeded() {
-	// Stop if pivot point isn't set
-	// or fast sync is turned off
-	if conn.pivotPoint == 0 || !conn.fastsync {
-		return
-	}
-
-	// Determine if it's still good for fast sync
-	if conn.pivotPoint < conn.startBlockNumber+fastSyncFetchBlocksPerCycle {
-		// Stop fast sync from this point
-		// since we don't have enough blocks to have full fast sync cycle
-		conn.log.Info("Set sync mode to normal")
+// setFastSyncEnable set mode and params depend on fast sync state
+func (conn *connector) setFastSyncEnable(enabled bool) {
+	if enabled {
 		mode.Set(mode.Normal)
 		conn.blockCycleIndex = fetchBlocksPerCycle
 	} else {
-		conn.log.Info("Set sync mode to fast")
 		mode.Set(mode.Fastsynchronise)
-		conn.blockPerCycle = fastSyncFetchBlocksPerCycle
+		conn.blocksPerCycle = fastSyncFetchBlocksPerCycle
 	}
 }
