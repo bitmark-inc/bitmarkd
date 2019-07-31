@@ -772,13 +772,14 @@ func (conn *connector) enableFastSyncIfNeeded() {
 	}
 
 	// Determine if it's still good for fast sync
-	pivotPointDistance := conn.pivotPoint - conn.startBlockNumber
-	if pivotPointDistance < fastSyncFetchBlocksPerCycle {
+	if conn.pivotPoint < conn.startBlockNumber+fastSyncFetchBlocksPerCycle {
 		// Stop fast sync from this point
 		// since we don't have enough blocks to have full fast sync cycle
+		conn.log.Info("Set sync mode to normal")
 		mode.Set(mode.Normal)
 		conn.blockCycleIndex = fetchBlocksPerCycle
 	} else {
+		conn.log.Info("Set sync mode to fast")
 		mode.Set(mode.Fastsynchronise)
 		conn.blockPerCycle = fastSyncFetchBlocksPerCycle
 	}
