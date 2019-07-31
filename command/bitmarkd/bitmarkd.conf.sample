@@ -68,6 +68,10 @@ M.reservoir_file = "reservoir-" .. M.chain .. ".cache"
 -- the data directory
 M.peer_file = "peers-" .. M.chain .. ".json"
 
+-- fast sync mode introduces a new mechanism for initial synchronization
+-- that speeds up the bitmark node to get it ready operating.
+M.fast_sync = true
+
 
 -- for JSON clients on TLS connection
 M.client_rpc = {

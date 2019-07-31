@@ -63,7 +63,7 @@ type peerData struct {
 var globalData peerData
 
 // Initialise - setup peer background processes
-func Initialise(configuration *Configuration, version string) error {
+func Initialise(configuration *Configuration, version string, fastsync bool) error {
 
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -101,7 +101,7 @@ func Initialise(configuration *Configuration, version string) error {
 	if err := globalData.lstn.initialise(privateKey, publicKey, configuration.Listen, version); nil != err {
 		return err
 	}
-	if err := globalData.conn.initialise(privateKey, publicKey, configuration.Connect, configuration.DynamicConnections, configuration.PreferIPv6); nil != err {
+	if err := globalData.conn.initialise(privateKey, publicKey, configuration.Connect, configuration.DynamicConnections, configuration.PreferIPv6, fastsync); nil != err {
 		return err
 	}
 

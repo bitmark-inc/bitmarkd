@@ -81,6 +81,7 @@ type connector struct {
 	samples          int                   // counter to detect missed block broadcast
 	votes            voting.Voting
 
+	fastsync        bool   // fast sync mode enabled?
 	blockPerCycle   int    // number of blocks to fetch per cycle
 	blockCycleIndex int    // current index of block is fetching in cycle
 	pivotPoint      uint64 // block number to stop fast syncing
@@ -93,12 +94,15 @@ func (conn *connector) initialise(
 	connect []Connection,
 	dynamicEnabled bool,
 	preferIPv6 bool,
+	fastsync bool,
 ) error {
 
 	log := logger.New("connector")
 	conn.log = log
 
 	conn.preferIPv6 = preferIPv6
+
+	conn.fastsync = fastsync
 
 	log.Info("initialising…")
 
@@ -766,8 +770,9 @@ func (conn *connector) getConnectedClientCount() int {
 }
 
 func (conn *connector) enableFastSyncIfNeeded() {
-	// Security check, stop if pivot point isn't set
-	if conn.pivotPoint == 0 {
+	// Stop if pivot point isn't set
+	// or fast sync is turned off
+	if conn.pivotPoint == 0 || !conn.fastsync {
 		return
 	}
 
