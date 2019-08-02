@@ -77,6 +77,7 @@ ok=yes
 CHECK_PROGRAM bitmarkd bitmark-cli recorderd discovery bitmark-wallet
 CHECK_PROGRAM bitcoind bitcoin-cli
 CHECK_PROGRAM litecoind litecoin-cli
+CHECK_PROGRAM drill:host
 CHECK_PROGRAM awk jq lua52:lua5.2:lua53:lua5.3:lua
 CHECK_PROGRAM genbtcltc restart-all-bitmarkds bm-tester
 CHECK_PROGRAM generate-bitmarkd-configuration
@@ -185,6 +186,20 @@ do
   run-bitmarkd --config="%${i}" dns-txt
   SEP
 done
+
+# check the TXT records work
+SEP 'checking the TXT records...'
+for p in drill host
+do
+  drill=$(which "${p}")
+  [ -x "${drill}" ] && break
+done
+[ -x "${drill}" ] || ERROR 'cannot locate host or drill programs'
+
+r=$(${drill} -t TXT "${nodes_domain}" | grep '^'"${nodes_domain}")
+[ -z "${r}" ] && ERROR 'dnsmasq/unbound not setup: missing TXT for: %s' "${nodes_domain}"
+printf 'DNS query shows:\n\n'
+printf '%s\n\n' "${r}"
 
 # add proper nodes and reconfigure
 SEP 'update configuration...'
