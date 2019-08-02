@@ -80,7 +80,15 @@ comment_string='-- '
 testnet_only=''
 livenet_only="${comment_string}"
 
-lua=lua52
+# detect lua
+for l in lua52 lua5.2 lua53 lua 5.3 lua
+do
+  lua=$(which "${l}")
+  [ -x "${lua}" ] && break
+done
+[ -x "${lua}" ] || ERROR 'cannot locate usable lua'
+
+# detect GNU getopt
 getopt=
 case "$(uname)" in
   (FreeBSD|DragonFly)
@@ -88,7 +96,6 @@ case "$(uname)" in
     ;;
   (NetBSD)
     getopt=/usr/pkg/bin/getopt
-    lua=lua5.2
     ;;
   (OpenBSD)
     getopt=/usr/local/bin/gnugetopt
@@ -98,7 +105,6 @@ case "$(uname)" in
     ;;
   (Linux)
     getopt=/usr/bin/getopt
-    lua=lua5.2
     ;;
   (*)
     ERROR 'OS: %s is not supported' "$(uname)"

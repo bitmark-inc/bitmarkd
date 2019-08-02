@@ -77,7 +77,7 @@ ok=yes
 CHECK_PROGRAM bitmarkd bitmark-cli recorderd discovery bitmark-wallet
 CHECK_PROGRAM bitcoind bitcoin-cli
 CHECK_PROGRAM litecoind litecoin-cli
-CHECK_PROGRAM awk jq lua52:lua5.2
+CHECK_PROGRAM awk jq lua52:lua5.2:lua53:lua5.3:lua
 CHECK_PROGRAM genbtcltc restart-all-bitmarkds bm-tester
 CHECK_PROGRAM generate-bitmarkd-configuration
 CHECK_PROGRAM run-bitcoin run-litecoin run-discovery
