@@ -111,7 +111,6 @@ case "$(uname)" in
     ;;
 esac
 [ -x "${getopt}" ] || ERROR 'getopt: "%s" is not executable or not installed' "${getopt}"
-[ -x "$(which ${lua})" ] || ERROR 'lua: "%s" is not executable or not installed' "${lua}"
 
 args=$(${getopt} -o hvc:n:C:b:l:d:kmuD --long=help,verbose,chain:,nodes:,connect:,bitcoin:,litecoin:,discovery:,console,more,update,debug -- "$@") || exit 1
 
