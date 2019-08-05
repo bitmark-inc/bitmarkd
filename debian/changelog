@@ -1,3 +1,11 @@
+bitmarkd (0.11.0-rc.1-1) unstable; urgency=medium
+
+  * some minor test script fixes
+  * small doc change
+  * no changes to bitmarkd code since beta1
+
+ -- Christopher Hall <hsw@bitmark.com>  Mon, 05 Aug 2019 03:51:20 +0000
+
 bitmarkd (0.11.0-beta.1-1) unstable; urgency=medium
 
   * ensure expired peers are not reloaded from cache file
