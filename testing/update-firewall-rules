@@ -1,0 +1,47 @@
+#!/bin/sh
+
+getopt=
+case "$(uname)" in
+  (Darwin)
+    getopt=/usr/local/opt/gnu-getopt/bin/getopt
+    ;;
+  (*)
+    ERROR 'OS: %s is not supported' "$(uname)"
+    ;;
+esac
+[ -x "${getopt}" ] || ERROR 'getopt: "%s" is not executable or not installed' "${getopt}"
+
+args=$(${getopt} -o f: --long=file-name -- "$@") || exit 1
+
+eval set -- "${args}"
+
+while :
+do
+  case "$1" in
+    (-f|--file-name)
+      file=$2
+      shift
+      ;;
+
+    (--)
+      shift
+      break
+      ;;
+
+    (*)
+      USAGE 'invalid option: %s' "$1"
+      ;;
+  esac
+  shift
+done
+
+case "$(uname)" in
+  (Darwin)
+    sudo pfctl -d;
+    sudo pfctl -f "firewall-rules/$(uname)/${file}";
+    sudo pfctl -e;
+    ;;
+  (*)
+    ERROR 'OS: %s is not supported' "$(uname)"
+    ;;
+esac

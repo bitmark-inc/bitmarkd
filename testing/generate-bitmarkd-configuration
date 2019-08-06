@@ -95,6 +95,7 @@ case "$(uname)" in
     ;;
   (Darwin)
     getopt=/usr/local/opt/gnu-getopt/bin/getopt
+    lua=lua
     ;;
   (Linux)
     getopt=/usr/bin/getopt
