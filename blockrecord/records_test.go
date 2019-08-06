@@ -46,6 +46,19 @@ var recordsTestData = recordsTestType{
 	beExpectedDigest: "08c7539a6d2cf618637f3db6792af495273b04ea946dfc170e6ca4b71fbf1d46",
 }
 
+var correctRecordTestData = recordsTestType{
+	leVersion:          "0100",
+	leTransactionCount: "0400",
+	leNumber:           "2000000000000000",
+	lePrevious:         "81cd02ab7e569e8bcd9317e2fe99f2de44d49ab2b8851ba4a308000000000000",
+	leMerkle:           "e320b6c2fffc8d750423db8b1eb942ae710e951ed797f7affc8892b0f1fc122b",
+	leTimestamp:        "c7f5d74d00000000",
+	leDifficultyBits:   "f2b9441a3243250d",
+	leNonce:            "42a1469535a7d421",
+}
+
+var defaultDigest = blockdigest.Digest{}
+
 func TestBlockDigestFromHex(t *testing.T) {
 	r := recordsTestData // the test data block
 
@@ -71,6 +84,49 @@ func TestBlockDigestFromHex(t *testing.T) {
 	if d != expected {
 		t.Logf("block: %x", leBinaryBlock)
 		t.Errorf("digest: %#v  expected: %#v", d, expected)
+	}
+}
+
+func TestExtractHeader_SkipDigest(t *testing.T) {
+	r := correctRecordTestData // the test data block
+	leBlock := r.leVersion + r.leTransactionCount + r.leNumber + r.lePrevious + r.leMerkle + r.leTimestamp + r.leDifficultyBits + r.leNonce
+
+	leBinaryBlock, err := hex.DecodeString(leBlock)
+	if nil != err {
+		t.Fatalf("hex decode string error: %s", err)
+	}
+
+	header, digest, _, err := blockrecord.ExtractHeader(leBinaryBlock, 0, true)
+	if header == nil {
+		t.Errorf("no header")
+	}
+
+	if digest != defaultDigest {
+		t.Fail()
+	}
+
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestExtractHeader_NoSkipDigest(t *testing.T) {
+	r := correctRecordTestData // the test data block
+	leBlock := r.leVersion + r.leTransactionCount + r.leNumber + r.lePrevious + r.leMerkle + r.leTimestamp + r.leDifficultyBits + r.leNonce
+
+	leBinaryBlock, err := hex.DecodeString(leBlock)
+	if nil != err {
+		t.Fatalf("hex decode string error: %s", err)
+	}
+
+	_, digest, _, err := blockrecord.ExtractHeader(leBinaryBlock, 0, false)
+
+	if digest == defaultDigest {
+		t.Fail()
+	}
+
+	if err != nil {
+		t.Error(err)
 	}
 }
 
