@@ -12,9 +12,8 @@ import (
 )
 
 const (
-	publicKeyLength = 32
-	socketIDLength  = 32
-	connTimeout     = 15 * time.Second
+	socketIDLength = 32
+	connTimeout    = 15 * time.Second
 )
 
 func openSocket(serverPubKey []byte, address string, v6 bool) (*zmq.Socket, error) {
