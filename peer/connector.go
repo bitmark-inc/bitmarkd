@@ -508,6 +508,7 @@ func (conn *connector) runStateMachine() bool {
 							log.Errorf("delete down to block number: %d  error: %s", startingPoint, err)
 						}
 
+						conn.fastsyncEnabled = false
 						conn.toState(cStateHighestBlock)
 						conn.startBlockNumber = startingPoint
 						break fetch_blocks
