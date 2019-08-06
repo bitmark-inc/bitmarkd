@@ -221,7 +221,7 @@ func TestBlockDigestFromBlock(t *testing.T) {
 loop:
 	for i := 0; i < len(p); i += 1 {
 		// test the unpacker with bad records
-		h, _, _, err := blockrecord.ExtractHeader(p[:i], h.Number)
+		h, _, _, err := blockrecord.ExtractHeader(p[:i], h.Number, true)
 		if nil != err {
 			continue loop
 		}
