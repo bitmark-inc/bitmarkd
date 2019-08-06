@@ -20,7 +20,6 @@ type Mode int
 const (
 	Stopped Mode = iota
 	Resynchronise
-	Fastsynchronise // Sync data with skipping header and tx verification in some blocks
 	Normal
 	maximum
 )
