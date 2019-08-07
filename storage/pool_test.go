@@ -26,9 +26,6 @@ func poolDelete(t *testing.T, p *PoolHandle, key string) {
 
 // main pool test
 func TestPool(t *testing.T) {
-	setup(t)
-	defer teardown(t)
-
 	p := Pool.TestData
 
 	// ensure that pool was empty
