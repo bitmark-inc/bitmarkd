@@ -11,6 +11,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/logger"
 )
 
@@ -27,6 +28,7 @@ const (
 
 // Configuration - structure for configuration file
 type Configuration struct {
+	Mode         string                  `gluamapper:"mode" hcl:"mode" json:"mode"`
 	UseDiscovery bool                    `gluamapper:"use_discovery" hcl:"use_discovery" json:"use_discovery"`
 	Discovery    *discoveryConfiguration `gluamapper:"discovery" hcl:"discovery" json:"discovery"`
 	Bitcoin      *currencyConfiguration  `gluamapper:"bitcoin" hcl:"bitcoin" json:"bitcoin"`
@@ -73,12 +75,14 @@ func Initialise(configuration *Configuration) error {
 	for c := currency.First; c <= currency.Last; c++ {
 		switch c {
 		case currency.Bitcoin:
+			// FIXME: change the first parameter to configuration.mode
 			handler, err := newBitcoinHandler(configuration.UseDiscovery, configuration.Bitcoin)
 			if err != nil {
 				return err
 			}
 			globalData.handlers[currency.Bitcoin.String()] = handler
 		case currency.Litecoin:
+			// FIXME: change the first parameter to configuration.mode
 			handler, err := newLitecoinHandler(configuration.UseDiscovery, configuration.Litecoin)
 			if err != nil {
 				return err
@@ -93,17 +97,31 @@ func Initialise(configuration *Configuration) error {
 	globalData.log.Info("start background…")
 
 	processes := background.Processes{}
-	if configuration.UseDiscovery {
+
+	switch configuration.Mode {
+	case "p2p":
+		globalData.log.Info("p2p watcher…")
+		p2pWatcher, err := newP2pWatcher(storage.PaymentStorage.Ltc, LtcTestNet4Params)
+		if err != nil {
+			return err
+		}
+		processes = append(processes, p2pWatcher)
+	case "discovery":
 		globalData.log.Info("discovery…")
 		discoverer, err := newDiscoverer(configuration.Discovery.SubEndpoint, configuration.Discovery.ReqEndpoint)
 		if err != nil {
 			return err
 		}
 		processes = append(processes, discoverer)
-	} else {
+	default:
 		globalData.log.Info("checker…")
 		processes = append(processes, &checker{})
 	}
+
+	// FIXME: remove
+	// if configuration.UseDiscovery {
+	// } else {
+	// }
 
 	// all data initialised
 	globalData.initialised = true
@@ -124,7 +142,7 @@ func Finalise() error {
 	globalData.log.Flush()
 
 	// stop background
-	globalData.background.Stop()
+	globalData.background.StopAndWait()
 
 	// finally...
 	globalData.initialised = false

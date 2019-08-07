@@ -7,6 +7,7 @@ require (
 	github.com/bitmark-inc/go-argon2 v0.1.4
 	github.com/bitmark-inc/listener v0.2.0
 	github.com/bitmark-inc/logger v0.3.4
+	github.com/btcsuite/btcd v0.0.0-20190629003639-c26ffa870fd8
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/golang/mock v1.3.1
