@@ -27,7 +27,7 @@ type PackedBlock []byte
 
 // currently supported block version (used by proofer)
 const (
-	Version                    = 3
+	Version                    = 4
 	MinimumVersion             = 1
 	MinimumBlockNumber         = 2 // 1 => genesis block
 	MinimumDifficultyBaseBlock = 3
