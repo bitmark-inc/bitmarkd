@@ -1,3 +1,9 @@
+bitmarkd (0.11.0-rc.2-1) unstable; urgency=medium
+
+  * problem with block version need to increase again
+
+ -- Christopher Hall <hsw@bitmark.com>  Thu, 08 Aug 2019 06:48:48 +0000
+
 bitmarkd (0.11.0-rc.1-1) unstable; urgency=medium
 
   * some minor test script fixes
