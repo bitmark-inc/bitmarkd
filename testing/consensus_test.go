@@ -56,44 +56,52 @@ type partition struct {
 type ConsensusTestSuite struct {
 	suite.Suite
 
-	homeDirectory string
-
 	peerCount int
 	peers     []peer
 }
 
 func (suite *ConsensusTestSuite) SetupSuite() {
-	suite.homeDirectory = os.Getenv("HOME")
-
 	suite.peerCount = 12
 	suite.peers = make([]peer, 0, suite.peerCount)
-	for i := 0; i < suite.peerCount; i++ {
-		dat, err := ioutil.ReadFile(fmt.Sprintf("%s/.config/bitmarkd%d/peer.public", suite.homeDirectory, i+1))
-		if !suite.NoError(err) {
+	for i := 1; i < suite.peerCount+1; i++ {
+		dat, err := ioutil.ReadFile(getFile(i, "peer.public"))
+		if err != nil {
 			suite.FailNow("failed to read peer public key files")
 		}
 
 		key, err := zmqutil.ReadPublicKey(string(dat))
-		if !suite.NoError(err) {
+		if err != nil {
 			suite.FailNow("failed to parse peer public keys")
 		}
 
 		suite.peers = append(suite.peers, peer{publicKey: key})
 	}
 
-	cmd := exec.Command("sh", "update-firewall-rules", "-f", "default.conf")
-	out, err := cmd.CombinedOutput()
-	if !suite.NoError(err) {
-		suite.FailNowf("failed to reset the firewall rules", "stdout: %s", string(out))
+	if err := updateFirewallRules("default.conf"); err != nil {
+		suite.FailNowf("failed to apply default firewall rules", err.Error())
 	}
 }
 
 func (suite *ConsensusTestSuite) SetupTest() {
-	// reset the blockchain to the genesis block
-	cmd := exec.Command("sh", "bm-tester", "2")
-	out, err := cmd.CombinedOutput()
-	if !suite.NoError(err) {
-		suite.FailNowf("failed to restart the local cluster", "stdout: %s", out)
+	exec.Command("killall", "bitmarkd").Run()
+
+	// wait for nodes to be restarted
+	time.Sleep(10 * time.Second)
+
+	for i := 1; i < suite.peerCount+1; i++ {
+		config := getFile(i, "bitmarkd.conf")
+
+		go func(i int, cfg string) {
+			// delete blocks
+			if err := runBitmarkd(cfg, "delete-down", "2"); err != nil {
+				suite.FailNowf("failed to delete blocks", "node-%d", i)
+			}
+
+			// start bitmarkd
+			if err := runBitmarkd(cfg); err != nil {
+				suite.FailNowf("failed to run bitmarkd", "node-%d", i)
+			}
+		}(i, config)
 	}
 
 	// wait for nodes to be restarted
@@ -115,8 +123,7 @@ func (suite *ConsensusTestSuite) SetupTest() {
 				time.Sleep(10 * time.Second)
 
 				reply, _ := suite.peers[i].rpcClient.GetBitmarkInfo()
-				// the status is normal and the node has the global view of the cluster
-				if reply.Mode == mode.Normal.String() && reply.Peers == 16 {
+				if reply.Mode == mode.Normal.String() {
 					return
 				}
 			}
@@ -132,10 +139,8 @@ func (suite *ConsensusTestSuite) TearDownTest() {
 }
 
 func (suite *ConsensusTestSuite) TestMajority() {
-	cmd := exec.Command("sh", "update-firewall-rules", "-f", "block-all.conf")
-	out, err := cmd.CombinedOutput()
-	if !suite.NoError(err) {
-		suite.FailNowf("failed to disable ipv6 peer connections", "stdout: %s", string(out))
+	if err := updateFirewallRules("block-all.conf"); err != nil {
+		suite.FailNowf("failed to disable ipv6 peer connections", err.Error())
 	}
 
 	partitions := []partition{
@@ -168,10 +173,8 @@ func (suite *ConsensusTestSuite) TestMajority() {
 		}
 	}
 
-	cmd = exec.Command("sh", "update-firewall-rules", "-f", "default.conf")
-	out, err = cmd.CombinedOutput()
-	if !suite.NoError(err) {
-		suite.FailNowf("failed to enable ipv6 peer connections", "stdout: %s", string(out))
+	if err := updateFirewallRules("default.conf"); err != nil {
+		suite.FailNowf("failed to apply default firewall rules", err.Error())
 	}
 
 	time.Sleep(waitingTimeForResolvingForks)
@@ -183,6 +186,24 @@ func (suite *ConsensusTestSuite) TestMajority() {
 			suite.Equal(partitions[0].block.digest, reply.Block.Hash)
 		}
 	}
+}
+
+func updateFirewallRules(name string) error {
+	cmd := exec.Command("sh", "update-firewall-rules", "-f", name)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf(string(out))
+	}
+	return nil
+}
+
+func runBitmarkd(cfg string, arg ...string) error {
+	args := append([]string{"--config-file", cfg}, arg...)
+	return exec.Command("bitmarkd", args...).Run()
+}
+
+func getFile(index int, name string) string {
+	return fmt.Sprintf("%s/.config/bitmarkd%d/%s", os.Getenv("HOME"), index, name)
 }
 
 func TestConsensusTestSuite(t *testing.T) {
