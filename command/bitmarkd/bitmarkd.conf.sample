@@ -216,20 +216,21 @@ M.proofing = {
 -- setup for every payment service
 M.payment = {
 
-    -- set to true to get payment transactions directly from the discovery proxy
-    use_discovery = true,
+    -- the mode should be one of the following: p2p, discovery, rest
+    mode = "p2p",
 
+    -- required if the mode is set to "discovery"
     discovery = {
         sub_endpoint = "127.0.0.1:5566",
         req_endpoint = "127.0.0.1:5567"
     },
 
-    -- local bitcoin access to REST API
+    -- local bitcoin access to REST API. required if the mode is set to "rest"
     bitcoin = {
         url = "http://127.0.0.1:8332/rest"
     },
 
-    -- local litecoin access to REST API
+    -- local litecoin access to REST API. required if the mode is set to "rest"
     litecoin = {
         url = "http://127.0.0.1:9332/rest"
     }

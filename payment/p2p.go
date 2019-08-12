@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"strconv"
 	"sync"
 	"time"
 
@@ -20,8 +21,10 @@ import (
 	"github.com/btcsuite/btcd/peer"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
+	"github.com/patrickmn/go-cache"
 
 	"github.com/bitmark-inc/bitmarkd/currency"
+	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/storage"
@@ -40,19 +43,20 @@ var (
 	ErrProcessStopping    = errors.New("process is going to stop")
 )
 
-var srcAddr *wire.NetAddress = wire.NewNetAddressIPPort(net.ParseIP("0.0.0.0"), 18333, 0)
-
 // p2pWatcher is a watcher that sync with bitcoin / litecoin blockchain by its peer to peer protocol.
 type p2pWatcher struct {
 	sync.WaitGroup
 
 	connectedPeers *PeerMap
+	currency       currency.Currency
 
 	addrManager   *addrmgr.AddrManager
 	connManager   *connmgr.ConnManager
 	networkParams *chaincfg.Params
+	srcAddr       *wire.NetAddress
 	checkpoint    chaincfg.Checkpoint
 	storage       storage.P2PStorage
+	blockCache    *cache.Cache
 	log           *logger.L
 
 	lastHash     *chainhash.Hash
@@ -62,19 +66,39 @@ type p2pWatcher struct {
 	shutdown     chan struct{}
 }
 
-func newP2pWatcher(paymentStore storage.P2PStorage, networkParams *chaincfg.Params) (*p2pWatcher, error) {
+func newP2pWatcher(c currency.Currency) (*p2pWatcher, error) {
 	var attemptLock sync.Mutex
-	log := logger.New("p2p-watcher")
+	log := logger.New(c.String() + "-watcher")
+	var paymentStore storage.P2PStorage
+	switch c {
+	case currency.Bitcoin:
+		paymentStore = storage.PaymentStorage.Btc
+	case currency.Litecoin:
+		paymentStore = storage.PaymentStorage.Ltc
+	default:
+		return nil, errors.New("unsupported currency")
+	}
+
+	networkParams := c.ChainParam(mode.IsTesting())
+
+	defaultPort, err := strconv.ParseInt(networkParams.DefaultPort, 10, 16)
+	if err != nil {
+		return nil, err
+	}
+	log.Tracef("watcher default port: %d", defaultPort)
 
 	addrManager := addrmgr.New(".", nil)
 	checkpoint := networkParams.Checkpoints[len(networkParams.Checkpoints)-1]
 
 	w := &p2pWatcher{
+		currency:       c,
 		connectedPeers: NewPeerMap(),
 		addrManager:    addrManager,
 		networkParams:  networkParams,
+		srcAddr:        wire.NewNetAddressIPPort(net.ParseIP("0.0.0.0"), uint16(defaultPort), 0),
 		checkpoint:     checkpoint,
 		storage:        paymentStore,
+		blockCache:     cache.New(time.Hour, 2*time.Hour),
 		log:            log,
 		onHeadersErr:   make(chan error, 0),
 		shutdown:       make(chan struct{}, 0),
@@ -416,7 +440,7 @@ func (w *p2pWatcher) onPeerVerAck(p *peer.Peer, msg *wire.MsgVerAck) {
 func (w *p2pWatcher) onPeerAddr(p *peer.Peer, msg *wire.MsgAddr) {
 	for _, a := range msg.AddrList {
 		w.log.Tracef("Receive new address: %s:%d. Peer service: %s", a.IP, a.Port, a.Services)
-		w.addrManager.AddAddress(a, srcAddr)
+		w.addrManager.AddAddress(a, w.srcAddr)
 	}
 }
 
@@ -519,9 +543,10 @@ func (w *p2pWatcher) rollbackBlock() error {
 // collect all potential bitmark payment transactions.
 func (w *p2pWatcher) onPeerBlock(p *peer.Peer, msg *wire.MsgBlock, buf []byte) {
 	w.log.Tracef("on block: %s", msg.BlockHash())
+	blockHash := msg.BlockHash().String()
 
 	if time.Since(msg.Header.Timestamp) > PaymentExpiry {
-		w.log.Tracef("ignore old block: %s", msg.BlockHash().String())
+		w.log.Tracef("ignore old block: %s", blockHash)
 		return
 	}
 
@@ -531,8 +556,8 @@ func (w *p2pWatcher) onPeerBlock(p *peer.Peer, msg *wire.MsgBlock, buf []byte) {
 		return
 	}
 
-	if w.storage.HasBlockReceipt(blockHeight) {
-		w.log.Tracef("block has already processed: %d", blockHeight)
+	if _, found := w.blockCache.Get(blockHash); found {
+		w.log.Tracef("block has already processed: %d", blockHash)
 		return
 	}
 
@@ -569,7 +594,7 @@ func (w *p2pWatcher) onPeerBlock(p *peer.Peer, msg *wire.MsgBlock, buf []byte) {
 			reservoir.SetTransferVerified(
 				payId,
 				&reservoir.PaymentDetail{
-					Currency: currency.Bitcoin, // FIXME: change it to a variable
+					Currency: w.currency,
 					TxID:     txId,
 					Amounts:  amounts,
 				},
@@ -577,10 +602,7 @@ func (w *p2pWatcher) onPeerBlock(p *peer.Peer, msg *wire.MsgBlock, buf []byte) {
 		}
 	}
 
-	// add a receipt for processed blocks
-	if err := w.storage.SetBlockReceipt(blockHeight); err != nil {
-		w.log.Errorf("Can not set block processed. Error: %s", err)
-	}
+	w.blockCache.Set(blockHash, true, 0)
 }
 
 // peerConfig returns a payment template. The `ChainParams` will vary between

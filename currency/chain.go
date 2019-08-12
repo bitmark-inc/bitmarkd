@@ -1,4 +1,4 @@
-package payment
+package currency
 
 import (
 	"math/big"
@@ -7,10 +7,12 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
+
+	"github.com/bitmark-inc/logger"
 )
 
-var BtcMainNetParams *chaincfg.Params = &chaincfg.MainNetParams
-var BtcTestNet3Params *chaincfg.Params = &chaincfg.TestNet3Params
+var btcMainNetParams *chaincfg.Params = &chaincfg.MainNetParams
+var btcTestNet3Params *chaincfg.Params = &chaincfg.TestNet3Params
 
 // A group of variables for Litecoin Mainnet
 var (
@@ -85,7 +87,7 @@ var (
 		Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
 	}
 
-	LtcMainNetParams = &chaincfg.Params{
+	ltcMainNetParams = &chaincfg.Params{
 		Name:        "mainnet",
 		Net:         wire.MainNet,
 		DefaultPort: "9333",
@@ -195,7 +197,7 @@ var (
 		Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
 	}
 
-	LtcTestNet4Params = &chaincfg.Params{
+	ltcTestNet4Params = &chaincfg.Params{
 		Name:        "testnet4",
 		Net:         wire.BitcoinNet(0xf1c8d2fd),
 		DefaultPort: "19335",
@@ -279,9 +281,31 @@ func newHashFromStr(hashString string) *chainhash.Hash {
 }
 
 func init() {
-	BtcMainNetParams.Checkpoints = []chaincfg.Checkpoint{{588665, newHashFromStr("0000000000000000001bbd854842ad2562993e71ae06ed7ecaf8f04f07688692")}}
-	BtcTestNet3Params.Checkpoints = []chaincfg.Checkpoint{{1568498, newHashFromStr("000000000000004654a8d2599a24a95274f9d26c57be147e1c94324071d7363e")}}
+	btcMainNetParams.Checkpoints = []chaincfg.Checkpoint{{588665, newHashFromStr("0000000000000000001bbd854842ad2562993e71ae06ed7ecaf8f04f07688692")}}
+	btcTestNet3Params.Checkpoints = []chaincfg.Checkpoint{{1568498, newHashFromStr("000000000000004654a8d2599a24a95274f9d26c57be147e1c94324071d7363e")}}
 
-	LtcMainNetParams.Checkpoints = []chaincfg.Checkpoint{{1679794, newHashFromStr("ca37528e6644cf6a4417493909699881e920086ec609679387c9ee83c73c7ce3")}}
-	LtcTestNet4Params.Checkpoints = []chaincfg.Checkpoint{{1162128, newHashFromStr("1b0bb65ecba47aa1991cbf1d2adb9348a493040becb871ce1d750e027d900cf4")}}
+	ltcMainNetParams.Checkpoints = []chaincfg.Checkpoint{{1679794, newHashFromStr("ca37528e6644cf6a4417493909699881e920086ec609679387c9ee83c73c7ce3")}}
+	ltcTestNet4Params.Checkpoints = []chaincfg.Checkpoint{{1162128, newHashFromStr("1b0bb65ecba47aa1991cbf1d2adb9348a493040becb871ce1d750e027d900cf4")}}
+}
+
+func (currency Currency) ChainParam(testnet bool) *chaincfg.Params {
+	switch currency {
+	case Nothing:
+		return nil // for genesis blocks
+	case Bitcoin:
+		if testnet {
+			return btcTestNet3Params
+		} else {
+			return btcMainNetParams
+		}
+	case Litecoin:
+		if testnet {
+			return ltcTestNet4Params
+		} else {
+			return ltcMainNetParams
+		}
+	default:
+		logger.Panicf("non supported currency: %s", currency)
+	}
+	return nil
 }
