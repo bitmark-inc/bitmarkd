@@ -24,8 +24,6 @@ type P2PStorage interface {
 	StoreBlock(height int32, hash *chainhash.Hash) error
 	GetCheckpoint() (*chainhash.Hash, error)
 	SetCheckpoint(height int32) error
-	HasBlockReceipt(height int32) bool
-	SetBlockReceipt(height int32) error
 	RollbackTo(deleteFrom, deleteTo int32) error
 	Close() error
 }
@@ -195,16 +193,6 @@ func (l *LevelDBPaymentStore) RollbackTo(deleteFrom, deleteTo int32) error {
 		}
 	}
 	return nil
-}
-
-// SetBlockReceipt will mark a given block as processed
-func (l *LevelDBPaymentStore) SetBlockReceipt(height int32) error {
-	return l.Table("receipt").Put([]byte(fmt.Sprintf("%08x", height)), []byte{})
-}
-
-// HasBlockReceipt validate whether a given block is processed by checking its receipt
-func (l *LevelDBPaymentStore) HasBlockReceipt(height int32) bool {
-	return l.Table("receipt").Has([]byte(fmt.Sprintf("%08x", height)))
 }
 
 func (l *LevelDBPaymentStore) Close() error {

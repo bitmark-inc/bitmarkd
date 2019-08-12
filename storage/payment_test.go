@@ -100,31 +100,6 @@ func TestPaymentStorageGetAndSetCheckpoint(t *testing.T) {
 	}
 }
 
-func TestPaymentStorageBlockReceipt(t *testing.T) {
-	db := PaymentStorage.Btc.DB()
-
-	var height int32 = 103
-
-	store := PaymentStorage.Btc
-	if err := store.SetBlockReceipt(height); err != nil {
-		t.Fatalf("unable set block receipt. error: %s", err.Error())
-	}
-
-	receiptKey := append([]byte{"r"[0]}, []byte(fmt.Sprintf("%08x", height))...)
-	exist, err := db.Has(receiptKey, nil)
-	if err != nil {
-		t.Fatalf("can not validate the receipt key from db. error: %s", err.Error())
-	}
-
-	if !exist {
-		t.Fatalf("block receipt is not set to the database")
-	}
-
-	if !store.HasBlockReceipt(height) {
-		t.Fatalf("unable get an existed block receipt")
-	}
-}
-
 func TestPaymentStorageRollback(t *testing.T) {
 	db := PaymentStorage.Btc.DB()
 
