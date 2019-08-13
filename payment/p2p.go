@@ -471,7 +471,13 @@ func (w *p2pWatcher) onPeerHeaders(p *peer.Peer, msg *wire.MsgHeaders) {
 			if time.Since(h.Timestamp) < 48*time.Hour && firstNewHeight == 0 {
 				firstNewHeight = newHeight
 			}
-			hash, _ := w.storage.GetHash(newHeight)
+
+			hash, getHashErr := w.storage.GetHash(newHeight)
+			if getHashErr != nil {
+				err = getHashErr
+				return
+			}
+
 			if reflect.DeepEqual(hash.CloneBytes(), newHashByte) {
 				w.log.Tracef("Omit the same hash: %s", hash)
 				continue
