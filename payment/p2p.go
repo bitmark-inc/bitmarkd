@@ -37,10 +37,14 @@ const PaymentExpiry = 12 * time.Hour
 const HeaderSyncTimeout = time.Minute
 
 var (
-	ErrNoNewHeader        = errors.New("no new block headers from peer")
-	ErrMissingBlockHeader = errors.New("missing previous block header")
-	ErrTimeoutWaitHeader  = errors.New("timed out waiting for the block header data")
-	ErrProcessStopping    = errors.New("process is going to stop")
+	ErrNoNewHeader           = errors.New("no new block headers from peer")
+	ErrMissingPreviousHeader = errors.New("missing previous block header")
+	ErrTimeoutWaitHeader     = errors.New("timed out waiting for the block header data")
+	ErrProcessStopping       = errors.New("process is going to stop")
+
+	ErrBlockHeaderNotFound = errors.New("the header of the block is not found")
+	ErrBlockTooOld         = errors.New("the block is too old")
+	ErrBlockProcessed      = errors.New("the block has already processed")
 )
 
 // p2pWatcher is a watcher that sync with bitcoin / litecoin blockchain by its peer to peer protocol.
@@ -303,7 +307,7 @@ func (w *p2pWatcher) sync() {
 								return
 							}
 						}
-					case ErrMissingBlockHeader:
+					case ErrMissingPreviousHeader:
 						w.log.Warnf("Incorrect block data", err.Error())
 						break SYNC_LOOP
 					case ErrProcessStopping:
@@ -489,7 +493,7 @@ func (w *p2pWatcher) onPeerHeaders(p *peer.Peer, msg *wire.MsgHeaders) {
 		prevHeight, err := w.storage.GetHeight(&h.PrevBlock)
 		if err != nil {
 			p.Disconnect()
-			err = ErrMissingBlockHeader
+			err = ErrMissingPreviousHeader
 			return
 		}
 
@@ -545,51 +549,53 @@ func (w *p2pWatcher) rollbackBlock() error {
 	return nil
 }
 
-// onPeerBlock handles block messages from peer. It abstrcts transactions from block data to
+func (w *p2pWatcher) examineTransaction(tx *wire.MsgTx) ([]byte, map[string]uint64) {
+	var id []byte
+	amounts := map[string]uint64{}
+
+	for _, txout := range tx.TxOut {
+		// if script starts with `6a30`, the rest of bytes would be a potential payment id
+		index := bytes.Index(txout.PkScript, []byte{106, 48})
+		if index == 0 {
+			id = txout.PkScript[2:]
+		} else {
+			s, err := txscript.ParsePkScript(txout.PkScript)
+			if err != nil {
+				continue
+			}
+
+			addr, err := s.Address(w.networkParams)
+			if err != nil {
+				continue
+			}
+			amounts[addr.String()] = uint64(txout.Value)
+		}
+	}
+
+	return id, amounts
+}
+
+// onPeerBlock handles block messages from peer. It abstracts transactions from block data to
 // collect all potential bitmark payment transactions.
-func (w *p2pWatcher) onPeerBlock(p *peer.Peer, msg *wire.MsgBlock, buf []byte) {
-	w.log.Tracef("on block: %s", msg.BlockHash())
+func (w *p2pWatcher) onPeerBlock(p *peer.Peer, msg *wire.MsgBlock, buf []byte) error {
 	blockHash := msg.BlockHash().String()
 
 	if time.Since(msg.Header.Timestamp) > PaymentExpiry {
-		w.log.Tracef("ignore old block: %s", blockHash)
-		return
+		return ErrBlockTooOld
 	}
 
 	hash := msg.BlockHash()
 	blockHeight, _ := w.storage.GetHeight(&hash)
 	if blockHeight == 0 {
-		return
+		return ErrBlockHeaderNotFound
 	}
 
 	if _, found := w.blockCache.Get(blockHash); found {
-		w.log.Tracef("block has already processed: %d", blockHash)
-		return
+		return ErrBlockProcessed
 	}
 
 	for _, tx := range msg.Transactions {
-		var id []byte
-		amounts := map[string]uint64{}
-
-		for _, txout := range tx.TxOut {
-			// if script starts with `6a30`, the rest of bytes would be a potential payment id
-			index := bytes.Index(txout.PkScript, []byte{106, 48})
-			if index == 0 {
-				id = txout.PkScript[2:]
-			} else {
-				s, err := txscript.ParsePkScript(txout.PkScript)
-				if err != nil {
-					continue
-				}
-
-				addr, err := s.Address(w.networkParams)
-				if err != nil {
-					continue
-				}
-				amounts[addr.String()] = uint64(txout.Value)
-			}
-		}
-
+		id, amounts := w.examineTransaction(tx)
 		if id != nil {
 			var payId pay.PayId
 			copy(payId[:], id[:])
@@ -609,6 +615,7 @@ func (w *p2pWatcher) onPeerBlock(p *peer.Peer, msg *wire.MsgBlock, buf []byte) {
 	}
 
 	w.blockCache.Set(blockHash, true, 0)
+	return nil
 }
 
 // peerConfig returns a payment template. The `ChainParams` will vary between
@@ -627,7 +634,13 @@ func (w *p2pWatcher) peerConfig() *peer.Config {
 			OnVerAck:  w.onPeerVerAck,
 			OnAddr:    w.onPeerAddr,
 			OnHeaders: w.onPeerHeaders,
-			OnBlock:   w.onPeerBlock,
+			OnBlock: func(p *peer.Peer, msg *wire.MsgBlock, buf []byte) {
+				w.log.Tracef("on block: %s", msg.BlockHash())
+
+				if err := w.onPeerBlock(p, msg, buf); err != nil {
+					w.log.Tracef("ignore block processing for block: %s. error: %s", msg.BlockHash(), err.Error())
+				}
+			},
 
 			OnTx: func(p *peer.Peer, msg *wire.MsgTx) {
 				w.log.Debugf("tx: %+v", msg)
