@@ -450,16 +450,16 @@ func (w *p2pWatcher) onPeerAddr(p *peer.Peer, msg *wire.MsgAddr) {
 
 // onPeerHeaders handles messages from peer for updating header data
 func (w *p2pWatcher) onPeerHeaders(p *peer.Peer, msg *wire.MsgHeaders) {
-	var err error
+	var headersErr error
 	defer func() {
 		select {
-		case w.onHeadersErr <- err:
-		default:
+		case w.onHeadersErr <- headersErr:
+		case <-time.After(time.Second):
 		}
 	}()
 
 	if len(msg.Headers) == 0 {
-		err = ErrNoNewHeader
+		headersErr = ErrNoNewHeader
 		return
 	}
 
@@ -479,7 +479,7 @@ func (w *p2pWatcher) onPeerHeaders(p *peer.Peer, msg *wire.MsgHeaders) {
 
 			hash, getHashErr := w.storage.GetHash(newHeight)
 			if getHashErr != nil {
-				err = getHashErr
+				headersErr = getHashErr
 				return
 			}
 
@@ -494,7 +494,7 @@ func (w *p2pWatcher) onPeerHeaders(p *peer.Peer, msg *wire.MsgHeaders) {
 		prevHeight, err := w.storage.GetHeight(&h.PrevBlock)
 		if err != nil {
 			p.Disconnect()
-			err = ErrMissingPreviousHeader
+			headersErr = ErrMissingPreviousHeader
 			return
 		}
 
@@ -505,13 +505,14 @@ func (w *p2pWatcher) onPeerHeaders(p *peer.Peer, msg *wire.MsgHeaders) {
 		}
 
 		w.log.Debugf("Add block hash: %s, %d", newHash, newHeight)
-		if err = w.storage.StoreBlock(newHeight, &newHash); err != nil {
+		if err := w.storage.StoreBlock(newHeight, &newHash); err != nil {
+			headersErr = err
 			return
 		}
 	}
 
 	if !hasNewHeader {
-		err = ErrNoNewHeader
+		headersErr = ErrNoNewHeader
 	}
 
 	if firstNewHeight > 0 {
