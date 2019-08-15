@@ -60,8 +60,8 @@ func (m *PeerMap) First() (p *peer.Peer) {
 	return nil
 }
 
-// Iter is a wrapper function of the map iteration.
-func (m *PeerMap) Iter(callback func(key string, value *peer.Peer)) {
+// Range is a wrapper function of the map iteration.
+func (m *PeerMap) Range(callback func(key string, value *peer.Peer)) {
 	m.RLock()
 	defer m.RUnlock()
 	for k, v := range m.peers {

@@ -254,7 +254,7 @@ func (w *p2pWatcher) fetchMoreAddress() {
 		case <-time.After(10 * time.Second):
 			if w.addrManager.NeedMoreAddresses() {
 				w.log.Debugf("Need more address. Fetch address from peers.")
-				w.connectedPeers.Iter(func(k string, p *peer.Peer) {
+				w.connectedPeers.Range(func(k string, p *peer.Peer) {
 					p.QueueMessage(wire.NewMsgGetAddr(), nil)
 				})
 			}
