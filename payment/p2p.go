@@ -104,8 +104,8 @@ func newP2pWatcher(c currency.Currency) (*p2pWatcher, error) {
 		storage:        paymentStore,
 		blockCache:     cache.New(time.Hour, 2*time.Hour),
 		log:            log,
-		onHeadersErr:   make(chan error, 0),
-		shutdown:       make(chan struct{}, 0),
+		onHeadersErr:   make(chan error),
+		shutdown:       make(chan struct{}),
 	}
 
 	//	prepare configuration for the connection manager
@@ -454,6 +454,7 @@ func (w *p2pWatcher) onPeerHeaders(p *peer.Peer, msg *wire.MsgHeaders) {
 	defer func() {
 		select {
 		case w.onHeadersErr <- err:
+		default:
 		}
 	}()
 
