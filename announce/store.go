@@ -132,7 +132,7 @@ func restorePeers(peerFile string) error {
 
 	f, err := os.OpenFile(peerFile, os.O_RDONLY, 0600)
 	if err != nil {
-		// peer file not exist shoulnd't return error, for example when starting
+		// peer file not exist shouldn't return error, for example when starting
 		// bitmarkd first time, peer file doesn't exist.
 		if os.IsNotExist(err) {
 			return nil

@@ -25,6 +25,14 @@ const (
 	cycleInterval = 30 * time.Second
 )
 
+// state of connection
+type connectedState int
+
+const (
+	stateDisconnected connectedState = iota
+	stateConnected    connectedState = iota
+)
+
 // atomically incremented counter for log names
 var upstreamCounter counter.Counter
 
@@ -135,7 +143,9 @@ func (u *Upstream) poller(shutdown <-chan struct{}, event <-chan zmqutil.Event) 
 	log := u.log
 
 	log.Debug("start polling…")
-	disconnected := false
+
+	// assumes connected
+	state := stateDisconnected
 
 loop:
 	for {
@@ -143,14 +153,14 @@ loop:
 		case <-shutdown:
 			break loop
 		case e := <-event:
-			u.handleEvent(e, &disconnected)
+			u.handleEvent(e, &state)
 		}
 	}
 	log.Debug("stopped polling")
 }
 
 // process the socket events
-func (u *Upstream) handleEvent(event zmqutil.Event, disconnected *bool) {
+func (u *Upstream) handleEvent(event zmqutil.Event, state *connectedState) {
 	log := u.log
 
 	switch event.Event {
@@ -163,8 +173,8 @@ func (u *Upstream) handleEvent(event zmqutil.Event, disconnected *bool) {
 
 		log.Warnf("socket %q is disconnected. event: %q (0x%x)", event.Address, event.Event, int(event.Event))
 
-		if *disconnected {
-			*disconnected = true
+		if *state == stateConnected {
+			*state = stateDisconnected
 
 			u.Lock()
 			u.connected = false
@@ -182,21 +192,25 @@ func (u *Upstream) handleEvent(event zmqutil.Event, disconnected *bool) {
 			log.Infof("reconnect to %q successful", event.Address)
 		}
 
-	case zmqutil.EVENT_CONNECT_DELAYED, zmqutil.EVENT_HANDSHAKE_SUCCEEDED:
+	case zmqutil.EVENT_CONNECT_DELAYED:
 		log.Infof("socket %q is connected. event: %q (0x%x)", event.Address, event.Event, int(event.Event))
 
-	case zmqutil.EVENT_CONNECTED:
+	case zmqutil.EVENT_CONNECTED, zmqutil.EVENT_HANDSHAKE_SUCCEEDED:
+
 		log.Infof("socket %q is connected. event: %q (0x%x)", event.Address, event.Event, int(event.Event))
 
-		err := u.requestBlockchinInfo()
-		if nil == err {
-			*disconnected = false
-			u.Lock()
-			u.connected = true
-			u.Unlock()
-		} else {
-			u.log.Debugf("request peer connection error: %s", err)
+		if *state == stateDisconnected {
+			err := u.requestBlockchainInfo()
+			if nil == err {
+				*state = stateConnected
+				u.Lock()
+				u.connected = true
+				u.Unlock()
+			} else {
+				u.log.Debugf("request peer connection error: %s", err)
+			}
 		}
+
 	default:
 		log.Warnf("socket %q unhandled event: %q (0x%x) value: %d", event.Address, event.Event, int(event.Event), event.Value)
 	}
@@ -204,7 +218,7 @@ func (u *Upstream) handleEvent(event zmqutil.Event, disconnected *bool) {
 }
 
 // register with server and check chain information
-func (u *Upstream) requestBlockchinInfo() error {
+func (u *Upstream) requestBlockchainInfo() error {
 	log := u.log
 	client := u.client
 	log.Debugf("register: client: %s", client)
@@ -242,7 +256,7 @@ func (u *Upstream) requestBlockchinInfo() error {
 			return fmt.Errorf("connection refused.  expected chain: %q but received: %q ", chain, received)
 		}
 		timestamp := binary.BigEndian.Uint64(data[4])
-		log.Infof("connection establised. register replied: public key: %x:  listeners: %x  timestamp: %d", data[2], data[3], timestamp)
+		log.Infof("connection established. register replied: public key: %x:  listeners: %x  timestamp: %d", data[2], data[3], timestamp)
 		announce.AddPeer(data[2], data[3], timestamp) // publicKey, broadcasts, listeners
 		return nil
 	default:

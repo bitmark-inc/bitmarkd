@@ -108,89 +108,67 @@ func determineConnections(log *logger.L) {
 		return // called to early
 	}
 
-	log.Infof("DC: this: %x", globalData.publicKey)
-
-	// N1
-	n1 := globalData.thisNode.Next()
-	if nil == n1 {
-		n1 = globalData.peerTree.First()
-	}
-	if nil == n1 || n1 == globalData.thisNode {
-		log.Errorf("determineConnections tree too small")
-		return
-	}
-	peer := n1.Value().(*peerEntry)
-	log.Infof("N1: peer: %s", peer)
-	messagebus.Bus.Connector.Send("N1", peer.publicKey, peer.listeners)
-
-	// N2
-	node := n1.Next()
-	if nil == node {
-		node = globalData.peerTree.First()
-	}
-	if nil == node || node == globalData.thisNode {
-		return // tree still too small
-	}
-
-	// N3
-	n3 := node.Next()
-	if nil == n3 {
-		n3 = globalData.peerTree.First()
-	}
-	if nil == n3 || n3 == globalData.thisNode {
-		return // tree still too small
-	}
-	if n3 != n1 {
-		peer := n3.Value().(*peerEntry)
-		log.Infof("N3: peer: %s", peer)
-		messagebus.Bus.Connector.Send("N3", peer.publicKey, peer.listeners)
-	}
-
-	// determine X25, X50 and X75 the cross ¼,½ and ¾ positions (mod tree size)
+	// locate this node in the tree
 	_, index := globalData.peerTree.Search(globalData.thisNode.Key())
 	count := globalData.peerTree.Count()
-	quarter := count/4 + index
-	if quarter >= count {
-		quarter -= count
+	log.Infof("N0: index: %d  tree: %d  public key: %x", index, count, globalData.publicKey)
+
+	// various increment values
+	e := count / 8
+	q := count / 4
+	h := count / 2
+
+	jump := 3      // to deal with N3/P3 and too few nodes
+	if count < 4 { // if insufficient
+		jump = 1 // just duplicate N1/P1
 	}
 
-	half := count/2 + index
-	if half >= count {
-		half -= count
+	names := [11]string{
+		"N1",
+		"N3",
+		"X1",
+		"X2",
+		"X3",
+		"X4",
+		"X5",
+		"X6",
+		"X7",
+		"P1",
+		"P3",
 	}
 
-	threequarters := half + count/4
-	if threequarters >= count {
-		threequarters -= count
-	}
+	// compute all possible offsets
+	// if count is too small then there will be duplicate offsets
+	var n [11]int
+	n[0] = index + 1             // N1 (+1)
+	n[1] = index + jump          // N3 (+3)
+	n[2] = e + index             // X⅛
+	n[3] = q + index             // X¼
+	n[4] = q + e + index         // X⅜
+	n[5] = h + index             // X½
+	n[6] = h + e + index         // X⅝
+	n[7] = h + q + index         // X¾
+	n[8] = h + q + e + index     // X⅞
+	n[9] = index + count - 1     // P1 (-1)
+	n[10] = index + count - jump // P3 (-3)
 
-	log.Debugf("N0: %d  tree size: %d", index, count)
-	log.Debugf("Xi: ¼: %d  ½: %d  ¾: %d", quarter, half, threequarters)
-
-	x25 := globalData.peerTree.Get(quarter)
-	x50 := globalData.peerTree.Get(half)
-	x75 := globalData.peerTree.Get(threequarters)
-
-	log.Infof("X25: this: %x", globalData.publicKey)
-	if nil != x25 {
-		if x25 != n1 && x25 != n3 {
-			peer := x25.Value().(*peerEntry)
-			log.Infof("X25: peer: %s", peer)
-			messagebus.Bus.Connector.Send("X25", peer.publicKey, peer.listeners)
+	u := -1
+deduplicate:
+	for i, v := range n {
+		if v == index || v == u {
+			continue deduplicate
 		}
-	}
-	if nil != x50 {
-		if x50 != n1 && x50 != n3 && x50 != x25 {
-			peer := x50.Value().(*peerEntry)
-			log.Infof("X50: peer: %s", peer)
-			messagebus.Bus.Connector.Send("X50", peer.publicKey, peer.listeners)
+		u = v
+		if v >= count {
+			v -= count
 		}
-	}
-	if nil != x75 {
-		if x75 != n1 && x75 != n3 && x75 != x25 && x75 != x50 {
-			peer := x75.Value().(*peerEntry)
-			log.Infof("X75: peer: %s", peer)
-			messagebus.Bus.Connector.Send("X75", peer.publicKey, peer.listeners)
+		node := globalData.peerTree.Get(v)
+		if nil != node {
+			peer := node.Value().(*peerEntry)
+			if nil != peer {
+				log.Infof("%s: peer: %s", names[i], peer)
+				messagebus.Bus.Connector.Send(names[i], peer.publicKey, peer.listeners)
+			}
 		}
 	}
 }
