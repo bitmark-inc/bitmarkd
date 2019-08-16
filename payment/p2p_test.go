@@ -5,10 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/peer"
 	"github.com/btcsuite/btcd/wire"
+	"golang.org/x/sync/errgroup"
+
+	"github.com/bitmark-inc/bitmarkd/currency"
 )
 
 func NewDummyMsgBlock(previousBlock *chainhash.Hash, timestamp *time.Time) *wire.MsgBlock {
@@ -155,5 +157,111 @@ func TestExamineTx(t *testing.T) {
 
 	if v != paidAmount {
 		t.Fatalf("unexpected amount for the payment address. expected: %d, actual: %d", paidAmount, v)
+	}
+}
+
+func TestOnPeerNoHeaders(t *testing.T) {
+	testCurrency := currency.Litecoin
+
+	w, err := newP2pWatcher(testCurrency)
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
+
+	p, err := peer.NewOutboundPeer(w.peerConfig(), "127.0.0.1:12345")
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
+
+	headers := wire.NewMsgHeaders()
+
+	var g errgroup.Group
+
+	g.Go(func() error { return <-w.onHeadersErr })
+	w.onPeerHeaders(p, headers)
+
+	if err := g.Wait(); err != ErrNoNewHeader {
+		t.Fatalf("unexpected error. expect: %s, actual: %s", ErrNoNewHeader.Error(), err)
+	}
+}
+
+func TestOnPeerAllOldHeaders(t *testing.T) {
+	testCurrency := currency.Litecoin
+
+	w, err := newP2pWatcher(testCurrency)
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
+
+	fakeHeader1 := wire.NewBlockHeader(1, &chainhash.Hash{}, &chainhash.Hash{}, 1, 1)
+	fakeHash1 := fakeHeader1.BlockHash()
+	fakeHeader2 := wire.NewBlockHeader(1, &fakeHash1, &chainhash.Hash{}, 1, 1)
+	fakeHash2 := fakeHeader2.BlockHash()
+
+	if err := w.storage.StoreBlock(1, &fakeHash1); err != nil {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
+	if err := w.storage.StoreBlock(2, &fakeHash2); err != nil {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
+
+	w.lastHash = &fakeHash2
+	w.lastHeight = 2
+
+	p, err := peer.NewOutboundPeer(w.peerConfig(), "127.0.0.1:12345")
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
+
+	headers := wire.NewMsgHeaders()
+	headers.Headers = append(headers.Headers, fakeHeader1, fakeHeader2)
+
+	var g errgroup.Group
+
+	g.Go(func() error { return <-w.onHeadersErr })
+	w.onPeerHeaders(p, headers)
+
+	if err := g.Wait(); err != ErrNoNewHeader {
+		t.Fatalf("unexpected error. expect: %s, actual: %s", ErrNoNewHeader.Error(), err)
+	}
+}
+
+func TestOnPeerInvalidPrevious(t *testing.T) {
+	testCurrency := currency.Litecoin
+
+	w, err := newP2pWatcher(testCurrency)
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
+
+	fakeHeader1 := wire.NewBlockHeader(1, &chainhash.Hash{}, &chainhash.Hash{}, 1, 1)
+	fakeHash1 := fakeHeader1.BlockHash()
+	wrongPrevHash := &chainhash.Hash{}
+	// make the hash different from the first one
+	wrongPrevHash[0] = 1
+	fakeHeader2 := wire.NewBlockHeader(1, wrongPrevHash, &chainhash.Hash{}, 1, 1)
+
+	if err := w.storage.StoreBlock(1, &fakeHash1); err != nil {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
+
+	w.lastHash = &fakeHash1
+	w.lastHeight = 1
+
+	p, err := peer.NewOutboundPeer(w.peerConfig(), "127.0.0.1:12345")
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
+
+	headers := wire.NewMsgHeaders()
+	headers.Headers = append(headers.Headers, fakeHeader1, fakeHeader2)
+
+	var g errgroup.Group
+
+	g.Go(func() error { return <-w.onHeadersErr })
+	w.onPeerHeaders(p, headers)
+
+	if err := g.Wait(); err != ErrHashRecordInconsistency {
+		t.Fatalf("unexpected error. expect: %s, actual: %s", ErrHashRecordInconsistency.Error(), err)
 	}
 }

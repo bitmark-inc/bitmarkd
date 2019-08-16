@@ -37,10 +37,10 @@ const PaymentExpiry = 12 * time.Hour
 const HeaderSyncTimeout = time.Minute
 
 var (
-	ErrNoNewHeader           = errors.New("no new block headers from peer")
-	ErrMissingPreviousHeader = errors.New("missing previous block header")
-	ErrTimeoutWaitHeader     = errors.New("timed out waiting for the block header data")
-	ErrProcessStopping       = errors.New("process is going to stop")
+	ErrNoNewHeader             = errors.New("no new block headers from peer")
+	ErrHashRecordInconsistency = errors.New("missing previous block header")
+	ErrTimeoutWaitHeader       = errors.New("timed out waiting for the block header data")
+	ErrProcessStopping         = errors.New("process is going to stop")
 
 	ErrBlockHeaderNotFound = errors.New("the header of the block is not found")
 	ErrBlockTooOld         = errors.New("the block is too old")
@@ -307,14 +307,17 @@ func (w *p2pWatcher) sync() {
 								return
 							}
 						}
-					case ErrMissingPreviousHeader:
-						w.log.Warnf("Incorrect block data", err.Error())
+					case ErrHashRecordInconsistency:
+						w.log.Warnf("Incorrect block data: %s", err)
 						break SYNC_LOOP
 					case ErrProcessStopping:
 						w.log.Trace("stop syncing…")
 						return
+					default:
+						// The loop will retry the fetching process if there are errors which is not
+						// defined above.
+						w.log.Errorf("some other error happens during header fetching process. error: %s", err.Error())
 					}
-
 				} else {
 					if p.LastBlock() <= w.lastHeight {
 						if err := w.sleep(30 * time.Second); err == ErrProcessStopping {
@@ -448,6 +451,23 @@ func (w *p2pWatcher) onPeerAddr(p *peer.Peer, msg *wire.MsgAddr) {
 	}
 }
 
+func (w *p2pWatcher) isNewHeader(hash *chainhash.Hash) bool {
+	newHashByte := hash.CloneBytes()
+	newHeight, _ := w.storage.GetHeight(hash)
+	if newHeight != 0 {
+		// If there is any error here, the hash would be nil.
+		// That means the height is not correctly set. We will do nothing and
+		// assume it is a new hash
+		if hash, _ := w.storage.GetHash(newHeight); hash != nil {
+			if reflect.DeepEqual(hash.CloneBytes(), newHashByte) {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
 // onPeerHeaders handles messages from peer for updating header data
 func (w *p2pWatcher) onPeerHeaders(p *peer.Peer, msg *wire.MsgHeaders) {
 	var headersErr error
@@ -469,38 +489,32 @@ func (w *p2pWatcher) onPeerHeaders(p *peer.Peer, msg *wire.MsgHeaders) {
 
 	for _, h := range msg.Headers {
 		newHash = h.BlockHash()
-		newHashByte := newHash.CloneBytes()
-		newHeight, _ = w.storage.GetHeight(&newHash)
 
-		if newHeight != 0 {
-			if time.Since(h.Timestamp) < 48*time.Hour && firstNewHeight == 0 {
-				firstNewHeight = newHeight
-			}
-
-			hash, getHashErr := w.storage.GetHash(newHeight)
-			if getHashErr != nil {
-				headersErr = getHashErr
-				return
-			}
-
-			if reflect.DeepEqual(hash.CloneBytes(), newHashByte) {
-				w.log.Tracef("Omit the same hash: %s", hash)
-				continue
-			}
+		if !w.isNewHeader(&newHash) {
+			w.log.Tracef("Omit the same hash: %s", newHash)
+			continue
 		}
 
 		hasNewHeader = true
 
+		// Since the header is new, we will then check whether its previous header is existed.
+		// If it's not, a fork might be happened. We will return the error: ErrHashRecordInconsistency.
+		// The event will break the sync loop and trigger a rollback process
 		prevHeight, err := w.storage.GetHeight(&h.PrevBlock)
-		if err != nil {
+		if err != nil || prevHeight == 0 {
 			p.Disconnect()
-			headersErr = ErrMissingPreviousHeader
+			headersErr = ErrHashRecordInconsistency
+			return
+		}
+		prevHash, err := w.storage.GetHash(prevHeight)
+		if err != nil || !reflect.DeepEqual(prevHash.CloneBytes(), h.PrevBlock.CloneBytes()) {
+			p.Disconnect()
+			headersErr = ErrHashRecordInconsistency
 			return
 		}
 
 		newHeight = prevHeight + 1
-
-		if time.Since(h.Timestamp) < 48*time.Hour && firstNewHeight == 0 {
+		if firstNewHeight == 0 && time.Since(h.Timestamp) < PaymentExpiry {
 			firstNewHeight = newHeight
 		}
 
@@ -511,8 +525,10 @@ func (w *p2pWatcher) onPeerHeaders(p *peer.Peer, msg *wire.MsgHeaders) {
 		}
 	}
 
+	// check if there is any new headers at this processing
 	if !hasNewHeader {
 		headersErr = ErrNoNewHeader
+		return
 	}
 
 	if firstNewHeight > 0 {
