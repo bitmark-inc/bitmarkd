@@ -72,7 +72,7 @@ type p2pWatcher struct {
 
 func newP2pWatcher(c currency.Currency) (*p2pWatcher, error) {
 	var attemptLock sync.Mutex
-	log := logger.New(c.String() + "-watcher")
+	log := logger.New(c.String() + "_watcher")
 	var paymentStore storage.P2PStorage
 	switch c {
 	case currency.Bitcoin:
