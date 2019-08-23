@@ -66,6 +66,8 @@ bitmark_connect=
 bitcoin_conf=
 litecoin_conf=
 discovery_conf=
+recorderd_ipv4='127.0.0.1'
+recorderd_ipv6='[::1]'
 proxy=no
 log_size=1048576
 log_count=100
@@ -112,7 +114,7 @@ case "$(uname)" in
 esac
 [ -x "${getopt}" ] || ERROR 'getopt: "%s" is not executable or not installed' "${getopt}"
 
-args=$(${getopt} -o hvc:n:C:b:l:d:kmuD --long=help,verbose,chain:,nodes:,connect:,bitcoin:,litecoin:,discovery:,console,more,update,debug -- "$@") || exit 1
+args=$(${getopt} -o hvc:n:C:b:l:d:rkmuD --long=help,verbose,chain:,nodes:,connect:,bitcoin:,litecoin:,discovery:,recorderd-public,console,more,update,debug -- "$@") || exit 1
 
 # replace the arguments with the parsed values
 eval set -- "${args}"
@@ -191,6 +193,11 @@ do
       [ -z "${litecoin_conf}" ] && USAGE 'litecoin configuration cannot be empty'
       [ -d "${litecoin_conf}" ] && litecoin_conf="${litecoin_conf}/litecoin.conf"
       shift
+      ;;
+
+    (-r|--recorderd-public)
+      recorderd_ipv4='0.0.0.0'
+      recorderd_ipv6='[::]'
       ;;
 
     (-k|--console)
@@ -396,6 +403,7 @@ do
   [ -d "${dir}" ] || mkdir -p "${dir}"
 
   VERBOSE 'config: %s  ports: %dXX' "${config}" "${prefix}"
+  VERBOSE 'recorderd IPv4: %s  IPv6: %s' "${recorderd_ipv4}" "${recorderd_ipv6}"
 
   cat > "${config}" <<EOF
 -- bitmarkd.conf  -*- mode: lua -*-
@@ -612,12 +620,12 @@ M.proofing = {
     },
 
     publish = {
-        "127.0.0.1:${prefix}38",
-        "[::1]:${prefix}38"
+        "${recorderd_ipv4}:${prefix}38",
+        "${recorderd_ipv6}:${prefix}38"
     },
     submit = {
-        "127.0.0.1:${prefix}39",
-        "[::1]:${prefix}39"
+        "${recorderd_ipv4}:${prefix}39",
+        "${recorderd_ipv6}:${prefix}39"
     }
 }
 
