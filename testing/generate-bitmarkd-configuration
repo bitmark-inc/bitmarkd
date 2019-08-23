@@ -348,10 +348,10 @@ then
     # must be a config file
     [ -f "${discovery_conf}" ] || USAGE 'missing discovery configuration: %s' "${discovery_conf}"
 
-    discovery_pub=$(get_endpoint pub_endpoint "${discovery_conf}" "127.0.0.1" 17008)
+    discovery_pub=$(get_endpoint pub_endpoint.ipv4 "${discovery_conf}" "127.0.0.1" 17008)
     [ -z "${discovery_pub}" ] && ERROR 'cannot determine discovery pub from: %s' "${discovery_conf}"
 
-    discovery_rep=$(get_endpoint rep_endpoint "${discovery_conf}" "127.0.0.1" 17009)
+    discovery_rep=$(get_endpoint rep_endpoint.ipv4 "${discovery_conf}" "127.0.0.1" 17009)
     [ -z "${discovery_rep}" ] && ERROR 'cannot determine discovery rep from: %s' "${discovery_conf}"
 
   fi
