@@ -160,6 +160,39 @@ func TestExamineTx(t *testing.T) {
 	}
 }
 
+func TestExamineTxWithoutPayment(t *testing.T) {
+	var paidAmount uint64 = 10000
+
+	tx := &wire.MsgTx{
+		Version: 1,
+		TxIn:    nil,
+		TxOut: []*wire.TxOut{
+			{
+				Value: int64(paidAmount),
+				PkScript: []byte{
+					0x76, 0xa9, 0x14, 0xd2, 0xeb, 0xb7, 0xb2, 0x59, 0xfb, 0x74,
+					0x10, 0xdc, 0xa1, 0x9b, 0x70, 0x7c, 0x40, 0x91, 0x19, 0x5d,
+					0x81, 0x8a, 0xc4, 0x88, 0xac,
+				},
+			},
+		},
+		LockTime: 0,
+	}
+
+	testCurrency := currency.Litecoin
+
+	w, err := newP2pWatcher(testCurrency)
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
+
+	b, _ := w.examineTransaction(tx)
+
+	if b != nil {
+		t.Fatalf("expect the pay id be nil. actual: %v", b)
+	}
+}
+
 func TestOnPeerNoHeaders(t *testing.T) {
 	testCurrency := currency.Litecoin
 
@@ -263,5 +296,45 @@ func TestOnPeerInvalidPrevious(t *testing.T) {
 
 	if err := g.Wait(); err != ErrHashRecordInconsistency {
 		t.Fatalf("unexpected error. expect: %s, actual: %s", ErrHashRecordInconsistency.Error(), err)
+	}
+}
+
+func TestRollbackToHeight(t *testing.T) {
+	testCurrency := currency.Litecoin
+
+	w, err := newP2pWatcher(testCurrency)
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
+
+	fakeHeader1 := wire.NewBlockHeader(99997997, &chainhash.Hash{}, &chainhash.Hash{}, 1, 1)
+	fakeHash1 := fakeHeader1.BlockHash()
+	fakeHeader2 := wire.NewBlockHeader(99997998, &fakeHash1, &chainhash.Hash{}, 1, 1)
+	fakeHash2 := fakeHeader2.BlockHash()
+	fakeHeader3 := wire.NewBlockHeader(99997999, &fakeHash2, &chainhash.Hash{}, 1, 1)
+	fakeHash3 := fakeHeader3.BlockHash()
+
+	w.lastHeight = 99999997
+
+	if err := w.storage.StoreBlock(99997997, &fakeHash1); err != nil {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
+	if err := w.storage.StoreBlock(99997998, &fakeHash2); err != nil {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
+	if err := w.storage.StoreBlock(99997999, &fakeHash3); err != nil {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
+
+	if err := w.rollbackBlock(); err != nil {
+		t.Fatalf("unexpected error. expected nil, actual: %s", err.Error())
+	}
+
+	if w.lastHeight != 99997997 {
+		t.Fatalf("unexpected amount for the payment address. expected: %d, actual: %d", 9997997, w.lastHeight)
+	}
+
+	if !reflect.DeepEqual(w.lastHash, &fakeHash1) {
+		t.Fatalf("unexpected last hash. expected: %d, actual: %d", &fakeHash1, w.lastHash)
 	}
 }
