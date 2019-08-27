@@ -1,5 +1,7 @@
 module github.com/bitmark-inc/bitmarkd
 
+go 1.12
+
 require (
 	github.com/bitmark-inc/certgen v0.1.1
 	github.com/bitmark-inc/exitwithstatus v0.1.2
@@ -7,28 +9,22 @@ require (
 	github.com/bitmark-inc/go-argon2 v0.1.4
 	github.com/bitmark-inc/listener v0.2.0
 	github.com/bitmark-inc/logger v0.3.4
-	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/fsnotify/fsnotify v1.4.7
-	github.com/golang/mock v1.3.1
-	github.com/golang/protobuf v1.3.2 // indirect
-	github.com/golang/snappy v0.0.1 // indirect
-	github.com/kr/pretty v0.1.0 // indirect
-	github.com/miekg/dns v1.1.15
-	github.com/mitchellh/mapstructure v1.1.2 // indirect
-	github.com/onsi/ginkgo v1.8.0 // indirect
-	github.com/onsi/gomega v1.5.0 // indirect
+	github.com/libp2p/go-libp2p v0.3.0
+	github.com/libp2p/go-libp2p-core v0.2.0
+	github.com/libp2p/go-libp2p-crypto v0.1.0
+	github.com/libp2p/go-libp2p-peerstore v0.1.3
+	github.com/libp2p/go-libp2p-secio v0.2.0
+	github.com/libp2p/go-libp2p-tls v0.1.1
+	github.com/miekg/dns v1.1.16
+	github.com/mr-tron/base58 v1.1.2
+	github.com/multiformats/go-multiaddr v0.0.4
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pebbe/zmq4 v1.0.0
-	github.com/stretchr/testify v1.3.0
 	github.com/syndtr/goleveldb v1.0.0
-	github.com/urfave/cli v1.20.0
+	github.com/urfave/cli v1.21.0
+	github.com/ymzuiku/hit v0.0.0-20190525155149-18097f1d08f4
 	github.com/yuin/gluamapper v0.0.0-20150323120927-d836955830e7
 	github.com/yuin/gopher-lua v0.0.0-20190514113301-1cd887cd7036
-	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
-	golang.org/x/net v0.0.0-20190724013045-ca1201d0de80 // indirect
-	golang.org/x/sys v0.0.0-20190712062909-fae7ac547cb7 // indirect
-	golang.org/x/text v0.3.2 // indirect
+	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
-	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
-	gopkg.in/yaml.v2 v2.2.2 // indirect
 )
