@@ -130,7 +130,7 @@ config_dir=$(dirname "${config}")
 [ X"${debug}" = X"yes" ] && set -x
 
 # determine if a litecoind is running
-pidfile="${config_dir}/regtest/litecoind.pid"
+pidfile="${config_dir}/regtest/litecoin.pid"
 
 pid2=not-running
 [ -e "${pidfile}" ] && pid2=$(cat -- "${pidfile}")
