@@ -18,7 +18,7 @@ const (
 //   cache-id            - alows password to be cached for a time
 //   error-message       - blank
 //   prompt              - names the identity
-//   description         - shows create/transfer opration
+//   description         - shows create/transfer operation
 func passwordFromAgent(name string, title string, agent string, clear bool) (string, error) {
 
 	cacheId := passwordTag + name

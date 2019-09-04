@@ -177,7 +177,7 @@ func lookupNodesDomain(domain string, log *logger.L) error {
 				log.Infof("result[%d]: adding: %x", i, listeners)
 
 				// internal add, as lock is already held
-				addPeer(tag.publicKey, listeners, 0)
+				addPeer(tag.publicKey, listeners, uint64(time.Now().Unix()))
 			}
 		}
 	}
