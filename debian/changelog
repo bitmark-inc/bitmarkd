@@ -1,3 +1,36 @@
+bitmarkd (0.11.0-1) unstable; urgency=medium
+
+  * make the release version
+
+ -- Christopher Hall <hsw@bitmark.com>  Tue, 03 Sep 2019 02:15:59 +0000
+
+bitmarkd (0.11.0-rc.3-1) unstable; urgency=medium
+
+  * longer time for old coin payments
+
+ -- Christopher Hall <hsw@bitmark.com>  Mon, 02 Sep 2019 03:26:05 +0000
+
+bitmarkd (0.11.0-rc.2-1) unstable; urgency=medium
+
+  * problem with block version need to increase again
+
+ -- Christopher Hall <hsw@bitmark.com>  Thu, 08 Aug 2019 06:48:48 +0000
+
+bitmarkd (0.11.0-rc.1-1) unstable; urgency=medium
+
+  * some minor test script fixes
+  * small doc change
+  * no changes to bitmarkd code since beta1
+
+ -- Christopher Hall <hsw@bitmark.com>  Mon, 05 Aug 2019 03:51:20 +0000
+
+bitmarkd (0.11.0-beta.1-1) unstable; urgency=medium
+
+  * ensure expired peers are not reloaded from cache file
+  * some minor spelling fixes
+
+ -- Christopher Hall <hsw@bitmark.com>  Thu, 01 Aug 2019 09:24:30 +0000
+
 bitmarkd (0.11.0-alpha.4-1) unstable; urgency=medium
 
   * fix connection event handlers

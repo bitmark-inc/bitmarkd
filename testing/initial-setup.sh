@@ -1,13 +1,15 @@
 #!/bin/sh
 # generate all LOCAL bitmarkd configuration configurations
 
+# do not change these defaults (use bm-tester.conf to override
 all=$(seq 1 12)
 console='1 2 8'
 more='1 2 8'
+recorderd_public=no
 
-# to setup the DNS TXT records
+# to setup the DNS TXT records (can be set by bm-tester.conf)
+nodes_domain=''
 dns_txt='1 2'
-
 
 ERROR() {
   printf 'error: '
@@ -61,7 +63,28 @@ CHECK_PROGRAM() {
 
 # main program
 
-[ -n "${1}" ] && nodes_domain="${1}"
+
+# if a config override is in the current directory
+cfg=bm-tester.conf
+if [ -f "${cfg}" ]
+then
+  printf 'using configuration override: %s\n' "${cfg}"
+  sleep 2
+  . "${cfg}"
+fi
+
+# possible to re-override nodes-domain from command-line
+if [ -n "${1}" ]
+then
+  old_nd="${nodes_domain}"
+  nodes_domain="${1}"
+  if [ -n "${old_nd}" -a X"${old_nd}" != "${nodes_domain}" ]
+  then
+    printf 'command-line override: %s (was: %s}\n' "${nodes_domain}" "${old_nd}"
+    sleep 2
+  fi
+fi
+
 [ -z "${nodes_domain}" ] && ERROR 'missing nodes-domain argument'
 
 xdg_home="${XDG_CONFIG_HOME}"
@@ -77,7 +100,8 @@ ok=yes
 CHECK_PROGRAM bitmarkd bitmark-cli recorderd discovery bitmark-wallet
 CHECK_PROGRAM bitcoind bitcoin-cli
 CHECK_PROGRAM litecoind litecoin-cli
-CHECK_PROGRAM awk jq lua52:lua5.2
+CHECK_PROGRAM drill:host
+CHECK_PROGRAM awk jq lua52:lua5.2:lua53:lua5.3:lua
 CHECK_PROGRAM genbtcltc restart-all-bitmarkds bm-tester
 CHECK_PROGRAM generate-bitmarkd-configuration
 CHECK_PROGRAM run-bitcoin run-litecoin run-discovery
@@ -86,6 +110,30 @@ CHECK_PROGRAM make-blockchain node-info
 
 # fail if something is missing
 [ X"${ok}" = X"no" ] && ERROR 'missing programs'
+
+# detect GNU getopt
+getopt=
+case "$(uname)" in
+  (FreeBSD|DragonFly)
+    getopt=/usr/local/bin/getopt
+    ;;
+  (NetBSD)
+    getopt=/usr/pkg/bin/getopt
+    ;;
+  (OpenBSD)
+    getopt=/usr/local/bin/gnugetopt
+    ;;
+  (Darwin)
+    getopt=/usr/local/opt/gnu-getopt/bin/getopt
+    ;;
+  (Linux)
+    getopt=/usr/bin/getopt
+    ;;
+  (*)
+    ERROR 'OS: %s is not supported' "$(uname)"
+    ;;
+esac
+[ -x "${getopt}" ] || ERROR 'getopt: "%s" is not executable or not installed' "${getopt}"
 
 # check coins setup
 for program in bitcoin litecoin discovery recorderd
@@ -131,6 +179,7 @@ CONFIGURE() {
     OPT --discovery="${xdg_home}/discovery"
     OPT "$@"
     OPT --update
+    [ X"${recorderd_public}" = X"yes" ] && OPT --recorderd-public
     [ X"${console}" = X"yes" ] && OPT --console
     [ X"${more}" = X"yes" ] && OPT --more
 
@@ -161,6 +210,20 @@ do
   run-bitmarkd --config="%${i}" dns-txt
   SEP
 done
+
+# check the TXT records work
+SEP 'checking the TXT records...'
+for p in drill host
+do
+  drill=$(which "${p}")
+  [ -x "${drill}" ] && break
+done
+[ -x "${drill}" ] || ERROR 'cannot locate host or drill programs'
+
+r=$(${drill} -t TXT "${nodes_domain}" | grep '^'"${nodes_domain}")
+[ -z "${r}" ] && ERROR 'dnsmasq/unbound not setup: missing TXT for: %s' "${nodes_domain}"
+printf 'DNS query shows:\n\n'
+printf '%s\n\n' "${r}"
 
 # add proper nodes and reconfigure
 SEP 'update configuration...'

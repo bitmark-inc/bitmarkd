@@ -50,6 +50,7 @@ func makeSelfSignedCertificate(name string, certificateFileName string, privateK
 // CertificateFingerprint - compute the fingerprint of a certificate
 //
 // FreeBSD: openssl x509 -outform DER -in bitmarkd-local-rpc.crt | sha3sum -a 256
+// Darwin:  openssl x509 -outform DER -in bitmarkd-local-rpc.crt | sha3-256sum
 func CertificateFingerprint(certificate []byte) [32]byte {
 	return sha3.Sum256(certificate)
 }

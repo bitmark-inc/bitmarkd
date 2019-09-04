@@ -66,6 +66,8 @@ bitmark_connect=
 bitcoin_conf=
 litecoin_conf=
 discovery_conf=
+recorderd_ipv4='127.0.0.1'
+recorderd_ipv6='[::1]'
 proxy=no
 log_size=1048576
 log_count=100
@@ -80,7 +82,15 @@ comment_string='-- '
 testnet_only=''
 livenet_only="${comment_string}"
 
-lua=lua52
+# detect lua
+for l in lua52 lua5.2 lua53 lua 5.3 lua
+do
+  lua=$(which "${l}")
+  [ -x "${lua}" ] && break
+done
+[ -x "${lua}" ] || ERROR 'cannot locate usable lua'
+
+# detect GNU getopt
 getopt=
 case "$(uname)" in
   (FreeBSD|DragonFly)
@@ -88,7 +98,6 @@ case "$(uname)" in
     ;;
   (NetBSD)
     getopt=/usr/pkg/bin/getopt
-    lua=lua5.2
     ;;
   (OpenBSD)
     getopt=/usr/local/bin/gnugetopt
@@ -99,16 +108,14 @@ case "$(uname)" in
     ;;
   (Linux)
     getopt=/usr/bin/getopt
-    lua=lua5.2
     ;;
   (*)
     ERROR 'OS: %s is not supported' "$(uname)"
     ;;
 esac
 [ -x "${getopt}" ] || ERROR 'getopt: "%s" is not executable or not installed' "${getopt}"
-[ -x "$(which ${lua})" ] || ERROR 'lua: "%s" is not executable or not installed' "${lua}"
 
-args=$(${getopt} -o hvc:n:C:b:l:d:kmuD --long=help,verbose,chain:,nodes:,connect:,bitcoin:,litecoin:,discovery:,console,more,update,debug -- "$@") || exit 1
+args=$(${getopt} -o hvc:n:C:b:l:d:rkmuD --long=help,verbose,chain:,nodes:,connect:,bitcoin:,litecoin:,discovery:,recorderd-public,console,more,update,debug -- "$@") || exit 1
 
 # replace the arguments with the parsed values
 eval set -- "${args}"
@@ -187,6 +194,11 @@ do
       [ -z "${litecoin_conf}" ] && USAGE 'litecoin configuration cannot be empty'
       [ -d "${litecoin_conf}" ] && litecoin_conf="${litecoin_conf}/litecoin.conf"
       shift
+      ;;
+
+    (-r|--recorderd-public)
+      recorderd_ipv4='0.0.0.0'
+      recorderd_ipv6='[::]'
       ;;
 
     (-k|--console)
@@ -337,10 +349,10 @@ then
     # must be a config file
     [ -f "${discovery_conf}" ] || USAGE 'missing discovery configuration: %s' "${discovery_conf}"
 
-    discovery_pub=$(get_endpoint pub_endpoint "${discovery_conf}" "127.0.0.1" 17008)
+    discovery_pub=$(get_endpoint pub_endpoint.ipv4 "${discovery_conf}" "127.0.0.1" 17008)
     [ -z "${discovery_pub}" ] && ERROR 'cannot determine discovery pub from: %s' "${discovery_conf}"
 
-    discovery_rep=$(get_endpoint rep_endpoint "${discovery_conf}" "127.0.0.1" 17009)
+    discovery_rep=$(get_endpoint rep_endpoint.ipv4 "${discovery_conf}" "127.0.0.1" 17009)
     [ -z "${discovery_rep}" ] && ERROR 'cannot determine discovery rep from: %s' "${discovery_conf}"
 
   fi
@@ -392,6 +404,7 @@ do
   [ -d "${dir}" ] || mkdir -p "${dir}"
 
   VERBOSE 'config: %s  ports: %dXX' "${config}" "${prefix}"
+  VERBOSE 'recorderd IPv4: %s  IPv6: %s' "${recorderd_ipv4}" "${recorderd_ipv6}"
 
   cat > "${config}" <<EOF
 -- bitmarkd.conf  -*- mode: lua -*-
@@ -608,12 +621,12 @@ M.proofing = {
     },
 
     publish = {
-        "127.0.0.1:${prefix}38",
-        "[::1]:${prefix}38"
+        "${recorderd_ipv4}:${prefix}38",
+        "${recorderd_ipv6}:${prefix}38"
     },
     submit = {
-        "127.0.0.1:${prefix}39",
-        "[::1]:${prefix}39"
+        "${recorderd_ipv4}:${prefix}39",
+        "${recorderd_ipv6}:${prefix}39"
     }
 }
 

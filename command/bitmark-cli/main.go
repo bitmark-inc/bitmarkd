@@ -107,7 +107,7 @@ func main() {
 		},
 		{
 			Name:      "add",
-			Usage:     "add a new identity to config file, set it as default",
+			Usage:     "add a new identity to config file",
 			ArgsUsage: "\n   (* = required, + = select one )",
 			Flags: []cli.Flag{
 				cli.StringFlag{
@@ -217,12 +217,12 @@ func main() {
 				cli.StringFlag{
 					Name:  "bitcoin, b",
 					Value: "",
-					Usage: "*address receive the bitcoin payment `ACCOUNT`",
+					Usage: "*address receive the bitcoin payment `ADDRESS`",
 				},
 				cli.StringFlag{
 					Name:  "litecoin, l",
 					Value: "",
-					Usage: "*address to receive the litecoin payment `ACCOUNT`",
+					Usage: "*address to receive the litecoin payment `ADDRESS`",
 				},
 			},
 			Action: runBlockTransfer,
@@ -299,7 +299,7 @@ func main() {
 				cli.StringFlag{
 					Name:  "share-id, s",
 					Value: "",
-					Usage: "*transaction id of share `SHARE_ID`",
+					Usage: "*transaction id of share `SHAREID`",
 				},
 				cli.Uint64Flag{
 					Name:  "quantity, q",
@@ -316,7 +316,7 @@ func main() {
 		},
 		{
 			Name:      "swap",
-			Usage:     "swap some shares of a bitmark to a receiver",
+			Usage:     "swap some shares of a bitmark with a receiver",
 			ArgsUsage: "\n   (* = required)",
 			Flags: []cli.Flag{
 				cli.StringFlag{
@@ -327,7 +327,7 @@ func main() {
 				cli.StringFlag{
 					Name:  "share-id-one, s",
 					Value: "",
-					Usage: "*transaction id of share one `SHARE_ID`",
+					Usage: "*transaction id of share one `SHAREID`",
 				},
 				cli.Uint64Flag{
 					Name:  "quantity-one, q",
@@ -337,7 +337,7 @@ func main() {
 				cli.StringFlag{
 					Name:  "share-id-two, S",
 					Value: "",
-					Usage: "*transaction id of share two `SHARE_ID`",
+					Usage: "*transaction id of share two `SHAREID`",
 				},
 				cli.Uint64Flag{
 					Name:  "quantity-two, Q",
@@ -365,7 +365,7 @@ func main() {
 				cli.StringFlag{
 					Name:  "share-id, s",
 					Value: "",
-					Usage: " starting from share `SHARE_ID`",
+					Usage: " starting from share `SHAREID`",
 				},
 				cli.IntFlag{
 					Name:  "count, c",
@@ -400,7 +400,7 @@ func main() {
 		},
 		{
 			Name:  "seed",
-			Usage: "decrypt and display default identity's recovery seed",
+			Usage: "decrypt and display an identity's recovery seed",
 			Flags: []cli.Flag{
 				cli.BoolFlag{
 					Name:  "recovery, r",
@@ -411,7 +411,7 @@ func main() {
 		},
 		{
 			Name:   "password",
-			Usage:  "change default identity's password",
+			Usage:  "change an identity's password",
 			Action: runChangePassword,
 		},
 		{

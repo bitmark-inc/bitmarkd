@@ -46,13 +46,18 @@ func SetPeer(publicKey []byte, listeners []byte) error {
 	globalData.listeners = listeners
 	globalData.peerSet = true
 
-	addPeer(publicKey, listeners, 0)
+	addPeer(publicKey, listeners, uint64(time.Now().Unix()))
 
 	globalData.thisNode, _ = globalData.peerTree.Search(pubkey(publicKey))
 
 	determineConnections(globalData.log)
 
 	return nil
+}
+
+// isPeerExpiredFromTime - is peer expired from time
+func isPeerExpiredFromTime(timestamp time.Time) bool {
+	return timestamp.Add(announceExpiry).Before(time.Now())
 }
 
 // AddPeer - add a peer announcement to the in-memory tree
@@ -68,15 +73,8 @@ func AddPeer(publicKey []byte, listeners []byte, timestamp uint64) bool {
 
 // internal add a peer announcement, hold lock before calling
 func addPeer(publicKey []byte, listeners []byte, timestamp uint64) bool {
-
-	// disallow future timestamps: require timestamp ≤ Now
-	ts := time.Now()
-	if timestamp != 0 && timestamp <= uint64(ts.Unix()) {
-		ts = time.Unix(int64(timestamp), 0)
-	}
-
-	// ignore expired request
-	if time.Since(ts) >= announceExpiry {
+	ts := resetFutureTimestampToNow(timestamp)
+	if isPeerExpiredFromTime(ts) {
 		return false
 	}
 
@@ -109,6 +107,16 @@ func addPeer(publicKey []byte, listeners []byte, timestamp uint64) bool {
 	}
 
 	return true
+}
+
+// resetFutureTimestampToNow - reset future timestamp to now
+func resetFutureTimestampToNow(timestamp uint64) time.Time {
+	ts := time.Unix(int64(timestamp), 0)
+	now := time.Now()
+	if now.Before(ts) {
+		return now
+	}
+	return ts
 }
 
 // GetNext - fetch the data for the next node in the ring for a given public key
