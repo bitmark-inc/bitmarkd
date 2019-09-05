@@ -46,11 +46,8 @@ func Start(processes Processes, args interface{}) *T {
 		register.s[i].finished = finished
 		register.Add(1)
 		go func(p Process, shutdown <-chan struct{}, finished chan<- struct{}) {
-			// pass the shutdown to the Run loop for shutdown signalling
-			func() {
-				p.Run(args, shutdown)
-				register.Done()
-			}()
+			p.Run(args, shutdown)
+			register.Done()
 			// flag for the stop routine to wait for shutdown
 			close(finished)
 		}(p, shutdown, finished)
