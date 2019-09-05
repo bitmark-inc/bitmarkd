@@ -71,15 +71,6 @@ func (t *T) Stop() {
 // StopAndWait will notify all processes to shutdown by closing shutdown channel
 // and wait until all processes be stopped.
 func (t *T) StopAndWait() {
-
-	if nil == t {
-		return
-	}
-
-	// trigger shutdown of all background tasks
-	for _, shutdown := range t.s {
-		close(shutdown.shutdown)
-	}
-
+	t.Stop()
 	t.Wait()
 }
