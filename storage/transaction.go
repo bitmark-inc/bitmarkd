@@ -63,15 +63,15 @@ func (t *TransactionImpl) Put(
 	value []byte,
 	additional []byte,
 ) {
-	h.put(key, value, additional)
+	h.InternalPut(key, value, additional)
 }
 
 func (t *TransactionImpl) PutN(h Handle, key []byte, value uint64) {
-	h.putN(key, value)
+	h.InternalPutN(key, value)
 }
 
 func (t *TransactionImpl) Delete(h Handle, key []byte) {
-	h.remove(key)
+	h.InternalRemove(key)
 }
 
 func (t *TransactionImpl) Commit() error {

@@ -13,14 +13,14 @@ import (
 // helper to add to pool
 func poolPut(t *testing.T, p *PoolHandle, key string, data string) {
 	p.Begin()
-	p.put([]byte(key), []byte(data), []byte{})
+	p.InternalPut([]byte(key), []byte(data), []byte{})
 	p.Commit()
 }
 
 // helper to remove from pool
 func poolDelete(t *testing.T, p *PoolHandle, key string) {
 	p.Begin()
-	p.remove([]byte(key))
+	p.InternalRemove([]byte(key))
 	p.Commit()
 }
 

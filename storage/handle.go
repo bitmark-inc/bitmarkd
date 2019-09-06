@@ -17,13 +17,14 @@ import (
 type Handle interface {
 	Begin()
 	Commit() error
+	Empty() bool
 	Get([]byte) []byte
 	GetN([]byte) (uint64, bool)
 	GetNB([]byte) (uint64, []byte)
 	Has([]byte) bool
-	put([]byte, []byte, []byte)
-	putN([]byte, uint64)
-	remove([]byte)
+	InternalPut([]byte, []byte, []byte)
+	InternalPutN([]byte, uint64)
+	InternalRemove([]byte)
 }
 
 // PoolHandle - the structure of a pool handle
@@ -48,7 +49,7 @@ func (p *PoolHandle) prefixKey(key []byte) []byte {
 }
 
 // Put - store a key/value bytes pair to the database
-func (p *PoolHandle) put(key []byte, value []byte, dummy []byte) {
+func (p *PoolHandle) InternalPut(key []byte, value []byte, dummy []byte) {
 	poolData.RLock()
 	defer poolData.RUnlock()
 	if nil == p.dataAccess {
@@ -59,13 +60,13 @@ func (p *PoolHandle) put(key []byte, value []byte, dummy []byte) {
 }
 
 // PutN - store a uint8 as an 8 byte sequence
-func (p *PoolHandle) putN(key []byte, value uint64) {
+func (p *PoolHandle) InternalPutN(key []byte, value uint64) {
 	buffer := make([]byte, 8)
 	binary.BigEndian.PutUint64(buffer, value)
-	p.put(key, buffer, []byte{})
+	p.InternalPut(key, buffer, []byte{})
 }
 
-func (p *PoolHandle) remove(key []byte) {
+func (p *PoolHandle) InternalRemove(key []byte) {
 	poolData.RLock()
 	defer poolData.RUnlock()
 	p.dataAccess.Delete(p.prefixKey(key))
@@ -180,4 +181,9 @@ func (p *PoolHandle) Begin() {
 
 func (p *PoolHandle) Commit() error {
 	return p.dataAccess.Commit()
+}
+
+//Empty - check if struct is empty
+func (p *PoolHandle) Empty() bool {
+	return nil == p || 0 == p.prefix
 }
