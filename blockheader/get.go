@@ -26,7 +26,7 @@ type cachedBlockDigest struct {
 }
 
 var cached [cacheSize]cachedBlockDigest
-var nextID int
+var cacheIndex int
 
 // DigestForBlock - return the digest for a specific block number
 func DigestForBlock(number uint64) (blockdigest.Digest, error) {
@@ -75,18 +75,18 @@ func digestFromCache(blockNumber uint64) blockdigest.Digest {
 }
 
 func add(blockNumber uint64, digest blockdigest.Digest) {
-	cached[nextID] = cachedBlockDigest{
+	cached[cacheIndex] = cachedBlockDigest{
 		blockNumber: blockNumber,
 		digest:      digest,
 	}
-	incrementNextID()
+	incrementCacheIndex()
 }
 
-func incrementNextID() {
-	if cacheSize-1 == nextID {
-		nextID = 0
+func incrementCacheIndex() {
+	if cacheSize-1 == cacheIndex {
+		cacheIndex = 0
 	} else {
-		nextID++
+		cacheIndex++
 	}
 }
 
