@@ -51,7 +51,7 @@ func DigestForBlock(number uint64) (blockdigest.Digest, error) {
 	binary.BigEndian.PutUint64(n, number)
 
 	digest = blockrecord.DigestFromHashPool(storage.Pool.BlockHeaderHash, n)
-	if digest.IsEmpty() {
+	if !digest.IsEmpty() {
 		add(number, digest)
 		return digest, nil
 	}
