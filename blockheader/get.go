@@ -52,7 +52,7 @@ func DigestForBlock(number uint64) (blockdigest.Digest, error) {
 
 	digest = blockrecord.DigestFromHashPool(storage.Pool.BlockHeaderHash, n)
 	if !digest.IsEmpty() {
-		add(number, digest)
+		addToCache(number, digest)
 		return digest, nil
 	}
 
@@ -61,7 +61,7 @@ func DigestForBlock(number uint64) (blockdigest.Digest, error) {
 		return blockdigest.Digest{}, err
 	}
 
-	add(number, digest)
+	addToCache(number, digest)
 	return digest, err
 }
 
@@ -78,7 +78,7 @@ func digestFromCache(blockNumber uint64) blockdigest.Digest {
 	return blockdigest.Digest{}
 }
 
-func add(blockNumber uint64, digest blockdigest.Digest) {
+func addToCache(blockNumber uint64, digest blockdigest.Digest) {
 	cached[cacheIndex] = cachedBlockDigest{
 		blockNumber: blockNumber,
 		digest:      digest,
