@@ -61,6 +61,11 @@ func (digest Digest) Cmp(difficulty *big.Int) int {
 	return result.SetBytes(bigEndian[:]).Cmp(difficulty)
 }
 
+//IsEmpty - is digest empty
+func (d Digest) IsEmpty() bool {
+	return d == (Digest{})
+}
+
 // IsValidByDifficulty - is digest valid by difficulty
 func (d Digest) IsValidByDifficulty(diff *difficulty.Difficulty) bool {
 	reversedDigest := reversed(d)

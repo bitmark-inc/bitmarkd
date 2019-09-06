@@ -29,7 +29,7 @@ func (p *PoolNB) put(key []byte, nValue []byte, bValue []byte) {
 	p.pool.put(key, data, []byte{})
 }
 
-// Delete - remove a key from the database
+// remove - internally remove a key from database
 func (p *PoolNB) remove(key []byte) {
 	p.pool.remove(key)
 }
@@ -93,4 +93,9 @@ func (p *PoolNB) Begin() {
 
 func (p *PoolNB) Commit() error {
 	return p.pool.Commit()
+}
+
+// Empty - check if struct is empty
+func (p *PoolNB) Empty() bool {
+	return nil == p || 0 == p.pool.prefix
 }
