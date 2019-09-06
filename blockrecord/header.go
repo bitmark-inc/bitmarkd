@@ -128,7 +128,7 @@ func ExtractHeader(block []byte, checkHeight uint64) (*Header, blockdigest.Diges
 	return header, digest, block[totalBlockSize:], nil
 }
 
-//DigestFromHashPool - get digest from hash pool
+// DigestFromHashPool - get digest from hash pool
 func DigestFromHashPool(pool storage.Handle, blockNumber []byte) blockdigest.Digest {
 	var digest blockdigest.Digest
 	if !pool.Empty() {
