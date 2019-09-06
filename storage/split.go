@@ -17,7 +17,7 @@ type PoolNB struct {
 }
 
 // Put - store a key/value bytes pair to the database
-func (p *PoolNB) InternalPut(key []byte, nValue []byte, bValue []byte) {
+func (p *PoolNB) put(key []byte, nValue []byte, bValue []byte) {
 	if 8 != len(nValue) {
 		logger.Panic("pool.PutNB 1st parameter must be 8 bytes")
 		return
@@ -26,16 +26,16 @@ func (p *PoolNB) InternalPut(key []byte, nValue []byte, bValue []byte) {
 	data := make([]byte, len(nValue)+len(bValue))
 	copy(data, nValue)
 	copy(data[len(nValue):], bValue)
-	p.pool.InternalPut(key, data, []byte{})
+	p.pool.put(key, data, []byte{})
 }
 
-//InternalRemove - internally remove a key from database
-func (p *PoolNB) InternalRemove(key []byte) {
-	p.pool.InternalRemove(key)
+//remove - internally remove a key from database
+func (p *PoolNB) remove(key []byte) {
+	p.pool.remove(key)
 }
 
-func (p *PoolNB) InternalPutN(key []byte, value uint64) {
-	logger.Panic("PoolNB has not InternalPutN method")
+func (p *PoolNB) putN(key []byte, value uint64) {
+	logger.Panic("PoolNB has not putN method")
 }
 
 // for interface
