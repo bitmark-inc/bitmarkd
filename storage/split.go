@@ -29,7 +29,7 @@ func (p *PoolNB) put(key []byte, nValue []byte, bValue []byte) {
 	p.pool.put(key, data, []byte{})
 }
 
-//remove - internally remove a key from database
+// remove - internally remove a key from database
 func (p *PoolNB) remove(key []byte) {
 	p.pool.remove(key)
 }
