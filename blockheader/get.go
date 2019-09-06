@@ -16,6 +16,18 @@ import (
 	"github.com/bitmark-inc/bitmarkd/storage"
 )
 
+const (
+	cacheSize = 10
+)
+
+type cachedBlockDigest struct {
+	blockNumber uint64
+	digest      blockdigest.Digest
+}
+
+var cached [cacheSize]cachedBlockDigest
+var nextID int
+
 // DigestForBlock - return the digest for a specific block number
 func DigestForBlock(number uint64) (blockdigest.Digest, error) {
 	globalData.Lock()
@@ -29,15 +41,61 @@ func DigestForBlock(number uint64) (blockdigest.Digest, error) {
 		return genesis.LiveGenesisDigest, nil
 	}
 
-	// fetch block and compute digest
+	digest := digestFromCache(number)
+	if !digest.IsEmpty() {
+		return digest, nil
+	}
+
+	//fetch block and compute digest
 	n := make([]byte, 8)
 	binary.BigEndian.PutUint64(n, number)
-	packed := storage.Pool.Blocks.Get(n) // ***** FIX THIS: possible optimisation is to store the block hashes in a separate index
+
+	digest = blockrecord.DigestFromHashPool(storage.Pool.BlockHeaderHash, n)
+	if digest.IsEmpty() {
+		add(number, digest)
+		return digest, nil
+	}
+
+	digest, err := genDigest(n)
+	if nil != err {
+		return blockdigest.Digest{}, err
+	}
+
+	add(number, digest)
+	return digest, err
+}
+
+func digestFromCache(blockNumber uint64) blockdigest.Digest {
+	for _, c := range cached {
+		if c.blockNumber == blockNumber {
+			return c.digest
+		}
+	}
+	return blockdigest.Digest{}
+}
+
+func add(blockNumber uint64, digest blockdigest.Digest) {
+	cached[nextID] = cachedBlockDigest{
+		blockNumber: blockNumber,
+		digest:      digest,
+	}
+	incrementNextID()
+}
+
+func incrementNextID() {
+	if cacheSize-1 == nextID {
+		nextID = 0
+	} else {
+		nextID++
+	}
+}
+
+func genDigest(blockNumber []byte) (blockdigest.Digest, error) {
+	packed := storage.Pool.Blocks.Get(blockNumber)
 	if nil == packed {
 		return blockdigest.Digest{}, fault.ErrBlockNotFound
 	}
 
 	_, digest, _, err := blockrecord.ExtractHeader(packed, 0)
-
 	return digest, err
 }

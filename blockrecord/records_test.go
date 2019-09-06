@@ -14,8 +14,11 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
+	"github.com/bitmark-inc/bitmarkd/blockrecord/mocks"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/stretchr/testify/assert"
@@ -235,4 +238,56 @@ func TestResetDifficulty(t *testing.T) {
 
 	difficulty := difficulty.Current.Value()
 	assert.Equal(t, float64(1), difficulty, "not reset difficulty")
+}
+
+func TestDigestFromHashPool(t *testing.T) {
+	ctl := gomock.NewController(t)
+	mock := mocks.NewMockHandle(ctl)
+
+	blockNumber := []byte{100}
+	digestBytes := []byte{
+		0x11, 0x11, 0x11, 0x11,
+		0x11, 0x11, 0x11, 0x11,
+		0x11, 0x11, 0x11, 0x11,
+		0x11, 0x11, 0x11, 0x11,
+		0x11, 0x11, 0x11, 0x11,
+		0x11, 0x11, 0x11, 0x11,
+		0x11, 0x11, 0x11, 0x11,
+		0x11, 0x11, 0x11, 0x11,
+	}
+
+	var expectedDigest blockdigest.Digest
+	_ = blockdigest.DigestFromBytes(&expectedDigest, digestBytes)
+
+	mock.EXPECT().Empty().Return(false).Times(1)
+	mock.EXPECT().Get(blockNumber).Return(digestBytes).Times(1)
+
+	digest := blockrecord.DigestFromHashPool(mock, blockNumber)
+	assert.Equal(t, expectedDigest, digest, "wrong digest")
+}
+
+func TestDigestFromCache(t *testing.T) {
+	ctl := gomock.NewController(t)
+	mock := mocks.NewMockHandle(ctl)
+
+	blockNumber := []byte{100}
+	digestBytes := []byte{
+		0x11, 0x11, 0x11, 0x11,
+		0x11, 0x11, 0x11, 0x11,
+		0x11, 0x11, 0x11, 0x11,
+		0x11, 0x11, 0x11, 0x11,
+		0x11, 0x11, 0x11, 0x11,
+		0x11, 0x11, 0x11, 0x11,
+		0x11, 0x11, 0x11, 0x11,
+		0x11, 0x11, 0x11, 0x11,
+	}
+
+	var expectedDigest blockdigest.Digest
+	_ = blockdigest.DigestFromBytes(&expectedDigest, digestBytes)
+
+	mock.EXPECT().Empty().Return(false).Times(1)
+	mock.EXPECT().Get(blockNumber).Return(digestBytes).Times(1)
+
+	digest := blockrecord.DigestFromHashPool(mock, blockNumber)
+	assert.Equal(t, expectedDigest, digest, "wrong digest")
 }
