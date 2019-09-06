@@ -95,7 +95,7 @@ func (p *PoolNB) Commit() error {
 	return p.pool.Commit()
 }
 
-//Empty - check if struct is empty
+// Empty - check if struct is empty
 func (p *PoolNB) Empty() bool {
 	return nil == p || 0 == p.pool.prefix
 }
