@@ -65,6 +65,10 @@ func DigestForBlock(number uint64) (blockdigest.Digest, error) {
 	return digest, err
 }
 
+func ClearCache() {
+	cached = *new([cacheSize]cachedBlockDigest)
+}
+
 func digestFromCache(blockNumber uint64) blockdigest.Digest {
 	for _, c := range cached {
 		if c.blockNumber == blockNumber {

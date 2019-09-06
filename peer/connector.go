@@ -395,6 +395,7 @@ func (conn *connector) runStateMachine() bool {
 			conn.nextState() // assume success
 			log.Infof("local block number: %d", height)
 
+			blockheader.ClearCache()
 			// check digests of descending blocks (to detect a fork)
 		check_digests:
 			for h := height; h >= genesis.BlockNumber; h -= 1 {
