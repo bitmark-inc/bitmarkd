@@ -46,7 +46,7 @@ func DigestForBlock(number uint64) (blockdigest.Digest, error) {
 		return digest, nil
 	}
 
-	//fetch block and compute digest
+	// fetch block and compute digest
 	n := make([]byte, 8)
 	binary.BigEndian.PutUint64(n, number)
 
