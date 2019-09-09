@@ -1,3 +1,11 @@
+bitmarkd (0.11.2-beta.1-1) unstable; urgency=medium
+
+  * new sample configs that have better defaults
+  * fix save/restore announce data error
+  * allow recorderd to read bitmarkd/proof.public directly
+
+ -- Christopher Hall <hsw@bitmark.com>  Mon, 09 Sep 2019 08:53:52 +0000
+
 bitmarkd (0.11.1-1) unstable; urgency=medium
 
   * reduce disk activity on getting block hash
