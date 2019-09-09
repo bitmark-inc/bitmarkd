@@ -103,7 +103,7 @@ func backupPeers(peerFile string) error {
 
 	for node != lastNode {
 		peer, ok := node.Value().(*peerEntry)
-		if ok {
+		if ok && len(peer.listeners) > 0 {
 			p := NewPeerItem(peer)
 			peers = append(peers, *p)
 		}
@@ -111,7 +111,7 @@ func backupPeers(peerFile string) error {
 	}
 	// backup the last node
 	peer, ok := lastNode.Value().(*peerEntry)
-	if ok {
+	if ok && len(peer.listeners) > 0 {
 		p := NewPeerItem(peer)
 		peers = append(peers, *p)
 	}
