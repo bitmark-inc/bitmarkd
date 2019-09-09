@@ -1,5 +1,12 @@
 -- bitmarkd.conf  -*- mode: lua -*-
 
+-- Minimum Items To Setup: (search for **MUST-SET**)
+-- 1. select appropriate chain for M.chain
+-- 2. setup all testing and live crypto currency addresses
+-- 3. if running a publicly visible node set up annouce IPs
+-- 4. ensure _external_firewall_ forwards correct ports
+--    (as a minimum, forward: 2130 and 2136)
+
 local M = {}
 
 local public_ip = {}
@@ -50,11 +57,24 @@ M.data_directory = "/var/lib/bitmarkd"    -- absolute path
 -- the data directory
 --M.pidfile = "bitmarkd.pid"
 
+-- **MUST-SET**
 -- select the chain of the network for peer connections
--- cross chain networking connects will not work
+-- cross chain networking connects will not work (uncomment one)
 --M.chain = "bitmark"
 --M.chain = "testing"
-M.chain = "local"
+--M.chain = "local"
+
+-- **MUST-SET**
+-- setup coin addresses for recorder payments
+-- the chain selection above will determine which address to use
+bitcoin_addresses = {
+    test = "***REPLACE-WITH-REAL-TEST-ADDRESS***",
+    live = "***REPLACE-WITH-REAL-LIVE-ADDRESS***",
+}
+litecoin_addresses = {
+    test = "***REPLACE-WITH-REAL-TEST-ADDRESS***",
+    live = "***REPLACE-WITH-REAL-LIVE-ADDRESS***",
+}
 
 -- select the default node configuration
 -- choose from: none, chain OR sub.domain.tld
@@ -80,6 +100,7 @@ M.client_rpc = {
         "[::]:2130"
     },
 
+    -- **MUST-SET**
     -- announce certain public IP:ports to network
     -- if using firewall port forwarding use the firewall external IP:port
     announce = {
@@ -148,6 +169,7 @@ M.peering = {
         "[::]:2136"
     },
 
+    -- **MUST-SET**
     -- announce certain public IP:ports to network
     -- if using firewall port forwarding use the firewall external IP:port
     announce = {
@@ -165,8 +187,8 @@ M.peering = {
 
     -- connect = {
     --    {
-    --        public_key = "781d78a9eb338a511ae88a9be5383095ede46445596506e29ad8f022a3f8596e",
-    --        address = "p.q.r.s:3136"
+    --        public_key = "***HEX-PUBLIC-KEY***",
+    --        address = "p.q.r.s:2136"
     --    }
     -- }
 }
@@ -194,24 +216,38 @@ M.proofing = {
     private_key = read_file("proof.private"),
     signing_key = read_file(M.chain == "bitmark" and 'proof.live' or 'proof.test'),
 
-    -- payments for future transfers
-    -- private keys are just samples for testing
-    -- (do not include such keys in a real configuration file)
+    -- payments for future transfers auto detected from *coin_address near top of this file
     payment_address = {
-        bitcoin = "msxN7C7cRNgbgyUzt3EcvrpmWXc59sZVN4",
-        litecoin = "mjPkDNakVA4w4hJZ6WF7p8yKUV2merhyCM"
+        bitcoin = M.chain == "bitmark" and bitcoin_address.live or bitcoin_address.test,
+        litecoin = M.chain == "bitmark" and litecoin_address.live or litecoin_address.test,
     },
 
     publish = {
-        "0.0.0.0:2140",
-        "[::]:2140"
+        "0.0.0.0:2138",
+        "[::]:2138"
     },
     submit = {
-        "0.0.0.0:2141",
-        "[::]:2141"
+        "0.0.0.0:2139",
+        "[::]:2139"
     }
 }
 
+-- determine proxy addresses based on the chain selected
+function proxy_address()
+    local proxy = {
+        sub_endpoint = "127.0.0.1:17008",
+        req_endpoint = "127.0.0.1:17009",
+    }
+    if M.chain == "bitmark" then
+        proxy.sub_endpoint = "dsc-1.live.bitmark.com:17008"
+        proxy.req_endpoint = "dsc-1.live.bitmark.com:17009"
+    end
+    if M.chain == "testing" then
+        proxy.sub_endpoint = "coins.test.bitmark.com:16008"
+        proxy.req_endpoint = "coins.test.bitmark.com:16009"
+    end
+    return proxy
+end
 
 -- setup for every payment service
 M.payment = {
@@ -219,10 +255,8 @@ M.payment = {
     -- set to true to get payment transactions directly from the discovery proxy
     use_discovery = true,
 
-    discovery = {
-        sub_endpoint = "127.0.0.1:5566",
-        req_endpoint = "127.0.0.1:5567"
-    },
+    -- setup proxy addresses based on selected chain
+    discovery = proxy_address(),
 
     -- local bitcoin access to REST API
     bitcoin = {
