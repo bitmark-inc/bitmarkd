@@ -1,10 +1,10 @@
 -- recorderd.conf  -*- mode: lua -*-
 
--- Minimum Items to Setup: (search for **MUST-SET**)
--- 1. public key for local bitmarkd, just the hex data from:
---    /var/lib/bitmarkd/proof.pub
--- 2. [option] the IP to connect if this is stand-alone recorder
---             connecting to another machine running bitmarkd
+-- This configuration file is set for local bitmarkd by default.
+--
+-- For connecting to another machine running bitmarkd adjust the
+-- parameters in the "connect" item.  Multiple connections are
+-- supported.
 
 local M = {}
 
@@ -57,14 +57,20 @@ M.peering = {
     public_key = read_file("recorderd.public"),
     private_key = read_file("recorderd.private"),
 
-    -- **MUST-SET**
     -- connections to bitmarkd nodes
     connect = {
+        -- default local bitmarkd connection
         {
-            public_key = "***REPLACE-WITH-LOCAL-BITMARKD-PROOF-PUBLIC-KEY***",
+            public_key = read_file("../bitmarkd/proof.public"),
             blocks = "127.0.0.1:2138",
             submit = "127.0.0.1:2139"
-        }
+        },
+        -- static IP connection
+        -- {
+        --     public_key = "***REPLACE-WITH-BITMARKD-PROOF-PUBLIC-KEY***",
+        --     blocks = "a.b.c.d:2138",
+        --     submit = "a.b.c.d:2139"
+        -- },
     }
 }
 
@@ -72,6 +78,9 @@ M.peering = {
 M.logging = {
     size = 131072,
     count = 10,
+
+    -- set to true to log to console
+    console = false,
 
     -- set the logging level for various modules
     -- modules not overridden with get the value from DEFAULT
