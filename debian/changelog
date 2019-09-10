@@ -1,3 +1,9 @@
+bitmarkd (0.11.2-1) unstable; urgency=medium
+
+  * make release version
+
+ -- Christopher Hall <hsw@bitmark.com>  Tue, 10 Sep 2019 02:44:04 +0000
+
 bitmarkd (0.11.2-beta.1-1) unstable; urgency=medium
 
   * new sample configs that have better defaults
