@@ -1,11 +1,42 @@
 -- bitmarkd.conf  -*- mode: lua -*-
 
--- Minimum Items To Setup: (search for **MUST-SET**)
--- 1. select appropriate chain for M.chain
--- 2. setup all testing and live crypto currency addresses
--- 3. if running a publicly visible node set up annouce IPs
--- 4. ensure _external_firewall_ forwards correct ports
+-- Minimum Items To Setup:
+-- 1. Select appropriate chain
+-- 2. Setup all test and live crypto currency addresses
+-- 3. If running a publicly visible node set up annouce_ips
+-- 4. Ensure _external_NAT_firewall_ forwards correct ports
 --    (as a minimum, forward: 2130 and 2136)
+
+-- [1] select the chain of the network for peer connections
+--     cross chain networking connects will not work
+-- Uncomment One:
+--local chain = "bitmark"
+--local chain = "testing"
+--local chain = "local"   -- for regression testing only
+
+-- [2] setup coin addresses for recorder payments
+--     the chain selection above will determine which
+--     address to use
+local bitcoin_addresses = {
+    test = "***REPLACE-WITH-REAL-TEST-BTC-ADDRESS***",
+    live = "***REPLACE-WITH-REAL-LIVE-BTC-ADDRESS***",
+}
+local litecoin_addresses = {
+    test = "***REPLACE-WITH-REAL-TEST-LTC-ADDRESS***",
+    live = "***REPLACE-WITH-REAL-LIVE-LTC-ADDRESS***",
+}
+
+-- [3] public IPs of firewall or external interface
+--     Either or both IPv4 and IPv6 can be added depending
+--     on the network settings
+local announce_ips = {
+    --"a.b.c.d",   -- IPv4
+    --"[x::y:z]",  -- IPv6
+}
+
+------------------------------------------------------------------------
+-- Advanced configuration below this point
+------------------------------------------------------------------------
 
 local M = {}
 
@@ -27,9 +58,9 @@ end
 -- The ip should be provided using environment variables
 -- either PUBLIC_IPV4 or PUBLIC_IPV6, or both
 -- depends on the public IP addresses of the node.
-function announce_self(port)
+function make_announcements(ip_list, port)
     local announcements = {}
-    for k, v in pairs(public_ip) do
+    for k, v in pairs(ip_list) do
         announcements[#announcements+1] = v .. ":" .. port
     end
     return unpack(announcements)
@@ -57,24 +88,9 @@ M.data_directory = "/var/lib/bitmarkd"    -- absolute path
 -- the data directory
 --M.pidfile = "bitmarkd.pid"
 
--- **MUST-SET**
 -- select the chain of the network for peer connections
 -- cross chain networking connects will not work (uncomment one)
---M.chain = "bitmark"
---M.chain = "testing"
---M.chain = "local"
-
--- **MUST-SET**
--- setup coin addresses for recorder payments
--- the chain selection above will determine which address to use
-bitcoin_addresses = {
-    test = "***REPLACE-WITH-REAL-TEST-ADDRESS***",
-    live = "***REPLACE-WITH-REAL-LIVE-ADDRESS***",
-}
-litecoin_addresses = {
-    test = "***REPLACE-WITH-REAL-TEST-ADDRESS***",
-    live = "***REPLACE-WITH-REAL-LIVE-ADDRESS***",
-}
+M.chain = chain
 
 -- select the default node configuration
 -- choose from: none, chain OR sub.domain.tld
@@ -100,15 +116,17 @@ M.client_rpc = {
         "[::]:2130"
     },
 
-    -- **MUST-SET**
     -- announce certain public IP:ports to network
     -- if using firewall port forwarding use the firewall external IP:port
     announce = {
         -- "a.b.c.d:2130",
         -- "[x::y:z]:2130",
 
+        -- only use if minimum announce setup varible is set
+        make_announcements(announce_ips, 2130),
+
         -- only used if PUBLIC_IPV[46] variables are set
-        announce_self(2130)
+        make_announcements(public_ip, 2130),
     },
 
     certificate = read_file("rpc.crt"),
@@ -169,28 +187,29 @@ M.peering = {
         "[::]:2136"
     },
 
-    -- **MUST-SET**
     -- announce certain public IP:ports to network
     -- if using firewall port forwarding use the firewall external IP:port
     announce = {
         -- "a.b.c.d:2136",
         -- "[x::y:z]:2136",
 
+        -- only use if minimum announce setup varible is set
+        make_announcements(announce_ips, 2136),
+
         -- only used if PUBLIC_IPV[46] variables are set
-        announce_self(2136)
+        make_announcements(public_ip, 2136),
     },
 
     public_key = read_file("peer.public"),
     private_key = read_file("peer.private"),
 
-    -- dedicated connections
-
-    -- connect = {
-    --    {
-    --        public_key = "***HEX-PUBLIC-KEY***",
-    --        address = "p.q.r.s:2136"
-    --    }
-    -- }
+    -- dedicated static peer connections
+    connect = {
+        -- {
+        --     public_key = "***BITMARKD-PEER-PUBLIC-KEY-INCLUDING-PUBLIC:-PREFIX***",
+        --     address = "p.q.r.s:2136"
+        -- },
+    }
 }
 
 

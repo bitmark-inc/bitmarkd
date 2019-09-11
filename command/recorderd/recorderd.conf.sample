@@ -67,7 +67,7 @@ M.peering = {
         },
         -- static IP connection
         -- {
-        --     public_key = "***REPLACE-WITH-BITMARKD-PROOF-PUBLIC-KEY***",
+        --     public_key = "***BITMARKD-PROOF-PUBLIC-KEY-INCLUDING-PUBLIC:-PREFIX***",
         --     blocks = "a.b.c.d:2138",
         --     submit = "a.b.c.d:2139"
         -- },
