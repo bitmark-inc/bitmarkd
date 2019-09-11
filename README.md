@@ -38,12 +38,12 @@ Install following packages
 
 First we need to add access to testing package's repo as well as to our current version, in this case stable.
 ~~~
-root@debian-bitmarkd:/# cat /etc/apt/sources.list.d/stable.list 
+root@debian-bitmarkd:/# cat /etc/apt/sources.list.d/stable.list
 deb     http://ftp.de.debian.org/debian/    stable main contrib non-free
 deb-src http://ftp.de.debian.org/debian/    stable main contrib non-free
 deb     http://security.debian.org/         stable/updates  main contrib non-free
 
-root@debian-bitmarkd:/# cat /etc/apt/sources.list.d/testing.list 
+root@debian-bitmarkd:/# cat /etc/apt/sources.list.d/testing.list
 deb     http://ftp.de.debian.org/debian/    testing main contrib non-free
 deb-src http://ftp.de.debian.org/debian/    testing main contrib non-free
 deb     http://security.debian.org/         testing/updates  main contrib non-free
@@ -113,7 +113,7 @@ Start the program.
 bitmarkd --config-file="${HOME}/.config/bitmarkd/bitmarkd.conf" start
 ~~~~~
 
-Note that a similar process is needed for the prooferd (mining subsystem)
+Note that a similar process is needed for the recorderd (mining subsystem)
 
 # Prebuilt Binary
 
@@ -139,14 +139,14 @@ Note that a similar process is needed for the prooferd (mining subsystem)
 
   2. Before push to remote (`pre-push`)
 
-  	Runs `go test` for whole directory except `vendor` one. It is
+    Runs `go test` for whole directory except `vendor` one. It is
     mandatory to pass this check because generally, new modifications should not
     break existing logic/behaviour.
 
     Other optional actions are `sonaqube` and `go tool vet`. These two are
     optional to follow since static code analysis just provide some advice.
 
-* all variables are camel case i.e. no underscores
+* all variables are camel case i.e.: no underscores
 * labels are all lowercase with '_' between words
 * imports and one single block
 * all break/continue must have label
