@@ -1,3 +1,10 @@
+bitmarkd (0.11.3-beta.1-1) unstable; urgency=medium
+
+  * updated configuration files
+  * cli identifier/account detection update
+
+ -- Christopher Hall <hsw@bitmark.com>  Wed, 11 Sep 2019 05:23:19 +0000
+
 bitmarkd (0.11.2-1) unstable; urgency=medium
 
   * make release version

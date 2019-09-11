@@ -7,7 +7,7 @@
 
 Prerequisites
 
-* Install the go language package for your system
+* Install the go language package for the system
 * Configure environment variables for go system
 * Install the ZMQ4 and Argon2 libraries
 
@@ -49,17 +49,17 @@ deb-src http://ftp.de.debian.org/debian/    testing main contrib non-free
 deb     http://security.debian.org/         testing/updates  main contrib non-free
 ~~~
 
-Now install libargon2 using the following.
+Now install libargon2 using:
 ```
 apt-get -t testing install libargon2-dev libargon2-1
 ```
 
-For the other packages, you can decide if you want install from stable or testing, both versions works:
+For the other packages, install from stable or testing, both versions work:
 ```
 apt install uuid-dev libzmq3-dev
 ```
 
-## To manually compile, simply:
+## To manually compile, run these commands:
 
 ~~~~~
 go get github.com/bitmark-inc/bitmarkd
@@ -134,19 +134,19 @@ Note that a similar process is needed for the recorderd (mining subsystem)
 
   1. Before commit (`pre-commt`)
 
-	Runs `go lint` for every modified file(s). It shows suggestions but not
+	Runs `go lint` for every modified file. It shows suggestions but not
     necessary to follow.
 
   2. Before push to remote (`pre-push`)
 
     Runs `go test` for whole directory except `vendor` one. It is
-    mandatory to pass this check because generally, new modifications should not
+    mandatory to pass this check because generally, new modifications must not
     break existing logic/behaviour.
 
     Other optional actions are `sonaqube` and `go tool vet`. These two are
     optional to follow since static code analysis just provide some advice.
 
-* all variables are camel case i.e.: no underscores
+* all variables are camel case with no underscores
 * labels are all lowercase with '_' between words
 * imports and one single block
 * all break/continue must have label
