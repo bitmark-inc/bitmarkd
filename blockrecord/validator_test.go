@@ -19,7 +19,7 @@ import (
 
 func setupHeader() *blockrecord.Header {
 	return &blockrecord.Header{
-		Version:          uint16(4),
+		Version:          uint16(5),
 		TransactionCount: uint16(0),
 		Number:           uint64(5),
 		PreviousBlock:    blockdigest.Digest{},
@@ -91,7 +91,7 @@ func TestValidIncomingDifficutyWhenDifficultyAppliedAndInValid(t *testing.T) {
 }
 
 func TestIsDifficultyAppliedVersionWhenApplied(t *testing.T) {
-	ok := blockrecord.IsDifficultyAppliedVersion(4)
+	ok := blockrecord.IsDifficultyAppliedVersion(5)
 	assert.Equal(t, true, ok, "difficulty applied version")
 }
 
@@ -166,7 +166,7 @@ func TestIsBlockToAdjustDifficultyWhenDifficultyNotAppliedAndAtStartInterval(t *
 
 func TestIsBlockToAdjustDifficultyWhenDifficultyAppliedAndAtStrtInterval(t *testing.T) {
 	height := uint64(difficulty.AdjustTimespanInBlocks * 200000)
-	ok := blockrecord.IsBlockToAdjustDifficulty(height, 4)
+	ok := blockrecord.IsBlockToAdjustDifficulty(height, 5)
 	assert.Equal(t, true, ok, "starting of difficulty timespan")
 }
 

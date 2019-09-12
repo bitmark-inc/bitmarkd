@@ -17,7 +17,7 @@ const (
 
 	initialVersion             = 1
 	modifiedTimeSpacingVersion = 2
-	difficultyAppliedVersion   = 4
+	difficultyAppliedVersion   = 5
 )
 
 // ValidBlockTimeSpacingAtVersion - valid block time spacing based on different version

@@ -279,3 +279,39 @@ func TestHashrate(t *testing.T) {
 	expected := math.Floor((float64(1024)/120)*1000) / 1000
 	assert.Equal(t, expected, hashrate, "network hashrate")
 }
+
+func TestNextDifficultyByPreviousTimespanWhenTooLong(t *testing.T) {
+	diff := float64(8)
+	targetTimespan := 2 * 60 * 200
+	testTime := targetTimespan * 8
+	actual := difficulty.NextDifficultyByPreviousTimespan(uint64(testTime), diff)
+
+	assert.Equal(t, diff/4, actual, "wrong difficulty adjust")
+}
+
+func TestNextDifficultyByPreviousTimespanWhenTooShort(t *testing.T) {
+	diff := float64(8)
+	targetTimespan := 2 * 60 * 200
+	testTime := targetTimespan / 8
+	actual := difficulty.NextDifficultyByPreviousTimespan(uint64(testTime), diff)
+
+	assert.Equal(t, diff*4, actual, "wrong difficulty adjust")
+}
+
+func TestNextDifficultyByPreviousTimespanWhenLarger(t *testing.T) {
+	diff := float64(8)
+	targetTimespan := 2 * 60 * 200
+	testTime := targetTimespan * 3
+	actual := difficulty.NextDifficultyByPreviousTimespan(uint64(testTime), diff)
+
+	assert.Equal(t, diff/3, actual, "wrong difficulty adjust")
+}
+
+func TestNextDifficultyByPreviousTimespanWhenSmaller(t *testing.T) {
+	diff := float64(8)
+	targetTimespan := 2 * 60 * 200
+	testTime := targetTimespan / 3
+	actual := difficulty.NextDifficultyByPreviousTimespan(uint64(testTime), diff)
+
+	assert.Equal(t, diff*3, actual, "wrong difficulty adjust")
+}
