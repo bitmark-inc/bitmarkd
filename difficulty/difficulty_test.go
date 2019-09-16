@@ -11,8 +11,9 @@ import (
 	"math"
 	"testing"
 
-	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/bitmark-inc/bitmarkd/difficulty"
 )
 
 // test difficulty initiialisation
@@ -52,6 +53,12 @@ var tests = []testItem{
 		bits:       0x04ffffffffffffff,
 		big:        "000ffffffffffffff80000000000000000000000000000000000000000000000",
 		bigf:       "000ffffffffffffff80000000000000000000000000000000000000000000000",
+	},
+	{
+		reciprocal: 64,
+		bits:       0x06ffffffffffffff,
+		big:        "0003fffffffffffffe0000000000000000000000000000000000000000000000",
+		bigf:       "0003fffffffffffffe0000000000000000000000000000000000000000000000",
 	},
 	{
 		reciprocal: 256,
@@ -276,7 +283,7 @@ func TestHashrate(t *testing.T) {
 	// possible hashes for a correct one is pow(2, 10) = 1024 hashes
 	// expected time for a block is 120 seconds
 	// hash rate = hashes / time = 1024 / 120
-	expected := math.Floor((float64(1024)/120)*1000) / 1000
+	expected := math.Floor(float64(1024)/120*1000) / 1000
 	assert.Equal(t, expected, hashrate, "network hashrate")
 }
 
