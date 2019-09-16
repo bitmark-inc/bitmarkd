@@ -310,11 +310,11 @@ func NextDifficultyByPreviousTimespan(prevTimespanSecond uint64, currentDifficul
 }
 
 func adjustRatioByLastTimespan(actualTimespanSecond uint64) float64 {
-	if actualTimespanSecond>>2 >= adjustTimespanInSecond {
+	if actualTimespanSecond <= adjustTimespanInSecond>>2 {
 		return nextDifficultyRatioUpperbound
 	}
 
-	if actualTimespanSecond<<2 <= adjustTimespanInSecond {
+	if actualTimespanSecond >= adjustTimespanInSecond<<2 {
 		return nextDifficultyRaioLowerbound
 	}
 	return float64(adjustTimespanInSecond) / float64(actualTimespanSecond)
