@@ -1,3 +1,9 @@
+bitmarkd (0.11.4-1) unstable; urgency=medium
+
+  * fix for difficulty calculation
+
+ -- Christopher Hall <hsw@bitmark.com>  Mon, 16 Sep 2019 01:13:26 +0000
+
 bitmarkd (0.11.3-1) unstable; urgency=medium
 
   * make release version
