@@ -346,5 +346,5 @@ func prevBeginBlockWhenAtBeginOfNextTimespan(height uint64) (uint64, uint64) {
 func Hashrate() float64 {
 	zeroBitCount := defaultEmptyBits + math.Log2(Current.Value())
 	rate := math.Pow(2, zeroBitCount) / ExpectedBlockSpacingInSecond
-	return math.Floor(rate*1000) / 1000
+	return math.Floor(rate*1000+0.5) / 1000
 }
