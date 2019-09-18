@@ -342,9 +342,9 @@ func prevBeginBlockWhenAtBeginOfNextTimespan(height uint64) (uint64, uint64) {
 	return uint64(firstBlock), uint64(end)
 }
 
-// Hashrate - calculate hashrate from current difficulty, round value to decimal with 3 digits
+// Hashrate - calculate hashrate from current difficulty, rounded to 3 digits
 func Hashrate() float64 {
-	zeroBitCount := math.Floor(defaultEmptyBits + math.Log2(Current.Value()))
+	zeroBitCount := defaultEmptyBits + math.Log2(Current.Value())
 	rate := math.Pow(2, zeroBitCount) / ExpectedBlockSpacingInSecond
 	return math.Floor(rate*1000) / 1000
 }

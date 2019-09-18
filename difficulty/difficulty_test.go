@@ -275,15 +275,15 @@ func TestPrevTimespanBlockBeginAndEndWhenInFirstTimespan(t *testing.T) {
 }
 
 func TestHashrate(t *testing.T) {
-	difficulty.Current.Set(4)
+	difficulty.Current.Set(4.8)
 	hashrate := difficulty.Hashrate()
 
-	// difficulty 4, log2(4) = 2
-	// total bits of empty zero will 8+2 = 10 bits
-	// possible hashes for a correct one is pow(2, 10) = 1024 hashes
+	// difficulty 4.8, log2(4.8) = 2.263034405833794
+	// total bits of empty zero will 8+2.263034405833794 = 10.263034405833794 bits
+	// possible hashes for a correct one is pow(2, 10.263034405833794) = 1228.8000000000004 hashes
 	// expected time for a block is 120 seconds
-	// hash rate = hashes / time = 1024 / 120
-	expected := math.Floor(float64(1024)/120*1000) / 1000
+	// hash rate = hashes / time = 1228.8000000000004 / 120
+	expected := math.Floor(float64(1228.8000000000004)/120*1000) / 1000
 	assert.Equal(t, expected, hashrate, "network hashrate")
 }
 
