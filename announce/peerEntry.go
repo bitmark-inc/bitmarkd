@@ -6,7 +6,6 @@
 package announce
 
 import (
-	"bytes"
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
@@ -17,39 +16,43 @@ import (
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
+	peerlib "github.com/libp2p/go-libp2p-core/peer"
+	ma "github.com/multiformats/go-multiaddr"
 )
 
-type pubkey []byte
+type peerIDkey peerlib.ID
 
 type peerEntry struct {
-	publicKey []byte
-	listeners []byte
+	peerID    peerlib.ID
+	listeners []ma.Multiaddr
 	timestamp time.Time // last seen time
 }
 
 // string - conversion fro fmt package
-func (p peerEntry) String() string {
-	v4, v6 := util.PackedConnection(p.listeners).Unpack46()
-	return fmt.Sprintf("%x @ %q %q - %s", p.publicKey, v4, v6, p.timestamp.Format(timeFormat))
+func (p peerEntry) String() []string {
+	allAddress := []string{}
+	for _, listener := range p.listeners {
+		allAddress = append(allAddress, listener.String())
+	}
+	return allAddress
 }
 
-// SetPeer - called by the peering initialisation to set up this
+// SetSelf - called by the peering initialisation to set up this
 // node's announcement data
-func SetPeer(publicKey []byte, listeners []byte) error {
+func setSelf(peerID peerlib.ID, listeners []ma.Multiaddr) error {
 	globalData.Lock()
 	defer globalData.Unlock()
 
 	if globalData.peerSet {
 		return fault.ErrAlreadyInitialised
 	}
-	globalData.publicKey = publicKey
+	globalData.peerID = peerID
 	globalData.listeners = listeners
 	globalData.peerSet = true
 
-	addPeer(publicKey, listeners, uint64(time.Now().Unix()))
+	addPeer(peerID, listeners, uint64(time.Now().Unix()))
 
-	globalData.thisNode, _ = globalData.peerTree.Search(pubkey(publicKey))
-
+	globalData.thisNode, _ = globalData.peerTree.Search(peerIDkey(peerID))
 	determineConnections(globalData.log)
 
 	return nil
@@ -64,27 +67,27 @@ func isPeerExpiredFromTime(timestamp time.Time) bool {
 // returns:
 //   true  if this was a new/updated entry
 //   false if the update was within the limits (to prevent continuous relaying)
-func AddPeer(publicKey []byte, listeners []byte, timestamp uint64) bool {
+func AddPeer(peerID peerlib.ID, listeners []ma.Multiaddr, timestamp uint64) bool {
 	globalData.Lock()
-	rc := addPeer(publicKey, listeners, timestamp)
+	rc := addPeer(peerID, listeners, timestamp)
 	globalData.Unlock()
 	return rc
 }
 
 // internal add a peer announcement, hold lock before calling
-func addPeer(publicKey []byte, listeners []byte, timestamp uint64) bool {
+func addPeer(peerID peerlib.ID, listeners []ma.Multiaddr, timestamp uint64) bool {
 	ts := resetFutureTimestampToNow(timestamp)
 	if isPeerExpiredFromTime(ts) {
 		return false
 	}
 
 	peer := &peerEntry{
-		publicKey: publicKey,
+		peerID:    peerID,
 		listeners: listeners,
 		timestamp: ts,
 	}
-
-	if node, _ := globalData.peerTree.Search(pubkey(publicKey)); nil != node {
+	// TODO: Take care of peer update and peer replace base on protocol of multiaddress
+	if node, _ := globalData.peerTree.Search(peerIDkey(peerID)); nil != node {
 		peer := node.Value().(*peerEntry)
 
 		if ts.Sub(peer.timestamp) < announceRebroadcast {
@@ -93,12 +96,12 @@ func addPeer(publicKey []byte, listeners []byte, timestamp uint64) bool {
 	}
 
 	// add or update the timestamp in the tree
-	recordAdded := globalData.peerTree.Insert(pubkey(publicKey), peer)
+	recordAdded := globalData.peerTree.Insert(peerIDkey(peerID), peer)
 
-	globalData.log.Debugf("added: %t  nodes in the peer tree: %d", recordAdded, globalData.peerTree.Count())
+	globalData.log.Infof("Peer Added:  ID: %s,  sucessadd:%t  nodes in the peer tree: %d", peerID.String(), recordAdded, globalData.peerTree.Count())
 
 	// if adding this nodes data
-	if bytes.Equal(globalData.publicKey, publicKey) {
+	if util.IDEqual(globalData.peerID, peerID) {
 		return false
 	}
 
@@ -120,11 +123,11 @@ func resetFutureTimestampToNow(timestamp uint64) time.Time {
 }
 
 // GetNext - fetch the data for the next node in the ring for a given public key
-func GetNext(publicKey []byte) ([]byte, []byte, time.Time, error) {
+func GetNext(publicKey []byte) (peerlib.ID, []ma.Multiaddr, time.Time, error) {
 	globalData.Lock()
 	defer globalData.Unlock()
 
-	node, _ := globalData.peerTree.Search(pubkey(publicKey))
+	node, _ := globalData.peerTree.Search(peerIDkey(publicKey))
 	if nil != node {
 		node = node.Next()
 	}
@@ -132,14 +135,14 @@ func GetNext(publicKey []byte) ([]byte, []byte, time.Time, error) {
 		node = globalData.peerTree.First()
 	}
 	if nil == node {
-		return nil, nil, time.Now(), fault.ErrInvalidPublicKey
+		return peerlib.ID(""), nil, time.Now(), fault.ErrInvalidPublicKey
 	}
 	peer := node.Value().(*peerEntry)
-	return peer.publicKey, peer.listeners, peer.timestamp, nil
+	return peer.peerID, peer.listeners, peer.timestamp, nil
 }
 
-// GetRandom - fetch the data for a random node in the ring not matching a given public key
-func GetRandom(publicKey []byte) ([]byte, []byte, time.Time, error) {
+// GetRandom - fetch the data for a random node in the ring not matching a givpubkeyen public key
+func GetRandom(peerID peerlib.ID) (peerlib.ID, []ma.Multiaddr, time.Time, error) {
 	globalData.Lock()
 	defer globalData.Unlock()
 
@@ -161,12 +164,12 @@ retry_loop:
 			break retry_loop
 		}
 		peer := node.Value().(*peerEntry)
-		if bytes.Equal(peer.publicKey, globalData.publicKey) || bytes.Equal(peer.publicKey, publicKey) {
+		if util.IDEqual(peer.peerID, globalData.peerID) || util.IDEqual(peer.peerID, peerID) {
 			continue retry_loop
 		}
-		return peer.publicKey, peer.listeners, peer.timestamp, nil
+		return peer.peerID, peer.listeners, peer.timestamp, nil
 	}
-	return nil, nil, time.Now(), fault.ErrInvalidPublicKey
+	return peerlib.ID(""), nil, time.Now(), fault.ErrInvalidPublicKey
 }
 
 // SendRegistration - send a peer registration request to a client channel
@@ -177,16 +180,16 @@ func SendRegistration(client zmqutil.ClientIntf, fn string) error {
 	timestamp := make([]byte, 8)
 	binary.BigEndian.PutUint64(timestamp, uint64(time.Now().Unix()))
 
-	return client.Send(fn, chain, globalData.publicKey, globalData.listeners, timestamp)
+	return client.Send(fn, chain, globalData.peerID, globalData.listeners, timestamp)
 }
 
 // Compare - public key comparison for AVL interface
-func (p pubkey) Compare(q interface{}) int {
-	return bytes.Compare(p, q.(pubkey))
+func (p peerIDkey) Compare(q interface{}) int {
+	return util.IDCompare(peerlib.ID(p), peerlib.ID(q.(peerIDkey)))
 }
 
 // String - public key string convert for AVL interface
-func (p pubkey) String() string {
+func (p peerIDkey) String() string {
 	return fmt.Sprintf("%x", []byte(p))
 }
 
@@ -195,7 +198,7 @@ func setPeerTimestamp(publicKey []byte, timestamp time.Time) {
 	globalData.Lock()
 	defer globalData.Unlock()
 
-	node, _ := globalData.peerTree.Search(pubkey(publicKey))
+	node, _ := globalData.peerTree.Search(peerIDkey(publicKey))
 	log := globalData.log
 	if nil == node {
 		log.Errorf("The peer with public key %x is not existing in peer tree", publicKey)
@@ -204,4 +207,14 @@ func setPeerTimestamp(publicKey []byte, timestamp time.Time) {
 
 	peer := node.Value().(*peerEntry)
 	peer.timestamp = timestamp
+}
+
+func showIDFromByte(id []byte) {
+	ID, err := peerlib.IDFromBytes(id)
+	if err != nil {
+		globalData.log.Infof("IDFromByte Error:%v", err)
+		return
+	}
+	globalData.log.Infof("id:%x\n%s", id, ID.String())
+
 }

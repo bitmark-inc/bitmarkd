@@ -6,12 +6,15 @@
 package announce
 
 import (
-	"bytes"
 	"encoding/binary"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/util"
+
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/logger"
+	proto "github.com/golang/protobuf/proto"
+	peerlib "github.com/libp2p/go-libp2p-core/peer"
 )
 
 const (
@@ -57,8 +60,43 @@ loop:
 			switch item.Command {
 			case "reconnect":
 				determineConnections(log)
+				log.Infof("-><- reconnect")
 			case "updatetime":
 				setPeerTimestamp(item.Parameters[0], time.Now())
+				log.Infof("-><- updatetime id:%s", string(item.Parameters[0]))
+			case "addpeer":
+				//TODO: Make sure the timestamp is from external message or  local timestamp
+				id, err := peerlib.IDFromBytes(item.Parameters[0])
+				if err != nil {
+					log.Warn(err.Error())
+					continue loop
+				}
+				timestamp := binary.BigEndian.Uint64(item.Parameters[2])
+				var listeners Addrs
+				proto.Unmarshal(item.Parameters[1], &listeners)
+				addrs := util.GetMultiAddrsFromBytes(listeners.Address)
+				if len(addrs) == 0 {
+					log.Warn("No valid listener address")
+					continue loop
+				}
+				addPeer(id, addrs, timestamp)
+				log.Infof("-><- addpeer : %s  listener: %s  timestamp: %d", id.String(), printBinaryAddrs(item.Parameters[1]), timestamp)
+				globalData.peerTree.Print(false)
+			case "self":
+				id, err := peerlib.IDFromBytes(item.Parameters[0])
+				if err != nil {
+					log.Warn(err.Error())
+					continue loop
+				}
+				var lsners Addrs
+				proto.Unmarshal(item.Parameters[1], &lsners)
+				addrs := util.GetMultiAddrsFromBytes(lsners.Address)
+				if len(addrs) == 0 {
+					log.Warn("No valid listener address")
+					continue loop
+				}
+				log.Infof("-><-  self announce data: %v  listener: %s", id, printBinaryAddrs(item.Parameters[1]))
+				setSelf(id, addrs)
 			default:
 			}
 
@@ -89,8 +127,12 @@ func (ann *announcer) process() {
 		messagebus.Bus.Broadcast.Send("rpc", globalData.fingerprint[:], globalData.rpcs, timestamp)
 	}
 	if globalData.peerSet {
-		log.Debugf("send peer: %x", globalData.publicKey)
-		messagebus.Bus.Broadcast.Send("peer", globalData.publicKey, globalData.listeners, timestamp)
+		log.Debugf("send peer: %x", globalData.peerID)
+		addrsBinary, errAddr := proto.Marshal(&Addrs{Address: util.GetBytesFromMultiaddr(globalData.listeners)})
+		idBinary, errID := globalData.peerID.MarshalBinary()
+		if nil == errAddr && nil == errID {
+			messagebus.Bus.P2P.Send("peer", idBinary, addrsBinary, timestamp)
+		}
 	}
 
 	expireRPC()
@@ -111,7 +153,7 @@ func determineConnections(log *logger.L) {
 	// locate this node in the tree
 	_, index := globalData.peerTree.Search(globalData.thisNode.Key())
 	count := globalData.peerTree.Count()
-	log.Infof("N0: index: %d  tree: %d  public key: %x", index, count, globalData.publicKey)
+	log.Infof("determine thisNode index: %d  tree: %d  peerID: %v peerID ", index, count, globalData.peerID)
 
 	// various increment values
 	e := count / 8
@@ -166,9 +208,15 @@ deduplicate:
 		if nil != node {
 			peer := node.Value().(*peerEntry)
 			if nil != peer {
-				log.Infof("%s: peer: %s", names[i], peer)
-				messagebus.Bus.Connector.Send(names[i], peer.publicKey, peer.listeners)
+				idBinary, errID := peer.peerID.Marshal()
+				pbAddr := util.GetBytesFromMultiaddr(peer.listeners)
+				pbAddrBinary, errMarshal := proto.Marshal(&Addrs{Address: pbAddr})
+				if nil == errID && nil == errMarshal {
+					messagebus.Bus.P2P.Send(names[i], idBinary, pbAddrBinary)
+					log.Infof("determine %v : %s  address: %x ", names[i], peer.peerID.String(), printBinaryAddrs(pbAddrBinary))
+				}
 			}
+
 		}
 	}
 }
@@ -185,15 +233,16 @@ scan_nodes:
 		nextNode = node.Next()
 
 		// skip this node's entry
-		if bytes.Equal(globalData.publicKey, peer.publicKey) {
+		if globalData.peerID.String() == peer.peerID.String() {
 			continue scan_nodes
 		}
-		log.Debugf("public key: %x timestamp: %s", peer.publicKey, peer.timestamp.Format(timeFormat))
+		log.Debugf("PeerID: %v timestamp: %s", peer.peerID, peer.timestamp.Format(timeFormat))
 		if peer.timestamp.Add(announceExpiry).Before(now) {
 			globalData.peerTree.Delete(key)
 			globalData.treeChanged = true
-			messagebus.Bus.Connector.Send("@D", peer.publicKey, peer.listeners) //@D means: @->Internal Command, D->delete
-			log.Infof("Peer Expired! public key: %x timestamp: %s is removed", peer.publicKey, peer.timestamp.Format(timeFormat))
+			// TODO: Send to P2P to Expire
+			//messagebus.Bus.Connector.Send("@D", peer.peerID, peer.listeners) //@D means: @->Internal Command, D->delete
+			log.Infof("Peer Expired! public key: %x timestamp: %s is removed", peer.peerID, peer.timestamp.Format(timeFormat))
 		}
 
 	}

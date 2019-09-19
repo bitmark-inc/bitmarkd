@@ -31,7 +31,7 @@ type tagline struct {
 	rpcPort                uint16
 	connectPort            uint16
 	certificateFingerprint []byte
-	publicKey              []byte
+	peerID                 string
 }
 
 // decode DNS TXT records of these forms
@@ -47,7 +47,7 @@ func parseTag(s string) (*tagline, error) {
 	countA := 0
 	countC := 0
 	countF := 0
-	countP := 0
+	countI := 0
 	countR := 0
 
 words:
@@ -106,16 +106,9 @@ words:
 		case 'r':
 			t.rpcPort, err = getPort(parameter)
 			countR += 1
-		case 'p':
-			if len(parameter) != publicKeyLength {
-				err = fault.ErrInvalidPublicKey
-			} else {
-				t.publicKey, err = hex.DecodeString(parameter)
-				if nil != err {
-					err = fault.ErrInvalidPublicKey
-				}
-			}
-			countP += 1
+		case 'i':
+			t.peerID = parameter
+			countI += 1
 		case 'f':
 			if len(parameter) != fingerprintLength {
 				err = fault.ErrInvalidFingerprint
@@ -135,7 +128,7 @@ words:
 	}
 
 	// ensure that there is only one each of the required items
-	if countA != 1 || countC != 1 || countF != 1 || countP != 1 || countR != 1 {
+	if countA != 1 || countC != 1 || countF != 1 || countI != 1 || countR != 1 {
 		return nil, fault.ErrInvalidDnsTxtRecord
 	}
 

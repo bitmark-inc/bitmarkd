@@ -12,7 +12,7 @@ import (
 func TestRestorePeers(t *testing.T) {
 	// if peer file not exist, do not show any error
 	notExistFile := "file_not_exist.json"
-	err := restorePeers(notExistFile)
+	_, err := restorePeers(notExistFile)
 	if nil != err {
 		t.Errorf("Peer file not exist should not return error.")
 	}

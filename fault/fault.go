@@ -41,6 +41,7 @@ var (
 	ErrCannotDecodePrivateKey                = recordError("cannot decode private key")
 	ErrCannotDecodeSeed                      = recordError("cannot decode seed")
 	ErrCanOnlyConvertAssetsToShares          = invalidError("can only convert assets to shares")
+	ErrCerfificateFileNotFound               = notFoundError("cerfificate file not found")
 	ErrCertificateFileAlreadyExists          = existsError("certificate file already exists")
 	ErrChecksumMismatch                      = processError("checksum mismatch")
 	ErrConnectingToSelfForbidden             = processError("connecting to self forbidden")

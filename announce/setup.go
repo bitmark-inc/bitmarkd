@@ -15,6 +15,8 @@ import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
+	peerlib "github.com/libp2p/go-libp2p-core/peer"
+	ma "github.com/multiformats/go-multiaddr"
 )
 
 // type of listener
@@ -34,9 +36,6 @@ type rpcEntry struct {
 	local       bool                  // true => never expires
 }
 
-// format for timestamps
-const timeFormat = "2006-01-02 15:04:05"
-
 // globals for background process
 type announcerData struct {
 	sync.RWMutex // to allow locking
@@ -45,8 +44,8 @@ type announcerData struct {
 	log *logger.L
 
 	// this node's packed annoucements
-	publicKey   []byte
-	listeners   []byte
+	peerID      peerlib.ID
+	listeners   []ma.Multiaddr
 	fingerprint fingerprintType
 	rpcs        []byte
 	peerSet     bool
@@ -77,6 +76,9 @@ type announcerData struct {
 // global data
 var globalData announcerData
 
+// format for timestamps
+const timeFormat = "2006-01-02 15:04:05"
+
 // Initialise - set up the announcement system
 // pass a fully qualified domain for root node list
 // or empty string for no root nodes
@@ -105,7 +107,8 @@ func Initialise(nodesDomain, peerFile string) error {
 	globalData.peerFile = peerFile
 
 	globalData.log.Info("start restoring peer data…")
-	if err := restorePeers(globalData.peerFile); err != nil {
+	if _, err := restorePeers(globalData.peerFile); err != nil {
+
 		globalData.log.Errorf("fail to restore peer data: %s", err.Error())
 	}
 
@@ -146,7 +149,7 @@ func Finalise() error {
 	globalData.background.Stop()
 
 	globalData.log.Info("start backing up peer data…")
-	if err := backupPeers(globalData.peerFile); err != nil {
+	if err := storePeers(globalData.peerFile); err != nil {
 		globalData.log.Errorf("fail to backup peer data: %s", err.Error())
 	}
 
