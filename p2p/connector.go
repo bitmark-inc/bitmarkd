@@ -6,11 +6,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/libp2p/go-libp2p-core/peer"
 	net "github.com/libp2p/go-libp2p-net"
 	"github.com/multiformats/go-multiaddr"
-	ma "github.com/multiformats/go-multiaddr"
-	"github.com/prometheus/common/log"
 )
 
 func (n *Node) dialPeer(ctx context.Context, remoteListner *peer.AddrInfo) (net.Stream, error) {
@@ -21,19 +20,20 @@ func (n *Node) dialPeer(ctx context.Context, remoteListner *peer.AddrInfo) (net.
 
 // ConnectPeers connect to all peers in host peerstore
 func (n *Node) connectPeers() {
-
-loop:
-	for idx, peerID := range n.Host.Peerstore().Peers() {
+	for idx, peerID := range n.Host.Peerstore().PeersWithAddrs() {
 		peerInfo := n.Host.Peerstore().PeerInfo(peerID)
-
-		if len(peerInfo.Addrs) != 0 && !n.isSameNode(peerInfo.Addrs) {
+		n.log.Infof("connect to peer[%s] %s... ", peerInfo.ID, util.PrintMaAddrs(peerInfo.Addrs))
+		if len(peerInfo.Addrs) == 0 {
+			n.log.Infof("no Addr: %s", peerID)
+			continue
+		} else if n.isSameNode(peerInfo) {
+			n.log.Infof("The same node: %s", peerID)
+			continue
+		} else {
 			for _, addr := range peerInfo.Addrs {
 				n.log.Infof("connectPeers: Dial to peer[%d]:%s", idx, addr.String())
 			}
 			n.directConnect(peerInfo)
-		} else {
-			n.log.Infof("The same node: %s", peerID)
-			continue loop
 		}
 	}
 }
@@ -43,28 +43,30 @@ func (n *Node) directConnect(info peer.AddrInfo) {
 	// Multiaddress of the destination peer is fetched from the peerstore using 'peerId'.
 	s, err := n.Host.NewStream(context.Background(), info.ID, "/chat/1.0.0")
 	if err != nil {
-		log.Warn(err.Error())
+		n.log.Warn(err.Error())
 		return
 	}
 	// Create a thread to read and write data.
-	shandler := basicStream{ID: fmt.Sprintf("%s", n.Host.ID())}
+	var shandler basicStream
+	shandler.ID = fmt.Sprintf("%s", n.Host.ID())
 	shandler.handleStream(s)
 }
 
 // Check on IP and Port and also local addr with the same port
-func (n *Node) isSameNode(addrs []ma.Multiaddr) bool {
-	for _, cmpr := range addrs {
+func (n *Node) isSameNode(info peer.AddrInfo) bool {
+	if n.Host.ID().Pretty() == info.ID.Pretty() {
+		return true
+	}
+	for _, cmpr := range info.Addrs {
 		for _, a := range n.Announce {
 			// Compare Announce Address
 			if strings.Contains(cmpr.String(), a.String()) {
-				n.log.Info("Peer is this NODE")
 				return true
 			}
 		}
 		// Compare local listener address
 		for _, a := range n.Host.Addrs() {
 			if strings.Contains(cmpr.String(), a.String()) {
-				n.log.Info("Peer is this NODE")
 				return true
 			}
 		}

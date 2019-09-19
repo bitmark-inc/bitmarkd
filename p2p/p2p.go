@@ -158,7 +158,13 @@ loop:
 					pbPeerAddrs := Addrs{}
 					proto.Unmarshal(item.Parameters[1], &pbPeerAddrs)
 					maAddrs := util.GetMultiAddrsFromBytes(pbPeerAddrs.Address)
-					n.addPeerAddrs(peerID, maAddrs)
+					info, err := peerlib.AddrInfoFromP2pAddr(maAddrs[0])
+					if err != nil {
+						log.Warn(err.Error())
+						continue loop
+					}
+					n.addPeerAddrs(*info)
+					n.connectPeers()
 				}
 			}
 		case <-delay:

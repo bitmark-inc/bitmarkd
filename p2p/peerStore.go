@@ -4,18 +4,20 @@ import (
 	"fmt"
 	"time"
 
-	peer "github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p-core/peer"
+	peerlib "github.com/libp2p/go-libp2p-core/peer"
 	peerstore "github.com/libp2p/go-libp2p-core/peerstore"
 	ma "github.com/multiformats/go-multiaddr"
 )
 
 //TODO: This function add address into the peer with the same id. Needs to take care of  IP changes
 // addPeer to PeerStore
-func (n *Node) addPeerAddrs(id peer.ID, peerAddrs []ma.Multiaddr) {
+func (n *Node) addPeerAddrs(info peerlib.AddrInfo) {
 	n.Lock()
-	n.Host.Peerstore().AddAddrs(id, peerAddrs, peerstore.ConnectedAddrTTL)
-	info := peer.AddrInfo{ID: id, Addrs: peerAddrs}
-	n.log.Infof("add peerstore:%s", info.String())
+	for _, addr := range info.Addrs {
+		n.Host.Peerstore().AddAddr(info.ID, addr, peerstore.ConnectedAddrTTL)
+		n.log.Infof("add peerstore:%s", info.String())
+	}
 	n.Unlock()
 }
 
