@@ -39,7 +39,7 @@ func TestStorePeers(t *testing.T) {
 	curPath := os.Getenv("PWD")
 	peerfile := path.Join(curPath, "peers")
 	// domain from bind9
-	err := Initialise("local.bitmark", peerfile)
+	err := Initialise("nodes.rachael.bitmark", peerfile)
 	assert.NoError(t, err, "routing initialized error")
 	storePeers(peerfile)
 	assert.NoError(t, err, "routing backupPeers error")
