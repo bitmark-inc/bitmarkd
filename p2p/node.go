@@ -16,17 +16,8 @@ import (
 )
 
 //Setup setup a node
-func (n *Node) Setup(configuration *Configuration) error {
-	globalData.NodeType = configuration.NodeType
-	globalData.PreferIPv6 = configuration.PreferIPv6
-	maAddrs := IPPortToMultiAddr(configuration.Listen)
-	prvKey, err := DecodeHexToPrvKey([]byte(configuration.PrivateKey)) //Hex Decoded binaryString
-	if err != nil {
-		globalData.log.Error(err.Error())
-		panic(err)
-	}
-	n.PrivateKey = prvKey
-	n.NewHost(configuration.NodeType, maAddrs, n.PrivateKey)
+func (n *Node) Setup(configuration *Configuration, version string) error {
+	globalData.Version = version
 	n.setAnnounce(configuration.Announce)
 	// Start to listen to p2p stream
 	go n.listen(configuration.Announce)

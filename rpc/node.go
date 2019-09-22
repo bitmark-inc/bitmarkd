@@ -6,7 +6,6 @@
 package rpc
 
 import (
-	"encoding/hex"
 	"time"
 
 	"golang.org/x/time/rate"
@@ -16,7 +15,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/mode"
-	"github.com/bitmark-inc/bitmarkd/peer"
+	"github.com/bitmark-inc/bitmarkd/p2p"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/logger"
 )
@@ -104,7 +103,7 @@ func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 		return err
 	}
 
-	incoming, outgoing := peer.GetCounts()
+	incoming, outgoing := p2p.GetCounts()
 	reply.Chain = mode.ChainName()
 	reply.Mode = mode.String()
 	reply.Block = BlockInfo{
@@ -118,6 +117,7 @@ func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 	reply.Hashrate = difficulty.Hashrate()
 	reply.Version = node.version
 	reply.Uptime = time.Since(node.start).String()
-	reply.PublicKey = hex.EncodeToString(peer.PublicKey())
+	//TODO: make it ID not public key, this is base58Encoded
+	reply.PublicKey = p2p.ID().Pretty()
 	return nil
 }

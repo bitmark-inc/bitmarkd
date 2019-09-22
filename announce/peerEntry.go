@@ -123,11 +123,11 @@ func resetFutureTimestampToNow(timestamp uint64) time.Time {
 }
 
 // GetNext - fetch the data for the next node in the ring for a given public key
-func GetNext(publicKey []byte) (peerlib.ID, []ma.Multiaddr, time.Time, error) {
+func GetNext(peerID peerlib.ID) (peerlib.ID, []ma.Multiaddr, time.Time, error) {
 	globalData.Lock()
 	defer globalData.Unlock()
 
-	node, _ := globalData.peerTree.Search(peerIDkey(publicKey))
+	node, _ := globalData.peerTree.Search(peerIDkey(peerID))
 	if nil != node {
 		node = node.Next()
 	}
@@ -194,14 +194,14 @@ func (p peerIDkey) String() string {
 }
 
 // setPeerTimestamp - set the timestamp for the peer with given public key
-func setPeerTimestamp(publicKey []byte, timestamp time.Time) {
+func setPeerTimestamp(peerID peerlib.ID, timestamp time.Time) {
 	globalData.Lock()
 	defer globalData.Unlock()
 
-	node, _ := globalData.peerTree.Search(peerIDkey(publicKey))
+	node, _ := globalData.peerTree.Search(peerIDkey(peerID))
 	log := globalData.log
 	if nil == node {
-		log.Errorf("The peer with public key %x is not existing in peer tree", publicKey)
+		log.Errorf("The peer with public key %x is not existing in peer tree", peerID.Pretty())
 		return
 	}
 

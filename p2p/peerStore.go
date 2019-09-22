@@ -20,12 +20,24 @@ func (n *Node) addPeerAddrs(info peerlib.AddrInfo) {
 	}
 	n.Unlock()
 }
-
 func (n *Node) addPeerAddr(id peer.ID, peerAddr ma.Multiaddr) {
 	n.Lock()
 	n.log.Infof("add peerstore:%s", id.String())
 	n.Host.Peerstore().AddAddr(id, peerAddr, peerstore.ConnectedAddrTTL)
 	n.Unlock()
+}
+
+func (n *Node) peerInfos() []peerlib.AddrInfo {
+	var infos []peerlib.AddrInfo
+	if len(n.Host.Peerstore().PeersWithAddrs()) == 0 {
+		n.log.Warn("no peers in peerstore")
+		return infos
+	}
+	for _, id := range n.Host.Peerstore().PeersWithAddrs() {
+		addrs := n.Host.Peerstore().Addrs(id)
+		infos = append(infos, peerlib.AddrInfo{ID: id, Addrs: addrs})
+	}
+	return infos
 }
 
 func (n *Node) printPeerStore() {

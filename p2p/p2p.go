@@ -76,6 +76,7 @@ const (
 
 //Node  A p2p node
 type Node struct {
+	Version        string
 	NodeType       string
 	Host           p2pcore.Host
 	Announce       []ma.Multiaddr
@@ -91,7 +92,7 @@ type Node struct {
 }
 
 // Initialise initialize p2p module
-func Initialise(configuration *Configuration) error {
+func Initialise(configuration *Configuration, version string) error {
 	globalData.Lock()
 	defer globalData.Unlock()
 	if globalData.initialised {
@@ -99,7 +100,7 @@ func Initialise(configuration *Configuration) error {
 	}
 	globalData.log = logger.New("p2p")
 	globalData.log.Info("starting…")
-	globalData.Setup(configuration)
+	globalData.Setup(configuration, version)
 	globalData.log.Info("start background…")
 
 	processes := background.Processes{

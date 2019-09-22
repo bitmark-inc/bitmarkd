@@ -1,14 +1,15 @@
 package main
 
 import (
-	"github.com/bitmark-inc/bitmarkd/p2p"
-	"github.com/bitmark-inc/bitmarkd/announce"
 	"flag"
 	"fmt"
 	"os"
 	"path"
 	"path/filepath"
 	"time"
+
+	"github.com/bitmark-inc/bitmarkd/announce"
+	"github.com/bitmark-inc/bitmarkd/p2p"
 
 	"github.com/bitmark-inc/bitmarkd/configuration"
 	"github.com/bitmark-inc/logger"
@@ -44,7 +45,7 @@ func main() {
 		panic(fmt.Sprintf("peer initialise error: %s", err))
 	}
 	defer announce.Finalise()
-	err = p2p.Initialise(&globalConf.Peering)
+	err = p2p.Initialise(&globalConf.Peering, "v1.0.0")
 	if nil != err {
 		panic(fmt.Sprintf("peer initialise error: %s", err))
 	}

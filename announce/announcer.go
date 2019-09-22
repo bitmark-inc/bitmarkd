@@ -62,7 +62,12 @@ loop:
 				determineConnections(log)
 				log.Infof("-><- reconnect")
 			case "updatetime":
-				setPeerTimestamp(item.Parameters[0], time.Now())
+				id, err := peerlib.IDFromBytes(item.Parameters[0])
+				if err != nil {
+					log.Warn(err.Error())
+					continue loop
+				}
+				setPeerTimestamp(id, time.Now())
 				log.Infof("-><- updatetime id:%s", string(item.Parameters[0]))
 			case "addpeer":
 				//TODO: Make sure the timestamp is from external message or  local timestamp

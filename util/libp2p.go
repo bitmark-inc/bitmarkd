@@ -58,6 +58,15 @@ func GetBytesFromMultiaddr(listners []ma.Multiaddr) [][]byte {
 	return byteAddrs
 }
 
+// MaAddrToString take an [][]byte and convert them it to multiAddress and return its presented string
+func MaAddrToString(maAddrs []ma.Multiaddr) []string {
+	var addrsStr []string
+	for _, addr := range maAddrs {
+		addrsStr = append(addrsStr, addr.String())
+	}
+	return addrsStr
+}
+
 // ByteAddrsToString take an [][]byte and convert them it to multiAddress and return its presented string
 func ByteAddrsToString(addrs [][]byte) []string {
 	var addrsStr []string

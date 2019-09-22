@@ -13,8 +13,8 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/configuration"
+	"github.com/bitmark-inc/bitmarkd/p2p"
 	"github.com/bitmark-inc/bitmarkd/payment"
-	"github.com/bitmark-inc/bitmarkd/peer"
 	"github.com/bitmark-inc/bitmarkd/proof"
 	"github.com/bitmark-inc/bitmarkd/publish"
 	"github.com/bitmark-inc/bitmarkd/rpc"
@@ -77,7 +77,7 @@ type Configuration struct {
 
 	ClientRPC  rpc.RPCConfiguration   `gluamapper:"client_rpc" json:"client_rpc"`
 	HttpsRPC   rpc.HTTPSConfiguration `gluamapper:"https_rpc" json:"https_rpc"`
-	Peering    peer.Configuration     `gluamapper:"peering" json:"peering"`
+	Peering    p2p.Configuration      `gluamapper:"peering" json:"peering"`
 	Publishing publish.Configuration  `gluamapper:"publishing" json:"publishing"`
 	Proofing   proof.Configuration    `gluamapper:"proofing" json:"proofing"`
 	Payment    payment.Configuration  `gluamapper:"payment" json:"payment"`
@@ -117,12 +117,13 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 		HttpsRPC: rpc.HTTPSConfiguration{
 			MaximumConnections: defaultRPCClients,
 		},
-
-		Peering: peer.Configuration{
-			DynamicConnections: true,
-			PreferIPv6:         true,
-		},
-
+		//TODO:  P2P
+		/*
+			Peering: peer.Configuration{
+				DynamicConnections: true,
+				PreferIPv6:         true,
+			},
+		*/
 		Logging: logger.Configuration{
 			Directory: defaultLogDirectory,
 			File:      defaultLogFile,

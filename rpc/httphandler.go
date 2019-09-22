@@ -6,8 +6,6 @@
 package rpc
 
 import (
-	"bytes"
-	"encoding/hex"
 	"encoding/json"
 	"io"
 	"net"
@@ -23,10 +21,13 @@ import (
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/mode"
-	"github.com/bitmark-inc/bitmarkd/peer"
+	"github.com/bitmark-inc/bitmarkd/p2p"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/util"
-	"github.com/bitmark-inc/bitmarkd/zmqutil"
+	peerlib "github.com/libp2p/go-libp2p-core/peer"
+	"github.com/prometheus/common/log"
+
+	//	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
 )
 
@@ -162,7 +163,7 @@ func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 		Hashrate            float64    `json:"hashrate,omitempty"`
 		Version             string     `json:"version"`
 		Uptime              string     `json:"uptime"`
-		PublicKey           string     `json:"publicKey"`
+		PeerID              peerlib.ID `json:"peerid"`
 	}
 
 	reply := theReply{
@@ -171,7 +172,7 @@ func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 		Block: blockInfo{
 			LRCount: lrCount{
 				Local:  blockheader.Height(),
-				Remote: peer.BlockHeight(),
+				Remote: p2p.BlockHeight(),
 			},
 			Hash: block.LastBlockHash(),
 		},
@@ -181,10 +182,10 @@ func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 		Hashrate:   difficulty.Hashrate(),
 		Version:    s.version,
 		Uptime:     time.Since(s.start).String(),
-		PublicKey:  hex.EncodeToString(peer.PublicKey()),
+		PeerID:     p2p.ID(),
 	}
 
-	reply.Peers.Incoming, reply.Peers.Outgoing = peer.GetCounts()
+	reply.Peers.Incoming, reply.Peers.Outgoing = p2p.GetCounts()
 	reply.TransactionCounters.Pending, reply.TransactionCounters.Verified = reservoir.ReadCounters()
 
 	sendReply(w, reply)
@@ -206,21 +207,21 @@ func (s *httpHandler) connections(w http.ResponseWriter, r *http.Request) {
 	defer connectionCount.Decrement()
 
 	type reply struct {
-		ConnectedTo []*zmqutil.Connected `json:"connectedTo"`
+		ConnectedTo []peerlib.AddrInfo `json:"connectedTo"`
 	}
 
 	var info reply
 
-	info.ConnectedTo = peer.FetchConnectors()
+	info.ConnectedTo = p2p.FetchConnectors()
 
 	sendReply(w, info)
 }
 
 // to output peer data
 type entry struct {
-	PublicKey string    `json:"publicKey"`
-	Listeners []string  `json:"listeners"`
-	Timestamp time.Time `json:"timestamp"`
+	PeerID    peerlib.ID `json:"peerid"`
+	Listeners []string   `json:"listeners"`
+	Timestamp time.Time  `json:"timestamp"`
 }
 
 // GET to find data on all peers seen in the announcer
@@ -234,24 +235,17 @@ func (s *httpHandler) peers(w http.ResponseWriter, r *http.Request) {
 		sendMethodNotAllowed(w)
 		return
 	}
-
 	if !s.isAllowed("peers", r) {
 		s.log.Warnf("Deny access: %q", r.RemoteAddr)
 		sendForbidden(w)
 		return
 	}
-
 	connectionCount.Increment()
 	defer connectionCount.Decrement()
-
 	r.ParseForm()
-
-	// public_key parsing
-	startkey := []byte{}
-	k, err := hex.DecodeString(r.Form.Get("public_key"))
-	if nil == err && 32 == len(k) {
-		startkey = k
-	}
+	// TODO:  check enCoding part of code
+	var startkey string
+	startkey = r.Form.Get("peerid")
 
 	// count parsing
 	count := defaultCount
@@ -259,42 +253,34 @@ func (s *httpHandler) peers(w http.ResponseWriter, r *http.Request) {
 	if nil == err && n >= 1 && n <= maximumCount {
 		count = n
 	}
-
 	peers := make([]entry, 0, count)
 
 item_loop:
 	for i := 0; i < count; i += 1 {
-		publicKey, listeners, timestamp, err := announce.GetNext(startkey)
+		startID, err := peerlib.IDB58Decode(startkey)
+		if err != nil {
+			log.Warnf("ID DecodeBase58 Error :%v ID::%v", err, startkey)
+			continue item_loop
+		}
+		id, listeners, timestamp, err := announce.GetNext(startID)
 		if nil != err {
 			sendInternalServerError(w)
 			return
 		}
-		if bytes.Compare(publicKey, startkey) <= 0 {
+		// p2p version
+		if util.IDCompare(id, startID) <= 0 {
 			break item_loop
 		}
-		startkey = publicKey
-
-		p := hex.EncodeToString(publicKey)
-
-		lPack := util.PackedConnection(listeners)
-		lc := make([]string, 0, 2)
-	lc_loop:
-		for {
-			conn, n := lPack.Unpack()
-			if nil == conn {
-				break lc_loop
-			}
-			lc = append(lc, conn.String())
-			lPack = lPack[n:]
-		}
-
+		startID = id
+		p := id
+		stringAddrs := util.MaAddrToString(listeners)
 		peers = append(peers, entry{
-			PublicKey: p,
-			Listeners: lc,
+			PeerID:    p,
+			Listeners: stringAddrs,
 			Timestamp: timestamp,
 		})
-	}
 
+	}
 	sendReply(w, peers)
 }
 

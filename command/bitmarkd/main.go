@@ -21,8 +21,8 @@ import (
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/p2p"
 	"github.com/bitmark-inc/bitmarkd/payment"
-	"github.com/bitmark-inc/bitmarkd/peer"
 	"github.com/bitmark-inc/bitmarkd/proof"
 	"github.com/bitmark-inc/bitmarkd/publish"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
@@ -287,12 +287,21 @@ func main() {
 	}
 
 	// start up the peering background processes
-	err = peer.Initialise(&masterConfiguration.Peering, version)
+	/*
+		err = peer.Initialise(&masterConfiguration.Peering, version)
+		if nil != err {
+			log.Criticalf("peer initialise error: %s", err)
+			exitwithstatus.Message("peer initialise error: %s", err)
+		}
+		defer peer.Finalise()
+	*/
+
+	err = p2p.Initialise(&masterConfiguration.Peering, version)
 	if nil != err {
-		log.Criticalf("peer initialise error: %s", err)
-		exitwithstatus.Message("peer initialise error: %s", err)
+		log.Criticalf("p2p initialise error: %s", err)
+		exitwithstatus.Message("p2p initialise error: %s", err)
 	}
-	defer peer.Finalise()
+	defer p2p.Finalise()
 
 	// start up the publishing background processes
 	err = publish.Initialise(&masterConfiguration.Publishing, version)
