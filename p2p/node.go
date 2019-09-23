@@ -6,8 +6,8 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/util"
+	proto "github.com/golang/protobuf/proto"
 
-	"github.com/gogo/protobuf/proto"
 	libp2p "github.com/libp2p/go-libp2p"
 	crypto "github.com/libp2p/go-libp2p-core/crypto"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -18,10 +18,18 @@ import (
 //Setup setup a node
 func (n *Node) Setup(configuration *Configuration, version string) error {
 	globalData.Version = version
+	globalData.NodeType = configuration.NodeType
+	globalData.PreferIPv6 = configuration.PreferIPv6
+	maAddrs := IPPortToMultiAddr(configuration.Listen)
+	prvKey, err := DecodeHexToPrvKey([]byte(configuration.PrivateKey)) //Hex Decoded binaryString
+	if err != nil {
+		globalData.log.Error(err.Error())
+		panic(err)
+	}
+	n.PrivateKey = prvKey
+	n.NewHost(configuration.NodeType, maAddrs, n.PrivateKey)
 	n.setAnnounce(configuration.Announce)
-	// Start to listen to p2p stream
 	go n.listen(configuration.Announce)
-	// Create a Multicasting route
 	ps, err := pubsub.NewGossipSub(context.Background(), n.Host)
 	if err != nil {
 		panic(err)
@@ -29,6 +37,7 @@ func (n *Node) Setup(configuration *Configuration, version string) error {
 	n.MuticastStream = ps
 	sub, err := n.MuticastStream.Subscribe(multicastingTopic)
 	go n.SubHandler(context.Background(), sub)
+
 	globalData.initialised = true
 	return nil
 }
@@ -61,6 +70,7 @@ func (n *Node) setAnnounce(announceAddrs []string) {
 	if nil == err && nil == idErr {
 		messagebus.Bus.Announce.Send("self", param0, byteMessage)
 	}
+
 }
 
 func (n *Node) listen(announceAddrs []string) {

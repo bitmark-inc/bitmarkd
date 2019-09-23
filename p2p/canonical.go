@@ -17,10 +17,12 @@ func announceMuxAddr(ipportAnnounce []ma.Multiaddr, protocol string, id peer.ID)
 	if err != nil {
 		return nil
 	}
+
 	for _, addr := range ipportAnnounce {
 		maAddr := addr.Encapsulate(p2pMa)
 		maAddrs = append(maAddrs, maAddr)
 	}
+
 	return maAddrs
 }
 
