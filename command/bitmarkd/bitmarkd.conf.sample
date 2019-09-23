@@ -17,11 +17,11 @@
 -- [2] setup coin addresses for recorder payments
 --     the chain selection above will determine which
 --     address to use
-local bitcoin_addresses = {
+local bitcoin_address = {
     test = "***REPLACE-WITH-REAL-TEST-BTC-ADDRESS***",
     live = "***REPLACE-WITH-REAL-LIVE-BTC-ADDRESS***",
 }
-local litecoin_addresses = {
+local litecoin_address = {
     test = "***REPLACE-WITH-REAL-TEST-LTC-ADDRESS***",
     live = "***REPLACE-WITH-REAL-LIVE-LTC-ADDRESS***",
 }
