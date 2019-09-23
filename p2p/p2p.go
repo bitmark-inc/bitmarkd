@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/messagebus"
+	"github.com/bitmark-inc/bitmarkd/p2p/statemachine"
 	"github.com/bitmark-inc/bitmarkd/util"
 
 	"github.com/bitmark-inc/bitmarkd/background"
@@ -88,6 +89,9 @@ type Node struct {
 	background *background.T
 	// set once during initialise
 	initialised bool
+	Metrics
+	// statemachine
+	stateMachine statemachine.StateMachine
 }
 
 // Initialise initialize p2p module
@@ -104,6 +108,7 @@ func Initialise(configuration *Configuration, version string) error {
 
 	processes := background.Processes{
 		&globalData,
+		&globalData.stateMachine,
 	}
 	globalData.background = background.Start(processes, globalData.log)
 	return nil
