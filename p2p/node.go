@@ -21,12 +21,15 @@ func (n *Node) Setup(configuration *Configuration, version string) error {
 	globalData.NodeType = configuration.NodeType
 	globalData.PreferIPv6 = configuration.PreferIPv6
 	maAddrs := IPPortToMultiAddr(configuration.Listen)
+	n.log.Infof("private key:%s", configuration.PrivateKey)
+
 	prvKey, err := DecodeHexToPrvKey([]byte(configuration.PrivateKey)) //Hex Decoded binaryString
 	if err != nil {
 		globalData.log.Error(err.Error())
 		panic(err)
 	}
 	n.PrivateKey = prvKey
+
 	n.NewHost(configuration.NodeType, maAddrs, n.PrivateKey)
 	n.setAnnounce(configuration.Announce)
 	go n.listen(configuration.Announce)

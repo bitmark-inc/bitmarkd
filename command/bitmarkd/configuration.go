@@ -117,13 +117,12 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 		HttpsRPC: rpc.HTTPSConfiguration{
 			MaximumConnections: defaultRPCClients,
 		},
-		//TODO:  P2P
-		/*
-			Peering: peer.Configuration{
-				DynamicConnections: true,
-				PreferIPv6:         true,
-			},
-		*/
+		//TODO:  Check P2P
+		Peering: p2p.Configuration{
+			DynamicConnections: true,
+			PreferIPv6:         true,
+		},
+
 		Logging: logger.Configuration{
 			Directory: defaultLogDirectory,
 			File:      defaultLogFile,

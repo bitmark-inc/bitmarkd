@@ -23,10 +23,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/p2p"
 	"github.com/bitmark-inc/bitmarkd/payment"
-	"github.com/bitmark-inc/bitmarkd/proof"
-	"github.com/bitmark-inc/bitmarkd/publish"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
-	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/exitwithstatus"
@@ -286,16 +283,6 @@ func main() {
 		exitwithstatus.Message("zmq.AuthStart: error: %s", err)
 	}
 
-	// start up the peering background processes
-	/*
-		err = peer.Initialise(&masterConfiguration.Peering, version)
-		if nil != err {
-			log.Criticalf("peer initialise error: %s", err)
-			exitwithstatus.Message("peer initialise error: %s", err)
-		}
-		defer peer.Finalise()
-	*/
-
 	err = p2p.Initialise(&masterConfiguration.Peering, version)
 	if nil != err {
 		log.Criticalf("p2p initialise error: %s", err)
@@ -304,29 +291,33 @@ func main() {
 	defer p2p.Finalise()
 
 	// start up the publishing background processes
-	err = publish.Initialise(&masterConfiguration.Publishing, version)
-	if nil != err {
-		log.Criticalf("publish initialise error: %s", err)
-		exitwithstatus.Message("publish initialise error: %s", err)
-	}
-	defer publish.Finalise()
-
+	/*
+		err = publish.Initialise(&masterConfiguration.Publishing, version)
+		if nil != err {
+			log.Criticalf("publish initialise error: %s", err)
+			exitwithstatus.Message("publish initialise error: %s", err)
+		}
+		defer publish.Finalise()
+	*/
 	// start up the rpc background processes
-	err = rpc.Initialise(&masterConfiguration.ClientRPC, &masterConfiguration.HttpsRPC, version)
-	if nil != err {
-		log.Criticalf("rpc initialise error: %s", err)
-		exitwithstatus.Message("peer initialise error: %s", err)
-	}
-	defer rpc.Finalise()
+	/*
+		err = rpc.Initialise(&masterConfiguration.ClientRPC, &masterConfiguration.HttpsRPC, version)
+		if nil != err {
+			log.Criticalf("rpc initialise error: %s", err)
+			exitwithstatus.Message("peer initialise error: %s", err)
+		}
+		defer rpc.Finalise()
+	*/
 
 	// start proof background processes
-	err = proof.Initialise(&masterConfiguration.Proofing)
-	if nil != err {
-		log.Criticalf("proof initialise error: %s", err)
-		exitwithstatus.Message("proof initialise error: %s", err)
-	}
-	defer proof.Finalise()
-
+	/*
+		err = proof.Initialise(&masterConfiguration.Proofing)
+		if nil != err {
+			log.Criticalf("proof initialise error: %s", err)
+			exitwithstatus.Message("proof initialise error: %s", err)
+		}
+		defer proof.Finalise()
+	*/
 	// if memory logging enabled
 	if len(options["memory-stats"]) > 0 {
 		go memstats()

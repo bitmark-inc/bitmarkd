@@ -50,7 +50,6 @@ type StaticConnection struct {
 // Configuration - a block of configuration data
 // this is read from the configuration file
 type Configuration struct {
-	PublicIP           []string           `gluamapper:"publicip" json:"publicip"`
 	NodeType           string             `gluamapper:"nodetype" json:"nodetype"`
 	Port               int                `gluamapper:"port" json:"port"`
 	DynamicConnections bool               `gluamapper:"dynamic_connections" json:"dynamic_connections"`

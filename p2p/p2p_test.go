@@ -34,7 +34,6 @@ func TestMain(m *testing.M) {
 
 func mockConfiguration(nType string, port int) *Configuration {
 	return &Configuration{
-		PublicIP:           []string{"127.0.0.1", "[::1]"},
 		NodeType:           nType,
 		Port:               port,
 		DynamicConnections: true,
