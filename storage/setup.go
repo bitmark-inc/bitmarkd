@@ -61,6 +61,11 @@ var poolData struct {
 	cache     Cache
 }
 
+var PaymentStorage struct {
+	Btc P2PStorage
+	Ltc P2PStorage
+}
+
 // pool access modes
 const (
 	ReadOnly  = true
@@ -90,6 +95,8 @@ func Initialise(database string, readOnly bool) (bool, bool, error) {
 
 	blocksDatabase := database + "-blocks.leveldb"
 	indexDatabase := database + "-index.leveldb"
+	btcDatabase := database + "-btc.leveldb"
+	ltcDatabase := database + "-ltc.leveldb"
 
 	db, blocksVersion, err := getDB(blocksDatabase, readOnly)
 	if nil != err {
@@ -160,6 +167,18 @@ func Initialise(database string, readOnly bool) (bool, bool, error) {
 		}
 
 	}
+
+	db, _, err = getDB(btcDatabase, readOnly)
+	if nil != err {
+		return mustMigrate, mustReindex, err
+	}
+	PaymentStorage.Btc = NewLevelDBPaymentStore(db)
+
+	db, _, err = getDB(ltcDatabase, readOnly)
+	if nil != err {
+		return mustMigrate, mustReindex, err
+	}
+	PaymentStorage.Ltc = NewLevelDBPaymentStore(db)
 
 	// this will be a struct type
 	poolType := reflect.TypeOf(Pool)
@@ -233,6 +252,14 @@ func dbClose() {
 	if nil != poolData.dbBlocks {
 		poolData.dbBlocks.Close()
 		poolData.dbBlocks = nil
+	}
+	if nil != PaymentStorage.Btc {
+		PaymentStorage.Btc.Close()
+		PaymentStorage.Btc = nil
+	}
+	if nil != PaymentStorage.Ltc {
+		PaymentStorage.Ltc.Close()
+		PaymentStorage.Ltc = nil
 	}
 }
 

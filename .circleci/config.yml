@@ -33,13 +33,14 @@ jobs:
             sudo apt-get -t testing install libargon2-1 libargon2-dev
             sudo apt-get install uuid-dev libzmq3-dev
             sudo apt-get -t testing install pkg-config
-            go get github.com/bitmark-inc/go-argon2/
+      - run:
+         name: go dependencies
+         command: |
             go get -v -t -d ./...
             go get -v golang.org/x/lint/golint
-            go get github.com/fzipp/gocyclo
-            go get -u github.com/client9/misspell/cmd/misspell
-            go get github.com/securego/gosec/cmd/gosec
-            go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
+            go get -v github.com/client9/misspell/cmd/misspell
+            go get -v github.com/securego/gosec/cmd/gosec
+            go get -v github.com/golangci/golangci-lint/cmd/golangci-lint
       - run:
           name: golint
           command: golint ./...

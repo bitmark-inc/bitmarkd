@@ -151,18 +151,26 @@ func (client *Client) openSocket() error {
 	client.Lock()
 	defer client.Unlock()
 
+	if client.socket != nil {
+		logger.Panicf("socket is not closed")
+	}
+
+	// create a secure random identifier
+	randomIdBytes := make([]byte, identifierSize)
+	_, err := rand.Read(randomIdBytes)
+	if nil != err {
+		return err
+	}
+	randomIdentifier := string(randomIdBytes)
+
+	// create a new socket
 	socket, err := zmq.NewSocket(client.socketType)
 	if nil != err {
 		return err
 	}
 
-	// create a secure random identifier
-	randomIdBytes := make([]byte, identifierSize)
-	_, err = rand.Read(randomIdBytes)
-	if nil != err {
-		return err
-	}
-	randomIdentifier := string(randomIdBytes)
+	// all errors after here must goto failure to ensure proper
+	// cleanup
 
 	// set up as client
 	err = socket.SetCurveServer(0)
@@ -562,7 +570,7 @@ func (client *Client) poller(shutdown <-chan struct{}, stopped chan<- struct{}) 
 		logger.Panicf("cannot create monitor for: %s  error: %s", monitorConnection, err)
 	}
 
-	go func(m *zmq.Socket, queue chan<- Event) {
+	go func(m *zmq.Socket, sigReceive *zmq.Socket, queue chan<- Event) {
 		poller := NewPoller()
 
 		poller.Add(m, zmq.POLLIN)
@@ -591,7 +599,7 @@ func (client *Client) poller(shutdown <-chan struct{}, stopped chan<- struct{}) 
 		m.Close()
 		close(stopped)
 		//log.Debug("stopped polling")
-	}(m, client.queue)
+	}(m, sigReceive, client.queue)
 
 	// wait here for signal
 	<-shutdown

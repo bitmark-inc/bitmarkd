@@ -1,0 +1,177 @@
+#!/bin/sh
+# simple display of network main nodes
+
+ERROR()
+{
+  printf 'error: '
+  printf "$@"
+  printf '\n'
+  exit 1
+}
+
+USAGE()
+{
+  if [ -n "$1" ]
+  then
+    printf 'error: '
+    printf "$@"
+    printf '\n'
+  fi
+  echo usage: $(basename "$0") '[options] [start [finish]]'
+  echo '       --help             -h            this message'
+  echo '       --verbose          -v            more messages'
+  echo '       --compact          -c            squash output'
+  echo '       --network=NET      -n NET        network {live|test} ['"${network}"']'
+  echo '       --debug            -D            debuging messages'
+  exit 1
+}
+
+VERBOSE()
+{
+  [ X"${verbose}" = X"yes" ] && printf "$@"
+}
+
+# main program
+verbose=no
+compact=no
+debug=no
+network=testing
+
+getopt=
+case "$(uname)" in
+  (FreeBSD|DragonFly)
+    getopt=/usr/local/bin/getopt
+    ;;
+  (NetBSD)
+    getopt=/usr/pkg/bin/getopt
+    ;;
+  (OpenBSD)
+    getopt=/usr/local/bin/gnugetopt
+    ;;
+  (Darwin)
+    getopt=/usr/local/opt/gnu-getopt/bin/getopt
+    ;;
+  (Linux)
+    getopt=/usr/bin/getopt
+    ;;
+  (*)
+    ERROR 'OS: %s is not supported' "$(uname)"
+    ;;
+esac
+[ -x "${getopt}" ] || ERROR 'getopt: "%s" is not executable or not installed' "${getopt}"
+
+args=$(${getopt} -o hvcn:D --long=help,verbose,compact,network:,debug -- "$@") || exit 1
+
+# replace the arguments with the parsed values
+eval set -- "${args}"
+
+while :
+do
+  case "$1" in
+    (-v|--verbose)
+      verbose=yes
+      ;;
+
+    (-c|--compact)
+      compact=yes
+      ;;
+
+    (-n|--network)
+      case "${2}" in
+        (l|live|b|bitmark)
+          network=bitmark
+          ;;
+        (t|test|testing)
+          network=testing
+          ;;
+        (*)
+          USAGE 'invalid network: "%s"' "${2}"
+          ;;
+      esac
+      shift
+      ;;
+
+    (-D|--debug)
+      debug=yes
+      ;;
+
+    (--)
+      shift
+      break
+      ;;
+
+    (-h|--help)
+      USAGE
+      ;;
+
+    (*)
+      USAGE 'invalid option: %s' "$1"
+      ;;
+  esac
+  shift
+done
+
+# verify arguments
+#[ $# -eq 0 ] && USAGE 'missing argument'
+[ $# -gt 2 ] && USAGE 'invalid extraneous arguments'
+
+# enable debuging
+[ X"${debug}" = X"yes" ] && set -x
+
+start="${1}"
+finish="${2}"
+
+[ -z "${start}" ] && start=0
+[ -z "${finish}" ] && finish=11
+
+
+# formatted
+if [ X"${compact}" = X"yes" ]
+then
+  compact_b=''
+  compact_m='1'
+  compact_ch='1'
+  compact_sw=''
+  compact_v='11'
+  compact_u=''
+else
+  compact_b='b: '
+  compact_m='6'
+  compact_ch=''
+  compact_sw='sw: '
+  compact_v='14'
+  compact_u='up: '
+fi
+filter='
+    def rj($f;$w): ("                    "+($f|tostring))[-$w:];
+    def lj($f;$w): (($f|tostring)+"                    ")[:$w];
+    "\u001b[1;32m" + lj(._connection;7) + " " +
+    "\u001b[1;32m'"${compact_b}"'\u001b[1;33m" + (.block.height // .blocks | tostring) +
+    "\u001b[0;33m " + (.block.hash[56:64] // "--------") +
+    " \u001b[" + (if .mode=="Normal" then "1;32" else "0;31" end) + "m" + .mode[0:'"${compact_m}"'] +
+    " \u001b[0;36m" + .chain[0:'"${compact_ch}"'] +
+    " \u001b[1;34mp:\u001b[1;34m" + rj(.transactionCounters.pending;5) +
+    " \u001b[1;31mv:\u001b[1;31m " + rj(.transactionCounters.verified;5) +
+    " \u001b[1;34mc:" + rj(.peers|tostring;3) +
+    " \u001b[1;35m'"${compact_sw}"'" + lj(.version;'"${compact_v}"') +
+    " \u001b[0;37m'"${compact_up}"'" + rj(.uptime|tostring
+           | sub("[[:digit:]]+[.][[:digit:]]*s$";"")
+           | sub("^(?<a>[[:digit:]]+m)";"0h\(.a)")
+           | sub("h(?<a>[^m]*)m.*$";":\(.a)")
+           | sub(":(?<a>.)$";":0\(.a)");8) +
+    "\u001b[0m"
+'
+
+#filter='.'
+
+# loop through all nodes
+for i in $(seq "${start}" "${finish}")
+do
+  r=$(bitmark-cli --network="${network}" --connection="${i}" bitmarkd 2>&1)
+  if [ $? -ne 0 ]
+  then
+    printf 'conn %2d: %s\n' "${i}" "${r}"
+  else
+    printf '%s' "${r}" | jq --raw-output "${filter}"
+  fi
+done

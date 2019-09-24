@@ -216,3 +216,22 @@ func TestIsValidByDifficultyWhenInValid(t *testing.T) {
 	ok := digest.IsValidByDifficulty(diff)
 	assert.Equal(t, false, ok, "invalid digest by difficulty")
 }
+
+func TestIsEmptyWhenEmpty(t *testing.T) {
+	d := blockdigest.Digest{}
+	assert.Equal(t, true, d.IsEmpty(), "empty digest")
+}
+
+func TestIsEmptyWhenNotEmpty(t *testing.T) {
+	d := blockdigest.Digest{
+		0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff,
+		0x11, 0x11, 0x11, 0x11,
+		0x11, 0x11, 0x11, 0x11,
+		0x11, 0x11, 0x11, 0x11,
+		0x11, 0x11, 0x11, 0x11,
+		0x11, 0x11, 0x11, 0x11,
+		0xff, 0xff, 0xff, 0x00,
+	}
+	assert.Equal(t, false, d.IsEmpty(), "not empty digest")
+}

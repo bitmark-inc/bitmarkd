@@ -11,8 +11,9 @@ import (
 	"math"
 	"testing"
 
-	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/bitmark-inc/bitmarkd/difficulty"
 )
 
 // test difficulty initiialisation
@@ -48,10 +49,22 @@ var tests = []testItem{
 		bigf:       "007fffffffffffffc00000000000000000000000000000000000000000000000",
 	},
 	{
+		reciprocal: 2.2874055134732947,
+		bits:       0x01bfab3425899de4,
+		big:        "006feacd09626779000000000000000000000000000000000000000000000000",
+		bigf:       "006feacd0962677916d10918344a505d5a363a023349f9c39623104c540b1ae2",
+	},
+	{
 		reciprocal: 16,
 		bits:       0x04ffffffffffffff,
 		big:        "000ffffffffffffff80000000000000000000000000000000000000000000000",
 		bigf:       "000ffffffffffffff80000000000000000000000000000000000000000000000",
+	},
+	{
+		reciprocal: 64,
+		bits:       0x06ffffffffffffff,
+		big:        "0003fffffffffffffe0000000000000000000000000000000000000000000000",
+		bigf:       "0003fffffffffffffe0000000000000000000000000000000000000000000000",
 	},
 	{
 		reciprocal: 256,
@@ -84,7 +97,7 @@ var tests = []testItem{
 		bigf:       "00000000001713f413f413f40821936d0ab882041e769aaa6e7999e3a827ef1b",
 	},
 	{
-		reciprocal: 1E15,
+		reciprocal: 1e15,
 		bits:       0x31203af9ee756159,
 		big:        "00000000000000480ebe7b9d5856400000000000000000000000000000000000",
 		bigf:       "00000000000000480ebe7b9d585648806f5db1f9cfcec44485b1756799f713b1",
@@ -268,14 +281,50 @@ func TestPrevTimespanBlockBeginAndEndWhenInFirstTimespan(t *testing.T) {
 }
 
 func TestHashrate(t *testing.T) {
-	difficulty.Current.Set(4)
+	difficulty.Current.Set(4.8)
 	hashrate := difficulty.Hashrate()
 
-	// difficulty 4, log2(4) = 2
-	// total bits of empty zero will 8+2 = 10 bits
-	// possible hashes for a correct one is pow(2, 10) = 1024 hashes
+	// difficulty 4.8, log2(4.8) = 2.263034405833794
+	// total bits of empty zero will 8+2.263034405833794 = 10.263034405833794 bits
+	// possible hashes for a correct one is pow(2, 10.263034405833794) = 1228.8000000000004 hashes
 	// expected time for a block is 120 seconds
-	// hash rate = hashes / time = 1024 / 120
-	expected := math.Floor((float64(1024)/120)*1000) / 1000
+	// hash rate = hashes / time = 1228.8000000000004 / 120
+	expected := math.Floor(float64(1228.8000000000004)/120*1000) / 1000
 	assert.Equal(t, expected, hashrate, "network hashrate")
+}
+
+func TestNextDifficultyByPreviousTimespanWhenTooLong(t *testing.T) {
+	diff := float64(8)
+	targetTimespan := 2 * 60 * 200
+	testTime := targetTimespan * 8
+	actual := difficulty.NextDifficultyByPreviousTimespan(uint64(testTime), diff)
+
+	assert.Equal(t, diff/4, actual, "wrong difficulty adjust")
+}
+
+func TestNextDifficultyByPreviousTimespanWhenTooShort(t *testing.T) {
+	diff := float64(8)
+	targetTimespan := 2 * 60 * 200
+	testTime := targetTimespan / 8
+	actual := difficulty.NextDifficultyByPreviousTimespan(uint64(testTime), diff)
+
+	assert.Equal(t, diff*4, actual, "wrong difficulty adjust")
+}
+
+func TestNextDifficultyByPreviousTimespanWhenLarger(t *testing.T) {
+	diff := float64(8)
+	targetTimespan := 2 * 60 * 200
+	testTime := targetTimespan * 3
+	actual := difficulty.NextDifficultyByPreviousTimespan(uint64(testTime), diff)
+
+	assert.Equal(t, diff/3, actual, "wrong difficulty adjust")
+}
+
+func TestNextDifficultyByPreviousTimespanWhenSmaller(t *testing.T) {
+	diff := float64(8)
+	targetTimespan := 2 * 60 * 200
+	testTime := targetTimespan / 3
+	actual := difficulty.NextDifficultyByPreviousTimespan(uint64(testTime), diff)
+
+	assert.Equal(t, diff*3, actual, "wrong difficulty adjust")
 }

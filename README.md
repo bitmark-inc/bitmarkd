@@ -7,90 +7,96 @@
 
 Prerequisites
 
-* Install the go language package for your system
+* Install the go language package for the system
 * Configure environment variables for go system
 * Install the ZMQ4 and Argon2 libraries
 
+# Operating system specific setup commands
 
 ## FreeBSD
 
 ~~~~~
-pkg install libzmq4 libargon2
+pkg install libzmq4 libargon2 git
 ~~~~~
 
 ## MacOSX
 
 (be sure that homebrew is installed correctly)
-~~~~
+~~~
 brew tap bitmark-inc/bitmark
 brew install argon2
 brew install zeromq43
-~~~~
+brew install git
+~~~
 
 ## Ubuntu
 (tested on version 18.04)
 
 Install following packages
-   `sudo apt install libargon2-0-dev uuid-dev libzmq3-dev`
+
+~~~
+sudo apt install libargon2-0-dev uuid-dev libzmq3-dev git
+~~~
 
 ## Debian
 (tested on version 9)
 
-First we need to add access to testing package's repo as well as to our current version, in this case stable.
+First we need to add access to testing package's repository as well as
+to our current version, in this case stable.
+
 ~~~
-root@debian-bitmarkd:/# cat /etc/apt/sources.list.d/stable.list 
+root@debian-bitmarkd:/# cat /etc/apt/sources.list.d/stable.list
 deb     http://ftp.de.debian.org/debian/    stable main contrib non-free
 deb-src http://ftp.de.debian.org/debian/    stable main contrib non-free
 deb     http://security.debian.org/         stable/updates  main contrib non-free
 
-root@debian-bitmarkd:/# cat /etc/apt/sources.list.d/testing.list 
+root@debian-bitmarkd:/# cat /etc/apt/sources.list.d/testing.list
 deb     http://ftp.de.debian.org/debian/    testing main contrib non-free
 deb-src http://ftp.de.debian.org/debian/    testing main contrib non-free
 deb     http://security.debian.org/         testing/updates  main contrib non-free
 ~~~
 
-Now install libargon2 using the following.
+Now install libargon2 using:
 ```
 apt-get -t testing install libargon2-dev libargon2-1
 ```
 
-For the other packages, you can decide if you want install from stable or testing, both versions works:
+For the other packages, install from stable or testing, both versions work:
 ```
 apt install uuid-dev libzmq3-dev
+apt install git
 ```
 
-## To manually compile, simply:
+# Compilation commands for all operating systems
+
+To compile use use the `git` command to clone the repository and the
+`go` command to compile all commands.  The process requires that the
+Go installation be 1.12 or later as the build process uses Go Modules.
 
 ~~~~~
-go get github.com/bitmark-inc/bitmarkd
-go install -v github.com/bitmark-inc/bitmarkd/command/bitmarkd
+git clone https://github.com/bitmark-inc/bitmarkd
+cd bitmarkd
+go install -v ./...
 ~~~~~
 
-:warning: **Argon2 optimization**
+# Set up for running a node
 
-Argon2 can achieve better performance if [AVX instructions](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions) is available. But the potential optimization is not enabled if Argon2 is installed by package managers.
+Note: ensure that the `${HOME}/go/bin` directory is on the path before
+continuing.  The commands below assume that a checked out and compiled
+version of the system exists in the `${HOME}/bitmarkd` directory.
 
-To leverage AVX instructions, extra flag has to be specified during the compilation process.
+## Setup and run bitmarkd
 
-```shell
-make OPTTARGET=native
-```
-
-If AVX is not available, make sure Argon2 has no reference to AVX otherwise bitmarkd will crash.
-
-```shell
-make OPTTARGET=generic
-```
-
-# Set up
-
-Create the configuration directory, copy sample configuration, edit it to
-set up IPs, ports and local bitcoin testnet connection.
+Create the configuration directory, copy sample configuration, edit it
+to set up IP addresses, ports and local bitcoin testnet connection.
+The sample configuration has some embedded instructions for quick
+setup and only a few items near the beginning of the file need to be
+set for basic use.
 
 ~~~~~
 mkdir -p ~/.config/bitmarkd
-cp command/bitmarkd/bitmarkd.conf.sample  ~/.config/bitmarkd/bitmarkd.conf
-${EDITOR}   ~/.config/bitmarkd/bitmarkd.conf
+cp ~/bitmarkd/command/bitmarkd/bitmarkd.conf.sample  ~/.config/bitmarkd/bitmarkd.conf
+${EDITOR} ~/.config/bitmarkd/bitmarkd.conf
 ~~~~~
 
 To see the bitmarkd sub-commands:
@@ -102,9 +108,9 @@ bitmarkd --config-file="${HOME}/.config/bitmarkd/bitmarkd.conf" help
 Generate key files and certificates.
 
 ~~~~~
-bitmarkd --config-file="${HOME}/.config/bitmarkd/bitmarkd.conf" gen-peer-identity
-bitmarkd --config-file="${HOME}/.config/bitmarkd/bitmarkd.conf" gen-rpc-cert
-bitmarkd --config-file="${HOME}/.config/bitmarkd/bitmarkd.conf" gen-proof-identity
+bitmarkd --config-file="${HOME}/.config/bitmarkd/bitmarkd.conf" gen-peer-identity "${HOME}/.config/bitmarkd/
+bitmarkd --config-file="${HOME}/.config/bitmarkd/bitmarkd.conf" gen-rpc-cert "${HOME}/.config/bitmarkd/
+bitmarkd --config-file="${HOME}/.config/bitmarkd/bitmarkd.conf" gen-proof-identity "${HOME}/.config/bitmarkd/
 ~~~~~
 
 Start the program.
@@ -113,7 +119,36 @@ Start the program.
 bitmarkd --config-file="${HOME}/.config/bitmarkd/bitmarkd.conf" start
 ~~~~~
 
-Note that a similar process is needed for the prooferd (mining subsystem)
+
+## Setup and run recorderd (the mining program)
+
+This is similar to the bitmarkd steps above. For mining on the local
+bitmarkd the sample configuration should work without changes.
+
+~~~~~
+mkdir -p ~/.config/recorderd
+cp ~/bitmarkd/command/recorderd/recorderd.conf.sample  ~/.config/recorderd/recorderd.conf
+${EDITOR} ~/.config/recorderd/recorderd.conf
+~~~~~
+
+To see the recorderd sub-commands:
+
+~~~~~
+recorderd --config-file="${HOME}/.config/recorderd/recorderd.conf" help
+~~~~~
+
+Generate key files and certificates.
+
+~~~~~
+recorderd --config-file="${HOME}/.config/recorderd/recorderd.conf" generate-identity "${HOME}/.config/recorderd/
+~~~~~
+
+Start the program.
+
+~~~~~
+recorderd --config-file="${HOME}/.config/recorderd/recorderd.conf" start
+~~~~~
+
 
 # Prebuilt Binary
 
@@ -132,21 +167,21 @@ Note that a similar process is needed for the prooferd (mining subsystem)
   Link git hooks directory, run command `./scripts/setup-hook.sh` at root of bitmarkd
   directory. Currently it provides checks for two stages:
 
-  1. Before commit (`pre-commt`)
+  1. Before commit (`pre-commit`)
 
-	Runs `go lint` for every modified file(s). It shows suggestions but not
+	Runs `go lint` for every modified file. It shows suggestions but not
     necessary to follow.
 
   2. Before push to remote (`pre-push`)
 
-  	Runs `go test` for whole directory except `vendor` one. It is
-    mandatory to pass this check because generally, new modifications should not
-    break existing logic/behaviour.
+    Runs `go test` for whole directory. It is mandatory to pass this
+    check because generally, new modifications must not break existing
+    logic/behaviour.
 
     Other optional actions are `sonaqube` and `go tool vet`. These two are
     optional to follow since static code analysis just provide some advice.
 
-* all variables are camel case i.e. no underscores
+* all variables are camel case with no underscores
 * labels are all lowercase with '_' between words
 * imports and one single block
 * all break/continue must have label
