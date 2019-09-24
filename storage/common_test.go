@@ -6,6 +6,7 @@
 package storage
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -18,7 +19,17 @@ const (
 	databaseFileName = testingDirName + "/test"
 )
 
-// common test setup routines
+// Test main entrypoint
+func TestMain(m *testing.M) {
+	if err := setup(); err != nil {
+		os.Exit(1)
+	}
+	initialiseVars()
+	result := m.Run()
+	teardownTestDataAccess()
+	teardown()
+	os.Exit(result)
+}
 
 // remove all files created by test
 func removeFiles() {
@@ -26,7 +37,7 @@ func removeFiles() {
 }
 
 // configure for testing
-func setup(t *testing.T) {
+func setup() error {
 	removeFiles()
 	os.Mkdir(testingDirName, 0700)
 
@@ -47,21 +58,23 @@ func setup(t *testing.T) {
 	// open database
 	_, mustReindex, err := Initialise(databaseFileName, false)
 	if nil != err {
-		t.Fatalf("storage initialise error: %s", err)
+		return fmt.Errorf("storage initialise error: %s", err.Error())
 	}
 	if mustReindex {
 		err := ReindexDone()
 		if nil != err {
-			t.Fatalf("storage reindex done error: %s", err)
+			return fmt.Errorf("storage reindex done error: %s", err.Error())
 		}
 	}
+
+	return nil
 }
 
 // post test cleanup
-func teardown(t *testing.T) {
+func teardown() {
 	Finalise()
-	removeFiles()
 	logger.Finalise()
+	removeFiles()
 }
 
 // a string data item

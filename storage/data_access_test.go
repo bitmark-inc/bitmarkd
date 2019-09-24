@@ -61,13 +61,6 @@ func teardownTestDataAccess() {
 	removeDir(dbName)
 }
 
-func TestMain(m *testing.M) {
-	initialiseVars()
-	result := m.Run()
-	teardownTestDataAccess()
-	os.Exit(result)
-}
-
 func TestBeginShouldErrorWhenAlreadyInTransaction(t *testing.T) {
 	mc := setupDummyMockCache(t)
 	da := setupTestDataAccess(mc)

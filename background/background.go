@@ -5,6 +5,10 @@
 
 package background
 
+import (
+	"sync"
+)
+
 // the shutdown and completed type for a background
 type shutdown struct {
 	shutdown chan struct{}
@@ -13,6 +17,7 @@ type shutdown struct {
 
 // T - handle type for the stop
 type T struct {
+	sync.WaitGroup
 	s []shutdown
 }
 
@@ -30,6 +35,7 @@ type Processes []Process
 func Start(processes Processes, args interface{}) *T {
 
 	register := new(T)
+	register.WaitGroup = sync.WaitGroup{}
 	register.s = make([]shutdown, len(processes))
 
 	// start each background
@@ -38,9 +44,13 @@ func Start(processes Processes, args interface{}) *T {
 		finished := make(chan struct{})
 		register.s[i].shutdown = shutdown
 		register.s[i].finished = finished
+		register.Add(1)
 		go func(p Process, shutdown <-chan struct{}, finished chan<- struct{}) {
 			// pass the shutdown to the Run loop for shutdown signalling
-			p.Run(args, shutdown)
+			func() {
+				p.Run(args, shutdown)
+				register.Done()
+			}()
 			// flag for the stop routine to wait for shutdown
 			close(finished)
 		}(p, shutdown, finished)
@@ -59,4 +69,20 @@ func (t *T) Stop() {
 	for _, shutdown := range t.s {
 		close(shutdown.shutdown)
 	}
+}
+
+// StopAndWait will notify all processes to shutdown by closing shutdown channel
+// and wait until all processes be stopped.
+func (t *T) StopAndWait() {
+
+	if nil == t {
+		return
+	}
+
+	// trigger shutdown of all background tasks
+	for _, shutdown := range t.s {
+		close(shutdown.shutdown)
+	}
+
+	t.Wait()
 }
