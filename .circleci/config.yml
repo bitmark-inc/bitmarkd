@@ -37,9 +37,9 @@ jobs:
             go get -v -t -d ./...
             go get -v golang.org/x/lint/golint
             go get github.com/fzipp/gocyclo
-            go get -u github.com/client9/misspell/cmd/misspell
+            go get github.com/client9/misspell/cmd/misspell
             go get github.com/securego/gosec/cmd/gosec
-            go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
+            go get github.com/golangci/golangci-lint/cmd/golangci-lint
       - run:
           name: golint
           command: golint ./...
