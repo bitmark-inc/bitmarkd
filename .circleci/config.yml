@@ -34,7 +34,6 @@ jobs:
             sudo apt-get install uuid-dev libzmq3-dev
             sudo apt-get -t testing install pkg-config
             go get -v golang.org/x/lint/golint
-            go get github.com/fzipp/gocyclo
             go get github.com/client9/misspell/cmd/misspell
             go get github.com/securego/gosec/cmd/gosec
             go get github.com/golangci/golangci-lint/cmd/golangci-lint
