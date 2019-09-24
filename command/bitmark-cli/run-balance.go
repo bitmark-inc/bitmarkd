@@ -24,9 +24,16 @@ func runBalance(c *cli.Context) error {
 		return fmt.Errorf("invalid count: %d", count)
 	}
 
-	name, owner, err := checkRecipient(c.String("owner"), m.config)
+	name, owner, err := checkRecipient(c, "owner", m.config)
 	if nil != err {
-		return err
+		name = c.GlobalString("identity")
+		if "" == name {
+			name = m.config.DefaultIdentity
+		}
+		owner, err = m.config.Account(name)
+		if nil != err {
+			return err
+		}
 	}
 
 	if m.verbose {

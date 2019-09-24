@@ -1,5 +1,11 @@
 -- recorderd.conf  -*- mode: lua -*-
 
+-- This configuration file is set for local bitmarkd by default.
+--
+-- For connecting to another machine running bitmarkd adjust the
+-- parameters in the "connect" item.  Multiple connections are
+-- supported.
+
 local M = {}
 
 -- helper functions
@@ -22,16 +28,10 @@ M.data_directory = "/var/lib/recorderd"   -- absolute path
 -- the data directory
 --M.pidfile = "recorderd.pid"
 
--- select the chain of the network for peer connections
--- cross chain networking connects will not work
---M.chain = "bitmark"
---M.chain = "testing"
-M.chain = "local"
-
 -- maximum percentage of cpu computation power used for hashing
 -- counts in terms of total cpu cores, e.g. 50% of 8 cpu cores will be 4 threads utilized
 -- default: 50
--- M.max_cpu_usage = 30
+M.max_cpu_usage = 50
 
 -- schedule time recorderd runs
 -- time is denoted by hour:minute, hour is denoted in 24-hour clock format
@@ -59,31 +59,41 @@ M.peering = {
 
     -- connections to bitmarkd nodes
     connect = {
+        -- default local bitmarkd connection
         {
-            public_key = "b95fb9b64b2287378e2decd68557207229207cbac7165a483ff4a063b1de6c21",
-            blocks = "127.0.0.1:2140",
-            submit = "127.0.0.1:2141"
-        }
+            public_key = read_file("../bitmarkd/proof.public"),
+            blocks = "127.0.0.1:2138",
+            submit = "127.0.0.1:2139"
+        },
+        -- static IP connection
+        -- {
+        --     public_key = "***BITMARKD-PROOF-PUBLIC-KEY-INCLUDING-PUBLIC:-PREFIX***",
+        --     blocks = "a.b.c.d:2138",
+        --     submit = "a.b.c.d:2139"
+        -- },
     }
 }
 
 -- logging configuration
 M.logging = {
-    size = 1048576,
-    count = 20,
+    size = 131072,
+    count = 10,
+
+    -- set to true to log to console
+    console = false,
 
     -- set the logging level for various modules
     -- modules not overridden with get the value from DEFAULT
     -- the default value for DEFAULT is "critical"
     levels = {
-        DEFAULT = "info",
         -- DEFAULT = "debug",
+        -- DEFAULT = "info",
+        DEFAULT = "warn",
+        -- DEFAULT = "error",
 
-        -- data
-        mode = "debug",
-
-        -- other
-        main = "debug"
+        -- some specific logging channels: (there may be others)
+        -- mode = "info",
+        -- main = "info"
     }
 }
 

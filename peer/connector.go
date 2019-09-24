@@ -8,7 +8,6 @@ package peer
 import (
 	"bytes"
 	"container/list"
-	"encoding/hex"
 	"fmt"
 	"strings"
 	"sync"
@@ -23,6 +22,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/peer/upstream"
 	"github.com/bitmark-inc/bitmarkd/peer/voting"
 	"github.com/bitmark-inc/bitmarkd/util"
+	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
 )
 
@@ -131,7 +131,7 @@ func (conn *connector) initialise(
 				errF(wg, ch, canonicalErrF(c, err))
 				return
 			}
-			serverPublicKey, err := hex.DecodeString(c.PublicKey)
+			serverPublicKey, err := zmqutil.ReadPublicKey(c.PublicKey)
 			if nil != err {
 				log.Errorf("client[%d]=public: %q  error: %s", i, c.PublicKey, err)
 				errF(wg, ch, canonicalErrF(c, err))
@@ -395,6 +395,7 @@ func (conn *connector) runStateMachine() bool {
 			conn.nextState() // assume success
 			log.Infof("local block number: %d", height)
 
+			blockheader.ClearCache()
 			// check digests of descending blocks (to detect a fork)
 		check_digests:
 			for h := height; h >= genesis.BlockNumber; h -= 1 {

@@ -6,7 +6,6 @@
 package main
 
 import (
-	"encoding/hex"
 	"fmt"
 	"os"
 	"os/signal"
@@ -212,7 +211,7 @@ func main() {
 connection_setup:
 	for i, remote := range masterConfiguration.Peering.Connect {
 
-		serverPublicKey, err := hex.DecodeString(remote.PublicKey)
+		serverPublicKey, err := zmqutil.ReadPublicKey(remote.PublicKey)
 		if nil != err {
 			log.Warnf("client: %d invalid server publickey: %q error: %s", i, remote.PublicKey, err)
 			continue connection_setup

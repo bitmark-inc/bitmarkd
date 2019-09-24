@@ -67,6 +67,13 @@ func readConfiguration(filename string, options interface{}) error {
 
 // Identity - find identity for a given name
 func (config *Configuration) Identity(name string) (*Identity, error) {
+
+	// account names cannot be identities to prevent confusion
+	_, err := account.AccountFromBase58(name)
+	if nil == err {
+		return nil, fault.ErrInvalidIdentityName
+	}
+
 	id, ok := config.Identities[name]
 	if !ok {
 		return nil, fault.ErrIdentityNameNotFound
@@ -77,12 +84,20 @@ func (config *Configuration) Identity(name string) (*Identity, error) {
 
 // Account - find identity for a given name and convert to an account
 func (config *Configuration) Account(name string) (*account.Account, error) {
+	// check if valid account in Base58 first
+	// to prevent identifiers masquerading as accounts
+	acc, err := account.AccountFromBase58(name)
+	if nil == err {
+		return acc, nil
+	}
+
+	// otherwise lookup as an identifier
 	id, err := config.Identity(name)
 	if nil != err {
 		return nil, err
 	}
 
-	acc, err := account.AccountFromBase58(id.Account)
+	acc, err = account.AccountFromBase58(id.Account)
 
 	return acc, err
 }

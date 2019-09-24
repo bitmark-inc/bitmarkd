@@ -7,6 +7,7 @@ package main
 
 import (
 	"encoding/hex"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -23,6 +24,12 @@ import (
 func checkName(name string) (string, error) {
 	if "" == name {
 		return "", fault.ErrIdentityNameIsRequired
+	}
+
+	// account names cannot be identities to prevent confusion
+	_, err := account.AccountFromBase58(name)
+	if nil == err {
+		return "", fault.ErrInvalidIdentityName
 	}
 
 	return name, nil
@@ -180,9 +187,10 @@ func checkOwnerWithPasswordPrompt(name string, config *configuration.Configurati
 
 // recipient is required field convert to an account
 // used for any non-signing account process (e.g. provenance listing)
-func checkRecipient(recipient string, config *configuration.Configuration) (string, *account.Account, error) {
+func checkRecipient(c *cli.Context, name string, config *configuration.Configuration) (string, *account.Account, error) {
+	recipient := c.String(name)
 	if "" == recipient {
-		return "", nil, fault.ErrRecipientIsRequired
+		return "", nil, fmt.Errorf("%s is required", name)
 	}
 
 	newOwner, err := config.Account(recipient)

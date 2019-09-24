@@ -165,8 +165,6 @@ OPT() {
 
 SEP 'expect errors if here:'
 
-subs=
-
 CONFIGURE() {
   for i in ${all}
   do
@@ -185,23 +183,11 @@ CONFIGURE() {
 
     generate-bitmarkd-configuration ${opts} "${i}"
     SEP
-
-    public=$(cat "${xdg_home}/bitmarkd${i}/proof.public")
-    subs="${subs}s/%%BITMARKD_${i}%%/${public#PUBLIC:}/;"
   done
 }
 
 # first pass configure
 CONFIGURE
-
-# fixup recorderd
-for program in recorderd
-do
-  d="${xdg_home}/${program}"
-  dcf="${d}/${program}.conf"
-  [ -f "${dcf}" ] || ERROR 'missing file: %s' "${dcf}"
-  sed -E -i .bk "${subs}" "${dcf}"
-done
 
 # print out the dns items
 SEP 'configure your local DNS TXT records with the following data\n'

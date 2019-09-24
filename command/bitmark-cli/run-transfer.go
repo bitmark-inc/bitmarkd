@@ -22,7 +22,7 @@ func runTransfer(c *cli.Context) error {
 		return err
 	}
 
-	to, recipient, err := checkRecipient(c.String("receiver"), m.config)
+	to, recipient, err := checkRecipient(c, "receiver", m.config)
 	if nil != err {
 		return err
 	}
