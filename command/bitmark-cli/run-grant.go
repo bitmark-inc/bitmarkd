@@ -17,7 +17,7 @@ func runGrant(c *cli.Context) error {
 
 	m := c.App.Metadata["config"].(*metadata)
 
-	to, recipient, err := checkRecipient(c.String("receiver"), m.config)
+	to, recipient, err := checkRecipient(c, "receiver", m.config)
 	if nil != err {
 		return err
 	}

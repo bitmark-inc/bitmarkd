@@ -169,16 +169,14 @@ func (queue *BroadcastQueue) Send(command string, parameters ...[]byte) {
 	queue.index.PushBack(sum)
 
 	if queue.index.Len() > 100 {
-		e := queue.index.Front()
-		s := e.Value.(signature)
+		s := queue.index.Remove(queue.index.Front()).(signature)
 		delete(queue.cache, s)
-		queue.index.Remove(e)
 	}
 	queue.Unlock()
 
 	for _, out := range queue.out {
 
-		// check for more that one free entry
+		// check for more than one free entry
 		if len(out) < cap(out)-1 {
 			out <- m
 		} else if "block" == command {

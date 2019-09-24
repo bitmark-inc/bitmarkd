@@ -23,7 +23,7 @@ func runBlockTransfer(c *cli.Context) error {
 		return err
 	}
 
-	to, newOwner, err := checkRecipient(c.String("receiver"), m.config)
+	to, newOwner, err := checkRecipient(c, "receiver", m.config)
 	if nil != err {
 		return err
 	}

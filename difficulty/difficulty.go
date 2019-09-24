@@ -310,11 +310,11 @@ func NextDifficultyByPreviousTimespan(prevTimespanSecond uint64, currentDifficul
 }
 
 func adjustRatioByLastTimespan(actualTimespanSecond uint64) float64 {
-	if actualTimespanSecond>>2 >= adjustTimespanInSecond {
+	if actualTimespanSecond <= adjustTimespanInSecond>>2 {
 		return nextDifficultyRatioUpperbound
 	}
 
-	if actualTimespanSecond<<2 <= adjustTimespanInSecond {
+	if actualTimespanSecond >= adjustTimespanInSecond<<2 {
 		return nextDifficultyRaioLowerbound
 	}
 	return float64(adjustTimespanInSecond) / float64(actualTimespanSecond)
@@ -342,9 +342,9 @@ func prevBeginBlockWhenAtBeginOfNextTimespan(height uint64) (uint64, uint64) {
 	return uint64(firstBlock), uint64(end)
 }
 
-// Hashrate - calculate hashrate from current difficulty, round value to decimal with 3 digits
+// Hashrate - calculate hashrate from current difficulty, rounded to 3 digits
 func Hashrate() float64 {
-	zeroBitCount := math.Floor(defaultEmptyBits + math.Log2(Current.Value()))
+	zeroBitCount := defaultEmptyBits + math.Log2(Current.Value())
 	rate := math.Pow(2, zeroBitCount) / ExpectedBlockSpacingInSecond
-	return math.Floor(rate*1000) / 1000
+	return math.Floor(rate*1000+0.5) / 1000
 }

@@ -574,9 +574,9 @@ M.peering = {
 ${connections}
     -- connect = {
     --    {
-    --        public_key = "781d78a9eb338a511ae88a9be5383095ede46445596506e29ad8f022a3f8596e",
+    --        public_key = "PUBLIC:781d78a9eb338a511ae88a9be5383095ede46445596506e29ad8f022a3f8596e",
     --        address = "127.0.0.1:3136"
-    --    }
+    --    },
     -- }
 }
 

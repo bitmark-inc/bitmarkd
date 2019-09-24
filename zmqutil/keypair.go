@@ -63,7 +63,7 @@ func ReadPublicKey(key string) ([]byte, error) {
 		return []byte{}, err
 	}
 	if private {
-		return []byte{}, fault.ErrInvalidPublicKeyFile
+		return []byte{}, fault.ErrInvalidPublicKey
 	}
 	return data, err
 }
@@ -75,7 +75,7 @@ func ReadPrivateKey(key string) ([]byte, error) {
 		return []byte{}, err
 	}
 	if !private {
-		return []byte{}, fault.ErrInvalidPrivateKeyFile
+		return []byte{}, fault.ErrInvalidPrivateKey
 	}
 	return data, err
 }
@@ -89,7 +89,7 @@ func ParseKey(data string) ([]byte, bool, error) {
 			return []byte{}, false, err
 		}
 		if len(h) != privateLength {
-			return []byte{}, false, fault.ErrInvalidPrivateKeyFile
+			return []byte{}, false, fault.ErrInvalidPrivateKey
 		}
 		return h, true, nil
 	} else if strings.HasPrefix(s, taggedPublic) {
@@ -98,10 +98,10 @@ func ParseKey(data string) ([]byte, bool, error) {
 			return []byte{}, false, err
 		}
 		if len(h) != publicLength {
-			return []byte{}, false, fault.ErrInvalidPublicKeyFile
+			return []byte{}, false, fault.ErrInvalidPublicKey
 		}
 		return h, false, nil
 	}
 
-	return []byte{}, false, fault.ErrInvalidPublicKeyFile
+	return []byte{}, false, fault.ErrInvalidPublicKey
 }
