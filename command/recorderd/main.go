@@ -249,7 +249,7 @@ connection_setup:
 	}
 
 	// erase the private key from memory
-	//lint:ignore SA4006 we want to make sure we clean privateKey
+	//nolint:ignore SA4006 we want to make sure we clean privateKey
 	privateKey = []byte{}
 
 	// abort if no clients were connected
@@ -260,8 +260,7 @@ connection_setup:
 	}
 
 	// turn Signals into channel messages
-	ch := make(chan os.Signal)
-	//lint:ignore SA1017 XXX: signal.Notify should be buffered here
+	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-ch
 	log.Infof("received signal: %v", sig)

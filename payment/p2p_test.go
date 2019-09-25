@@ -39,19 +39,19 @@ func TestOnPeerBlockEarlyBlocks(t *testing.T) {
 
 	w, err := newP2pWatcher(testCurrency)
 	if err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
+		t.Fatalf("unexpected error: %s", err)
 	}
 
 	p, err := peer.NewOutboundPeer(w.peerConfig(), "127.0.0.1:12345")
 	if err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
+		t.Fatalf("unexpected error: %s", err)
 	}
 
 	blockMsg := NewDummyMsgBlock(nil, nil)
 	err = w.onPeerBlock(p, blockMsg, nil)
 
-	if err != ErrBlockTooOld {
-		t.Fatalf("error is not what we expected. expected: %s, actual: %s", ErrBlockTooOld, err)
+	if err != ErrBlockIsTooOld {
+		t.Fatalf("error is not what we expected. expected: %s, actual: %s", ErrBlockIsTooOld, err)
 	}
 }
 
@@ -60,12 +60,12 @@ func TestOnPeerBlockHeaderNotFound(t *testing.T) {
 
 	w, err := newP2pWatcher(testCurrency)
 	if err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
+		t.Fatalf("unexpected error: %s", err)
 	}
 
 	p, err := peer.NewOutboundPeer(w.peerConfig(), "127.0.0.1:12345")
 	if err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
+		t.Fatalf("unexpected error: %s", err)
 	}
 
 	now := time.Now()
@@ -83,12 +83,12 @@ func TestOnPeerBlockProcessed(t *testing.T) {
 
 	w, err := newP2pWatcher(testCurrency)
 	if err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
+		t.Fatalf("unexpected error: %s", err)
 	}
 
 	p, err := peer.NewOutboundPeer(w.peerConfig(), "127.0.0.1:12345")
 	if err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
+		t.Fatalf("unexpected error: %s", err)
 	}
 
 	checkpoint := testCurrency.ChainParam(true).Checkpoints[0]
@@ -106,8 +106,8 @@ func TestOnPeerBlockProcessed(t *testing.T) {
 
 	err = w.onPeerBlock(p, blockMsg, nil)
 
-	if err != ErrBlockProcessed {
-		t.Fatalf("error is not what we expected. expected: %s, actual: %s", ErrBlockProcessed, err)
+	if err != ErrBlockAlreadyProcessed {
+		t.Fatalf("error is not what we expected. expected: %s, actual: %s", ErrBlockAlreadyProcessed, err)
 	}
 }
 
@@ -145,7 +145,7 @@ func TestExamineTx(t *testing.T) {
 
 	w, err := newP2pWatcher(testCurrency)
 	if err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
+		t.Fatalf("unexpected error: %s", err)
 	}
 
 	b, amounts := w.examineTransaction(tx)
@@ -188,7 +188,7 @@ func TestExamineTxWithoutPayment(t *testing.T) {
 
 	w, err := newP2pWatcher(testCurrency)
 	if err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
+		t.Fatalf("unexpected error: %s", err)
 	}
 
 	b, _ := w.examineTransaction(tx)
@@ -203,12 +203,12 @@ func TestOnPeerNoHeaders(t *testing.T) {
 
 	w, err := newP2pWatcher(testCurrency)
 	if err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
+		t.Fatalf("unexpected error: %s", err)
 	}
 
 	p, err := peer.NewOutboundPeer(w.peerConfig(), "127.0.0.1:12345")
 	if err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
+		t.Fatalf("unexpected error: %s", err)
 	}
 
 	headers := wire.NewMsgHeaders()
@@ -218,8 +218,8 @@ func TestOnPeerNoHeaders(t *testing.T) {
 	g.Go(func() error { return <-w.onHeadersErr })
 	w.onPeerHeaders(p, headers)
 
-	if err := g.Wait(); err != ErrNoNewHeader {
-		t.Fatalf("unexpected error. expect: %s, actual: %s", ErrNoNewHeader.Error(), err)
+	if err := g.Wait(); err != ErrNoNewBlockHeadersFromPeer {
+		t.Fatalf("unexpected error. expect: %s, actual: %s", ErrNoNewBlockHeadersFromPeer, err)
 	}
 }
 
@@ -228,7 +228,7 @@ func TestOnPeerAllOldHeaders(t *testing.T) {
 
 	w, err := newP2pWatcher(testCurrency)
 	if err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
+		t.Fatalf("unexpected error: %s", err)
 	}
 
 	fakeHeader1 := wire.NewBlockHeader(1, &chainhash.Hash{}, &chainhash.Hash{}, 1, 1)
@@ -237,10 +237,10 @@ func TestOnPeerAllOldHeaders(t *testing.T) {
 	fakeHash2 := fakeHeader2.BlockHash()
 
 	if err := w.storage.StoreBlock(1, &fakeHash1); err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
+		t.Fatalf("unexpected error: %s", err)
 	}
 	if err := w.storage.StoreBlock(2, &fakeHash2); err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
+		t.Fatalf("unexpected error: %s", err)
 	}
 
 	w.lastHash = &fakeHash2
@@ -248,7 +248,7 @@ func TestOnPeerAllOldHeaders(t *testing.T) {
 
 	p, err := peer.NewOutboundPeer(w.peerConfig(), "127.0.0.1:12345")
 	if err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
+		t.Fatalf("unexpected error: %s", err)
 	}
 
 	headers := wire.NewMsgHeaders()
@@ -259,8 +259,8 @@ func TestOnPeerAllOldHeaders(t *testing.T) {
 	g.Go(func() error { return <-w.onHeadersErr })
 	w.onPeerHeaders(p, headers)
 
-	if err := g.Wait(); err != ErrNoNewHeader {
-		t.Fatalf("unexpected error. expect: %s, actual: %s", ErrNoNewHeader.Error(), err)
+	if err := g.Wait(); err != ErrNoNewBlockHeadersFromPeer {
+		t.Fatalf("unexpected error. expect: %s, actual: %s", ErrNoNewBlockHeadersFromPeer, err)
 	}
 }
 
@@ -269,7 +269,7 @@ func TestOnPeerInvalidPrevious(t *testing.T) {
 
 	w, err := newP2pWatcher(testCurrency)
 	if err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
+		t.Fatalf("unexpected error: %s", err)
 	}
 
 	fakeHeader1 := wire.NewBlockHeader(1, &chainhash.Hash{}, &chainhash.Hash{}, 1, 1)
@@ -280,7 +280,7 @@ func TestOnPeerInvalidPrevious(t *testing.T) {
 	fakeHeader2 := wire.NewBlockHeader(1, wrongPrevHash, &chainhash.Hash{}, 1, 1)
 
 	if err := w.storage.StoreBlock(1, &fakeHash1); err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
+		t.Fatalf("unexpected error: %s", err)
 	}
 
 	w.lastHash = &fakeHash1
@@ -288,7 +288,7 @@ func TestOnPeerInvalidPrevious(t *testing.T) {
 
 	p, err := peer.NewOutboundPeer(w.peerConfig(), "127.0.0.1:12345")
 	if err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
+		t.Fatalf("unexpected error: %s", err)
 	}
 
 	headers := wire.NewMsgHeaders()
@@ -299,8 +299,8 @@ func TestOnPeerInvalidPrevious(t *testing.T) {
 	g.Go(func() error { return <-w.onHeadersErr })
 	w.onPeerHeaders(p, headers)
 
-	if err := g.Wait(); err != ErrHashRecordInconsistency {
-		t.Fatalf("unexpected error. expect: %s, actual: %s", ErrHashRecordInconsistency.Error(), err)
+	if err := g.Wait(); err != ErrMissingPreviousBlockHeader {
+		t.Fatalf("unexpected error. expect: %s, actual: %s", ErrMissingPreviousBlockHeader, err)
 	}
 }
 
@@ -309,7 +309,7 @@ func TestRollbackToHeight(t *testing.T) {
 
 	w, err := newP2pWatcher(testCurrency)
 	if err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
+		t.Fatalf("unexpected error: %s", err)
 	}
 
 	fakeHeader1 := wire.NewBlockHeader(99997997, &chainhash.Hash{}, &chainhash.Hash{}, 1, 1)
@@ -322,17 +322,17 @@ func TestRollbackToHeight(t *testing.T) {
 	w.lastHeight = 99999997
 
 	if err := w.storage.StoreBlock(99997997, &fakeHash1); err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
+		t.Fatalf("unexpected error: %s", err)
 	}
 	if err := w.storage.StoreBlock(99997998, &fakeHash2); err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
+		t.Fatalf("unexpected error: %s", err)
 	}
 	if err := w.storage.StoreBlock(99997999, &fakeHash3); err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
+		t.Fatalf("unexpected error: %s", err)
 	}
 
 	if err := w.rollbackBlock(); err != nil {
-		t.Fatalf("unexpected error. expected nil, actual: %s", err.Error())
+		t.Fatalf("unexpected error. expected nil, actual: %s", err)
 	}
 
 	if w.lastHeight != 99997997 {
