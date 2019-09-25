@@ -49,6 +49,7 @@ var (
 	ErrCryptoFailed                          = processError("crypto failed")
 	ErrCurrencyAddressIsRequired             = invalidError("currency address is required")
 	ErrCurrencyIsNotSupportedByProofer       = invalidError("currency is not supported by proofer")
+	ErrDatabaseIsNotSet                      = notFoundError("database is not set")
 	ErrDataInconsistent                      = validationError("data inconsistent")
 	ErrDescriptionIsRequired                 = invalidError("description is required")
 	ErrDoubleTransferAttempt                 = invalidError("double transfer attempt")
