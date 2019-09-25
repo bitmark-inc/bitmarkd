@@ -330,7 +330,7 @@ func main() {
 
 	// turn Signals into channel messages
 	ch := make(chan os.Signal)
-	//lint:ignore SA1017 signal.Notify could be buffered here
+	//nolint:ignore SA1017 signal.Notify could be buffered here
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-ch
 	log.Infof("received signal: %v", sig)
