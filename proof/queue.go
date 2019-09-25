@@ -19,17 +19,18 @@ import (
 
 // PublishedItem - to send to proofer
 type PublishedItem struct {
-	Job    string
-	Header blockrecord.Header
-	TxZero []byte
-	TxIds  []merkle.Digest
+	Job    string             `json:"job"`
+	Header blockrecord.Header `json:"header"`
+	TxZero []byte             `json:"txZero"`
+	TxIds  []merkle.Digest    `json:"txIds"`
 }
 
 // SubmittedItem - received from the proofer
 type SubmittedItem struct {
-	Request string
-	Job     string
-	Packed  []byte
+	Request string `json:"request"`
+	Job     string `json:"job"`
+	Packed  []byte `json:"packed"`
+	//***** FIX THIS: add for miner generated TxZero  []byte `json:"txZero"`
 }
 
 type entryType struct {

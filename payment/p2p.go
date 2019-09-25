@@ -1,4 +1,5 @@
-// Copyright (c) 2014-2018 Bitmark Inc.
+// SPDX-License-Identifier: ISC
+// Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -37,14 +38,13 @@ const PaymentExpiry = 12 * time.Hour
 const HeaderSyncTimeout = time.Minute
 
 var (
-	ErrNoNewHeader             = errors.New("no new block headers from peer")
-	ErrHashRecordInconsistency = errors.New("missing previous block header")
-	ErrTimeoutWaitHeader       = errors.New("timed out waiting for the block header data")
-	ErrProcessStopping         = errors.New("process is going to stop")
-
-	ErrBlockHeaderNotFound = errors.New("the header of the block is not found")
-	ErrBlockTooOld         = errors.New("the block is too old")
-	ErrBlockProcessed      = errors.New("the block has already processed")
+	ErrNoNewBlockHeadersFromPeer  = errors.New("no new block headers from peer")
+	ErrMissingPreviousBlockHeader = errors.New("missing previous block header")
+	ErrTimeoutWaitingForHeader    = errors.New("timeout waiting for block header")
+	ErrProcessStopping            = errors.New("process stopping")
+	ErrBlockHeaderNotFound        = errors.New("block header not found")
+	ErrBlockIsTooOld              = errors.New("block is too old")
+	ErrBlockAlreadyProcessed      = errors.New("block already processed")
 )
 
 // p2pWatcher is a watcher that sync with bitcoin / litecoin blockchain by its peer to peer protocol.
@@ -206,7 +206,7 @@ func (w *p2pWatcher) syncHeaderFromPeer(p *peer.Peer) error {
 		}
 	case <-time.After(HeaderSyncTimeout):
 		w.log.Warnf("Timed out waiting for the block header data")
-		return ErrTimeoutWaitHeader
+		return ErrTimeoutWaitingForHeader
 	}
 
 	return nil
@@ -297,7 +297,7 @@ func (w *p2pWatcher) sync() {
 			default:
 				if err != nil {
 					switch err {
-					case ErrNoNewHeader:
+					case ErrNoNewBlockHeadersFromPeer:
 						if p.LastBlock() < w.lastHeight {
 							p.Disconnect()
 						} else {
@@ -307,7 +307,7 @@ func (w *p2pWatcher) sync() {
 								return
 							}
 						}
-					case ErrHashRecordInconsistency:
+					case ErrMissingPreviousBlockHeader:
 						w.log.Warnf("Incorrect block data: %s", err)
 						break SYNC_LOOP
 					case ErrProcessStopping:
@@ -341,16 +341,18 @@ func (w *p2pWatcher) Run(args interface{}, shutdown <-chan struct{}) {
 	w.addrManager.Start()
 
 	// add peer address by dns seed
+outer:
 	for _, seed := range w.networkParams.DNSSeeds {
 		ips, err := net.LookupIP(seed.Host)
 		if err != nil {
 			w.log.Warnf("Fail to look up ip from DNS. Error: %s", err)
-			continue
+			continue outer
 		}
+	inner:
 		for i, ip := range ips {
 			// use DNS seed as a peer up to half of target outbound peer amounts
 			if i > MaximumOutboundPeers/2 {
-				break
+				break inner
 			}
 			if err := w.addrManager.AddAddressByIP(net.JoinHostPort(ip.String(), w.networkParams.DefaultPort)); err != nil {
 				w.log.Warnf("Can not add an IP into address manager. Error: %s", err)
@@ -410,18 +412,19 @@ func (w *p2pWatcher) StopAndWait() {
 // Note: This is not a perfect random mechanism. But what we need is
 // to have a way to have chances to get peers from different sources.
 func (w *p2pWatcher) getPeer() *peer.Peer {
+loop:
 	for {
 		p := w.connectedPeers.First()
 		if p == nil {
 			time.Sleep(time.Second)
-			continue
+			continue loop
 		}
 
 		if w.lastHeight-p.LastBlock() > 100 {
 			p.Disconnect()
 			w.log.Tracef("Disconnect out-date peer: %s", p.Addr())
 			time.Sleep(time.Second)
-			continue
+			continue loop
 		}
 
 		return p
@@ -479,7 +482,7 @@ func (w *p2pWatcher) onPeerHeaders(p *peer.Peer, msg *wire.MsgHeaders) {
 	}()
 
 	if len(msg.Headers) == 0 {
-		headersErr = ErrNoNewHeader
+		headersErr = ErrNoNewBlockHeadersFromPeer
 		return
 	}
 
@@ -487,12 +490,13 @@ func (w *p2pWatcher) onPeerHeaders(p *peer.Peer, msg *wire.MsgHeaders) {
 	var newHash chainhash.Hash
 	var firstNewHeight, newHeight int32
 
+loop:
 	for _, h := range msg.Headers {
 		newHash = h.BlockHash()
 
 		if !w.isNewHeader(&newHash) {
 			w.log.Tracef("Omit the same hash: %s", newHash)
-			continue
+			continue loop
 		}
 
 		hasNewHeader = true
@@ -503,13 +507,13 @@ func (w *p2pWatcher) onPeerHeaders(p *peer.Peer, msg *wire.MsgHeaders) {
 		prevHeight, err := w.storage.GetHeight(&h.PrevBlock)
 		if err != nil || prevHeight == 0 {
 			p.Disconnect()
-			headersErr = ErrHashRecordInconsistency
+			headersErr = ErrMissingPreviousBlockHeader
 			return
 		}
 		prevHash, err := w.storage.GetHash(prevHeight)
 		if err != nil || !reflect.DeepEqual(prevHash.CloneBytes(), h.PrevBlock.CloneBytes()) {
 			p.Disconnect()
-			headersErr = ErrHashRecordInconsistency
+			headersErr = ErrMissingPreviousBlockHeader
 			return
 		}
 
@@ -527,7 +531,7 @@ func (w *p2pWatcher) onPeerHeaders(p *peer.Peer, msg *wire.MsgHeaders) {
 
 	// check if there is any new headers at this processing
 	if !hasNewHeader {
-		headersErr = ErrNoNewHeader
+		headersErr = ErrNoNewBlockHeadersFromPeer
 		return
 	}
 
@@ -571,6 +575,7 @@ func (w *p2pWatcher) examineTransaction(tx *wire.MsgTx) ([]byte, map[string]uint
 	var id []byte
 	amounts := map[string]uint64{}
 
+loop:
 	for _, txout := range tx.TxOut {
 		// if script starts with `6a30`, the rest of bytes would be a potential payment id
 		index := bytes.Index(txout.PkScript, []byte{106, 48})
@@ -579,12 +584,12 @@ func (w *p2pWatcher) examineTransaction(tx *wire.MsgTx) ([]byte, map[string]uint
 		} else {
 			s, err := txscript.ParsePkScript(txout.PkScript)
 			if err != nil {
-				continue
+				continue loop
 			}
 
 			addr, err := s.Address(w.networkParams)
 			if err != nil {
-				continue
+				continue loop
 			}
 			amounts[addr.String()] = uint64(txout.Value)
 		}
@@ -599,7 +604,7 @@ func (w *p2pWatcher) onPeerBlock(p *peer.Peer, msg *wire.MsgBlock, buf []byte) e
 	blockHash := msg.BlockHash().String()
 
 	if time.Since(msg.Header.Timestamp) > PaymentExpiry {
-		return ErrBlockTooOld
+		return ErrBlockIsTooOld
 	}
 
 	hash := msg.BlockHash()
@@ -609,7 +614,7 @@ func (w *p2pWatcher) onPeerBlock(p *peer.Peer, msg *wire.MsgBlock, buf []byte) e
 	}
 
 	if _, found := w.blockCache.Get(blockHash); found {
-		return ErrBlockProcessed
+		return ErrBlockAlreadyProcessed
 	}
 
 	for _, tx := range msg.Transactions {

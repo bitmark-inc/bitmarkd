@@ -47,7 +47,6 @@ var versionKey = []byte{0x00, 'V', 'E', 'R', 'S', 'I', 'O', 'N'}
 const (
 	currentBlockDBVersion = 0x301
 	currentIndexDBVersion = 0x200
-	ErrEmptyTransaction   = "Empty Transaction"
 )
 
 // holds the database handle
