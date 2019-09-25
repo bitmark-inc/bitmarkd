@@ -59,12 +59,12 @@ func (bitmark *BlockOwner) TxIdForBlock(info *TxIdForBlockArguments, reply *TxId
 		return fault.ErrBlockNotFound
 	}
 
-	header, digest, _, err := blockrecord.ExtractHeader(packedBlock, 0)
+	header, digest, _, err := blockrecord.ExtractHeader(packedBlock, 0, false)
 	if nil != err {
 		return err
 	}
 
-	reply.TxId = blockrecord.FoundationTxId(header, digest)
+	reply.TxId = blockrecord.FoundationTxId(header.Number, digest)
 
 	return nil
 }
