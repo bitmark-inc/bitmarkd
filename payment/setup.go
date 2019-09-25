@@ -27,10 +27,10 @@ const (
 
 // Configuration - structure for configuration file
 type Configuration struct {
-	UseDiscovery bool                    `gluamapper:"use_discovery" hcl:"use_discovery" json:"use_discovery"`
-	Discovery    *discoveryConfiguration `gluamapper:"discovery" hcl:"discovery" json:"discovery"`
-	Bitcoin      *currencyConfiguration  `gluamapper:"bitcoin" hcl:"bitcoin" json:"bitcoin"`
-	Litecoin     *currencyConfiguration  `gluamapper:"litecoin" hcl:"litecoin" json:"litecoin"`
+	Mode      string                  `gluamapper:"mode" hcl:"mode" json:"mode"`
+	Discovery *discoveryConfiguration `gluamapper:"discovery" hcl:"discovery" json:"discovery"`
+	Bitcoin   *currencyConfiguration  `gluamapper:"bitcoin" hcl:"bitcoin" json:"bitcoin"`
+	Litecoin  *currencyConfiguration  `gluamapper:"litecoin" hcl:"litecoin" json:"litecoin"`
 }
 
 type discoveryConfiguration struct {
@@ -70,22 +70,25 @@ func Initialise(configuration *Configuration) error {
 
 	// initialise the handler for each currency
 	globalData.handlers = make(map[string]currencyHandler)
-	for c := currency.First; c <= currency.Last; c++ {
-		switch c {
-		case currency.Bitcoin:
-			handler, err := newBitcoinHandler(configuration.UseDiscovery, configuration.Bitcoin)
-			if err != nil {
-				return err
+	if configuration.Mode != "p2p" {
+		useDiscovery := configuration.Mode == "discovery"
+		for c := currency.First; c <= currency.Last; c++ {
+			switch c {
+			case currency.Bitcoin:
+				handler, err := newBitcoinHandler(useDiscovery, configuration.Bitcoin)
+				if err != nil {
+					return err
+				}
+				globalData.handlers[currency.Bitcoin.String()] = handler
+			case currency.Litecoin:
+				handler, err := newLitecoinHandler(useDiscovery, configuration.Litecoin)
+				if err != nil {
+					return err
+				}
+				globalData.handlers[currency.Litecoin.String()] = handler
+			default: // only fails if new module not correctly installed
+				logger.Panicf("missing payment initialiser for Currency: %s", c.String())
 			}
-			globalData.handlers[currency.Bitcoin.String()] = handler
-		case currency.Litecoin:
-			handler, err := newLitecoinHandler(configuration.UseDiscovery, configuration.Litecoin)
-			if err != nil {
-				return err
-			}
-			globalData.handlers[currency.Litecoin.String()] = handler
-		default: // only fails if new module not correctly installed
-			logger.Panicf("missing payment initialiser for Currency: %s", c.String())
 		}
 	}
 
@@ -93,16 +96,32 @@ func Initialise(configuration *Configuration) error {
 	globalData.log.Info("start background…")
 
 	processes := background.Processes{}
-	if configuration.UseDiscovery {
+
+	switch configuration.Mode {
+	case "p2p":
+		globalData.log.Info("p2p watcher…")
+
+		btcP2pWatcher, err := newP2pWatcher(currency.Bitcoin)
+		if err != nil {
+			return err
+		}
+		ltcP2pWatcher, err := newP2pWatcher(currency.Litecoin)
+		if err != nil {
+			return err
+		}
+		processes = append(processes, btcP2pWatcher, ltcP2pWatcher)
+	case "discovery":
 		globalData.log.Info("discovery…")
 		discoverer, err := newDiscoverer(configuration.Discovery.SubEndpoint, configuration.Discovery.ReqEndpoint)
 		if err != nil {
 			return err
 		}
 		processes = append(processes, discoverer)
-	} else {
+	case "rest":
 		globalData.log.Info("checker…")
 		processes = append(processes, &checker{})
+	default:
+		logger.Panicf("unsupported payment verification mode: %s", configuration.Mode)
 	}
 
 	// all data initialised
@@ -124,7 +143,7 @@ func Finalise() error {
 	globalData.log.Flush()
 
 	// stop background
-	globalData.background.Stop()
+	globalData.background.StopAndWait()
 
 	// finally...
 	globalData.initialised = false

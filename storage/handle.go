@@ -17,6 +17,7 @@ import (
 type Handle interface {
 	Begin()
 	Commit() error
+	Empty() bool
 	Get([]byte) []byte
 	GetN([]byte) (uint64, bool)
 	GetNB([]byte) (uint64, []byte)
@@ -180,4 +181,9 @@ func (p *PoolHandle) Begin() {
 
 func (p *PoolHandle) Commit() error {
 	return p.dataAccess.Commit()
+}
+
+// Empty - check if struct is empty
+func (p *PoolHandle) Empty() bool {
+	return nil == p || 0 == p.prefix
 }

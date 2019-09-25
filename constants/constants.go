@@ -16,7 +16,7 @@ const (
 
 // the time for looking back at old payments when starting up
 const (
-	OldPaymentTime = 24 * time.Hour
+	OldPaymentTime = 5 * 24 * time.Hour
 )
 
 // the maximum time before unverified asset is expired

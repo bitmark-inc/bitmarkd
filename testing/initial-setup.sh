@@ -1,13 +1,15 @@
 #!/bin/sh
 # generate all LOCAL bitmarkd configuration configurations
 
+# do not change these defaults (use bm-tester.conf to override
 all=$(seq 1 12)
 console='1 2 8'
 more='1 2 8'
+recorderd_public=no
 
-# to setup the DNS TXT records
+# to setup the DNS TXT records (can be set by bm-tester.conf)
+nodes_domain=''
 dns_txt='1 2'
-
 
 ERROR() {
   printf 'error: '
@@ -61,7 +63,28 @@ CHECK_PROGRAM() {
 
 # main program
 
-[ -n "${1}" ] && nodes_domain="${1}"
+
+# if a config override is in the current directory
+cfg=bm-tester.conf
+if [ -f "${cfg}" ]
+then
+  printf 'using configuration override: %s\n' "${cfg}"
+  sleep 2
+  . "${cfg}"
+fi
+
+# possible to re-override nodes-domain from command-line
+if [ -n "${1}" ]
+then
+  old_nd="${nodes_domain}"
+  nodes_domain="${1}"
+  if [ -n "${old_nd}" -a X"${old_nd}" != "${nodes_domain}" ]
+  then
+    printf 'command-line override: %s (was: %s}\n' "${nodes_domain}" "${old_nd}"
+    sleep 2
+  fi
+fi
+
 [ -z "${nodes_domain}" ] && ERROR 'missing nodes-domain argument'
 
 xdg_home="${XDG_CONFIG_HOME}"
@@ -142,8 +165,6 @@ OPT() {
 
 SEP 'expect errors if here:'
 
-subs=
-
 CONFIGURE() {
   for i in ${all}
   do
@@ -156,28 +177,17 @@ CONFIGURE() {
     OPT --discovery="${xdg_home}/discovery"
     OPT "$@"
     OPT --update
+    [ X"${recorderd_public}" = X"yes" ] && OPT --recorderd-public
     [ X"${console}" = X"yes" ] && OPT --console
     [ X"${more}" = X"yes" ] && OPT --more
 
     generate-bitmarkd-configuration ${opts} "${i}"
     SEP
-
-    public=$(cat "${xdg_home}/bitmarkd${i}/proof.public")
-    subs="${subs}s/%%BITMARKD_${i}%%/${public#PUBLIC:}/;"
   done
 }
 
 # first pass configure
 CONFIGURE
-
-# fixup recorderd
-for program in recorderd
-do
-  d="${xdg_home}/${program}"
-  dcf="${d}/${program}.conf"
-  [ -f "${dcf}" ] || ERROR 'missing file: %s' "${dcf}"
-  sed -E -i .bk "${subs}" "${dcf}"
-done
 
 # print out the dns items
 SEP 'configure your local DNS TXT records with the following data\n'

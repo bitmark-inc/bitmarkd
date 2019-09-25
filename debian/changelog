@@ -1,3 +1,66 @@
+bitmarkd (0.11.5-1) unstable; urgency=medium
+
+  * changes to difficulty calculation
+
+ -- Christopher Hall <hsw@bitmark.com>  Wed, 18 Sep 2019 08:06:45 +0000
+
+bitmarkd (0.11.4-1) unstable; urgency=medium
+
+  * fix for difficulty calculation
+
+ -- Christopher Hall <hsw@bitmark.com>  Mon, 16 Sep 2019 01:13:26 +0000
+
+bitmarkd (0.11.3-1) unstable; urgency=medium
+
+  * make release version
+
+ -- Christopher Hall <hsw@bitmark.com>  Thu, 12 Sep 2019 02:22:21 +0000
+
+bitmarkd (0.11.3-beta.1-1) unstable; urgency=medium
+
+  * updated configuration files
+  * cli identifier/account detection update
+
+ -- Christopher Hall <hsw@bitmark.com>  Wed, 11 Sep 2019 05:23:19 +0000
+
+bitmarkd (0.11.2-1) unstable; urgency=medium
+
+  * make release version
+
+ -- Christopher Hall <hsw@bitmark.com>  Tue, 10 Sep 2019 02:44:04 +0000
+
+bitmarkd (0.11.2-beta.1-1) unstable; urgency=medium
+
+  * new sample configs that have better defaults
+  * fix save/restore announce data error
+  * allow recorderd to read bitmarkd/proof.public directly
+
+ -- Christopher Hall <hsw@bitmark.com>  Mon, 09 Sep 2019 08:53:52 +0000
+
+bitmarkd (0.11.1-1) unstable; urgency=medium
+
+  * reduce disk activity on getting block hash
+
+ -- Christopher Hall <hsw@bitmark.com>  Mon, 09 Sep 2019 01:13:09 +0000
+
+bitmarkd (0.11.0-1) unstable; urgency=medium
+
+  * make the release version
+
+ -- Christopher Hall <hsw@bitmark.com>  Tue, 03 Sep 2019 02:15:59 +0000
+
+bitmarkd (0.11.0-rc.3-1) unstable; urgency=medium
+
+  * longer time for old coin payments
+
+ -- Christopher Hall <hsw@bitmark.com>  Mon, 02 Sep 2019 03:26:05 +0000
+
+bitmarkd (0.11.0-rc.2-1) unstable; urgency=medium
+
+  * problem with block version need to increase again
+
+ -- Christopher Hall <hsw@bitmark.com>  Thu, 08 Aug 2019 06:48:48 +0000
+
 bitmarkd (0.11.0-rc.1-1) unstable; urgency=medium
 
   * some minor test script fixes

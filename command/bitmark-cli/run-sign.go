@@ -74,7 +74,7 @@ func runVerify(c *cli.Context) error {
 		return err
 	}
 
-	from, owner, err := checkRecipient(c.String("owner"), m.config)
+	from, owner, err := checkRecipient(c, "owner", m.config)
 	if nil != err {
 		return err
 	}

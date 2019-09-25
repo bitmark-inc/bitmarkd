@@ -27,7 +27,7 @@ type PackedBlock []byte
 
 // currently supported block version (used by proofer)
 const (
-	Version                    = 3
+	Version                    = 5
 	MinimumVersion             = 1
 	MinimumBlockNumber         = 2 // 1 => genesis block
 	MinimumDifficultyBaseBlock = 3
@@ -120,19 +120,28 @@ func ExtractHeader(block []byte, checkHeight uint64, skipDigest bool) (*Header, 
 		return header, blockdigest.Digest{}, block[totalBlockSize:], nil
 	}
 
-	var digest blockdigest.Digest
-	if storage.Pool.BlockHeaderHash != nil {
-		thisBlockNumberKey := make([]byte, 8)
-		binary.BigEndian.PutUint64(thisBlockNumberKey, header.Number)
-		digestBytes := storage.Pool.BlockHeaderHash.Get(thisBlockNumberKey)
-		if err := blockdigest.DigestFromBytes(&digest, digestBytes); err != nil {
-			digest = blockdigest.NewDigest(packedHeader[:])
-		}
-	} else {
-		digest = blockdigest.NewDigest(packedHeader[:])
+	thisBlockNumberKey := make([]byte, 8)
+	binary.BigEndian.PutUint64(thisBlockNumberKey, header.Number)
+	digest := DigestFromHashPool(storage.Pool.BlockHeaderHash, thisBlockNumberKey)
+	if !digest.IsEmpty() {
+		return header, digest, block[totalBlockSize:], nil
 	}
 
+	digest = blockdigest.NewDigest(packedHeader[:])
+
 	return header, digest, block[totalBlockSize:], nil
+}
+
+// DigestFromHashPool - get digest from hash pool
+func DigestFromHashPool(pool storage.Handle, blockNumber []byte) blockdigest.Digest {
+	var digest blockdigest.Digest
+	if !pool.Empty() {
+		digestBytes := pool.Get(blockNumber)
+		if err := blockdigest.DigestFromBytes(&digest, digestBytes); err == nil {
+			return digest
+		}
+	}
+	return blockdigest.Digest{}
 }
 
 // ComputeHeaderHash - return the hash of a block's header
