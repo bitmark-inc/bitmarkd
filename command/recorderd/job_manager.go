@@ -52,20 +52,17 @@ func newJobManager(calendar JobCalendar, proofer Proofer, rescheduleChannel <-ch
 func (j *JobManagerData) waitForRefresh() {
 	j.log.Info("waiting to reschedule events")
 	//lint:ignore S1000 XXX: We should use for range here
-	for {
-		select {
-		case <-j.channels.rescheduleChannel:
-			j.log.Debug("receive reschedule event")
-			if j.initialized {
-				j.resetAllEvent()
-			} else {
-				j.initialized = true
-				now := time.Now()
-				j.calendar.RescheduleStartEventsPrior(now)
-				j.calendar.RescheduleStopEventsPrior(now)
-			}
-			j.reschedule()
+	for range j.channels.rescheduleChannel {
+		j.log.Debug("receive reschedule event")
+		if j.initialized {
+			j.resetAllEvent()
+		} else {
+			j.initialized = true
+			now := time.Now()
+			j.calendar.RescheduleStartEventsPrior(now)
+			j.calendar.RescheduleStopEventsPrior(now)
 		}
+		j.reschedule()
 	}
 	// j.log.Info("stop...")
 }
