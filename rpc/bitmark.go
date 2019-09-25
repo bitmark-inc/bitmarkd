@@ -200,7 +200,7 @@ loop:
 			}
 
 			record, _ := transactionrecord.RecordName(assetTx)
-			h := ProvenanceRecord{
+			h = ProvenanceRecord{
 				Record:  record,
 				IsOwner: false,
 				TxId:    nil,
