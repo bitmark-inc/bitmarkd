@@ -55,7 +55,7 @@ func (blk *blockstore) process(item *messagebus.Message) {
 
 	if 1 == len(item.Parameters) {
 		packedBlock := item.Parameters[0]
-		err := StoreIncoming(packedBlock, RescanVerified)
+		err := StoreIncoming(packedBlock, nil, RescanVerified)
 		if nil == err {
 			// broadcast this packedBlock to peers if the block was valid
 			messagebus.Bus.Broadcast.Send("block", packedBlock)

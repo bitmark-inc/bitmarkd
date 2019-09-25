@@ -287,7 +287,7 @@ func main() {
 	}
 
 	// start up the peering background processes
-	err = peer.Initialise(&masterConfiguration.Peering, version)
+	err = peer.Initialise(&masterConfiguration.Peering, version, masterConfiguration.Fastsync)
 	if nil != err {
 		log.Criticalf("peer initialise error: %s", err)
 		exitwithstatus.Message("peer initialise error: %s", err)

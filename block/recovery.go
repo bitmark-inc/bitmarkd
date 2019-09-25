@@ -53,5 +53,5 @@ func doRecovery() error {
 }
 
 func recoverRecord(key []byte, value []byte) error {
-	return StoreIncoming(value, NoRescanVerified)
+	return StoreIncoming(value, nil, NoRescanVerified)
 }

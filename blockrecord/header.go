@@ -96,7 +96,7 @@ func Finalise() {
 // ExtractHeader - extract a header from the front of a []byte
 // if checkHeight non-zero then verify correct block number first
 // to reduce hashing load for obviously incorrect blocks
-func ExtractHeader(block []byte, checkHeight uint64) (*Header, blockdigest.Digest, []byte, error) {
+func ExtractHeader(block []byte, checkHeight uint64, skipDigest bool) (*Header, blockdigest.Digest, []byte, error) {
 	if len(block) < totalBlockSize {
 		return nil, blockdigest.Digest{}, nil, fault.ErrInvalidBlockHeaderSize
 	}
@@ -114,6 +114,10 @@ func ExtractHeader(block []byte, checkHeight uint64) (*Header, blockdigest.Diges
 			log.Errorf("check height %d, incoming block height %d, error: %s", checkHeight, header.Number, err)
 			return nil, blockdigest.Digest{}, nil, err
 		}
+	}
+
+	if skipDigest {
+		return header, blockdigest.Digest{}, block[totalBlockSize:], nil
 	}
 
 	thisBlockNumberKey := make([]byte, 8)
@@ -225,9 +229,9 @@ func (header *Header) Pack() PackedHeader {
 
 // FoundationTxId - create the transaction id for a foundation record
 // its TxId is sha3-256 . concat blockDigest leBlockNumberUint64
-func FoundationTxId(header *Header, digest blockdigest.Digest) merkle.Digest {
+func FoundationTxId(blockNumber uint64, digest blockdigest.Digest) merkle.Digest {
 	leBlockNumber := make([]byte, 8)
-	binary.LittleEndian.PutUint64(leBlockNumber, header.Number)
+	binary.LittleEndian.PutUint64(leBlockNumber, blockNumber)
 	return merkle.NewDigest(append(digest[:], leBlockNumber...))
 }
 
@@ -337,7 +341,7 @@ func timestampOfBlock(height uint64) (uint64, error) {
 		return uint64(0), fault.ErrBlockNotFound
 	}
 
-	header, _, _, err := ExtractHeader(packed, 0)
+	header, _, _, err := ExtractHeader(packed, 0, true)
 	if err != nil {
 		return uint64(0), err
 	}
@@ -354,7 +358,7 @@ func difficultyOfBlock(height uint64) (float64, error) {
 		return float64(0), fault.ErrBlockNotFound
 	}
 
-	header, _, _, err := ExtractHeader(packed, 0)
+	header, _, _, err := ExtractHeader(packed, 0, true)
 	if err != nil {
 		return float64(0), err
 	}

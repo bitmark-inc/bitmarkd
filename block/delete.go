@@ -42,7 +42,7 @@ func DeleteDownToBlock(finalBlockNumber uint64) error {
 
 outer_loop:
 	for {
-		header, digest, data, err := blockrecord.ExtractHeader(packedBlock, 0)
+		header, digest, data, err := blockrecord.ExtractHeader(packedBlock, 0, false)
 		if nil != err {
 			log.Criticalf("failed to unpack block: %d from storage  error: %s", binary.BigEndian.Uint64(last.Key), err)
 			return err
@@ -369,7 +369,7 @@ outer_loop:
 		binary.BigEndian.PutUint64(blockNumberKey, header.Number)
 
 		// block ownership remove
-		foundationTxId := blockrecord.FoundationTxId(header, digest)
+		foundationTxId := blockrecord.FoundationTxId(header.Number, digest)
 		trx.Delete(storage.Pool.Transactions, foundationTxId[:])
 		if nil == blockOwner {
 			trx.Abort()

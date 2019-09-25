@@ -70,6 +70,7 @@ type Configuration struct {
 	PidFile       string       `gluamapper:"pidfile" json:"pidfile"`
 	Chain         string       `gluamapper:"chain" json:"chain"`
 	Nodes         string       `gluamapper:"nodes" json:"nodes"`
+	Fastsync      bool         `gluamapper:"fast_sync" json:"fast_sync"`
 	Database      DatabaseType `gluamapper:"database" json:"database"`
 
 	PeerFile      string `gluamapper:"peer_file" json:"peer_file"`

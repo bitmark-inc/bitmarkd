@@ -252,7 +252,7 @@ func checkAssembly(t *testing.T, title string, source SourceData, gDigest blockd
 	}
 
 	// unpack the block header
-	unpackedHeader, _, _, err := blockrecord.ExtractHeader(blk, genesis.BlockNumber)
+	unpackedHeader, _, _, err := blockrecord.ExtractHeader(blk, genesis.BlockNumber, true)
 	if nil != err {
 		t.Fatalf("unpack block header failed: error: %s", err)
 	}
