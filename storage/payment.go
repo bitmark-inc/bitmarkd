@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: ISC
+// Copyright (c) 2014-2019 Bitmark Inc.
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
 package storage
 
 import (
@@ -8,11 +13,8 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/syndtr/goleveldb/leveldb"
 
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/logger"
-)
-
-var (
-	ErrDatabaseNotSet = errors.New("database is not set")
 )
 
 var CheckpointKey = []byte("checkpoint")
@@ -44,7 +46,7 @@ func (p *PaymentTable) prefixKey(key []byte) []byte {
 // store a key/value bytes pair to the database
 func (p *PaymentTable) Put(key []byte, value []byte) error {
 	if nil == p.database {
-		return ErrDatabaseNotSet
+		return fault.ErrDatabaseIsNotSet
 	}
 	return p.database.Put(p.prefixKey(key), value, nil)
 }
@@ -52,7 +54,7 @@ func (p *PaymentTable) Put(key []byte, value []byte) error {
 // remove a key from the database
 func (p *PaymentTable) Delete(key []byte) error {
 	if nil == p.database {
-		return ErrDatabaseNotSet
+		return fault.ErrDatabaseIsNotSet
 	}
 	return p.database.Delete(p.prefixKey(key), nil)
 }
