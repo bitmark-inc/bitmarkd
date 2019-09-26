@@ -6,8 +6,6 @@
 package voting
 
 import (
-	"fmt"
-
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/peer/upstream"
@@ -156,11 +154,11 @@ func (v *VotingImpl) countVotes() error {
 	)
 
 	if nil == v.result.winner {
-		return fmt.Errorf("%s", fault.ErrVotesEmptyWinner)
+		return fault.VotesWithEmptyWinner
 	}
 
 	if !v.sufficientVotes() {
-		return fmt.Errorf("%s", fault.ErrVotesInsufficient)
+		return fault.VotesInsufficient
 	}
 
 	return nil
@@ -207,11 +205,11 @@ func (v *VotingImpl) drawElection() (upstream.UpstreamIntf, uint64, error) {
 
 func (v *VotingImpl) drawWinner() (upstream.UpstreamIntf, error) {
 	if 0 == v.result.highestNumVotes {
-		return nil, fault.ErrVotesZeroCount
+		return nil, fault.VotesWithZeroCount
 	}
 
 	if uint64(0) == v.result.majorityHeight {
-		return nil, fault.ErrVotesZeroHeight
+		return nil, fault.VotesWithZeroHeight
 	}
 	v.log.Debug("start to decide which is best winner")
 	candidates := v.sameVoteCandidates(v.result.highestNumVotes)

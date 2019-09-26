@@ -45,7 +45,7 @@ loop:
 		}
 		buffer, err := getBinaryBlock(n)
 		if nil != err {
-			if started && fault.ErrBlockNotFound == err {
+			if started && fault.BlockNotFound == err {
 				break loop
 			}
 			return err
@@ -86,7 +86,7 @@ func getBinaryBlock(number uint64) ([]byte, error) {
 
 	packed := storage.Pool.Blocks.Get(n)
 	if nil == packed {
-		return nil, fault.ErrBlockNotFound
+		return nil, fault.BlockNotFound
 	}
 	return packed, nil
 }

@@ -85,12 +85,12 @@ type invalid struct {
 
 // Invalid account
 var testInvalidAccountFromBase58 = []invalid{
-	{"3gLJjLSociTmf4kgL3ztUK;tgADFvg9yjXt1jFbEx9KgpEEAFn", fault.ErrCannotDecodeAccount}, // invalid base58 string
-	{"anF8SWxSRY5vnN3Bbyz9buRYW1hfCAAZxfbv8Fw9SFXaktvLDj", fault.ErrChecksumMismatch},    // checksum mismatch
-	{"WjbRFkA9dhmMKnKTuufZ1sVD4E4H1NRnsmwjMKNHHRSCvDm5bXPV", fault.ErrInvalidKeyType},    // undefined key algorithm
-	{"YqVxD4vazrrnxnLH2MzCHJedPPz1VKHnKbVfya39nF96ABAYes", fault.ErrNotPublicKey},        // private key
-	{"anF8SWxSRY5vnN3Bbyz9buRYW1hfCAAZxfbv8Fw9SFXaktvLC", fault.ErrNotPublicKey},         // truncated
-	{"nF8SWxSRY5vnN3Bbyz9buRYW1hfCAAZxfbv8Fw9SFXaktvLCj", fault.ErrNotPublicKey},         // truncated
+	{"3gLJjLSociTmf4kgL3ztUK;tgADFvg9yjXt1jFbEx9KgpEEAFn", fault.CannotDecodeAccount}, // invalid base58 string
+	{"anF8SWxSRY5vnN3Bbyz9buRYW1hfCAAZxfbv8Fw9SFXaktvLDj", fault.ChecksumMismatch},    // checksum mismatch
+	{"WjbRFkA9dhmMKnKTuufZ1sVD4E4H1NRnsmwjMKNHHRSCvDm5bXPV", fault.InvalidKeyType},    // undefined key algorithm
+	{"YqVxD4vazrrnxnLH2MzCHJedPPz1VKHnKbVfya39nF96ABAYes", fault.NotPublicKey},        // private key
+	{"anF8SWxSRY5vnN3Bbyz9buRYW1hfCAAZxfbv8Fw9SFXaktvLC", fault.NotPublicKey},         // truncated
+	{"nF8SWxSRY5vnN3Bbyz9buRYW1hfCAAZxfbv8Fw9SFXaktvLCj", fault.NotPublicKey},         // truncated
 }
 
 // show manually created accounts

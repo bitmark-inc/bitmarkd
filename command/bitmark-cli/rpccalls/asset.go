@@ -97,7 +97,7 @@ func (client *Client) MakeAsset(assetConfig *AssetData) (*AssetResult, error) {
 
 	// pack without signature
 	packed, err := r.Pack(registrant)
-	if fault.ErrInvalidSignature != err {
+	if fault.InvalidSignature != err {
 		return nil, err
 	}
 

@@ -50,14 +50,14 @@ func (payid PayId) MarshalText() ([]byte, error) {
 // UnmarshalText - convert hex text into a pay id
 func (payid *PayId) UnmarshalText(s []byte) error {
 	if len(*payid) != hex.DecodedLen(len(s)) {
-		return fault.ErrNotAPayId
+		return fault.NotAPayId
 	}
 	byteCount, err := hex.Decode(payid[:], s)
 	if nil != err {
 		return err
 	}
 	if len(payid) != byteCount {
-		return fault.ErrNotAPayId
+		return fault.NotAPayId
 	}
 	return nil
 }

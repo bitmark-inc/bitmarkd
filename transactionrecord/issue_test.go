@@ -157,7 +157,7 @@ func TestPackTenBitmarkIssues(t *testing.T) {
 		rs[i] = r
 
 		partial, err := r.Pack(issuerAccount)
-		if fault.ErrInvalidSignature != err {
+		if fault.InvalidSignature != err {
 			if nil != partial {
 				t.Errorf("partial packed:\n%s", util.FormatBytes("expected", partial))
 			}
@@ -203,7 +203,7 @@ func TestPackBitmarkIssueWithZeroAccount(t *testing.T) {
 	if nil == err {
 		t.Fatalf("pack should have failed")
 	}
-	if fault.ErrInvalidOwnerOrRegistrant != err {
+	if fault.InvalidOwnerOrRegistrant != err {
 		t.Fatalf("unexpected pack error: %s", err)
 	}
 }

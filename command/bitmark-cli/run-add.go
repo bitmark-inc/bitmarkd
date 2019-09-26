@@ -66,7 +66,7 @@ func runAdd(c *cli.Context) error {
 		}
 
 	} else {
-		return fault.ErrIncompatibleOptions
+		return fault.IncompatibleOptions
 	}
 
 	// require configuration update

@@ -51,7 +51,7 @@ func (share *Share) Create(bmfr *transactionrecord.BitmarkShare, reply *ShareCre
 	log.Infof("Share.Create: %+v", bmfr)
 
 	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
+		return fault.NotAvailableDuringSynchronise
 	}
 
 	// save transfer/check for duplicate
@@ -113,23 +113,23 @@ func (share *Share) Balance(arguments *ShareBalanceArguments, reply *ShareBalanc
 	log.Infof("Share.Balance: %+v", arguments)
 
 	if nil == arguments || nil == arguments.Owner {
-		return fault.ErrInvalidItem
+		return fault.InvalidItem
 	}
 
 	count := arguments.Count
 	if count <= 0 {
-		return fault.ErrInvalidCount
+		return fault.InvalidCount
 	}
 	if count > maximumBitmarksCount {
 		count = maximumBitmarksCount
 	}
 
 	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
+		return fault.NotAvailableDuringSynchronise
 	}
 
 	if arguments.Owner.IsTesting() != mode.IsTesting() {
-		return fault.ErrWrongNetworkForPublicKey
+		return fault.WrongNetworkForPublicKey
 	}
 
 	result, err := reservoir.ShareBalance(arguments.Owner, arguments.ShareId, arguments.Count)
@@ -165,23 +165,23 @@ func (share *Share) Grant(arguments *transactionrecord.ShareGrant, reply *ShareG
 	log.Infof("Share.Grant: %+v", arguments)
 
 	if nil == arguments || nil == arguments.Owner || nil == arguments.Recipient {
-		return fault.ErrInvalidItem
+		return fault.InvalidItem
 	}
 
 	if arguments.Quantity < 1 {
-		return fault.ErrShareQuantityTooSmall
+		return fault.ShareQuantityTooSmall
 	}
 
 	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
+		return fault.NotAvailableDuringSynchronise
 	}
 
 	if arguments.Owner.IsTesting() != mode.IsTesting() {
-		return fault.ErrWrongNetworkForPublicKey
+		return fault.WrongNetworkForPublicKey
 	}
 
 	if arguments.Recipient.IsTesting() != mode.IsTesting() {
-		return fault.ErrWrongNetworkForPublicKey
+		return fault.WrongNetworkForPublicKey
 	}
 
 	// save transfer/check for duplicate
@@ -238,23 +238,23 @@ func (share *Share) Swap(arguments *transactionrecord.ShareSwap, reply *ShareSwa
 	log.Infof("Share.Swap: %+v", arguments)
 
 	if nil == arguments || nil == arguments.OwnerOne || nil == arguments.OwnerTwo {
-		return fault.ErrInvalidItem
+		return fault.InvalidItem
 	}
 
 	if arguments.QuantityOne < 1 || arguments.QuantityTwo < 1 {
-		return fault.ErrShareQuantityTooSmall
+		return fault.ShareQuantityTooSmall
 	}
 
 	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
+		return fault.NotAvailableDuringSynchronise
 	}
 
 	if arguments.OwnerOne.IsTesting() != mode.IsTesting() {
-		return fault.ErrWrongNetworkForPublicKey
+		return fault.WrongNetworkForPublicKey
 	}
 
 	if arguments.OwnerTwo.IsTesting() != mode.IsTesting() {
-		return fault.ErrWrongNetworkForPublicKey
+		return fault.WrongNetworkForPublicKey
 	}
 
 	// save transfer/check for duplicate

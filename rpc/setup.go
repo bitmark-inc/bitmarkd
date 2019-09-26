@@ -95,7 +95,7 @@ func Initialise(rpcConfiguration *RPCConfiguration, httpsConfiguration *HTTPSCon
 
 	// no need to start if already started
 	if globalData.initialised {
-		return fault.ErrAlreadyInitialised
+		return fault.AlreadyInitialised
 	}
 
 	log := logger.New("rpc")
@@ -122,7 +122,7 @@ func Initialise(rpcConfiguration *RPCConfiguration, httpsConfiguration *HTTPSCon
 func Finalise() error {
 
 	if !globalData.initialised {
-		return fault.ErrNotInitialised
+		return fault.NotInitialised
 	}
 
 	globalData.log.Info("shutting down…")
@@ -146,16 +146,16 @@ func initialiseRPC(configuration *RPCConfiguration, version string) error {
 
 	if configuration.MaximumConnections <= 0 {
 		log.Errorf("invalid %s maximum connection limit: %d", name, configuration.MaximumConnections)
-		return fault.ErrMissingParameters
+		return fault.MissingParameters
 	}
 	if configuration.Bandwidth <= 1000000 { // fail if < 1Mbps
 		log.Errorf("invalid %s bandwidth: %d bps < 1Mbps", name, configuration.Bandwidth)
-		return fault.ErrMissingParameters
+		return fault.MissingParameters
 	}
 
 	if 0 == len(configuration.Listen) {
 		log.Errorf("missing %s listen", name)
-		return fault.ErrMissingParameters
+		return fault.MissingParameters
 	}
 
 	// create limiter
@@ -221,7 +221,7 @@ func initialiseHTTPS(configuration *HTTPSConfiguration, version string) error {
 
 	if configuration.MaximumConnections <= 0 {
 		log.Errorf("invalid %s maximum connection limit: %d", name, configuration.MaximumConnections)
-		return fault.ErrMissingParameters
+		return fault.MissingParameters
 	}
 
 	tlsConfiguration, fingerprint, err := getCertificate(globalData.log, name, configuration.Certificate, configuration.PrivateKey)

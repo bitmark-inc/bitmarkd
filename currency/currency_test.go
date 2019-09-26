@@ -66,7 +66,7 @@ func TestInvalidString(t *testing.T) {
 
 		var c currency.Currency
 		n, err := fmt.Sscan(test, &c)
-		if fault.ErrInvalidCurrency != err {
+		if fault.InvalidCurrency != err {
 			t.Fatalf("%d: string to currency error: %s", index, err)
 		}
 

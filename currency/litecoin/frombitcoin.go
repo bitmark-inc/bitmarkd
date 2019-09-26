@@ -36,7 +36,7 @@ func FromBitcoin(address string) (string, error) {
 	case bitcoin.TestnetScript:
 		ltcVersion = TestnetScript
 	default:
-		return "", fault.ErrInvalidBitcoinAddress
+		return "", fault.InvalidBitcoinAddress
 	}
 
 	ltc := append([]byte{byte(ltcVersion)}, addressBytes[:]...)

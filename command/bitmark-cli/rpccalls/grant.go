@@ -70,7 +70,7 @@ func (client *Client) Grant(grantConfig *GrantData) (*GrantSingleSignedReply, er
 		return nil, err
 	}
 	if nil == grant {
-		return nil, fault.ErrMakeGrantFailed
+		return nil, fault.MakeGrantFailed
 	}
 
 	client.printJson("Grant Request", grant)
@@ -135,8 +135,8 @@ func makeGrantOneSignature(testnet bool, shareId merkle.Digest, quantity uint64,
 	// pack without signature
 	packed, err := r.Pack(ownerAccount)
 	if nil == err {
-		return nil, nil, fault.ErrMakeGrantFailed
-	} else if fault.ErrInvalidSignature != err {
+		return nil, nil, fault.MakeGrantFailed
+	} else if fault.InvalidSignature != err {
 		return nil, nil, err
 	}
 
@@ -147,8 +147,8 @@ func makeGrantOneSignature(testnet bool, shareId merkle.Digest, quantity uint64,
 	// include first signature by packing again
 	packed, err = r.Pack(ownerAccount)
 	if nil == err {
-		return nil, nil, fault.ErrMakeGrantFailed
-	} else if fault.ErrInvalidSignature != err {
+		return nil, nil, fault.MakeGrantFailed
+	} else if fault.InvalidSignature != err {
 		return nil, nil, err
 	}
 	return packed, &r, nil

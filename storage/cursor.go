@@ -48,10 +48,10 @@ var one = big.NewInt(1)
 // Fetch - return some elements starting from key
 func (cursor *FetchCursor) Fetch(count int) ([]Element, error) {
 	if nil == cursor {
-		return nil, fault.ErrInvalidCursor
+		return nil, fault.InvalidCursor
 	}
 	if count <= 0 {
-		return nil, fault.ErrInvalidCount
+		return nil, fault.InvalidCount
 	}
 
 	if nil == cursor.pool.dataAccess {
@@ -104,7 +104,7 @@ iterating:
 // Map - run a function on all elements in the range
 func (cursor *FetchCursor) Map(f func(key []byte, value []byte) error) error {
 	if nil == cursor {
-		return fault.ErrInvalidCursor
+		return fault.InvalidCursor
 	}
 
 	if nil == cursor.pool.dataAccess {

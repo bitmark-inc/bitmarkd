@@ -28,11 +28,11 @@ const (
 // separate files
 func MakeKeyPair(publicKeyFileName string, privateKeyFileName string) error {
 	if util.EnsureFileExists(publicKeyFileName) {
-		return fault.ErrKeyFileAlreadyExists
+		return fault.KeyFileAlreadyExists
 	}
 
 	if util.EnsureFileExists(privateKeyFileName) {
-		return fault.ErrKeyFileAlreadyExists
+		return fault.KeyFileAlreadyExists
 	}
 
 	// keys are encoded in in Z85 (ZeroMQ Base-85 Encoding) see: http://rfc.zeromq.org/spec:32
@@ -63,7 +63,7 @@ func ReadPublicKey(key string) ([]byte, error) {
 		return []byte{}, err
 	}
 	if private {
-		return []byte{}, fault.ErrInvalidPublicKey
+		return []byte{}, fault.InvalidPublicKey
 	}
 	return data, err
 }
@@ -75,7 +75,7 @@ func ReadPrivateKey(key string) ([]byte, error) {
 		return []byte{}, err
 	}
 	if !private {
-		return []byte{}, fault.ErrInvalidPrivateKey
+		return []byte{}, fault.InvalidPrivateKey
 	}
 	return data, err
 }
@@ -89,7 +89,7 @@ func ParseKey(data string) ([]byte, bool, error) {
 			return []byte{}, false, err
 		}
 		if len(h) != privateLength {
-			return []byte{}, false, fault.ErrInvalidPrivateKey
+			return []byte{}, false, fault.InvalidPrivateKey
 		}
 		return h, true, nil
 	} else if strings.HasPrefix(s, taggedPublic) {
@@ -98,10 +98,10 @@ func ParseKey(data string) ([]byte, bool, error) {
 			return []byte{}, false, err
 		}
 		if len(h) != publicLength {
-			return []byte{}, false, fault.ErrInvalidPublicKey
+			return []byte{}, false, fault.InvalidPublicKey
 		}
 		return h, false, nil
 	}
 
-	return []byte{}, false, fault.ErrInvalidPublicKey
+	return []byte{}, false, fault.InvalidPublicKey
 }

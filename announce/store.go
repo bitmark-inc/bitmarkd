@@ -46,7 +46,7 @@ func (item *PeerItem) UnmarshalText(data []byte) error {
 
 	publicKeyLength, publicKeyOffset := util.ClippedVarint64(b[n:], 1, 8192)
 	if 0 == publicKeyOffset || 32 != publicKeyLength {
-		return fault.ErrNotPublicKey
+		return fault.NotPublicKey
 	}
 	publicKey := make([]byte, publicKeyLength)
 	n += publicKeyOffset
@@ -57,7 +57,7 @@ func (item *PeerItem) UnmarshalText(data []byte) error {
 
 	ll := listenerLength / 19
 	if 0 == listenerOffset || ll < 1 || ll > 2 {
-		return fault.ErrInvalidIpAddress
+		return fault.InvalidIpAddress
 	}
 	listener := make([]byte, listenerLength)
 	n += listenerOffset
@@ -66,7 +66,7 @@ func (item *PeerItem) UnmarshalText(data []byte) error {
 
 	timestamp, timestampLength := util.FromVarint64(b[n:])
 	if 0 == timestampLength {
-		return fault.ErrInvalidTimestamp
+		return fault.InvalidTimestamp
 	}
 
 	item.PublicKey = publicKey

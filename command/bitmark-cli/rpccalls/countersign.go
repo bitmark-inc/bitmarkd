@@ -56,6 +56,6 @@ func (client *Client) Countersign(countersignConfig *CountersignData) (interface
 		return client.CountersignSwap(tx)
 
 	default:
-		return nil, fault.ErrNotACountersignableRecord
+		return nil, fault.NotACountersignableRecord
 	}
 }

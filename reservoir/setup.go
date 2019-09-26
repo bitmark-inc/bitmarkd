@@ -130,7 +130,7 @@ func Initialise(reservoirDataFile string) error {
 
 	// no need to start if already started
 	if globalData.initialised {
-		return fault.ErrAlreadyInitialised
+		return fault.AlreadyInitialised
 	}
 
 	globalData.log = logger.New("reservoir")
@@ -181,7 +181,7 @@ func Initialise(reservoirDataFile string) error {
 func Finalise() error {
 
 	if !globalData.initialised {
-		return fault.ErrNotInitialised
+		return fault.NotInitialised
 	}
 
 	globalData.log.Info("shutting down…")

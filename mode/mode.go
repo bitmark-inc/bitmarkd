@@ -44,7 +44,7 @@ func Initialise(chainName string) error {
 
 	// no need to start if already started
 	if globalData.initialised {
-		return fault.ErrAlreadyInitialised
+		return fault.AlreadyInitialised
 	}
 
 	globalData.log = logger.New("mode")
@@ -63,7 +63,7 @@ func Initialise(chainName string) error {
 		globalData.testing = true
 	default:
 		globalData.log.Criticalf("mode cannot handle chain: '%s'", chainName)
-		return fault.ErrInvalidChain
+		return fault.InvalidChain
 	}
 
 	// all data initialised
@@ -76,7 +76,7 @@ func Initialise(chainName string) error {
 func Finalise() error {
 
 	if !globalData.initialised {
-		return fault.ErrNotInitialised
+		return fault.NotInitialised
 	}
 
 	globalData.log.Info("shutting down…")

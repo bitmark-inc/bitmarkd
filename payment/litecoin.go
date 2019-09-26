@@ -160,7 +160,7 @@ func newLitecoinState(url string) (*litecoinState, error) {
 	}
 
 	if !mode.IsTesting() && chain.Chain != "main" {
-		return nil, fault.ErrInvalidChain
+		return nil, fault.InvalidChain
 	}
 
 	return &litecoinState{

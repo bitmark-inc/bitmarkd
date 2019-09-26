@@ -47,15 +47,15 @@ func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransferCou
 	log.Infof("Bitmark.Transfer: %+v", transfer)
 
 	if nil == arguments || nil == arguments.Owner {
-		return fault.ErrInvalidItem
+		return fault.InvalidItem
 	}
 
 	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
+		return fault.NotAvailableDuringSynchronise
 	}
 
 	if arguments.Owner.IsTesting() != mode.IsTesting() {
-		return fault.ErrWrongNetworkForPublicKey
+		return fault.WrongNetworkForPublicKey
 	}
 
 	// for unratified transfers

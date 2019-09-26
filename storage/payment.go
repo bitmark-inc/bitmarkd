@@ -6,7 +6,6 @@
 package storage
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 
@@ -46,7 +45,7 @@ func (p *PaymentTable) prefixKey(key []byte) []byte {
 // store a key/value bytes pair to the database
 func (p *PaymentTable) Put(key []byte, value []byte) error {
 	if nil == p.database {
-		return fault.ErrDatabaseIsNotSet
+		return fault.DatabaseIsNotSet
 	}
 	return p.database.Put(p.prefixKey(key), value, nil)
 }
@@ -54,7 +53,7 @@ func (p *PaymentTable) Put(key []byte, value []byte) error {
 // remove a key from the database
 func (p *PaymentTable) Delete(key []byte) error {
 	if nil == p.database {
-		return fault.ErrDatabaseIsNotSet
+		return fault.DatabaseIsNotSet
 	}
 	return p.database.Delete(p.prefixKey(key), nil)
 }
@@ -125,7 +124,7 @@ func (l *LevelDBPaymentStore) Table(tableName string) *PaymentTable {
 // GetHeight returns height for a specific hash
 func (l *LevelDBPaymentStore) GetHeight(hash *chainhash.Hash) (int32, error) {
 	if hash == nil {
-		return 0, errors.New("hash can not be nil")
+		return 0, fault.HashCannotBeNil
 	}
 
 	heightByte := l.Table("hash").Get(hash.CloneBytes())
@@ -151,7 +150,7 @@ func (l *LevelDBPaymentStore) GetCheckpoint() (*chainhash.Hash, error) {
 func (l *LevelDBPaymentStore) SetCheckpoint(height int32) error {
 	hash := l.Table("height").Get([]byte(fmt.Sprintf("%08x", height)))
 	if hash == nil {
-		return errors.New("block height is not found")
+		return fault.BlockHeightNotFound
 	}
 
 	return l.Table("hash").Put(CheckpointKey, hash)
@@ -161,7 +160,7 @@ func (l *LevelDBPaymentStore) SetCheckpoint(height int32) error {
 func (l *LevelDBPaymentStore) GetHash(height int32) (*chainhash.Hash, error) {
 	b := l.Table("height").Get([]byte(fmt.Sprintf("%08x", height)))
 	if b == nil {
-		return nil, errors.New("hash not found")
+		return nil, fault.HashNotFound
 	}
 	return chainhash.NewHash(b)
 }
@@ -180,7 +179,7 @@ func (l *LevelDBPaymentStore) StoreBlock(height int32, hash *chainhash.Hash) err
 // RollbackTo deletes blocks from a block down a another
 func (l *LevelDBPaymentStore) RollbackTo(deleteFrom, deleteTo int32) error {
 	if deleteFrom <= deleteTo {
-		return errors.New("incorrect range to blocks to rollback")
+		return fault.IncorrectBlockRangeToRollback
 	}
 	for i := deleteFrom; i > deleteTo; i-- {
 		l.log.Debugf("Delete block: %d", i)

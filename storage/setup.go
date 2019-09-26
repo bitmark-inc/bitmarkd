@@ -83,7 +83,7 @@ func Initialise(database string, readOnly bool) (bool, bool, error) {
 	mustReindex := false
 
 	if nil != poolData.dbBlocks {
-		return mustMigrate, mustReindex, fault.ErrAlreadyInitialised
+		return mustMigrate, mustReindex, fault.AlreadyInitialised
 	}
 
 	defer func() {

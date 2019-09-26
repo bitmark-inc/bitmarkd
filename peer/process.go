@@ -32,7 +32,7 @@ func processSubscription(log *logger.L, command string, arguments [][]byte) {
 		}
 		log.Infof("received block: %x", arguments[0])
 		if !mode.Is(mode.Normal) {
-			err := fault.ErrNotAvailableDuringSynchronise
+			err := fault.NotAvailableDuringSynchronise
 			log.Debugf("failed assets: error: %s", err)
 		} else {
 			messagebus.Bus.Blockstore.Send("remote", arguments[0])
@@ -130,11 +130,11 @@ func processSubscription(log *logger.L, command string, arguments [][]byte) {
 func processAssets(packed []byte) error {
 
 	if 0 == len(packed) {
-		return fault.ErrMissingParameters
+		return fault.MissingParameters
 	}
 
 	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
+		return fault.NotAvailableDuringSynchronise
 	}
 
 	ok := false
@@ -155,14 +155,14 @@ func processAssets(packed []byte) error {
 			}
 
 		default:
-			return fault.ErrTransactionIsNotAnAsset
+			return fault.TransactionIsNotAnAsset
 		}
 		packed = packed[n:]
 	}
 
 	// all items were duplicates
 	if !ok {
-		return fault.ErrNoNewTransactions
+		return fault.NoNewTransactions
 	}
 	return nil
 }
@@ -171,11 +171,11 @@ func processAssets(packed []byte) error {
 func processIssues(packed []byte) error {
 
 	if 0 == len(packed) {
-		return fault.ErrMissingParameters
+		return fault.MissingParameters
 	}
 
 	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
+		return fault.NotAvailableDuringSynchronise
 	}
 
 	packedIssues := transactionrecord.Packed(packed)
@@ -193,12 +193,12 @@ func processIssues(packed []byte) error {
 			issues = append(issues, tx)
 			issueCount += 1
 		default:
-			return fault.ErrTransactionIsNotAnIssue
+			return fault.TransactionIsNotAnIssue
 		}
 		packedIssues = packedIssues[n:]
 	}
 	if 0 == len(issues) {
-		return fault.ErrMissingParameters
+		return fault.MissingParameters
 	}
 
 	_, duplicate, err := reservoir.StoreIssues(issues)
@@ -207,7 +207,7 @@ func processIssues(packed []byte) error {
 	}
 
 	if duplicate {
-		return fault.ErrTransactionAlreadyExists
+		return fault.TransactionAlreadyExists
 	}
 
 	return nil
@@ -217,11 +217,11 @@ func processIssues(packed []byte) error {
 func processTransfer(packed []byte) error {
 
 	if 0 == len(packed) {
-		return fault.ErrMissingParameters
+		return fault.MissingParameters
 	}
 
 	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
+		return fault.NotAvailableDuringSynchronise
 	}
 
 	transaction, _, err := transactionrecord.Packed(packed).Unpack(mode.IsTesting())
@@ -246,7 +246,7 @@ func processTransfer(packed []byte) error {
 			_, duplicate, err = reservoir.StoreSwap(tx)
 
 		default:
-			return fault.ErrTransactionIsNotATransfer
+			return fault.TransactionIsNotATransfer
 		}
 	}
 
@@ -255,7 +255,7 @@ func processTransfer(packed []byte) error {
 	}
 
 	if duplicate {
-		return fault.ErrTransactionAlreadyExists
+		return fault.TransactionAlreadyExists
 	}
 
 	return nil
@@ -265,17 +265,17 @@ func processTransfer(packed []byte) error {
 func processProof(packed []byte) error {
 
 	if 0 == len(packed) {
-		return fault.ErrMissingParameters
+		return fault.MissingParameters
 	}
 
 	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
+		return fault.NotAvailableDuringSynchronise
 	}
 
 	var payId pay.PayId
 	nonceLength := len(packed) - len(payId) // could be negative
 	if nonceLength < payment.MinimumNonceLength || nonceLength > payment.MaximumNonceLength {
-		return fault.ErrInvalidNonce
+		return fault.InvalidNonce
 	}
 
 	copy(payId[:], packed[:len(payId)])
@@ -283,7 +283,7 @@ func processProof(packed []byte) error {
 	status := reservoir.TryProof(payId, nonce)
 	if reservoir.TrackingAccepted != status {
 		// pay id already processed or was invalid
-		return fault.ErrPayIdAlreadyUsed
+		return fault.PayIdAlreadyUsed
 	}
 
 	return nil

@@ -63,7 +63,7 @@ func validateTxOwnerRecords(txId merkle.Digest, owner *account.Account) error {
 	txIdFromList := storage.Pool.OwnerList.Get(ownerListKey)
 
 	if !reflect.DeepEqual(txIdFromList[:], txId[:]) {
-		return fault.ErrDataInconsistent
+		return fault.DataInconsistent
 	}
 	return nil
 }
@@ -76,7 +76,7 @@ func validateBlockOwnerRecord(txId merkle.Digest, payments currency.Map) error {
 
 	if len(blockNumberKey) == 0 {
 		globalData.log.Error("ownership is not indexed")
-		return fault.ErrOwnershipIsNotIndexed
+		return fault.OwnershipIsNotIndexed
 	}
 
 	packedPayment, err := payments.Pack(mode.IsTesting())
@@ -88,7 +88,7 @@ func validateBlockOwnerRecord(txId merkle.Digest, payments currency.Map) error {
 	globalData.log.Debugf("validate whether the payment info identical. txId: %s", txId)
 	if !reflect.DeepEqual(storage.Pool.BlockOwnerPayment.Get(blockNumberKey[:]), packedPayment) {
 		globalData.log.Error("payment info data is not consistent")
-		return fault.ErrDataInconsistent
+		return fault.DataInconsistent
 	}
 	return nil
 }
@@ -149,7 +149,7 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 			globalData.log.Debugf("validate whether the foundation transaction indexed. foundationTxId: %s", foundationTxId)
 			if !storage.Pool.Transactions.Has(foundationTxId[:]) {
 				globalData.log.Error("foundation tx is not indexed")
-				return fault.ErrTransactionIsNotIndexed
+				return fault.TransactionIsNotIndexed
 			}
 
 			if _, ok := priorBlockOwnerTxs[foundationTxId.String()]; !ok {
@@ -165,13 +165,13 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 			globalData.log.Debugf("validate whether the owner transaction indexed. txId: %s", txId)
 			if !storage.Pool.Transactions.Has(txId[:]) {
 				globalData.log.Error("tx is not indexed")
-				return fault.ErrTransactionIsNotIndexed
+				return fault.TransactionIsNotIndexed
 			}
 
 			globalData.log.Debugf("validate whether the previous ownership deleted. txId: %s", txId)
 			if storage.Pool.BlockOwnerTxIndex.Has(tx.Link[:]) {
 				globalData.log.Error("ownership is not deleted")
-				return fault.ErrPreviousOwnershipWasNotDeleted
+				return fault.PreviousOwnershipWasNotDeleted
 			}
 
 			if _, ok := priorBlockOwnerTxs[txId.String()]; !ok {
@@ -190,13 +190,13 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 			assetId := tx.AssetId()
 			if !storage.Pool.Assets.Has(assetId[:]) {
 				globalData.log.Error("asset is not indexed")
-				return fault.ErrAssetIsNotIndexed
+				return fault.AssetIsNotIndexed
 			}
 		case *transactionrecord.BitmarkIssue:
 			globalData.log.Debugf("validate whether the issue transaction indexed. txId: %s", txId)
 			if !storage.Pool.Transactions.Has(txId[:]) {
 				globalData.log.Error("tx is not indexed")
-				return fault.ErrTransactionIsNotIndexed
+				return fault.TransactionIsNotIndexed
 			}
 
 			if _, ok := priorTxOwnerTxs[txId.String()]; !ok {
@@ -211,12 +211,12 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 			globalData.log.Debugf("validate whether the transfer transaction indexed. txId: %s", txId)
 			if !storage.Pool.Transactions.Has(txId[:]) {
 				globalData.log.Error("tx is not indexed")
-				return fault.ErrTransactionIsNotIndexed
+				return fault.TransactionIsNotIndexed
 			}
 
 			globalData.log.Debugf("validate whether the prior transaction wiped out. txId: %s", txId)
 			if !isTxWipedOut(tx.GetLink()) {
-				return fault.ErrPreviousTransactionWasNotDeleted
+				return fault.PreviousTransactionWasNotDeleted
 			}
 
 			if _, ok := priorTxOwnerTxs[txId.String()]; !ok && nil != tx.GetOwner() {
@@ -234,11 +234,11 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 			globalData.log.Debugf("validate whether the share transaction indexed. txId: %s", txId)
 			if !storage.Pool.Transactions.Has(txId[:]) {
 				globalData.log.Error("tx is not indexed")
-				return fault.ErrTransactionIsNotIndexed
+				return fault.TransactionIsNotIndexed
 			}
 		default:
 			globalData.log.Errorf("unexpected transaction record: %+v", tx)
-			return fault.ErrUnexpectedTransactionRecord
+			return fault.UnexpectedTransactionRecord
 		}
 		data = data[n:]
 	}
@@ -299,7 +299,7 @@ func Initialise(migrate, reindex bool) error {
 
 	// no need to start if already started
 	if globalData.initialised {
-		return fault.ErrAlreadyInitialised
+		return fault.AlreadyInitialised
 	}
 
 	log := logger.New("block")
@@ -309,7 +309,7 @@ func Initialise(migrate, reindex bool) error {
 	// check storage is initialised
 	if nil == storage.Pool.Blocks {
 		log.Critical("storage pool is not initialised")
-		return fault.ErrNotInitialised
+		return fault.NotInitialised
 	}
 
 	if migrate {
@@ -381,7 +381,7 @@ func Initialise(migrate, reindex bool) error {
 func Finalise() error {
 
 	if !globalData.initialised {
-		return fault.ErrNotInitialised
+		return fault.NotInitialised
 	}
 
 	globalData.log.Info("shutting down…")

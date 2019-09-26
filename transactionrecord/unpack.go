@@ -31,13 +31,13 @@ func (record Packed) Unpack(testnet bool) (t Transaction, n int, e error) {
 
 	defer func() {
 		if r := recover(); nil != r {
-			e = fault.ErrNotTransactionPack
+			e = fault.NotTransactionPack
 		}
 	}()
 
 	recordType, n := util.ClippedVarint64(record, 1, 8192)
 	if 0 == n {
-		return nil, 0, fault.ErrNotTransactionPack
+		return nil, 0, fault.NotTransactionPack
 	}
 
 unpack_switch:
@@ -76,7 +76,7 @@ unpack_switch:
 			return nil, 0, err
 		}
 		if owner.IsTesting() != testnet {
-			return nil, 0, fault.ErrWrongNetworkForPublicKey
+			return nil, 0, fault.WrongNetworkForPublicKey
 		}
 		n += ownerLength
 
@@ -151,7 +151,7 @@ unpack_switch:
 			return nil, 0, err
 		}
 		if registrant.IsTesting() != testnet {
-			return nil, 0, fault.ErrWrongNetworkForPublicKey
+			return nil, 0, fault.WrongNetworkForPublicKey
 		}
 		n += registrantLength
 
@@ -204,7 +204,7 @@ unpack_switch:
 			return nil, 0, err
 		}
 		if owner.IsTesting() != testnet {
-			return nil, 0, fault.ErrWrongNetworkForPublicKey
+			return nil, 0, fault.WrongNetworkForPublicKey
 		}
 		n += ownerLength
 
@@ -269,7 +269,7 @@ unpack_switch:
 			return nil, 0, err
 		}
 		if owner.IsTesting() != testnet {
-			return nil, 0, fault.ErrWrongNetworkForPublicKey
+			return nil, 0, fault.WrongNetworkForPublicKey
 		}
 		n += ownerLength
 
@@ -327,7 +327,7 @@ unpack_switch:
 			return nil, 0, err
 		}
 		if owner.IsTesting() != testnet {
-			return nil, 0, fault.ErrWrongNetworkForPublicKey
+			return nil, 0, fault.WrongNetworkForPublicKey
 		}
 		n += ownerLength
 
@@ -373,7 +373,7 @@ unpack_switch:
 		}
 		n += versionLength
 		if version < 1 || version >= uint64(len(versions)) {
-			return nil, 0, fault.ErrInvalidCurrencyAddress // ***** FIX THIS: is this error right?
+			return nil, 0, fault.InvalidCurrencyAddress // ***** FIX THIS: is this error right?
 		}
 
 		// payment map
@@ -387,7 +387,7 @@ unpack_switch:
 			return nil, 0, err
 		}
 		if cs != versions[version] {
-			return nil, 0, fault.ErrInvalidCurrencyAddress // ***** FIX THIS: is this error right?
+			return nil, 0, fault.InvalidCurrencyAddress // ***** FIX THIS: is this error right?
 		}
 		n += paymentsLength
 
@@ -402,7 +402,7 @@ unpack_switch:
 			return nil, 0, err
 		}
 		if owner.IsTesting() != testnet {
-			return nil, 0, fault.ErrWrongNetworkForPublicKey
+			return nil, 0, fault.WrongNetworkForPublicKey
 		}
 		n += ownerLength
 
@@ -464,7 +464,7 @@ unpack_switch:
 		}
 		n += versionLength
 		if version < 1 || version >= uint64(len(versions)) {
-			return nil, 0, fault.ErrInvalidCurrencyAddress // ***** FIX THIS: is this error right?
+			return nil, 0, fault.InvalidCurrencyAddress // ***** FIX THIS: is this error right?
 		}
 
 		// payment map
@@ -479,7 +479,7 @@ unpack_switch:
 			return nil, 0, err
 		}
 		if cs != versions[version] {
-			return nil, 0, fault.ErrInvalidCurrencyAddress // ***** FIX THIS: is this error right?
+			return nil, 0, fault.InvalidCurrencyAddress // ***** FIX THIS: is this error right?
 		}
 		n += paymentsLength
 
@@ -494,7 +494,7 @@ unpack_switch:
 			return nil, 0, err
 		}
 		if owner.IsTesting() != testnet {
-			return nil, 0, fault.ErrWrongNetworkForPublicKey
+			return nil, 0, fault.WrongNetworkForPublicKey
 		}
 		n += ownerLength
 
@@ -609,7 +609,7 @@ unpack_switch:
 			return nil, 0, err
 		}
 		if owner.IsTesting() != testnet {
-			return nil, 0, fault.ErrWrongNetworkForPublicKey
+			return nil, 0, fault.WrongNetworkForPublicKey
 		}
 		n += ownerLength
 
@@ -624,7 +624,7 @@ unpack_switch:
 			return nil, 0, err
 		}
 		if recipient.IsTesting() != testnet {
-			return nil, 0, fault.ErrWrongNetworkForPublicKey
+			return nil, 0, fault.WrongNetworkForPublicKey
 		}
 		n += recipientLength
 
@@ -703,7 +703,7 @@ unpack_switch:
 			return nil, 0, err
 		}
 		if ownerOne.IsTesting() != testnet {
-			return nil, 0, fault.ErrWrongNetworkForPublicKey
+			return nil, 0, fault.WrongNetworkForPublicKey
 		}
 		n += ownerOneLength
 
@@ -738,7 +738,7 @@ unpack_switch:
 			return nil, 0, err
 		}
 		if ownerTwo.IsTesting() != testnet {
-			return nil, 0, fault.ErrWrongNetworkForPublicKey
+			return nil, 0, fault.WrongNetworkForPublicKey
 		}
 		n += ownerTwoLength
 
@@ -788,7 +788,7 @@ unpack_switch:
 
 	default: // also NullTag
 	}
-	return nil, 0, fault.ErrNotTransactionPack
+	return nil, 0, fault.NotTransactionPack
 }
 
 func unpackEscrow(record []byte, n int) (*Payment, int, error) {
@@ -804,7 +804,7 @@ func unpackEscrow(record []byte, n int) (*Payment, int, error) {
 		// currency
 		c, currencyLength := util.FromVarint64(record[n:])
 		if 0 == currencyLength {
-			return nil, 0, fault.ErrNotTransactionPack
+			return nil, 0, fault.NotTransactionPack
 		}
 		n += currencyLength
 		currency, err := currency.FromUint64(c)
@@ -815,7 +815,7 @@ func unpackEscrow(record []byte, n int) (*Payment, int, error) {
 		// address
 		addressLength, addressOffset := util.ClippedVarint64(record[n:], 1, 8192)
 		if 0 == addressOffset {
-			return nil, 0, fault.ErrNotTransactionPack
+			return nil, 0, fault.NotTransactionPack
 		}
 		n += addressOffset
 		address := string(record[n : n+addressLength])
@@ -824,7 +824,7 @@ func unpackEscrow(record []byte, n int) (*Payment, int, error) {
 		// amount
 		amount, amountLength := util.FromVarint64(record[n:])
 		if 0 == amountLength {
-			return nil, 0, fault.ErrNotTransactionPack
+			return nil, 0, fault.NotTransactionPack
 		}
 		n += amountLength
 
@@ -834,7 +834,7 @@ func unpackEscrow(record []byte, n int) (*Payment, int, error) {
 			Amount:   amount,
 		}
 	} else {
-		return nil, 0, fault.ErrNotTransactionPack
+		return nil, 0, fault.NotTransactionPack
 	}
 	return payment, n, nil
 }

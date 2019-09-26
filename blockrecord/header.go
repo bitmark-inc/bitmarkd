@@ -98,7 +98,7 @@ func Finalise() {
 // to reduce hashing load for obviously incorrect blocks
 func ExtractHeader(block []byte, checkHeight uint64, skipDigest bool) (*Header, blockdigest.Digest, []byte, error) {
 	if len(block) < totalBlockSize {
-		return nil, blockdigest.Digest{}, nil, fault.ErrInvalidBlockHeaderSize
+		return nil, blockdigest.Digest{}, nil, fault.InvalidBlockHeaderSize
 	}
 	packedHeader := PackedHeader{}
 	copy(packedHeader[:], block[:totalBlockSize])
@@ -147,7 +147,7 @@ func DigestFromHashPool(pool storage.Handle, blockNumber []byte) blockdigest.Dig
 // ComputeHeaderHash - return the hash of a block's header
 func ComputeHeaderHash(block []byte) (blockdigest.Digest, error) {
 	if len(block) < totalBlockSize {
-		return blockdigest.Digest{}, fault.ErrInvalidBlockHeaderSize
+		return blockdigest.Digest{}, fault.InvalidBlockHeaderSize
 	}
 	packedHeader := PackedHeader{}
 	copy(packedHeader[:], block[:totalBlockSize])
@@ -171,11 +171,11 @@ func (record PackedHeader) Unpack() (*Header, error) {
 	} else {
 		// normal block
 		if header.Version < MinimumVersion || header.Number < MinimumBlockNumber {
-			return nil, fault.ErrInvalidBlockHeaderVersion
+			return nil, fault.InvalidBlockHeaderVersion
 		}
 
 		if header.TransactionCount < MinimumTransactions || header.TransactionCount > MaximumTransactions {
-			return nil, fault.ErrTransactionCountOutOfRange
+			return nil, fault.TransactionCountOutOfRange
 		}
 	}
 
@@ -192,7 +192,7 @@ func (record PackedHeader) Unpack() (*Header, error) {
 	header.Timestamp = binary.LittleEndian.Uint64(record[timestampOffset:difficultyOffset])
 
 	if header.Timestamp > uint64(time.Now().Add(5*time.Minute).Unix()) {
-		return nil, fault.ErrInvalidBlockHeaderTimestamp
+		return nil, fault.InvalidBlockHeaderTimestamp
 	}
 
 	header.Difficulty.SetBytes(record[difficultyOffset:nonceOffset])
@@ -326,7 +326,7 @@ func timespanOfBlockFromBeginToEnd(beginBlock uint64, endBlock uint64) (uint64, 
 
 	if endTime <= beginTime {
 		log.Error("block end time earlier than block begin time")
-		return uint64(0), fault.ErrDifficultyTimespan
+		return uint64(0), fault.BlockEndEarlierThanBegin
 	}
 
 	return endTime - beginTime, nil
@@ -338,7 +338,7 @@ func timestampOfBlock(height uint64) (uint64, error) {
 
 	packed := storage.Pool.Blocks.Get(blockKey)
 	if nil == packed {
-		return uint64(0), fault.ErrBlockNotFound
+		return uint64(0), fault.BlockNotFound
 	}
 
 	header, _, _, err := ExtractHeader(packed, 0, true)
@@ -355,7 +355,7 @@ func difficultyOfBlock(height uint64) (float64, error) {
 
 	packed := storage.Pool.Blocks.Get(blockKey)
 	if nil == packed {
-		return float64(0), fault.ErrBlockNotFound
+		return float64(0), fault.BlockNotFound
 	}
 
 	header, _, _, err := ExtractHeader(packed, 0, true)

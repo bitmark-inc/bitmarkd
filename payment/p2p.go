@@ -7,8 +7,6 @@ package payment
 
 import (
 	"bytes"
-	"errors"
-	"fmt"
 	"net"
 	"reflect"
 	"strconv"
@@ -25,6 +23,7 @@ import (
 	"github.com/patrickmn/go-cache"
 
 	"github.com/bitmark-inc/bitmarkd/currency"
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
@@ -36,16 +35,6 @@ const checkpointBackLimit = 2000
 const MaximumOutboundPeers = 32
 const PaymentExpiry = 12 * time.Hour
 const HeaderSyncTimeout = time.Minute
-
-var (
-	ErrNoNewBlockHeadersFromPeer  = errors.New("no new block headers from peer")
-	ErrMissingPreviousBlockHeader = errors.New("missing previous block header")
-	ErrTimeoutWaitingForHeader    = errors.New("timeout waiting for block header")
-	ErrProcessStopping            = errors.New("process stopping")
-	ErrBlockHeaderNotFound        = errors.New("block header not found")
-	ErrBlockIsTooOld              = errors.New("block is too old")
-	ErrBlockAlreadyProcessed      = errors.New("block already processed")
-)
 
 // p2pWatcher is a watcher that sync with bitcoin / litecoin blockchain by its peer to peer protocol.
 type p2pWatcher struct {
@@ -80,7 +69,7 @@ func newP2pWatcher(c currency.Currency) (*p2pWatcher, error) {
 	case currency.Litecoin:
 		paymentStore = storage.PaymentStorage.Ltc
 	default:
-		return nil, errors.New("unsupported currency")
+		return nil, fault.UnsupportedCurrency
 	}
 
 	networkParams := c.ChainParam(mode.IsTesting())
@@ -116,7 +105,7 @@ func newP2pWatcher(c currency.Currency) (*p2pWatcher, error) {
 		GetNewAddress: func() (net.Addr, error) {
 			ka := addrManager.GetAddress()
 			if ka == nil {
-				return nil, errors.New("failed to find appropriate address to return")
+				return nil, fault.NoAddressToReturn
 			}
 			address := ka.NetAddress()
 			addr := &net.TCPAddr{
@@ -127,12 +116,12 @@ func newP2pWatcher(c currency.Currency) (*p2pWatcher, error) {
 			defer attemptLock.Unlock()
 
 			if time.Since(ka.LastAttempt()) < 10*time.Minute {
-				return nil, errors.New("failed to find appropriate address to return")
+				return nil, fault.NoAddressToReturn
 			}
 
 			if w.connectedPeers.Exist(addr.String()) {
 				w.log.Warnf("ignore connected peer: %s", addr.String())
-				return nil, errors.New("failed to find appropriate address to return")
+				return nil, fault.NoAddressToReturn
 			}
 
 			addrManager.Attempt(address)
@@ -152,13 +141,13 @@ func newP2pWatcher(c currency.Currency) (*p2pWatcher, error) {
 
 	lastHash, err := w.storage.GetCheckpoint()
 	if err != nil {
-		log.Warnf("unable to get checkpoint: %s", err.Error())
+		log.Warnf("unable to get checkpoint: %s", err)
 	}
 
 	if lastHash != nil {
 		lastHeight, err := w.storage.GetHeight(lastHash)
 		if err != nil {
-			w.log.Warnf("unable to get last hash: %s", err.Error())
+			w.log.Warnf("unable to get last hash: %s", err)
 		} else {
 			w.lastHash = lastHash
 			w.lastHeight = lastHeight
@@ -172,7 +161,7 @@ func newP2pWatcher(c currency.Currency) (*p2pWatcher, error) {
 
 		// Write the first hash data into storage
 		if err := w.storage.StoreBlock(w.lastHeight, w.lastHash); err != nil {
-			return nil, fmt.Errorf("unable to set first hash: %s", err)
+			return nil, err
 		}
 	}
 	return w, nil
@@ -199,14 +188,14 @@ func (w *p2pWatcher) syncHeaderFromPeer(p *peer.Peer) error {
 
 	select {
 	case <-w.shutdown:
-		return ErrProcessStopping
+		return fault.ProcessStopping
 	case err := <-w.onHeadersErr:
 		if err != nil {
 			return err
 		}
 	case <-time.After(HeaderSyncTimeout):
 		w.log.Warnf("Timed out waiting for the block header data")
-		return ErrTimeoutWaitingForHeader
+		return fault.TimeoutWaitingForHeader
 	}
 
 	return nil
@@ -235,7 +224,7 @@ func (w *p2pWatcher) lookupPaymentFromPeer(p *peer.Peer, lookUpToHeight int32) {
 		for h := w.lastHeight; h >= lookUpToHeight; h-- {
 			hash, err := w.storage.GetHash(h)
 			if err != nil {
-				w.log.Errorf("unable to look up payment for height: %d. error: %s", h, err.Error())
+				w.log.Errorf("unable to look up payment for height: %d. error: %s", h, err)
 				return
 			}
 
@@ -270,7 +259,7 @@ func (w *p2pWatcher) fetchMoreAddress() {
 func (w *p2pWatcher) sleep(d time.Duration) error {
 	select {
 	case <-w.shutdown:
-		return ErrProcessStopping
+		return fault.ProcessStopping
 	case <-time.After(d):
 		return nil
 	}
@@ -297,30 +286,30 @@ func (w *p2pWatcher) sync() {
 			default:
 				if err != nil {
 					switch err {
-					case ErrNoNewBlockHeadersFromPeer:
+					case fault.NoNewBlockHeadersFromPeer:
 						if p.LastBlock() < w.lastHeight {
 							p.Disconnect()
 						} else {
 							w.log.Debug("no new headers. wait for next sync…")
-							if err := w.sleep(30 * time.Second); err == ErrProcessStopping {
+							if err := w.sleep(30 * time.Second); err == fault.ProcessStopping {
 								w.log.Trace("stop syncing…")
 								return
 							}
 						}
-					case ErrMissingPreviousBlockHeader:
+					case fault.MissingPreviousBlockHeader:
 						w.log.Warnf("Incorrect block data: %s", err)
 						break SYNC_LOOP
-					case ErrProcessStopping:
+					case fault.ProcessStopping:
 						w.log.Trace("stop syncing…")
 						return
 					default:
 						// The loop will retry the fetching process if there are errors which is not
 						// defined above.
-						w.log.Errorf("some other error happens during header fetching process. error: %s", err.Error())
+						w.log.Errorf("some other error happens during header fetching process. error: %s", err)
 					}
 				} else {
 					if p.LastBlock() <= w.lastHeight {
-						if err := w.sleep(30 * time.Second); err == ErrProcessStopping {
+						if err := w.sleep(30 * time.Second); err == fault.ProcessStopping {
 							w.log.Trace("stop syncing…")
 							return
 						}
@@ -403,7 +392,6 @@ func (w *p2pWatcher) StopAndWait() {
 		w.log.Errorf("Can not update the new check point. Error: %s", err)
 	}
 
-	// w.onHeadersErr <- ErrProcessStopping
 	w.Wait()
 }
 
@@ -482,7 +470,7 @@ func (w *p2pWatcher) onPeerHeaders(p *peer.Peer, msg *wire.MsgHeaders) {
 	}()
 
 	if len(msg.Headers) == 0 {
-		headersErr = ErrNoNewBlockHeadersFromPeer
+		headersErr = fault.NoNewBlockHeadersFromPeer
 		return
 	}
 
@@ -502,18 +490,18 @@ loop:
 		hasNewHeader = true
 
 		// Since the header is new, we will then check whether its previous header is existed.
-		// If it's not, a fork might be happened. We will return the error: ErrHashRecordInconsistency.
+		// If a fork has happened then return an error
 		// The event will break the sync loop and trigger a rollback process
 		prevHeight, err := w.storage.GetHeight(&h.PrevBlock)
 		if err != nil || prevHeight == 0 {
 			p.Disconnect()
-			headersErr = ErrMissingPreviousBlockHeader
+			headersErr = fault.MissingPreviousBlockHeader
 			return
 		}
 		prevHash, err := w.storage.GetHash(prevHeight)
 		if err != nil || !reflect.DeepEqual(prevHash.CloneBytes(), h.PrevBlock.CloneBytes()) {
 			p.Disconnect()
-			headersErr = ErrMissingPreviousBlockHeader
+			headersErr = fault.MissingPreviousBlockHeader
 			return
 		}
 
@@ -531,7 +519,7 @@ loop:
 
 	// check if there is any new headers at this processing
 	if !hasNewHeader {
-		headersErr = ErrNoNewBlockHeadersFromPeer
+		headersErr = fault.NoNewBlockHeadersFromPeer
 		return
 	}
 
@@ -604,17 +592,17 @@ func (w *p2pWatcher) onPeerBlock(p *peer.Peer, msg *wire.MsgBlock, buf []byte) e
 	blockHash := msg.BlockHash().String()
 
 	if time.Since(msg.Header.Timestamp) > PaymentExpiry {
-		return ErrBlockIsTooOld
+		return fault.BlockIsTooOld
 	}
 
 	hash := msg.BlockHash()
 	blockHeight, _ := w.storage.GetHeight(&hash)
 	if blockHeight == 0 {
-		return ErrBlockHeaderNotFound
+		return fault.BlockHeaderNotFound
 	}
 
 	if _, found := w.blockCache.Get(blockHash); found {
-		return ErrBlockAlreadyProcessed
+		return fault.BlockAlreadyProcessed
 	}
 
 	for _, tx := range msg.Transactions {
@@ -661,7 +649,7 @@ func (w *p2pWatcher) peerConfig() *peer.Config {
 				w.log.Tracef("on block: %s", msg.BlockHash())
 
 				if err := w.onPeerBlock(p, msg, buf); err != nil {
-					w.log.Tracef("ignore block processing for block: %s. error: %s", msg.BlockHash(), err.Error())
+					w.log.Tracef("ignore block processing for block: %s  error: %s", msg.BlockHash(), err)
 				}
 			},
 

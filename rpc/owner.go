@@ -123,7 +123,7 @@ func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitm
 
 		inBlock, transaction := storage.Pool.Transactions.GetNB(txId[:])
 		if nil == transaction {
-			return fault.ErrLinkToInvalidOrUnconfirmedTransaction
+			return fault.LinkToInvalidOrUnconfirmedTransaction
 		}
 
 		tx, _, err := transactionrecord.Packed(transaction).Unpack(mode.IsTesting())
@@ -134,7 +134,7 @@ func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitm
 		record, ok := transactionrecord.RecordName(tx)
 		if !ok {
 			log.Errorf("problem tx: %+v", tx)
-			return fault.ErrLinkToInvalidOrUnconfirmedTransaction
+			return fault.LinkToInvalidOrUnconfirmedTransaction
 		}
 		textTxId, err := txId.MarshalText()
 		if nil != err {
@@ -168,7 +168,7 @@ asset_loop:
 
 		inBlock, transaction := storage.Pool.Assets.GetNB(assetId[:])
 		if nil == transaction {
-			return fault.ErrAssetNotFound
+			return fault.AssetNotFound
 		}
 
 		tx, _, err := transactionrecord.Packed(transaction).Unpack(mode.IsTesting())
@@ -178,7 +178,7 @@ asset_loop:
 
 		record, ok := transactionrecord.RecordName(tx)
 		if !ok {
-			return fault.ErrAssetNotFound
+			return fault.AssetNotFound
 		}
 		textAssetId, err := assetId.MarshalText()
 		if nil != err {

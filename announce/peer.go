@@ -40,7 +40,7 @@ func SetPeer(publicKey []byte, listeners []byte) error {
 	defer globalData.Unlock()
 
 	if globalData.peerSet {
-		return fault.ErrAlreadyInitialised
+		return fault.AlreadyInitialised
 	}
 	globalData.publicKey = publicKey
 	globalData.listeners = listeners
@@ -132,7 +132,7 @@ func GetNext(publicKey []byte) ([]byte, []byte, time.Time, error) {
 		node = globalData.peerTree.First()
 	}
 	if nil == node {
-		return nil, nil, time.Now(), fault.ErrInvalidPublicKey
+		return nil, nil, time.Now(), fault.InvalidPublicKey
 	}
 	peer := node.Value().(*peerEntry)
 	return peer.publicKey, peer.listeners, peer.timestamp, nil
@@ -166,7 +166,7 @@ retry_loop:
 		}
 		return peer.publicKey, peer.listeners, peer.timestamp, nil
 	}
-	return nil, nil, time.Now(), fault.ErrInvalidPublicKey
+	return nil, nil, time.Now(), fault.InvalidPublicKey
 }
 
 // SendRegistration - send a peer registration request to a client channel

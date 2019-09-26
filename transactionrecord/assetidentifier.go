@@ -61,7 +61,7 @@ func (assetId *AssetIdentifier) Scan(state fmt.ScanState, verb rune) error {
 		return err
 	}
 	if len(token) != hex.EncodedLen(AssetIdentifierLength) {
-		return fault.ErrNotAssetId
+		return fault.NotAssetId
 	}
 
 	byteCount, err := hex.Decode(assetId[:], token)
@@ -70,7 +70,7 @@ func (assetId *AssetIdentifier) Scan(state fmt.ScanState, verb rune) error {
 	}
 
 	if AssetIdentifierLength != byteCount {
-		return fault.ErrNotAssetId
+		return fault.NotAssetId
 	}
 	return nil
 }
@@ -86,14 +86,14 @@ func (assetId AssetIdentifier) MarshalText() ([]byte, error) {
 // UnmarshalText - convert little endian hex text into a assetId
 func (assetId *AssetIdentifier) UnmarshalText(s []byte) error {
 	if len(assetId) != hex.DecodedLen(len(s)) {
-		return fault.ErrNotLink
+		return fault.NotLink
 	}
 	byteCount, err := hex.Decode(assetId[:], s)
 	if nil != err {
 		return err
 	}
 	if AssetIdentifierLength != byteCount {
-		return fault.ErrNotAssetId
+		return fault.NotAssetId
 	}
 	return nil
 }
@@ -101,7 +101,7 @@ func (assetId *AssetIdentifier) UnmarshalText(s []byte) error {
 // AssetIdentifierFromBytes - convert and validate little endian binary byte slice to a assetId
 func AssetIdentifierFromBytes(assetId *AssetIdentifier, buffer []byte) error {
 	if AssetIdentifierLength != len(buffer) {
-		return fault.ErrNotAssetId
+		return fault.NotAssetId
 	}
 	copy(assetId[:], buffer)
 	return nil

@@ -83,18 +83,18 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 			switch cType {
 			case bitcoin.Testnet, bitcoin.TestnetScript:
 				if !mode.IsTesting() {
-					err := fault.ErrBitcoinAddressForWrongNetwork
+					err := fault.BitcoinAddressForWrongNetwork
 					log.Errorf("validate bitcoin address error: %s", err)
 					return err
 				}
 			case bitcoin.Livenet, bitcoin.LivenetScript:
 				if mode.IsTesting() {
-					err := fault.ErrBitcoinAddressForWrongNetwork
+					err := fault.BitcoinAddressForWrongNetwork
 					log.Errorf("validate bitcoin address error: %s", err)
 					return err
 				}
 			default:
-				return fault.ErrBitcoinAddressIsNotSupported
+				return fault.BitcoinAddressIsNotSupported
 			}
 		case currency.Litecoin:
 			cType, _, err := litecoin.ValidateAddress(currencyAddress)
@@ -104,19 +104,19 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 			switch cType {
 			case litecoin.Testnet, litecoin.TestnetScript, litecoin.TestnetScript2:
 				if !mode.IsTesting() {
-					return fault.ErrLitecoinAddressForWrongNetwork
+					return fault.LitecoinAddressForWrongNetwork
 				}
 			case litecoin.Livenet, litecoin.LivenetScript, litecoin.LivenetScript2:
 				if mode.IsTesting() {
-					return fault.ErrLitecoinAddressForWrongNetwork
+					return fault.LitecoinAddressForWrongNetwork
 				}
 			default:
-				return fault.ErrLitecoinAddressIsNotSupported
+				return fault.LitecoinAddressIsNotSupported
 			}
 
 		default:
 			log.Errorf("unsupported currency: %q", c)
-			return fault.ErrCurrencyIsNotSupportedByProofer
+			return fault.CurrencyIsNotSupportedByProofer
 		}
 
 		pub.paymentAddress[paymentCurrency] = currencyAddress
@@ -142,7 +142,7 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 		pub.privateKey = privateKey.PrivateKeyBytes()
 		pub.owner = privateKey.Account()
 	} else {
-		return fault.ErrInvalidProofSigningKey
+		return fault.InvalidProofSigningKey
 	}
 
 	// read the keys

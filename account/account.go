@@ -76,7 +76,7 @@ func AccountFromBase58(accountBase58Encoded string) (*Account, error) {
 	// Decode the account
 	accountDecoded := util.FromBase58(accountBase58Encoded)
 	if 0 == len(accountDecoded) {
-		return nil, fault.ErrCannotDecodeAccount
+		return nil, fault.CannotDecodeAccount
 	}
 
 	// Parse the key variant
@@ -84,13 +84,13 @@ func AccountFromBase58(accountBase58Encoded string) (*Account, error) {
 
 	// Check key type
 	if 0 == keyVariantLength || keyVariant&publicKeyCode != publicKeyCode {
-		return nil, fault.ErrNotPublicKey
+		return nil, fault.NotPublicKey
 	}
 
 	// compute algorithm
 	keyAlgorithm := keyVariant >> algorithmShift
 	if keyAlgorithm >= algorithmLimit {
-		return nil, fault.ErrInvalidKeyType
+		return nil, fault.InvalidKeyType
 	}
 
 	// network selection
@@ -99,21 +99,21 @@ func AccountFromBase58(accountBase58Encoded string) (*Account, error) {
 	// Compute key length
 	keyLength := len(accountDecoded) - keyVariantLength - checksumLength
 	if keyLength <= 0 {
-		return nil, fault.ErrInvalidKeyLength
+		return nil, fault.InvalidKeyLength
 	}
 
 	// Checksum
 	checksumStart := len(accountDecoded) - checksumLength
 	checksum := sha3.Sum256(accountDecoded[:checksumStart])
 	if !bytes.Equal(checksum[:checksumLength], accountDecoded[checksumStart:]) {
-		return nil, fault.ErrChecksumMismatch
+		return nil, fault.ChecksumMismatch
 	}
 
 	// return a pointer to the specific account type
 	switch keyAlgorithm {
 	case ED25519:
 		if keyLength != ed25519.PublicKeySize {
-			return nil, fault.ErrInvalidKeyLength
+			return nil, fault.InvalidKeyLength
 		}
 		publicKey := accountDecoded[keyVariantLength:checksumStart]
 		account := &Account{
@@ -125,7 +125,7 @@ func AccountFromBase58(accountBase58Encoded string) (*Account, error) {
 		return account, nil
 	case Nothing:
 		if 2 != keyLength {
-			return nil, fault.ErrInvalidKeyLength
+			return nil, fault.InvalidKeyLength
 		}
 		publicKey := accountDecoded[keyVariantLength:checksumStart]
 		account := &Account{
@@ -136,7 +136,7 @@ func AccountFromBase58(accountBase58Encoded string) (*Account, error) {
 		}
 		return account, nil
 	default:
-		return nil, fault.ErrInvalidKeyType
+		return nil, fault.InvalidKeyType
 	}
 }
 
@@ -151,13 +151,13 @@ func AccountFromBytes(accountBytes []byte) (*Account, error) {
 
 	// Check key type
 	if 0 == keyVariantLength || keyVariant&publicKeyCode != publicKeyCode {
-		return nil, fault.ErrNotPublicKey
+		return nil, fault.NotPublicKey
 	}
 
 	// compute algorithm
 	keyAlgorithm := keyVariant >> algorithmShift
 	if keyAlgorithm >= algorithmLimit {
-		return nil, fault.ErrInvalidKeyType
+		return nil, fault.InvalidKeyType
 	}
 
 	// network selection
@@ -166,14 +166,14 @@ func AccountFromBytes(accountBytes []byte) (*Account, error) {
 	// Compute key length
 	keyLength := len(accountBytes) - keyVariantLength
 	if keyLength <= 0 {
-		return nil, fault.ErrInvalidKeyLength
+		return nil, fault.InvalidKeyLength
 	}
 
 	// return a pointer to the specific account type
 	switch keyAlgorithm {
 	case ED25519:
 		if keyLength != ed25519.PublicKeySize {
-			return nil, fault.ErrInvalidKeyLength
+			return nil, fault.InvalidKeyLength
 		}
 		publicKey := accountBytes[keyVariantLength:]
 		account := &Account{
@@ -185,7 +185,7 @@ func AccountFromBytes(accountBytes []byte) (*Account, error) {
 		return account, nil
 	case Nothing:
 		if 2 != keyLength {
-			return nil, fault.ErrInvalidKeyLength
+			return nil, fault.InvalidKeyLength
 		}
 		publicKey := accountBytes[keyVariantLength:]
 		account := &Account{
@@ -196,7 +196,7 @@ func AccountFromBytes(accountBytes []byte) (*Account, error) {
 		}
 		return account, nil
 	default:
-		return nil, fault.ErrInvalidKeyType
+		return nil, fault.InvalidKeyType
 	}
 }
 
@@ -227,11 +227,11 @@ func (account *ED25519Account) PublicKeyBytes() []byte {
 func (account *ED25519Account) CheckSignature(message []byte, signature Signature) error {
 
 	if ed25519.SignatureSize != len(signature) {
-		return fault.ErrInvalidSignature
+		return fault.InvalidSignature
 	}
 
 	if !ed25519.Verify(account.PublicKey[:], message, signature) {
-		return fault.ErrInvalidSignature
+		return fault.InvalidSignature
 	}
 	return nil
 }
@@ -288,7 +288,7 @@ func (account *NothingAccount) PublicKeyBytes() []byte {
 
 // CheckSignature - check the signature of a message
 func (account *NothingAccount) CheckSignature(message []byte, signature Signature) error {
-	return fault.ErrInvalidSignature
+	return fault.InvalidSignature
 }
 
 // Bytes - byte slice for encoded key

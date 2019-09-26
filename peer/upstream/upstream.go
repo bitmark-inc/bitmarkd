@@ -138,12 +138,12 @@ func (u *Upstream) RemoteDigestOfHeight(blockNumber uint64) (blockdigest.Digest,
 	}
 
 	if 2 != len(data) {
-		return blockdigest.Digest{}, fault.ErrInvalidPeerResponse
+		return blockdigest.Digest{}, fault.InvalidPeerResponse
 	}
 
 	switch string(data[0]) {
 	case "E":
-		return blockdigest.Digest{}, fault.ErrorFromRunes(data[1])
+		return blockdigest.Digest{}, fault.BlockNotFound
 	case "H":
 		d := blockdigest.Digest{}
 		if blockdigest.Length == len(data[1]) {
@@ -152,7 +152,7 @@ func (u *Upstream) RemoteDigestOfHeight(blockNumber uint64) (blockdigest.Digest,
 		}
 	default:
 	}
-	return blockdigest.Digest{}, fault.ErrInvalidPeerResponse
+	return blockdigest.Digest{}, fault.InvalidPeerResponse
 }
 
 // GetBlockData - fetch block data from a specific block number
@@ -174,17 +174,17 @@ func (u *Upstream) GetBlockData(blockNumber uint64) ([]byte, error) {
 	}
 
 	if 2 != len(data) {
-		return nil, fault.ErrInvalidPeerResponse
+		return nil, fault.InvalidPeerResponse
 	}
 
 	switch string(data[0]) {
 	case "E":
-		return nil, fault.ErrorFromRunes(data[1])
+		return nil, fault.BlockNotFound
 	case "B":
 		return data[1], nil
 	default:
 	}
-	return nil, fault.ErrInvalidPeerResponse
+	return nil, fault.InvalidPeerResponse
 }
 
 // must have lock held before calling

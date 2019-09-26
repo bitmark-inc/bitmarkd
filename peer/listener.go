@@ -205,19 +205,19 @@ func (lstn *listener) process(socket *zmq.Socket) {
 
 	case "B": // get packed block
 		if 1 != len(parameters) {
-			err = fault.ErrMissingParameters
+			err = fault.MissingParameters
 		} else if 8 == len(parameters[0]) {
 			result = storage.Pool.Blocks.Get(parameters[0])
 			if nil == result {
-				err = fault.ErrBlockNotFound
+				err = fault.BlockNotFound
 			}
 		} else {
-			err = fault.ErrBlockNotFound
+			err = fault.BlockNotFound
 		}
 
 	case "H": // get block hash
 		if 1 != len(parameters) {
-			err = fault.ErrMissingParameters
+			err = fault.MissingParameters
 		} else if 8 == len(parameters[0]) {
 			number := binary.BigEndian.Uint64(parameters[0])
 			d, e := blockheader.DigestForBlock(number)
@@ -227,17 +227,17 @@ func (lstn *listener) process(socket *zmq.Socket) {
 				err = e
 			}
 		} else {
-			err = fault.ErrBlockNotFound
+			err = fault.BlockNotFound
 		}
 
 	case "R": // registration: chain, publicKey, listeners, timestamp
 		if len(parameters) < 4 {
-			listenerSendError(socket, fault.ErrMissingParameters)
+			listenerSendError(socket, fault.MissingParameters)
 			return
 		}
 		chain := mode.ChainName()
 		if string(parameters[0]) != chain {
-			listenerSendError(socket, fault.ErrIncorrectChain)
+			listenerSendError(socket, fault.IncorrectChain)
 			return
 		}
 

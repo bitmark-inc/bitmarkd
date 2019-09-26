@@ -93,7 +93,7 @@ func (assets *Assets) Get(arguments *AssetGetArguments, reply *AssetGetReply) er
 	}
 
 	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
+		return fault.NotAvailableDuringSynchronise
 	}
 
 	log.Infof("Assets.Get: %+v", arguments)

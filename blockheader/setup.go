@@ -40,7 +40,7 @@ func Initialise() error {
 
 	// no need to start if already started
 	if globalData.initialised {
-		return fault.ErrAlreadyInitialised
+		return fault.AlreadyInitialised
 	}
 
 	log := logger.New("blockheader")
@@ -63,7 +63,7 @@ func Initialise() error {
 func Finalise() error {
 
 	if !globalData.initialised {
-		return fault.ErrNotInitialised
+		return fault.NotInitialised
 	}
 
 	globalData.log.Info("shutting down…")

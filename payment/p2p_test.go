@@ -16,6 +16,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/bitmark-inc/bitmarkd/currency"
+	"github.com/bitmark-inc/bitmarkd/fault"
 )
 
 func NewDummyMsgBlock(previousBlock *chainhash.Hash, timestamp *time.Time) *wire.MsgBlock {
@@ -50,8 +51,8 @@ func TestOnPeerBlockEarlyBlocks(t *testing.T) {
 	blockMsg := NewDummyMsgBlock(nil, nil)
 	err = w.onPeerBlock(p, blockMsg, nil)
 
-	if err != ErrBlockIsTooOld {
-		t.Fatalf("error is not what we expected. expected: %s, actual: %s", ErrBlockIsTooOld, err)
+	if err != fault.BlockIsTooOld {
+		t.Fatalf("error is not what we expected. expected: %s, actual: %s", fault.BlockIsTooOld, err)
 	}
 }
 
@@ -73,8 +74,8 @@ func TestOnPeerBlockHeaderNotFound(t *testing.T) {
 
 	err = w.onPeerBlock(p, blockMsg, nil)
 
-	if err != ErrBlockHeaderNotFound {
-		t.Fatalf("error is not what we expected. expected: %s, actual: %s", ErrBlockHeaderNotFound, err)
+	if err != fault.BlockHeaderNotFound {
+		t.Fatalf("error is not what we expected. expected: %s, actual: %s", fault.BlockHeaderNotFound, err)
 	}
 }
 
@@ -106,8 +107,8 @@ func TestOnPeerBlockProcessed(t *testing.T) {
 
 	err = w.onPeerBlock(p, blockMsg, nil)
 
-	if err != ErrBlockAlreadyProcessed {
-		t.Fatalf("error is not what we expected. expected: %s, actual: %s", ErrBlockAlreadyProcessed, err)
+	if err != fault.BlockAlreadyProcessed {
+		t.Fatalf("error is not what we expected. expected: %s, actual: %s", fault.BlockAlreadyProcessed, err)
 	}
 }
 
@@ -218,8 +219,8 @@ func TestOnPeerNoHeaders(t *testing.T) {
 	g.Go(func() error { return <-w.onHeadersErr })
 	w.onPeerHeaders(p, headers)
 
-	if err := g.Wait(); err != ErrNoNewBlockHeadersFromPeer {
-		t.Fatalf("unexpected error. expect: %s, actual: %s", ErrNoNewBlockHeadersFromPeer, err)
+	if err := g.Wait(); err != fault.NoNewBlockHeadersFromPeer {
+		t.Fatalf("unexpected error. expect: %s, actual: %s", fault.NoNewBlockHeadersFromPeer, err)
 	}
 }
 
@@ -259,8 +260,8 @@ func TestOnPeerAllOldHeaders(t *testing.T) {
 	g.Go(func() error { return <-w.onHeadersErr })
 	w.onPeerHeaders(p, headers)
 
-	if err := g.Wait(); err != ErrNoNewBlockHeadersFromPeer {
-		t.Fatalf("unexpected error. expect: %s, actual: %s", ErrNoNewBlockHeadersFromPeer, err)
+	if err := g.Wait(); err != fault.NoNewBlockHeadersFromPeer {
+		t.Fatalf("unexpected error. expect: %s, actual: %s", fault.NoNewBlockHeadersFromPeer, err)
 	}
 }
 
@@ -299,8 +300,8 @@ func TestOnPeerInvalidPrevious(t *testing.T) {
 	g.Go(func() error { return <-w.onHeadersErr })
 	w.onPeerHeaders(p, headers)
 
-	if err := g.Wait(); err != ErrMissingPreviousBlockHeader {
-		t.Fatalf("unexpected error. expect: %s, actual: %s", ErrMissingPreviousBlockHeader, err)
+	if err := g.Wait(); err != fault.MissingPreviousBlockHeader {
+		t.Fatalf("unexpected error. expect: %s, actual: %s", fault.MissingPreviousBlockHeader, err)
 	}
 }
 

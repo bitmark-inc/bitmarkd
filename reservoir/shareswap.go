@@ -89,7 +89,7 @@ func StoreSwap(swap *transactionrecord.ShareSwap) (*SwapInfo, bool, error) {
 	// if duplicates were detected, but different duplicates were present
 	// then it is an error
 	if duplicate {
-		return nil, true, fault.ErrTransactionAlreadyExists
+		return nil, true, fault.TransactionAlreadyExists
 	}
 
 	swapItem := &transactionData{
@@ -142,7 +142,7 @@ func CheckSwapBalances(
 ) (uint64, uint64, error) {
 	// check incoming quantity
 	if 0 == swap.QuantityOne || 0 == swap.QuantityTwo {
-		return 0, 0, fault.ErrShareQuantityTooSmall
+		return 0, 0, fault.ShareQuantityTooSmall
 	}
 
 	oKeyOne := append(swap.OwnerOne.Bytes(), swap.ShareIdOne[:]...)
@@ -156,7 +156,7 @@ func CheckSwapBalances(
 
 	// check if sufficient funds
 	if !ok || balanceOne < swap.QuantityOne {
-		return 0, 0, fault.ErrInsufficientShares
+		return 0, 0, fault.InsufficientShares
 	}
 
 	oKeyTwo := append(swap.OwnerTwo.Bytes(), swap.ShareIdTwo[:]...)
@@ -169,7 +169,7 @@ func CheckSwapBalances(
 
 	// check if sufficient funds
 	if !ok || balanceTwo < swap.QuantityTwo {
-		return 0, 0, fault.ErrInsufficientShares
+		return 0, 0, fault.InsufficientShares
 	}
 
 	return balanceOne, balanceTwo, nil
@@ -181,7 +181,7 @@ func verifySwap(swap *transactionrecord.ShareSwap) (*verifiedSwapInfo, bool, err
 
 	height := blockheader.Height()
 	if swap.BeforeBlock <= height {
-		return nil, false, fault.ErrRecordHasExpired
+		return nil, false, fault.RecordHasExpired
 	}
 
 	balanceOne, balanceTwo, err := CheckSwapBalances(nil, swap)
@@ -211,11 +211,11 @@ func verifySwap(swap *transactionrecord.ShareSwap) (*verifiedSwapInfo, bool, err
 
 	// a single verified transfer fails the whole block
 	if okV {
-		return nil, false, fault.ErrTransactionAlreadyExists
+		return nil, false, fault.TransactionAlreadyExists
 	}
 	// a single confirmed transfer fails the whole block
 	if storage.Pool.Transactions.Has(txId[:]) {
-		return nil, false, fault.ErrTransactionAlreadyExists
+		return nil, false, fault.TransactionAlreadyExists
 	}
 
 	// log.Infof("share one: %x", swap.ShareOne)
@@ -227,11 +227,11 @@ func verifySwap(swap *transactionrecord.ShareSwap) (*verifiedSwapInfo, bool, err
 	// the owner data is under tx id of share record
 	_ /*totalValue*/, shareTxId := storage.Pool.Shares.GetNB(swap.ShareIdOne[:])
 	if nil == shareTxId {
-		return nil, false, fault.ErrDoubleTransferAttempt
+		return nil, false, fault.DoubleTransferAttempt
 	}
 	ownerData, err := ownership.GetOwnerDataB(nil, shareTxId)
 	if nil != err {
-		return nil, false, fault.ErrDoubleTransferAttempt
+		return nil, false, fault.DoubleTransferAttempt
 	}
 	// log.Infof("ownerData: %x", ownerData)
 

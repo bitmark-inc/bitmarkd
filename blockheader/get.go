@@ -97,7 +97,7 @@ func incrementCacheIndex() {
 func genDigestFromPool(pool storage.Handle, blockNumber []byte) (blockdigest.Digest, error) {
 	packed := pool.Get(blockNumber)
 	if nil == packed {
-		return blockdigest.Digest{}, fault.ErrBlockNotFound
+		return blockdigest.Digest{}, fault.BlockNotFound
 	}
 
 	_, digest, _, err := blockrecord.ExtractHeader(packed, 0, false)

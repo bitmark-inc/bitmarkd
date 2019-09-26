@@ -47,9 +47,9 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, er
 
 	count := len(issues)
 	if count > MaximumIssues {
-		return nil, false, fault.ErrTooManyItemsToProcess
+		return nil, false, fault.TooManyItemsToProcess
 	} else if 0 == count {
-		return nil, false, fault.ErrMissingParameters
+		return nil, false, fault.MissingParameters
 	}
 
 	// individual packed issues
@@ -74,11 +74,11 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, er
 	for i, issue := range issues {
 
 		if nil == issue || nil == issue.Owner {
-			return nil, false, fault.ErrInvalidItem
+			return nil, false, fault.InvalidItem
 		}
 
 		if issue.Owner.IsTesting() != mode.IsTesting() {
-			return nil, false, fault.ErrWrongNetworkForPublicKey
+			return nil, false, fault.WrongNetworkForPublicKey
 		}
 
 		// all are free or all are non-free
@@ -93,7 +93,7 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, er
 		}
 
 		if !asset.Exists(issue.AssetId) {
-			return nil, false, fault.ErrAssetNotFound
+			return nil, false, fault.AssetNotFound
 		}
 
 		txId := packedIssue.MakeLink()
@@ -111,11 +111,11 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, er
 		_, ok = globalData.verifiedIndex[txId]
 		globalData.RUnlock()
 		if ok {
-			return nil, false, fault.ErrTransactionAlreadyExists
+			return nil, false, fault.TransactionAlreadyExists
 		}
 		// a single confirmed issue fails the whole block
 		if storage.Pool.Transactions.Has(txId[:]) {
-			return nil, false, fault.ErrTransactionAlreadyExists
+			return nil, false, fault.TransactionAlreadyExists
 		}
 
 		// accumulate the data
@@ -168,7 +168,7 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, er
 	// then it is an error
 	if duplicate {
 		globalData.log.Debugf("overlapping pay id: %s", payId)
-		return nil, false, fault.ErrTransactionAlreadyExists
+		return nil, false, fault.TransactionAlreadyExists
 	}
 
 	globalData.log.Infof("creating pay id: %s", payId)
@@ -181,13 +181,13 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, er
 		// check for single asset being issued (paid issues)
 		// fail if not a single confirmed asset
 		if !unique {
-			return nil, false, fault.ErrAssetNotFound
+			return nil, false, fault.AssetNotFound
 		}
 
 		assetBlockNumber, t := storage.Pool.Assets.GetNB(uniqueAssetId[:])
 
 		if nil == t || assetBlockNumber <= genesis.BlockNumber {
-			return nil, false, fault.ErrAssetNotFound
+			return nil, false, fault.AssetNotFound
 		}
 
 		blockNumberKey := make([]byte, 8)
@@ -196,7 +196,7 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, er
 		p := getPayment(blockNumberKey)
 		if nil == p { // would be an internal database error
 			globalData.log.Errorf("missing payment for asset id: %s", issues[0].AssetId)
-			return nil, false, fault.ErrAssetNotFound
+			return nil, false, fault.AssetNotFound
 		}
 
 		result.Payments = make([]transactionrecord.PaymentAlternative, 0, len(p))
@@ -253,7 +253,7 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, er
 
 	if freeIssueAllowed && globalData.pendingFreeCount+len(txs) > maximumPendingFreeIssues ||
 		!freeIssueAllowed && globalData.pendingPaidCount+len(txs) >= maximumPendingPaidIssues {
-		return nil, false, fault.ErrBufferCapacityLimit
+		return nil, false, fault.BufferCapacityLimit
 	}
 
 	// create index entries

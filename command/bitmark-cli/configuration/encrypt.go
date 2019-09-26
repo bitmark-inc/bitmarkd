@@ -28,7 +28,7 @@ func decryptIdentity(password string, identity *Identity) (*Private, error) {
 	salt := new(Salt)
 	err := salt.UnmarshalText([]byte(identity.Salt))
 	if nil != err || "" == identity.Data {
-		return nil, fault.ErrNotPrivateKey
+		return nil, fault.NotPrivateKey
 	}
 
 	key, err := generateKey(password, salt)
@@ -38,7 +38,7 @@ func decryptIdentity(password string, identity *Identity) (*Private, error) {
 
 	seed, err := decryptData(identity.Data, key)
 	if nil != err {
-		return nil, fault.ErrWrongPassword
+		return nil, fault.WrongPassword
 	}
 
 	privateKey, err := account.PrivateKeyFromBase58Seed(seed)
@@ -98,7 +98,7 @@ func encryptData(data string, secretKey *[32]byte) (string, error) {
 	// ensure data not too small or too large
 	len := len(data)
 	if len < 32 || len >= 16384 {
-		return "", fault.ErrCryptoFailed
+		return "", fault.CryptoFailed
 	}
 
 	// must use a different nonce for each message you encrypt with the
@@ -106,7 +106,7 @@ func encryptData(data string, secretKey *[32]byte) (string, error) {
 	// provides a sufficiently small probability of repeats.
 	var nonce [24]byte
 	if _, err := rand.Read(nonce[:]); err != nil {
-		return "", fault.ErrCryptoFailed
+		return "", fault.CryptoFailed
 	}
 
 	// encrypt
@@ -120,7 +120,7 @@ func encryptData(data string, secretKey *[32]byte) (string, error) {
 func decryptData(ciphertext string, secretKey *[32]byte) (string, error) {
 
 	if "" == ciphertext {
-		return "", fault.ErrCryptoFailed
+		return "", fault.CryptoFailed
 	}
 
 	encrypted, err := hex.DecodeString(ciphertext)
@@ -128,7 +128,7 @@ func decryptData(ciphertext string, secretKey *[32]byte) (string, error) {
 		return "", err
 	}
 	if len(encrypted) <= 24 {
-		return "", fault.ErrCryptoFailed
+		return "", fault.CryptoFailed
 	}
 
 	// When you decrypt, you must use the same nonce and key you used to
@@ -139,7 +139,7 @@ func decryptData(ciphertext string, secretKey *[32]byte) (string, error) {
 
 	decrypted, ok := secretbox.Open(nil, encrypted[24:], &nonce, secretKey)
 	if !ok {
-		return "", fault.ErrCryptoFailed
+		return "", fault.CryptoFailed
 	}
 
 	return string(decrypted), nil

@@ -85,7 +85,7 @@ func StoreGrant(grant *transactionrecord.ShareGrant) (*GrantInfo, bool, error) {
 	// if duplicates were detected, but different duplicates were present
 	// then it is an error
 	if duplicate {
-		return nil, true, fault.ErrTransactionAlreadyExists
+		return nil, true, fault.TransactionAlreadyExists
 	}
 
 	grantItem := &transactionData{
@@ -146,7 +146,7 @@ func CheckGrantBalance(trx storage.Transaction, grant *transactionrecord.ShareGr
 
 	// check incoming quantity
 	if 0 == grant.Quantity {
-		return 0, fault.ErrShareQuantityTooSmall
+		return 0, fault.ShareQuantityTooSmall
 	}
 
 	oKey := append(grant.Owner.Bytes(), grant.ShareId[:]...)
@@ -160,7 +160,7 @@ func CheckGrantBalance(trx storage.Transaction, grant *transactionrecord.ShareGr
 
 	// check if sufficient funds
 	if !ok || balance < grant.Quantity {
-		return 0, fault.ErrInsufficientShares
+		return 0, fault.InsufficientShares
 	}
 
 	return balance, nil
@@ -171,7 +171,7 @@ func verifyGrant(grant *transactionrecord.ShareGrant) (*verifiedGrantInfo, bool,
 
 	height := blockheader.Height()
 	if grant.BeforeBlock <= height {
-		return nil, false, fault.ErrRecordHasExpired
+		return nil, false, fault.RecordHasExpired
 	}
 
 	balance, err := CheckGrantBalance(nil, grant)
@@ -201,11 +201,11 @@ func verifyGrant(grant *transactionrecord.ShareGrant) (*verifiedGrantInfo, bool,
 
 	// a single verified transfer fails the whole block
 	if okV {
-		return nil, false, fault.ErrTransactionAlreadyExists
+		return nil, false, fault.TransactionAlreadyExists
 	}
 	// a single confirmed transfer fails the whole block
 	if storage.Pool.Transactions.Has(txId[:]) {
-		return nil, false, fault.ErrTransactionAlreadyExists
+		return nil, false, fault.TransactionAlreadyExists
 	}
 
 	// log.Infof("share: %x", grant.Share)
@@ -213,12 +213,12 @@ func verifyGrant(grant *transactionrecord.ShareGrant) (*verifiedGrantInfo, bool,
 	// the owner data is under tx id of share record
 	_ /*totalValue*/, shareTxId := storage.Pool.Shares.GetNB(grant.ShareId[:])
 	if nil == shareTxId {
-		return nil, false, fault.ErrDoubleTransferAttempt
+		return nil, false, fault.DoubleTransferAttempt
 	}
 
 	ownerData, err := ownership.GetOwnerDataB(nil, shareTxId)
 	if nil != err {
-		return nil, false, fault.ErrDoubleTransferAttempt
+		return nil, false, fault.DoubleTransferAttempt
 	}
 	// log.Debugf("ownerData: %x", ownerData)
 

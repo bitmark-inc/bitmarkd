@@ -115,10 +115,10 @@ func NewClient(
 ) (*Client, <-chan Event, error) {
 
 	if len(publicKey) != publicKeySize {
-		return nil, nil, fault.ErrInvalidPublicKey
+		return nil, nil, fault.InvalidPublicKey
 	}
 	if len(privateKey) != privateKeySize {
-		return nil, nil, fault.ErrInvalidPrivateKey
+		return nil, nil, fault.InvalidPrivateKey
 	}
 
 	n := clientCounter.Increment()
@@ -419,7 +419,7 @@ func (client *Client) Send(items ...interface{}) error {
 	defer client.Unlock()
 
 	if nil == client.socket || "" == client.address {
-		return fault.ErrNotConnected
+		return fault.NotConnected
 	}
 
 	if 0 == len(items) {
@@ -504,7 +504,7 @@ func (client *Client) Receive(flags zmq.Flag) ([][]byte, error) {
 	defer client.Unlock()
 
 	if nil == client.socket || "" == client.address {
-		return nil, fault.ErrNotConnected
+		return nil, fault.NotConnected
 	}
 	data, err := client.socket.RecvMessageBytes(flags)
 	return data, err

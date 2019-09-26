@@ -24,7 +24,7 @@ type Connection struct {
 func NewConnection(hostPort string) (*Connection, error) {
 	host, port, err := net.SplitHostPort(hostPort)
 	if nil != err {
-		return nil, fault.ErrInvalidIpAddress
+		return nil, fault.InvalidIpAddress
 	}
 
 	IP := net.ParseIP(strings.Trim(host, " "))
@@ -34,7 +34,7 @@ func NewConnection(hostPort string) (*Connection, error) {
 			return nil, err
 		}
 		if len(ips) < 1 {
-			return nil, fault.ErrInvalidIpAddress
+			return nil, fault.InvalidIpAddress
 		}
 		IP = ips[0]
 	}
@@ -44,7 +44,7 @@ func NewConnection(hostPort string) (*Connection, error) {
 		return nil, err
 	}
 	if numericPort < 1 || numericPort > 65535 {
-		return nil, fault.ErrInvalidPortNumber
+		return nil, fault.InvalidPortNumber
 	}
 	c := &Connection{
 		ip:   IP,
@@ -56,7 +56,7 @@ func NewConnection(hostPort string) (*Connection, error) {
 // NewConnections -  convert an array of connections
 func NewConnections(hostPort []string) ([]*Connection, error) {
 	if 0 == len(hostPort) {
-		return nil, fault.ErrInvalidLength
+		return nil, fault.InvalidLength
 	}
 	c := make([]*Connection, len(hostPort))
 	for i, hp := range hostPort {

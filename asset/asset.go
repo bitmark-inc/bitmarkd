@@ -64,7 +64,7 @@ func Initialise() error {
 
 	// no need to start if already started
 	if globalData.initialised {
-		return fault.ErrAlreadyInitialised
+		return fault.AlreadyInitialised
 	}
 
 	globalData.log = logger.New("asset")
@@ -96,7 +96,7 @@ func Initialise() error {
 func Finalise() error {
 
 	if !globalData.initialised {
-		return fault.ErrNotInitialised
+		return fault.NotInitialised
 	}
 
 	globalData.log.Info("shutting down…")
@@ -172,7 +172,7 @@ func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIdentifi
 
 	// report invalid asset changes
 	if dataWouldChange {
-		return nil, nil, fault.ErrAssetsAlreadyRegistered
+		return nil, nil, fault.AssetsAlreadyRegistered
 	}
 
 	// queue for expiry

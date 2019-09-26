@@ -110,7 +110,7 @@ func (conn *connector) initialise(
 	staticCount := len(connect) // can be zero
 	if 0 == staticCount && !dynamicEnabled {
 		log.Error("zero static connections and dynamic is disabled")
-		return fault.ErrNoConnectionsAvailable
+		return fault.NoConnectionsAvailable
 	}
 	conn.staticClients = make([]upstream.UpstreamIntf, staticCount)
 
@@ -152,7 +152,7 @@ func (conn *connector) initialise(
 
 			// prevent connection to self
 			if bytes.Equal(publicKey, serverPublicKey) {
-				err := fault.ErrConnectingToSelfForbidden
+				err := fault.ConnectingToSelfForbidden
 				log.Errorf("client[%d]=public: %q  error: %s", i, c.PublicKey, err)
 				errF(wg, ch, canonicalErrF(c, err))
 				return
@@ -731,7 +731,7 @@ func (conn *connector) connectUpstream(
 			serverPublicKey,
 			conn.preferIPv6,
 		)
-		return fault.ErrAddressIsNil
+		return fault.AddressIsNil
 	}
 
 	log.Infof("connect: %s to: %x @ %s", priority, serverPublicKey, address)

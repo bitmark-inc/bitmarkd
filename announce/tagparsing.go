@@ -57,7 +57,7 @@ words:
 			if _, ok := supportedTags[w]; ok {
 				continue words
 			}
-			return nil, fault.ErrInvalidDnsTxtRecord
+			return nil, fault.InvalidDnsTxtRecord
 		}
 
 		// ignore empty
@@ -67,7 +67,7 @@ words:
 
 		// require form: <letter>=<word>
 		if len(w) < 3 || '=' != w[1] {
-			return nil, fault.ErrInvalidDnsTxtRecord
+			return nil, fault.InvalidDnsTxtRecord
 		}
 
 		// w[0]=tag character; w[1]= char('='); w[2:]=parameter
@@ -85,7 +85,7 @@ words:
 				}
 				IP := net.ParseIP(address)
 				if nil == IP {
-					err = fault.ErrInvalidIpAddress
+					err = fault.InvalidIpAddress
 					break addresses
 				} else {
 					err = nil
@@ -108,26 +108,26 @@ words:
 			countR += 1
 		case 'p':
 			if len(parameter) != publicKeyLength {
-				err = fault.ErrInvalidPublicKey
+				err = fault.InvalidPublicKey
 			} else {
 				t.publicKey, err = hex.DecodeString(parameter)
 				if nil != err {
-					err = fault.ErrInvalidPublicKey
+					err = fault.InvalidPublicKey
 				}
 			}
 			countP += 1
 		case 'f':
 			if len(parameter) != fingerprintLength {
-				err = fault.ErrInvalidFingerprint
+				err = fault.InvalidFingerprint
 			} else {
 				t.certificateFingerprint, err = hex.DecodeString(parameter)
 				if nil != err {
-					err = fault.ErrInvalidFingerprint
+					err = fault.InvalidFingerprint
 				}
 			}
 			countF += 1
 		default:
-			err = fault.ErrInvalidDnsTxtRecord
+			err = fault.InvalidDnsTxtRecord
 		}
 		if nil != err {
 			return nil, err
@@ -136,7 +136,7 @@ words:
 
 	// ensure that there is only one each of the required items
 	if countA != 1 || countC != 1 || countF != 1 || countP != 1 || countR != 1 {
-		return nil, fault.ErrInvalidDnsTxtRecord
+		return nil, fault.InvalidDnsTxtRecord
 	}
 
 	return t, nil
@@ -146,10 +146,10 @@ func getPort(s string) (uint16, error) {
 
 	port, err := strconv.Atoi(s)
 	if nil != err {
-		return 0, fault.ErrInvalidPortNumber
+		return 0, fault.InvalidPortNumber
 	}
 	if port < 1 || port > 65535 {
-		return 0, fault.ErrInvalidPortNumber
+		return 0, fault.InvalidPortNumber
 	}
 	return uint16(port), nil
 }

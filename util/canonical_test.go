@@ -91,7 +91,7 @@ func TestCanonicalIP(t *testing.T) {
 		}
 		if strings.Contains(err.Error(), "no such host") {
 			// expected error
-		} else if fault.ErrInvalidIpAddress != err {
+		} else if fault.InvalidIpAddress != err {
 			t.Fatalf("NewConnection failed on:[%d] %q  error: %s", i, d, err)
 		}
 	}
@@ -112,7 +112,7 @@ func TestCanonicalPort(t *testing.T) {
 			s, v6 := c.CanonicalIPandPort("")
 			t.Fatalf("eroneoulssly converted:[%d]: %q  to(%t): %q", i, d, v6, s)
 		}
-		if fault.ErrInvalidPortNumber != err {
+		if fault.InvalidPortNumber != err {
 			t.Fatalf("NewConnection failed on:[%d] %q  error: %s", i, d, err)
 		}
 	}

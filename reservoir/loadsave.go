@@ -56,7 +56,7 @@ func LoadFromFile() error {
 	}
 
 	if taggedBOF != tag {
-		return fmt.Errorf("expected BOF (%d) but read: %d", taggedBOF, tag)
+		return fmt.Errorf("expected BOF: %d but read: %d", taggedBOF, tag)
 	}
 
 	if !bytes.Equal(bofData, packed) {
@@ -157,7 +157,7 @@ func saveToFile() error {
 
 	if !globalData.initialised {
 		log.Error("save when not initialised")
-		return fault.ErrNotInitialised
+		return fault.NotInitialised
 	}
 
 	log.Info("saving…")
