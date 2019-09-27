@@ -17,6 +17,7 @@ require (
 	github.com/keegancsmith/rpc v1.1.0 // indirect
 	github.com/kr/pty v1.1.8 // indirect
 	github.com/libp2p/go-libp2p v0.2.0
+	github.com/libp2p/go-libp2p-connmgr v0.1.1
 	github.com/libp2p/go-libp2p-core v0.0.9
 	github.com/libp2p/go-libp2p-crypto v0.1.0
 	github.com/libp2p/go-libp2p-gorpc v0.1.0

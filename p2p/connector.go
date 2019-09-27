@@ -8,48 +8,52 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/libp2p/go-libp2p-core/peer"
-	net "github.com/libp2p/go-libp2p-net"
 	"github.com/multiformats/go-multiaddr"
 )
 
-func (n *Node) dialPeer(ctx context.Context, remoteListner *peer.AddrInfo) (net.Stream, error) {
-	cctx, cancel := context.WithTimeout(ctx, time.Second*60)
-	defer cancel()
-	return n.Host.NewStream(cctx, remoteListner.ID, "/chat/1.0.0")
-}
-
 // ConnectPeers connect to all peers in host peerstore
 func (n *Node) connectPeers() {
+loop:
 	for idx, peerID := range n.Host.Peerstore().PeersWithAddrs() {
 		peerInfo := n.Host.Peerstore().PeerInfo(peerID)
 		n.log.Infof("connect to peer[%s] %s... ", peerInfo.ID, util.PrintMaAddrs(peerInfo.Addrs))
 		if len(peerInfo.Addrs) == 0 {
 			n.log.Infof("no Addr: %s", peerID)
-			continue
+			continue loop
 		} else if n.isSameNode(peerInfo) {
 			n.log.Infof("The same node: %s", peerID)
-			continue
+			continue loop
 		} else {
 			for _, addr := range peerInfo.Addrs {
 				n.log.Infof("connectPeers: Dial to peer[%d]:%s", idx, addr.String())
 			}
-			n.directConnect(peerInfo)
+			err := n.directConnect(peerInfo)
+			if err != nil {
+				continue loop
+			}
+			s, err := n.register(&peerInfo)
+			if err != nil {
+				n.log.Warn(fmt.Sprintf(":\x1b[31mRegister Failed: %v:\x1b[0m", err))
+				n.Host.Network().ClosePeer(peerInfo.ID)
+				continue loop
+			}
+			n.log.Info(fmt.Sprintf(":\x1b[32mRegister Sucessfull\x1b[0m"))
+			n.Lock()
+			n.RegisterStream = append(n.RegisterStream, s)
+			n.Unlock()
 		}
 	}
 }
 
-func (n *Node) directConnect(info peer.AddrInfo) {
-	// Start a stream with the destination.
-	// Multiaddress of the destination peer is fetched from the peerstore using 'peerId'.
-	s, err := n.Host.NewStream(context.Background(), info.ID, "/chat/1.0.0")
+func (n *Node) directConnect(info peer.AddrInfo) error {
+	cctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
+	defer cancel()
+	err := n.Host.Connect(cctx, info)
 	if err != nil {
 		n.log.Warn(err.Error())
-		return
+		return err
 	}
-	// Create a thread to read and write data.
-	var shandler basicStream
-	shandler.ID = fmt.Sprintf("%s", n.Host.ID())
-	shandler.handleStream(s)
+	return nil
 }
 
 // Check on IP and Port and also local addr with the same port

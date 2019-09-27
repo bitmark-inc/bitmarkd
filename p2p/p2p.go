@@ -14,6 +14,7 @@ import (
 	proto "github.com/golang/protobuf/proto"
 	p2pcore "github.com/libp2p/go-libp2p-core"
 	crypto "github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/network"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	ma "github.com/multiformats/go-multiaddr"
@@ -30,8 +31,11 @@ const (
 	domainBitamrk = "nodes.test.bitmark.com"
 	domainTest    = "nodes.test.bitmark.com"
 	//  time interval
-	nodeInitial  = 5 * time.Second // startup delay before first send
-	nodeInterval = 1 * time.Minute // regular polling time
+	nodeInitial   = 5 * time.Second // startup delay before first send
+	nodeInterval  = 1 * time.Minute // regular polling time
+	lowConn       = 3
+	maxConn       = 20
+	connGraceTime = 30 * time.Second
 )
 
 var (
@@ -82,6 +86,7 @@ type Node struct {
 	Announce       []ma.Multiaddr
 	sync.RWMutex             // to allow locking
 	log            *logger.L // logger
+	RegisterStream []*network.Stream
 	MuticastStream *pubsub.PubSub
 	PreferIPv6     bool
 	PrivateKey     crypto.PrivKey
@@ -89,7 +94,7 @@ type Node struct {
 	background *background.T
 	// set once during initialise
 	initialised bool
-	Metrics
+	metricsNetwork
 	// statemachine
 	stateMachine statemachine.StateMachine
 }
@@ -130,7 +135,7 @@ loop:
 			log.Infof("-><- P2P recieve commend:%s", item.Command)
 			switch item.Command {
 			case "peer":
-				messageOut := P2PMessage{Command: item.Command, Parameters: item.Parameters}
+				messageOut := BusMessage{Command: item.Command, Parameters: item.Parameters}
 				msgBytes, err := proto.Marshal(&messageOut)
 				if err != nil {
 					log.Errorf("Marshal Message Error: %v\n", err)

@@ -23,7 +23,7 @@ func (n *Node) SubHandler(ctx context.Context, sub *pubsub.Subscription) {
 			fmt.Fprintln(os.Stderr, err)
 			continue
 		}
-		req := &P2PMessage{}
+		req := &BusMessage{}
 		err = proto.Unmarshal(msg.Data, req)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
