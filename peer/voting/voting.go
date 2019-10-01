@@ -18,17 +18,17 @@ const (
 )
 
 type Voting interface {
-	ElectedCandidate() (upstream.UpstreamIntf, uint64, error)
+	ElectedCandidate() (upstream.Upstream, uint64, error)
 	NumVoteOfDigest(blockdigest.Digest) int
 	Reset()
 	SetMinHeight(uint64)
-	VoteBy(upstream.UpstreamIntf)
+	VoteBy(upstream.Upstream)
 }
 
 // each voter is also a candidate, it means all candidates vote
 // to height itself has
 type voters struct {
-	candidate upstream.UpstreamIntf
+	candidate upstream.Upstream
 	height    uint64
 }
 
@@ -37,11 +37,13 @@ type records map[blockdigest.Digest][]*voters
 type electionResult struct {
 	highestNumVotes int
 	majorityHeight  uint64
-	winner          upstream.UpstreamIntf
+	winner          upstream.Upstream
 	draw            bool
 }
 
-type VotingImpl struct {
+type VotingData struct {
+	Voting
+
 	votes     records
 	minHeight uint64
 	result    *electionResult
@@ -50,7 +52,7 @@ type VotingImpl struct {
 
 // NewVoting - new voting object
 func NewVoting() Voting {
-	return &VotingImpl{
+	return &VotingData{
 		votes:     make(records),
 		minHeight: uint64(0),
 		result: &electionResult{
@@ -64,30 +66,35 @@ func NewVoting() Voting {
 }
 
 // SetMinHeight - set minimum height for vote
-func (v *VotingImpl) SetMinHeight(height uint64) {
+func (v *VotingData) SetMinHeight(height uint64) {
 	v.log.Infof("minimum height %d\n", height)
 	v.minHeight = height
 }
 
 // NumVoteOfDigest - number of votest for a digest
-func (v *VotingImpl) NumVoteOfDigest(digest blockdigest.Digest) int {
+func (v *VotingData) NumVoteOfDigest(digest blockdigest.Digest) int {
 	if v.existVoteForDigest(digest) {
 		return len(v.votes[digest])
 	}
 	return 0
 }
 
-func (v *VotingImpl) existVoteForDigest(digest blockdigest.Digest) bool {
+func (v *VotingData) existVoteForDigest(digest blockdigest.Digest) bool {
 	_, ok := v.votes[digest]
 	return ok
 }
 
 // VoteBy - vote by some upstream
-func (v *VotingImpl) VoteBy(candidate upstream.UpstreamIntf) {
+func (v *VotingData) VoteBy(candidate upstream.Upstream) {
 	height := candidate.CachedRemoteHeight()
 	digest := candidate.CachedRemoteDigestOfLocalHeight()
-	remoteAddr := candidate.Client().String()
 	upstream := candidate.Name()
+
+	remoteAddr, err := candidate.RemoteAddr()
+	if nil != err {
+		v.log.Infof("remote addr error: %s", err)
+	}
+
 	v.log.Infof(
 		"%s connects to remote %s, cached remote height: %d with digest: %s",
 		upstream,
@@ -119,12 +126,12 @@ func (v *VotingImpl) VoteBy(candidate upstream.UpstreamIntf) {
 	v.votes[digest] = []*voters{e}
 }
 
-func (v *VotingImpl) validHeight(height uint64) bool {
+func (v *VotingData) validHeight(height uint64) bool {
 	return height >= v.minHeight
 }
 
 // ElectedCandidate - get candidate that is most vote
-func (v *VotingImpl) ElectedCandidate() (upstream.UpstreamIntf, uint64, error) {
+func (v *VotingData) ElectedCandidate() (upstream.Upstream, uint64, error) {
 	err := v.countVotes()
 	if nil != err {
 		v.log.Errorf("count votes with error: %s", err)
@@ -138,7 +145,7 @@ func (v *VotingImpl) ElectedCandidate() (upstream.UpstreamIntf, uint64, error) {
 	return v.result.winner, v.result.winner.CachedRemoteHeight(), nil
 }
 
-func (v *VotingImpl) countVotes() error {
+func (v *VotingData) countVotes() error {
 	for _, voters := range v.votes {
 		if v.result.highestNumVotes < len(voters) {
 			v.updateTemporarilyVoteSummary(voters)
@@ -164,7 +171,7 @@ func (v *VotingImpl) countVotes() error {
 	return nil
 }
 
-func (v *VotingImpl) sufficientVotes() bool {
+func (v *VotingData) sufficientVotes() bool {
 	if !v.result.draw {
 		return v.result.highestNumVotes >= (1+minimumClients)/2
 	}
@@ -172,7 +179,7 @@ func (v *VotingImpl) sufficientVotes() bool {
 	return v.sufficientVotesInDraw()
 }
 
-func (v *VotingImpl) sufficientVotesInDraw() bool {
+func (v *VotingData) sufficientVotesInDraw() bool {
 	drawVotes := 0
 	for _, voters := range v.votes {
 		counts := len(voters)
@@ -183,7 +190,7 @@ func (v *VotingImpl) sufficientVotesInDraw() bool {
 	return drawVotes >= (1+minimumClients)/2
 }
 
-func (v *VotingImpl) updateTemporarilyVoteSummary(voters []*voters) {
+func (v *VotingData) updateTemporarilyVoteSummary(voters []*voters) {
 	v.result.highestNumVotes = len(voters)
 	v.result.winner = voters[0].candidate
 	v.result.majorityHeight = voters[0].height
@@ -192,7 +199,7 @@ func (v *VotingImpl) updateTemporarilyVoteSummary(voters []*voters) {
 
 // when in draw, which chain has smaller digest is chosen
 // compare by remote digest of local height
-func (v *VotingImpl) drawElection() (upstream.UpstreamIntf, uint64, error) {
+func (v *VotingData) drawElection() (upstream.Upstream, uint64, error) {
 	var err error
 
 	v.log.Infof("election in draw with vote counts %d", v.result.highestNumVotes)
@@ -203,7 +210,7 @@ func (v *VotingImpl) drawElection() (upstream.UpstreamIntf, uint64, error) {
 	return v.result.winner, v.result.winner.CachedRemoteHeight(), nil
 }
 
-func (v *VotingImpl) drawWinner() (upstream.UpstreamIntf, error) {
+func (v *VotingData) drawWinner() (upstream.Upstream, error) {
 	if 0 == v.result.highestNumVotes {
 		return nil, fault.VotesWithZeroCount
 	}
@@ -218,8 +225,8 @@ func (v *VotingImpl) drawWinner() (upstream.UpstreamIntf, error) {
 	return elected, nil
 }
 
-func (v *VotingImpl) sameVoteCandidates(numVote int) []upstream.UpstreamIntf {
-	var candidates []upstream.UpstreamIntf
+func (v *VotingData) sameVoteCandidates(numVote int) []upstream.Upstream {
+	var candidates []upstream.Upstream
 	for _, elections := range v.votes {
 		if len(elections) == numVote {
 			candidates = append(candidates, elections[0].candidate)
@@ -230,9 +237,9 @@ func (v *VotingImpl) sameVoteCandidates(numVote int) []upstream.UpstreamIntf {
 	return candidates
 }
 
-func (v *VotingImpl) smallerDigestWinnerFrom(
-	candidates []upstream.UpstreamIntf,
-) upstream.UpstreamIntf {
+func (v *VotingData) smallerDigestWinnerFrom(
+	candidates []upstream.Upstream,
+) upstream.Upstream {
 	v.log.Debug("select candidate with smaller digest")
 
 	elected := candidates[0]
@@ -257,7 +264,7 @@ election:
 	return elected
 }
 
-func (v *VotingImpl) allZeros(s blockdigest.Digest) bool {
+func (v *VotingData) allZeros(s blockdigest.Digest) bool {
 	for _, b := range s {
 		if b != 0 {
 			return false
@@ -267,15 +274,15 @@ func (v *VotingImpl) allZeros(s blockdigest.Digest) bool {
 }
 
 // Reset - reset voting
-func (v *VotingImpl) Reset() {
+func (v *VotingData) Reset() {
 	v.votes = make(records)
-	v.minHeight = uint64(0)
+	v.minHeight = 0
 	v.resetResult()
 }
 
-func (v *VotingImpl) resetResult() {
+func (v *VotingData) resetResult() {
 	v.result.highestNumVotes = 0
 	v.result.winner = nil
-	v.result.majorityHeight = uint64(0)
+	v.result.majorityHeight = 0
 	v.result.draw = false
 }

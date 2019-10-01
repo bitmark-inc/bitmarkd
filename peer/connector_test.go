@@ -18,15 +18,15 @@ func newTestConnector() *connector {
 	return &connector{}
 }
 
-func newTestMockUpstream(t *testing.T) (*gomock.Controller, *mocks.MockUpstreamIntf) {
+func newTestMockUpstream(t *testing.T) (*gomock.Controller, *mocks.MockUpstream) {
 	ctl := gomock.NewController(t)
-	return ctl, mocks.NewMockUpstreamIntf(ctl)
+	return ctl, mocks.NewMockUpstream(ctl)
 }
 
 func TestNextState(t *testing.T) {
 	c := newTestConnector()
 	orig := c.state
-	c.nextState()
+	c.nextState(orig + 1)
 	assert.Equal(t, orig+1, c.state, "state not increased")
 }
 

@@ -8,18 +8,57 @@ package upstream
 import (
 	"encoding/binary"
 	"fmt"
+	"sync"
 	"time"
 
 	zmq "github.com/pebbe/zmq4"
 
 	"github.com/bitmark-inc/bitmarkd/announce"
+	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/counter"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
 )
+
+// Upstream - upstream connection
+type Upstream interface {
+	ActiveInThePast(time.Duration) bool
+	CachedRemoteDigestOfLocalHeight() blockdigest.Digest
+	CachedRemoteHeight() uint64
+	Connect(*util.Connection, []byte) error
+	ConnectedTo() *zmqutil.Connected
+	Destroy()
+	GetBlockData(uint64) ([]byte, error)
+	IsConnectedTo([]byte) bool
+	IsConnected() bool
+	LocalHeight() uint64
+	Name() string
+	RemoteAddr() (string, error)
+	RemoteDigestOfHeight(uint64) (blockdigest.Digest, error)
+	RemoteHeight() (uint64, error)
+	ResetServer()
+	ServerPublicKey() []byte
+}
+
+// upstreamData - structure to hold an upstream connection
+type upstreamData struct {
+	Upstream
+	sync.RWMutex
+
+	log                       *logger.L
+	name                      string
+	client                    zmqutil.Client
+	connected                 bool
+	remoteHeight              uint64
+	localHeight               uint64
+	remoteDigestOfLocalHeight blockdigest.Digest
+	shutdown                  chan<- struct{}
+	lastResponseTime          time.Time
+}
 
 const (
 	cycleInterval = 30 * time.Second
@@ -37,7 +76,7 @@ const (
 var upstreamCounter counter.Counter
 
 // New - create a connection to an upstream server
-func New(privateKey []byte, publicKey []byte, timeout time.Duration) (UpstreamIntf, error) {
+func New(privateKey []byte, publicKey []byte, timeout time.Duration) (Upstream, error) {
 
 	client, event, err := zmqutil.NewClient(zmq.REQ, privateKey, publicKey, timeout, zmq.EVENT_ALL)
 	if nil != err {
@@ -48,7 +87,7 @@ func New(privateKey []byte, publicKey []byte, timeout time.Duration) (UpstreamIn
 
 	shutdown := make(chan struct{})
 	upstreamStr := fmt.Sprintf("upstream@%d", n)
-	u := &Upstream{
+	u := &upstreamData{
 		name:      upstreamStr,
 		log:       logger.New(upstreamStr),
 		client:    client,
@@ -61,7 +100,7 @@ func New(privateKey []byte, publicKey []byte, timeout time.Duration) (UpstreamIn
 }
 
 // loop to handle upstream communication
-func (u *Upstream) runner(shutdown <-chan struct{}) {
+func (u *upstreamData) runner(shutdown <-chan struct{}) {
 	log := u.log
 
 	log.Debug("starting…")
@@ -138,7 +177,7 @@ loop:
 // start polling the socket
 //
 // it should be called as a goroutine to avoid blocking
-func (u *Upstream) poller(shutdown <-chan struct{}, event <-chan zmqutil.Event) {
+func (u *upstreamData) poller(shutdown <-chan struct{}, event <-chan zmqutil.Event) {
 
 	log := u.log
 
@@ -160,7 +199,7 @@ loop:
 }
 
 // process the socket events
-func (u *Upstream) handleEvent(event zmqutil.Event, state *connectedState) {
+func (u *upstreamData) handleEvent(event zmqutil.Event, state *connectedState) {
 	log := u.log
 
 	switch event.Event {
@@ -218,7 +257,7 @@ func (u *Upstream) handleEvent(event zmqutil.Event, state *connectedState) {
 }
 
 // register with server and check chain information
-func (u *Upstream) requestBlockchainInfo() error {
+func (u *upstreamData) requestBlockchainInfo() error {
 	log := u.log
 	client := u.client
 	log.Debugf("register: client: %s", client)
@@ -264,7 +303,7 @@ func (u *Upstream) requestBlockchainInfo() error {
 	}
 }
 
-func (u *Upstream) height() (uint64, error) {
+func (u *upstreamData) height() (uint64, error) {
 	log := u.log
 	client := u.client
 	log.Infof("getHeight: client: %s", client)
@@ -303,7 +342,7 @@ func (u *Upstream) height() (uint64, error) {
 	}
 }
 
-func (u *Upstream) push(item *messagebus.Message) error {
+func (u *upstreamData) push(item *messagebus.Message) error {
 	log := u.log
 	client := u.client
 	log.Infof("push: client: %s  %q %x", client, item.Command, item.Parameters)

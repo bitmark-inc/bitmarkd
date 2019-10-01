@@ -8,7 +8,6 @@ package upstream
 import (
 	"encoding/binary"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
@@ -16,50 +15,12 @@ import (
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
-	"github.com/bitmark-inc/logger"
 )
 
-type UpstreamIntf interface {
-	ActiveInPastSeconds(time.Duration) bool
-	CachedRemoteDigestOfLocalHeight() blockdigest.Digest
-	CachedRemoteHeight() uint64
-	Client() zmqutil.ClientIntf
-	Connect(*util.Connection, []byte) error
-	ConnectedTo() *zmqutil.Connected
-	Destroy()
-	GetBlockData(uint64) ([]byte, error)
-	IsConnectedTo([]byte) bool
-	IsConnected() bool
-	LocalHeight() uint64
-	Name() string
-	RemoteAddr() (string, error)
-	RemoteDigestOfHeight(uint64) (blockdigest.Digest, error)
-	RemoteHeight() (uint64, error)
-	ResetServer()
-	ServerPublicKey() []byte
-}
-
-// Upstream - structure to hold an upstream connection
-type Upstream struct {
-	sync.RWMutex
-
-	UpstreamIntf
-
-	log                       *logger.L
-	name                      string
-	client                    zmqutil.ClientIntf
-	connected                 bool
-	remoteHeight              uint64
-	localHeight               uint64
-	remoteDigestOfLocalHeight blockdigest.Digest
-	shutdown                  chan<- struct{}
-	lastResponseTime          time.Time
-}
-
-// ActiveInPastSeconds - active upstream in past seconds
-func (u *Upstream) ActiveInPastSeconds(sec time.Duration) bool {
+// ActiveInThePast - active upstream in past time
+func (u *upstreamData) ActiveInThePast(d time.Duration) bool {
 	now := time.Now()
-	limit := now.Add(time.Second * sec * -1)
+	limit := now.Add(-d)
 	active := limit.Before(u.lastResponseTime)
 	difference := now.Sub(u.lastResponseTime).Seconds()
 
@@ -72,7 +33,7 @@ func (u *Upstream) ActiveInPastSeconds(sec time.Duration) bool {
 }
 
 // Destroy - shutdown a connection and terminate its background processes
-func (u *Upstream) Destroy() {
+func (u *upstreamData) Destroy() {
 	if nil != u {
 		close(u.shutdown)
 	}
@@ -80,7 +41,7 @@ func (u *Upstream) Destroy() {
 
 // ResetServer - clear Server side info of Zmq client for reusing the
 // upstream
-func (u *Upstream) ResetServer() {
+func (u *upstreamData) ResetServer() {
 	u.client.Close()
 	u.connected = false
 	u.remoteHeight = 0
@@ -90,34 +51,34 @@ func (u *Upstream) ResetServer() {
 //
 // does not mean actually connected, as could be in a timeout and
 // reconnect state
-func (u *Upstream) IsConnectedTo(serverPublicKey []byte) bool {
+func (u *upstreamData) IsConnectedTo(serverPublicKey []byte) bool {
 	return u.client.IsConnectedTo(serverPublicKey)
 }
 
 // IsConnected - check if registered and have a valid connection
-func (u *Upstream) IsConnected() bool {
+func (u *upstreamData) IsConnected() bool {
 	return u.connected
 }
 
 // ConnectedTo - if registered return the connection data
-func (u *Upstream) ConnectedTo() *zmqutil.Connected {
+func (u *upstreamData) ConnectedTo() *zmqutil.Connected {
 	return u.client.ConnectedTo()
 }
 
 // Connect - connect (or reconnect) to a specific server
-func (u *Upstream) Connect(address *util.Connection, serverPublicKey []byte) error {
+func (u *upstreamData) Connect(address *util.Connection, serverPublicKey []byte) error {
 	u.log.Infof("connecting to address: %s", address)
 	u.log.Infof("connecting to server: %x", serverPublicKey)
 	return u.client.Connect(address, serverPublicKey, mode.ChainName())
 }
 
 // ServerPublicKey - return the internal ZeroMQ client data
-func (u *Upstream) ServerPublicKey() []byte {
+func (u *upstreamData) ServerPublicKey() []byte {
 	return u.client.ServerPublicKey()
 }
 
 // RemoteDigestOfHeight - fetch block digest from a specific block number
-func (u *Upstream) RemoteDigestOfHeight(blockNumber uint64) (blockdigest.Digest, error) {
+func (u *upstreamData) RemoteDigestOfHeight(blockNumber uint64) (blockdigest.Digest, error) {
 	remoteAddr, _ := u.RemoteAddr()
 	u.log.Debugf("remote address %s, get block digest %d", remoteAddr, blockNumber)
 
@@ -156,7 +117,9 @@ func (u *Upstream) RemoteDigestOfHeight(blockNumber uint64) (blockdigest.Digest,
 }
 
 // GetBlockData - fetch block data from a specific block number
-func (u *Upstream) GetBlockData(blockNumber uint64) ([]byte, error) {
+// Note: returned data is always nil for error conditions
+func (u *upstreamData) GetBlockData(blockNumber uint64) ([]byte, error) {
+
 	parameter := make([]byte, 8)
 	binary.BigEndian.PutUint64(parameter, blockNumber)
 
@@ -188,7 +151,7 @@ func (u *Upstream) GetBlockData(blockNumber uint64) ([]byte, error) {
 }
 
 // must have lock held before calling
-func (u *Upstream) RemoteHeight() (uint64, error) {
+func (u *upstreamData) RemoteHeight() (uint64, error) {
 	u.log.Infof("getHeight: client: %s", u.client)
 
 	err := u.client.Send("N")
@@ -222,22 +185,21 @@ func (u *Upstream) RemoteHeight() (uint64, error) {
 }
 
 // CachedRemoteDigestOfLocalHeight - cached remote digest of local block height
-func (u *Upstream) CachedRemoteDigestOfLocalHeight() blockdigest.Digest {
+func (u *upstreamData) CachedRemoteDigestOfLocalHeight() blockdigest.Digest {
 	return u.remoteDigestOfLocalHeight
 }
 
 // RemoteAddr - remote client address
-func (u *Upstream) RemoteAddr() (string, error) {
+func (u *upstreamData) RemoteAddr() (string, error) {
 	var err error
 
 	if nil == u.client {
-		err = fmt.Errorf("client not created")
+		err = fault.ClientSocketNotCreated
 	} else if !u.client.IsConnected() {
-		err = fmt.Errorf("client socket not connected")
+		err = fault.ClientSocketNotConnected
 	}
-
 	if nil != err {
-		u.log.Error(err.Error())
+		u.log.Warnf("remote address not available error: %s", err)
 		return "", err
 	}
 
@@ -245,21 +207,16 @@ func (u *Upstream) RemoteAddr() (string, error) {
 }
 
 // Name - upstream name
-func (u *Upstream) Name() string {
+func (u *upstreamData) Name() string {
 	return u.name
 }
 
 // CachedRemoteHeight - cached remote client height
-func (u *Upstream) CachedRemoteHeight() uint64 {
+func (u *upstreamData) CachedRemoteHeight() uint64 {
 	return u.remoteHeight
 }
 
 // LocalHeight - local block height
-func (u *Upstream) LocalHeight() uint64 {
+func (u *upstreamData) LocalHeight() uint64 {
 	return u.localHeight
-}
-
-// Client - zmq client
-func (u *Upstream) Client() zmqutil.ClientIntf {
-	return u.client
 }

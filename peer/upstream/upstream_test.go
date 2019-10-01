@@ -11,13 +11,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/peer/mocks"
 	"github.com/bitmark-inc/logger"
-
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -61,16 +61,16 @@ func teardownTestUpstreamLogger() {
 	removeFiles()
 }
 
-func newMockZmqutilClient(t *testing.T) (*gomock.Controller, *mocks.MockClientIntf) {
+func newMockZmqutilClient(t *testing.T) (*gomock.Controller, *mocks.MockClient) {
 	ctl := gomock.NewController(t)
-	return ctl, mocks.NewMockClientIntf(ctl)
+	return ctl, mocks.NewMockClient(ctl)
 }
 
-func newTestUpstream(t *testing.T) (UpstreamIntf, *gomock.Controller, *mocks.MockClientIntf) {
+func newTestUpstream(t *testing.T) (Upstream, *gomock.Controller, *mocks.MockClient) {
 	setupTestUpstreamLogger()
 	ctl, mockZmq := newMockZmqutilClient(t)
 
-	return &Upstream{
+	return &upstreamData{
 		log:                       logger.New(testLoggerName),
 		client:                    mockZmq,
 		remoteDigestOfLocalHeight: defaultDigest,
@@ -90,7 +90,7 @@ func TestCachedRemoteDigestOfLocalHeight(t *testing.T) {
 
 func TestGetClientStringWhenNoClient(t *testing.T) {
 	setupTestUpstreamLogger()
-	u := &Upstream{
+	u := &upstreamData{
 		log: logger.New(testLoggerName),
 	}
 	defer teardownTestUpstreamLogger()
@@ -126,7 +126,7 @@ func TestGetClientStringWhenNotConnected(t *testing.T) {
 
 func TestActiveInPastSecondsWhenInRange(t *testing.T) {
 	setupTestUpstreamLogger()
-	u := &Upstream{
+	u := &upstreamData{
 		log: logger.New(testLoggerName),
 	}
 	defer teardownTestUpstreamLogger()
@@ -134,13 +134,13 @@ func TestActiveInPastSecondsWhenInRange(t *testing.T) {
 	now := time.Now()
 	u.lastResponseTime = now.Add(-5 * time.Second)
 
-	actual := u.ActiveInPastSeconds(30)
+	actual := u.ActiveInThePast(30 * time.Second)
 	assert.Equal(t, true, actual, "wrong time range")
 }
 
 func TestActiveInPastSecondsWhenOutOfRange(t *testing.T) {
 	setupTestUpstreamLogger()
-	u := &Upstream{
+	u := &upstreamData{
 		log: logger.New(testLoggerName),
 	}
 	defer teardownTestUpstreamLogger()
@@ -148,13 +148,13 @@ func TestActiveInPastSecondsWhenOutOfRange(t *testing.T) {
 	now := time.Now()
 	fiveSecBefore := now.Add(-35 * time.Second)
 	u.lastResponseTime = fiveSecBefore
-	actual := u.ActiveInPastSeconds(30)
+	actual := u.ActiveInThePast(30 * time.Second)
 	assert.Equal(t, false, actual, "wrong time range")
 }
 
 func TestCachedRemoteHeight(t *testing.T) {
 	setupTestUpstreamLogger()
-	u := &Upstream{
+	u := &upstreamData{
 		log: logger.New(testLoggerName),
 	}
 	defer teardownTestUpstreamLogger()
@@ -167,7 +167,7 @@ func TestCachedRemoteHeight(t *testing.T) {
 
 func TestName(t *testing.T) {
 	setupTestUpstreamLogger()
-	u := &Upstream{
+	u := &upstreamData{
 		log: logger.New(testLoggerName),
 	}
 	defer teardownTestUpstreamLogger()
@@ -180,7 +180,7 @@ func TestName(t *testing.T) {
 
 func TestLocalHeight(t *testing.T) {
 	setupTestUpstreamLogger()
-	u := &Upstream{
+	u := &upstreamData{
 		log: logger.New(testLoggerName),
 	}
 	defer teardownTestUpstreamLogger()

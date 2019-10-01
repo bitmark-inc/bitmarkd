@@ -42,7 +42,8 @@ const (
 	EVENT_HANDSHAKE_FAILED_AUTH      = 0x4000
 )
 
-type ClientIntf interface {
+// Client - structure to hold a client connection
+type Client interface {
 	Close() error
 	Connect(conn *util.Connection, serverPublicKey []byte, prefix string) error
 	ConnectedTo() *Connected
@@ -56,13 +57,13 @@ type ClientIntf interface {
 	String() string
 }
 
-// Client - structure to hold a client connection
+// clientData - structure to hold a client connection
 //
 // prefix:
 //   REQ socket this adds an item before send
 //   SUB socket this adds/changes subscription
-type Client struct {
-	ClientIntf
+type clientData struct {
+	Client
 
 	sync.Mutex
 
@@ -112,7 +113,7 @@ func NewClient(
 	publicKey []byte,
 	timeout time.Duration,
 	events zmq.Event,
-) (*Client, <-chan Event, error) {
+) (Client, <-chan Event, error) {
 
 	if len(publicKey) != publicKeySize {
 		return nil, nil, fault.InvalidPublicKey
@@ -125,7 +126,7 @@ func NewClient(
 
 	queue := make(chan Event, 10)
 
-	client := &Client{
+	client := &clientData{
 		publicKey:       make([]byte, publicKeySize),
 		privateKey:      make([]byte, privateKeySize),
 		serverPublicKey: make([]byte, publicKeySize),
@@ -147,7 +148,7 @@ func NewClient(
 }
 
 // create a socket and connect to specific server with public key
-func (client *Client) openSocket() error {
+func (client *clientData) openSocket() error {
 	client.Lock()
 	defer client.Unlock()
 
@@ -318,7 +319,7 @@ failure:
 
 // destroy the socket, but leave other connection info so can reconnect
 // to the same endpoint again
-func (client *Client) closeSocket() error {
+func (client *clientData) closeSocket() error {
 	client.Lock()
 	defer client.Unlock()
 
@@ -348,7 +349,7 @@ func (client *Client) closeSocket() error {
 }
 
 // Connect - disconnect old address and connect to new
-func (client *Client) Connect(conn *util.Connection, serverPublicKey []byte, prefix string) error {
+func (client *clientData) Connect(conn *util.Connection, serverPublicKey []byte, prefix string) error {
 
 	// if already connected, disconnect first
 	err := client.closeSocket()
@@ -372,17 +373,17 @@ func (client *Client) Connect(conn *util.Connection, serverPublicKey []byte, pre
 }
 
 // IsConnected - check if connected to a node
-func (client *Client) IsConnected() bool {
+func (client *clientData) IsConnected() bool {
 	return "" != client.address && nil != client.socket
 }
 
 // IsConnectedTo - check if connected to a specific node
-func (client *Client) IsConnectedTo(serverPublicKey []byte) bool {
+func (client *clientData) IsConnectedTo(serverPublicKey []byte) bool {
 	return bytes.Equal(client.serverPublicKey, serverPublicKey)
 }
 
 // Reconnect - close and reopen the connection
-func (client *Client) Reconnect() error {
+func (client *clientData) Reconnect() error {
 
 	err := client.closeSocket()
 	if nil != err {
@@ -396,7 +397,7 @@ func (client *Client) Reconnect() error {
 }
 
 // Close - disconnect old address and close
-func (client *Client) Close() error {
+func (client *clientData) Close() error {
 	err := client.closeSocket()
 	client.serverPublicKey = make([]byte, publicKeySize)
 	client.address = ""
@@ -405,7 +406,7 @@ func (client *Client) Close() error {
 }
 
 // CloseClients - disconnect old addresses and close all
-func CloseClients(clients []*Client) {
+func CloseClients(clients []Client) {
 	for _, client := range clients {
 		if nil != client {
 			client.Close()
@@ -414,7 +415,7 @@ func CloseClients(clients []*Client) {
 }
 
 // Send - send a message
-func (client *Client) Send(items ...interface{}) error {
+func (client *clientData) Send(items ...interface{}) error {
 	client.Lock()
 	defer client.Unlock()
 
@@ -499,7 +500,7 @@ func (client *Client) Send(items ...interface{}) error {
 }
 
 // Receive - receive a reply
-func (client *Client) Receive(flags zmq.Flag) ([][]byte, error) {
+func (client *clientData) Receive(flags zmq.Flag) ([][]byte, error) {
 	client.Lock()
 	defer client.Unlock()
 
@@ -517,7 +518,7 @@ type Connected struct {
 }
 
 // ConnectedTo - return representation of client connection
-func (client *Client) ConnectedTo() *Connected {
+func (client *clientData) ConnectedTo() *Connected {
 
 	if "" == client.address {
 		return nil
@@ -529,12 +530,12 @@ func (client *Client) ConnectedTo() *Connected {
 }
 
 // String - return a string description of a client
-func (client *Client) String() string {
+func (client *clientData) String() string {
 	return client.address
 }
 
 // GoString - return a basic information string for debugging purposes
-func (client *Client) GoString() string {
+func (client *clientData) GoString() string {
 	s := fmt.Sprintf(
 		"server public key: %x  address: %s  public key: %x  prefix: %s  v6: %t  socket type: %d  ts: %v  timeout duration: %s",
 		client.serverPublicKey,
@@ -550,11 +551,11 @@ func (client *Client) GoString() string {
 }
 
 // ServerPublicKey - return server's public key
-func (client *Client) ServerPublicKey() []byte {
+func (client *clientData) ServerPublicKey() []byte {
 	return client.serverPublicKey
 }
 
-func (client *Client) poller(shutdown <-chan struct{}, stopped chan<- struct{}) {
+func (client *clientData) poller(shutdown <-chan struct{}, stopped chan<- struct{}) {
 
 	n := sequenceCounter.Increment()
 	monitorConnection := fmt.Sprintf(monitorFormat, client.number, n)

@@ -51,38 +51,33 @@ const (
 	maximumDynamicClients = 25
 
 	// client should exist at least 1 response with in this number
-	activePastSec = 60
+	activeTime = 60 * time.Second
 
 	// fast sync option to fetch block
-	fastSyncFetchBlocksPerCycle = 2048
+	fastSyncFetchBlocksPerCycle = 2000
 	fastSyncSkipPerBlocks       = 100
+	fastSyncPivotBlocks         = 1000
 )
 
-type ConnectorIntf interface {
-	PrintUpstreams(string) string
-	Run(interface{}, <-chan struct{})
-}
-
 type connector struct {
-	ConnectorIntf
-
 	sync.RWMutex
+
 	log        *logger.L
 	preferIPv6 bool
 
-	staticClients []upstream.UpstreamIntf
+	staticClients []upstream.Upstream
 
 	dynamicClients list.List
 
 	state connectorState
 
-	theClient        upstream.UpstreamIntf // client used for fetching blocks
-	startBlockNumber uint64                // block number where local chain forks
-	height           uint64                // block number on best node
-	samples          int                   // counter to detect missed block broadcast
+	theClient        upstream.Upstream // client used for fetching blocks
+	startBlockNumber uint64            // block number where local chain forks
+	height           uint64            // block number on best node
+	samples          int               // counter to detect missed block broadcast
 	votes            voting.Voting
 
-	fastsyncEnabled bool   // fast sync mode enabled?
+	fastSyncEnabled bool   // fast sync mode enabled?
 	blocksPerCycle  int    // number of blocks to fetch per cycle
 	pivotPoint      uint64 // block number to stop fast syncing
 }
@@ -94,7 +89,7 @@ func (conn *connector) initialise(
 	connect []Connection,
 	dynamicEnabled bool,
 	preferIPv6 bool,
-	fastsync bool,
+	fastSync bool,
 ) error {
 
 	log := logger.New("connector")
@@ -102,7 +97,7 @@ func (conn *connector) initialise(
 
 	conn.preferIPv6 = preferIPv6
 
-	conn.fastsyncEnabled = fastsync
+	conn.fastSyncEnabled = fastSync
 
 	log.Info("initialising…")
 
@@ -112,7 +107,7 @@ func (conn *connector) initialise(
 		log.Error("zero static connections and dynamic is disabled")
 		return fault.NoConnectionsAvailable
 	}
-	conn.staticClients = make([]upstream.UpstreamIntf, staticCount)
+	conn.staticClients = make([]upstream.Upstream, staticCount)
 
 	// initially connect all static sockets
 	wg := sync.WaitGroup{}
@@ -220,7 +215,7 @@ func (conn *connector) initialise(
 	conn.votes = voting.NewVoting()
 
 	// start state machine
-	conn.toState(cStateConnecting)
+	conn.nextState(cStateConnecting)
 
 	return nil
 
@@ -250,18 +245,18 @@ func compositeError(errors []error) error {
 }
 
 func (conn *connector) allClients(
-	f func(client upstream.UpstreamIntf, e *list.Element),
+	f func(client upstream.Upstream, e *list.Element),
 ) {
 	for _, client := range conn.staticClients {
 		f(client, nil)
 	}
 	for e := conn.dynamicClients.Front(); nil != e; e = e.Next() {
-		f(e.Value.(upstream.UpstreamIntf), e)
+		f(e.Value.(upstream.Upstream), e)
 	}
 }
 
 func (conn *connector) searchClients(
-	f func(client upstream.UpstreamIntf, e *list.Element) bool,
+	f func(client upstream.Upstream, e *list.Element) bool,
 ) {
 	for _, client := range conn.staticClients {
 		if f(client, nil) {
@@ -269,28 +264,16 @@ func (conn *connector) searchClients(
 		}
 	}
 	for e := conn.dynamicClients.Front(); nil != e; e = e.Next() {
-		if f(e.Value.(*upstream.Upstream), e) {
+		if f(e.Value.(upstream.Upstream), e) {
 			return
 		}
 	}
 }
 
 func (conn *connector) destroy() {
-	conn.allClients(func(client upstream.UpstreamIntf, e *list.Element) {
+	conn.allClients(func(client upstream.Upstream, e *list.Element) {
 		client.Destroy()
 	})
-}
-
-// Print all upstream connectors default: "debug",
-// available: "debug", "info" , "warn" , used for debug
-func (conn *connector) PrintUpstreams(prefix string) string {
-	counter := 0
-	upstreams := ""
-	conn.allClients(func(client upstream.UpstreamIntf, e *list.Element) {
-		counter++
-		upstreams = fmt.Sprintf("%s%supstream%d: %v\n", upstreams, prefix, counter, client)
-	})
-	return upstreams
 }
 
 // various RPC calls to upstream connections
@@ -373,7 +356,7 @@ func (conn *connector) runStateMachine() bool {
 		log.Infof("connections: %d", globalData.clientCount)
 
 		if isConnectionEnough(globalData.clientCount) {
-			conn.nextState()
+			conn.nextState(cStateHighestBlock)
 		} else {
 			log.Warnf("connections: %d below minimum client count: %d", globalData.clientCount, minimumClients)
 			messagebus.Bus.Announce.Send("reconnect")
@@ -381,33 +364,43 @@ func (conn *connector) runStateMachine() bool {
 		continueLooping = false
 
 	case cStateHighestBlock:
-		conn.height, conn.theClient = conn.getHeightAndClient()
-		if conn.hasBetterChain(blockheader.Height()) {
-			log.Infof("new chain from %s, height %d, digest %s", conn.theClient.Name(), conn.height, conn.theClient.CachedRemoteDigestOfLocalHeight().String())
-			log.Info("enter fork detect state")
-			conn.nextState()
-		} else if conn.isSameChain() {
-			log.Info("remote same chain")
-			conn.toState(cStateRebuild)
+		if conn.updateHeightAndClient() {
+			log.Infof("highest block number: %d  client: %s", conn.height, conn.theClient.Name())
+			if conn.hasBetterChain(blockheader.Height()) {
+				log.Infof("new chain from %s, height %d, digest %s", conn.theClient.Name(), conn.height, conn.theClient.CachedRemoteDigestOfLocalHeight().String())
+				log.Info("enter fork detect state")
+				conn.nextState(cStateForkDetect)
+			} else if conn.isSameChain() {
+				log.Info("remote same chain")
+				conn.nextState(cStateRebuild)
+			} else {
+				log.Info("remote chain invalid, stop looping for now")
+				continueLooping = false
+			}
 		} else {
-			log.Info("remote chain invalid, stop looping for now")
+			log.Warn("connection lost")
+			conn.nextState(cStateConnecting)
 			continueLooping = false
 		}
-		log.Infof("highest block number: %d", conn.height)
 
 	case cStateForkDetect:
 		height := blockheader.Height()
 		if !conn.hasBetterChain(height) {
-			log.Debug("remote without better chain, enter state rebuild")
-			conn.toState(cStateRebuild)
+			log.Info("remote without better chain, enter state rebuild")
+			conn.nextState(cStateRebuild)
 		} else {
 			// determine pivot point to stop fast sync
-			conn.pivotPoint = conn.height - 1024
-			log.Debugf("Pivot point for fast sync: %d", conn.pivotPoint)
+			if conn.height > fastSyncPivotBlocks {
+				conn.pivotPoint = conn.height - fastSyncPivotBlocks
+			} else {
+				conn.pivotPoint = 0
+			}
+
+			log.Infof("Pivot point for fast sync: %d", conn.pivotPoint)
 
 			// first block number
 			conn.startBlockNumber = genesis.BlockNumber + 1
-			conn.nextState() // assume success
+			conn.nextState(cStateFetchBlocks) // assume success
 			log.Infof("local block number: %d", height)
 
 			blockheader.ClearCache()
@@ -417,18 +410,18 @@ func (conn *connector) runStateMachine() bool {
 				digest, err := blockheader.DigestForBlock(h)
 				if nil != err {
 					log.Infof("block number: %d  local digest error: %s", h, err)
-					conn.toState(cStateHighestBlock) // retry
+					conn.nextState(cStateHighestBlock) // retry
 					break check_digests
 				}
 				d, err := conn.theClient.RemoteDigestOfHeight(h)
 				if nil != err {
 					log.Infof("block number: %d  fetch digest error: %s", h, err)
-					conn.toState(cStateHighestBlock) // retry
+					conn.nextState(cStateHighestBlock) // retry
 					break check_digests
 				} else if d == digest {
 					if height-h >= forkProtection {
 						log.Errorf("fork protection at: %d - %d >= %d", height, h, forkProtection)
-						conn.toState(cStateHighestBlock)
+						conn.nextState(cStateHighestBlock)
 						break check_digests
 					}
 
@@ -439,7 +432,7 @@ func (conn *connector) runStateMachine() bool {
 					err := block.DeleteDownToBlock(conn.startBlockNumber)
 					if nil != err {
 						log.Errorf("delete down to block number: %d  error: %s", conn.startBlockNumber, err)
-						conn.toState(cStateHighestBlock) // retry
+						conn.nextState(cStateHighestBlock) // retry
 					}
 					break check_digests
 				}
@@ -447,14 +440,12 @@ func (conn *connector) runStateMachine() bool {
 		}
 
 	case cStateFetchBlocks:
-
 		continueLooping = false
 		var packedBlock []byte
 		var packedNextBlock []byte
 
 		// Check fast sync state on each loop
-		if conn.fastsyncEnabled &&
-			conn.pivotPoint >= conn.startBlockNumber+fastSyncFetchBlocksPerCycle {
+		if conn.fastSyncEnabled && conn.pivotPoint >= conn.startBlockNumber+fastSyncFetchBlocksPerCycle {
 			conn.blocksPerCycle = fastSyncFetchBlocksPerCycle
 		} else {
 			conn.blocksPerCycle = fetchBlocksPerCycle
@@ -464,7 +455,8 @@ func (conn *connector) runStateMachine() bool {
 		for i := 0; i < conn.blocksPerCycle; i++ {
 			if conn.startBlockNumber > conn.height {
 				// just in case block height has changed
-				conn.toState(cStateHighestBlock)
+				log.Infof("height changed from: %d to: %d", conn.height, conn.startBlockNumber)
+				conn.nextState(cStateHighestBlock)
 				continueLooping = true
 				break fetch_blocks
 			}
@@ -474,7 +466,7 @@ func (conn *connector) runStateMachine() bool {
 				p, err := conn.theClient.GetBlockData(conn.startBlockNumber)
 				if nil != err {
 					log.Errorf("fetch block number: %d  error: %s", conn.startBlockNumber, err)
-					conn.toState(cStateHighestBlock) // retry
+					conn.nextState(cStateHighestBlock) // retry
 					break fetch_blocks
 				}
 				packedBlock = p
@@ -482,7 +474,7 @@ func (conn *connector) runStateMachine() bool {
 				packedBlock = packedNextBlock
 			}
 
-			if conn.fastsyncEnabled {
+			if conn.fastSyncEnabled {
 				// test a random block for forgery
 				if i > 0 && i%fastSyncSkipPerBlocks == 0 {
 					h := conn.startBlockNumber - uint64(rand.Intn(fastSyncSkipPerBlocks))
@@ -490,13 +482,13 @@ func (conn *connector) runStateMachine() bool {
 					digest, err := blockheader.DigestForBlock(h)
 					if nil != err {
 						log.Infof("block number: %d  local digest error: %s", h, err)
-						conn.toState(cStateHighestBlock) // retry
+						conn.nextState(cStateHighestBlock) // retry
 						break fetch_blocks
 					}
 					d, err := conn.theClient.RemoteDigestOfHeight(h)
 					if nil != err {
 						log.Infof("block number: %d  fetch digest error: %s", h, err)
-						conn.toState(cStateHighestBlock) // retry
+						conn.nextState(cStateHighestBlock) // retry
 						break fetch_blocks
 					}
 
@@ -510,21 +502,20 @@ func (conn *connector) runStateMachine() bool {
 							log.Errorf("delete down to block number: %d  error: %s", startingPoint, err)
 						}
 
-						conn.fastsyncEnabled = false
-						conn.toState(cStateHighestBlock)
+						conn.fastSyncEnabled = false
+						conn.nextState(cStateHighestBlock)
 						conn.startBlockNumber = startingPoint
 						break fetch_blocks
 					}
 				}
 
-				// get next block
-				nextBlock, err := conn.theClient.GetBlockData(conn.startBlockNumber + 1)
+				// get next block:
+				//   packedNextBlock will be nil when local height is same as remote
+				var err error
+				packedNextBlock, err = conn.theClient.GetBlockData(conn.startBlockNumber + 1)
 				if nil != err {
-					log.Errorf("fetch block number: %d  error: %s", conn.startBlockNumber+1, err)
-					conn.toState(cStateHighestBlock) // retry
-					break fetch_blocks
+					log.Debugf("fetch next block number: %d  error: %s", conn.startBlockNumber+1, err)
 				}
-				packedNextBlock = nextBlock
 			} else {
 				packedNextBlock = nil
 			}
@@ -537,18 +528,17 @@ func (conn *connector) runStateMachine() bool {
 					conn.startBlockNumber,
 					err,
 				)
-				conn.toState(cStateHighestBlock) // retry
+				conn.nextState(cStateHighestBlock) // retry
 				break fetch_blocks
 			}
 
 			// next block
 			conn.startBlockNumber++
-
 		}
 
 	case cStateRebuild:
 		// return to normal operations
-		conn.nextState()
+		conn.nextState(cStateSampling)
 		conn.samples = 0 // zero out the counter
 		mode.Set(mode.Normal)
 		continueLooping = false
@@ -559,30 +549,35 @@ func (conn *connector) runStateMachine() bool {
 		if !isConnectionEnough(globalData.clientCount) {
 			log.Warnf("connections: %d below minimum client count: %d", globalData.clientCount, minimumClients)
 			continueLooping = true
-			conn.toState(cStateConnecting)
+			conn.nextState(cStateConnecting)
 			return continueLooping
 		}
 
 		log.Infof("connections: %d", globalData.clientCount)
 
-		// check height
-		conn.height, conn.theClient = conn.getHeightAndClient()
-		height := blockheader.Height()
-
-		log.Infof("height remote: %d, local: %d", conn.height, height)
-
 		continueLooping = false
 
-		if conn.hasBetterChain(height) {
-			conn.toState(cStateForkDetect)
-			continueLooping = true
-		} else {
-			conn.samples++
-			if conn.samples > samplelingLimit {
-				conn.toState(cStateForkDetect)
+		// check height
+		if conn.updateHeightAndClient() {
+			height := blockheader.Height()
+
+			log.Infof("height remote: %d, local: %d", conn.height, height)
+
+			if conn.hasBetterChain(height) {
+				conn.nextState(cStateForkDetect)
 				continueLooping = true
+			} else {
+				conn.samples++
+				if conn.samples > samplelingLimit {
+					conn.nextState(cStateForkDetect)
+					continueLooping = true
+				}
 			}
+		} else {
+			log.Warn("connection lost")
+			conn.nextState(cStateConnecting)
 		}
+
 	}
 	return continueLooping
 }
@@ -620,7 +615,7 @@ func (conn *connector) hasBetterChain(localHeight uint64) bool {
 		return false
 	}
 
-	if conn.height == localHeight && !conn.hasSamllerDigestThanLocal(localHeight) {
+	if conn.height == localHeight && !conn.hasSmallerDigestThanLocal(localHeight) {
 		return false
 	}
 
@@ -629,8 +624,9 @@ func (conn *connector) hasBetterChain(localHeight uint64) bool {
 
 // different chain but with same height, possible fork exist
 // choose the chain that has smaller digest
-func (conn *connector) hasSamllerDigestThanLocal(localHeight uint64) bool {
+func (conn *connector) hasSmallerDigestThanLocal(localHeight uint64) bool {
 	remoteDigest := conn.theClient.CachedRemoteDigestOfLocalHeight()
+
 	// if upstream update during processing
 	if conn.theClient.LocalHeight() != localHeight {
 		conn.log.Warnf("remote height %d is different than local height %d", conn.theClient.LocalHeight(), localHeight)
@@ -639,26 +635,29 @@ func (conn *connector) hasSamllerDigestThanLocal(localHeight uint64) bool {
 
 	localDigest, err := blockheader.DigestForBlock(localHeight)
 	if nil != err {
+		conn.log.Warnf("local height: %d  digest error: %s", localHeight, err)
 		return false
 	}
 
 	return remoteDigest.SmallerDigestThan(localDigest)
 }
 
-func (conn *connector) getHeightAndClient() (uint64, upstream.UpstreamIntf) {
+func (conn *connector) updateHeightAndClient() bool {
 	conn.votes.Reset()
 	conn.votes.SetMinHeight(blockheader.Height())
 	conn.startElection()
 	elected, height := conn.elected()
-	if uint64(0) == height {
-		return uint64(0), nil
+	if 0 == height {
+		conn.height = 0
+		return false
 	}
 
 	winnerName := elected.Name()
 	remoteAddr, err := elected.RemoteAddr()
 	if nil != err {
 		conn.log.Warnf("%s socket not connected", winnerName)
-		return uint64(0), nil
+		conn.height = 0
+		return false
 	}
 
 	conn.log.Debugf("winner %s majority height %d, connect to %s",
@@ -667,31 +666,33 @@ func (conn *connector) getHeightAndClient() (uint64, upstream.UpstreamIntf) {
 		remoteAddr,
 	)
 
-	if height > uint64(0) && nil != elected {
+	if height > 0 && nil != elected {
 		globalData.blockHeight = height
 	}
-	return height, elected
+	conn.theClient = elected
+	conn.height = height
+	return true
 }
 
 func (conn *connector) startElection() {
-	conn.allClients(func(client upstream.UpstreamIntf, e *list.Element) {
-		if client.IsConnected() && client.ActiveInPastSeconds(activePastSec) {
+	conn.allClients(func(client upstream.Upstream, e *list.Element) {
+		if client.IsConnected() && client.ActiveInThePast(activeTime) {
 			conn.votes.VoteBy(client)
 		}
 	})
 }
 
-func (conn *connector) elected() (upstream.UpstreamIntf, uint64) {
+func (conn *connector) elected() (upstream.Upstream, uint64) {
 	elected, height, err := conn.votes.ElectedCandidate()
 	if nil != err {
-		conn.log.Errorf("get elected with error: %s", err.Error())
-		return nil, uint64(0)
+		conn.log.Errorf("get elected with error: %s", err)
+		return nil, 0
 	}
 
 	remoteAddr, err := elected.RemoteAddr()
 	if nil != err {
-		conn.log.Errorf("get client string with error: %s", err.Error())
-		return nil, uint64(0)
+		conn.log.Errorf("get client string with error: %s", err)
+		return nil, 0
 	}
 
 	digest := elected.CachedRemoteDigestOfLocalHeight()
@@ -738,7 +739,7 @@ func (conn *connector) connectUpstream(
 
 	// see if already connected to this node
 	alreadyConnected := false
-	conn.searchClients(func(client upstream.UpstreamIntf, e *list.Element) bool {
+	conn.searchClients(func(client upstream.Upstream, e *list.Element) bool {
 		if client.IsConnectedTo(serverPublicKey) {
 			if nil == e {
 				log.Debugf(
@@ -762,7 +763,7 @@ func (conn *connector) connectUpstream(
 
 	// reconnect the oldest entry to new node
 	log.Infof("reconnect: %x @ %s", serverPublicKey, *address)
-	client := conn.dynamicClients.Front().Value.(*upstream.Upstream)
+	client := conn.dynamicClients.Front().Value.(upstream.Upstream)
 	err := client.Connect(address, serverPublicKey)
 	if nil != err {
 		log.Errorf("ConnectTo: %x @ %s  error: %s", serverPublicKey, *address, err)
@@ -775,7 +776,7 @@ func (conn *connector) connectUpstream(
 
 func (conn *connector) releaseServerKey(serverPublicKey []byte) error {
 	log := conn.log
-	conn.searchClients(func(client upstream.UpstreamIntf, e *list.Element) bool {
+	conn.searchClients(func(client upstream.Upstream, e *list.Element) bool {
 		if bytes.Equal(serverPublicKey, client.ServerPublicKey()) {
 			if e == nil { // static Clients
 				log.Infof("refuse to delete static peer: %x", serverPublicKey)
@@ -790,17 +791,13 @@ func (conn *connector) releaseServerKey(serverPublicKey []byte) error {
 	return nil
 }
 
-func (conn *connector) nextState() {
-	conn.state++
-}
-
-func (conn *connector) toState(newState connectorState) {
+func (conn *connector) nextState(newState connectorState) {
 	conn.state = newState
 }
 
 func (conn *connector) getConnectedClientCount() int {
 	clientCount := 0
-	conn.allClients(func(client upstream.UpstreamIntf, e *list.Element) {
+	conn.allClients(func(client upstream.Upstream, e *list.Element) {
 		if client.IsConnected() {
 			clientCount++
 		}
