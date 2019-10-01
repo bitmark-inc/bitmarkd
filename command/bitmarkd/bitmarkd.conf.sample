@@ -5,7 +5,8 @@
 -- 2. Setup all test and live crypto currency addresses
 -- 3. If running a publicly visible node set up annouce_ips
 -- 4. Ensure _external_NAT_firewall_ forwards correct ports
---    (as a minimum, forward: 2130 and 2136)
+--    (as a minimum, forward:  2130 and  2136 for bitmark blockchain
+--                        or: 12130 and 12136 for testing blockchain)
 
 -- [1] select the chain of the network for peer connections
 --     cross chain networking connects will not work
@@ -30,8 +31,8 @@ local litecoin_address = {
 --     Either or both IPv4 and IPv6 can be added depending
 --     on the network settings
 local announce_ips = {
-    --"a.b.c.d",   -- IPv4
-    --"[x::y:z]",  -- IPv6
+    --"a.b.c.d",  -- IPv4
+    --"x::y:z",   -- IPv6
 }
 
 ------------------------------------------------------------------------
@@ -54,6 +55,26 @@ function read_file(name)
     return r
 end
 
+-- port selections based on chain selected
+-- bitmark:  XXXX
+-- testing: 1XXXX
+-- local:   2XXXX
+function add_port(ip, port)
+    local port_base = 20000
+    local port_offset = 0 -- special setting to run multiple bitmarkds
+    if M.chain == "bitmark" then
+        port_base = 0
+    end
+    if M.chain == "testing" then
+        port_base = 10000
+    end
+    -- wrap unwrapped IPv6
+    if ip:match(":") and not ip[1] == "[" then
+        ip = "[" .. ip .. "]"
+    end
+    return ip .. ":" .. (port_base + port_offset + port)
+end
+
 -- Let the node announce itself (ip:port) to the network.
 -- The ip should be provided using environment variables
 -- either PUBLIC_IPV4 or PUBLIC_IPV6, or both
@@ -61,7 +82,7 @@ end
 function make_announcements(ip_list, port)
     local announcements = {}
     for k, v in pairs(ip_list) do
-        announcements[#announcements+1] = v .. ":" .. port
+        announcements[#announcements+1] = add_port(v, port)
     end
     return unpack(announcements)
 end
@@ -108,7 +129,6 @@ M.peer_file = "peers-" .. M.chain .. ".json"
 -- that speeds up the bitmark node to get it ready operating.
 M.fast_sync = true
 
-
 -- for JSON clients on TLS connection
 M.client_rpc = {
 
@@ -116,15 +136,15 @@ M.client_rpc = {
     bandwidth = 25000000,
 
     listen = {
-        "0.0.0.0:2130",
-        "[::]:2130"
+        add_port("0.0.0.0", 2130),
+        add_port("::", 2130)
     },
 
     -- announce certain public IP:ports to network
     -- if using firewall port forwarding use the firewall external IP:port
     announce = {
-        -- "a.b.c.d:2130",
-        -- "[x::y:z]:2130",
+        -- add_port("a.b.c.d", 2130),
+        -- add_port("x::y:z", 2130),
 
         -- only use if minimum announce setup varible is set
         make_announcements(announce_ips, 2130),
@@ -150,8 +170,8 @@ M.https_rpc = {
     -- GET  /bitmarkd/connections  (protected: list of all outgoing peer connections)
 
     listen = {
-        "0.0.0.0:2131",
-        "[::]:2131"
+        add_port("0.0.0.0", 2131),
+        add_port("::", 2131),
     },
 
     -- IP networks in CIDR form that can access the /bitmarkd/* GET APIs
@@ -187,15 +207,15 @@ M.peering = {
 
     -- for incoming peer connections
     listen = {
-        "0.0.0.0:2136",
-        "[::]:2136"
+        add_port("0.0.0.0", 2136),
+        add_port("::", 2136),
     },
 
     -- announce certain public IP:ports to network
     -- if using firewall port forwarding use the firewall external IP:port
     announce = {
-        -- "a.b.c.d:2136",
-        -- "[x::y:z]:2136",
+        -- add_port("a.b.c.d", 2136),
+        -- add_port("x::y:z", 2136),
 
         -- only use if minimum announce setup varible is set
         make_announcements(announce_ips, 2136),
@@ -222,8 +242,8 @@ M.peering = {
 M.publishing = {
 
     broadcast = {
-        "0.0.0.0:2135",
-        "[::]:2135"
+        add_port("0.0.0.0", 2135),
+        add_port("::", 2135),
     },
 
     -- ok to use the same keys as peer
@@ -237,29 +257,29 @@ M.proofing = {
 
     public_key = read_file("proof.public"),
     private_key = read_file("proof.private"),
-    signing_key = read_file(M.chain == "bitmark" and 'proof.live' or 'proof.test'),
+    signing_key = read_file(M.chain == "bitmark" and "proof.live" or "proof.test"),
 
-    -- payments for future transfers auto detected from *coin_address near top of this file
+    -- payments for future transfers auto detected from *coin_address at the top of this file
     payment_address = {
         bitcoin = M.chain == "bitmark" and bitcoin_address.live or bitcoin_address.test,
         litecoin = M.chain == "bitmark" and litecoin_address.live or litecoin_address.test,
     },
 
     publish = {
-        "0.0.0.0:2138",
-        "[::]:2138"
+        add_port("0.0.0.0", 2138),
+        add_port("::", 2138),
     },
     submit = {
-        "0.0.0.0:2139",
-        "[::]:2139"
-    }
+        add_port("0.0.0.0", 2139),
+        add_port("::", 2139),
+    },
 }
 
 -- determine proxy addresses based on the chain selected
 function proxy_address()
     local proxy = {
-        sub_endpoint = "127.0.0.1:17008",
-        req_endpoint = "127.0.0.1:17009",
+        sub_endpoint = "127.0.0.1:18008",
+        req_endpoint = "127.0.0.1:18009",
     }
     if M.chain == "bitmark" then
         proxy.sub_endpoint = "dsc-1.live.bitmark.com:17008"
@@ -272,6 +292,29 @@ function proxy_address()
     return proxy
 end
 
+-- determine port address based on chain selected
+function bitcoin_port()
+    local port = 18443
+    if M.chain == "bitmark" then
+        port = "8332"
+    end
+    if M.chain == "testing" then
+        port = "18332"
+    end
+    return port
+end
+
+function litecoin_port()
+    local port = "19443"
+    if M.chain == "bitmark" then
+        port = "9332"
+    end
+    if M.chain == "testing" then
+        port = "19332"
+    end
+    return port
+end
+
 -- setup for every payment service
 M.payment = {
 
@@ -279,24 +322,27 @@ M.payment = {
     mode = "p2p",
 
     -- setup proxy addresses based on selected chain
+    -- required if the mode is set to "rest"
     discovery = proxy_address(),
 
-    -- local bitcoin access to REST API. required if the mode is set to "rest"
+    -- local bitcoin access to REST API
+    -- required if the mode is set to "rest"
     bitcoin = {
-        url = "http://127.0.0.1:8332/rest"
+        url = "http://127.0.0.1:" .. bitcoin_port() .. "/rest"
     },
 
-    -- local litecoin access to REST API. required if the mode is set to "rest"
+    -- local litecoin access to REST API
+    -- required if the mode is set to "rest"
     litecoin = {
-        url = "http://127.0.0.1:9332/rest"
+        url = "http://127.0.0.1:" .. bitcoin_port() .. "/rest"
     }
 }
 
 
 -- configure global or specific logger channel levels
 M.logging = {
-    size = 1048576,
-    count = 100,
+    size = 100000,
+    count = 10,
 
     -- set to true to log to console
     console = false,

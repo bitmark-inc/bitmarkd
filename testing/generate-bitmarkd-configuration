@@ -39,9 +39,8 @@ USAGE()
   echo '       --chain=chain         -c CHAIN      set the chain [bitmark|testing|local]: ['"${network}"']'
   echo '       --nodes=DOMAIN        -n DOMAIN     set the nodes [none|chain|nodes.domain.tld]: ['"${nodes}"']'
   echo '       --connect=K:H:P       -C K:H:P      connect to specific bitmarkd public_key:host:port'
-  echo '       --bitcoin=DIR|FILE    -b DIR|FILE   set bitcoin access from bitcoin.conf'
-  echo '       --litecoin=DIR|FILE   -l DIR|FILE   set litecoin access from litecoin.conf'
-  echo '       --discovery=DIR|FILE  -d DIR|FILE   set discovery proxy from discovery.conf'
+  echo '       --payment=PRD         -p PRD        set payment mode [p2p|rest|discovery]: ['"${payment_mode}"']'
+  echo '       --recorderd-public    -r            allow external recorderd connections for local chain'
   echo '       --console             -k            log to console'
   echo '       --more                -m            more logging output'
   echo '       --update              -u            overwrite an existing configuration, does not change exiting keys'
@@ -57,38 +56,17 @@ xdg_home="${XDG_CONFIG_HOME}"
 [ -d "${xdg_home}" ] || ERROR 'missing directory: "%s" please create first' "${xdg_home}"
 
 verbose=no
-prefix_local=20
-prefix_testing=50
-prefix_bitmark=70
 chain=local
 nodes=none
 bitmark_connect=
-bitcoin_conf=
-litecoin_conf=
-discovery_conf=
-recorderd_ipv4='127.0.0.1'
-recorderd_ipv6='[::1]'
-proxy=no
+payment_mode=discovery
+recorderd_public=0
 log_size=1048576
 log_count=100
 log_console=false
 log_default=error
 debug=no
 update=no
-
-# depends on config language (Lua)
-comment_string='-- '
-
-testnet_only=''
-livenet_only="${comment_string}"
-
-# detect lua
-for l in lua52 lua5.2 lua53 lua 5.3 lua
-do
-  lua=$(which "${l}")
-  [ -x "${lua}" ] && break
-done
-[ -x "${lua}" ] || ERROR 'cannot locate usable lua'
 
 # detect GNU getopt
 getopt=
@@ -114,14 +92,14 @@ case "$(uname)" in
 esac
 [ -x "${getopt}" ] || ERROR 'getopt: "%s" is not executable or not installed' "${getopt}"
 
-args=$(${getopt} -o hvc:n:C:b:l:d:rkmuD --long=help,verbose,chain:,nodes:,connect:,bitcoin:,litecoin:,discovery:,recorderd-public,console,more,update,debug -- "$@") || exit 1
+args=$(${getopt} -o hvc:n:C:p:rkmuD --long=help,verbose,chain:,nodes:,connect:,payment:,recorderd-public,console,more,update,debug -- "$@") || exit 1
 
 # replace the arguments with the parsed values
 eval set -- "${args}"
 
 while :
 do
-  case "$1" in
+  case "${1}" in
     (-v|--verbose)
       verbose=yes
       ;;
@@ -129,7 +107,7 @@ do
     (-c|--chain)
       testnet_only=''
       livenet_only="${comment_string}"
-      case "$2" in
+      case "${2}" in
         (bitmark)
           chain=bitmark
           testnet_only="${comment_string}"
@@ -142,62 +120,57 @@ do
           chain=local
           ;;
         (*)
-          ERROR 'invalid chain: %s' "$2"
+          ERROR 'invalid chain: %s' "${2}"
           ;;
       esac
       shift
       ;;
 
     (-n|--nodes)
-      case "$2" in
+      case "${2}" in
         (none|chain)
-          nodes="$2"
+          nodes="${2}"
           ;;
         (*.*)
-          nodes="$2"
+          nodes="${2}"
           n=$(host -t TXT "${nodes}")
           [ $? -ne 0 ] && USAGE 'nodes cannot fetch TXT record for: "%s"' "${nodes}"
           [ -z "${n}" ] && USAGE 'nodes cannot empty TXT record for: "%s"' "${nodes}"
           ;;
         (*)
-          ERROR 'invalid nodes: %s' "$2"
+          ERROR 'invalid nodes: %s' "${2}"
           ;;
       esac
       shift
       ;;
 
     (-C|--connect)
-      conn="$2"
+      conn="${2}"
       [ -z "${conn}" ] && USAGE 'bitmarkd connect cannot be empty'
       shift
       bitmarkd_connect="${bitmarkd_connect} ${conn}"
       ;;
 
-    (-d|--discovery)
-      discovery_conf="$2"
-      [ -z "${discovery_conf}" ] && USAGE 'discovery configuration cannot be empty'
-      [ -d "${discovery_conf}" ] && discovery_conf="${discovery_conf}/discovery.conf"
-      shift
-      proxy=yes
-      ;;
-
-    (-b|--bitcoin)
-      bitcoin_conf="$2"
-      [ -z "${bitcoin_conf}" ] && USAGE 'bitcoin configuration cannot be empty'
-      [ -d "${bitcoin_conf}" ] && bitcoin_conf="${bitcoin_conf}/bitcoin.conf"
-      shift
-      ;;
-
-    (-l|--litecoin)
-      litecoin_conf="$2"
-      [ -z "${litecoin_conf}" ] && USAGE 'litecoin configuration cannot be empty'
-      [ -d "${litecoin_conf}" ] && litecoin_conf="${litecoin_conf}/litecoin.conf"
+    (-p|--payment)
+      case "${2}" in
+        (p|p2p)
+          payment_mode=p2p
+          ;;
+        (r|rest)
+          payment_mode=rest
+          ;;
+        (d|discovery)
+          payment_mode=discovery
+          ;;
+        (*)
+          USAGE 'invalid payment verification mode: %s' "${2}"
+          ;;
+      esac
       shift
       ;;
 
     (-r|--recorderd-public)
-      recorderd_ipv4='0.0.0.0'
-      recorderd_ipv6='[::]'
+      recorderd_public=1
       ;;
 
     (-k|--console)
@@ -254,133 +227,15 @@ done
 # enable debugging
 [ X"${debug}" = X"yes" ] && set -x
 
-get_url() {
-  local conf ip port path ip_port
-  conf="$1"; shift
-  ip="$1"; shift
-  port="$1"; shift
-  path="$1"; shift
-
-  ip_port=$(awk '
-    BEGIN {
-        bind = "'"${ip}"'"
-        port = "'"${port}"'"
-    }
-
-    /^[[:space:]]*rpcbind[[:space:]]*=/ {
-        bind = $0
-        sub("^.*=[[:space:]]*", "", bind)
-        sub("[[:space:]]*$", "", bind)
-    }
-
-    /^[[:space:]]*rpcport[[:space:]]*=/ {
-        port = $0
-        sub("^.*=[[:space:]]*", "", port)
-        sub("[[:space:]]*$", "", port)
-    }
-
-    END {
-        s = ":"
-        if ("[" == substr(bind,0,1)) {
-            s = "]:"
-        }
-        split(bind, a, s)
-        if (length(a) > 1) {
-            print bind
-        } else {
-            print bind ":" port
-        }
-    }
-  ' "${conf}")
-
-  printf 'http://%s%s' "${ip_port}" "${path}"
-}
-
-get_endpoint() {
-  local name conf ip port r protocol ip2 port2
-  name="$1"; shift
-  conf="$1"; shift
-  ip="$1"; shift
-  port="$1"; shift
-
-  r=$(${lua} <<EOF -
-    arg = {
-      [0] = "${conf}",
-    }
-    m = dofile(arg[0])
-    print(m.${name})
-EOF
-   )
-
-  protocol="${r%%:*}"
-  ip2="${r#*:}"
-  ip2="${ip2%:*}"
-  port2="${r##*:}"
-
-  ip2="${ip2#//}"
-  [ X"${ip2}" = X'*' ] && ip2="${ip}"
-  [ -z "${port2}" ] && port2="${port}"
-
-  printf '%s:%s' "${ip2}" "${port2}"
-}
-
-if [ X"${proxy}" = X"yes" ]
-then
-  # all discovery conf must exist
-
-  #check if URL:host:pub:rep form is specified
-  if [ X"${discovery_conf#URL:}" != X"${discovery_conf}" ]
-  then
-    d="${discovery_conf#URL:}"
-    d_host="${d%%:*}"
-    d="${d#*:}"
-    d_pub="${d%%:*}"
-    d="${d#*:}"
-    d_rep="${d%%:*}"
-    [ -z "${d_host}" ] && ERROR 'cannot determine discovery host from: %s' "${discovery_conf}"
-    [ -z "${d_pub}" ] && ERROR 'cannot determine discovery pub from: %s' "${discovery_conf}"
-    [ -z "${d_rep}" ] && ERROR 'cannot determine discovery rep from: %s' "${discovery_conf}"
-    discovery_pub="${d_host}:${d_pub}"
-    discovery_rep="${d_host}:${d_rep}"
-
-  else
-
-    # must be a config file
-    [ -f "${discovery_conf}" ] || USAGE 'missing discovery configuration: %s' "${discovery_conf}"
-
-    discovery_pub=$(get_endpoint pub_endpoint.ipv4 "${discovery_conf}" "127.0.0.1" 17008)
-    [ -z "${discovery_pub}" ] && ERROR 'cannot determine discovery pub from: %s' "${discovery_conf}"
-
-    discovery_rep=$(get_endpoint rep_endpoint.ipv4 "${discovery_conf}" "127.0.0.1" 17009)
-    [ -z "${discovery_rep}" ] && ERROR 'cannot determine discovery rep from: %s' "${discovery_conf}"
-
-  fi
-
-  # dummy coin configurations as these are not used when proxy is on
-  bitcoin_url=$(get_url /dev/null "127.0.0.1" 8332 /rest)
-  litecoin_url=$(get_url /dev/null "127.0.0.1" 9332 /rest)
-
-else
-  # all coin conf must exist
-  [ -f "${bitcoin_conf}" ] || USAGE 'missing bitcoin configuration: %s' "${bitcoin_conf}"
-  [ -f "${litecoin_conf}" ] || USAGE 'missing litecoin configuration: %s' "${litecoin_conf}"
-
-  bitcoin_url=$(get_url "${bitcoin_conf}" "127.0.0.1" 8332 /rest)
-  [ -z "${bitcoin_url}" ] && ERROR 'cannot determine bitcoin rest url from: %s' "${bitcoin_conf}"
-
-  litecoin_url=$(get_url "${litecoin_conf}" "127.0.0.1" 9332 /rest)
-  [ -z "${litecoin_url}" ] && ERROR 'cannot determine litecoin rest url from: %s' "${litecoin_conf}"
-fi
-
-connections=$(printf '\n    connect = {')
+# make static connections
+connections=''
 for conn in ${bitmarkd_connect}
 do
   public_key="${conn%%:*}"
+  [ X"${public_key#PUBLIC:}" = X"${public_key}" ] && public_key="PUBLIC:${public_key}"
   address="${conn#*:}"
-  connections="${connections}$(printf '\n        {\n            public_key = "%s",\n            address = "%s"\n        },\n' "${public_key}" "${address}")"
+  connections="${connections}$(printf '        {\\n            public_key = \\"%s\\",\\n            address = \\"%s\\"\\n        },\\n' "${public_key}" "${address}")"
 done
-connections="${connections}$(printf '\n    }\n')"
-
 
 # process all arguments can be 1..99 or T1..T99 0r L1..L99
 # T = testnet   L = livenet
@@ -390,7 +245,7 @@ do
   j="${i#[LT]}"
   [ X"${j}" != X"${i}" ] && external_net_comment="${comment_string}"
 
-  [ "${j}" -lt 1 -o "${j}" -gt 99 ] && ERROR 'index is out of range: %s' "${i}"
+  [ "${j}" -lt 1 -o "${j}" -gt 99 ] && ERROR 'index is out of range: %s' "${j}"
 
   dir="${xdg_home}/bitmarkd${i}"
   config="${dir}/bitmarkd.conf"
@@ -398,388 +253,146 @@ do
   # stop if a config exists and not update
   [ X"${update}" = X"no" ] && [ -d "${dir}" -o -f "${config}" ] && ERROR 'index: %s is already used: %s' "${i}" "${dir}"
 
-  eval prefix_base=\"\${prefix_${chain}}\"
-  prefix=$((prefix_base + j))
+  port_offset=$(( 100 * ( j - 1 ) ))
   [ -d "${dir}" ] || mkdir -p "${dir}"
 
-  VERBOSE 'config: %s  ports: %dXX' "${config}" "${prefix}"
+  VERBOSE 'config: %s  ports: %d' "${config}" "${port_offset}"
   VERBOSE 'recorderd IPv4: %s  IPv6: %s' "${recorderd_ipv4}" "${recorderd_ipv6}"
 
-  cat > "${config}" <<EOF
--- bitmarkd.conf  -*- mode: lua -*-
+  # just for demonstration
+  bitcoin_key="cPcHEqnqNG3Ze27Yqqxk8fQXmFVAgme1h1UT3HBN3MV4gERUVbVc"
+  bitcoin_test="msxN7C7cRNgbgyUzt3EcvrpmWXc59sZVN4"
+  bitcoin_live="1HeFjMrDTjheiZrBYViLGgjovRZK9Ba5EQ"
 
--- Minimum Items To Setup:
--- 1. Select appropriate chain
--- 2. Setup all test and live crypto currency addresses
--- 3. If running a publicly visible node set up annouce_ips
--- 4. Ensure _external_NAT_firewall_ forwards correct ports
---    (as a minimum, forward: 2130 and 2136)
+  litecoin_key="cUhoPFEKgWzxX9Ycynemjtvh4kEv3vcoVW6RgLaxzEVTGHFWF6WY"
+  litecoin_test="mjPkDNakVA4w4hJZ6WF7p8yKUV2merhyCM"
+  litecoin_live="LYg45SVcJALHWHSMVkHSKAnbAEXAbhei7h"
 
--- [1] select the chain of the network for peer connections
---     cross chain networking connects will not work
--- Uncomment One:
---local chain = "bitmark"
---local chain = "testing"
---local chain = "local"   -- for regression testing only
-local chain = "${chain}"
+  awk < "$(dirname "${0}")/../command/bitmarkd/bitmarkd.conf.sample" > "${config}" '
 
--- [2] setup coin addresses for recorder payments
---     the chain selection above will determine which
---     address to use
-local bitcoin_address = {
-    -- bitcoin key: "cPcHEqnqNG3Ze27Yqqxk8fQXmFVAgme1h1UT3HBN3MV4gERUVbVc"
-    test = "msxN7C7cRNgbgyUzt3EcvrpmWXc59sZVN4",
-    live = "1HeFjMrDTjheiZrBYViLGgjovRZK9Ba5EQ",
-}
-local litecoin_address = {
-    -- litecoin key: "cUhoPFEKgWzxX9Ycynemjtvh4kEv3vcoVW6RgLaxzEVTGHFWF6WY"
-    test = "mjPkDNakVA4w4hJZ6WF7p8yKUV2merhyCM",
-    live = "LYg45SVcJALHWHSMVkHSKAnbAEXAbhei7h",
-}
+    BEGIN {
+      check_logging = 0
+      skip_proofing = 0
+      recorderd_public = '"${recorderd_public}"'
+      chain = "'"${chain}"'"
+      nodes = "'"${nodes}"'"
+      connections = "'"${connections}"'"
+      bitcoin_test = "'"${bitcoin_test}"'"
+      bitcoin_live = "'"${bitcoin_live}"'"
+      litecoin_test = "'"${litecoin_test}"'"
+      litecoin_live = "'"${litecoin_live}"'"
+      log_size = '"${log_size}"'
+      log_count = '"${log_count}"'
+      log_console = '"${log_console}"'
+      # add quotes and trailing ',' to simplify comparisons
+      log_default = "\"'"${log_default}"'\","
+    }
 
--- [3] public IPs of firewall or external interface
---     Either or both IPv4 and IPv6 can be added depending
---     on the network settings
-local announce_ips = {
-    --"a.b.c.d",   -- IPv4
-    --"[x::y:z]",  -- IPv6
-}
+    # special logging detection
+    /^M[.]logging/ {
+      check_logging = 1
+    }
 
-------------------------------------------------------------------------
--- Advanced configuration below this point
-------------------------------------------------------------------------
+    # special to detect proofing block
+    /^M[.]proofing/ {
+      skip_proofing = recorderd_public
+    }
 
-local M = {}
+    # end of proofing block
+    /^}/ {
+      skip_proofing = 0
+    }
 
-local public_ip = {}
-
--- Read the named file in under the specified data directory
--- M.data_directory and return the contents.
-function read_file(name)
-    local f, err = io.open(M.data_directory .. "/" .. name, "r")
-    if f == nil then
-        return nil
-    end
-    local r = f:read("*a")
-    f:close()
-    return r
-end
-
--- Let the node announce itself (ip:port) to the network.
--- The ip should be provided using environment variables
--- either PUBLIC_IPV4 or PUBLIC_IPV6, or both
--- depends on the public IP addresses of the node.
-function make_announcements(ip_list, port)
-    local announcements = {}
-    for k, v in pairs(ip_list) do
-        announcements[#announcements+1] = v .. ":" .. port
-    end
-    return unpack(announcements)
-end
-
--- set the public IP addresses
-local public_ipv4 = os.getenv("PUBLIC_IPV4")
-if public_ipv4 ~= nil and public_ipv4 ~= "" then
-    public_ip[#public_ip+1] = public_ipv4
-end
-
-local public_ipv6 = os.getenv("PUBLIC_IPV6")
-if public_ipv6 ~= nil and public_ipv6 ~= "" then
-    public_ip[#public_ip+1] = public_ipv6
-end
-
-
--- set the directory for data and log files
-M.data_directory = arg[0]:match("(.*/)")  -- dir from configuration file
---M.data_directory = "."                    -- current directory
---M.data_directory = "/var/lib/bitmarkd"    -- absolute path
-
-
--- optional pid file if not absolute path then is created relative to
--- the data directory
---M.pidfile = "bitmarkd.pid"
-
--- select the chain of the network for peer connections
--- cross chain networking connects will not work (uncomment one)
-M.chain = chain
-
--- select the default node configuration
--- choose from: none, chain OR sub.domain.tld
---M.nodes = "chain"
-M.nodes = "${nodes}"
-
--- optional reservoir file if not absolute path then is created relative to
--- the data directory
-M.reservoir_file = "reservoir-" .. M.chain .. ".cache"
-
--- optional peer file if not absolute path then is created relative to
--- the data directory
-M.peer_file = "peers-" .. M.chain .. ".json"
-
--- fast sync mode introduces a new mechanism for initial synchronization
--- that speeds up the bitmark node to get it ready operating.
-M.fast_sync = true
-
-
--- for JSON clients on TLS connection
-M.client_rpc = {
-
-    maximum_connections = 50,
-    bandwidth = 25000000,
-
-    listen = {
-        "127.0.0.1:${prefix}30",
-        "[::1]:${prefix}30"
-    },
-
-    -- announce certain public IP:ports to network
-    -- if using firewall port forwarding use the firewall external IP:port
-${external_net_comment}    announce = {
-${external_net_comment}        "127.0.0.1:${prefix}30",
-${external_net_comment}        "[::1]:${prefix}30",
-${external_net_comment}
-${external_net_comment}        -- only use if minimum announce setup varible is set
-${external_net_comment}        make_announcements(announce_ips, ${prefix}30),
-${external_net_comment}
-${external_net_comment}        -- only used if PUBLIC_IPV[46] variables are set
-${external_net_comment}        make_announcements(public_ip, ${prefix}30),
-${external_net_comment}    },
-
-    certificate = read_file("rpc.crt"),
-    private_key = read_file("rpc.key")
-}
-
-
--- for local monitoring
-M.https_rpc = {
-
-    maximum_connections = 100,
-    bandwidth = 25000000,
-
-    -- POST /bitmarkd/rpc          (unrestricted: json body as client rpc)
-    -- GET  /bitmarkd/details      (protected: more data than Node.Info))
-    -- GET  /bitmarkd/peers        (protected: list of all peers and their public key)
-    -- GET  /bitmarkd/connections  (protected: list of all outgoing peer connections)
-
-    listen = {
-        "127.0.0.1:${prefix}31",
-        "[::1]:${prefix}31"
-    },
-
-    -- IP networks in CIDR form that can access the /bitmarkd/* GET APIs
-    -- default is deny
-    allow = {
-        details = {
-            "127.0.0.0/8",
-            "::1/128",
-        },
-        connections = {
-            "127.0.0.0/8",
-            "::1/128",
-        },
-        peers = {
-            "127.0.0.0/8",
-            "::1/128",
+    # block all lines to replace
+    !/^(--)?M[.]data_directory|^M[.]nodes|"[*][*][*]REPLACE-WITH-REAL-/ {
+      if ($1 == "local" && $2 == "port_offset" && $3 == "=") {
+        $4 = '"${port_offset}"'
+        print "    " $0
+      } else if (!check_logging) {
+        # ensure "local" uses localhost
+        if (chain == "local" && !skip_proofing) {
+          if (match($0, "add_port[(]\"0[.]0[.]0[.]0\",")) {
+             sub("\"0[.]0[.]0[.]0\"", "\"127.0.0.1\"", $0)
+          } else if (match($0, "add_port[(]\"::\",")) {
+             sub("\"::\"", "\"::1\"", $0)
+          }
+          print $0
+        } else {
+          print $0
         }
-    },
-
-    -- this example shares keys with client rpc
-    certificate = read_file("rpc.crt"),
-    private_key = read_file("rpc.key")
-}
-
-
--- peer-to-peer connections
-M.peering = {
-    -- set to false to prevent additional connections
-    dynamic_connections = true,
-
-    -- set to false to only use IPv4 for outgoing connections
-    prefer_ipv6 = true,
-
-    -- for incoming peer connections
-    listen = {
-        "127.0.0.1:${prefix}36",
-        "[::1]:${prefix}36"
-    },
-
-    -- announce certain public IP:ports to network
-    -- if using firewall port forwarding use the firewall external IP:port
-${external_net_comment}    announce = {
-${external_net_comment}        "127.0.0.1:${prefix}36",
-${external_net_comment}        "[::1]:${prefix}36",
-${external_net_comment}
-${external_net_comment}        -- only use if minimum announce setup varible is set
-${external_net_comment}        make_announcements(announce_ips, ${prefix}36),
-${external_net_comment}
-${external_net_comment}        -- only used if PUBLIC_IPV[46] variables are set
-${external_net_comment}        make_announcements(public_ip, ${prefix}36),
-${external_net_comment}    },
-
-    public_key = read_file("peer.public"),
-    private_key = read_file("peer.private"),
-
-    -- dedicated static peer connections
-${connections}
-    -- connect = {
-        -- {
-        --     public_key = "***BITMARKD-PEER-PUBLIC-KEY-INCLUDING-PUBLIC:-PREFIX***",
-        --     address = "p.q.r.s:${prefix}36"
-        -- },
-    -- }
-}
-
-
--- optional transaction/block publishing for subscribers to receive various announcements
--- intended for local services
-M.publishing = {
-
-    broadcast = {
-        "127.0.0.1:${prefix}35",
-        "[::1]:${prefix}35"
-    },
-
-    -- ok to use the same keys as peer
-    public_key = read_file("peer.public"),
-    private_key = read_file("peer.private")
-}
-
-
--- configuration of recorderd connections
-M.proofing = {
-
-    public_key = read_file("proof.public"),
-    private_key = read_file("proof.private"),
-    signing_key = read_file(M.chain == "bitmark" and 'proof.live' or 'proof.test'),
-
-    -- payments for future transfers auto detected from *coin_address near top of this file
-    payment_address = {
-        bitcoin = M.chain == "bitmark" and bitcoin_address.live or bitcoin_address.test,
-        litecoin = M.chain == "bitmark" and litecoin_address.live or litecoin_address.test,
-    },
-
-    publish = {
-        "${recorderd_ipv4}:${prefix}38",
-        "${recorderd_ipv6}:${prefix}38"
-    },
-    submit = {
-        "${recorderd_ipv4}:${prefix}39",
-        "${recorderd_ipv6}:${prefix}39"
+      }
     }
-}
 
--- determine proxy addresses based on the chain selected
-function proxy_address()
-    local proxy = {
-        sub_endpoint = "127.0.0.1:17008",
-        req_endpoint = "127.0.0.1:17009",
+    # announce for local
+    /^local[[:space:]]+announce_ips/ {
+        if (chain == "local") {
+            print "    \"::1\","
+        }
     }
-    if M.chain == "bitmark" then
-        proxy.sub_endpoint = "dsc-1.live.bitmark.com:17008"
-        proxy.req_endpoint = "dsc-1.live.bitmark.com:17009"
-    end
-    if M.chain == "testing" then
-        proxy.sub_endpoint = "coins.test.bitmark.com:16008"
-        proxy.req_endpoint = "coins.test.bitmark.com:16009"
-    end
-    return proxy
-end
 
--- setup for every payment service
-M.payment = {
-
-    -- the mode should be one of the following: p2p, discovery, rest
-    --mode = "p2p",
-    mode = "discovery",
-
-    -- setup proxy addresses based on selected chain
-    --discovery = proxy_address(),
-    discovery = {
-        sub_endpoint = "${discovery_pub}",
-        req_endpoint = "${discovery_rep}"
-    },
-
-    -- local bitcoin access to REST API. required if the mode is set to "rest"
-    bitcoin = {
-        --url = "http://127.0.0.1:8332/rest"
-        url = "${bitcoin_url}"
-    },
-
-    -- local litecoin access to REST API. required if the mode is set to "rest"
-    litecoin = {
-        --url = "http://127.0.0.1:9332/rest"
-        url = "${litecoin_url}"
+    # static connections
+    /connect[[:space:]]+=/ {
+      print connections
     }
-}
 
-
--- configure global or specific logger channel levels
-M.logging = {
-    size = ${log_size},
-    count = ${log_count},
-
-    -- set to true to log to console
-    console = ${log_console},
-
-    -- set the logging level for various modules
-    -- modules not overridden with get the value from DEFAULT
-    -- the default value for DEFAULT is "critical"
-    levels = {
-        -- DEFAULT = "debug",
-        -- DEFAULT = "info",
-        -- DEFAULT = "warn",
-        -- DEFAULT = "error",
-        DEFAULT = "${log_default}",
-
-        -- some specific logging channels: (there may be others)
-        -- announce = "info",
-        -- announcer = "info",
-        -- asset = "info",
-        -- asset-expiry = "info",
-        -- bitcoin = "info",
-        -- block = "info",
-        -- blockheader = "info",
-        -- blockrecord = "info",
-        -- blockstore = "info",
-        -- broadcaster = "info",
-        -- checker = "info",
-        -- connector = "info",
-        -- discoverer = "info",
-        -- expiration = "info",
-        -- listener = "info",
-        -- litecoin = "info",
-        -- BTC_watcher = "info",
-        -- LTC_watcher = "info",
-        -- main = "info",
-        -- mode = "info",
-        -- nodeslookup = "info",
-        -- payment = "info",
-        -- peer = "info",
-        -- proof = "info",
-        -- publish = "info",
-        -- publisher = "info",
-        -- rebroadcaster = "info",
-        -- reservoir = "info",
-        -- rpc = "info",
-        -- submission = "info",
-        -- ["upstream@1"] = "info",
-        -- ["upstream@2"] = "info",
-        -- ["upstream@3"] = "info",
-        -- ["upstream@4"] = "info",
-        -- ["upstream@5"] = "info",
-        -- ["upstream@6"] = "info",
-        -- ["upstream@7"] = "info",
-        -- ["upstream@8"] = "info",
-        -- ["upstream@9"] = "info",
-        -- ["upstream@10"] = "info",
+    # coins
+    /"[*][*][*]REPLACE-WITH-REAL-TEST-BTC-ADDRESS[*][*][*]",/ {
+      print "    test = \"" bitcoin_test"\","
     }
-}
+    /"[*][*][*]REPLACE-WITH-REAL-LIVE-BTC-ADDRESS[*][*][*]",/ {
+      print "    live = \"" bitcoin_live "\","
+    }
+    /"[*][*][*]REPLACE-WITH-REAL-TEST-LTC-ADDRESS[*][*][*]",/ {
+      print "    test = \"" litecoin_test "\","
+    }
+    /"[*][*][*]REPLACE-WITH-REAL-LIVE-LTC-ADDRESS[*][*][*]",/ {
+      print "    live = \"" litecoin_live "\","
+    }
 
+    # set the chain
+    /^--local chain = "local"/ {
+      print "local chain = \"" chain "\""
+    }
 
--- return the complete configuration
-return M
-EOF
+    # uncomment the right data directory line
+    # as all config are in XDG_CONFIG_HOME
+    /^(--)?M[.]data_directory/ {
+      sub("^--", "", $0)
+      if (match($0, "arg")) {
+        print $0
+      } else {
+        print "--" $0
+      }
+    }
 
-  # create identities
+    # set nodes domain
+    /^M[.]nodes/ {
+      print "M.nodes = \"" nodes "\""
+    }
+
+    # logging and remainder of the config file
+    check_logging {
+      if ($1 == "size") {
+        print "    size = " log_size ","
+      } else if ($1 == "count") {
+        print "    count = " log_count ","
+      } else if ($1 == "console") {
+        print "    console = " log_console ","
+      } else if ($1 == "DEFAULT") {
+        if ($3 == log_default) {
+          print $0
+        } else {
+          $1 = $1 # strip leading spaces from $0
+          print "        -- " $0
+        }
+      } else if ($2 == "DEFAULT" && $4 == log_default) {
+        print "        DEFAULT = " log_default
+      } else {
+        print $0
+      }
+    }
+'
+
+  # create identity files based on generated configuration
   run-bitmarkd --config="%${i}" --generate
 done

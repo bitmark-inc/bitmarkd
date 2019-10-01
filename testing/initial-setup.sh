@@ -172,9 +172,7 @@ CONFIGURE() {
     eval more=\"\${more_${i}}\"
     opts=''
     OPT --chain=local
-    OPT --bitcoin="${xdg_home}/bitcoin"
-    OPT --litecoin="${xdg_home}/litecoin"
-    OPT --discovery="${xdg_home}/discovery"
+    OPT --payment=discovery
     OPT "$@"
     OPT --update
     [ X"${recorderd_public}" = X"yes" ] && OPT --recorderd-public
