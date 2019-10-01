@@ -571,7 +571,7 @@ func (client *Client) poller(shutdown <-chan struct{}, stopped chan<- struct{}) 
 	}
 
 	go func(m *zmq.Socket, sigReceive *zmq.Socket, queue chan<- Event) {
-		poller := NewPoller()
+		poller := zmq.NewPoller()
 
 		poller.Add(m, zmq.POLLIN)
 
@@ -593,8 +593,8 @@ func (client *Client) poller(shutdown <-chan struct{}, stopped chan<- struct{}) 
 			}
 		}
 
-		poller.Remove(sigReceive)
-		poller.Remove(m)
+		poller.RemoveBySocket(sigReceive)
+		poller.RemoveBySocket(m)
 		sigReceive.Close()
 		m.Close()
 		close(stopped)
