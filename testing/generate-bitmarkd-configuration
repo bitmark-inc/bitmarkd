@@ -188,7 +188,7 @@ do
         (info)
           log_default=debug
           ;;
-        (debug)
+        (debug|trace)
           log_default=trace
           ;;
         (*)
@@ -283,7 +283,7 @@ do
       litecoin_live = "'"${litecoin_live}"'"
       log_size = '"${log_size}"'
       log_count = '"${log_count}"'
-      log_console = '"${log_console}"'
+      log_console = "'"${log_console}"'"
       # add quotes and trailing ',' to simplify comparisons
       log_default = "\"'"${log_default}"'\","
     }

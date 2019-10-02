@@ -69,7 +69,7 @@ function add_port(ip, port)
         port_base = 10000
     end
     -- wrap unwrapped IPv6
-    if ip:match(":") and not ip[1] == "[" then
+    if ip:match(":") and ip:sub(1, 1) ~= "[" then
         ip = "[" .. ip .. "]"
     end
     return ip .. ":" .. (port_base + port_offset + port)
