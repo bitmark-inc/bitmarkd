@@ -143,11 +143,8 @@ do
   d="${xdg_home}/${program}"
   mkdir -p "${d}" "${d}/log"
   cf="${program}.conf"
-  if [ ! -f "${d}/${cf}" ]
-  then
-    cp -p "${samples}/${cf}" "${d}/"
-    run-${program} --generate
-  fi
+  cp -p "${samples}/${cf}" "${d}/"
+  run-${program} --generate
 done
 
 # setup bitmarkd configs

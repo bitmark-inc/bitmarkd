@@ -276,7 +276,9 @@ do
       recorderd_public = '"${recorderd_public}"'
       chain = "'"${chain}"'"
       nodes = "'"${nodes}"'"
+      port_offset = '"${port_offset}"'
       connections = "'"${connections}"'"
+      payment_mode = "'"${payment_mode}"'"
       bitcoin_test = "'"${bitcoin_test}"'"
       bitcoin_live = "'"${bitcoin_live}"'"
       litecoin_test = "'"${litecoin_test}"'"
@@ -286,6 +288,7 @@ do
       log_console = "'"${log_console}"'"
       # add quotes and trailing ',' to simplify comparisons
       log_default = "\"'"${log_default}"'\","
+      drop_this = 0
     }
 
     # special logging detection
@@ -303,12 +306,60 @@ do
       skip_proofing = 0
     }
 
-    # block all lines to replace
-    !/^(--)?M[.]data_directory|^M[.]nodes|"[*][*][*]REPLACE-WITH-REAL-/ {
+    # change payment mode
+    /mode[[:space:]]+=[[:space:]]+"p2p",/ {
+      print "    mode = \"" payment_mode "\","
+      drop_this = 1
+    }
+
+    # uncomment the right data directory line
+    # as all config are in XDG_CONFIG_HOME
+    /^(--)?M[.]data_directory/ {
+      sub("^--", "", $0)
+      if (match($0, "arg")) {
+        print $0
+      } else {
+        print "--" $0
+      }
+      drop_this = 1
+    }
+
+    # set nodes domain
+    /^M[.]nodes/ {
+      print "M.nodes = \"" nodes "\""
+      drop_this = 1
+    }
+
+    # coins
+    /"[*][*][*]REPLACE-WITH-REAL-TEST-BTC-ADDRESS[*][*][*]",/ {
+      print "    test = \"" bitcoin_test"\","
+      drop_this = 1
+    }
+    /"[*][*][*]REPLACE-WITH-REAL-LIVE-BTC-ADDRESS[*][*][*]",/ {
+      print "    live = \"" bitcoin_live "\","
+      drop_this = 1
+    }
+    /"[*][*][*]REPLACE-WITH-REAL-TEST-LTC-ADDRESS[*][*][*]",/ {
+      print "    test = \"" litecoin_test "\","
+      drop_this = 1
+    }
+    /"[*][*][*]REPLACE-WITH-REAL-LIVE-LTC-ADDRESS[*][*][*]",/ {
+      print "    live = \"" litecoin_live "\","
+      drop_this = 1
+    }
+
+    # port_offset for bitmarkds 2..N
+    /^[[:space:]]*local[[:space:]]+port_offset/ {
       if ($1 == "local" && $2 == "port_offset" && $3 == "=") {
-        $4 = '"${port_offset}"'
+        $4 = port_offset
         print "    " $0
-      } else if (!check_logging) {
+        drop_this = 1
+      }
+    }
+
+    # block all lines to replace
+    {
+      if (!check_logging) {
         # ensure "local" uses localhost
         if (chain == "local" && !skip_proofing) {
           if (match($0, "add_port[(]\"0[.]0[.]0[.]0\",")) {
@@ -316,11 +367,17 @@ do
           } else if (match($0, "add_port[(]\"::\",")) {
              sub("\"::\"", "\"::1\"", $0)
           }
-          print $0
-        } else {
+        }
+        if (!drop_this) {
           print $0
         }
       }
+      drop_this = 0
+    }
+
+    # set the chain
+    /^--local chain = "local"/ {
+      print "local chain = \"" chain "\""
     }
 
     # announce for local
@@ -333,41 +390,6 @@ do
     # static connections
     /connect[[:space:]]+=/ {
       print connections
-    }
-
-    # coins
-    /"[*][*][*]REPLACE-WITH-REAL-TEST-BTC-ADDRESS[*][*][*]",/ {
-      print "    test = \"" bitcoin_test"\","
-    }
-    /"[*][*][*]REPLACE-WITH-REAL-LIVE-BTC-ADDRESS[*][*][*]",/ {
-      print "    live = \"" bitcoin_live "\","
-    }
-    /"[*][*][*]REPLACE-WITH-REAL-TEST-LTC-ADDRESS[*][*][*]",/ {
-      print "    test = \"" litecoin_test "\","
-    }
-    /"[*][*][*]REPLACE-WITH-REAL-LIVE-LTC-ADDRESS[*][*][*]",/ {
-      print "    live = \"" litecoin_live "\","
-    }
-
-    # set the chain
-    /^--local chain = "local"/ {
-      print "local chain = \"" chain "\""
-    }
-
-    # uncomment the right data directory line
-    # as all config are in XDG_CONFIG_HOME
-    /^(--)?M[.]data_directory/ {
-      sub("^--", "", $0)
-      if (match($0, "arg")) {
-        print $0
-      } else {
-        print "--" $0
-      }
-    }
-
-    # set nodes domain
-    /^M[.]nodes/ {
-      print "M.nodes = \"" nodes "\""
     }
 
     # logging and remainder of the config file
