@@ -15,4 +15,4 @@ message P2PMessage {
   message MockProtoMessage {
     string Data = 1;
   }
-    // protoc --proto_path=$HOME/wks_go/src/bitmark-network/p2p/pb/ --go_out=$HOME/wks_go/src/bitmark-network/p2p/ p2pMessage.proto
+  // protoc --proto_path=$HOME/wks_go/src/bitmark-network/p2p/pb/ --go_out=$HOME/wks_go/src/bitmark-network/p2p/ p2pMessage.proto

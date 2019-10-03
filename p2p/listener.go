@@ -2,11 +2,17 @@ package p2p
 
 import (
 	"bufio"
+	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/announce"
+	"github.com/bitmark-inc/bitmarkd/blockheader"
+	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/logger"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -17,14 +23,21 @@ const maxBytesRecieve = 2000
 
 //ListenHandler is a host Listening  handler
 type ListenHandler struct {
-	ID        peerlib.ID
-	registers []*network.Stream
-	log       *logger.L
+	ID   peerlib.ID
+	log  *logger.L
+	node *Node
+}
+
+type serverInfo struct {
+	Version string `json:"version"`
+	Chain   string `json:"chain"`
+	Normal  bool   `json:"normal"`
+	Height  uint64 `json:"height"`
 }
 
 //NewListenHandler return a NewListenerHandler
-func NewListenHandler(ID peerlib.ID, log *logger.L) ListenHandler {
-	return ListenHandler{ID: ID, log: log}
+func NewListenHandler(ID peerlib.ID, node *Node, log *logger.L) ListenHandler {
+	return ListenHandler{ID: ID, log: log, node: node}
 }
 
 func (l *ListenHandler) handleStream(stream network.Stream) {
@@ -35,54 +48,121 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 	//nodeChain := mode.ChainName()
 	nodeChain := "local"
 	log.Infof("chain Name:%v", nodeChain)
-	for {
-		req := make([]byte, maxBytesRecieve)
-		reqLen, err := rw.Read(req)
+	req := make([]byte, maxBytesRecieve)
+	reqLen, err := rw.Read(req)
+
+	if err != nil {
+		listenerSendError(rw, nodeChain, err, "-->READ", log)
+		return
+	}
+	if reqLen < 1 {
+		listenerSendError(rw, nodeChain, errors.New("length of byte recieved is less than 1"), "-->READ", log)
+		return
+	}
+	reqChain, fn, parameters, err := UnPackP2PMessage(req[:reqLen])
+
+	if err != nil {
+		listenerSendError(rw, nodeChain, err, "-->Unpack", log)
+		return
+	}
+	if len(reqChain) < 2 {
+		listenerSendError(rw, nodeChain, errors.New("Invalid Chain"), "-->Unpack", log)
+		return
+	}
+	if reqChain != nodeChain {
+		listenerSendError(rw, nodeChain, errors.New("Different Chain"), "-->Chain", log)
+		return
+	}
+
+	log.Info(fmt.Sprintf("%s RECIEVED:\x1b[32mfn:%s\x1b[0m> ", fn))
+
+	switch fn {
+	case "I": // server information
+		info := serverInfo{
+			Version: l.node.Version,
+			Chain:   nodeChain,
+			Normal:  mode.Is(mode.Normal),
+			Height:  blockheader.Height(),
+		}
+		// chain, fn, info
+		result, err := json.Marshal(info)
 		if err != nil {
-
-			listenerSendError(rw, nodeChain, err, "-->READ", log)
-			break
+			listenerSendError(rw, nodeChain, err, "-->Query Server  Information", log)
+			return
 		}
-		if reqLen < 1 {
-			listenerSendError(rw, nodeChain, errors.New("length of byte recieved is less than 1"), "-->READ", log)
-		}
-		reqChain, fn, parameters, err := UnPackP2PMessage(req[:reqLen])
+		respParams := [][]byte{result}
+		packed, err := PackP2PMessage(nodeChain, "I", respParams)
 		if err != nil {
-			listenerSendError(rw, nodeChain, err, "-->Unpack", log)
+			listenerSendError(rw, nodeChain, err, "-->Query Server Information", log)
+			return
 		}
-		if len(reqChain) < 2 {
-			listenerSendError(rw, nodeChain, errors.New("Invalid Chain"), "-->Unpack", log)
+		rw.Write(packed)
+		rw.Flush()
+	case "N": // get block number
+		blockNumber := blockheader.Height()
+		result := make([]byte, 8)
+		binary.BigEndian.PutUint64(result, blockNumber)
+		respParams := [][]byte{result}
+		packed, err := PackP2PMessage(nodeChain, "I", respParams)
+		if err != nil {
+			listenerSendError(rw, nodeChain, err, "-->Query Server Information", log)
+			return
 		}
-
-		if reqChain != nodeChain {
-			listenerSendError(rw, nodeChain, errors.New("Different Chain"), "-->Chain", log)
-		}
-
-		switch fn {
-		case "R":
-			reqID, reqMaAddrs, timestamp, err := UnPackRegisterData(parameters)
+		rw.Write(packed)
+		rw.Flush()
+	case "B": // get packed block
+		if 1 != len(parameters) {
+			err = fault.ErrMissingParameters
+		} else if 8 == len(parameters[0]) {
+			result := storage.Pool.Blocks.Get(parameters[0])
+			if nil == result {
+				err = fault.ErrBlockNotFound
+				listenerSendError(rw, nodeChain, err, "-->Query Block: block not found", log)
+			}
+			respParams := [][]byte{result}
+			packed, err := PackP2PMessage(nodeChain, "B", respParams)
 			if err != nil {
-				listenerSendError(rw, nodeChain, err, "-->RegData", log)
-				break
+				listenerSendError(rw, nodeChain, err, "-->Query Block  Information", log)
+				return
 			}
-
-			announce.AddPeer(reqID, reqMaAddrs, timestamp) // id, listeners, timestam
-			randPeerID, randListeners, randTs, err := announce.GetRandom(reqID)
-			var randData [][]byte
-			if nil != err { // No Random Node sendback this Node
-				randData, err = PackRegisterData(nodeChain, fn, reqID, reqMaAddrs, time.Now())
-				break
-			}
-			randData, err = PackRegisterData(nodeChain, fn, randPeerID, randListeners, randTs)
-			p2pMessagePacked, err := proto.Marshal(&P2PMessage{Data: randData})
-			if err != nil {
-				listenerSendError(rw, nodeChain, err, "-->radomn node", log)
-				break
-			}
-			_, err = rw.Write(p2pMessagePacked)
+			rw.Write(packed)
 			rw.Flush()
-			log.Info(fmt.Sprintf("WRITE:\x1b[32mLength:%d\x1b[0m> ", len(p2pMessagePacked)))
+		} else {
+			err = fault.ErrBlockNotFound
+			listenerSendError(rw, nodeChain, err, "-->Query Block: invalid parameter", log)
 		}
+	case "R":
+		nType, reqID, reqMaAddrs, timestamp, err := UnPackRegisterData(parameters)
+		if err != nil {
+			listenerSendError(rw, nodeChain, err, "-->RegData", log)
+			return
+		}
+		if nType != "client" {
+			log.Info(fmt.Sprintf("register:\x1b[32mClient registered\x1b[0m>"))
+			announce.AddPeer(reqID, reqMaAddrs, timestamp) // id, listeners, timestam
+		}
+		randPeerID, randListeners, randTs, err := announce.GetRandom(reqID)
+		var randData [][]byte
+		if nil != err { // No Random Node sendback this Node
+			randData, err = PackRegisterData(nodeChain, fn, nType, reqID, reqMaAddrs, time.Now())
+		} else {
+			randData, err = PackRegisterData(nodeChain, fn, "servant", randPeerID, randListeners, randTs)
+		}
+
+		p2pMessagePacked, err := proto.Marshal(&P2PMessage{Data: randData})
+		if err != nil {
+			listenerSendError(rw, nodeChain, err, "-><- Radom node", log)
+			return
+		}
+		l.node.addToRegister(reqID, stream)
+		_, err = rw.Write(p2pMessagePacked)
+		rw.Flush()
+		log.Info(fmt.Sprintf("<--WRITE:\x1b[32mLength:%d\x1b[0m> ", len(p2pMessagePacked)))
+	default: // other commands as subscription-type commands // this will move to pubsub
+		listenerSendError(rw, nodeChain, errors.New("subscription-type command"), "-> Subscription type command , should send through pubsub", log)
+		//processSubscription(log, fn, parameters)
+		//result = []byte{'A'}
+		return
 	}
 }
 

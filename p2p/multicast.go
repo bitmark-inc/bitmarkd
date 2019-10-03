@@ -14,7 +14,7 @@ import (
 
 // SubHandler multicasting subscription handler
 func (n *Node) SubHandler(ctx context.Context, sub *pubsub.Subscription) {
-	log := n.log
+	log := n.Log
 	log.Info("-- Sub start listen --")
 
 	for {

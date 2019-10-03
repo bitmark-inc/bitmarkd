@@ -31,6 +31,7 @@ require (
 	github.com/libp2p/go-libp2p-tls v0.1.1
 	github.com/miekg/dns v1.1.16
 	github.com/mitchellh/mapstructure v1.1.2 // indirect
+	github.com/mr-tron/base58 v1.1.2
 	github.com/multiformats/go-multiaddr v0.0.4
 	github.com/nbutton23/zxcvbn-go v0.0.0-20180912185939-ae427f1e4c1d // indirect
 	github.com/onsi/ginkgo v1.10.1 // indirect

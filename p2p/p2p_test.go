@@ -28,7 +28,7 @@ func TestMain(m *testing.M) {
 	if err := logger.Initialise(logConfig); err != nil {
 		panic(fmt.Sprintf("logger initialization failed: %s", err))
 	}
-	globalData.log = logger.New("nodes")
+	globalData.Log = logger.New("nodes")
 	os.Exit(m.Run())
 }
 

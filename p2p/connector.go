@@ -16,41 +16,40 @@ func (n *Node) connectPeers() {
 loop:
 	for idx, peerID := range n.Host.Peerstore().PeersWithAddrs() {
 		peerInfo := n.Host.Peerstore().PeerInfo(peerID)
-		n.log.Infof("connect to peer[%s] %s... ", peerInfo.ID, util.PrintMaAddrs(peerInfo.Addrs))
+		n.Log.Infof("connect to peer[%s] %s... ", peerInfo.ID, util.PrintMaAddrs(peerInfo.Addrs))
 		if len(peerInfo.Addrs) == 0 {
-			n.log.Infof("no Addr: %s", peerID)
+			n.Log.Infof("no Addr: %s", peerID)
 			continue loop
 		} else if n.isSameNode(peerInfo) {
-			n.log.Infof("The same node: %s", peerID)
+			n.Log.Infof("The same node: %s", peerID)
 			continue loop
 		} else {
 			for _, addr := range peerInfo.Addrs {
-				n.log.Infof("connectPeers: Dial to peer[%d]:%s", idx, addr.String())
+				n.Log.Infof("connectPeers: Dial to peer[%d]:%s", idx, addr.String())
 			}
-			err := n.directConnect(peerInfo)
+			err := n.DirectConnect(peerInfo)
 			if err != nil {
 				continue loop
 			}
-			s, err := n.register(&peerInfo)
+			_, err = n.Register(&peerInfo)
 			if err != nil {
-				n.log.Warn(fmt.Sprintf(":\x1b[31mRegister Failed: %v:\x1b[0m", err))
+				n.Log.Warn(fmt.Sprintf(":\x1b[31mRegister Failed: %v:\x1b[0m", err))
 				n.Host.Network().ClosePeer(peerInfo.ID)
 				continue loop
 			}
-			n.log.Info(fmt.Sprintf(":\x1b[32mRegister Sucessfull\x1b[0m"))
-			n.Lock()
-			n.RegisterStream = append(n.RegisterStream, s)
-			n.Unlock()
+			n.Log.Info(fmt.Sprintf(":\x1b[32mRegister Sucessfull\x1b[0m"))
 		}
 	}
+	n.Log.Infof("Connector Register Stream #= %d", len(n.RegisterStream))
 }
 
-func (n *Node) directConnect(info peer.AddrInfo) error {
+//DirectConnect connect to the peer with given peer AddrInfo
+func (n *Node) DirectConnect(info peer.AddrInfo) error {
 	cctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancel()
 	err := n.Host.Connect(cctx, info)
 	if err != nil {
-		n.log.Warn(err.Error())
+		n.Log.Warn(err.Error())
 		return err
 	}
 	return nil
@@ -83,9 +82,9 @@ func (n *Node) IsPeerExisted(newAddr multiaddr.Multiaddr) bool {
 	//TODO: refactor nested loop
 	for _, ID := range n.Host.Peerstore().Peers() {
 		for _, addr := range n.Host.Peerstore().PeerInfo(ID).Addrs {
-			//	log.Debugf("peers in PeerStore:%s     NewAddress:%s\n", addr.String(), newAddr.String())
+			//	Log.Debugf("peers in PeerStore:%s     NewAddress:%s\n", addr.String(), newAddr.String())
 			if addr.Equal(newAddr) {
-				n.log.Info("Peer is in PeerStore")
+				n.Log.Info("Peer is in PeerStore")
 				return true
 			}
 		}

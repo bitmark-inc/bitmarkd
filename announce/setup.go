@@ -15,6 +15,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
+	proto "github.com/golang/protobuf/proto"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 )
@@ -168,4 +169,14 @@ func (fingerprint fingerprintType) MarshalText() ([]byte, error) {
 	buffer := make([]byte, size)
 	hex.Encode(buffer, fingerprint[:])
 	return buffer, nil
+}
+
+func printBinaryAddrs(addrs []byte) string {
+	maAddrs := Addrs{}
+	err := proto.Unmarshal(addrs, &maAddrs)
+	if err != nil {
+		return ""
+	}
+	printAddrs := util.PrintMaAddrs(util.GetMultiAddrsFromBytes(maAddrs.Address))
+	return printAddrs
 }

@@ -85,8 +85,8 @@ type Node struct {
 	Host           p2pcore.Host
 	Announce       []ma.Multiaddr
 	sync.RWMutex             // to allow locking
-	log            *logger.L // logger
-	RegisterStream []*network.Stream
+	Log            *logger.L // logger
+	RegisterStream map[string]network.Stream
 	MuticastStream *pubsub.PubSub
 	PreferIPv6     bool
 	PrivateKey     crypto.PrivKey
@@ -106,22 +106,22 @@ func Initialise(configuration *Configuration, version string) error {
 	if globalData.initialised {
 		return fault.ErrAlreadyInitialised
 	}
-	globalData.log = logger.New("p2p")
-	globalData.log.Info("starting…")
+	globalData.Log = logger.New("p2p")
+	globalData.Log.Info("starting…")
 	globalData.Setup(configuration, version)
-	globalData.log.Info("start background…")
+	globalData.Log.Info("start background…")
 
 	processes := background.Processes{
 		&globalData,
 		&globalData.stateMachine,
 	}
-	globalData.background = background.Start(processes, globalData.log)
+	globalData.background = background.Start(processes, globalData.Log)
 	return nil
 }
 
 // Run  wait for incoming requests, process them and reply
 func (n *Node) Run(args interface{}, shutdown <-chan struct{}) {
-	log := n.log
+	log := n.Log
 	log.Info("starting…")
 	queue := messagebus.Bus.P2P.Chan()
 	delay := time.After(nodeInitial)
@@ -162,7 +162,7 @@ loop:
 					peerID, err := peerlib.IDFromBytes(item.Parameters[0])
 					log.Infof("N1 PeerID%s", peerID.String())
 					if err != nil {
-						n.log.Errorf("Unmarshal peer ID Error:%x", item.Parameters[0])
+						n.Log.Errorf("Unmarshal peer ID Error:%x", item.Parameters[0])
 						goto loop
 					}
 					pbPeerAddrs := Addrs{}
@@ -191,16 +191,16 @@ func Finalise() error {
 		return fault.ErrNotInitialised
 	}
 
-	globalData.log.Info("shutting down…")
-	globalData.log.Flush()
+	globalData.Log.Info("shutting down…")
+	globalData.Log.Flush()
 
 	// stop background
 	globalData.background.Stop()
 	// finally...
 	globalData.initialised = false
 
-	globalData.log.Info("finished")
-	globalData.log.Flush()
+	globalData.Log.Info("finished")
+	globalData.Log.Flush()
 
 	return nil
 }
