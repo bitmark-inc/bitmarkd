@@ -56,15 +56,9 @@ func setup() error {
 	_ = logger.Initialise(logging)
 
 	// open database
-	_, mustReindex, err := Initialise(databaseFileName, false)
+	err := Initialise(databaseFileName, false)
 	if nil != err {
 		return fmt.Errorf("storage initialise error: %s", err.Error())
-	}
-	if mustReindex {
-		err := ReindexDone()
-		if nil != err {
-			return fmt.Errorf("storage reindex done error: %s", err.Error())
-		}
 	}
 
 	return nil

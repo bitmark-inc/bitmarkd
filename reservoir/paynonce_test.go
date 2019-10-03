@@ -17,7 +17,7 @@ import (
 func TestPayNonce(t *testing.T) {
 
 	setup(t)
-	defer teardown(t)
+	defer teardown()
 
 	nonce := reservoir.PayNonce{
 		0x2b, 0xa1, 0x54, 0x14, 0x46, 0x74, 0x29, 0x1d,
@@ -55,7 +55,7 @@ func TestNewPayNonceBitmark(t *testing.T) {
 	expected := `"5c93f739eb01cdde"`
 
 	setup(t)
-	defer teardown(t)
+	defer teardown()
 
 	d, n := blockheader.GetNew()
 	t.Logf("block: %d  %#v", n, d)
@@ -82,7 +82,7 @@ func TestNewPayNonceTesting(t *testing.T) {
 	expected := `"8ae68bb87c4a926b"`
 
 	setup(t, chain.Testing)
-	defer teardown(t)
+	defer teardown()
 
 	d, n := blockheader.GetNew()
 	t.Logf("block: %d  %#v", n, d)

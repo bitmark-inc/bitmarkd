@@ -59,15 +59,9 @@ func setup(t *testing.T, theChain ...string) {
 	}
 
 	// open database
-	_, mustReindex, err := storage.Initialise(databaseFileName, false)
+	err := storage.Initialise(databaseFileName, false)
 	if nil != err {
 		t.Fatalf("storage initialise error: %s", err)
-	}
-	if mustReindex {
-		err := storage.ReindexDone()
-		if nil != err {
-			t.Fatalf("storage reindex done error: %s", err)
-		}
 	}
 
 	// need to initialise block before any tests can be performed
@@ -76,14 +70,14 @@ func setup(t *testing.T, theChain ...string) {
 		t.Fatalf("blockheader initialise error: %s", err)
 	}
 	// need to initialise block before any tests can be performed
-	err = block.Initialise(false, false)
+	err = block.Initialise()
 	if nil != err {
 		t.Fatalf("block initialise error: %s", err)
 	}
 }
 
 // post test cleanup
-func teardown(t *testing.T) {
+func teardown() {
 	block.Finalise()
 	blockheader.Finalise()
 	storage.Finalise()
