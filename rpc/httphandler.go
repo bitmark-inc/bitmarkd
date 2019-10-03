@@ -21,6 +21,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
+	"github.com/bitmark-inc/bitmarkd/counter"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/peer"
@@ -54,12 +55,17 @@ func (c *InternalConnection) Close() error {
 
 // the argument passed to the handlers
 type httpHandler struct {
-	log     *logger.L
-	server  *rpc.Server
-	start   time.Time
-	version string
-	allow   map[string][]*net.IPNet
+	log                *logger.L
+	server             *rpc.Server
+	start              time.Time
+	version            string
+	allow              map[string][]*net.IPNet
+	maximumConnections uint64
 }
+
+// global atomic connection counter
+// all listening ports share this count
+var connectionCountHTTPS counter.Counter
 
 // this matches anything not matched and returns error
 func (s *httpHandler) root(w http.ResponseWriter, r *http.Request) {
@@ -75,8 +81,12 @@ func (s *httpHandler) rpc(w http.ResponseWriter, r *http.Request) {
 
 	server := s.server
 
-	connectionCount.Increment()
-	defer connectionCount.Decrement()
+	if connectionCountHTTPS.Increment() > s.maximumConnections {
+		connectionCountHTTPS.Decrement()
+		sendTooManyRequests(w)
+		return
+	}
+	defer connectionCountHTTPS.Decrement()
 
 	serverCodec := jsonrpc.NewServerCodec(&InternalConnection{in: r.Body, out: w})
 	w.Header().Set("Content-Type", "application/json")
@@ -133,8 +143,12 @@ func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	connectionCount.Increment()
-	defer connectionCount.Decrement()
+	if connectionCountHTTPS.Increment() > s.maximumConnections {
+		connectionCountHTTPS.Decrement()
+		sendTooManyRequests(w)
+		return
+	}
+	defer connectionCountHTTPS.Decrement()
 
 	type lrCount struct {
 		Local  uint64 `json:"local"`
@@ -175,7 +189,7 @@ func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 			},
 			Hash: block.LastBlockHash(),
 		},
-		RPCs: connectionCount.Uint64(),
+		RPCs: connectionCountHTTPS.Uint64(),
 		// Miners : mine.ConnectionCount(),
 		Difficulty: difficulty.Current.Value(),
 		Hashrate:   difficulty.Hashrate(),
@@ -202,8 +216,12 @@ func (s *httpHandler) connections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	connectionCount.Increment()
-	defer connectionCount.Decrement()
+	if connectionCountHTTPS.Increment() > s.maximumConnections {
+		connectionCountHTTPS.Decrement()
+		sendTooManyRequests(w)
+		return
+	}
+	defer connectionCountHTTPS.Decrement()
 
 	type reply struct {
 		ConnectedTo []*zmqutil.Connected `json:"connectedTo"`
@@ -241,8 +259,12 @@ func (s *httpHandler) peers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	connectionCount.Increment()
-	defer connectionCount.Decrement()
+	if connectionCountHTTPS.Increment() > s.maximumConnections {
+		connectionCountHTTPS.Decrement()
+		sendTooManyRequests(w)
+		return
+	}
+	defer connectionCountHTTPS.Decrement()
 
 	r.ParseForm()
 
@@ -322,6 +344,9 @@ func sendMethodNotAllowed(w http.ResponseWriter) {
 func sendForbidden(w http.ResponseWriter) {
 	sendError(w, "forbidden", http.StatusForbidden)
 }
+func sendTooManyRequests(w http.ResponseWriter) {
+	sendError(w, "Too Many Requests", http.StatusTooManyRequests)
+}
 func sendInternalServerError(w http.ResponseWriter) {
 	sendError(w, "internal server error", http.StatusInternalServerError)
 }
@@ -339,7 +364,7 @@ func sendError(w http.ResponseWriter, message string, code int) {
 		Error: message,
 	})
 	if nil != err {
-		// manually composed error just incase JSON fails
+		// manually composed error just in case JSON fails
 		http.Error(w, `{"code":500,"error":"Internal Server Error"}`, http.StatusInternalServerError)
 		return
 	}

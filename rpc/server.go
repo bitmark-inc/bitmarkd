@@ -6,7 +6,7 @@
 package rpc
 
 import (
-	"io"
+	"net"
 	"net/rpc"
 	"net/rpc/jsonrpc"
 
@@ -14,33 +14,31 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-// limit the number of gets
-//const MaximumGetSize = 100
+// global atomic connection counter
+// all listening ports share this count
+var connectionCountRPC counter.Counter
 
-// the argument passed to the callback
-type serverArgument struct {
-	Log    *logger.L
-	Server *rpc.Server
-}
+// a single socket RPC listener
+func listenAndServeRPC(listen net.Listener, server *rpc.Server, maximumConnections uint64, log *logger.L) {
+accept_loop:
+	for {
+		conn, err := listen.Accept()
+		if err != nil {
+			log.Errorf("rpc.Server terminated: accept error:", err)
+			break accept_loop
+		}
+		if connectionCountRPC.Increment() <= maximumConnections {
+			go func() {
+				server.ServeCodec(jsonrpc.NewServerCodec(conn))
+				conn.Close()
+				connectionCountRPC.Decrement()
+			}()
+		} else {
+			connectionCountRPC.Decrement()
+			conn.Close()
+		}
 
-var connectionCount counter.Counter
-
-// Callback - callback to process RPC requests
-func Callback(conn io.ReadWriteCloser, argument interface{}) {
-
-	serverArgument := argument.(*serverArgument)
-
-	log := serverArgument.Log
-	log.Info("starting…")
-
-	server := serverArgument.Server
-
-	connectionCount.Increment()
-	defer connectionCount.Decrement()
-
-	codec := jsonrpc.NewServerCodec(conn)
-	defer codec.Close()
-	server.ServeCodec(codec)
-
-	log.Info("finished")
+	}
+	listen.Close()
+	log.Error("RPC accept terminated")
 }
