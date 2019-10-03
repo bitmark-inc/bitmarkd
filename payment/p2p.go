@@ -303,9 +303,8 @@ func (w *p2pWatcher) sync() {
 						w.log.Trace("stop syncing…")
 						return
 					default:
-						// The loop will retry the fetching process if there are errors which is not
-						// defined above.
-						w.log.Errorf("some other error happens during header fetching process. error: %s", err)
+						// The loop will retry the fetching process if there are other errors
+						w.log.Warnf("fetch header error: %s", err)
 					}
 				} else {
 					if p.LastBlock() <= w.lastHeight {
