@@ -141,7 +141,7 @@ func initialiseRPC(configuration *RPCConfiguration, version string) error {
 	name := "client_rpc"
 	log := globalData.log
 
-	if configuration.MaximumConnections <= 0 {
+	if configuration.MaximumConnections < 1 {
 		log.Errorf("invalid %s maximum connection limit: %d", name, configuration.MaximumConnections)
 		return fault.MissingParameters
 	}
@@ -212,7 +212,7 @@ func initialiseHTTPS(configuration *HTTPSConfiguration, version string) error {
 		return nil
 	}
 
-	if configuration.MaximumConnections <= 0 {
+	if configuration.MaximumConnections < 1 {
 		log.Errorf("invalid %s maximum connection limit: %d", name, configuration.MaximumConnections)
 		return fault.MissingParameters
 	}
