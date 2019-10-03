@@ -39,16 +39,16 @@ func teardownTestLogger() {
 	removeFiles()
 }
 
-func newTestMockDataAccess(t *testing.T) (*mocks.MockDataAccess, *gomock.Controller) {
+func newTestMockDataAccess(t *testing.T) (*mocks.MockAccess, *gomock.Controller) {
 	ctl := gomock.NewController(t)
 
-	return mocks.NewMockDataAccess(ctl), ctl
+	return mocks.NewMockAccess(ctl), ctl
 }
 
-func setupTestTransaction(t *testing.T) (Transaction, *mocks.MockDataAccess, *gomock.Controller) {
+func setupTestTransaction(t *testing.T) (Transaction, *mocks.MockAccess, *gomock.Controller) {
 	mock, ctl := newTestMockDataAccess(t)
 
-	trx := newTransaction([]DataAccess{mock})
+	trx := newTransaction([]Access{mock})
 	return trx, mock, ctl
 }
 

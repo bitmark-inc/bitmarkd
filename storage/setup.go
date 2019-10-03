@@ -48,6 +48,7 @@ var (
 
 const (
 	currentBitmarksDBVersion = 0x1
+	bitmarksDBName           = "bitmarks"
 )
 
 // holds the database handle
@@ -89,12 +90,17 @@ func Initialise(dbPrefix string, readOnly bool) error {
 		}
 	}()
 
-	db, bitmarksDBVersion, err := initialiseBitmarksDB(dbPrefix, readOnly)
+	bitmarksDBVersion, err := openBitmarkdDB(dbPrefix, readOnly)
 	if err != nil {
 		return err
 	}
 
-	err = validateBitmarksDB(bitmarksDBVersion, readOnly)
+	err = validateBitmarksDBVersion(bitmarksDBVersion, readOnly)
+	if err != nil {
+		return err
+	}
+
+	err = setupBitmarksDB()
 	if err != nil {
 		return err
 	}
@@ -103,7 +109,7 @@ func Initialise(dbPrefix string, readOnly bool) error {
 	btcDatabase := dbPrefix + "-btc.leveldb"
 	ltcDatabase := dbPrefix + "-ltc.leveldb"
 
-	db, _, err = getDB(btcDatabase, readOnly)
+	db, _, err := getDB(btcDatabase, readOnly)
 	if nil != err {
 		return err
 	}
@@ -115,27 +121,41 @@ func Initialise(dbPrefix string, readOnly bool) error {
 	}
 	PaymentStorage.Ltc = NewLevelDBPaymentStore(db)
 
+	ok = true // prevent db close
+	return nil
+}
+
+func setupBitmarksDB() error {
+	bitmarksDBAccess := setupBitmarksDBTransaction()
+
+	err := setupPools(bitmarksDBAccess)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func setupBitmarksDBTransaction() Access {
+	poolData.bitmarksBatch = new(leveldb.Batch)
+	poolData.cache = newCache()
+	bitmarksDBAccess := newDA(poolData.bitmarksDB, poolData.bitmarksBatch, poolData.cache)
+	poolData.trx = newTransaction([]Access{bitmarksDBAccess})
+
+	return bitmarksDBAccess
+}
+
+func setupPools(bitmarksDBAccess Access) error {
 	// this will be a struct type
 	poolType := reflect.TypeOf(Pool)
-
 	// get write access by using pointer + Elem()
 	poolValue := reflect.ValueOf(&Pool).Elem()
 
-	// databases
-	poolData.bitmarksBatch = new(leveldb.Batch)
-	poolData.cache = newCache()
-
-	bitmarksDBAccess := newDA(poolData.bitmarksDB, poolData.bitmarksBatch, poolData.cache)
-
-	access := []DataAccess{bitmarksDBAccess}
-	poolData.trx = newTransaction(access)
-
 	// scan each field
 	for i := 0; i < poolType.NumField(); i += 1 {
-
 		fieldInfo := poolType.Field(i)
-
 		prefixTag := fieldInfo.Tag.Get("prefix")
+
 		if 1 != len(prefixTag) {
 			return fmt.Errorf("pool: %v has invalid prefix: %q", fieldInfo, prefixTag)
 		}
@@ -164,24 +184,22 @@ func Initialise(dbPrefix string, readOnly bool) error {
 		}
 
 	}
-
-	ok = true // prevent db close
 	return nil
 }
 
-func initialiseBitmarksDB(dbPrefix string, readOnly bool) (*leveldb.DB, int, error) {
-	// bitmarksDB name
-	bitmarksDatabase := dbPrefix + "-bitmarks.leveldb"
+func openBitmarkdDB(dbPrefix string, readOnly bool) (int, error) {
+	name := fmt.Sprintf("%s-%s.leveldb", dbPrefix, bitmarksDBName)
 
-	db, bitmarksDBVersion, err := getDB(bitmarksDatabase, readOnly)
+	db, version, err := getDB(name, readOnly)
 	if nil != err {
-		return nil, 0, nil
+		return 0, err
 	}
 	poolData.bitmarksDB = db
-	return db, bitmarksDBVersion, err
+
+	return version, err
 }
 
-func validateBitmarksDB(bitmarksDBVersion int, readOnly bool) error {
+func validateBitmarksDBVersion(bitmarksDBVersion int, readOnly bool) error {
 	// ensure no database downgrade
 	if bitmarksDBVersion > currentBitmarksDBVersion {
 		msg := fmt.Sprintf("bitmarksDB database version: %d > current version: %d", bitmarksDBVersion, currentBitmarksDBVersion)
