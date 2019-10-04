@@ -334,7 +334,7 @@ M.payment = {
     -- local litecoin access to REST API
     -- required if the mode is set to "rest"
     litecoin = {
-        url = "http://127.0.0.1:" .. bitcoin_port() .. "/rest"
+        url = "http://127.0.0.1:" .. litecoin_port() .. "/rest"
     }
 }
 
