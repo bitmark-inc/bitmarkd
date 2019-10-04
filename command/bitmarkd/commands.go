@@ -6,6 +6,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -118,11 +119,11 @@ func processSetupCommand(arguments []string) bool {
 	case "start", "run":
 		return false // continue processing
 
-		// case "block-times":
-		// 	return false // defer processing until database is loaded
-
 	case "block", "b", "save-blocks", "save", "load-blocks", "load", "delete-down", "dd":
 		return false // defer processing until database is loaded
+
+	case "config-test", "cfg":
+		return false
 
 	default:
 		switch command {
@@ -160,6 +161,9 @@ func processSetupCommand(arguments []string) bool {
 		fmt.Printf("                                        for convienience when passing script arguments\n")
 		fmt.Printf("\n")
 
+		fmt.Printf("  config-test                (cfg)    - just check the configuration file\n")
+		fmt.Printf("\n")
+
 		fmt.Printf("  block S [E [FILE]]         (b)      - dump block(s) as a JSON structures to stdout/file\n")
 		fmt.Printf("\n")
 
@@ -193,6 +197,17 @@ func processConfigCommand(arguments []string, options *Configuration) bool {
 	switch command {
 	case "dns-txt", "txt":
 		dnsTXT(options)
+
+	case "config-test", "cfg":
+		b, err := json.Marshal(options)
+		if err != nil {
+			exitwithstatus.Message("error: %s", err)
+		}
+		var out bytes.Buffer
+		json.Indent(&out, b, "", "  ")
+		out.WriteTo(os.Stdout)
+		os.Stdout.WriteString("\n")
+
 	default: // unknown commands fall through to data command
 		return false
 	}
