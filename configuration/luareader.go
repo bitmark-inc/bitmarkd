@@ -6,7 +6,6 @@
 package configuration
 
 import (
-	"fmt"
 	"net"
 
 	"github.com/yuin/gluamapper"
@@ -44,8 +43,9 @@ func ParseConfigurationFile(fileName string, config interface{}) error {
 
 		// table for the list of addresses
 		addr := &lua.LTable{}
+		j := 1 // lua indices start at 1
 	ip_loop:
-		for i, a := range addrList {
+		for _, a := range addrList {
 			ip, _, err := net.ParseCIDR(a.String())
 			if nil != err || !ip.IsGlobalUnicast() {
 				// exclude most non-routable addresses
@@ -77,9 +77,8 @@ func ParseConfigurationFile(fileName string, config interface{}) error {
 					continue ip_loop
 				}
 			}
-			fmt.Printf("+%d: %q\n", i, ip.String())
-			addr.Insert(i+1, lua.LString(ip.String()))
-
+			addr.Insert(j, lua.LString(ip.String()))
+			j += 1
 		}
 		L.SetGlobal("interface_public_ips", addr)
 	}
