@@ -40,7 +40,6 @@ loop:
 			n.Log.Info(fmt.Sprintf(":\x1b[32mRegister Sucessfull\x1b[0m"))
 		}
 	}
-	n.Log.Infof("Connector Register Stream #= %d", len(n.RegisterStream))
 }
 
 //DirectConnect connect to the peer with given peer AddrInfo

@@ -6,6 +6,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/network"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/p2p/statemachine"
@@ -38,15 +39,14 @@ func (n *Node) Setup(configuration *Configuration, version string) error {
 	go n.listen(configuration.Announce)
 	go n.metricsNetwork.networkMonitor(n.Host, n.Log)
 
-	/*
-		ps, err := pubsub.NewGossipSub(context.Background(), n.Host)
-		if err != nil {
-			panic(err)
-		}
-		n.MuticastStream = ps
-		sub, err := n.MuticastStream.Subscribe(multicastingTopic)
-		go n.SubHandler(context.Background(), sub)
-	*/
+	ps, err := pubsub.NewGossipSub(context.Background(), n.Host)
+	if err != nil {
+		panic(err)
+	}
+	n.MuticastStream = ps
+	sub, err := n.MuticastStream.Subscribe(multicastingTopic)
+	go n.SubHandler(context.Background(), sub)
+
 	n.stateMachine = statemachine.NewStateMachine()
 	globalData.initialised = true
 	return nil
