@@ -155,9 +155,7 @@ func initialiseRPC(configuration *RPCConfiguration, version string) error {
 		return fault.MissingParameters
 	}
 
-	// create limiter
-	//	limiter := listener.NewLimiter(configuration.MaximumConnections)
-
+	// load certificate
 	tlsConfiguration, fingerprint, err := getCertificate(log, name, configuration.Certificate, configuration.PrivateKey)
 	if nil != err {
 		return err
@@ -185,11 +183,30 @@ process_rpcs:
 		return err
 	}
 
+	// server structure for RPC function invocation
 	server := createRPCServer(log, version)
 
-	for _, listen := range configuration.Listen {
+	// validate all listen addresses
+	ipType := make([]string, len(configuration.Listen))
+	for i, listen := range configuration.Listen {
+		if '[' == listen[0] {
+			listen = strings.Split(listen[1:], "]:")[0]
+			ipType[i] = "tcp6"
+		} else {
+			listen = strings.Split(listen, ":")[0]
+			ipType[i] = "tcp4"
+		}
+		ip := net.ParseIP(listen)
+		if nil == ip {
+			err := fault.InvalidIpAddress
+			log.Errorf("rpc server listen error: %s", err)
+			return err
+		}
+	}
+	for i, listen := range configuration.Listen {
 		log.Infof("starting RPC server: %s", listen)
-		l, err := tls.Listen("tcp", listen, tlsConfiguration)
+
+		l, err := tls.Listen(ipType[i], listen, tlsConfiguration)
 		if err != nil {
 			log.Errorf("rpc server listen error: %s", err)
 			return err
