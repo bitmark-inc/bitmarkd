@@ -141,6 +141,9 @@ do
   [ X"${pid}" = X"${pid2}" ] && running=yes && break
 done
 
+# if necessary to generate add code here
+[ X"${generate}" = X"yes" ] && exit 0
+
 # run the CLI
 if [ X"${server}" = X"no" ]
 then

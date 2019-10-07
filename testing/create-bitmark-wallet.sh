@@ -34,14 +34,14 @@ walletdb = "wallet.dat"
 agent {
   btc {
     type = "daemon"
-    node = "localhost:18001"
+    node = "localhost:18443"
     user = "btcuser1"
     pass = "beis7uvei9ALei4ofeu6ahFaeQu0IephTheebuchuuXio5ia"
   }
 
   ltc {
     type = "daemon"
-    node = "localhost:19001"
+    node = "localhost:19443"
     user = "litecoinuser"
     pass = "gdbhrkztqxgnfsggqzpzsxrmkgzvksfjwgngwgjsgqjknrnqspxgrvrmxdwxbbmt"
   }
