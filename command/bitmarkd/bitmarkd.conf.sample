@@ -36,12 +36,22 @@ local announce_ips = {
 }
 
 ------------------------------------------------------------------------
+-- Optionally override with "interface_public_ips"
+-- see:
+--   RFC 4921 (IPv6 Addressing Architecture)
+-- This global variable excludes addresses defined by:
+--   RFC 1918 (Address Allocation for Private Internets)
+--   RFC 3927 (Dynamic Configuration of IPv4 Link-Local Addresses)
+--   RFC 4193 (Unique Local IPv6 Unicast Addresses)
+------------------------------------------------------------------------
+--announce_ips = interface_public_ips
+
+
+------------------------------------------------------------------------
 -- Advanced configuration below this point
 ------------------------------------------------------------------------
 
 local M = {}
-
-local public_ip = {}
 
 -- Read the named file in under the specified data directory
 -- M.data_directory and return the contents.
@@ -78,24 +88,26 @@ end
 -- Let the node announce itself (ip:port) to the network.
 -- The ip should be provided using environment variables
 -- either PUBLIC_IPV4 or PUBLIC_IPV6, or both
--- depends on the public IP addresses of the node.
-function make_announcements(ip_list, port)
+-- depend on the public IP addresses of the node.
+function make_announcements(port)
     local announcements = {}
-    for k, v in pairs(ip_list) do
+    for k, v in pairs(announce_ips) do
         announcements[#announcements+1] = add_port(v, port)
     end
+
+    -- set the public IP addresses
+    local public_ipv4 = os.getenv("PUBLIC_IPV4")
+    if public_ipv4 ~= nil and public_ipv4 ~= "" then
+        announcements[#announcements+1] = add_port(public_ipv4, port)
+    end
+
+    local public_ipv6 = os.getenv("PUBLIC_IPV6")
+    if public_ipv6 ~= nil and public_ipv6 ~= "" then
+        announcements[#announcements+1] = add_port(public_ipv6, port)
+    end
+
+    -- expand table to return list
     return unpack(announcements)
-end
-
--- set the public IP addresses
-local public_ipv4 = os.getenv("PUBLIC_IPV4")
-if public_ipv4 ~= nil and public_ipv4 ~= "" then
-    public_ip[#public_ip+1] = public_ipv4
-end
-
-local public_ipv6 = os.getenv("PUBLIC_IPV6")
-if public_ipv6 ~= nil and public_ipv6 ~= "" then
-    public_ip[#public_ip+1] = public_ipv6
 end
 
 
@@ -147,10 +159,8 @@ M.client_rpc = {
         -- add_port("x::y:z", 2130),
 
         -- only use if minimum announce setup varible is set
-        make_announcements(announce_ips, 2130),
-
-        -- only used if PUBLIC_IPV[46] variables are set
-        make_announcements(public_ip, 2130),
+        -- or if PUBLIC_IPV[46] variables are set
+        make_announcements(2130),
     },
 
     certificate = read_file("rpc.crt"),
@@ -218,10 +228,8 @@ M.peering = {
         -- add_port("x::y:z", 2136),
 
         -- only use if minimum announce setup varible is set
-        make_announcements(announce_ips, 2136),
-
-        -- only used if PUBLIC_IPV[46] variables are set
-        make_announcements(public_ip, 2136),
+        -- or if PUBLIC_IPV[46] variables are set
+        make_announcements(2136),
     },
 
     public_key = read_file("peer.public"),

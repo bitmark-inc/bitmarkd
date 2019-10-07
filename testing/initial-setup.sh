@@ -1,15 +1,17 @@
 #!/bin/sh
 # generate all LOCAL bitmarkd configuration configurations
 
-# do not change these defaults (use bm-tester.conf to override
-all=$(seq 1 12)
-console='1 2 8'
-more='1 2 8'
+# do not change these defaults (use bm-tester.conf to override)
+all=$(seq 1 12) # sets list of daemons to run
+console='1 2 8' # sets console=true
+more='1 2 8'    # repeat a number to increase detail
 recorderd_public=no
 
 # to setup the DNS TXT records (can be set by bm-tester.conf)
 nodes_domain=''
 dns_txt='1 2'
+
+# end of configuration
 
 ERROR() {
   printf 'error: '
@@ -141,11 +143,8 @@ do
   d="${xdg_home}/${program}"
   mkdir -p "${d}" "${d}/log"
   cf="${program}.conf"
-  if [ ! -f "${d}/${cf}" ]
-  then
-    cp -p "${samples}/${cf}" "${d}/"
-    run-${program} --generate
-  fi
+  cp -p "${samples}/${cf}" "${d}/"
+  run-${program} --generate
 done
 
 # setup bitmarkd configs
@@ -155,7 +154,7 @@ do
 done
 for i in ${more}
 do
-  eval "more_${i}"=yes
+  eval "more_${i}"="\$(( more_${i} + 1 ))"
 done
 
 opts=
@@ -169,7 +168,7 @@ CONFIGURE() {
   for i in ${all}
   do
     eval console=\"\${console_${i}}\"
-    eval more=\"\${more_${i}}\"
+    eval more=\"\${more_${i}:-0}\"
     opts=''
     OPT --chain=local
     OPT --payment=discovery
@@ -177,7 +176,11 @@ CONFIGURE() {
     OPT --update
     [ X"${recorderd_public}" = X"yes" ] && OPT --recorderd-public
     [ X"${console}" = X"yes" ] && OPT --console
-    [ X"${more}" = X"yes" ] && OPT --more
+    while [ ${more} -gt 0 ]
+    do
+      OPT --more
+      more=$(( more - 1 ))
+    done
 
     generate-bitmarkd-configuration ${opts} "${i}"
     SEP

@@ -111,7 +111,7 @@ func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 		Height: blockheader.Height(),
 		Hash:   block.LastBlockHash(),
 	}
-	reply.RPCs = connectionCount.Uint64()
+	reply.RPCs = connectionCountRPC.Uint64()
 	reply.Peers = incoming + outgoing
 	reply.TransactionCounters.Pending, reply.TransactionCounters.Verified = reservoir.ReadCounters()
 	reply.Difficulty = difficulty.Current.Value()

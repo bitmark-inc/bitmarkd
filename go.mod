@@ -5,7 +5,6 @@ require (
 	github.com/bitmark-inc/exitwithstatus v0.1.2
 	github.com/bitmark-inc/getoptions v0.1.1
 	github.com/bitmark-inc/go-argon2 v0.1.4
-	github.com/bitmark-inc/listener v0.2.0
 	github.com/bitmark-inc/logger v0.3.4
 	github.com/btcsuite/btcd v0.0.0-20190629003639-c26ffa870fd8
 	github.com/davecgh/go-spew v1.1.1 // indirect

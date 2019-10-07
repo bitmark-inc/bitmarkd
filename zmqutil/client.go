@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pebbe/zmq4"
 	zmq "github.com/pebbe/zmq4"
 
 	"github.com/bitmark-inc/bitmarkd/counter"
@@ -78,10 +79,11 @@ type clientData struct {
 	timeout         time.Duration
 	timestamp       time.Time
 	number          uint64
-	monitorEvents   zmq.Event
-	monitorShutdown chan struct{}
-	monitorStopped  chan struct{}
 	queue           chan Event
+	monitorEvents   zmq.Event
+	monitorShutdown *zmq4.Socket
+	// monitorShutdown chan struct{}
+	// monitorStopped  chan struct{}
 }
 
 type Event struct {
@@ -137,10 +139,10 @@ func NewClient(
 		timeout:         timeout,
 		timestamp:       time.Now(),
 		number:          n,
+		queue:           queue,
 		monitorEvents:   events,
 		monitorShutdown: nil,
-		monitorStopped:  nil,
-		queue:           queue,
+		//monitorStopped:  nil,
 	}
 	copy(client.privateKey, privateKey)
 	copy(client.publicKey, publicKey)
@@ -306,9 +308,23 @@ func (client *clientData) openSocket() error {
 	client.socket = socket
 
 	if 0 != client.monitorEvents {
-		client.monitorShutdown = make(chan struct{})
-		client.monitorStopped = make(chan struct{})
-		go client.poller(client.monitorShutdown, client.monitorStopped)
+
+		n := sequenceCounter.Increment()
+		monitorConnection := fmt.Sprintf(monitorFormat, client.number, n)
+		monitorSignal := fmt.Sprintf(signalFormat, client.number, n)
+
+		sigReceive, sigSend, err := NewSignalPair(monitorSignal)
+		if nil != err {
+			logger.Panicf("cannot create signal for: %s  error: %s", monitorSignal, err)
+		}
+
+		m, err := NewMonitor(client.socket, monitorConnection, client.monitorEvents)
+		if nil != err {
+			logger.Panicf("cannot create monitor for: %s  error: %s", monitorConnection, err)
+		}
+		client.monitorShutdown = sigSend
+
+		go poller(m, sigReceive, client.queue)
 	}
 
 	return nil
@@ -336,10 +352,9 @@ func (client *clientData) closeSocket() error {
 	err := client.socket.Close()
 	client.socket = nil
 	if nil != client.monitorShutdown {
-		close(client.monitorShutdown)
+		client.monitorShutdown.SendMessage("stop")
+		client.monitorShutdown.Close()
 		client.monitorShutdown = nil
-		<-client.monitorStopped
-		client.monitorStopped = nil
 		// small delay to allow any background socket closing
 		// and to restrict rate of reconnection
 		time.Sleep(5 * time.Millisecond)
@@ -555,58 +570,41 @@ func (client *clientData) ServerPublicKey() []byte {
 	return client.serverPublicKey
 }
 
-func (client *clientData) poller(shutdown <-chan struct{}, stopped chan<- struct{}) {
+// internal poller called as go routine
+// this cannot access clientData or a race condition will occur
+func poller(monitor *zmq.Socket, sigReceive *zmq.Socket, queue chan<- Event) {
 
-	n := sequenceCounter.Increment()
-	monitorConnection := fmt.Sprintf(monitorFormat, client.number, n)
-	monitorSignal := fmt.Sprintf(signalFormat, client.number, n)
+	poller := zmq.NewPoller()
+	poller.Add(monitor, zmq.POLLIN)
+	poller.Add(sigReceive, zmq.POLLIN)
 
-	sigReceive, sigSend, err := NewSignalPair(monitorSignal)
-	if nil != err {
-		logger.Panicf("cannot create signal for: %s  error: %s", monitorSignal, err)
-	}
+loop:
+	//log.Debug("start polling…")
+	for {
+		//log.Debug("waiting…")
 
-	m, err := NewMonitor(client.socket, monitorConnection, client.monitorEvents)
-	if nil != err {
-		logger.Panicf("cannot create monitor for: %s  error: %s", monitorConnection, err)
-	}
-
-	go func(m *zmq.Socket, sigReceive *zmq.Socket, queue chan<- Event) {
-		poller := zmq.NewPoller()
-
-		poller.Add(m, zmq.POLLIN)
-
-		poller.Add(sigReceive, zmq.POLLIN)
-
-	loop:
-		//log.Debug("start polling…")
-		for {
-			//log.Debug("waiting…")
-
-			sockets, _ := poller.Poll(-1)
-			for _, socket := range sockets {
-				switch s := socket.Socket; s {
-				case sigReceive:
-					break loop
-				default:
-					handleEvent(s, queue)
+		sockets, _ := poller.Poll(-1)
+		for _, socket := range sockets {
+			switch s := socket.Socket; s {
+			case sigReceive:
+				// receive the "stop" message
+				_, err := sigReceive.RecvMessageBytes(0)
+				if nil != err {
+					logger.Panicf("poller: sigReceive error: %s", err)
 				}
+
+				break loop
+			default:
+				handleEvent(s, queue)
 			}
 		}
+	}
 
-		poller.RemoveBySocket(sigReceive)
-		poller.RemoveBySocket(m)
-		sigReceive.Close()
-		m.Close()
-		close(stopped)
-		//log.Debug("stopped polling")
-	}(m, sigReceive, client.queue)
-
-	// wait here for signal
-	<-shutdown
-
-	sigSend.SendMessage("stop")
-	sigSend.Close()
+	poller.RemoveBySocket(sigReceive)
+	poller.RemoveBySocket(monitor)
+	sigReceive.Close()
+	monitor.Close()
+	//log.Debug("stopped polling")
 }
 
 // process the socket events

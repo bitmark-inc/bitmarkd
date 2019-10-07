@@ -2,20 +2,14 @@
 # get information from bitmarkd servers
 
 # all available servers
-servers='
-  [::1]:2131
-  [::1]:2231
-  [::1]:2331
-  [::1]:2431
-  [::1]:2531
-  [::1]:2631
-  [::1]:2731
-  [::1]:2831
-  [::1]:2931
-  [::1]:3031
-  [::1]:3131
-  [::1]:3231
-'
+servers=''
+ip='[::1]'
+port_base=22131
+for s in $(seq 1 12)
+do
+  port=$(( port_base + ( s - 1 ) * 100 ))
+  servers="${servers} ${ip}:${port}"
+done
 
 ERROR()
 {

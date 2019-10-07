@@ -21,13 +21,12 @@ import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/util"
-	"github.com/bitmark-inc/listener"
 	"github.com/bitmark-inc/logger"
 )
 
 // RPCConfiguration - configuration file data for RPC setup
 type RPCConfiguration struct {
-	MaximumConnections int      `gluamapper:"maximum_connections" json:"maximum_connections"`
+	MaximumConnections uint64   `gluamapper:"maximum_connections" json:"maximum_connections"`
 	Bandwidth          float64  `gluamapper:"bandwidth" json:"bandwidth"`
 	Listen             []string `gluamapper:"listen" json:"listen"`
 	Certificate        string   `gluamapper:"certificate" json:"certificate"`
@@ -37,7 +36,7 @@ type RPCConfiguration struct {
 
 // HTTPSConfiguration - configuration file data for HTTPS setup
 type HTTPSConfiguration struct {
-	MaximumConnections int                 `gluamapper:"maximum_connections" json:"maximum_connections"`
+	MaximumConnections uint64              `gluamapper:"maximum_connections" json:"maximum_connections"`
 	Listen             []string            `gluamapper:"listen" json:"listen"`
 	Certificate        string              `gluamapper:"certificate" json:"certificate"`
 	PrivateKey         string              `gluamapper:"private_key" json:"private_key"`
@@ -77,8 +76,6 @@ type rpcData struct {
 	sync.RWMutex // to allow locking
 
 	log *logger.L // logger
-
-	listener *listener.MultiListener
 
 	// set once during initialise
 	initialised bool
@@ -129,7 +126,7 @@ func Finalise() error {
 	globalData.log.Flush()
 
 	// stop background
-	globalData.listener.Stop()
+	//globalData.listener.Stop()
 
 	// finally...
 	globalData.initialised = false
@@ -144,7 +141,7 @@ func initialiseRPC(configuration *RPCConfiguration, version string) error {
 	name := "client_rpc"
 	log := globalData.log
 
-	if configuration.MaximumConnections <= 0 {
+	if configuration.MaximumConnections < 1 {
 		log.Errorf("invalid %s maximum connection limit: %d", name, configuration.MaximumConnections)
 		return fault.MissingParameters
 	}
@@ -159,7 +156,7 @@ func initialiseRPC(configuration *RPCConfiguration, version string) error {
 	}
 
 	// create limiter
-	limiter := listener.NewLimiter(configuration.MaximumConnections)
+	//	limiter := listener.NewLimiter(configuration.MaximumConnections)
 
 	tlsConfiguration, fingerprint, err := getCertificate(log, name, configuration.Certificate, configuration.PrivateKey)
 	if nil != err {
@@ -167,14 +164,6 @@ func initialiseRPC(configuration *RPCConfiguration, version string) error {
 	}
 
 	log.Infof("%s: SHA3-256 fingerprint: %x", name, fingerprint)
-
-	log.Infof("multi listener for: %s", name)
-	ml, err := listener.NewMultiListener(name, configuration.Listen, tlsConfiguration, limiter, Callback)
-	if nil != err {
-		log.Errorf("invalid %s listen addresses", name)
-		return err
-	}
-	globalData.listener = ml
 
 	// setup announce
 	rpcs := make([]byte, 0, 100) // ***** FIX THIS: need a better default size
@@ -197,13 +186,17 @@ process_rpcs:
 	}
 
 	server := createRPCServer(log, version)
-	argument := &serverArgument{
-		Log:    log,
-		Server: server,
-	}
 
-	log.Infof("starting server: %s  with: %v", name, argument)
-	globalData.listener.Start(argument)
+	for _, listen := range configuration.Listen {
+		log.Infof("starting RPC server: %s", listen)
+		l, err := tls.Listen("tcp", listen, tlsConfiguration)
+		if err != nil {
+			log.Errorf("rpc server listen error: %s", err)
+			return err
+		}
+
+		go listenAndServeRPC(l, server, configuration.MaximumConnections, log)
+	}
 
 	return nil
 }
@@ -219,7 +212,7 @@ func initialiseHTTPS(configuration *HTTPSConfiguration, version string) error {
 		return nil
 	}
 
-	if configuration.MaximumConnections <= 0 {
+	if configuration.MaximumConnections < 1 {
 		log.Errorf("invalid %s maximum connection limit: %d", name, configuration.MaximumConnections)
 		return fault.MissingParameters
 	}
@@ -247,11 +240,12 @@ func initialiseHTTPS(configuration *HTTPSConfiguration, version string) error {
 
 	server := createRPCServer(log, version)
 	handler := &httpHandler{
-		log:     log,
-		server:  server,
-		version: version,
-		start:   time.Now(),
-		allow:   local,
+		log:                log,
+		server:             server,
+		version:            version,
+		start:              time.Now(),
+		allow:              local,
+		maximumConnections: configuration.MaximumConnections,
 	}
 
 	mux := http.NewServeMux()
