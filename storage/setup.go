@@ -8,7 +8,6 @@ package storage
 import (
 	"encoding/binary"
 	"fmt"
-	"os"
 	"reflect"
 	"sync"
 
@@ -23,41 +22,42 @@ import (
 //
 // note all must be exported (i.e. initial capital) or initialisation will panic
 type pools struct {
-	Blocks            *PoolHandle `prefix:"B" database:"blocks"`
-	BlockHeaderHash   *PoolHandle `prefix:"2" database:"blocks"`
-	BlockOwnerPayment *PoolHandle `prefix:"H" database:"index"`
-	BlockOwnerTxIndex *PoolHandle `prefix:"I" database:"index"`
-	Assets            *PoolNB     `prefix:"A" database:"index"`
-	Transactions      *PoolNB     `prefix:"T" database:"index"`
-	OwnerNextCount    *PoolHandle `prefix:"N" database:"index"`
-	OwnerList         *PoolHandle `prefix:"L" database:"index"`
-	OwnerTxIndex      *PoolHandle `prefix:"D" database:"index"`
-	OwnerData         *PoolHandle `prefix:"O" database:"index"`
-	Shares            *PoolHandle `prefix:"F" database:"index"`
-	ShareQuantity     *PoolHandle `prefix:"Q" database:"index"`
-	TestData          *PoolHandle `prefix:"Z" database:"index"`
+	Blocks            *PoolHandle `prefix:"B"`
+	BlockHeaderHash   *PoolHandle `prefix:"2"`
+	BlockOwnerPayment *PoolHandle `prefix:"H"`
+	BlockOwnerTxIndex *PoolHandle `prefix:"I"`
+	Assets            *PoolNB     `prefix:"A"`
+	Transactions      *PoolNB     `prefix:"T"`
+	OwnerNextCount    *PoolHandle `prefix:"N"`
+	OwnerList         *PoolHandle `prefix:"L"`
+	OwnerTxIndex      *PoolHandle `prefix:"D"`
+	OwnerData         *PoolHandle `prefix:"O"`
+	Shares            *PoolHandle `prefix:"F"`
+	ShareQuantity     *PoolHandle `prefix:"Q"`
+	TestData          *PoolHandle `prefix:"Z"`
 }
 
 // Pool - the set of exported pools
 var Pool pools
 
 // for database version
-var versionKey = []byte{0x00, 'V', 'E', 'R', 'S', 'I', 'O', 'N'}
+var (
+	versionKey    = []byte{0x00, 'V', 'E', 'R', 'S', 'I', 'O', 'N'}
+	needMigration = false
+)
 
 const (
-	currentBlockDBVersion = 0x301
-	currentIndexDBVersion = 0x200
+	currentBitmarksDBVersion = 0x1
+	bitmarksDBName           = "bitmarks"
 )
 
 // holds the database handle
 var poolData struct {
 	sync.RWMutex
-	dbBlocks  *leveldb.DB
-	dbIndex   *leveldb.DB
-	trx       Transaction
-	blocksTrx *leveldb.Batch
-	indexTrx  *leveldb.Batch
-	cache     Cache
+	bitmarksDB    *leveldb.DB
+	trx           Transaction
+	bitmarksBatch *leveldb.Batch
+	cache         Cache
 }
 
 var PaymentStorage struct {
@@ -74,16 +74,14 @@ const (
 // Initialise - open up the database connection
 //
 // this must be called before any pool is accessed
-func Initialise(database string, readOnly bool) (bool, bool, error) {
+func Initialise(dbPrefix string, readOnly bool) error {
 	poolData.Lock()
 	defer poolData.Unlock()
 
 	ok := false
-	mustMigrate := false
-	mustReindex := false
 
-	if nil != poolData.dbBlocks {
-		return mustMigrate, mustReindex, fault.AlreadyInitialised
+	if nil != poolData.bitmarksDB {
+		return fault.AlreadyInitialised
 	}
 
 	defer func() {
@@ -92,116 +90,74 @@ func Initialise(database string, readOnly bool) (bool, bool, error) {
 		}
 	}()
 
-	blocksDatabase := database + "-blocks.leveldb"
-	indexDatabase := database + "-index.leveldb"
-	btcDatabase := database + "-btc.leveldb"
-	ltcDatabase := database + "-ltc.leveldb"
+	bitmarksDBVersion, err := openBitmarkdDB(dbPrefix, readOnly)
+	if err != nil {
+		return err
+	}
 
-	db, blocksVersion, err := getDB(blocksDatabase, readOnly)
+	err = validateBitmarksDBVersion(bitmarksDBVersion, readOnly)
+	if err != nil {
+		return err
+	}
+
+	err = setupBitmarksDB()
+	if err != nil {
+		return err
+	}
+
+	// payment dbPrefix
+	btcDatabase := dbPrefix + "-btc.leveldb"
+	ltcDatabase := dbPrefix + "-ltc.leveldb"
+
+	db, _, err := getDB(btcDatabase, readOnly)
 	if nil != err {
-		return mustMigrate, mustReindex, err
-	}
-	poolData.dbBlocks = db
-
-	// ensure no database downgrade
-	if blocksVersion > currentBlockDBVersion {
-		logger.Criticalf("block database version: %d > current version: %d", blocksVersion, currentBlockDBVersion)
-		return mustMigrate, mustReindex, fmt.Errorf("block database version: %d > current version: %d", blocksVersion, currentBlockDBVersion)
-	}
-
-	db, indexVersion, err := getDB(indexDatabase, readOnly)
-	if nil != err {
-		return mustMigrate, mustReindex, err
-	}
-	poolData.dbIndex = db
-
-	// ensure no database downgrade
-	if indexVersion > currentIndexDBVersion {
-		logger.Criticalf("index database version: %d > current version: %d", indexVersion, currentIndexDBVersion)
-		return mustMigrate, mustReindex, fmt.Errorf("index database version: %d > current version: %d", indexVersion, currentIndexDBVersion)
-	}
-
-	// prevent readOnly from modifying the database
-	if readOnly && (blocksVersion != currentBlockDBVersion || indexVersion != currentIndexDBVersion) {
-		logger.Criticalf("database is inconsistent: blocks: %d  index: %d  current: %d & %d", blocksVersion, indexVersion, currentBlockDBVersion, currentIndexDBVersion)
-		return mustMigrate, mustReindex, fmt.Errorf("database is inconsistent: blocks: %d  index: %d  current: %d & %d", blocksVersion, indexVersion, currentBlockDBVersion, currentIndexDBVersion)
-	}
-
-	if 0 < blocksVersion && blocksVersion < currentBlockDBVersion {
-
-		mustMigrate = true
-
-		//logger.Criticalf("block database version: %d < current version: %d", blocksVersion, currentBlockDBVersion)
-
-	} else if 0 == blocksVersion {
-
-		// database was empty so tag as current version
-		err = putVersion(poolData.dbBlocks, currentBlockDBVersion)
-		if err != nil {
-			return mustMigrate, mustReindex, err
-		}
-	}
-
-	// see if index need to be created or deleted and re-created
-	if mustReindex || indexVersion < currentIndexDBVersion {
-
-		mustReindex = true
-
-		// close out current index
-		poolData.dbIndex.Close()
-		poolData.dbIndex = nil
-
-		//logger.Criticalf("drop index database: %s", indexDatabase)
-
-		// erase the index completely
-		err = os.RemoveAll(indexDatabase)
-		if nil != err {
-			return mustMigrate, mustReindex, err
-		}
-
-		// generate an empty index database
-		poolData.dbIndex, _, err = getDB(indexDatabase, readOnly)
-		if nil != err {
-			return mustMigrate, mustReindex, err
-		}
-
-	}
-
-	db, _, err = getDB(btcDatabase, readOnly)
-	if nil != err {
-		return mustMigrate, mustReindex, err
+		return err
 	}
 	PaymentStorage.Btc = NewLevelDBPaymentStore(db)
 
 	db, _, err = getDB(ltcDatabase, readOnly)
 	if nil != err {
-		return mustMigrate, mustReindex, err
+		return err
 	}
 	PaymentStorage.Ltc = NewLevelDBPaymentStore(db)
 
+	ok = true // prevent db close
+	return nil
+}
+
+func setupBitmarksDB() error {
+	bitmarksDBAccess := setupBitmarksDBTransaction()
+
+	err := setupPools(bitmarksDBAccess)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func setupBitmarksDBTransaction() Access {
+	poolData.bitmarksBatch = new(leveldb.Batch)
+	poolData.cache = newCache()
+	bitmarksDBAccess := newDA(poolData.bitmarksDB, poolData.bitmarksBatch, poolData.cache)
+	poolData.trx = newTransaction([]Access{bitmarksDBAccess})
+
+	return bitmarksDBAccess
+}
+
+func setupPools(bitmarksDBAccess Access) error {
 	// this will be a struct type
 	poolType := reflect.TypeOf(Pool)
-
 	// get write access by using pointer + Elem()
 	poolValue := reflect.ValueOf(&Pool).Elem()
 
-	// databases
-	poolData.blocksTrx = new(leveldb.Batch)
-	poolData.indexTrx = new(leveldb.Batch)
-	poolData.cache = newCache()
-	blockDBAccess := newDA(poolData.dbBlocks, poolData.blocksTrx, poolData.cache)
-	indexDBAccess := newDA(poolData.dbIndex, poolData.indexTrx, poolData.cache)
-	access := []DataAccess{blockDBAccess, indexDBAccess}
-	poolData.trx = newTransaction(access)
-
 	// scan each field
 	for i := 0; i < poolType.NumField(); i += 1 {
-
 		fieldInfo := poolType.Field(i)
-
 		prefixTag := fieldInfo.Tag.Get("prefix")
+
 		if 1 != len(prefixTag) {
-			return mustMigrate, mustReindex, fmt.Errorf("pool: %v has invalid prefix: %q", fieldInfo, prefixTag)
+			return fmt.Errorf("pool: %v has invalid prefix: %q", fieldInfo, prefixTag)
 		}
 
 		prefix := prefixTag[0]
@@ -210,20 +166,10 @@ func Initialise(database string, readOnly bool) (bool, bool, error) {
 			limit = []byte{prefix + 1}
 		}
 
-		var dataAccess DataAccess
-		switch dbName := fieldInfo.Tag.Get("database"); dbName {
-		case "blocks":
-			dataAccess = blockDBAccess
-		case "index":
-			dataAccess = indexDBAccess
-		default:
-			return mustMigrate, mustReindex, fmt.Errorf("pool: %v  has invalid database: %q", fieldInfo, dbName)
-		}
-
 		p := &PoolHandle{
 			prefix:     prefix,
 			limit:      limit,
-			dataAccess: dataAccess,
+			dataAccess: bitmarksDBAccess,
 		}
 
 		if poolValue.Field(i).Type() == reflect.TypeOf((*PoolNB)(nil)) {
@@ -238,26 +184,70 @@ func Initialise(database string, readOnly bool) (bool, bool, error) {
 		}
 
 	}
+	return nil
+}
 
-	ok = true // prevent db close
-	return mustMigrate, mustReindex, nil
+func openBitmarkdDB(dbPrefix string, readOnly bool) (int, error) {
+	name := fmt.Sprintf("%s-%s.leveldb", dbPrefix, bitmarksDBName)
+
+	db, version, err := getDB(name, readOnly)
+	if nil != err {
+		return 0, err
+	}
+	poolData.bitmarksDB = db
+
+	return version, err
+}
+
+func validateBitmarksDBVersion(bitmarksDBVersion int, readOnly bool) error {
+	// ensure no database downgrade
+	if bitmarksDBVersion > currentBitmarksDBVersion {
+		msg := fmt.Sprintf("bitmarksDB database version: %d > current version: %d", bitmarksDBVersion, currentBitmarksDBVersion)
+
+		logger.Critical(msg)
+		return nil
+	}
+
+	// prevent readOnly from modifying the database
+	if readOnly && bitmarksDBVersion != currentBitmarksDBVersion {
+		msg := fmt.Sprintf("database inconsistent: bitmarksDB: %d  current: %d ", bitmarksDBVersion, currentBitmarksDBVersion)
+
+		logger.Critical(msg)
+		return nil
+	}
+
+	if 0 < bitmarksDBVersion && bitmarksDBVersion < currentBitmarksDBVersion {
+		needMigration = true
+	} else if 0 == bitmarksDBVersion {
+		// database was empty so tag as current version
+		err := putVersion(poolData.bitmarksDB, currentBitmarksDBVersion)
+		if err != nil {
+			return nil
+		}
+	}
+
+	return nil
 }
 
 func dbClose() {
-	if nil != poolData.dbIndex {
-		poolData.dbIndex.Close()
-		poolData.dbIndex = nil
+	if nil != poolData.bitmarksDB {
+		if err := poolData.bitmarksDB.Close(); nil != err {
+			logger.Criticalf("close bitmarkd db with error: %s", err)
+		}
+		poolData.bitmarksDB = nil
 	}
-	if nil != poolData.dbBlocks {
-		poolData.dbBlocks.Close()
-		poolData.dbBlocks = nil
-	}
+
 	if nil != PaymentStorage.Btc {
-		PaymentStorage.Btc.Close()
+		if err := PaymentStorage.Btc.Close(); nil != err {
+			logger.Criticalf("close btc db with error: %s", err)
+		}
 		PaymentStorage.Btc = nil
 	}
+
 	if nil != PaymentStorage.Ltc {
-		PaymentStorage.Ltc.Close()
+		if err := PaymentStorage.Ltc.Close(); nil != err {
+			logger.Criticalf("close btc db with error: %s", err)
+		}
 		PaymentStorage.Ltc = nil
 	}
 }
@@ -269,15 +259,8 @@ func Finalise() {
 	poolData.Unlock()
 }
 
-// ReindexDone - called at the end of reindex
-func ReindexDone() error {
-	poolData.Lock()
-	defer poolData.Unlock()
-	return putVersion(poolData.dbIndex, currentIndexDBVersion)
-}
-
 // return:
-//   databse handle
+//   database handle
 //   version number
 func getDB(name string, readOnly bool) (*leveldb.DB, int, error) {
 	opt := &ldb_opt.Options{
@@ -295,12 +278,18 @@ func getDB(name string, readOnly bool) (*leveldb.DB, int, error) {
 	if leveldb.ErrNotFound == err {
 		return db, 0, nil
 	} else if nil != err {
-		db.Close()
+		e := db.Close()
+		if nil != e {
+			logger.Criticalf("close %s database with error: %s", name, e)
+		}
 		return nil, 0, err
 	}
 
 	if 4 != len(versionValue) {
-		db.Close()
+		e := db.Close()
+		if nil != e {
+			logger.Criticalf("close %s database with error: %s", name, e)
+		}
 		return nil, 0, fmt.Errorf("incompatible database version length: expected: %d  actual: %d", 4, len(versionValue))
 	}
 
@@ -313,6 +302,11 @@ func putVersion(db *leveldb.DB, version int) error {
 	binary.BigEndian.PutUint32(currentVersion, uint32(version))
 
 	return db.Put(versionKey, currentVersion, nil)
+}
+
+// IsMigrationNeed - check if bitmarks database needs migration
+func IsMigrationNeed() bool {
+	return needMigration
 }
 
 func NewDBTransaction() (Transaction, error) {

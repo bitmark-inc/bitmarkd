@@ -11,14 +11,14 @@ import (
 )
 
 // helper to add to pool
-func poolPut(t *testing.T, p *PoolHandle, key string, data string) {
+func poolPut(p *PoolHandle, key string, data string) {
 	p.Begin()
 	p.put([]byte(key), []byte(data), []byte{})
 	p.Commit()
 }
 
 // helper to remove from pool
-func poolDelete(t *testing.T, p *PoolHandle, key string) {
+func poolDelete(p *PoolHandle, key string) {
 	p.Begin()
 	p.remove([]byte(key))
 	p.Commit()
@@ -32,20 +32,20 @@ func TestPool(t *testing.T) {
 	checkAgain(t, true)
 
 	// add more items than poolSize
-	poolPut(t, p, "key-one", "data-one")
-	poolPut(t, p, "key-two", "data-two")
-	poolPut(t, p, "key-remove-me", "to be deleted")
-	poolDelete(t, p, "key-remove-me")
-	poolPut(t, p, "key-three", "data-three")
-	poolPut(t, p, "key-one", "data-one")     // duplicate
-	poolPut(t, p, "key-three", "data-three") // duplicate
-	poolPut(t, p, "key-four", "data-four")
-	poolPut(t, p, "key-delete-this", "to be deleted")
-	poolPut(t, p, "key-five", "data-five")
-	poolPut(t, p, "key-six", "data-six")
-	poolDelete(t, p, "key-delete-this")
-	poolPut(t, p, "key-seven", "data-seven")
-	poolPut(t, p, "key-one", "data-one(NEW)") // duplicate
+	poolPut(p, "key-one", "data-one")
+	poolPut(p, "key-two", "data-two")
+	poolPut(p, "key-remove-me", "to be deleted")
+	poolDelete(p, "key-remove-me")
+	poolPut(p, "key-three", "data-three")
+	poolPut(p, "key-one", "data-one")     // duplicate
+	poolPut(p, "key-three", "data-three") // duplicate
+	poolPut(p, "key-four", "data-four")
+	poolPut(p, "key-delete-this", "to be deleted")
+	poolPut(p, "key-five", "data-five")
+	poolPut(p, "key-six", "data-six")
+	poolDelete(p, "key-delete-this")
+	poolPut(p, "key-seven", "data-seven")
+	poolPut(p, "key-one", "data-one(NEW)") // duplicate
 
 	// ensure that data is correct
 	checkResults(t, p)
@@ -55,7 +55,7 @@ func TestPool(t *testing.T) {
 
 	// check that restarting database keeps data
 	Finalise()
-	Initialise(databaseFileName, false)
+	_ = Initialise(databaseFileName, false)
 	checkAgain(t, false)
 }
 

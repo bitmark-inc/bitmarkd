@@ -32,7 +32,7 @@ type PoolHandle struct {
 	Handle
 	prefix     byte
 	limit      []byte
-	dataAccess DataAccess
+	dataAccess Access
 }
 
 // Element - a binary data item

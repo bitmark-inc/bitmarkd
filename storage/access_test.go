@@ -51,7 +51,7 @@ func setupDummyMockCache(t *testing.T) *mocks.MockCache {
 	return mockCache
 }
 
-func setupTestDataAccess(mockCache *mocks.MockCache) DataAccess {
+func setupTestDataAccess(mockCache *mocks.MockCache) Access {
 	return newDA(db, trx, mockCache)
 }
 

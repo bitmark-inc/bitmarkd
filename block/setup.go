@@ -293,7 +293,9 @@ func validateAndReturnLastBlock(last storage.Element) (*blockrecord.Header, bloc
 }
 
 // Initialise - setup the current block data
-func Initialise(migrate, reindex bool) error {
+func Initialise() error {
+	migrate := storage.IsMigrationNeed()
+
 	globalData.Lock()
 	defer globalData.Unlock()
 
@@ -323,19 +325,6 @@ func Initialise(migrate, reindex bool) error {
 			return err
 		}
 		log.Info("block migration completed")
-	}
-
-	if reindex {
-		log.Warn("start index rebuild…")
-		globalData.rebuild = true
-		globalData.Unlock()
-		err := doRecovery()
-		globalData.Lock()
-		if nil != err {
-			log.Criticalf("index rebuild error: %s", err)
-			return err
-		}
-		log.Warn("index rebuild completed")
 	}
 
 	// ensure not in rebuild mode

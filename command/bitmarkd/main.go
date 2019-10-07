@@ -151,17 +151,15 @@ func main() {
 
 	// start the data storage
 	log.Info("initialise storage")
-	migrateRequired, reindexRequired, err := storage.Initialise(masterConfiguration.Database.Name, storage.ReadWrite)
+	err = storage.Initialise(masterConfiguration.Database.Name, storage.ReadWrite)
 	if nil != err {
 		log.Criticalf("storage initialise error: %s", err)
 		exitwithstatus.Message("storage initialise error: %s", err)
 	}
 	defer storage.Finalise()
-	if migrateRequired {
+
+	if storage.IsMigrationNeed() {
 		log.Warn("block database migration required")
-	}
-	if reindexRequired {
-		log.Warn("index database reindex required")
 	}
 
 	// start asset cache
@@ -196,22 +194,12 @@ func main() {
 
 	// block data storage - depends on storage and mode
 	log.Info("initialise block")
-	err = block.Initialise(migrateRequired, reindexRequired)
+	err = block.Initialise()
 	if nil != err {
 		log.Criticalf("block initialise error: %s", err)
 		exitwithstatus.Message("block initialise error: %s", err)
 	}
 	defer block.Finalise()
-
-	// if reindexing was done
-	if reindexRequired {
-		err = storage.ReindexDone()
-		if nil != err {
-			log.Criticalf("index regeneration error: %s", err)
-			exitwithstatus.Message("index regeneration error: %s", err)
-		}
-		log.Warn("index was regenerated")
-	}
 
 	// these commands are allowed to access the internal database
 	if len(arguments) > 0 && processDataCommand(log, arguments, masterConfiguration) {

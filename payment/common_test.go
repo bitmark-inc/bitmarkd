@@ -58,7 +58,7 @@ func setup() error {
 	_ = mode.Initialise("testing")
 
 	// open database
-	_, _, err := storage.Initialise(databaseFileName, false)
+	err := storage.Initialise(databaseFileName, false)
 	if nil != err {
 		return fmt.Errorf("storage initialise error: %s", err.Error())
 	}
