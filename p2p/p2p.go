@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/messagebus"
-	"github.com/bitmark-inc/bitmarkd/p2p/statemachine"
+	"github.com/bitmark-inc/bitmarkd/p2p/concensus"
 	"github.com/bitmark-inc/bitmarkd/util"
 
 	"github.com/bitmark-inc/bitmarkd/background"
@@ -96,7 +96,7 @@ type Node struct {
 	initialised bool
 	metricsNetwork
 	// statemachine
-	stateMachine statemachine.StateMachine
+	concensus.ConcensusMachine
 }
 
 // Initialise initialize p2p module
@@ -113,7 +113,7 @@ func Initialise(configuration *Configuration, version string) error {
 
 	processes := background.Processes{
 		&globalData,
-		&globalData.stateMachine,
+		&globalData.ConcensusMachine,
 	}
 	globalData.background = background.Start(processes, globalData.Log)
 	return nil

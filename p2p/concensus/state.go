@@ -3,7 +3,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package statemachine
+package concensus
 
 // a state type for the thread
 type state int

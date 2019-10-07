@@ -1,4 +1,4 @@
-package statemachine
+package concensus
 
 import (
 	"time"
@@ -33,21 +33,21 @@ const (
 	activePastSec = 60
 )
 
-// StateMachine a block state machine:
-type StateMachine struct {
+// ConcensusMachine a block state machine:
+type ConcensusMachine struct {
 	log *logger.L
 	state
 }
 
 // NewStateMachine get a new StateMachine
-func NewStateMachine() StateMachine {
-	machine := StateMachine{log: logger.New("machine")}
+func NewStateMachine() ConcensusMachine {
+	machine := ConcensusMachine{log: logger.New("machine")}
 	return machine
 }
 
-//Run Run A StateMachine
-func (m *StateMachine) Run(args interface{}, shutdown <-chan struct{}) {
-	log := m.log
+//Run Run A ConcensusMachine
+func (c *ConcensusMachine) Run(args interface{}, shutdown <-chan struct{}) {
+	log := c.log
 	log.Info("starting block state machine…")
 	timer := time.After(cycleInterval)
 loop:
@@ -60,7 +60,7 @@ loop:
 			break loop
 		case <-timer: // timer has priority over queue
 			timer = time.After(cycleInterval)
-			m.start()
+			c.start()
 		}
 	}
 	log.Info("shutting down…")
@@ -68,19 +68,19 @@ loop:
 	//conn.destroy()
 	log.Info("stopped")
 }
-func (m *StateMachine) start() {
-	for m.stepTransition() {
+func (c *ConcensusMachine) start() {
+	for c.stepTransition() {
 	}
 }
 
-func (m *StateMachine) stepTransition() bool {
-	log := m.log
+func (c *ConcensusMachine) stepTransition() bool {
+	log := c.log
 
-	log.Infof("current state: %s", m.state)
+	log.Infof("current state: %s", c.state)
 
 	continueLooping := true
 
-	switch m.state {
+	switch c.state {
 	case cStateConnecting:
 		continueLooping = false
 

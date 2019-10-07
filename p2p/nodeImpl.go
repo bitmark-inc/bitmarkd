@@ -9,7 +9,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 
 	"github.com/bitmark-inc/bitmarkd/messagebus"
-	"github.com/bitmark-inc/bitmarkd/p2p/statemachine"
+	"github.com/bitmark-inc/bitmarkd/p2p/concensus"
 	"github.com/bitmark-inc/bitmarkd/util"
 	proto "github.com/golang/protobuf/proto"
 
@@ -47,7 +47,7 @@ func (n *Node) Setup(configuration *Configuration, version string) error {
 	sub, err := n.MuticastStream.Subscribe(multicastingTopic)
 	go n.SubHandler(context.Background(), sub)
 
-	n.stateMachine = statemachine.NewStateMachine()
+	n.ConcensusMachine = concensus.NewStateMachine()
 	globalData.initialised = true
 	return nil
 }
