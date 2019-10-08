@@ -98,7 +98,7 @@ func addPeer(peerID peerlib.ID, listeners []ma.Multiaddr, timestamp uint64) bool
 	// add or update the timestamp in the tree
 	recordAdded := globalData.peerTree.Insert(peerIDkey(peerID), peer)
 
-	globalData.log.Infof("Peer Added:  ID: %s,  sucessadd:%t  nodes in the peer tree: %d", peerID.String(), recordAdded, globalData.peerTree.Count())
+	globalData.log.Infof("Peer Added:  ID: %s,  add:%t  nodes in the peer tree: %d", peerID.String(), recordAdded, globalData.peerTree.Count())
 
 	// if adding this nodes data
 	if util.IDEqual(globalData.peerID, peerID) {

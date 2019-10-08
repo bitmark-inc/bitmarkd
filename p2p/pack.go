@@ -11,7 +11,7 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 )
 
-//PackP2PMessage unpack p2pMessage to chain fn and parameters
+//PackP2PMessage pack  chain fn and parameters into []byte
 func PackP2PMessage(chain, fn string, parameters [][]byte) (packedP2PMessage []byte, err error) {
 	data := [][]byte{[]byte(chain), []byte(fn)}
 	if len(parameters) != 0 {

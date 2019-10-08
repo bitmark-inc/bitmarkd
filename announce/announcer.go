@@ -86,7 +86,11 @@ loop:
 				}
 				addPeer(id, addrs, timestamp)
 				log.Infof("-><- addpeer : %s  listener: %s  timestamp: %d", id.String(), printBinaryAddrs(item.Parameters[1]), timestamp)
-				globalData.peerTree.Print(false)
+				//globalData.peerTree.Print(false)
+			case "addrpc":
+				timestamp := binary.BigEndian.Uint64(item.Parameters[2])
+				log.Infof("received rpc: fingerprint: %x  rpc: %x  timestamp: %d", item.Parameters[0], item.Parameters[1], timestamp)
+				AddRPC(item.Parameters[0], item.Parameters[1], timestamp)
 			case "self":
 				id, err := peerlib.IDFromBytes(item.Parameters[0])
 				if err != nil {
@@ -104,7 +108,6 @@ loop:
 				setSelf(id, addrs)
 			default:
 			}
-
 		case <-delay:
 			delay = time.After(announceInterval)
 			ann.process()

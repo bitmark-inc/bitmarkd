@@ -113,11 +113,35 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 	case "B": // get packed block
 		if 1 != len(parameters) {
 			err = fault.ErrMissingParameters
-		} else if 8 == len(parameters[0]) {
+		} else if 6 == len(parameters[0]) { //it 8 or 6 ??
 			result := storage.Pool.Blocks.Get(parameters[0])
 			if nil == result {
 				err = fault.ErrBlockNotFound
 				listenerSendError(rw, nodeChain, err, "-->Query Block: block not found", log)
+			}
+			respParams := [][]byte{result}
+			packed, err := PackP2PMessage(nodeChain, "B", respParams)
+			if err != nil {
+				listenerSendError(rw, nodeChain, err, "-->Query Block  Information", log)
+				return
+			}
+			rw.Write(packed)
+			rw.Flush()
+		} else {
+			err = fault.ErrBlockNotFound
+			listenerSendError(rw, nodeChain, err, "-->Query Block: invalid parameter", log)
+		}
+	case "H": // get block hash
+		if 1 != len(parameters) {
+			err = fault.ErrMissingParameters
+		} else if 6 == len(parameters[0]) { //it 8 or 6 ??
+			number := binary.BigEndian.Uint64(parameters[0])
+			d, e := blockheader.DigestForBlock(number)
+			var result []byte
+			if nil == e {
+				result = d[:]
+			} else {
+				err = e
 			}
 			respParams := [][]byte{result}
 			packed, err := PackP2PMessage(nodeChain, "B", respParams)

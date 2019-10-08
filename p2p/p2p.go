@@ -7,6 +7,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/p2p/concensus"
 	"github.com/bitmark-inc/bitmarkd/util"
+	"github.com/prometheus/common/log"
 
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -125,6 +126,8 @@ func (n *Node) Run(args interface{}, shutdown <-chan struct{}) {
 	log.Info("starting…")
 	queue := messagebus.Bus.P2P.Chan()
 	delay := time.After(nodeInitial)
+	//nodeChain:= mode.ChainName()
+	nodeChain := "local"
 loop:
 	for {
 		log.Debug("waiting…")
@@ -132,38 +135,28 @@ loop:
 		case <-shutdown:
 			break loop
 		case item := <-queue:
-			log.Infof("-><- P2P recieve commend:%s", item.Command)
+			log.Infof("-><- P2P received commend:%s", item.Command)
 			switch item.Command {
 			case "peer":
-				messageOut := BusMessage{Command: item.Command, Parameters: item.Parameters}
-				msgBytes, err := proto.Marshal(&messageOut)
+				p2pMsgPacked, err := PackP2PMessage(nodeChain, item.Command, item.Parameters)
 				if err != nil {
-					log.Errorf("Marshal Message Error: %v\n", err)
-					break
+					continue loop
 				}
-				id, err := peerlib.IDFromBytes(messageOut.Parameters[0])
-				if err != nil {
-					log.Errorf("Inavalid ID format:%v", err)
-					break
-				}
-				err = n.MuticastStream.Publish(multicastingTopic, msgBytes)
+				err = n.MulticastWithBinaryID(p2pMsgPacked, item.Parameters[0])
 				if err != nil {
 					log.Errorf("Multicast Publish Error: %v\n", err)
-					break
+					continue loop
 				}
-				log.Infof("<<--- multicasting PEER : %v\n", id.ShortString())
 
 			default:
 				if "N1" == item.Command || "N3" == item.Command || "X1" == item.Command || "X2" == item.Command ||
 					"X3" == item.Command || "X4" == item.Command || "X5" == item.Command || "X6" == item.Command ||
 					"X7" == item.Command || "P1" == item.Command || "P2" == item.Command {
-					// save to node peer and connect ; 				messagebus.Bus.P2P.Send(names[i], peer.peerID, peer.listeners)
-					log.Infof("Command:%v", item.Command)
 					peerID, err := peerlib.IDFromBytes(item.Parameters[0])
-					log.Infof("N1 PeerID%s", peerID.String())
+					log.Infof("Command:%v PeerID%s", item.Command, peerID.String())
 					if err != nil {
 						n.Log.Errorf("Unmarshal peer ID Error:%x", item.Parameters[0])
-						goto loop
+						continue loop
 					}
 					pbPeerAddrs := Addrs{}
 					proto.Unmarshal(item.Parameters[1], &pbPeerAddrs)
@@ -202,5 +195,23 @@ func Finalise() error {
 	globalData.Log.Info("finished")
 	globalData.Log.Flush()
 
+	return nil
+}
+
+//MulticastWithBinaryID muticasts packed message with given id  in binary. Use id=nil if there is no peer ID
+func (n *Node) MulticastWithBinaryID(packedMessage, id []byte) error {
+	err := n.MuticastStream.Publish(multicastingTopic, packedMessage)
+	if err != nil {
+		log.Errorf("Multicast Publish Error: %v\n", err)
+		return err
+	}
+	if len(id) > 0 {
+		displayID, err := peerlib.IDFromBytes(id)
+		if err != nil {
+			log.Errorf("Inavalid ID format:%v", err)
+			return err
+		}
+		log.Infof("<<--- multicasting PEER : %v\n", displayID.ShortString())
+	}
 	return nil
 }
