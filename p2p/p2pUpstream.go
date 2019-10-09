@@ -27,7 +27,7 @@ func (n *Node) Register(peerInfo *peerlib.AddrInfo) (network.Stream, error) {
 		return nil, err
 	}
 	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
-	p2pData, err := PackRegisterData(nodeChain, "R", n.NodeType, peerInfo.ID, peerInfo.Addrs, time.Now())
+	p2pData, err := PackRegisterData(nodeChain, "R", n.NodeType, n.Host.ID(), n.Announce, time.Now())
 	if err != nil {
 		return nil, err
 	}
@@ -40,12 +40,12 @@ func (n *Node) Register(peerInfo *peerlib.AddrInfo) (network.Stream, error) {
 		n.Log.Error(err.Error())
 		return nil, err
 	}
-	n.Log.Info(fmt.Sprintf("WRITE:\x1b[32mLength:%d\x1b[0m> ", len(p2pMsgPacked)))
+	n.Log.Debug(fmt.Sprintf("WRITE:\x1b[32mLength:%d\x1b[0m> ", len(p2pMsgPacked)))
 	rw.Flush()
 	// Wait for response
 	resp := make([]byte, maxBytesRecieve)
 	respLen, err := rw.Read(resp)
-	n.Log.Info(fmt.Sprintf("%s RECIEVED:\x1b[32m%d\x1b[0m> ", "listener", respLen))
+	n.Log.Debug(fmt.Sprintf("%s RECIEVED:\x1b[32m%d\x1b[0m> ", "listener", respLen))
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func (n *Node) Register(peerInfo *peerlib.AddrInfo) (network.Stream, error) {
 		return nil, errors.New("length of byte recieved is less than 1")
 	}
 	chain, fn, parameters, err := UnPackP2PMessage(resp[:respLen])
-	n.Log.Info(fmt.Sprintf("RECIEVE:\x1b[32mLength:%d\x1b[0m> ", respLen))
+	n.Log.Debug(fmt.Sprintf("RECIEVED:\x1b[32mLength:%d\x1b[0m> ", respLen))
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func (n *Node) Register(peerInfo *peerlib.AddrInfo) (network.Stream, error) {
 			if nType != "client" { // client does not in the peer Tree
 				announce.AddPeer(randID, randAddrs, randTs) // id, listeners, timestam
 			}
-			n.Log.Info("--> \x1b[32mRegister Successful\x1b[0m")
+			n.Log.Infof("--> \x1b[32mRegister Successful:%v\x1b[0m", peerInfo.ID.String())
 		}
 	}
 	return s, nil

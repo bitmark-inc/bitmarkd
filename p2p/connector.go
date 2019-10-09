@@ -37,7 +37,6 @@ loop:
 				n.Host.Network().ClosePeer(peerInfo.ID)
 				continue loop
 			}
-			n.Log.Info(fmt.Sprintf(":\x1b[32mRegister Sucessfull\x1b[0m"))
 		}
 	}
 }

@@ -78,7 +78,7 @@ func runReg(info *peerlib.AddrInfo) {
 		globalData.Log.Error(err.Error())
 		return
 	}
-	globalData.Log.Info(fmt.Sprintf("-->WRITE:\x1b[32mLength:%d\x1b[0m> ", len(p2pMsgPacked)))
+	globalData.Log.Debug(fmt.Sprintf("-->WRITE:\x1b[32mLength:%d\x1b[0m> ", len(p2pMsgPacked)))
 	rw.Flush()
 	// Wait for response
 	resp := make([]byte, 10000)

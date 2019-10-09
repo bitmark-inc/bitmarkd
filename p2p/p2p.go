@@ -138,16 +138,19 @@ loop:
 			log.Infof("-><- P2P received commend:%s", item.Command)
 			switch item.Command {
 			case "peer":
-				p2pMsgPacked, err := PackP2PMessage(nodeChain, item.Command, item.Parameters)
-				if err != nil {
-					continue loop
+			case "rpc":
+				if n.NodeType != "client" {
+					p2pMsgPacked, err := PackP2PMessage(nodeChain, item.Command, item.Parameters)
+					if err != nil {
+						log.Errorf("peer command : PackP2PMessage Error")
+						continue loop
+					}
+					err = n.MulticastWithBinaryID(p2pMsgPacked, item.Parameters[0])
+					if err != nil {
+						log.Errorf("Multicast Publish Error: %v\n", err)
+						continue loop
+					}
 				}
-				err = n.MulticastWithBinaryID(p2pMsgPacked, item.Parameters[0])
-				if err != nil {
-					log.Errorf("Multicast Publish Error: %v\n", err)
-					continue loop
-				}
-
 			default:
 				if "N1" == item.Command || "N3" == item.Command || "X1" == item.Command || "X2" == item.Command ||
 					"X3" == item.Command || "X4" == item.Command || "X5" == item.Command || "X6" == item.Command ||
@@ -161,13 +164,15 @@ loop:
 					pbPeerAddrs := Addrs{}
 					proto.Unmarshal(item.Parameters[1], &pbPeerAddrs)
 					maAddrs := util.GetMultiAddrsFromBytes(pbPeerAddrs.Address)
-					info, err := peerlib.AddrInfoFromP2pAddr(maAddrs[0])
-					if err != nil {
-						log.Warn(err.Error())
-						continue loop
+					if len(maAddrs) > 0 {
+						info, err := peerlib.AddrInfoFromP2pAddr(maAddrs[0])
+						if err != nil {
+							log.Warn(err.Error())
+							continue loop
+						}
+						n.addPeerAddrs(*info)
+						n.connectPeers()
 					}
-					n.addPeerAddrs(*info)
-					n.connectPeers()
 				}
 			}
 		case <-delay:
@@ -211,7 +216,7 @@ func (n *Node) MulticastWithBinaryID(packedMessage, id []byte) error {
 			log.Errorf("Inavalid ID format:%v", err)
 			return err
 		}
-		log.Infof("<<--- multicasting PEER : %v\n", displayID.ShortString())
+		log.Infof("\x1b[32m<<--- multicasting PEER : %v\x1b[0m\n", displayID.ShortString())
 	}
 	return nil
 }

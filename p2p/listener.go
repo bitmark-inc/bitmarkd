@@ -74,8 +74,6 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 		return
 	}
 
-	log.Info(fmt.Sprintf("%s RECIEVED:\x1b[32mfn:%s\x1b[0m> ", fn))
-
 	switch fn {
 	case "I": // server information
 		info := serverInfo{
@@ -162,8 +160,10 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 			return
 		}
 		if nType != "client" {
-			log.Info(fmt.Sprintf("register:\x1b[32mClient registered\x1b[0m>"))
+			log.Info(fmt.Sprintf("register:\x1b[32m Servant registered:%s\x1b[0m>", reqID.String()))
 			announce.AddPeer(reqID, reqMaAddrs, timestamp) // id, listeners, timestam
+		} else {
+			log.Info(fmt.Sprintf("register:\x1b[32m Client registered:%s\x1b[0m>", reqID.String()))
 		}
 		randPeerID, randListeners, randTs, err := announce.GetRandom(reqID)
 		var randData [][]byte
@@ -181,7 +181,7 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 		l.node.addToRegister(reqID, stream)
 		_, err = rw.Write(p2pMessagePacked)
 		rw.Flush()
-		log.Info(fmt.Sprintf("<--WRITE:\x1b[32mLength:%d\x1b[0m> ", len(p2pMessagePacked)))
+		log.Debug(fmt.Sprintf("<--WRITE:\x1b[32mLength:%d\x1b[0m> ", len(p2pMessagePacked)))
 	default: // other commands as subscription-type commands // this will move to pubsub
 		listenerSendError(rw, nodeChain, errors.New("subscription-type command"), "-> Subscription type command , should send through pubsub", log)
 		//processSubscription(log, fn, parameters)
@@ -195,10 +195,10 @@ func listenerSendError(sender *bufio.ReadWriter, chain string, err error, logPre
 	packedP2PMessage, err := proto.Marshal(&P2PMessage{Data: errorMessage})
 	_, wErr := sender.Write(packedP2PMessage)
 	if wErr != nil && log != nil {
-		log.Errorf("%s  \x1b[32mError:%v \x1b[0m", logPrefix, wErr)
+		log.Errorf("%s  \x1b[31mError:%v \x1b[0m", logPrefix, wErr)
 	}
 	if log != nil {
-		fmt.Printf("%s  \x1b[32mError:%v \x1b[0m\n", logPrefix, err)
+		fmt.Printf("%s  \x1b[31mError:%v \x1b[0m\n", logPrefix, err)
 	}
 	sender.Flush()
 }

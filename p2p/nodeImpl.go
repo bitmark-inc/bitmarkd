@@ -35,7 +35,9 @@ func (n *Node) Setup(configuration *Configuration, version string) error {
 	n.PrivateKey = prvKey
 
 	n.NewHost(configuration.NodeType, maAddrs, n.PrivateKey)
-	n.setAnnounce(configuration.Announce)
+	if n.NodeType != "Servant" {
+		n.setAnnounce(configuration.Announce)
+	}
 	go n.listen(configuration.Announce)
 	go n.metricsNetwork.networkMonitor(n.Host, n.Log)
 

@@ -18,10 +18,14 @@ import (
 )
 
 const (
-	announceInitial     = 2 * time.Minute      // startup delay before first send
-	announceRebroadcast = 7 * time.Minute      // to prevent too frequent rebroadcasts
-	announceInterval    = 11 * time.Minute     // regular polling time
-	announceExpiry      = 5 * announceInterval // if no responses received within this time, delete the entry
+	//announceInitial     = 2 * time.Minute // startup delay before first send
+	announceInitial = 1 * time.Minute // startup delay before first send
+	//announceRebroadcast = 7 * time.Minute // to prevent too frequent rebroadcasts
+	announceRebroadcast = 30 * time.Second // to prevent too frequent rebroadcasts
+	//announceInterval    = 11 * time.Minute     // regular polling time
+	announceInterval = 1 * time.Minute
+	//announceExpiry   = 5 * announceInterval // if no responses received within this time, delete the entry
+	announceExpiry = 10 * announceInterval
 )
 
 type announcer struct {
