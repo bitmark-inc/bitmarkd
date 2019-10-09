@@ -54,7 +54,7 @@ const (
 	activeTime = 60 * time.Second
 
 	// times before entering resynchronization
-	countsBeforeEnterResynchronization = 3
+	retryBeforeEnterResynchronise = 3
 
 	// fast sync option to fetch block
 	fastSyncFetchBlocksPerCycle = 2000
@@ -74,12 +74,12 @@ type connector struct {
 
 	state connectorState
 
-	theClient                 upstream.Upstream // client used for fetching blocks
-	startBlockNumber          uint64            // block number where local chain forks
-	height                    uint64            // block number on best node
-	samples                   int               // counter to detect missed block broadcast
-	votes                     voting.Voting
-	countsInvalidRemoteClient uint16
+	theClient               upstream.Upstream // client used for fetching blocks
+	startBlockNumber        uint64            // block number where local chain forks
+	height                  uint64            // block number on best node
+	samples                 int               // counter to detect missed block broadcast
+	votes                   voting.Voting
+	invalidRemoteRetryCount uint16
 
 	fastSyncEnabled bool   // fast sync mode enabled?
 	blocksPerCycle  int    // number of blocks to fetch per cycle
@@ -369,6 +369,7 @@ func (conn *connector) runStateMachine() bool {
 
 	case cStateHighestBlock:
 		if conn.updateHeightAndClient() {
+			conn.invalidRemoteRetryCount = 0
 			log.Infof("highest block number: %d  client: %s", conn.height, conn.theClient.Name())
 			if conn.hasBetterChain(blockheader.Height()) {
 				log.Infof("new chain from %s, height %d, digest %s", conn.theClient.Name(), conn.height, conn.theClient.CachedRemoteDigestOfLocalHeight().String())
@@ -563,6 +564,7 @@ func (conn *connector) runStateMachine() bool {
 
 		// check height
 		if conn.updateHeightAndClient() {
+			conn.invalidRemoteRetryCount = 0
 			height := blockheader.Height()
 
 			log.Infof("height remote: %d, local: %d", conn.height, height)
@@ -595,11 +597,11 @@ func (conn *connector) runStateMachine() bool {
 // package didn't provide enough information in method "ElectedCandidate", thus connector
 // cannot decide which situation, currently it's a workaround
 func processInvalidClient(conn *connector) {
-	if conn.countsInvalidRemoteClient == countsBeforeEnterResynchronization {
+	if conn.invalidRemoteRetryCount == retryBeforeEnterResynchronise {
 		conn.nextState(cStateConnecting)
-		conn.countsInvalidRemoteClient = 0
+		conn.invalidRemoteRetryCount = 0
 	} else {
-		conn.countsInvalidRemoteClient++
+		conn.invalidRemoteRetryCount++
 	}
 }
 
