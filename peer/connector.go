@@ -53,6 +53,9 @@ const (
 	// client should exist at least 1 response with in this number
 	activeTime = 60 * time.Second
 
+	// times before entering resynchronization
+	countsBeforeEnterResynchronization = 3
+
 	// fast sync option to fetch block
 	fastSyncFetchBlocksPerCycle = 2000
 	fastSyncSkipPerBlocks       = 100
@@ -71,11 +74,12 @@ type connector struct {
 
 	state connectorState
 
-	theClient        upstream.Upstream // client used for fetching blocks
-	startBlockNumber uint64            // block number where local chain forks
-	height           uint64            // block number on best node
-	samples          int               // counter to detect missed block broadcast
-	votes            voting.Voting
+	theClient                 upstream.Upstream // client used for fetching blocks
+	startBlockNumber          uint64            // block number where local chain forks
+	height                    uint64            // block number on best node
+	samples                   int               // counter to detect missed block broadcast
+	votes                     voting.Voting
+	countsInvalidRemoteClient uint16
 
 	fastSyncEnabled bool   // fast sync mode enabled?
 	blocksPerCycle  int    // number of blocks to fetch per cycle
@@ -379,7 +383,7 @@ func (conn *connector) runStateMachine() bool {
 			}
 		} else {
 			log.Warn("connection lost")
-			conn.nextState(cStateConnecting)
+			processInvalidClient(conn)
 			continueLooping = false
 		}
 
@@ -575,11 +579,28 @@ func (conn *connector) runStateMachine() bool {
 			}
 		} else {
 			log.Warn("connection lost")
-			conn.nextState(cStateConnecting)
+			processInvalidClient(conn)
 		}
 
 	}
 	return continueLooping
+}
+
+// TODO: change behavior in voting package
+// the return value false from function "updateHeightAndClient" has 2 situations:
+// - no valid remote clients
+// - current node owns highest block in network, all other nodes owns lower block
+//
+// both situations cause update client to fail, and root cause is because voting
+// package didn't provide enough information in method "ElectedCandidate", thus connector
+// cannot decide which situation, currently it's a workaround
+func processInvalidClient(conn *connector) {
+	if conn.countsInvalidRemoteClient == countsBeforeEnterResynchronization {
+		conn.nextState(cStateConnecting)
+		conn.countsInvalidRemoteClient = 0
+	} else {
+		conn.countsInvalidRemoteClient++
+	}
 }
 
 func isConnectionEnough(count int) bool {
