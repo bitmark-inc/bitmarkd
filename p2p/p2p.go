@@ -220,6 +220,5 @@ func (n *Node) MulticastWithBinaryID(packedMessage, id []byte) error {
 		}
 		log.Infof("\x1b[32m<<--- multicasting PEER : %v\x1b[0m\n", displayID.ShortString())
 	}
-	log.Infof("\x1b[32m client does not broadcast to PEERs \x1b[0m\n")
 	return nil
 }
