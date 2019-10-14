@@ -108,7 +108,7 @@ loop:
 					log.Warn("No valid listener address")
 					continue loop
 				}
-				log.Infof("-><-  self announce data: %v  listener: %s", id, printBinaryAddrs(item.Parameters[1]))
+				log.Infof("-><-  request self announce data add to tree: %v  listener: %s", id, printBinaryAddrs(item.Parameters[1]))
 				setSelf(id, addrs)
 			default:
 			}

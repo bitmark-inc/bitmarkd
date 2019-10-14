@@ -138,6 +138,8 @@ loop:
 			log.Infof("-><- P2P received commend:%s", item.Command)
 			switch item.Command {
 			case "peer":
+				log.Infof("-[32m<<--- ><-get peer[0m<<--- ")
+				fallthrough
 			case "rpc":
 				if n.NodeType != "client" {
 					p2pMsgPacked, err := PackP2PMessage(nodeChain, item.Command, item.Parameters)
@@ -205,12 +207,12 @@ func Finalise() error {
 
 //MulticastWithBinaryID muticasts packed message with given id  in binary. Use id=nil if there is no peer ID
 func (n *Node) MulticastWithBinaryID(packedMessage, id []byte) error {
-	err := n.MuticastStream.Publish(multicastingTopic, packedMessage)
-	if err != nil {
-		log.Errorf("Multicast Publish Error: %v\n", err)
-		return err
-	}
 	if len(id) > 0 {
+		err := n.MuticastStream.Publish(multicastingTopic, packedMessage)
+		if err != nil {
+			log.Errorf("Multicast Publish Error: %v\n", err)
+			return err
+		}
 		displayID, err := peerlib.IDFromBytes(id)
 		if err != nil {
 			log.Errorf("Inavalid ID format:%v", err)
@@ -218,5 +220,6 @@ func (n *Node) MulticastWithBinaryID(packedMessage, id []byte) error {
 		}
 		log.Infof("\x1b[32m<<--- multicasting PEER : %v\x1b[0m\n", displayID.ShortString())
 	}
+	log.Infof("\x1b[32m client does not broadcast to PEERs \x1b[0m\n")
 	return nil
 }
