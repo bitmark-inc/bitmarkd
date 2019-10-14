@@ -278,15 +278,15 @@ func (u *upstreamData) requestBlockchainInfo() error {
 	}
 
 	if len(data) < 2 {
-		return fmt.Errorf("register received: %d  expected at least: 2", len(data))
+		return fmt.Errorf("register: received: %d  expected at least: 2", len(data))
 	}
 
 	switch string(data[0]) {
 	case "E":
-		return fmt.Errorf("connection refused. register error: %q", data[1])
+		return fmt.Errorf("register: connection error: %q", data[1])
 	case "R":
 		if len(data) < 5 {
-			return fmt.Errorf("connection refused. register response incorrect: %x", data)
+			return fmt.Errorf("register: response error: %x", data)
 		}
 		chain := mode.ChainName()
 		received := string(data[1])
@@ -299,20 +299,20 @@ func (u *upstreamData) requestBlockchainInfo() error {
 		announce.AddPeer(data[2], data[3], timestamp) // publicKey, broadcasts, listeners
 		return nil
 	default:
-		return fmt.Errorf("connection refused. rpc unexpected response: %q", data[0])
+		return fmt.Errorf("register: unexpected response: %q", data[0])
 	}
 }
 
 func (u *upstreamData) height() (uint64, error) {
 	log := u.log
 	client := u.client
-	log.Infof("getHeight: client: %s", client)
+	log.Infof("height: client: %s", client)
 
 	u.RLock()
 	err := client.Send("N")
 	if nil != err {
 		u.RUnlock()
-		log.Errorf("getHeight: %s send error: %s", client, err)
+		log.Errorf("height: %s send error: %s", client, err)
 		return 0, err
 	}
 
@@ -320,25 +320,25 @@ func (u *upstreamData) height() (uint64, error) {
 	u.RUnlock()
 
 	if nil != err {
-		log.Errorf("push: %s receive error: %s", client, err)
+		log.Errorf("height: %s receive error: %s", client, err)
 		return 0, err
 	}
 	if 2 != len(data) {
-		return 0, fmt.Errorf("getHeight received: %d  expected: 2", len(data))
+		return 0, fmt.Errorf("height received: %d  expected: 2", len(data))
 	}
 
 	switch string(data[0]) {
 	case "E":
-		return 0, fmt.Errorf("rpc error response: %q", data[1])
+		return 0, fmt.Errorf("height: error response: %q", data[1])
 	case "N":
 		if 8 != len(data[1]) {
-			return 0, fmt.Errorf("highestBlock: rpc invalid response: %q", data[1])
+			return 0, fmt.Errorf("hight: invalid response: %q", data[1])
 		}
 		height := binary.BigEndian.Uint64(data[1])
 		log.Infof("height: %d", height)
 		return height, nil
 	default:
-		return 0, fmt.Errorf("rpc unexpected response: %q", data[0])
+		return 0, fmt.Errorf("height: unexpected response: %q", data[0])
 	}
 }
 
@@ -368,11 +368,11 @@ func (u *upstreamData) push(item *messagebus.Message) error {
 
 	switch string(data[0]) {
 	case "E":
-		return fmt.Errorf("rpc error response: %q", data[1])
+		return fmt.Errorf("push: error response: %q", data[1])
 	case item.Command:
 		log.Debugf("push: client: %s complete: %q", client, data[1])
 		return nil
 	default:
-		return fmt.Errorf("rpc unexpected response: %q", data[0])
+		return fmt.Errorf("push: unexpected response: %q", data[0])
 	}
 }

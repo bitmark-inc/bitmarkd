@@ -36,7 +36,7 @@ const (
 	connectorTimeout = 60 * time.Second
 
 	// number of cycles to be 1 block out of sync before resync
-	samplelingLimit = 10
+	samplingLimit = 6
 
 	// number of blocks to fetch in one set
 	fetchBlocksPerCycle = 200
@@ -378,7 +378,7 @@ func (conn *connector) runStateMachine() bool {
 				continueLooping = false
 			}
 		} else {
-			log.Warn("connection lost")
+			log.Warn("highest block: connection lost")
 			conn.nextState(cStateConnecting)
 			continueLooping = false
 		}
@@ -564,18 +564,19 @@ func (conn *connector) runStateMachine() bool {
 			log.Infof("height remote: %d, local: %d", conn.height, height)
 
 			if conn.hasBetterChain(height) {
+				log.Warn("check height: better chain")
 				conn.nextState(cStateForkDetect)
 				continueLooping = true
 			} else {
-				conn.samples++
-				if conn.samples > samplelingLimit {
-					conn.nextState(cStateForkDetect)
-					continueLooping = true
-				}
+				conn.samples = 0
 			}
 		} else {
-			log.Warn("connection lost")
-			conn.nextState(cStateConnecting)
+			conn.samples++
+			if conn.samples > samplingLimit {
+				log.Warn("check height: time to resync")
+				conn.nextState(cStateForkDetect)
+				continueLooping = true
+			}
 		}
 
 	}

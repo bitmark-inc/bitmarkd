@@ -152,35 +152,35 @@ func (u *upstreamData) GetBlockData(blockNumber uint64) ([]byte, error) {
 
 // must have lock held before calling
 func (u *upstreamData) RemoteHeight() (uint64, error) {
-	u.log.Infof("getHeight: client: %s", u.client)
+	u.log.Infof("RemoteHeight: client: %s", u.client)
 
 	err := u.client.Send("N")
 	if nil != err {
-		u.log.Errorf("getHeight: %s send error: %s", u.client, err)
+		u.log.Errorf("RemoteHeight: %s send error: %s", u.client, err)
 		return 0, err
 	}
 
 	data, err := u.client.Receive(0)
 	if nil != err {
-		u.log.Errorf("push: %s receive error: %s", u.client, err)
+		u.log.Errorf("RemoteHeight: %s receive error: %s", u.client, err)
 		return 0, err
 	}
 	if 2 != len(data) {
-		return 0, fmt.Errorf("getHeight received: %d  expected: 2", len(data))
+		return 0, fmt.Errorf("RemoteHeight: received: %d  expected: 2", len(data))
 	}
 
 	switch string(data[0]) {
 	case "E":
-		return 0, fmt.Errorf("rpc error response: %q", data[1])
+		return 0, fmt.Errorf("RemoteHeight: error response: %q", data[1])
 	case "N":
 		if 8 != len(data[1]) {
-			return 0, fmt.Errorf("highestBlock: rpc invalid response: %q", data[1])
+			return 0, fmt.Errorf("RemoteHeight: invalid response: %q", data[1])
 		}
 		height := binary.BigEndian.Uint64(data[1])
 		u.log.Infof("height: %d", height)
 		return height, nil
 	default:
-		return 0, fmt.Errorf("rpc unexpected response: %q", data[0])
+		return 0, fmt.Errorf("RemoteHeight: unexpected response: %q", data[0])
 	}
 }
 

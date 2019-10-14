@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"syscall"
 
 	zmq "github.com/pebbe/zmq4"
 
@@ -160,23 +161,33 @@ func (lstn *listener) process(socket *zmq.Socket) {
 	log := lstn.log
 
 	log.Debug("process starting…")
+	for i := 0; lstn.processOne(i, socket); i += 1 {
+	}
+}
 
-	data, err := socket.RecvMessageBytes(0)
+func (lstn *listener) processOne(i int, socket *zmq.Socket) bool {
+	log := lstn.log
+
+	data, err := socket.RecvMessageBytes(zmq.DONTWAIT)
+	if zmq.Errno(syscall.EAGAIN) == zmq.AsErrno(err) {
+		lstn.log.Infof("processed: %d events", i)
+		return false
+	}
 	if nil != err {
-		log.Errorf("receive error: %s", err)
-		return
+		log.Errorf("receive: %d error: %s", i, err)
+		return false
 	}
 
 	if len(data) < 2 {
 		listenerSendError(socket, fmt.Errorf("packet too short"))
-		return
+		return true
 	}
 
 	theChain := string(data[0])
 	if theChain != lstn.chain {
 		log.Errorf("invalid chain: actual: %q  expect: %s", theChain, lstn.chain)
 		listenerSendError(socket, fmt.Errorf("invalid chain: actual: %q  expect: %s", theChain, lstn.chain))
-		return
+		return true
 	}
 
 	fn := string(data[1])
@@ -233,12 +244,12 @@ func (lstn *listener) process(socket *zmq.Socket) {
 	case "R": // registration: chain, publicKey, listeners, timestamp
 		if len(parameters) < 4 {
 			listenerSendError(socket, fault.MissingParameters)
-			return
+			return true
 		}
 		chain := mode.ChainName()
 		if string(parameters[0]) != chain {
 			listenerSendError(socket, fault.IncorrectChain)
-			return
+			return true
 		}
 
 		timestamp := binary.BigEndian.Uint64(parameters[3])
@@ -246,7 +257,7 @@ func (lstn *listener) process(socket *zmq.Socket) {
 		publicKey, listeners, ts, err := announce.GetRandom(parameters[1])
 		if nil != err {
 			listenerSendError(socket, err)
-			return
+			return true
 		}
 
 		var binTs [8]byte
@@ -263,7 +274,7 @@ func (lstn *listener) process(socket *zmq.Socket) {
 		_, err = socket.SendBytes(binTs[:], 0)
 		logger.PanicIfError("Listener", err)
 
-		return
+		return true
 
 	default: // other commands as subscription-type commands
 		processSubscription(log, fn, parameters)
@@ -272,7 +283,7 @@ func (lstn *listener) process(socket *zmq.Socket) {
 
 	if nil != err {
 		listenerSendError(socket, err)
-		return
+		return true
 	}
 
 	// send results
@@ -282,25 +293,34 @@ func (lstn *listener) process(socket *zmq.Socket) {
 	logger.PanicIfError("Listener", err)
 
 	log.Infof("sent: %q  result: %x", fn, result)
+	return true
 }
 
 // process the socket events
 func (lstn *listener) handleEvent(socket *zmq.Socket) {
-	ev, addr, v, err := socket.RecvEvent(0)
-	if nil != err {
-		lstn.log.Errorf("receive event error: %s", err)
-		return
-	}
-	lstn.log.Debugf("event: %q  address: %q  value: %d", ev, addr, v)
 
-	switch ev {
-	case zmq.EVENT_ACCEPTED:
-		lstn.connections += 1
-	case zmq.EVENT_DISCONNECTED:
-		if lstn.connections > 0 {
-			lstn.connections -= 1
+loop:
+	for i := 0; true; i = i + 1 {
+		ev, addr, v, err := socket.RecvEvent(zmq.DONTWAIT)
+		if zmq.Errno(syscall.EAGAIN) == zmq.AsErrno(err) {
+			lstn.log.Infof("received: %d events", i)
+			break loop
 		}
-	default:
+		if nil != err {
+			lstn.log.Errorf("receive event: %d error: %s", i, err)
+			return
+		}
+		lstn.log.Debugf("event: %q  address: %q  value: %d", ev, addr, v)
+
+		switch ev {
+		case zmq.EVENT_ACCEPTED:
+			lstn.connections += 1
+		case zmq.EVENT_DISCONNECTED:
+			if lstn.connections > 0 {
+				lstn.connections -= 1
+			}
+		default:
+		}
 	}
 }
 

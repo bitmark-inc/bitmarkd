@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/pebbe/zmq4"
@@ -609,21 +610,26 @@ loop:
 
 // process the socket events
 func handleEvent(s *zmq.Socket, queue chan<- Event) error {
-	ev, addr, v, err := s.RecvEvent(0)
-	if nil != err {
-		return err
-	}
+loop:
+	for {
+		ev, addr, v, err := s.RecvEvent(0)
+		if zmq.Errno(syscall.EAGAIN) == zmq.AsErrno(err) {
+			break loop
+		}
+		if nil != err {
+			return err
+		}
 
-	e := Event{
-		Event:   ev,
-		Address: addr,
-		Value:   v,
-	}
+		e := Event{
+			Event:   ev,
+			Address: addr,
+			Value:   v,
+		}
 
-	select {
-	case queue <- e:
-	default:
+		select {
+		case queue <- e:
+		default:
+		}
 	}
-
 	return nil
 }
