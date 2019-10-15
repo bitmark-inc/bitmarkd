@@ -1,3 +1,18 @@
+bitmarkd (0.12.0-alpha.1-1) unstable; urgency=medium
+
+  * consolidate for testing
+  * new fast block download
+  * index/block leveldb merged for proper recovery
+  * rpc simplified to avoid listener module
+  * p2p state machine fixes
+  * configuration file ports
+    +  21xx bitmark
+    + 121xx testing
+    + 221xx local
+  * empty receive queues on single poll
+
+ -- Christopher Hall <hsw@bitmark.com>  Tue, 15 Oct 2019 02:28:45 +0000
+
 bitmarkd (0.11.5-1) unstable; urgency=medium
 
   * changes to difficulty calculation
