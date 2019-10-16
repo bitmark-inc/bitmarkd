@@ -1,3 +1,11 @@
+bitmarkd (0.12.0-alpha.2-1) unstable; urgency=medium
+
+  * detect nil pointer in payment configuration, show error
+  * spilt configuration file
+  * Note: 0.12.x contains p2p payment verification system
+
+ -- Christopher Hall <hsw@bitmark.com>  Wed, 16 Oct 2019 03:26:35 +0000
+
 bitmarkd (0.12.0-alpha.1-1) unstable; urgency=medium
 
   * consolidate for testing
