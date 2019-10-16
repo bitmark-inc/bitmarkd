@@ -75,12 +75,18 @@ func Initialise(configuration *Configuration) error {
 		for c := currency.First; c <= currency.Last; c++ {
 			switch c {
 			case currency.Bitcoin:
+				if nil == configuration.Bitcoin {
+					return fault.MissingPaymentBitcoinSection
+				}
 				handler, err := newBitcoinHandler(useDiscovery, configuration.Bitcoin)
 				if err != nil {
 					return err
 				}
 				globalData.handlers[currency.Bitcoin.String()] = handler
 			case currency.Litecoin:
+				if nil == configuration.Litecoin {
+					return fault.MissingPaymentLitecoinSection
+				}
 				handler, err := newLitecoinHandler(useDiscovery, configuration.Litecoin)
 				if err != nil {
 					return err
@@ -112,6 +118,9 @@ func Initialise(configuration *Configuration) error {
 		processes = append(processes, btcP2pWatcher, ltcP2pWatcher)
 	case "discovery":
 		globalData.log.Info("discovery…")
+		if nil == configuration.Discovery {
+			return fault.MissingPaymentDiscoverySection
+		}
 		discoverer, err := newDiscoverer(configuration.Discovery.SubEndpoint, configuration.Discovery.ReqEndpoint)
 		if err != nil {
 			return err
