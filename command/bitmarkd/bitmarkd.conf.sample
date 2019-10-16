@@ -49,7 +49,7 @@ announce_ips = {
 ------------------------------------------------------------------------
 -- allow specific CIDRs to access the HTTPS monitoring port
 -- set nil to restict only to localhost
-http_allow = nil
+https_allow = nil
 -- http_allow = {
 --     "127.0.0.0/8",
 --     "::1/128",
@@ -59,4 +59,5 @@ http_allow = nil
 --log_level = "error"
 
 -- return the complete configuration
-return dofile("bitmarkd.conf.sub")
+local d = arg[0]:match("^(.*/)") or ""
+return dofile(d .. "bitmarkd.conf.sub")

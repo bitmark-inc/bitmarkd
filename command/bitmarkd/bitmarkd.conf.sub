@@ -24,7 +24,7 @@
 --
 --     -- other variables for some more advanced features
 --     -- normally can be left as nil:
---     --    http_allow, local_connections, log_level
+--     --    https_allow, local_connections, log_level
 --
 --     return dofile("bitmarkd.conf.sub")
 
@@ -94,8 +94,8 @@ end
 
 
 -- set the directory for data and log files
---M.data_directory = arg[0]:match("(.*/)")  -- dir from configuration file
---M.data_directory = "."                    -- current directory
+--M.data_directory = arg[0]:match("^(.*/)")  -- dir from configuration file
+--M.data_directory = "."                     -- current directory
 M.data_directory = "/var/lib/bitmarkd"    -- absolute path
 
 
@@ -168,16 +168,16 @@ M.https_rpc = {
 
     -- IP networks in CIDR form that can access the /bitmarkd/* GET APIs
     -- default is deny
-    allow = http_allow or {
-        details = {
+    allow = {
+        details = https_allow or{
             "127.0.0.0/8",
             "::1/128",
         },
-        connections = http_allow or {
+        connections = https_allow or {
             "127.0.0.0/8",
             "::1/128",
         },
-        peers = http_allow or {
+        peers = https_allow or {
             "127.0.0.0/8",
             "::1/128",
         }
