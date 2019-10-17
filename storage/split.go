@@ -17,7 +17,7 @@ type PoolNB struct {
 }
 
 // Put - store a key/value bytes pair to the database
-func (p *PoolNB) put(key []byte, nValue []byte, bValue []byte) {
+func (p *PoolNB) Put(key []byte, nValue []byte, bValue []byte) {
 	if 8 != len(nValue) {
 		logger.Panic("pool.PutNB 1st parameter must be 8 bytes")
 		return
@@ -26,16 +26,16 @@ func (p *PoolNB) put(key []byte, nValue []byte, bValue []byte) {
 	data := make([]byte, len(nValue)+len(bValue))
 	copy(data, nValue)
 	copy(data[len(nValue):], bValue)
-	p.pool.put(key, data, []byte{})
+	p.pool.Put(key, data, []byte{})
 }
 
-// remove - internally remove a key from database
-func (p *PoolNB) remove(key []byte) {
-	p.pool.remove(key)
+// Remove - internally Remove a key from database
+func (p *PoolNB) Remove(key []byte) {
+	p.pool.Remove(key)
 }
 
-func (p *PoolNB) putN(key []byte, value uint64) {
-	logger.Panic("PoolNB has not putN method")
+func (p *PoolNB) PutN(key []byte, value uint64) {
+	logger.Panic("PoolNB has not PutN method")
 }
 
 // Get - for interface
@@ -79,8 +79,8 @@ func (p *PoolNB) Commit() error {
 	return p.pool.Commit()
 }
 
-// Empty - check if struct is empty
-func (p *PoolNB) Empty() bool {
+// Ready - check if struct is empty
+func (p *PoolNB) Ready() bool {
 	return nil == p || 0 == p.pool.prefix
 }
 

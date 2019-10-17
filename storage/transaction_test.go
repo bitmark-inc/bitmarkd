@@ -95,13 +95,13 @@ func (m *testHandleMock) Has(key []byte) bool {
 	m.HasCalled = true
 	return true
 }
-func (m *testHandleMock) put(key []byte, value []byte, dummy []byte) {
+func (m *testHandleMock) Put(key []byte, value []byte, dummy []byte) {
 	m.PutCalled = true
 }
-func (m *testHandleMock) putN(key []byte, value uint64) {
+func (m *testHandleMock) PutN(key []byte, value uint64) {
 	m.PutNCalled = true
 }
-func (m *testHandleMock) remove(key []byte) {
+func (m *testHandleMock) Remove(key []byte) {
 	m.RemoveCalled = true
 }
 
@@ -126,7 +126,7 @@ func TestPut(t *testing.T) {
 	_ = tx.Begin()
 	tx.Put(myMock, []byte{}, []byte{}, []byte{})
 
-	assert.Equal(t, true, myMock.PutCalled, "internal method put is not called")
+	assert.Equal(t, true, myMock.PutCalled, "internal method Put is not called")
 }
 
 func TestPutN(t *testing.T) {
@@ -141,7 +141,7 @@ func TestPutN(t *testing.T) {
 
 	tx.PutN(myMock, []byte{}, uint64(0))
 
-	assert.Equal(t, true, myMock.PutNCalled, "internal method putN not called")
+	assert.Equal(t, true, myMock.PutNCalled, "internal method PutN not called")
 }
 
 func TestDelete(t *testing.T) {
@@ -155,7 +155,7 @@ func TestDelete(t *testing.T) {
 	_ = tx.Begin()
 	tx.Delete(myMock, []byte{})
 
-	assert.Equal(t, true, myMock.RemoveCalled, "internal method remove not called")
+	assert.Equal(t, true, myMock.RemoveCalled, "internal method Remove not called")
 }
 
 func TestGet(t *testing.T) {
