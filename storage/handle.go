@@ -14,20 +14,31 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-// TODO: Aaron separate interface into smaller ones
 type Handle interface {
 	Begin()
 	Commit() error
+	Query
+	Retrieve
+	Update
+}
+
+type Retrieve interface {
 	Get([]byte) []byte
 	GetN([]byte) (uint64, bool)
 	GetNB([]byte) (uint64, []byte)
-	Has([]byte) bool
 	LastElement() (Element, bool)
 	NewFetchCursor() *FetchCursor
-	Ready() bool
+}
+
+type Update interface {
 	Put([]byte, []byte, []byte)
 	PutN([]byte, uint64)
 	Remove([]byte)
+}
+
+type Query interface {
+	Has([]byte) bool
+	Ready() bool
 }
 
 // PoolHandle - the structure of a pool handle
