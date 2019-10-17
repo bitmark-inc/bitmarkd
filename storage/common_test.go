@@ -19,7 +19,7 @@ const (
 	databaseFileName = testingDirName + "/test"
 )
 
-// Test main entrypoint
+// Test main entry-point
 func TestMain(m *testing.M) {
 	if err := setup(); err != nil {
 		os.Exit(1)
@@ -33,13 +33,13 @@ func TestMain(m *testing.M) {
 
 // remove all files created by test
 func removeFiles() {
-	os.RemoveAll(testingDirName)
+	_ = os.RemoveAll(testingDirName)
 }
 
 // configure for testing
 func setup() error {
 	removeFiles()
-	os.Mkdir(testingDirName, 0700)
+	_ = os.Mkdir(testingDirName, 0700)
 
 	logging := logger.Configuration{
 		Directory: testingDirName,

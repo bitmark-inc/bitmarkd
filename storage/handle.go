@@ -14,6 +14,7 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
+// TODO: Aaron separate interface into smaller ones
 type Handle interface {
 	Begin()
 	Commit() error
@@ -22,6 +23,8 @@ type Handle interface {
 	GetN([]byte) (uint64, bool)
 	GetNB([]byte) (uint64, []byte)
 	Has([]byte) bool
+	LastElement() (Element, bool)
+	NewFetchCursor() *FetchCursor
 	put([]byte, []byte, []byte)
 	putN([]byte, uint64)
 	remove([]byte)
@@ -29,7 +32,6 @@ type Handle interface {
 
 // PoolHandle - the structure of a pool handle
 type PoolHandle struct {
-	Handle
 	prefix     byte
 	limit      []byte
 	dataAccess Access

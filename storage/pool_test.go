@@ -11,14 +11,14 @@ import (
 )
 
 // helper to add to pool
-func poolPut(p *PoolHandle, key string, data string) {
+func poolPut(p Handle, key string, data string) {
 	p.Begin()
 	p.put([]byte(key), []byte(data), []byte{})
 	p.Commit()
 }
 
 // helper to remove from pool
-func poolDelete(p *PoolHandle, key string) {
+func poolDelete(p Handle, key string) {
 	p.Begin()
 	p.remove([]byte(key))
 	p.Commit()
@@ -59,7 +59,7 @@ func TestPool(t *testing.T) {
 	checkAgain(t, false)
 }
 
-func checkResults(t *testing.T, p *PoolHandle) {
+func checkResults(t *testing.T, p Handle) {
 
 	// ensure we get all of the pool
 	cursor := p.NewFetchCursor()

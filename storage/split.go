@@ -38,31 +38,15 @@ func (p *PoolNB) putN(key []byte, value uint64) {
 	logger.Panic("PoolNB has not putN method")
 }
 
-// for interface
+// Get - for interface
 func (p *PoolNB) Get(key []byte) []byte {
 	return []byte{}
 }
 
-// for interface only
+// GetN - for interface only
 func (p *PoolNB) GetN(key []byte) (uint64, bool) {
 	return uint64(0), false
 }
-
-// // GetN - read a record and decode first 8 bytes as big endian uint64
-// //
-// // second parameter is false if record was not found
-// // panics if not 8 (or more) bytes in the record
-// func (p *PoolNB) GetN(key []byte) (uint64, bool) {
-// 	buffer := p.pool.Get(key)
-// 	if nil == buffer {
-// 		return 0, false
-// 	}
-// 	if len(buffer) < 8 {
-// 		logger.Panicf("pool.GetN truncated record for: %x: %s", key, buffer)
-// 	}
-// 	n := binary.BigEndian.Uint64(buffer[:8])
-// 	return n, true
-// }
 
 // GetNB - read a record and decode first 8 bytes as big endian uint64
 // and return the rest of the record as byte slice
@@ -98,4 +82,9 @@ func (p *PoolNB) Commit() error {
 // Empty - check if struct is empty
 func (p *PoolNB) Empty() bool {
 	return nil == p || 0 == p.pool.prefix
+}
+
+// LastElement - last element
+func (p *PoolNB) LastElement() (Element, bool) {
+	return p.pool.LastElement()
 }
