@@ -157,8 +157,8 @@ func setupPools(bitmarksDBAccess Access) error {
 		prefixTag := fieldInfo.Tag.Get("prefix")
 		poolTag := fieldInfo.Tag.Get("pool")
 
-		if 1 != len(prefixTag) {
-			return fmt.Errorf("pool: %v has invalid prefix: %q", fieldInfo, prefixTag)
+		if 1 != len(prefixTag) || 0 == len(poolTag) {
+			return fmt.Errorf("pool: %v has invalid prefix: %q, poolTag: %s", fieldInfo, prefixTag, poolTag)
 		}
 
 		prefix := prefixTag[0]
