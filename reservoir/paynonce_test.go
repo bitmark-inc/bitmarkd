@@ -9,8 +9,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/chain"
+
+	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 )
 

@@ -10,6 +10,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/reservoir/mocks"
+	"github.com/golang/mock/gomock"
+
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/chain"
@@ -69,8 +72,11 @@ func setup(t *testing.T, theChain ...string) {
 	if nil != err {
 		t.Fatalf("blockheader initialise error: %s", err)
 	}
-	// need to initialise block before any tests can be performed
-	err = block.Initialise()
+
+	ctl := gomock.NewController(t)
+	handle := mocks.NewMockHandle(ctl)
+	handle.EXPECT().LastElement().Return(storage.Element{}, false).Times(1)
+	err = block.Initialise(handle)
 	if nil != err {
 		t.Fatalf("block initialise error: %s", err)
 	}

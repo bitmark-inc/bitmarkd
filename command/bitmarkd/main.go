@@ -194,7 +194,7 @@ func main() {
 
 	// block data storage - depends on storage and mode
 	log.Info("initialise block")
-	err = block.Initialise()
+	err = block.Initialise(storage.Pool.Blocks)
 	if nil != err {
 		log.Criticalf("block initialise error: %s", err)
 		exitwithstatus.Message("block initialise error: %s", err)

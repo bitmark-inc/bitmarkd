@@ -293,7 +293,7 @@ func validateAndReturnLastBlock(last storage.Element) (*blockrecord.Header, bloc
 }
 
 // Initialise - setup the current block data
-func Initialise() error {
+func Initialise(db storage.Handle) error {
 	migrate := storage.IsMigrationNeed()
 
 	globalData.Lock()
@@ -309,7 +309,7 @@ func Initialise() error {
 	log.Info("starting…")
 
 	// check storage is initialised
-	if nil == storage.Pool.Blocks {
+	if nil == db {
 		log.Critical("storage pool is not initialised")
 		return fault.NotInitialised
 	}
@@ -331,7 +331,7 @@ func Initialise() error {
 	globalData.rebuild = false
 
 	// detect if any blocks on file
-	if last, ok := storage.Pool.Blocks.LastElement(); ok {
+	if last, ok := db.LastElement(); ok {
 
 		// start validating block indexes
 		header, digest, err := validateAndReturnLastBlock(last)
