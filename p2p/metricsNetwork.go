@@ -7,18 +7,18 @@ import (
 	"github.com/bitmark-inc/logger"
 	p2pcore "github.com/libp2p/go-libp2p-core"
 	p2pnet "github.com/libp2p/go-libp2p-core/network"
-	multiaddr "github.com/multiformats/go-multiaddr"
+	ma "github.com/multiformats/go-multiaddr"
 )
 
-// Metrics contain P2P metrics
-type metricsNetwork struct {
+// MetricsNetwork contain P2P network metrics
+type MetricsNetwork struct {
 	streamCount counter.Counter
 	connCount   counter.Counter
 }
 
-func (m *metricsNetwork) networkMonitor(host p2pcore.Host, log *logger.L) {
+func (m *MetricsNetwork) networkMonitor(host p2pcore.Host, log *logger.L) {
 	host.Network().Notify(&p2pnet.NotifyBundle{
-		ListenF: func(net p2pnet.Network, addr multiaddr.Multiaddr) {
+		ListenF: func(net p2pnet.Network, addr ma.Multiaddr) {
 			log.Debugf("@@Host: %v is listen at %v\n", addr.String(), time.Now())
 		},
 		ConnectedF: func(net p2pnet.Network, conn p2pnet.Conn) {
@@ -38,4 +38,10 @@ func (m *metricsNetwork) networkMonitor(host p2pcore.Host, log *logger.L) {
 			log.Debugf("@@Stream :%v-%v is Closed at %v streamCount:%d\n", stream.Conn().RemoteMultiaddr().String(), stream.Protocol(), time.Now(), m.streamCount)
 		},
 	})
+}
+
+//GetConnCount return current connection counts
+func (m *MetricsNetwork) GetConnCount() counter.Counter {
+	globalData.Log.Warnf("GetConnCount:%d", m.connCount)
+	return m.connCount
 }

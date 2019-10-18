@@ -79,6 +79,26 @@ func ByteAddrsToString(addrs [][]byte) []string {
 	return addrsStr
 }
 
+//IsMultiAddrIPV4 check if an ipv4 address
+func IsMultiAddrIPV4(addr ma.Multiaddr) bool {
+	for _, protocol := range addr.Protocols() {
+		if protocol.Name == "ip4" {
+			return true
+		}
+	}
+	return false
+}
+
+//IsMultiAddrIPV6 check if an ipv4 address
+func IsMultiAddrIPV6(addr ma.Multiaddr) bool {
+	for _, protocol := range addr.Protocols() {
+		if protocol.Name == "ip6" {
+			return true
+		}
+	}
+	return false
+}
+
 // PrintMaAddrs print out all ma with a new line seperater
 func PrintMaAddrs(addrs []ma.Multiaddr) string {
 	var stringAddr string

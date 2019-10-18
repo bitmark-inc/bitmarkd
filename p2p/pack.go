@@ -30,7 +30,9 @@ func UnPackP2PMessage(packed []byte) (chain string, fn string, parameters [][]by
 	}
 	chain = string(unpacked.Data[0])
 	fn = string(unpacked.Data[1])
-	parameters = unpacked.Data[2:]
+	if len(unpacked.Data) > 2 {
+		parameters = unpacked.Data[2:]
+	}
 	return chain, fn, parameters, nil
 }
 
@@ -75,4 +77,20 @@ func PackRegisterData(chain, fn string, nodeType string, id peerlib.ID, addrs []
 //UnpackListenError unpacked ErrorMessage
 func UnpackListenError(parameters [][]byte) (error, error) {
 	return errors.New(string(parameters[0])), nil
+}
+
+//PackQueryDigestData pack node message into p2pMessage
+func PackQueryDigestData(chain string, blockheight uint64) ([][]byte, error) {
+	heightPacked := make([]byte, 8)
+	binary.BigEndian.PutUint64(heightPacked, blockheight)
+	packedData := [][]byte{[]byte(chain), []byte("H"), heightPacked}
+	return packedData, nil
+}
+
+//PackQueryBlockData pack node message into p2pMessage
+func PackQueryBlockData(chain string, blockheight uint64) ([][]byte, error) {
+	heightPacked := make([]byte, 8)
+	binary.BigEndian.PutUint64(heightPacked, blockheight)
+	packedData := [][]byte{[]byte(chain), []byte("B"), heightPacked}
+	return packedData, nil
 }

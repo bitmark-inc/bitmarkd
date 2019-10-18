@@ -20,6 +20,7 @@ func (n *Node) addPeerAddrs(info peerlib.AddrInfo) {
 	}
 	n.Unlock()
 }
+
 func (n *Node) addPeerAddr(id peer.ID, peerAddr ma.Multiaddr) {
 	n.Lock()
 	n.Log.Infof("add peerstore:%s", id.String())

@@ -14,7 +14,7 @@ import (
 // ConnectPeers connect to all peers in host peerstore
 func (n *Node) connectPeers() {
 loop:
-	for idx, peerID := range n.Host.Peerstore().PeersWithAddrs() {
+	for _, peerID := range n.Host.Peerstore().PeersWithAddrs() {
 		peerInfo := n.Host.Peerstore().PeerInfo(peerID)
 		n.Log.Infof("connect to peer[%s] %s... ", peerInfo.ID, util.PrintMaAddrs(peerInfo.Addrs))
 		if len(peerInfo.Addrs) == 0 {
@@ -24,9 +24,6 @@ loop:
 			n.Log.Infof("The same node: %s", peerID)
 			continue loop
 		} else {
-			for _, addr := range peerInfo.Addrs {
-				n.Log.Infof("connectPeers: Dial to peer[%d]:%s", idx, addr.String())
-			}
 			err := n.DirectConnect(peerInfo)
 			if err != nil {
 				continue loop

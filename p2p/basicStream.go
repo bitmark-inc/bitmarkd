@@ -3,7 +3,6 @@ package p2p
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/network"
@@ -15,7 +14,7 @@ type basicStream struct {
 }
 
 func (s *basicStream) handleStream(stream network.Stream) {
-	log.Println("--- Start A New stream --")
+	//log.Println("--- Start A New stream --")
 	// Create a buffer stream for non blocking read and write.
 	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
 	go readData(rw, s.ID)

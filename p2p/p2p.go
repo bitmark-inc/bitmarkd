@@ -5,9 +5,7 @@ import (
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/messagebus"
-	"github.com/bitmark-inc/bitmarkd/p2p/concensus"
 	"github.com/bitmark-inc/bitmarkd/util"
-	"github.com/prometheus/common/log"
 
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -15,7 +13,6 @@ import (
 	proto "github.com/golang/protobuf/proto"
 	p2pcore "github.com/libp2p/go-libp2p-core"
 	crypto "github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/network"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	ma "github.com/multiformats/go-multiaddr"
@@ -87,7 +84,7 @@ type Node struct {
 	Announce       []ma.Multiaddr
 	sync.RWMutex             // to allow locking
 	Log            *logger.L // logger
-	RegisterStream map[string]network.Stream
+	Registers      map[string]bool
 	MuticastStream *pubsub.PubSub
 	PreferIPv6     bool
 	PrivateKey     crypto.PrivKey
@@ -95,9 +92,10 @@ type Node struct {
 	background *background.T
 	// set once during initialise
 	initialised bool
-	metricsNetwork
+	MetricsNetwork
+	metricsVoting MetricsPeersVoting
 	// statemachine
-	concensus.ConcensusMachine
+	concensusMachine Machine
 }
 
 // Initialise initialize p2p module
@@ -114,7 +112,8 @@ func Initialise(configuration *Configuration, version string) error {
 
 	processes := background.Processes{
 		&globalData,
-		&globalData.ConcensusMachine,
+		&globalData.concensusMachine,
+		&globalData.metricsVoting,
 	}
 	globalData.background = background.Start(processes, globalData.Log)
 	return nil
@@ -138,7 +137,8 @@ loop:
 			log.Infof("-><- P2P received commend:%s", item.Command)
 			switch item.Command {
 			case "peer":
-				log.Infof("-[32m<<--- ><-get peer[0m<<--- ")
+
+				log.Infof("\x1b[32m<<--- ><-get peer\x1b[30m ")
 				fallthrough
 			case "rpc":
 				if n.NodeType != "client" {
@@ -210,15 +210,15 @@ func (n *Node) MulticastWithBinaryID(packedMessage, id []byte) error {
 	if len(id) > 0 {
 		err := n.MuticastStream.Publish(multicastingTopic, packedMessage)
 		if err != nil {
-			log.Errorf("Multicast Publish Error: %v\n", err)
+			n.Log.Errorf("\x1b[31mMulticast Publish Error: %v\x1b[0m", err)
 			return err
 		}
 		displayID, err := peerlib.IDFromBytes(id)
 		if err != nil {
-			log.Errorf("Inavalid ID format:%v", err)
+			n.Log.Errorf("\x1b[31mInavalid ID format:%v\x1b[0m", err)
 			return err
 		}
-		log.Infof("\x1b[32m<<--- multicasting PEER : %v\x1b[0m\n", displayID.ShortString())
+		n.Log.Infof("\x1b[32m<<--- multicasting PEER : %v\x1b[0m\n", displayID.ShortString())
 	}
 	return nil
 }

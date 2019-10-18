@@ -13,6 +13,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/storage"
+	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -43,7 +44,7 @@ func NewListenHandler(ID peerlib.ID, node *Node, log *logger.L) ListenHandler {
 func (l *ListenHandler) handleStream(stream network.Stream) {
 	defer stream.Close()
 	log := l.log
-	log.Info("--- Start A New stream --")
+	//log.Info("--- Start A New stream --")
 	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
 	//nodeChain := mode.ChainName()
 	nodeChain := "local"
@@ -60,7 +61,7 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 		return
 	}
 	reqChain, fn, parameters, err := UnPackP2PMessage(req[:reqLen])
-
+	log.Infof("\x1b[32mlistener get chain:%s, fn:%s, reqLen:%d\x1b[0m", reqChain, fn, len(parameters))
 	if err != nil {
 		listenerSendError(rw, nodeChain, err, "-->Unpack", log)
 		return
@@ -101,7 +102,7 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 		result := make([]byte, 8)
 		binary.BigEndian.PutUint64(result, blockNumber)
 		respParams := [][]byte{result}
-		packed, err := PackP2PMessage(nodeChain, "I", respParams)
+		packed, err := PackP2PMessage(nodeChain, "N", respParams)
 		if err != nil {
 			listenerSendError(rw, nodeChain, err, "-->Query Server Information", log)
 			return
@@ -111,7 +112,7 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 	case "B": // get packed block
 		if 1 != len(parameters) {
 			err = fault.ErrMissingParameters
-		} else if 6 == len(parameters[0]) { //it 8 or 6 ??
+		} else if 8 == len(parameters[0]) { //it 8 or 6 ??
 			result := storage.Pool.Blocks.Get(parameters[0])
 			if nil == result {
 				err = fault.ErrBlockNotFound
@@ -132,7 +133,7 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 	case "H": // get block hash
 		if 1 != len(parameters) {
 			err = fault.ErrMissingParameters
-		} else if 6 == len(parameters[0]) { //it 8 or 6 ??
+		} else if 8 == len(parameters[0]) {
 			number := binary.BigEndian.Uint64(parameters[0])
 			d, e := blockheader.DigestForBlock(number)
 			var result []byte
@@ -144,14 +145,14 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 			respParams := [][]byte{result}
 			packed, err := PackP2PMessage(nodeChain, "B", respParams)
 			if err != nil {
-				listenerSendError(rw, nodeChain, err, "-->Query Block  Information", log)
+				listenerSendError(rw, nodeChain, err, "-->Query Blockhash  Information", log)
 				return
 			}
 			rw.Write(packed)
 			rw.Flush()
 		} else {
 			err = fault.ErrBlockNotFound
-			listenerSendError(rw, nodeChain, err, "-->Query Block: invalid parameter", log)
+			listenerSendError(rw, nodeChain, err, "-->Query Blockhash: invalid parameter", log)
 		}
 	case "R":
 		nType, reqID, reqMaAddrs, timestamp, err := UnPackRegisterData(parameters)
@@ -165,12 +166,16 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 		} else {
 			log.Info(fmt.Sprintf("register:\x1b[32m Client registered:%s\x1b[0m>", reqID.String()))
 		}
+		log.Info(fmt.Sprintf("register:\x1b[32m requestID  :%s\x1b[0m>", reqID.ShortString()))
 		randPeerID, randListeners, randTs, err := announce.GetRandom(reqID)
 		var randData [][]byte
-		if nil != err { // No Random Node sendback this Node
+
+		if nil != err || util.IDEqual(reqID, randPeerID) { // No Random Node sendback this Node
 			randData, err = PackRegisterData(nodeChain, fn, nType, reqID, reqMaAddrs, time.Now())
+			log.Info(fmt.Sprintf("register:\x1b[32m No Random Request PeerID:%s\x1b[0m>", reqID.ShortString()))
 		} else {
 			randData, err = PackRegisterData(nodeChain, fn, "servant", randPeerID, randListeners, randTs)
+			log.Info(fmt.Sprintf("register:\x1b[32m Random  PeerID:%s\x1b[0m>", randPeerID.ShortString()))
 		}
 
 		p2pMessagePacked, err := proto.Marshal(&P2PMessage{Data: randData})
@@ -178,7 +183,8 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 			listenerSendError(rw, nodeChain, err, "-><- Radom node", log)
 			return
 		}
-		l.node.addToRegister(reqID, stream)
+		log.Info(fmt.Sprintf("register:\x1b[32m message packed :%d\x1b[0m>", len(p2pMessagePacked)))
+		l.node.addRegister(reqID)
 		_, err = rw.Write(p2pMessagePacked)
 		rw.Flush()
 		log.Debug(fmt.Sprintf("<--WRITE:\x1b[32mLength:%d\x1b[0m> ", len(p2pMessagePacked)))

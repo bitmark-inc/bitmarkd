@@ -4,12 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/libp2p/go-libp2p-core/network"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 
 	"github.com/bitmark-inc/bitmarkd/messagebus"
-	"github.com/bitmark-inc/bitmarkd/p2p/concensus"
 	"github.com/bitmark-inc/bitmarkd/util"
 	proto "github.com/golang/protobuf/proto"
 
@@ -26,7 +24,7 @@ func (n *Node) Setup(configuration *Configuration, version string) error {
 	globalData.NodeType = configuration.NodeType
 	globalData.PreferIPv6 = configuration.PreferIPv6
 	maAddrs := IPPortToMultiAddr(configuration.Listen)
-	n.RegisterStream = make(map[string]network.Stream)
+	n.Registers = make(map[string]bool)
 	prvKey, err := DecodeHexToPrvKey([]byte(configuration.PrivateKey)) //Hex Decoded binaryString
 	if err != nil {
 		n.Log.Error(err.Error())
@@ -39,8 +37,11 @@ func (n *Node) Setup(configuration *Configuration, version string) error {
 		n.setAnnounce(configuration.Announce)
 	}
 	go n.listen(configuration.Announce)
-	go n.metricsNetwork.networkMonitor(n.Host, n.Log)
-
+	go n.MetricsNetwork.networkMonitor(n.Host, n.Log)
+	//Start a block & concensus machine
+	n.metricsVoting = NewMetricsPeersVoting(n)
+	n.concensusMachine = NewConcensusMachine(n, &n.metricsVoting)
+	//Start Broadcsting
 	ps, err := pubsub.NewGossipSub(context.Background(), n.Host)
 	if err != nil {
 		panic(err)
@@ -49,7 +50,6 @@ func (n *Node) Setup(configuration *Configuration, version string) error {
 	sub, err := n.MuticastStream.Subscribe(multicastingTopic)
 	go n.SubHandler(context.Background(), sub)
 
-	n.ConcensusMachine = concensus.NewStateMachine()
 	globalData.initialised = true
 	return nil
 }
@@ -94,8 +94,23 @@ func (n *Node) listen(announceAddrs []string) {
 	<-make(chan struct{})
 }
 
-func (n *Node) addToRegister(id peerlib.ID, s network.Stream) {
+func (n *Node) addRegister(id peerlib.ID) {
 	n.Lock()
-	n.RegisterStream[id.Pretty()] = s
+	n.Registers[id.Pretty()] = true
 	n.Unlock()
+}
+func (n *Node) delRegister(id peerlib.ID) {
+	n.Lock()
+	n.Registers[id.Pretty()] = false
+	n.Unlock()
+}
+
+//IsRegister if given id has a registered stream
+func (n *Node) IsRegister(id peerlib.ID) (registered bool) {
+	n.Lock()
+	if isRegistered, ok := n.Registers[id.Pretty()]; ok && isRegistered {
+		registered = true
+	}
+	n.Unlock()
+	return
 }
