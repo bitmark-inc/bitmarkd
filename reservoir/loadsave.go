@@ -71,8 +71,9 @@ restore_loop:
 	for {
 		tag, packed, err := readRecord(f)
 		if nil != err {
-			return err
+			continue
 		}
+
 		switch tag {
 
 		case taggedEOF:

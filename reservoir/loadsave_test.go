@@ -120,7 +120,7 @@ func init() {
 
 }
 
-func setupDataFile() {
+func setupBackupFile() {
 	f, _ := os.OpenFile(dataFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	defer f.Close()
 
@@ -160,11 +160,11 @@ func teardownDataFile() {
 	_ = os.Remove(dataFile)
 }
 
-func TestAsset(t *testing.T) {
+func TestLoadFromFileWhenAssetIssuance(t *testing.T) {
 	setup(t, "testing")
 	defer teardown()
 
-	setupDataFile()
+	setupBackupFile()
 	defer teardownDataFile()
 
 	ctl := gomock.NewController(t)
