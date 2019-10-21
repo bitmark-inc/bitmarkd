@@ -148,7 +148,7 @@ func processAssets(packed []byte) error {
 
 		switch tx := transaction.(type) {
 		case *transactionrecord.AssetData:
-			_, packedAsset, err := asset.Cache(tx)
+			_, packedAsset, err := asset.Cache(tx, storage.Pool.Assets)
 			if nil != err {
 				return err
 			}

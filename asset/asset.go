@@ -115,7 +115,7 @@ func Finalise() error {
 }
 
 // Cache - cache an incoming asset
-func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIdentifier, transactionrecord.Packed, error) {
+func Cache(asset *transactionrecord.AssetData, assetHandle storage.Handle) (*transactionrecord.AssetIdentifier, transactionrecord.Packed, error) {
 	packedAsset, err := asset.Pack(asset.Registrant)
 	if nil != err {
 		return nil, nil, err
@@ -130,7 +130,7 @@ func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIdentifi
 	assetId := asset.AssetId()
 
 	// already confirmed
-	if storage.Pool.Assets.Has(assetId[:]) {
+	if assetHandle.Has(assetId[:]) {
 		return &assetId, nil, nil
 	}
 

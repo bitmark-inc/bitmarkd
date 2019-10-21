@@ -7,10 +7,8 @@ require (
 	github.com/bitmark-inc/go-argon2 v0.1.4
 	github.com/bitmark-inc/logger v0.3.4
 	github.com/btcsuite/btcd v0.0.0-20190629003639-c26ffa870fd8
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/golang/mock v1.3.1
-	github.com/golang/protobuf v1.3.2 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/miekg/dns v1.1.16
@@ -19,6 +17,7 @@ require (
 	github.com/onsi/gomega v1.7.0 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pebbe/zmq4 v1.0.0
+	github.com/prometheus/common v0.7.0
 	github.com/stretchr/testify v1.4.0
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/urfave/cli v1.21.0

@@ -85,38 +85,33 @@ restore_loop:
 				log.Errorf("unable to unpack asset: %s", err)
 				continue restore_loop
 			}
+
 			switch tx := unpacked.(type) {
 
 			case *transactionrecord.AssetData:
-				_, _, err := asset.Cache(tx)
+				restorer, err := NewRestorer(unpacked)
 				if nil != err {
-					log.Errorf("fail to cache asset: %s", err)
+					log.Errorf("create asset restorer with error: %s", err)
+					continue
+				}
+				err = restorer.Restore()
+				if nil != err {
+					fmt.Printf("restore asset with error: %s", err)
+					continue
 				}
 
 			case *transactionrecord.BitmarkIssue:
-				packedIssues := packed
-				issues := make([]*transactionrecord.BitmarkIssue, 0, 100)
-
-				for len(packedIssues) > 0 {
-					transaction, n, err := packedIssues.Unpack(mode.IsTesting())
-					if nil != err {
-						log.Errorf("unable to unpack issue: %s", err)
-						continue restore_loop
-					}
-
-					if issue, ok := transaction.(*transactionrecord.BitmarkIssue); ok {
-						issues = append(issues, issue)
-					} else {
-						log.Errorf("issue block contains non-issue: %+v", transaction)
-						continue restore_loop
-					}
-					packedIssues = packedIssues[n:]
-				}
-
-				_, _, err := StoreIssues(issues, assetHandle, blockOwnerPaymentHandle)
+				restorer, err := NewRestorer(unpacked, packed, assetHandle, blockOwnerPaymentHandle)
 				if nil != err {
-					log.Errorf("fail to store issue: %s", err)
+					log.Errorf("create issue restorer with error: %s", err)
+					continue
 				}
+				err = restorer.Restore()
+				if nil != err {
+					log.Errorf("restore issue with error: %s", err)
+					continue
+				}
+				continue
 
 			case *transactionrecord.BitmarkTransferUnratified,
 				*transactionrecord.BitmarkTransferCountersigned:
