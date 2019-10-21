@@ -133,6 +133,7 @@ func setupDataFile() {
 	_, _ = f.Write(count)
 	_, _ = f.Write(packed)
 
+	// asset issuance
 	verifiedIssue := transactionrecord.BitmarkIssue{
 		AssetId: assetID,
 		Owner:   &owner,
@@ -147,6 +148,7 @@ func setupDataFile() {
 	_, _ = f.Write(count)
 	_, _ = f.Write(packed)
 
+	// end of file
 	_, _ = f.Write([]byte{byte(taggedEOF)})
 	packed = []byte(eofData)
 	binary.BigEndian.PutUint16(count, uint16(len(packed)))
