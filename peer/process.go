@@ -8,6 +8,8 @@ package peer
 import (
 	"encoding/binary"
 
+	"github.com/bitmark-inc/bitmarkd/storage"
+
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -201,7 +203,7 @@ func processIssues(packed []byte) error {
 		return fault.MissingParameters
 	}
 
-	_, duplicate, err := reservoir.StoreIssues(issues)
+	_, duplicate, err := reservoir.StoreIssues(issues, storage.Pool.Assets, storage.Pool.BlockOwnerPayment)
 	if nil != err {
 		return err
 	}

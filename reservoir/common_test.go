@@ -74,6 +74,8 @@ func setup(t *testing.T, theChain ...string) {
 	}
 
 	ctl := gomock.NewController(t)
+	defer ctl.Finish()
+
 	handle := mocks.NewMockHandle(ctl)
 	handle.EXPECT().LastElement().Return(storage.Element{}, false).Times(1)
 	err = block.Initialise(handle)

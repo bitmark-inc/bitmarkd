@@ -182,11 +182,10 @@ func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIdentifi
 	return &assetId, packedAsset, nil
 }
 
-// Exists - check if an asset is exist and is confirmed
-func Exists(assetId transactionrecord.AssetIdentifier) bool {
-
+// Exists - check if an item confirmed in storage handle
+func Exists(assetId transactionrecord.AssetIdentifier, handle storage.Handle) bool {
 	// already confirmed
-	if storage.Pool.Assets.Has(assetId[:]) {
+	if handle.Has(assetId[:]) {
 		return true
 	}
 

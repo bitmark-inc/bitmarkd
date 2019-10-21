@@ -14,6 +14,7 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
+// Handle - interface for storage operations
 type Handle interface {
 	Begin()
 	Commit() error
@@ -22,6 +23,7 @@ type Handle interface {
 	Update
 }
 
+// Retrieve - interface for storage retrieve data
 type Retrieve interface {
 	Get([]byte) []byte
 	GetN([]byte) (uint64, bool)
@@ -30,12 +32,14 @@ type Retrieve interface {
 	NewFetchCursor() *FetchCursor
 }
 
+// Update - interface for storage update data
 type Update interface {
 	Put([]byte, []byte, []byte)
 	PutN([]byte, uint64)
 	Remove([]byte)
 }
 
+// Query - interface for storage query data status
 type Query interface {
 	Has([]byte) bool
 	Ready() bool

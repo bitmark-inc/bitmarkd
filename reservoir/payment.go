@@ -38,13 +38,13 @@ func getPayments(transferBlockNumber uint64, issueBlockNumber uint64, previousTr
 		payments[i] = make(transactionrecord.PaymentAlternative, 1, 3)
 	}
 
-	issuePayment := getPayment(iKey) // will never be nil
+	issuePayment := getPayment(iKey, storage.Pool.BlockOwnerPayment) // will never be nil
 	for i, ip := range issuePayment {
 		payments[i][0] = ip
 	}
 
 	// last transfer payment if there is one otherwise issuer gets double
-	transferPayment := getPayment(tKey)
+	transferPayment := getPayment(tKey, storage.Pool.BlockOwnerPayment)
 	if nil == transferPayment {
 		for _, ip := range payments {
 			ip[0].Amount *= 2
@@ -82,7 +82,7 @@ func getPayments(transferBlockNumber uint64, issueBlockNumber uint64, previousTr
 }
 
 // get a payment record from a specific block given the blocks 8 byte big endian key
-func getPayment(blockNumberKey []byte) *PaymentSegment {
+func getPayment(blockNumberKey []byte, handle storage.Handle) *PaymentSegment {
 
 	if 8 != len(blockNumberKey) {
 		logger.Panicf("payment.getPayment: block number need 8 bytes: %x", blockNumberKey)
@@ -93,7 +93,7 @@ func getPayment(blockNumberKey []byte) *PaymentSegment {
 		return nil
 	}
 
-	paymentData := storage.Pool.BlockOwnerPayment.Get(blockNumberKey)
+	paymentData := handle.Get(blockNumberKey)
 	if nil == paymentData {
 		logger.Panicf("payment.getPayment: no block payment data for block number: %x", blockNumberKey)
 	}

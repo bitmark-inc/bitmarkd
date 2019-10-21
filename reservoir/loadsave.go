@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/bitmark-inc/bitmarkd/storage"
+
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
@@ -35,7 +37,7 @@ var bofData = []byte("bitmark-cache v1.0")
 
 // LoadFromFile - load transactions from file
 // called later when system is able to handle the tx and proofs
-func LoadFromFile() error {
+func LoadFromFile(assetHandle storage.Handle, blockOwnerPaymentHandle storage.Handle) error {
 	Disable()
 	defer Enable()
 
@@ -77,7 +79,6 @@ restore_loop:
 			break restore_loop
 
 		case taggedTransaction:
-
 			unpacked, _, err := packed.Unpack(mode.IsTesting())
 			if nil != err {
 				log.Errorf("unable to unpack asset: %s", err)
@@ -94,6 +95,7 @@ restore_loop:
 			case *transactionrecord.BitmarkIssue:
 				packedIssues := packed
 				issues := make([]*transactionrecord.BitmarkIssue, 0, 100)
+
 				for len(packedIssues) > 0 {
 					transaction, n, err := packedIssues.Unpack(mode.IsTesting())
 					if nil != err {
@@ -110,7 +112,7 @@ restore_loop:
 					packedIssues = packedIssues[n:]
 				}
 
-				_, _, err := StoreIssues(issues)
+				_, _, err := StoreIssues(issues, assetHandle, blockOwnerPaymentHandle)
 				if nil != err {
 					log.Errorf("fail to store issue: %s", err)
 				}

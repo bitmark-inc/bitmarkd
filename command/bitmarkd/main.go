@@ -220,7 +220,7 @@ func main() {
 	// reservoir and block are both ready
 	// so can restore any previously saved transactions
 	// before any peer services are started
-	err = reservoir.LoadFromFile()
+	err = reservoir.LoadFromFile(storage.Pool.Assets, storage.Pool.BlockOwnerPayment)
 	if nil != err && !os.IsNotExist(err) {
 		log.Criticalf("reservoir reload error: %s", err)
 		exitwithstatus.Message("reservoir reload error: %s", err)
