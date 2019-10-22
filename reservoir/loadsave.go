@@ -37,7 +37,7 @@ var bofData = []byte("bitmark-cache v1.0")
 
 // LoadFromFile - load transactions from file
 // called later when system is able to handle the tx and proofs
-func LoadFromFile(assetHandle storage.Handle, blockOwnerPaymentHandle storage.Handle) error {
+func LoadFromFile(assetHandle storage.Handle, blockOwnerPaymentHandle storage.Handle, transactionHandle storage.Handle, ownerTxHandle storage.Handle, ownerDataHandle storage.Handle) error {
 	Disable()
 	defer Enable()
 
@@ -116,7 +116,7 @@ restore_loop:
 			case *transactionrecord.BitmarkTransferUnratified,
 				*transactionrecord.BitmarkTransferCountersigned:
 				tr := tx.(transactionrecord.BitmarkTransfer)
-				_, _, err := StoreTransfer(tr)
+				_, _, err := StoreTransfer(tr, transactionHandle, ownerTxHandle, ownerDataHandle, blockOwnerPaymentHandle)
 				if nil != err {
 					log.Errorf("fail to store transfer: %s", err)
 				}

@@ -63,7 +63,7 @@ loop:
 
 		merkle.DigestFromBytes(&record.TxId, item.Value)
 
-		ownerData, err := GetOwnerData(nil, record.TxId)
+		ownerData, err := GetOwnerData(nil, record.TxId, storage.Pool.OwnerData)
 		if nil != err {
 			return nil, err
 		}

@@ -6,6 +6,7 @@
 package rpc
 
 import (
+	"github.com/bitmark-inc/bitmarkd/storage"
 	"golang.org/x/time/rate"
 
 	"github.com/bitmark-inc/bitmarkd/account"
@@ -55,7 +56,7 @@ func (share *Share) Create(bmfr *transactionrecord.BitmarkShare, reply *ShareCre
 	}
 
 	// save transfer/check for duplicate
-	stored, duplicate, err := reservoir.StoreTransfer(bmfr)
+	stored, duplicate, err := reservoir.StoreTransfer(bmfr, storage.Pool.Transactions, storage.Pool.OwnerTxIndex, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
 	if nil != err {
 		return err
 	}

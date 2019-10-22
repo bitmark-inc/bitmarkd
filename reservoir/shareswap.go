@@ -57,7 +57,7 @@ func StoreSwap(swap *transactionrecord.ShareSwap) (*SwapInfo, bool, error) {
 
 	txId := verifyResult.txId
 
-	payments := getPayments(verifyResult.transferBlockNumber, verifyResult.issueBlockNumber, nil)
+	payments := getPayments(verifyResult.transferBlockNumber, verifyResult.issueBlockNumber, nil, storage.Pool.BlockOwnerPayment)
 
 	spendKeyOne := makeSpendKey(swap.OwnerOne, swap.ShareIdOne)
 	spendKeyTwo := makeSpendKey(swap.OwnerTwo, swap.ShareIdTwo)

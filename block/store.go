@@ -214,7 +214,7 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 					return fault.DoubleTransferAttempt
 				}
 
-				ownerData, err := ownership.GetOwnerData(nil, link)
+				ownerData, err := ownership.GetOwnerData(nil, link, storage.Pool.OwnerData)
 				if nil != err {
 					return fault.DoubleTransferAttempt
 				}
@@ -267,7 +267,7 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 					return err
 				}
 
-				ownerData, err := ownership.GetOwnerData(nil, link)
+				ownerData, err := ownership.GetOwnerData(nil, link, storage.Pool.OwnerData)
 				if nil != err {
 					return fault.DoubleTransferAttempt
 				}

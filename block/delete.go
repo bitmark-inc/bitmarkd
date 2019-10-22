@@ -232,7 +232,7 @@ outer_loop:
 					logger.Panic("Transactions database is corrupt")
 				}
 
-				ownerData, err := ownership.GetOwnerData(trx, txId)
+				ownerData, err := ownership.GetOwnerData(trx, txId, storage.Pool.OwnerData)
 				if nil != err {
 					trx.Abort()
 					logger.Criticalf("invalid ownerData for tx id: %s", txId)

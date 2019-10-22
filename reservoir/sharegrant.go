@@ -56,7 +56,7 @@ func StoreGrant(grant *transactionrecord.ShareGrant) (*GrantInfo, bool, error) {
 
 	txId := verifyResult.txId
 
-	payments := getPayments(verifyResult.transferBlockNumber, verifyResult.issueBlockNumber, nil)
+	payments := getPayments(verifyResult.transferBlockNumber, verifyResult.issueBlockNumber, nil, storage.Pool.BlockOwnerPayment)
 
 	spendKey := makeSpendKey(grant.Owner, grant.ShareId)
 

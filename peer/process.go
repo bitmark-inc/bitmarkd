@@ -236,7 +236,7 @@ func processTransfer(packed []byte) error {
 	transfer, ok := transaction.(transactionrecord.BitmarkTransfer)
 	if ok {
 
-		_, duplicate, err = reservoir.StoreTransfer(transfer)
+		_, duplicate, err = reservoir.StoreTransfer(transfer, storage.Pool.Transactions, storage.Pool.OwnerTxIndex, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
 
 	} else {
 		switch tx := transaction.(type) {
