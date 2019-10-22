@@ -7,6 +7,10 @@ import (
 	"os"
 	"testing"
 
+	"github.com/bitmark-inc/bitmarkd/merkle"
+
+	"github.com/bitmark-inc/bitmarkd/fault"
+
 	"github.com/bitmark-inc/bitmarkd/asset"
 
 	"github.com/bitmark-inc/bitmarkd/currency"
@@ -18,8 +22,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/bitmark-inc/logger"
-
-	"github.com/bitmark-inc/bitmarkd/merkle"
 
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 
@@ -68,32 +70,10 @@ func setupLogger() {
 }
 
 func init() {
-	_, _ = fmt.Sscan(assetIDString, &assetID)
-
-	publicKey = []byte{
-		0x9f, 0xc4, 0x86, 0xa2, 0x53, 0x4f, 0x17, 0xe3,
-		0x67, 0x07, 0xfa, 0x4b, 0x95, 0x3e, 0x3b, 0x34,
-		0x00, 0xe2, 0x72, 0x9f, 0x65, 0x61, 0x16, 0xdd,
-		0x7b, 0x01, 0x8d, 0xf3, 0x46, 0x98, 0xbd, 0xc2,
-	}
-
-	privateKey = []byte{
-		0xf3, 0xf7, 0xa1, 0xfc, 0x33, 0x10, 0x71, 0xc2,
-		0xb1, 0xcb, 0xbe, 0x4f, 0x3a, 0xee, 0x23, 0x5a,
-		0xae, 0xcc, 0xd8, 0x5d, 0x2a, 0x80, 0x4c, 0x44,
-		0xb5, 0xc6, 0x03, 0xb4, 0xca, 0x4d, 0x9e, 0xc0,
-		0x9f, 0xc4, 0x86, 0xa2, 0x53, 0x4f, 0x17, 0xe3,
-		0x67, 0x07, 0xfa, 0x4b, 0x95, 0x3e, 0x3b, 0x34,
-		0x00, 0xe2, 0x72, 0x9f, 0x65, 0x61, 0x16, 0xdd,
-		0x7b, 0x01, 0x8d, 0xf3, 0x46, 0x98, 0xbd, 0xc2,
-	}
-
-	assetTxID = merkle.Digest{
-		0x54, 0x21, 0x45, 0x4d, 0x44, 0x9c, 0x63, 0x13,
-		0x59, 0x48, 0x67, 0x19, 0x21, 0xdb, 0x9a, 0x7b,
-		0xe2, 0x60, 0xb6, 0xab, 0x1f, 0x5c, 0x1c, 0x01,
-		0x4f, 0x25, 0x14, 0x04, 0x08, 0x99, 0x85, 0x1c,
-	}
+	seed, _ := account.NewBase58EncodedSeedV2(true)
+	p, _ := account.PrivateKeyFromBase58Seed(seed)
+	privateKey = p.PrivateKeyBytes()
+	publicKey = p.Account().PublicKeyBytes()
 
 	owner = account.Account{
 		AccountInterface: &account.ED25519Account{
@@ -107,13 +87,34 @@ func init() {
 	currencyMap[currency.Litecoin] = "mwLH3WTj4zxMSM3Tzq3w9rfgJicawtKp1R"
 
 	assetData = transactionrecord.AssetData{
-		Name:        "asset name",
 		Fingerprint: "0123456789abcdefg",
 		Metadata:    "owner\x00me",
+		Name:        "asset name",
 		Registrant:  &owner,
 	}
-	packed, _ := assetData.Pack(&owner)
+	packed, err := assetData.Pack(&owner)
+	if fault.InvalidSignature != err {
+		fmt.Printf("pack asset data err: %s\n", err)
+	}
 	assetData.Signature = ed25519.Sign(privateKey, packed)
+	assetID = assetData.AssetId()
+	assetIssuance := transactionrecord.BitmarkIssue{
+		AssetId:   assetID,
+		Owner:     &owner,
+		Nonce:     1,
+		Signature: nil,
+	}
+	packed, err = assetIssuance.Pack(&owner)
+	if fault.InvalidSignature != err {
+		fmt.Printf("issuance pack err: %s\n", err)
+	}
+	signature := ed25519.Sign(privateKey, packed)
+	assetIssuance.Signature = signature[:]
+	p2, err := assetIssuance.Pack(&owner)
+	if nil != err {
+		fmt.Printf("second pack err: %s\n", err)
+	}
+	assetTxID = p2.MakeLink()
 }
 
 func initPackages() {
