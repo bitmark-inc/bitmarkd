@@ -44,6 +44,7 @@ type handles struct {
 const (
 	dataFile   = "test.cache"
 	loggerFile = "test.log"
+	chain      = "testing"
 )
 
 const (
@@ -227,7 +228,7 @@ func setupMocks(t *testing.T) ([]*gomock.Controller, handles) {
 }
 
 func TestLoadFromFileWhenAssetIssuance(t *testing.T) {
-	setup(t, "testing")
+	setup(t, chain)
 	defer teardown()
 
 	setupBackupFile()
@@ -259,7 +260,7 @@ func TestLoadFromFileWhenAssetIssuance(t *testing.T) {
 }
 
 func TestLoadFromFileWhenAssetData(t *testing.T) {
-	setup(t, "testing")
+	setup(t, chain)
 	defer teardown()
 
 	setupBackupFile()
@@ -287,7 +288,7 @@ func TestLoadFromFileWhenAssetData(t *testing.T) {
 }
 
 func TestLoadFromFileWhenTransferUnratified(t *testing.T) {
-	setup(t, "testing")
+	setup(t, chain)
 	defer teardown()
 
 	setupBackupFile()
