@@ -68,7 +68,6 @@ func (p *MetricsPeersVoting) UpdateCandidates() {
 //Run  is a Routine to get peer info
 func (p *MetricsPeersVoting) Run(args interface{}, shutdown <-chan struct{}) {
 	log := p.Log
-	log.Info("\x1b[33mpeerVoting starting…\x1b[0m")
 	delay := time.After(nodeInitial)
 	//nodeChain:= mode.ChainName()
 loop:
@@ -108,7 +107,8 @@ func (p *MetricsPeersVoting) setMetrics(id peerlib.ID, height uint64, digest blo
 			respTime := time.Now()
 			candidate.UpdateMetrics(id.String(), height, localheight, digest, respTime)
 			p.mutex.Unlock()
-			p.Log.Infof("\x1b[33mvotingMetrics update: ID:%s, height:%d, digest:%s respTime:%d\x1b[0m", id.String(), height, digest.String(), respTime.Unix())
+			p.Log.Debugf("\x1b[32m: ID:%s, height:%d, digest:%s respTime:%d\x1b[0m",
+				candidate.ID, candidate.Metrics.localHeight, candidate.Metrics.remoteDigestOfLocalHeight, candidate.Metrics.lastResponseTime.Unix())
 			break
 		}
 	}

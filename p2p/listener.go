@@ -61,7 +61,7 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 		return
 	}
 	reqChain, fn, parameters, err := UnPackP2PMessage(req[:reqLen])
-	log.Infof("\x1b[32mlistener get chain:%s, fn:%s, reqLen:%d\x1b[0m", reqChain, fn, len(parameters))
+	log.Debugf("\x1b[32mlistener get chain:%s, fn:%s, reqLen:%d\x1b[0m", reqChain, fn, len(parameters))
 	if err != nil {
 		listenerSendError(rw, nodeChain, err, "-->Unpack", log)
 		return
@@ -142,8 +142,13 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 			} else {
 				err = e
 			}
+			log.Info(fmt.Sprintf("GetBlockHash:\x1b[32mLocal Digest:%v\x1b[0m>", d.String()))
+			if err != nil {
+				listenerSendError(rw, nodeChain, err, "-->Query Blockhash  Information", log)
+				return
+			}
 			respParams := [][]byte{result}
-			packed, err := PackP2PMessage(nodeChain, "B", respParams)
+			packed, err := PackP2PMessage(nodeChain, "H", respParams)
 			if err != nil {
 				listenerSendError(rw, nodeChain, err, "-->Query Blockhash  Information", log)
 				return

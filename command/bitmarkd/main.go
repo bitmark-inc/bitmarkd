@@ -24,6 +24,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/p2p"
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
+	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/exitwithstatus"
@@ -289,6 +290,12 @@ func main() {
 		exitwithstatus.Message("p2p initialise error: %s", err)
 	}
 	defer p2p.Finalise()
+	err = rpc.Initialise(&masterConfiguration.ClientRPC, &masterConfiguration.HttpsRPC, version)
+	if nil != err {
+		log.Criticalf("rpc initialise error: %s", err)
+		exitwithstatus.Message("peer initialise error: %s", err)
+	}
+	defer rpc.Finalise()
 
 	// start up the publishing background processes
 	/*

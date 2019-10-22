@@ -95,14 +95,13 @@ func (v *VotingImpl) existVoteForDigest(digest blockdigest.Digest) bool {
 
 // VoteBy - vote by some upstream
 func (v *VotingImpl) VoteBy(candidate Candidate) {
-	v.log.Infof("\x1b[32mVoteby:%s\x1b[0m", candidate.Name())
 	height := candidate.CachedRemoteHeight()
 	digest := candidate.CachedRemoteDigestOfLocalHeight()
 	remoteAddr := candidate.RemoteAddr()
 	remoteName := candidate.Name()
 
-	v.log.Infof(
-		"%s connects to remote %s, cached remote height: %d with digest: %s",
+	v.log.Debugf(
+		"\x1b[32m%s connects to remote %s, cached remote height: %d with digest: %s\x1b[0m",
 		remoteName,
 		remoteAddr,
 		height,
@@ -111,7 +110,7 @@ func (v *VotingImpl) VoteBy(candidate Candidate) {
 
 	if !v.validHeight(height) {
 		v.log.Infof(
-			"remote cached height: %d, below minimum height %d, discard",
+			"\x1b[32mremote cached height: %d, below minimum height %d, discard\x1b[0m",
 			height,
 			v.minHeight,
 		)
@@ -127,7 +126,7 @@ func (v *VotingImpl) VoteBy(candidate Candidate) {
 		v.votes[digest] = append(v.votes[digest], e)
 		return
 	}
-	v.log.Debugf("%s connect to remote %s, vote success", candidate.Name(), remoteAddr)
+	v.log.Debugf("\x1b[32m%s connect to remote %s, vote success\x1b[0m", candidate.Name(), remoteAddr)
 	v.votes[digest] = []*voters{e}
 }
 
@@ -150,6 +149,7 @@ func (v *VotingImpl) ElectedCandidate() (Candidate, uint64, error) {
 }
 
 func (v *VotingImpl) countVotes() error {
+	v.log.Infof("countVotes: count=%d", len(v.votes))
 	for _, voters := range v.votes {
 		if v.result.highestNumVotes < len(voters) {
 			v.updateTemporarilyVoteSummary(voters)

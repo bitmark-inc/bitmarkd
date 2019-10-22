@@ -16,6 +16,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
+	"github.com/prometheus/common/log"
 )
 
 //Register this node register itself to the peerInfo node and  add the stream to RegisterStream
@@ -182,24 +183,29 @@ func (n *Node) RemoteDigestOfHeight(peerID peerlib.ID, blockNumber uint64) (bloc
 		return blockdigest.Digest{}, err
 	}
 	rw.Flush()
+
 	respPacked := make([]byte, maxBytesRecieve)
 	_, err = rw.Read(respPacked)
 	n.Unlock()
 	chain, fn, parameters, err := UnPackP2PMessage(respPacked)
 	if err != nil {
+		log.Warn(fmt.Sprintf("\x1b[30m RemoteDigestOfHeight UnPackP2PMessage Error:%s\x1b[0m>", err))
 		return blockdigest.Digest{}, err
 	}
 
 	if mode.ChainName() != chain {
+		log.Warn(fmt.Sprintf("\x1b[30m RemoteDigestOfHeight chain different Error:%s\x1b[0m>", err))
 		return blockdigest.Digest{}, err
 	}
 
-	if fn == "" || len(parameters[0]) != 1 { // not enough  data return
+	if fn == "" || len(parameters) != 1 { // not enough  data return
+		n.Log.Warn(fmt.Sprintf("\x1b[31mRemoteDigestOfHeight fn !empty || len(parameters[0]) != 1  len:%d\x1b[0m>", len(parameters[0])))
 		return blockdigest.Digest{}, err
 	}
 
 	switch string(fn) {
 	case "E":
+		n.Log.Warn(fmt.Sprintf("\x1b[31mRemoteDigestOfHeight fn !empty || len(parameters[0]) != 1  len:%d\x1b[0m>", len(parameters[0])))
 		return blockdigest.Digest{}, fault.ErrorFromRunes(parameters[0])
 	case "H":
 		d := blockdigest.Digest{}
@@ -208,6 +214,7 @@ func (n *Node) RemoteDigestOfHeight(peerID peerlib.ID, blockNumber uint64) (bloc
 			return d, err
 		}
 	default:
+		n.Log.Warn(fmt.Sprintf("\x1b[31mdefaul: fn :%s\x1b[0m>", fn))
 	}
 	return blockdigest.Digest{}, fault.ErrInvalidPeerResponse
 }

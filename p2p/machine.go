@@ -43,8 +43,8 @@ type Machine struct {
 	attachedNode     *Node
 	votingMetrics    *MetricsPeersVoting
 	votes            voting.Voting
-	electedWiner     P2PCandidatesImpl //voting winner
-	electedHeight    uint64            //voting winner block height
+	electedWiner     voting.Candidate //voting winner
+	electedHeight    uint64           //voting winner block height
 	startBlockNumber uint64
 	samples          int
 }
@@ -90,6 +90,7 @@ func (m *Machine) transitions() bool {
 	switch m.state {
 	case cStateConnecting:
 		mode.Set(mode.Resynchronise)
+		log.Infof("Enter \x1b[33mConnecting State mode:%s \x1b[0m", mode.String())
 		if isConnectionEnough(m.attachedNode.MetricsNetwork.GetConnCount()) {
 			m.nextState()
 		} else {
@@ -97,16 +98,16 @@ func (m *Machine) transitions() bool {
 		}
 		stop = true
 	case cStateHighestBlock:
+		log.Infof("Enter \x1b[33mHighestBlock state, mode:%s \x1b[0m", mode.String())
 		winerHeight, winer := m.newElection()
 		if winer == nil || 0 == winerHeight {
 			stop = true
 		} else {
 			m.electedHeight = winerHeight
-			m.electedWiner = winer.(P2PCandidatesImpl)
+			m.electedWiner = winer
 			if m.hasBetterChain(blockheader.Height()) {
 				log.Infof("new chain from %s, height %d, digest %s",
 					m.electedWiner.Name(), m.electedWiner.CachedRemoteHeight(), m.electedWiner.CachedRemoteDigestOfLocalHeight().String())
-				log.Info("enter fork detect state")
 				m.nextState()
 			} else if m.isSameChain() {
 				log.Info("remote same chain")
@@ -115,12 +116,11 @@ func (m *Machine) transitions() bool {
 				log.Info("remote chain invalid, stop looping for now")
 				stop = true
 			}
-			log.Infof("highest block number: %d", m.electedHeight)
 		}
 	case cStateForkDetect:
+		log.Infof("Enter \x1b[33mForkDetect state, mode:%s \x1b[0m", mode.String())
 		height := blockheader.Height()
 		if !m.hasBetterChain(height) {
-			log.Debug("remote without better chain, enter state rebuild")
 			m.toState(cStateRebuild)
 		} else {
 			mode.Set(mode.Resynchronise)
@@ -139,7 +139,7 @@ func (m *Machine) transitions() bool {
 					m.toState(cStateHighestBlock) // retry
 					break check_digests
 				}
-				d, err := m.attachedNode.RemoteDigestOfHeight(m.electedWiner.ID, h)
+				d, err := m.attachedNode.RemoteDigestOfHeight(m.electedWiner.(*P2PCandidatesImpl).ID, h)
 				if nil != err {
 					log.Infof("block number: %d  fetch digest error: %s", h, err)
 					m.toState(cStateHighestBlock) // retry
@@ -164,14 +164,18 @@ func (m *Machine) transitions() bool {
 			}
 		}
 	case cStateFetchBlocks:
+		log.Infof("Enter\x1b[33mFetchBlocks state, mode:%s \x1b[0m", mode.String())
 		stop = true
 	case cStateRebuild:
+		log.Infof("Enter \x1b[33mRebuild state, mode:%s \x1b[0m", mode.String())
 		// return to normal operations
 		m.nextState()
 		m.samples = 0 // zero out the counter
 		mode.Set(mode.Normal)
+		log.Infof("Enter \x1b[33mRebuild state, mode set to normal:%s \x1b[0m", mode.String())
 		stop = true
 	case cStateSampling:
+		log.Infof("Enter \x1b[33mSampling state, mode:%s \x1b[0m", mode.String())
 		// check peers
 		//globalData.clientCount = conn.getConnectedClientCount()
 		connCount := m.attachedNode.MetricsNetwork.GetConnCount()
@@ -185,7 +189,7 @@ func (m *Machine) transitions() bool {
 		// check height
 		winerHeight, winer := m.newElection()
 		m.electedHeight = winerHeight
-		m.electedWiner = winer.(P2PCandidatesImpl)
+		m.electedWiner = winer
 		height := blockheader.Height()
 		log.Infof("height remote: %d, local: %d", m.electedHeight, height)
 		stop = true
@@ -200,7 +204,6 @@ func (m *Machine) transitions() bool {
 			}
 		}
 	}
-	log.Infof("transition Stop:%v", stop)
 	return stop
 }
 
@@ -216,13 +219,9 @@ func isConnectionEnough(count counter.Counter) bool {
 }
 
 func (m *Machine) startElection() {
-	m.log.Info("startElection")
 	m.votingMetrics.allCandidates(func(c *P2PCandidatesImpl) {
-		m.log.Infof("ID:%s name:%s lastRespT:%d", c.ID, c.Metrics.name, c.Metrics.lastResponseTime.Unix())
 		if c.ActiveInPastSeconds(activePastSec) {
 			m.votes.VoteBy(c)
-		} else {
-			m.log.Info("Not")
 		}
 	})
 }
@@ -285,8 +284,8 @@ func (m *Machine) hasBetterChain(localHeight uint64) bool {
 func (m *Machine) hasSamllerDigestThanLocal(localHeight uint64) bool {
 	remoteDigest := m.electedWiner.CachedRemoteDigestOfLocalHeight()
 	// if upstream update during processing
-	if m.electedWiner.Metrics.localHeight != localHeight {
-		m.log.Warnf("remote height %d is different than local height %d", m.electedWiner.Metrics.localHeight, localHeight)
+	if m.electedWiner.(*P2PCandidatesImpl).Metrics.localHeight != localHeight {
+		m.log.Warnf("remote height %d is different than local height %d", m.electedWiner.(*P2PCandidatesImpl).Metrics.localHeight, localHeight)
 		return false
 	}
 	localDigest, err := blockheader.DigestForBlock(localHeight)
