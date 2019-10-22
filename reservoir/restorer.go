@@ -31,8 +31,24 @@ func NewRestorer(t interface{}, args ...interface{}) (Restorer, error) {
 			assetHandle:             args[1].(storage.Handle),
 			blockOwnerPaymentHandle: args[2].(storage.Handle),
 		}, nil
+
 	case *transactionrecord.AssetData:
 		return &assetRestoreData{packed: t.(*transactionrecord.AssetData)}, nil
+
+	case *transactionrecord.BitmarkTransferUnratified,
+		*transactionrecord.BitmarkTransferCountersigned:
+
+		if 4 != len(args) {
+			return nil, fmt.Errorf("insufficient parameter")
+		}
+
+		return &transferRestoreData{
+			packed:            t.(transactionrecord.BitmarkTransfer),
+			transaction:       args[0].(storage.Handle),
+			ownerTx:           args[1].(storage.Handle),
+			ownerData:         args[2].(storage.Handle),
+			blockOwnerPayment: args[3].(storage.Handle),
+		}, nil
 	}
 	return nil, nil
 }
@@ -83,5 +99,21 @@ func (i *issueRestoreData) Restore() error {
 		log.Errorf("fail to store issue: %s", err)
 	}
 
+	return nil
+}
+
+type transferRestoreData struct {
+	packed            transactionrecord.BitmarkTransfer
+	transaction       storage.Handle
+	ownerTx           storage.Handle
+	ownerData         storage.Handle
+	blockOwnerPayment storage.Handle
+}
+
+func (t *transferRestoreData) Restore() error {
+	_, _, err := StoreTransfer(t.packed, t.transaction, t.ownerTx, t.ownerData, t.blockOwnerPayment)
+	if nil != err {
+		log.Errorf("fail to restore transfer: %s", err)
+	}
 	return nil
 }

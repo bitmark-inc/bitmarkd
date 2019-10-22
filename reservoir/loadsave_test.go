@@ -207,15 +207,22 @@ func teardownDataFile() {
 	_ = os.Remove(dataFile)
 }
 
-func setupMocks(t *testing.T) (*gomock.Controller, handles) {
-	ctl := gomock.NewController(t)
+func setupMocks(t *testing.T) ([]*gomock.Controller, handles) {
+	var ctls []*gomock.Controller
+	ctl1 := gomock.NewController(t)
+	ctl2 := gomock.NewController(t)
+	ctl3 := gomock.NewController(t)
+	ctl4 := gomock.NewController(t)
+	ctl5 := gomock.NewController(t)
 
-	return ctl, handles{
-		asset:             mocks.NewMockHandle(ctl),
-		blockOwnerPayment: mocks.NewMockHandle(ctl),
-		transaction:       mocks.NewMockHandle(ctl),
-		ownerTx:           mocks.NewMockHandle(ctl),
-		ownerData:         mocks.NewMockHandle(ctl),
+	ctls = append(ctls, ctl1, ctl2, ctl3, ctl4, ctl5)
+
+	return ctls, handles{
+		asset:             mocks.NewMockHandle(ctl1),
+		blockOwnerPayment: mocks.NewMockHandle(ctl2),
+		transaction:       mocks.NewMockHandle(ctl3),
+		ownerTx:           mocks.NewMockHandle(ctl4),
+		ownerData:         mocks.NewMockHandle(ctl5),
 	}
 }
 
@@ -229,8 +236,12 @@ func TestLoadFromFileWhenAssetIssuance(t *testing.T) {
 	initPackages()
 	defer asset.Finalise()
 
-	ctl, mockHandles := setupMocks(t)
-	defer ctl.Finish()
+	ctls, mockHandles := setupMocks(t)
+	defer func(ctls []*gomock.Controller) {
+		for _, c := range ctls {
+			c.Finish()
+		}
+	}(ctls)
 
 	mockHandles.asset.EXPECT().Has(gomock.Any()).Return(true).AnyTimes()
 	mockHandles.asset.EXPECT().GetNB(gomock.Any()).Return(uint64(2), []byte("exist")).Times(1)
@@ -238,7 +249,7 @@ func TestLoadFromFileWhenAssetIssuance(t *testing.T) {
 	data, _ := currencyMap.Pack(true)
 	mockHandles.blockOwnerPayment.EXPECT().Get(gomock.Any()).Return(data).Times(1)
 
-	mockHandles.transaction.EXPECT().GetNB(gomock.Any()).Return(uint64(2), []byte{}).Times(1)
+	mockHandles.transaction.EXPECT().GetNB(gomock.Any()).Return(uint64(2), []byte{}).AnyTimes()
 
 	_ = reservoir.Initialise(dataFile)
 	_ = reservoir.LoadFromFile(mockHandles.asset, mockHandles.blockOwnerPayment, mockHandles.transaction, mockHandles.ownerTx, storage.Pool.OwnerData)
@@ -257,8 +268,12 @@ func TestLoadFromFileWhenAssetData(t *testing.T) {
 	initPackages()
 	defer asset.Finalise()
 
-	ctl, mockHandles := setupMocks(t)
-	defer ctl.Finish()
+	ctls, mockHandles := setupMocks(t)
+	defer func(ctls []*gomock.Controller) {
+		for _, c := range ctls {
+			c.Finish()
+		}
+	}(ctls)
 
 	mockHandles.asset.EXPECT().Has(gomock.Any()).Return(false).AnyTimes()
 
@@ -281,8 +296,12 @@ func TestLoadFromFileWhenTransferUnratified(t *testing.T) {
 	initPackages()
 	defer asset.Finalise()
 
-	ctl, mockHandles := setupMocks(t)
-	defer ctl.Finish()
+	ctls, mockHandles := setupMocks(t)
+	defer func(ctls []*gomock.Controller) {
+		for _, c := range ctls {
+			c.Finish()
+		}
+	}(ctls)
 
 	mockHandles.asset.EXPECT().Has(gomock.Any()).Return(true).Times(1)
 	mockHandles.asset.EXPECT().GetNB(gomock.Any()).Return(uint64(2), []byte("exist")).AnyTimes()

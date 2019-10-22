@@ -6,7 +6,6 @@
 package reservoir
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/account"
@@ -48,7 +47,6 @@ func StoreTransfer(transfer transactionrecord.BitmarkTransfer, transactionHandle
 
 	verifyResult, duplicate, err := verifyTransfer(transfer, transactionHandle, ownerTxHandle, ownerDataHandle)
 	if err != nil {
-		fmt.Printf("verify err: %s\n", err)
 		return nil, false, err
 	}
 
@@ -231,7 +229,6 @@ func verifyTransfer(transfer transactionrecord.BitmarkTransfer, transactionHandl
 
 	if okL && linkTxId != txId {
 		// not an exact match - must be a double transfer
-		fmt.Println("here")
 		return nil, false, fault.DoubleTransferAttempt
 	}
 
@@ -260,7 +257,6 @@ func verifyTransfer(transfer transactionrecord.BitmarkTransfer, transactionHandl
 	// log.Infof("dKey: %x", dKey)
 	dCount := ownerTxHandle.Get(dKey)
 	if nil == dCount {
-		fmt.Println("see")
 		return nil, false, fault.DoubleTransferAttempt
 	}
 
@@ -268,7 +264,6 @@ func verifyTransfer(transfer transactionrecord.BitmarkTransfer, transactionHandl
 	ownerData, err := ownership.GetOwnerData(nil, link, ownerDataHandle)
 	if nil != err {
 		globalData.log.Errorf("owner data error: %s", err)
-		fmt.Println("there")
 		return nil, false, err //fault.DoubleTransferAttempt
 	}
 	// log.Debugf("ownerData: %x", ownerData)

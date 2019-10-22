@@ -111,14 +111,19 @@ restore_loop:
 					log.Errorf("restore issue with error: %s", err)
 					continue
 				}
-				continue
 
 			case *transactionrecord.BitmarkTransferUnratified,
 				*transactionrecord.BitmarkTransferCountersigned:
-				tr := tx.(transactionrecord.BitmarkTransfer)
-				_, _, err := StoreTransfer(tr, transactionHandle, ownerTxHandle, ownerDataHandle, blockOwnerPaymentHandle)
+
+				restorer, err := NewRestorer(unpacked, transactionHandle, ownerTxHandle, ownerDataHandle, blockOwnerPaymentHandle)
 				if nil != err {
-					log.Errorf("fail to store transfer: %s", err)
+					log.Errorf("create transfer restorer with error: %s", err)
+					continue
+				}
+				err = restorer.Restore()
+				if nil != err {
+					log.Errorf("restore transfer with error: %s", err)
+					continue
 				}
 
 			default:
