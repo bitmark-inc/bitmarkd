@@ -25,8 +25,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/bitmark-inc/logger"
-
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 
 	"github.com/bitmark-inc/bitmarkd/account"
@@ -52,8 +50,6 @@ const (
 	taggedEOF
 	taggedTransaction
 	taggedProof
-	assetIDString = "0123456789012345678901234567890123456789012345678901234567890123"
-	privateString = "6396dd14d2381e00682feb2a1b3171584361d70495abd33a43d6151a442d1bed"
 )
 
 var (
@@ -70,19 +66,6 @@ var (
 	txUnratifiedData transactionrecord.BitmarkTransferUnratified
 	txUnratifiedID   merkle.Digest
 )
-
-func removeLogger() {
-	os.RemoveAll(loggerFile)
-}
-
-func setupLogger() {
-	_ = logger.Initialise(logger.Configuration{
-		Directory: ".",
-		File:      loggerFile,
-		Size:      50000,
-		Count:     10,
-	})
-}
 
 func init() {
 	seed, _ := account.NewBase58EncodedSeedV2(true)
@@ -160,12 +143,11 @@ func setupBackupFile() {
 
 	// begin of file
 	var count, packed []byte
-	_, _ = f.Write([]byte{byte(taggedBOF)})
+	_, _ = f.Write([]byte{taggedBOF})
 	count = make([]byte, 2)
-	packed = []byte(bofData)
-	binary.BigEndian.PutUint16(count, uint16(len(packed)))
+	binary.BigEndian.PutUint16(count, uint16(len(bofData)))
 	_, _ = f.Write(count)
-	_, _ = f.Write(packed)
+	_, _ = f.Write(bofData)
 
 	// asset issuance
 	issue := transactionrecord.BitmarkIssue{
@@ -176,32 +158,31 @@ func setupBackupFile() {
 	msg, _ := issue.Pack(&owner)
 	issue.Signature = ed25519.Sign(privateKey, msg)
 
-	_, _ = f.Write([]byte{byte(taggedTransaction)})
+	_, _ = f.Write([]byte{taggedTransaction})
 	packed, _ = issue.Pack(&owner)
 	binary.BigEndian.PutUint16(count, uint16(len(packed)))
 	_, _ = f.Write(count)
 	_, _ = f.Write(packed)
 
 	// asset data
-	_, _ = f.Write([]byte{byte(taggedTransaction)})
+	_, _ = f.Write([]byte{taggedTransaction})
 	packed, _ = assetData.Pack(&owner)
 	binary.BigEndian.PutUint16(count, uint16(len(packed)))
 	_, _ = f.Write(count)
 	_, _ = f.Write(packed)
 
-	// transfer unratifierd
-	_, _ = f.Write([]byte{byte(taggedTransaction)})
+	// transfer unratified
+	_, _ = f.Write([]byte{taggedTransaction})
 	packed, _ = txUnratifiedData.Pack(&owner)
 	binary.BigEndian.PutUint16(count, uint16(len(packed)))
 	_, _ = f.Write(count)
 	_, _ = f.Write(packed)
 
 	// end of file
-	_, _ = f.Write([]byte{byte(taggedEOF)})
-	packed = []byte(eofData)
-	binary.BigEndian.PutUint16(count, uint16(len(packed)))
+	_, _ = f.Write([]byte{taggedEOF})
+	binary.BigEndian.PutUint16(count, uint16(len(eofData)))
 	_, _ = f.Write(count)
-	_, _ = f.Write(packed)
+	_, _ = f.Write(eofData)
 }
 
 func teardownDataFile() {
