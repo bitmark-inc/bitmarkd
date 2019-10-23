@@ -113,7 +113,8 @@ restore_loop:
 				}
 
 			case *transactionrecord.BitmarkTransferUnratified,
-				*transactionrecord.BitmarkTransferCountersigned:
+				*transactionrecord.BitmarkTransferCountersigned,
+				*transactionrecord.BitmarkShare:
 
 				restorer, err := NewRestorer(unpacked, transactionHandle, ownerTxHandle, ownerDataHandle, blockOwnerPaymentHandle)
 				if nil != err {

@@ -36,7 +36,8 @@ func NewRestorer(t interface{}, args ...interface{}) (Restorer, error) {
 		return &assetRestoreData{packed: t.(*transactionrecord.AssetData)}, nil
 
 	case *transactionrecord.BitmarkTransferUnratified,
-		*transactionrecord.BitmarkTransferCountersigned:
+		*transactionrecord.BitmarkTransferCountersigned,
+		*transactionrecord.BitmarkShare:
 
 		if 4 != len(args) {
 			return nil, fmt.Errorf("insufficient parameter")
