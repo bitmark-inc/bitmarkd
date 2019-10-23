@@ -142,14 +142,31 @@ func setupBackupFile() {
 	defer f.Close()
 
 	// begin of file
-	var count, packed []byte
+	writeBeginOfFile(f)
+
+	// asset issuance
+	writeAssetIssuance(f)
+
+	// asset data
+	writeAssetData(f)
+
+	// transfer unratified
+	writeTransferUnratified(f)
+
+	// end of file
+	writeEndOfFile(f)
+}
+
+func writeBeginOfFile(f *os.File) {
+	count := make([]byte, 2)
 	_, _ = f.Write([]byte{taggedBOF})
-	count = make([]byte, 2)
 	binary.BigEndian.PutUint16(count, uint16(len(bofData)))
 	_, _ = f.Write(count)
 	_, _ = f.Write(bofData)
+}
 
-	// asset issuance
+func writeAssetIssuance(f *os.File) {
+	count := make([]byte, 2)
 	issue := transactionrecord.BitmarkIssue{
 		AssetId: assetID,
 		Owner:   &owner,
@@ -157,28 +174,33 @@ func setupBackupFile() {
 	}
 	msg, _ := issue.Pack(&owner)
 	issue.Signature = ed25519.Sign(privateKey, msg)
-
 	_, _ = f.Write([]byte{taggedTransaction})
-	packed, _ = issue.Pack(&owner)
+	packed, _ := issue.Pack(&owner)
 	binary.BigEndian.PutUint16(count, uint16(len(packed)))
 	_, _ = f.Write(count)
 	_, _ = f.Write(packed)
+}
 
-	// asset data
+func writeAssetData(f *os.File) {
+	count := make([]byte, 2)
 	_, _ = f.Write([]byte{taggedTransaction})
-	packed, _ = assetData.Pack(&owner)
+	packed, _ := assetData.Pack(&owner)
 	binary.BigEndian.PutUint16(count, uint16(len(packed)))
 	_, _ = f.Write(count)
 	_, _ = f.Write(packed)
+}
 
-	// transfer unratified
+func writeTransferUnratified(f *os.File) {
+	count := make([]byte, 2)
 	_, _ = f.Write([]byte{taggedTransaction})
-	packed, _ = txUnratifiedData.Pack(&owner)
+	packed, _ := txUnratifiedData.Pack(&owner)
 	binary.BigEndian.PutUint16(count, uint16(len(packed)))
 	_, _ = f.Write(count)
 	_, _ = f.Write(packed)
+}
 
-	// end of file
+func writeEndOfFile(f *os.File) {
+	count := make([]byte, 2)
 	_, _ = f.Write([]byte{taggedEOF})
 	binary.BigEndian.PutUint16(count, uint16(len(eofData)))
 	_, _ = f.Write(count)
