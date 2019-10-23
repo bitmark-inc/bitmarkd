@@ -7,6 +7,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/ownership"
 
 	"github.com/bitmark-inc/bitmarkd/merkle"
@@ -44,7 +45,6 @@ type handles struct {
 const (
 	dataFile   = "test.cache"
 	loggerFile = "test.log"
-	testChain  = "testing"
 )
 
 const (
@@ -228,7 +228,7 @@ func setupMocks(t *testing.T) ([]*gomock.Controller, handles) {
 }
 
 func TestLoadFromFileWhenAssetIssuance(t *testing.T) {
-	setup(t, testChain)
+	setup(t, chain.Testing)
 	defer teardown()
 
 	setupBackupFile()
@@ -260,7 +260,7 @@ func TestLoadFromFileWhenAssetIssuance(t *testing.T) {
 }
 
 func TestLoadFromFileWhenAssetData(t *testing.T) {
-	setup(t, testChain)
+	setup(t, chain.Testing)
 	defer teardown()
 
 	setupBackupFile()
@@ -288,7 +288,7 @@ func TestLoadFromFileWhenAssetData(t *testing.T) {
 }
 
 func TestLoadFromFileWhenTransferUnratified(t *testing.T) {
-	setup(t, testChain)
+	setup(t, chain.Testing)
 	defer teardown()
 
 	setupBackupFile()
