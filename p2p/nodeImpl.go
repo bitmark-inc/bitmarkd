@@ -46,8 +46,8 @@ func (n *Node) Setup(configuration *Configuration, version string) error {
 	if err != nil {
 		panic(err)
 	}
-	n.MuticastStream = ps
-	sub, err := n.MuticastStream.Subscribe(multicastingTopic)
+	n.Multicast = ps
+	sub, err := n.Multicast.Subscribe(MulticastingTopic)
 	go n.SubHandler(context.Background(), sub)
 
 	globalData.initialised = true

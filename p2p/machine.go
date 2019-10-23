@@ -172,7 +172,6 @@ func (m *Machine) transitions() bool {
 		m.nextState()
 		m.samples = 0 // zero out the counter
 		mode.Set(mode.Normal)
-		log.Infof("Enter \x1b[33mRebuild state, mode set to normal:%s \x1b[0m", mode.String())
 		stop = true
 	case cStateSampling:
 		log.Infof("Enter \x1b[33mSampling state, mode:%s \x1b[0m", mode.String())

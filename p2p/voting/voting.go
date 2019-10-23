@@ -76,7 +76,6 @@ func NewVoting() Voting {
 
 // SetMinHeight - set minimum height for vote
 func (v *VotingImpl) SetMinHeight(height uint64) {
-	v.log.Infof("minimum height %d\n", height)
 	v.minHeight = height
 }
 

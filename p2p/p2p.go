@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -30,16 +31,16 @@ const (
 	domainTest    = "nodes.test.bitmark.com"
 	//  time interval
 	nodeInitial   = 5 * time.Second // startup delay before first send
-	nodeInterval  = 1 * time.Minute // regular polling time
+	nodeInterval  = 3 * time.Minute // regular polling time
 	lowConn       = 3
 	maxConn       = 20
 	connGraceTime = 30 * time.Second
 )
 
 var (
-	// muticastingTopic
-	multicastingTopic = "/peer/announce/1.0.0"
-	// stream protocols
+	//MulticastingTopic
+	MulticastingTopic = "/multicast/1.0.0"
+	//nodeProtocol
 	nodeProtocol = ma.ProtocolWithCode(ma.P_P2P).Name
 )
 
@@ -78,16 +79,16 @@ const (
 
 //Node  A p2p node
 type Node struct {
-	Version        string
-	NodeType       string
-	Host           p2pcore.Host
-	Announce       []ma.Multiaddr
-	sync.RWMutex             // to allow locking
-	Log            *logger.L // logger
-	Registers      map[string]bool
-	MuticastStream *pubsub.PubSub
-	PreferIPv6     bool
-	PrivateKey     crypto.PrivKey
+	Version      string
+	NodeType     string
+	Host         p2pcore.Host
+	Announce     []ma.Multiaddr
+	sync.RWMutex           // to allow locking
+	Log          *logger.L // logger
+	Registers    map[string]bool
+	Multicast    *pubsub.PubSub
+	PreferIPv6   bool
+	PrivateKey   crypto.PrivKey
 	// for background
 	background *background.T
 	// set once during initialise
@@ -134,33 +135,52 @@ loop:
 		case <-shutdown:
 			break loop
 		case item := <-queue:
-			log.Infof("-><- P2P received commend:%s", item.Command)
+			util.LogInfo(log, util.CoYellow, fmt.Sprintf("-><- P2P received command:%s", item.Command))
 			switch item.Command {
-			case "peer":
-
-				log.Infof("\x1b[32m<<--- ><-get peer\x1b[30m ")
+			case "peer": // only servant broadcast its peer and rpc
 				fallthrough
 			case "rpc":
+				fallthrough
+			case "block":
+				fallthrough
+			case "proof":
+				fallthrough
+			case "transfer":
+				fallthrough
+			case "issues":
+				fallthrough
+			case "assets":
 				if n.NodeType != "client" {
 					p2pMsgPacked, err := PackP2PMessage(nodeChain, item.Command, item.Parameters)
 					if err != nil {
-						log.Errorf("peer command : PackP2PMessage Error")
+						util.LogWarn(log, util.CoLightRed, fmt.Sprintf("Run:PackP2PMessage error:%v", err))
 						continue loop
 					}
-					err = n.MulticastWithBinaryID(p2pMsgPacked, item.Parameters[0])
+					err = n.MulticastCommand(p2pMsgPacked)
 					if err != nil {
-						log.Errorf("Multicast Publish Error: %v\n", err)
+						util.LogWarn(log, util.CoLightRed, fmt.Sprintf("Run:Multicast Publish error:%v", err))
 						continue loop
+					}
+					if item.Command == "peer" {
+						id := item.Parameters[0]
+						if id != nil && len(id) > 0 {
+							displayID, err := peerlib.IDFromBytes(id)
+							if nil == err {
+								util.LogInfo(log, util.CoGreen, fmt.Sprintf("<<-- multicasting PEER : %v", displayID.ShortString()))
+							}
+						}
+					} else {
+						util.LogInfo(log, util.CoGreen, fmt.Sprintf("<<--Multicast Command:%s parameters:%d\n", item.Command, len(item.Parameters)))
 					}
 				}
-			default:
+			//general broadcasting
+			default: //peers to connect
 				if "N1" == item.Command || "N3" == item.Command || "X1" == item.Command || "X2" == item.Command ||
 					"X3" == item.Command || "X4" == item.Command || "X5" == item.Command || "X6" == item.Command ||
 					"X7" == item.Command || "P1" == item.Command || "P2" == item.Command {
 					peerID, err := peerlib.IDFromBytes(item.Parameters[0])
-					log.Infof("Command:%v PeerID%s", item.Command, peerID.String())
 					if err != nil {
-						n.Log.Errorf("Unmarshal peer ID Error:%x", item.Parameters[0])
+						util.LogWarn(log, util.CoLightRed, fmt.Sprintf("Unmarshal peer ID error:%x", item.Parameters[0]))
 						continue loop
 					}
 					pbPeerAddrs := Addrs{}
@@ -168,29 +188,27 @@ loop:
 					maAddrs := util.GetMultiAddrsFromBytes(pbPeerAddrs.Address)
 					if len(maAddrs) > 0 {
 						info, err := peerlib.AddrInfoFromP2pAddr(maAddrs[0])
+						info.ID = peerID
 						if err != nil {
-							log.Warn(err.Error())
+							util.LogWarn(log, util.CoLightRed, fmt.Sprintf("peer Address error:%v", err))
 							continue loop
 						}
 						n.addPeerAddrs(*info)
 						n.connectPeers()
 					}
-				}
+				} // ignore if command is not one of it ie. "ignore:"
 			}
 		case <-delay:
-			delay = time.After(nodeInterval)
-			log.Infof("Node Module Interval")
+			delay = time.After(nodeInterval) // periodical process
 		}
 	}
 }
 
 // Finalise - stop all background tasks
 func Finalise() error {
-
 	if !globalData.initialised {
 		return fault.ErrNotInitialised
 	}
-
 	globalData.Log.Info("shutting down…")
 	globalData.Log.Flush()
 
@@ -198,27 +216,18 @@ func Finalise() error {
 	globalData.background.Stop()
 	// finally...
 	globalData.initialised = false
-
 	globalData.Log.Info("finished")
 	globalData.Log.Flush()
 
 	return nil
 }
 
-//MulticastWithBinaryID muticasts packed message with given id  in binary. Use id=nil if there is no peer ID
-func (n *Node) MulticastWithBinaryID(packedMessage, id []byte) error {
-	if len(id) > 0 {
-		err := n.MuticastStream.Publish(multicastingTopic, packedMessage)
-		if err != nil {
-			n.Log.Errorf("\x1b[31mMulticast Publish Error: %v\x1b[0m", err)
-			return err
-		}
-		displayID, err := peerlib.IDFromBytes(id)
-		if err != nil {
-			n.Log.Errorf("\x1b[31mInavalid ID format:%v\x1b[0m", err)
-			return err
-		}
-		n.Log.Infof("\x1b[32m<<--- multicasting PEER : %v\x1b[0m\n", displayID.ShortString())
+//MulticastCommand muticasts packed message with given id  in binary. Use id=nil if there is no peer ID
+func (n *Node) MulticastCommand(packedMessage []byte) error {
+	err := n.Multicast.Publish(MulticastingTopic, packedMessage)
+	if err != nil {
+		util.LogWarn(n.Log, util.CoLightRed, fmt.Sprintf("MulticastCommand Publish error:%v", err))
+		return err
 	}
 	return nil
 }

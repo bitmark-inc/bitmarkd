@@ -39,6 +39,7 @@ func (p *MetricsPeersVoting) UpdateCandidates() {
 	var candidate P2PCandidatesImpl
 	peerstore := p.watchNode.Host.Peerstore()
 	p.mutex.Lock()
+
 	for _, id := range peerstore.PeersWithAddrs() {
 		if p.watchNode.IsRegister(id) && !util.IDEqual(p.watchNode.Host.ID(), id) {
 			candidate = P2PCandidatesImpl{ID: id}
@@ -54,15 +55,18 @@ func (p *MetricsPeersVoting) UpdateCandidates() {
 					}
 				}
 			}
+			Candidates = append(Candidates, &candidate)
 		}
-		Candidates = append(Candidates, &candidate)
 	}
 	p.Candidates = Candidates
 	p.mutex.Unlock()
-	for _, c := range p.Candidates {
-		p.Log.Debugf("Current candidate ID :%s addr:%v", c.ID, c.Addr)
-	}
-
+	/*
+		if p.Candidates != nil {
+			for _, c := range p.Candidates {
+				p.Log.Debugf("Current candidate ID :%s addr:%v", c.ID, c.Addr)
+			}
+		}
+	*/
 }
 
 //Run  is a Routine to get peer info
@@ -75,13 +79,16 @@ loop:
 		log.Debug("waiting…")
 		select {
 		case <-shutdown:
-			break loop
+			continue loop
 		case <-delay: //update voting metrics
 			delay = time.After(votingCycleInterval)
 			p.UpdateCandidates()
+			if nil == p.Candidates {
+				continue loop
+			}
 			for _, peer := range p.Candidates {
 				go func(id peerlib.ID) {
-					height, err := p.watchNode.QueryBlockHeight(peer.ID)
+					height, err := p.watchNode.QueryBlockHeight(id)
 					if err != nil {
 						p.Log.Errorf("\x1b[31mRun QueryBlockHeight Error : %v\x1b[0m", err)
 						return

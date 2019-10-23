@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
 )
@@ -16,7 +15,7 @@ func (n *Node) connectPeers() {
 loop:
 	for _, peerID := range n.Host.Peerstore().PeersWithAddrs() {
 		peerInfo := n.Host.Peerstore().PeerInfo(peerID)
-		n.Log.Infof("connect to peer[%s] %s... ", peerInfo.ID, util.PrintMaAddrs(peerInfo.Addrs))
+		//n.Log.Infof("connect to peer[%s] %s... ", peerInfo.ID, util.PrintMaAddrs(peerInfo.Addrs))
 		if len(peerInfo.Addrs) == 0 {
 			n.Log.Infof("no Addr: %s", peerID)
 			continue loop

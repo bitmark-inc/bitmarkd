@@ -84,7 +84,7 @@ func TestBroadcast(t *testing.T) {
 
 	// nothing listening so these messages should be dropped
 	for _, item := range items {
-		messagebus.Bus.Broadcast.Send("ignored:" + item.Command)
+		messagebus.Bus.P2P.Send("ignored:" + item.Command)
 	}
 
 	// create some listeners
@@ -129,18 +129,18 @@ func TestBroadcast(t *testing.T) {
 	// all listening so one copy of each messages should be received
 	for _, item := range items {
 		for i := 0; i < 10; i += 1 {
-			messagebus.Bus.Broadcast.Send(item.Command)
+			messagebus.Bus.P2P.Send(item.Command)
 		}
 	}
 
 	for _, item := range items {
-		messagebus.Bus.Broadcast.Send(item.Command)
+		messagebus.Bus.P2P.Send(item.Command)
 	}
 
 	// wait for at least one item removed from all queues
 	wgFirst.Wait()
 
-	messagebus.Bus.Broadcast.Send(DONE)
+	messagebus.Bus.P2P.Send(DONE)
 
 	// wait for final completion
 	wgStop.Wait()
@@ -169,14 +169,14 @@ func TestQueueOverflow(t *testing.T) {
 		c := cmd[rand.Intn(len(cmd))]
 		p := make([]byte, rand.Intn(1024))
 		rand.Read(p)
-		messagebus.Bus.Broadcast.Send(c, p)
+		messagebus.Bus.P2P.Send(c, p)
 	}
 
 	if len(queue) >= queueSize {
 		t.Fatal("queue was filled by normal messages")
 	}
 
-	messagebus.Bus.Broadcast.Send("block", []byte{0x11, 0x99})
+	messagebus.Bus.P2P.Send("block", []byte{0x11, 0x99})
 
 	if len(queue) != queueSize {
 		t.Fatal("queue could not accept block")

@@ -108,7 +108,7 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 	// if data to send
 	if 0 != len(packedAssets) {
 		// announce transaction block to other peers
-		messagebus.Bus.Broadcast.Send("assets", packedAssets)
+		messagebus.Bus.P2P.Send("assets", packedAssets)
 	}
 
 	if 0 != len(packedIssues) {
@@ -131,7 +131,7 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 
 		// announce transaction block to other peers
 		if !duplicate {
-			messagebus.Bus.Broadcast.Send("issues", packedIssues, util.ToVarint64(0))
+			messagebus.Bus.P2P.Send("issues", packedIssues, util.ToVarint64(0))
 		}
 	}
 
@@ -193,7 +193,7 @@ func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) er
 	packed = append(packed, nonce...)
 
 	log.Infof("broadcast proof: %x", packed)
-	messagebus.Bus.Broadcast.Send("proof", packed)
+	messagebus.Bus.P2P.Send("proof", packed)
 
 	// check if proof matches
 	reply.Status = reservoir.TryProof(arguments.PayId, nonce)

@@ -20,7 +20,7 @@ import (
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 )
 
-const maxBytesRecieve = 2000
+const maxBytesRecieve = 3000
 
 //ListenHandler is a host Listening  handler
 type ListenHandler struct {
@@ -48,7 +48,6 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
 	//nodeChain := mode.ChainName()
 	nodeChain := "local"
-	log.Infof("chain Name:%v", nodeChain)
 	req := make([]byte, maxBytesRecieve)
 	reqLen, err := rw.Read(req)
 
@@ -142,7 +141,6 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 			} else {
 				err = e
 			}
-			log.Info(fmt.Sprintf("GetBlockHash:\x1b[32mLocal Digest:%v\x1b[0m>", d.String()))
 			if err != nil {
 				listenerSendError(rw, nodeChain, err, "-->Query Blockhash  Information", log)
 				return
@@ -171,16 +169,16 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 		} else {
 			log.Info(fmt.Sprintf("register:\x1b[32m Client registered:%s\x1b[0m>", reqID.String()))
 		}
-		log.Info(fmt.Sprintf("register:\x1b[32m requestID  :%s\x1b[0m>", reqID.ShortString()))
+		log.Debug(fmt.Sprintf("register:\x1b[32m requestID  :%s\x1b[0m>", reqID.ShortString()))
 		randPeerID, randListeners, randTs, err := announce.GetRandom(reqID)
 		var randData [][]byte
 
 		if nil != err || util.IDEqual(reqID, randPeerID) { // No Random Node sendback this Node
 			randData, err = PackRegisterData(nodeChain, fn, nType, reqID, reqMaAddrs, time.Now())
-			log.Info(fmt.Sprintf("register:\x1b[32m No Random Request PeerID:%s\x1b[0m>", reqID.ShortString()))
+			log.Debug(fmt.Sprintf("register:\x1b[32m No Random Request PeerID:%s\x1b[0m>", reqID.ShortString()))
 		} else {
 			randData, err = PackRegisterData(nodeChain, fn, "servant", randPeerID, randListeners, randTs)
-			log.Info(fmt.Sprintf("register:\x1b[32m Random  PeerID:%s\x1b[0m>", randPeerID.ShortString()))
+			log.Debug(fmt.Sprintf("register:\x1b[32m Random  PeerID:%s\x1b[0m>", randPeerID.ShortString()))
 		}
 
 		p2pMessagePacked, err := proto.Marshal(&P2PMessage{Data: randData})

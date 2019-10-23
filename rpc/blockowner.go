@@ -122,7 +122,7 @@ func (bitmark *BlockOwner) Transfer(transfer *transactionrecord.BlockOwnerTransf
 
 	// announce transaction block to other peers
 	if !duplicate {
-		messagebus.Bus.Broadcast.Send("transfer", packedTransfer)
+		messagebus.Bus.P2P.Send("transfer", packedTransfer)
 	}
 
 	return nil

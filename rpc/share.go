@@ -80,7 +80,7 @@ func (share *Share) Create(bmfr *transactionrecord.BitmarkShare, reply *ShareCre
 
 	// announce transaction block to other peers
 	if !duplicate {
-		messagebus.Bus.Broadcast.Send("transfer", packed)
+		messagebus.Bus.P2P.Send("transfer", packed)
 	}
 
 	return nil
@@ -208,7 +208,7 @@ func (share *Share) Grant(arguments *transactionrecord.ShareGrant, reply *ShareG
 
 	// announce transaction block to other peers
 	if !duplicate {
-		messagebus.Bus.Broadcast.Send("transfer", packed)
+		messagebus.Bus.P2P.Send("transfer", packed)
 	}
 
 	return nil
@@ -282,7 +282,7 @@ func (share *Share) Swap(arguments *transactionrecord.ShareSwap, reply *ShareSwa
 
 	// announce transaction block to other peers
 	if !duplicate {
-		messagebus.Bus.Broadcast.Send("transfer", packed)
+		messagebus.Bus.P2P.Send("transfer", packed)
 	}
 
 	return nil

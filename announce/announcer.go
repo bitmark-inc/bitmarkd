@@ -136,7 +136,7 @@ func (ann *announcer) process() {
 	// announce this nodes IP and ports to other peers
 	if globalData.rpcsSet {
 		log.Debugf("send rpc: %x", globalData.fingerprint)
-		messagebus.Bus.Broadcast.Send("rpc", globalData.fingerprint[:], globalData.rpcs, timestamp)
+		messagebus.Bus.P2P.Send("rpc", globalData.fingerprint[:], globalData.rpcs, timestamp)
 	}
 	if globalData.peerSet {
 		log.Debugf("send peer: %x", globalData.peerID)

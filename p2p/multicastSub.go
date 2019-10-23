@@ -13,6 +13,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
+	"github.com/bitmark-inc/bitmarkd/util"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -32,18 +33,18 @@ loop:
 		}
 		chain, fn, parameters, err := UnPackP2PMessage(msg.Data)
 		if chain != nodeChain {
-			log.Errorf("-->>Different Chain Error: this chain %v peer chain %v", nodeChain, chain)
+			util.LogError(log, util.CoRed, fmt.Sprintf("-->>Different Chain Error: this chain %v peer chain %v", nodeChain, chain))
 			continue loop
 		}
 		dataLength := len(parameters)
-
+		util.LogInfo(log, util.CoGreen, fmt.Sprintf("-->>sub Recieve: chain:%s, fn=%s, len(param)=%d", chain, fn, len(parameters)))
 		switch fn {
 		case "block":
 			if dataLength < 1 {
-				log.Debugf("-->>block with too few data: %d items", dataLength)
+				util.LogDebug(log, util.CoRed, fmt.Sprintf("-->>block with too few data: %d items", dataLength))
 				continue loop
 			}
-			log.Infof("-->>received block: %x", parameters[0])
+			util.LogDebug(log, util.CoRed, fmt.Sprintf("-->>received block: %x", parameters[0]))
 			if !mode.Is(mode.Normal) {
 				err := fault.ErrNotAvailableDuringSynchronise
 				log.Debugf("-->>failed assets: error: %s", err)
@@ -53,18 +54,19 @@ loop:
 			}
 		case "assets":
 			if dataLength < 1 {
-				log.Debugf("-->>assets with too few data: %d items", dataLength)
+				log.Warnf("\x1b[31m-->>assets with too few data: %d items\x1b[0m", dataLength)
 				continue loop
 			}
-			log.Infof("-->>received assets: %x", parameters[0])
+			log.Infof("\x1b[32m-->>received assets: %x\x1b[0m", parameters[0])
 			err := processAssets(parameters[0])
 			if nil != err {
-				log.Debugf("-->>failed assets: error: %s", err)
+				log.Warnf("\x1b[31m-->>failed assets: error: %s\x1b[0m", err)
 				continue loop
 			}
+			log.Infof("%assets: processAssets Succesful%s", util.CoGreen, util.CoReset)
 		case "issues":
 			if dataLength < 1 {
-				log.Debugf("-->>issues with too few data: %d items", dataLength)
+				log.Warnf("\x1b[31m-->>issues with too few data: %d items\x1b[0m", dataLength)
 				continue loop
 			}
 			log.Infof("-->>received issues: %x", parameters[0])
@@ -93,16 +95,17 @@ loop:
 			log.Infof("-->>received proof: %x", parameters[0])
 			err := processProof(parameters[0])
 			if nil != err {
-				log.Debugf("-->>failed proof: error: %s", err)
+				log.Warnf("-->>failed proof: error: %s", err)
 				continue loop
 			}
 		case "rpc":
+
 			if dataLength < 3 {
-				log.Debugf("-->>rpc with too few data: %d items", dataLength)
+				log.Warnf("-->>rpc with too few data: %d items", dataLength)
 				continue loop
 			}
 			if 8 != len(parameters[2]) {
-				log.Debug("-->>rpc with invalid timestamp")
+				log.Warnf("-->>rpc with invalid timestamp")
 				continue loop
 			}
 			messagebus.Bus.Announce.Send("addrpc", parameters[0], parameters[1], parameters[2])
@@ -116,11 +119,11 @@ loop:
 				continue loop
 			}
 			id, err := peer.IDFromBytes(parameters[0])
-			log.Infof("\x1b[32m-->>sub Recieve: %v  ID:%s\x1b[0m \n", fn, id.ShortString())
 			if err != nil {
 				log.Error("\x1b[31m-->>invalid id in requesting\x1b[0m")
 				continue loop
 			}
+			log.Infof("\x1b[32mSubHandler fn=%s Send to Announce  ID:%s\x1b[0m \n", fn, id.ShortString())
 			messagebus.Bus.Announce.Send("addpeer", parameters[0], parameters[1], parameters[2])
 		default:
 			log.Infof("-->>unreganized Command:%s ", fn)

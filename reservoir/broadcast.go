@@ -77,7 +77,7 @@ func (r *rebroadcaster) process() {
 
 // send the transaction
 func broadcastTransaction(item *transactionData) {
-	messagebus.Bus.Broadcast.Send("transfer", item.packed)
+	messagebus.Bus.P2P.Send("transfer", item.packed)
 }
 
 // concatenate all transactions and send
@@ -86,7 +86,7 @@ func broadcastPaidIssue(item *issuePaymentData) {
 	for _, tx := range item.txs {
 		packedIssues = append(packedIssues, tx.packed...)
 	}
-	messagebus.Bus.Broadcast.Send("issues", packedIssues)
+	messagebus.Bus.P2P.Send("issues", packedIssues)
 }
 
 // concatenate pending assets and issues, then send
@@ -107,15 +107,15 @@ func broadcastFreeIssue(item *issueFreeData) {
 		packedIssues = append(packedIssues, tx.packed...)
 	}
 	if len(packedAssets) > 0 {
-		messagebus.Bus.Broadcast.Send("assets", packedAssets)
+		messagebus.Bus.P2P.Send("assets", packedAssets)
 	}
-	messagebus.Bus.Broadcast.Send("issues", packedIssues)
+	messagebus.Bus.P2P.Send("issues", packedIssues)
 
 	// if the issue is a free issue, broadcast the proof
 	if nil != item.difficulty {
 		packed := make([]byte, len(item.payId), len(item.payId)+len(item.nonce))
 		copy(packed, item.payId[:])
 		packed = append(packed, item.nonce[:]...)
-		messagebus.Bus.Broadcast.Send("proof", packed)
+		messagebus.Bus.P2P.Send("proof", packed)
 	}
 }
