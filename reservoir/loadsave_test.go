@@ -236,63 +236,25 @@ func finaliseMockController(ctls []*gomock.Controller) {
 	}
 }
 
+func setupAssetIssuanceBackupFile() {
+	f, _ := os.OpenFile(dataFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
+	defer f.Close()
+
+	// begin of file
+	writeBeginOfFile(f)
+
+	// asset issuance
+	writeAssetIssuance(f)
+
+	// end of file
+	writeEndOfFile(f)
+}
+
 func TestLoadFromFileWhenAssetIssuance(t *testing.T) {
 	setup(t, chain.Testing)
 	defer teardown()
 
-	setupBackupFile()
-	defer teardownDataFile()
-
-	initPackages()
-	defer asset.Finalise()
-
-	ctls, mockHandles := setupMocks(t)
-	defer finaliseMockController(ctls)
-
-	mockHandles.asset.EXPECT().Has(gomock.Any()).Return(true).AnyTimes()
-	mockHandles.asset.EXPECT().GetNB(gomock.Any()).Return(uint64(2), []byte("exist")).Times(1)
-
-	data, _ := currencyMap.Pack(true)
-	mockHandles.blockOwnerPayment.EXPECT().Get(gomock.Any()).Return(data).Times(1)
-
-	mockHandles.transaction.EXPECT().GetNB(gomock.Any()).Return(uint64(2), []byte{}).AnyTimes()
-
-	_ = reservoir.Initialise(dataFile)
-	_ = reservoir.LoadFromFile(mockHandles.asset, mockHandles.blockOwnerPayment, mockHandles.transaction, mockHandles.ownerTx, storage.Pool.OwnerData)
-
-	state := reservoir.TransactionStatus(assetTxID)
-	assert.Equal(t, reservoir.StatePending, state, "wrong asset state")
-}
-
-func TestLoadFromFileWhenAssetData(t *testing.T) {
-	setup(t, chain.Testing)
-	defer teardown()
-
-	setupBackupFile()
-	defer teardownDataFile()
-
-	initPackages()
-	defer asset.Finalise()
-
-	ctls, mockHandles := setupMocks(t)
-	defer finaliseMockController(ctls)
-
-	mockHandles.asset.EXPECT().Has(gomock.Any()).Return(false).AnyTimes()
-
-	mockHandles.transaction.EXPECT().GetNB(gomock.Any()).Return(uint64(2), []byte{}).AnyTimes()
-
-	_ = reservoir.Initialise(dataFile)
-	_ = reservoir.LoadFromFile(mockHandles.asset, mockHandles.blockOwnerPayment, mockHandles.transaction, mockHandles.ownerTx, storage.Pool.OwnerData)
-
-	result := asset.Exists(assetData.AssetId(), mockHandles.asset)
-	assert.Equal(t, true, result, "wrong asset cache")
-}
-
-func TestLoadFromFileWhenTransferUnratified(t *testing.T) {
-	setup(t, chain.Testing)
-	defer teardown()
-
-	setupBackupFile()
+	setupAssetIssuanceBackupFile()
 	defer teardownDataFile()
 
 	initPackages()
@@ -302,7 +264,80 @@ func TestLoadFromFileWhenTransferUnratified(t *testing.T) {
 	defer finaliseMockController(ctls)
 
 	mockHandles.asset.EXPECT().Has(gomock.Any()).Return(true).Times(1)
-	mockHandles.asset.EXPECT().GetNB(gomock.Any()).Return(uint64(2), []byte("exist")).AnyTimes()
+	mockHandles.asset.EXPECT().GetNB(gomock.Any()).Return(uint64(2), []byte("exist")).Times(1)
+
+	data, _ := currencyMap.Pack(true)
+	mockHandles.blockOwnerPayment.EXPECT().Get(gomock.Any()).Return(data).Times(1)
+
+	_ = reservoir.Initialise(dataFile)
+	_ = reservoir.LoadFromFile(mockHandles.asset, mockHandles.blockOwnerPayment, mockHandles.transaction, mockHandles.ownerTx, storage.Pool.OwnerData)
+
+	state := reservoir.TransactionStatus(assetTxID)
+	assert.Equal(t, reservoir.StatePending, state, "wrong asset state")
+}
+
+func setupAssetDataBackupFile() {
+	f, _ := os.OpenFile(dataFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
+	defer f.Close()
+
+	// begin of file
+	writeBeginOfFile(f)
+
+	// asset data
+	writeAssetData(f)
+
+	// end of file
+	writeEndOfFile(f)
+}
+
+func TestLoadFromFileWhenAssetData(t *testing.T) {
+	setup(t, chain.Testing)
+	defer teardown()
+
+	setupAssetDataBackupFile()
+	defer teardownDataFile()
+
+	initPackages()
+	defer asset.Finalise()
+
+	ctls, mockHandles := setupMocks(t)
+	defer finaliseMockController(ctls)
+
+	mockHandles.asset.EXPECT().Has(gomock.Any()).Return(false).Times(1)
+
+	_ = reservoir.Initialise(dataFile)
+	_ = reservoir.LoadFromFile(mockHandles.asset, mockHandles.blockOwnerPayment, mockHandles.transaction, mockHandles.ownerTx, storage.Pool.OwnerData)
+
+	result := asset.Exists(assetData.AssetId(), mockHandles.asset)
+	assert.Equal(t, true, result, "wrong asset cache")
+}
+
+func setupTransferUnratifiedBackupFile() {
+	f, _ := os.OpenFile(dataFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
+	defer f.Close()
+
+	// begin of file
+	writeBeginOfFile(f)
+
+	// transfer unratified
+	writeTransferUnratified(f)
+
+	// end of file
+	writeEndOfFile(f)
+}
+
+func TestLoadFromFileWhenTransferUnratified(t *testing.T) {
+	setup(t, chain.Testing)
+	defer teardown()
+
+	setupTransferUnratifiedBackupFile()
+	defer teardownDataFile()
+
+	initPackages()
+	defer asset.Finalise()
+
+	ctls, mockHandles := setupMocks(t)
+	defer finaliseMockController(ctls)
 
 	data, _ := currencyMap.Pack(true)
 	mockHandles.blockOwnerPayment.EXPECT().Get(gomock.Any()).Return(data).AnyTimes()
@@ -312,8 +347,8 @@ func TestLoadFromFileWhenTransferUnratified(t *testing.T) {
 		fmt.Printf("asset pack err: %s\n", err)
 	}
 
-	mockHandles.transaction.EXPECT().GetNB(gomock.Any()).Return(uint64(2), packed).AnyTimes()
-	mockHandles.transaction.EXPECT().Has(gomock.Any()).Return(false).AnyTimes()
+	mockHandles.transaction.EXPECT().GetNB(gomock.Any()).Return(uint64(2), packed).Times(1)
+	mockHandles.transaction.EXPECT().Has(gomock.Any()).Return(false).Times(1)
 
 	mockHandles.ownerTx.EXPECT().Get(gomock.Any()).Return([]byte("1")).Times(1)
 
@@ -334,7 +369,7 @@ func TestLoadFromFileWhenTransferUnratified(t *testing.T) {
 		0xbe, 0xfb, 0x4c, 0x41, 0x63, 0x3a, 0x7e, 0x39,
 		0xef,
 	}
-	mockHandles.ownerData.EXPECT().Get(gomock.Any()).Return(packedOwnerData).AnyTimes()
+	mockHandles.ownerData.EXPECT().Get(gomock.Any()).Return(packedOwnerData).Times(1)
 
 	_ = reservoir.Initialise(dataFile)
 	_ = reservoir.LoadFromFile(mockHandles.asset, mockHandles.blockOwnerPayment, mockHandles.transaction, mockHandles.ownerTx, mockHandles.ownerData)
