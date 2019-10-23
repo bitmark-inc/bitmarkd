@@ -144,7 +144,7 @@ func verifyTransfer(transfer transactionrecord.BitmarkTransfer, transactionHandl
 	var currentOwner *account.Account
 	var previousTransfer transactionrecord.BitmarkTransfer
 
-	// ensure that the transaction is a valid chain transition
+	// ensure that the transaction is a valid testChain transition
 	switch tx := previousTransaction.(type) {
 	case *transactionrecord.BitmarkIssue:
 		// ensure link to correct transfer type
