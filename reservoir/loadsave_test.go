@@ -208,6 +208,12 @@ func setupMocks(t *testing.T) ([]*gomock.Controller, handles) {
 	}
 }
 
+func finaliseMockController(ctls []*gomock.Controller) {
+	for _, c := range ctls {
+		c.Finish()
+	}
+}
+
 func TestLoadFromFileWhenAssetIssuance(t *testing.T) {
 	setup(t, chain.Testing)
 	defer teardown()
@@ -219,11 +225,7 @@ func TestLoadFromFileWhenAssetIssuance(t *testing.T) {
 	defer asset.Finalise()
 
 	ctls, mockHandles := setupMocks(t)
-	defer func(ctls []*gomock.Controller) {
-		for _, c := range ctls {
-			c.Finish()
-		}
-	}(ctls)
+	defer finaliseMockController(ctls)
 
 	mockHandles.asset.EXPECT().Has(gomock.Any()).Return(true).AnyTimes()
 	mockHandles.asset.EXPECT().GetNB(gomock.Any()).Return(uint64(2), []byte("exist")).Times(1)
@@ -251,11 +253,7 @@ func TestLoadFromFileWhenAssetData(t *testing.T) {
 	defer asset.Finalise()
 
 	ctls, mockHandles := setupMocks(t)
-	defer func(ctls []*gomock.Controller) {
-		for _, c := range ctls {
-			c.Finish()
-		}
-	}(ctls)
+	defer finaliseMockController(ctls)
 
 	mockHandles.asset.EXPECT().Has(gomock.Any()).Return(false).AnyTimes()
 
@@ -279,11 +277,7 @@ func TestLoadFromFileWhenTransferUnratified(t *testing.T) {
 	defer asset.Finalise()
 
 	ctls, mockHandles := setupMocks(t)
-	defer func(ctls []*gomock.Controller) {
-		for _, c := range ctls {
-			c.Finish()
-		}
-	}(ctls)
+	defer finaliseMockController(ctls)
 
 	mockHandles.asset.EXPECT().Has(gomock.Any()).Return(true).Times(1)
 	mockHandles.asset.EXPECT().GetNB(gomock.Any()).Return(uint64(2), []byte("exist")).AnyTimes()
