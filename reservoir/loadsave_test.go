@@ -117,6 +117,7 @@ func init() {
 			PublicKey: publicKey2,
 		},
 	}
+
 	// payment
 	currencyMap = make(currency.Map)
 	currencyMap[currency.Bitcoin] = "2N7uK4otZGYDUDNEQ3Yr6hPPrs49BHQA32L"
@@ -215,7 +216,7 @@ func init() {
 	}
 	txShareID = p2.MakeLink()
 
-	// grant
+	// grant share
 	grantData = transactionrecord.ShareGrant{
 		ShareId:          txShareID,
 		Quantity:         100,
@@ -243,7 +244,7 @@ func init() {
 	}
 	grantID = p2.MakeLink()
 
-	// swap
+	// swap share
 	swapData = transactionrecord.ShareSwap{
 		ShareIdOne:       txShareID,
 		QuantityOne:      shareQuantity,

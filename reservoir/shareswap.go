@@ -42,6 +42,9 @@ type verifiedSwapInfo struct {
 
 // StoreSwap - verify and store a swap request
 func StoreSwap(swap *transactionrecord.ShareSwap, shareQuantityHandle storage.Handle, shareHandle storage.Handle, ownerDataHandle storage.Handle, blockOwnerPaymentHandle storage.Handle) (*SwapInfo, bool, error) {
+	if nil == shareQuantityHandle || nil == shareHandle || nil == ownerDataHandle || nil == blockOwnerPaymentHandle {
+		return nil, false, fault.NilPointer
+	}
 
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -137,6 +140,10 @@ func StoreSwap(swap *transactionrecord.ShareSwap, shareQuantityHandle storage.Ha
 
 // CheckSwapBalances - check sufficient balance on both accounts to be able to execute a swap request
 func CheckSwapBalances(trx storage.Transaction, swap *transactionrecord.ShareSwap, shareQuantityHandle storage.Handle) (uint64, uint64, error) {
+	if nil == shareQuantityHandle {
+		return 0, 0, fault.NilPointer
+	}
+
 	// check incoming quantity
 	if 0 == swap.QuantityOne || 0 == swap.QuantityTwo {
 		return 0, 0, fault.ShareQuantityTooSmall
@@ -175,6 +182,9 @@ func CheckSwapBalances(trx storage.Transaction, swap *transactionrecord.ShareSwa
 // verify that a swap is ok
 // ensure lock is held before calling
 func verifySwap(swap *transactionrecord.ShareSwap, shareQuantityHandle storage.Handle, shareHandle storage.Handle, ownerDataHandle storage.Handle) (*verifiedSwapInfo, bool, error) {
+	if nil == shareQuantityHandle || nil == shareHandle || nil == ownerDataHandle {
+		return nil, false, fault.NilPointer
+	}
 
 	height := blockheader.Height()
 	if swap.BeforeBlock <= height {

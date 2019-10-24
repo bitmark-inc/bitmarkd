@@ -44,6 +44,9 @@ type IssueInfo struct {
 // previous set - this is to allow for multiple submission from client
 // without receiving a duplicate transaction error
 func StoreIssues(issues []*transactionrecord.BitmarkIssue, assetHandle storage.Handle, blockOwnerPaymentHandle storage.Handle) (*IssueInfo, bool, error) {
+	if nil == assetHandle || nil == blockOwnerPaymentHandle {
+		return nil, false, fault.NilPointer
+	}
 
 	count := len(issues)
 	if count > MaximumIssues {

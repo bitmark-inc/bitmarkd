@@ -41,6 +41,9 @@ type verifiedTransferInfo struct {
 
 // StoreTransfer - verify and store a transfer request
 func StoreTransfer(transfer transactionrecord.BitmarkTransfer, transactionHandle storage.Handle, ownerTxHandle storage.Handle, ownerDataHandle storage.Handle, blockOwnerPaymentHandle storage.Handle) (*TransferInfo, bool, error) {
+	if nil == transactionHandle || nil == ownerTxHandle || nil == ownerDataHandle || nil == blockOwnerPaymentHandle {
+		return nil, false, fault.NilPointer
+	}
 
 	globalData.RLock()
 	defer globalData.RUnlock()

@@ -22,6 +22,9 @@ type PaymentSegment [currency.Count]*transactionrecord.Payment
 
 // get payment record from a specific block given the blocks 8 byte big endian key
 func getPayments(transferBlockNumber uint64, issueBlockNumber uint64, previousTransfer transactionrecord.BitmarkTransfer, blockOwnerPaymentHandle storage.Handle) []transactionrecord.PaymentAlternative {
+	if nil == blockOwnerPaymentHandle {
+		return []transactionrecord.PaymentAlternative{}
+	}
 
 	tKey := make([]byte, 8)
 	binary.BigEndian.PutUint64(tKey, transferBlockNumber)
@@ -82,7 +85,10 @@ func getPayments(transferBlockNumber uint64, issueBlockNumber uint64, previousTr
 }
 
 // get a payment record from a specific block given the blocks 8 byte big endian key
-func getPayment(blockNumberKey []byte, handle storage.Handle) *PaymentSegment {
+func getPayment(blockNumberKey []byte, blockOwnerPaymentHandle storage.Handle) *PaymentSegment {
+	if nil == blockOwnerPaymentHandle {
+		return nil
+	}
 
 	if 8 != len(blockNumberKey) {
 		logger.Panicf("payment.getPayment: block number need 8 bytes: %x", blockNumberKey)
@@ -93,7 +99,7 @@ func getPayment(blockNumberKey []byte, handle storage.Handle) *PaymentSegment {
 		return nil
 	}
 
-	paymentData := handle.Get(blockNumberKey)
+	paymentData := blockOwnerPaymentHandle.Get(blockNumberKey)
 	if nil == paymentData {
 		logger.Panicf("payment.getPayment: no block payment data for block number: %x", blockNumberKey)
 	}
