@@ -51,7 +51,6 @@ const (
 	taggedBOF byte = iota
 	taggedEOF
 	taggedTransaction
-	taggedProof
 )
 
 var (
