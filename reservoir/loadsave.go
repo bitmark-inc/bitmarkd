@@ -35,9 +35,20 @@ const (
 // exact match is required
 var bofData = []byte("bitmark-cache v1.0")
 
+// Handles - storage handles used when restore from cache file
+type Handles struct {
+	Assets            storage.Handle
+	BlockOwnerPayment storage.Handle
+	Transaction       storage.Handle
+	OwnerTx           storage.Handle
+	OwnerData         storage.Handle
+	Share             storage.Handle
+	ShareQuantity     storage.Handle
+}
+
 // LoadFromFile - load transactions from file
 // called later when system is able to handle the tx and proofs
-func LoadFromFile(assetHandle, blockOwnerPaymentHandle, transactionHandle, ownerTxHandle, ownerDataHandle, shareQuantityHandle, shareHandle storage.Handle) error {
+func LoadFromFile(handles Handles) error {
 	Disable()
 	defer Enable()
 
@@ -100,7 +111,7 @@ restore_loop:
 				}
 
 			case *transactionrecord.BitmarkIssue:
-				restorer, err := NewRestorer(unpacked, packed, assetHandle, blockOwnerPaymentHandle)
+				restorer, err := NewRestorer(unpacked, packed, handles.Assets, handles.BlockOwnerPayment)
 				if nil != err {
 					log.Errorf("create issue restorer with error: %s", err)
 					continue
@@ -115,7 +126,7 @@ restore_loop:
 				*transactionrecord.BitmarkTransferCountersigned,
 				*transactionrecord.BitmarkShare:
 
-				restorer, err := NewRestorer(unpacked, transactionHandle, ownerTxHandle, ownerDataHandle, blockOwnerPaymentHandle)
+				restorer, err := NewRestorer(unpacked, handles.Transaction, handles.OwnerTx, handles.OwnerData, handles.BlockOwnerPayment)
 				if nil != err {
 					log.Errorf("create transfer restorer with error: %s", err)
 					continue
@@ -127,7 +138,7 @@ restore_loop:
 				}
 
 			case *transactionrecord.ShareGrant:
-				restorer, err := NewRestorer(unpacked, shareQuantityHandle, shareHandle, ownerDataHandle, blockOwnerPaymentHandle)
+				restorer, err := NewRestorer(unpacked, handles.ShareQuantity, handles.Share, handles.OwnerData, handles.BlockOwnerPayment)
 				if nil != err {
 					log.Errorf("create grant restorer with error: %s", err)
 					continue
@@ -139,7 +150,7 @@ restore_loop:
 				}
 
 			case *transactionrecord.ShareSwap:
-				restorer, err := NewRestorer(unpacked, shareQuantityHandle, shareHandle, ownerDataHandle, blockOwnerPaymentHandle)
+				restorer, err := NewRestorer(unpacked, handles.ShareQuantity, handles.Share, handles.OwnerData, handles.BlockOwnerPayment)
 				if nil != err {
 					log.Errorf("create swap restorer with error: %s", err)
 					continue
