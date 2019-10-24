@@ -82,7 +82,8 @@ restore_loop:
 	for {
 		tag, packed, err := readRecord(f)
 		if nil != err {
-			continue
+			log.Errorf("read record with error: %s\n", err)
+			continue restore_loop
 		}
 
 		switch tag {
@@ -97,73 +98,15 @@ restore_loop:
 				continue restore_loop
 			}
 
-			switch tx := unpacked.(type) {
+			restorer, err := NewRestorer(unpacked, packed, handles)
+			if nil != err {
+				log.Errorf("create asset restorer with error: %s", err)
+				continue restore_loop
+			}
 
-			case *transactionrecord.AssetData:
-				restorer, err := NewRestorer(unpacked)
-				if nil != err {
-					log.Errorf("create asset restorer with error: %s", err)
-					continue
-				}
-				err = restorer.Restore()
-				if nil != err {
-					continue
-				}
-
-			case *transactionrecord.BitmarkIssue:
-				restorer, err := NewRestorer(unpacked, packed, handles.Assets, handles.BlockOwnerPayment)
-				if nil != err {
-					log.Errorf("create issue restorer with error: %s", err)
-					continue
-				}
-				err = restorer.Restore()
-				if nil != err {
-					log.Errorf("restore issue with error: %s", err)
-					continue
-				}
-
-			case *transactionrecord.BitmarkTransferUnratified,
-				*transactionrecord.BitmarkTransferCountersigned,
-				*transactionrecord.BitmarkShare:
-
-				restorer, err := NewRestorer(unpacked, handles.Transaction, handles.OwnerTx, handles.OwnerData, handles.BlockOwnerPayment)
-				if nil != err {
-					log.Errorf("create transfer restorer with error: %s", err)
-					continue
-				}
-				err = restorer.Restore()
-				if nil != err {
-					log.Errorf("restore transfer with error: %s", err)
-					continue
-				}
-
-			case *transactionrecord.ShareGrant:
-				restorer, err := NewRestorer(unpacked, handles.ShareQuantity, handles.Share, handles.OwnerData, handles.BlockOwnerPayment)
-				if nil != err {
-					log.Errorf("create grant restorer with error: %s", err)
-					continue
-				}
-				err = restorer.Restore()
-				if nil != err {
-					log.Errorf("restore grant with error: %s", err)
-					continue
-				}
-
-			case *transactionrecord.ShareSwap:
-				restorer, err := NewRestorer(unpacked, handles.ShareQuantity, handles.Share, handles.OwnerData, handles.BlockOwnerPayment)
-				if nil != err {
-					log.Errorf("create swap restorer with error: %s", err)
-					continue
-				}
-				err = restorer.Restore()
-				if nil != err {
-					log.Errorf("restore swap with error: %s", err)
-					continue
-				}
-
-			default:
-				log.Errorf("read invalid transaction: %+v", tx)
-				return fmt.Errorf("read invalid transaction")
+			err = restorer.Restore()
+			if nil != err {
+				continue restore_loop
 			}
 
 		case taggedProof:
@@ -178,8 +121,10 @@ restore_loop:
 			TryProof(payId, nonce)
 
 		default:
-			log.Errorf("read invalid tag: 0x%02x", tag)
-			return fmt.Errorf("read invalid tag: 0x%02x", tag)
+			// in case any unsupported tag exist
+			msg := fmt.Errorf("abort, read invalid tag: 0x%02x", tag)
+			log.Error(msg.Error())
+			return msg
 		}
 	}
 	log.Info("restore completed")

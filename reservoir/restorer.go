@@ -20,72 +20,59 @@ type Restorer interface {
 }
 
 // NewRestorer - create object with Restorer interface
-func NewRestorer(t interface{}, args ...interface{}) (Restorer, error) {
-	switch t.(type) {
+func NewRestorer(unpacked interface{}, packed interface{}, handles Handles) (Restorer, error) {
+	switch unpacked.(type) {
 	case *transactionrecord.BitmarkIssue:
-		if 3 != len(args) {
-			return nil, fmt.Errorf("insufficient parameter")
-		}
 		return &issueRestoreData{
-			packed:                  args[0].(transactionrecord.Packed),
-			assetHandle:             args[1].(storage.Handle),
-			blockOwnerPaymentHandle: args[2].(storage.Handle),
+			packed:                  packed.(transactionrecord.Packed),
+			assetHandle:             handles.Assets,
+			blockOwnerPaymentHandle: handles.BlockOwnerPayment,
 		}, nil
 
 	case *transactionrecord.AssetData:
-		return &assetRestoreData{packed: t.(*transactionrecord.AssetData)}, nil
+		return &assetRestoreData{unpacked: unpacked.(*transactionrecord.AssetData)}, nil
 
 	case *transactionrecord.BitmarkTransferUnratified,
 		*transactionrecord.BitmarkTransferCountersigned,
 		*transactionrecord.BitmarkShare:
 
-		if 4 != len(args) {
-			return nil, fmt.Errorf("insufficient parameter")
-		}
-
 		return &transferRestoreData{
-			packed:            t.(transactionrecord.BitmarkTransfer),
-			transaction:       args[0].(storage.Handle),
-			ownerTx:           args[1].(storage.Handle),
-			ownerData:         args[2].(storage.Handle),
-			blockOwnerPayment: args[3].(storage.Handle),
+			unpacked:          unpacked.(transactionrecord.BitmarkTransfer),
+			transaction:       handles.Transaction,
+			ownerTx:           handles.OwnerTx,
+			ownerData:         handles.OwnerData,
+			blockOwnerPayment: handles.BlockOwnerPayment,
 		}, nil
 
 	case *transactionrecord.ShareGrant:
-		if 4 != len(args) {
-			return nil, fmt.Errorf("insufficient parameter")
-		}
 
 		return &grantRestoreData{
-			packed:            t.(*transactionrecord.ShareGrant),
-			shareQuantity:     args[0].(storage.Handle),
-			share:             args[1].(storage.Handle),
-			ownerData:         args[2].(storage.Handle),
-			blockOwnerPayment: args[3].(storage.Handle),
+			unpacked:          unpacked.(*transactionrecord.ShareGrant),
+			shareQuantity:     handles.ShareQuantity,
+			share:             handles.Share,
+			ownerData:         handles.OwnerData,
+			blockOwnerPayment: handles.BlockOwnerPayment,
 		}, nil
 
 	case *transactionrecord.ShareSwap:
-		if 4 != len(args) {
-			return nil, fmt.Errorf("insufficient parameter")
-		}
 
 		return &swapRestoreData{
-			packed:            t.(*transactionrecord.ShareSwap),
-			shareQuantity:     args[0].(storage.Handle),
-			share:             args[1].(storage.Handle),
-			ownerData:         args[2].(storage.Handle),
-			blockOwnerPayment: args[3].(storage.Handle),
+			unpacked:          unpacked.(*transactionrecord.ShareSwap),
+			shareQuantity:     handles.ShareQuantity,
+			share:             handles.Share,
+			ownerData:         handles.OwnerData,
+			blockOwnerPayment: handles.BlockOwnerPayment,
 		}, nil
 	}
 	return nil, nil
 }
 
 type assetRestoreData struct {
-	packed *transactionrecord.AssetData
+	unpacked *transactionrecord.AssetData
 }
 
 func (a *assetRestoreData) Restore() error {
-	_, _, err := asset.Cache(a.packed, storage.Pool.Assets)
+	_, _, err := asset.Cache(a.unpacked, storage.Pool.Assets)
 	if nil != err {
 		msg := fmt.Errorf("fail to cache asset: %s", err)
 		log.Errorf("%s", msg)
@@ -130,7 +117,7 @@ func (i *issueRestoreData) Restore() error {
 }
 
 type transferRestoreData struct {
-	packed            transactionrecord.BitmarkTransfer
+	unpacked          transactionrecord.BitmarkTransfer
 	transaction       storage.Handle
 	ownerTx           storage.Handle
 	ownerData         storage.Handle
@@ -138,7 +125,7 @@ type transferRestoreData struct {
 }
 
 func (t *transferRestoreData) Restore() error {
-	_, _, err := StoreTransfer(t.packed, t.transaction, t.ownerTx, t.ownerData, t.blockOwnerPayment)
+	_, _, err := StoreTransfer(t.unpacked, t.transaction, t.ownerTx, t.ownerData, t.blockOwnerPayment)
 	if nil != err {
 		log.Errorf("fail to restore transfer: %s", err)
 	}
@@ -146,7 +133,7 @@ func (t *transferRestoreData) Restore() error {
 }
 
 type grantRestoreData struct {
-	packed            *transactionrecord.ShareGrant
+	unpacked          *transactionrecord.ShareGrant
 	shareQuantity     storage.Handle
 	share             storage.Handle
 	ownerData         storage.Handle
@@ -154,7 +141,7 @@ type grantRestoreData struct {
 }
 
 func (g *grantRestoreData) Restore() error {
-	_, _, err := StoreGrant(g.packed, g.shareQuantity, g.share, g.ownerData, g.blockOwnerPayment)
+	_, _, err := StoreGrant(g.unpacked, g.shareQuantity, g.share, g.ownerData, g.blockOwnerPayment)
 
 	if nil != err {
 		log.Errorf("fail to restore grant: %s", err)
@@ -163,7 +150,7 @@ func (g *grantRestoreData) Restore() error {
 }
 
 type swapRestoreData struct {
-	packed            *transactionrecord.ShareSwap
+	unpacked          *transactionrecord.ShareSwap
 	shareQuantity     storage.Handle
 	share             storage.Handle
 	ownerData         storage.Handle
@@ -171,7 +158,7 @@ type swapRestoreData struct {
 }
 
 func (s *swapRestoreData) Restore() error {
-	_, _, err := StoreSwap(s.packed, s.shareQuantity, s.share, s.ownerData, s.blockOwnerPayment)
+	_, _, err := StoreSwap(s.unpacked, s.shareQuantity, s.share, s.ownerData, s.blockOwnerPayment)
 	if nil != err {
 		log.Errorf("create swap restorer with error: %s", err)
 	}
