@@ -242,7 +242,7 @@ func processTransfer(packed []byte) error {
 		switch tx := transaction.(type) {
 
 		case *transactionrecord.ShareGrant:
-			_, duplicate, err = reservoir.StoreGrant(tx)
+			_, duplicate, err = reservoir.StoreGrant(tx, storage.Pool.ShareQuantity, storage.Pool.Shares, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
 
 		case *transactionrecord.ShareSwap:
 			_, duplicate, err = reservoir.StoreSwap(tx)

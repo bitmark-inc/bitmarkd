@@ -121,12 +121,12 @@ func GetOwnerData(trx storage.Transaction, txId merkle.Digest, ownerDataHandle s
 }
 
 // GetOwnerDataB - fetch and unpack owner data
-func GetOwnerDataB(trx storage.Transaction, txId []byte) (OwnerData, error) {
+func GetOwnerDataB(trx storage.Transaction, txId []byte, ownerDataHandle storage.Handle) (OwnerData, error) {
 	var packed []byte
 	if nil == trx {
-		packed = storage.Pool.OwnerData.Get(txId)
+		packed = ownerDataHandle.Get(txId)
 	} else {
-		packed = trx.Get(storage.Pool.OwnerData, txId)
+		packed = trx.Get(ownerDataHandle, txId)
 	}
 
 	if nil == packed {

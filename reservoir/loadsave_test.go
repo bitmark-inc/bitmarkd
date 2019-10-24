@@ -38,11 +38,14 @@ type handles struct {
 	transaction       *mocks.MockHandle
 	ownerTx           *mocks.MockHandle
 	ownerData         *mocks.MockHandle
+	share             *mocks.MockHandle
+	shareQuality      *mocks.MockHandle
 }
 
 const (
-	dataFile   = "test.cache"
-	loggerFile = "test.log"
+	dataFile      = "test.cache"
+	loggerFile    = "test.log"
+	shareQuantity = 100
 )
 
 const (
@@ -194,7 +197,7 @@ func init() {
 	// create share
 	txShareData = transactionrecord.BitmarkShare{
 		Link:      txUnratifiedID,
-		Quantity:  100,
+		Quantity:  shareQuantity,
 		Signature: nil,
 	}
 	packed, err = txShareData.Pack(&owner)
@@ -269,8 +272,10 @@ func setupMocks(t *testing.T) ([]*gomock.Controller, handles) {
 	ctl3 := gomock.NewController(t)
 	ctl4 := gomock.NewController(t)
 	ctl5 := gomock.NewController(t)
+	ctl6 := gomock.NewController(t)
+	ctl7 := gomock.NewController(t)
 
-	ctls = append(ctls, ctl1, ctl2, ctl3, ctl4, ctl5)
+	ctls = append(ctls, ctl1, ctl2, ctl3, ctl4, ctl5, ctl6)
 
 	return ctls, handles{
 		asset:             mocks.NewMockHandle(ctl1),
@@ -278,6 +283,8 @@ func setupMocks(t *testing.T) ([]*gomock.Controller, handles) {
 		transaction:       mocks.NewMockHandle(ctl3),
 		ownerTx:           mocks.NewMockHandle(ctl4),
 		ownerData:         mocks.NewMockHandle(ctl5),
+		share:             mocks.NewMockHandle(ctl6),
+		shareQuality:      mocks.NewMockHandle(ctl7),
 	}
 }
 
@@ -337,7 +344,7 @@ func TestLoadFromFileWhenAssetIssuance(t *testing.T) {
 	mockHandles.blockOwnerPayment.EXPECT().Get(gomock.Any()).Return(data).Times(1)
 
 	_ = reservoir.Initialise(dataFile)
-	_ = reservoir.LoadFromFile(mockHandles.asset, mockHandles.blockOwnerPayment, mockHandles.transaction, mockHandles.ownerTx, storage.Pool.OwnerData)
+	_ = reservoir.LoadFromFile(mockHandles.asset, mockHandles.blockOwnerPayment, mockHandles.transaction, mockHandles.ownerTx, storage.Pool.OwnerData, mockHandles.shareQuality, mockHandles.share)
 
 	state := reservoir.TransactionStatus(assetTxID)
 	assert.Equal(t, reservoir.StatePending, state, "wrong asset state")
@@ -382,7 +389,7 @@ func TestLoadFromFileWhenAssetData(t *testing.T) {
 	mockHandles.asset.EXPECT().Has(gomock.Any()).Return(false).Times(1)
 
 	_ = reservoir.Initialise(dataFile)
-	_ = reservoir.LoadFromFile(mockHandles.asset, mockHandles.blockOwnerPayment, mockHandles.transaction, mockHandles.ownerTx, storage.Pool.OwnerData)
+	_ = reservoir.LoadFromFile(mockHandles.asset, mockHandles.blockOwnerPayment, mockHandles.transaction, mockHandles.ownerTx, storage.Pool.OwnerData, mockHandles.shareQuality, mockHandles.share)
 
 	result := asset.Exists(assetData.AssetId(), mockHandles.asset)
 	assert.Equal(t, true, result, "wrong asset cache")
@@ -440,7 +447,7 @@ func TestLoadFromFileWhenTransferUnratified(t *testing.T) {
 	mockHandles.ownerData.EXPECT().Get(gomock.Any()).Return(packedOwnerData).Times(1)
 
 	_ = reservoir.Initialise(dataFile)
-	_ = reservoir.LoadFromFile(mockHandles.asset, mockHandles.blockOwnerPayment, mockHandles.transaction, mockHandles.ownerTx, mockHandles.ownerData)
+	_ = reservoir.LoadFromFile(mockHandles.asset, mockHandles.blockOwnerPayment, mockHandles.transaction, mockHandles.ownerTx, mockHandles.ownerData, mockHandles.shareQuality, mockHandles.share)
 
 	result := reservoir.TransactionStatus(txUnratifiedID)
 	assert.Equal(t, reservoir.StatePending, result, "wrong transfer state")
@@ -501,7 +508,7 @@ func TestLoadFromFileWhenShare(t *testing.T) {
 	mockHandles.ownerData.EXPECT().Get(gomock.Any()).Return(packedOwnerData).Times(2)
 
 	_ = reservoir.Initialise(dataFile)
-	_ = reservoir.LoadFromFile(mockHandles.asset, mockHandles.blockOwnerPayment, mockHandles.transaction, mockHandles.ownerTx, mockHandles.ownerData)
+	_ = reservoir.LoadFromFile(mockHandles.asset, mockHandles.blockOwnerPayment, mockHandles.transaction, mockHandles.ownerTx, mockHandles.ownerData, mockHandles.shareQuality, mockHandles.share)
 
 	result := reservoir.TransactionStatus(txShareID)
 	assert.Equal(t, reservoir.StatePending, result, "wrong share state")
@@ -510,7 +517,7 @@ func TestLoadFromFileWhenShare(t *testing.T) {
 func writeGrant(f *os.File) {
 	count := make([]byte, 2)
 	_, _ = f.Write([]byte{taggedTransaction})
-	packed, _ := grantData.Pack(&owner2)
+	packed, _ := grantData.Pack(&owner)
 	binary.BigEndian.PutUint16(count, uint16(len(packed)))
 	_, _ = f.Write(count)
 	_, _ = f.Write(packed)
@@ -529,3 +536,38 @@ func setupGrantBackupFile() {
 	// end of file
 	writeEndOfFile(f)
 }
+
+// storeGrant
+
+func TestLoadFromFileWhenGrant(t *testing.T) {
+	setup(t, chain.Testing)
+	defer teardown()
+
+	setupGrantBackupFile()
+	defer teardownDataFile()
+
+	initPackages()
+	defer asset.Finalise()
+
+	ctls, mockHandles := setupMocks(t)
+	defer finaliseMockController(ctls)
+
+	data, _ := currencyMap.Pack(true)
+	mockHandles.blockOwnerPayment.EXPECT().Get(gomock.Any()).Return(data).AnyTimes()
+
+	mockHandles.ownerData.EXPECT().Get(gomock.Any()).Return(packedOwnerData).Times(1)
+	mockHandles.shareQuality.EXPECT().GetN(gomock.Any()).Return(uint64(shareQuantity), true).Times(1)
+	mockHandles.share.EXPECT().GetNB(gomock.Any()).Return(uint64(shareQuantity), []byte{}).Times(1)
+
+	_ = reservoir.Initialise(dataFile)
+	err := reservoir.LoadFromFile(mockHandles.asset, mockHandles.blockOwnerPayment, mockHandles.transaction, mockHandles.ownerTx, mockHandles.ownerData, mockHandles.shareQuality, mockHandles.share)
+	if nil != err {
+		fmt.Printf("load from file err: %s\n", err)
+
+	}
+
+	result := reservoir.TransactionStatus(grantID)
+	assert.Equal(t, reservoir.StatePending, result, "wrong share state")
+}
+
+// storeSwap

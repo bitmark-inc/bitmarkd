@@ -50,6 +50,21 @@ func NewRestorer(t interface{}, args ...interface{}) (Restorer, error) {
 			ownerData:         args[2].(storage.Handle),
 			blockOwnerPayment: args[3].(storage.Handle),
 		}, nil
+
+	case *transactionrecord.ShareGrant:
+
+		if 4 != len(args) {
+			return nil, fmt.Errorf("insufficient parameter")
+		}
+
+		return &grantRestoreData{
+			packed:            t.(*transactionrecord.ShareGrant),
+			shareQuality:      args[0].(storage.Handle),
+			share:             args[1].(storage.Handle),
+			ownerData:         args[2].(storage.Handle),
+			blockOwnerPayment: args[3].(storage.Handle),
+		}, nil
+
 	}
 	return nil, nil
 }
@@ -116,5 +131,22 @@ func (t *transferRestoreData) Restore() error {
 	if nil != err {
 		log.Errorf("fail to restore transfer: %s", err)
 	}
-	return nil
+	return err
+}
+
+type grantRestoreData struct {
+	packed            *transactionrecord.ShareGrant
+	shareQuality      storage.Handle
+	share             storage.Handle
+	ownerData         storage.Handle
+	blockOwnerPayment storage.Handle
+}
+
+func (g *grantRestoreData) Restore() error {
+	_, _, err := StoreGrant(g.packed, g.shareQuality, g.share, g.ownerData, g.blockOwnerPayment)
+
+	if nil != err {
+		log.Errorf("fail to restore grant: %s", err)
+	}
+	return err
 }

@@ -283,7 +283,7 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 				if nil != err {
 					return err
 				}
-				_, err = reservoir.CheckGrantBalance(nil, tx)
+				_, err = reservoir.CheckGrantBalance(nil, tx, storage.Pool.ShareQuantity)
 				if nil != err {
 					return err
 				}

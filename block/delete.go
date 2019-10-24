@@ -143,7 +143,7 @@ outer_loop:
 					log.Criticalf("missing transaction record for: %v", tx.Link)
 					logger.Panic("Transactions database is corrupt")
 				}
-				ownerdata, err := ownership.GetOwnerDataB(trx, txId[:])
+				ownerdata, err := ownership.GetOwnerDataB(trx, txId[:], storage.Pool.OwnerData)
 				if nil != err {
 					trx.Abort()
 					log.Criticalf("missing ownership for: %s", txId)

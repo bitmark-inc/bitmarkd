@@ -462,7 +462,7 @@ func rescanItem(item *transactionData) {
 		}
 
 	case *transactionrecord.ShareGrant:
-		_, err := CheckGrantBalance(nil, tx)
+		_, err := CheckGrantBalance(nil, tx, storage.Pool.ShareQuantity)
 		if nil != err {
 			internalDeleteByTxId(txId)
 		} else {
