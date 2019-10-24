@@ -66,6 +66,9 @@ var (
 	owner           account.Account
 	publicKey       []byte
 	privateKey      []byte
+	owner2          account.Account
+	publicKey2      []byte
+	privateKey2     []byte
 	packedOwnerData ownership.PackedOwnerData
 
 	// payment
@@ -78,13 +81,16 @@ var (
 	// share
 	txShareData transactionrecord.BitmarkShare
 	txShareID   merkle.Digest
+
+	// grant
+	grantData transactionrecord.ShareGrant
+	grantID   merkle.Digest
 )
 
 func init() {
+	// owner
 	seed, _ := account.NewBase58EncodedSeedV2(true)
 	p, _ := account.PrivateKeyFromBase58Seed(seed)
-
-	// owner
 	privateKey = p.PrivateKeyBytes()
 	publicKey = p.Account().PublicKeyBytes()
 	owner = account.Account{
@@ -94,6 +100,17 @@ func init() {
 		},
 	}
 
+	// owner2
+	seed, _ = account.NewBase58EncodedSeedV2(true)
+	p, _ = account.PrivateKeyFromBase58Seed(seed)
+	privateKey2 = p.PrivateKeyBytes()
+	publicKey2 = p.Account().PublicKeyBytes()
+	owner2 = account.Account{
+		AccountInterface: &account.ED25519Account{
+			Test:      true,
+			PublicKey: publicKey2,
+		},
+	}
 	// payment
 	currencyMap = make(currency.Map)
 	currencyMap[currency.Bitcoin] = "2N7uK4otZGYDUDNEQ3Yr6hPPrs49BHQA32L"
@@ -174,9 +191,9 @@ func init() {
 	}
 	txUnratifiedID = p2.MakeLink()
 
-	// share
+	// create share
 	txShareData = transactionrecord.BitmarkShare{
-		Link:      assetTxID,
+		Link:      txUnratifiedID,
 		Quantity:  100,
 		Signature: nil,
 	}
@@ -188,33 +205,41 @@ func init() {
 	txShareData.Signature = signature[:]
 	p2, err = txShareData.Pack(&owner)
 	if nil != err {
-		fmt.Printf("secodn share pack err: %s\n", err)
+		fmt.Printf("second share pack err: %s\n", err)
 	}
 	txShareID = p2.MakeLink()
+
+	// grant
+	grantData = transactionrecord.ShareGrant{
+		ShareId:          txShareID,
+		Quantity:         100,
+		Owner:            &owner,
+		Recipient:        &owner2,
+		BeforeBlock:      5,
+		Signature:        nil,
+		Countersignature: nil,
+	}
+	packed, err = grantData.Pack(&owner)
+	if fault.InvalidSignature != err {
+		fmt.Printf("grant pack eerror: %s\n", err)
+	}
+	signature = ed25519.Sign(privateKey, packed)
+	grantData.Signature = signature[:]
+	packed, err = grantData.Pack(&owner)
+	if fault.InvalidSignature != err {
+		fmt.Printf("second grant pack err: %s\n", err)
+	}
+	signature = ed25519.Sign(privateKey2, packed)
+	grantData.Countersignature = signature[:]
+	p2, err = grantData.Pack(&owner)
+	if nil != err {
+		fmt.Printf("second grant err: %s\n", err)
+	}
+	grantID = p2.MakeLink()
 }
 
 func initPackages() {
 	_ = asset.Initialise()
-}
-
-func setupBackupFile() {
-	f, _ := os.OpenFile(dataFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
-	defer f.Close()
-
-	// begin of file
-	writeBeginOfFile(f)
-
-	// asset issuance
-	writeAssetIssuance(f)
-
-	// asset data
-	writeAssetData(f)
-
-	// transfer unratified
-	writeTransferUnratified(f)
-
-	// end of file
-	writeEndOfFile(f)
 }
 
 func writeBeginOfFile(f *os.File) {
@@ -438,6 +463,9 @@ func setupShareBackupFile() {
 	writeBeginOfFile(f)
 
 	// transfer unratified
+	writeTransferUnratified(f)
+
+	// transfer unratified
 	writeShareIssuance(f)
 
 	// end of file
@@ -465,17 +493,39 @@ func TestLoadFromFileWhenShare(t *testing.T) {
 		fmt.Printf("asset pack err: %s\n", err)
 	}
 
-	mockHandles.transaction.EXPECT().GetNB(gomock.Any()).Return(uint64(2), packed).Times(1)
-	mockHandles.transaction.EXPECT().Has(gomock.Any()).Return(false).Times(1)
+	mockHandles.transaction.EXPECT().GetNB(gomock.Any()).Return(uint64(2), packed).Times(2)
+	mockHandles.transaction.EXPECT().Has(gomock.Any()).Return(false).Times(2)
 
-	mockHandles.ownerTx.EXPECT().Get(gomock.Any()).Return([]byte("1")).Times(1)
+	mockHandles.ownerTx.EXPECT().Get(gomock.Any()).Return([]byte("1")).Times(2)
 
-	mockHandles.ownerData.EXPECT().Get(gomock.Any()).Return(packedOwnerData).Times(1)
+	mockHandles.ownerData.EXPECT().Get(gomock.Any()).Return(packedOwnerData).Times(2)
 
 	_ = reservoir.Initialise(dataFile)
 	_ = reservoir.LoadFromFile(mockHandles.asset, mockHandles.blockOwnerPayment, mockHandles.transaction, mockHandles.ownerTx, mockHandles.ownerData)
 
-	fmt.Printf("share tx ID: %s\n", txShareID)
 	result := reservoir.TransactionStatus(txShareID)
 	assert.Equal(t, reservoir.StatePending, result, "wrong share state")
+}
+
+func writeGrant(f *os.File) {
+	count := make([]byte, 2)
+	_, _ = f.Write([]byte{taggedTransaction})
+	packed, _ := grantData.Pack(&owner2)
+	binary.BigEndian.PutUint16(count, uint16(len(packed)))
+	_, _ = f.Write(count)
+	_, _ = f.Write(packed)
+}
+
+func setupGrantBackupFile() {
+	f, _ := os.OpenFile(dataFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
+	defer f.Close()
+
+	// begin of file
+	writeBeginOfFile(f)
+
+	// grant
+	writeGrant(f)
+
+	// end of file
+	writeEndOfFile(f)
 }

@@ -6,6 +6,7 @@
 package reservoir
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/account"
@@ -41,6 +42,7 @@ type verifiedGrantInfo struct {
 
 // StoreGrant - validate and store a grant request
 func StoreGrant(grant *transactionrecord.ShareGrant) (*GrantInfo, bool, error) {
+	fmt.Println("grant")
 
 	globalData.Lock()
 	defer globalData.Unlock()

@@ -96,7 +96,6 @@ restore_loop:
 				}
 				err = restorer.Restore()
 				if nil != err {
-					fmt.Printf("restore asset with error: %s", err)
 					continue
 				}
 
@@ -124,6 +123,13 @@ restore_loop:
 				err = restorer.Restore()
 				if nil != err {
 					log.Errorf("restore transfer with error: %s", err)
+					continue
+				}
+
+			case *transactionrecord.ShareGrant:
+				_, _, err := StoreGrant(unpacked.(*transactionrecord.ShareGrant))
+
+				if nil != err {
 					continue
 				}
 
