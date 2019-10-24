@@ -98,14 +98,15 @@ restore_loop:
 				continue restore_loop
 			}
 
-			restorer, err := NewRestorer(unpacked, packed, handles)
+			restorer, err := NewTransactionRestorer(unpacked, packed, handles)
 			if nil != err {
-				log.Errorf("create asset restorer with error: %s", err)
+				log.Errorf("create transaction restorer with error: %s", err)
 				continue restore_loop
 			}
 
 			err = restorer.Restore()
 			if nil != err {
+				log.Errorf("restore %s with error: %s", restorer, err)
 				continue restore_loop
 			}
 

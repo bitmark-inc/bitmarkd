@@ -17,12 +17,14 @@ import (
 // Restorer - interface to restore data from cache file
 type Restorer interface {
 	Restore() error
+	fmt.Stringer
 }
 
-// NewRestorer - create object with Restorer interface
-func NewRestorer(unpacked interface{}, packed interface{}, handles Handles) (Restorer, error) {
+// NewTransactionRestorer - create object with Restorer interface
+func NewTransactionRestorer(unpacked interface{}, packed interface{}, handles Handles) (Restorer, error) {
 	switch unpacked.(type) {
 	case *transactionrecord.BitmarkIssue:
+
 		return &issueRestoreData{
 			packed:                  packed.(transactionrecord.Packed),
 			assetHandle:             handles.Assets,
@@ -30,6 +32,7 @@ func NewRestorer(unpacked interface{}, packed interface{}, handles Handles) (Res
 		}, nil
 
 	case *transactionrecord.AssetData:
+
 		return &assetRestoreData{unpacked: unpacked.(*transactionrecord.AssetData)}, nil
 
 	case *transactionrecord.BitmarkTransferUnratified,
@@ -71,6 +74,10 @@ type assetRestoreData struct {
 	unpacked *transactionrecord.AssetData
 }
 
+func (a *assetRestoreData) String() string {
+	return "transactionrecord.AssetData"
+}
+
 func (a *assetRestoreData) Restore() error {
 	_, _, err := asset.Cache(a.unpacked, storage.Pool.Assets)
 	if nil != err {
@@ -85,6 +92,10 @@ type issueRestoreData struct {
 	packed                  transactionrecord.Packed
 	assetHandle             storage.Handle
 	blockOwnerPaymentHandle storage.Handle
+}
+
+func (i *issueRestoreData) String() string {
+	return "transactionrecord.BitmarkIssue"
 }
 
 func (i *issueRestoreData) Restore() error {
@@ -124,6 +135,10 @@ type transferRestoreData struct {
 	blockOwnerPayment storage.Handle
 }
 
+func (t *transferRestoreData) String() string {
+	return "transactionrecord.BitmarkTransfer"
+}
+
 func (t *transferRestoreData) Restore() error {
 	_, _, err := StoreTransfer(t.unpacked, t.transaction, t.ownerTx, t.ownerData, t.blockOwnerPayment)
 	if nil != err {
@@ -138,6 +153,10 @@ type grantRestoreData struct {
 	share             storage.Handle
 	ownerData         storage.Handle
 	blockOwnerPayment storage.Handle
+}
+
+func (g *grantRestoreData) String() string {
+	return "transactionrecord.ShareGrant"
 }
 
 func (g *grantRestoreData) Restore() error {
@@ -155,6 +174,10 @@ type swapRestoreData struct {
 	share             storage.Handle
 	ownerData         storage.Handle
 	blockOwnerPayment storage.Handle
+}
+
+func (s *swapRestoreData) String() string {
+	return "transactionrecord.ShareSwap"
 }
 
 func (s *swapRestoreData) Restore() error {
