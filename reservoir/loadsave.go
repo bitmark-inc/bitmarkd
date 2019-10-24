@@ -37,7 +37,7 @@ var bofData = []byte("bitmark-cache v1.0")
 
 // LoadFromFile - load transactions from file
 // called later when system is able to handle the tx and proofs
-func LoadFromFile(assetHandle storage.Handle, blockOwnerPaymentHandle storage.Handle, transactionHandle storage.Handle, ownerTxHandle storage.Handle, ownerDataHandle storage.Handle, shareQuantityHandle storage.Handle, shareHandle storage.Handle) error {
+func LoadFromFile(assetHandle, blockOwnerPaymentHandle, transactionHandle, ownerTxHandle, ownerDataHandle, shareQuantityHandle, shareHandle storage.Handle) error {
 	Disable()
 	defer Enable()
 
