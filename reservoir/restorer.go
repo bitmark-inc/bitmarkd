@@ -22,7 +22,7 @@ type Restorer interface {
 
 // NewTransactionRestorer - create object with Restorer interface
 func NewTransactionRestorer(unpacked interface{}, packed interface{}, handles Handles) (Restorer, error) {
-	switch unpacked.(type) {
+	switch t := unpacked.(type) {
 	case *transactionrecord.BitmarkIssue:
 
 		return &issueRestoreData{
@@ -33,7 +33,7 @@ func NewTransactionRestorer(unpacked interface{}, packed interface{}, handles Ha
 
 	case *transactionrecord.AssetData:
 
-		return &assetRestoreData{unpacked: unpacked.(*transactionrecord.AssetData)}, nil
+		return &assetRestoreData{unpacked: t}, nil
 
 	case *transactionrecord.BitmarkTransferUnratified,
 		*transactionrecord.BitmarkTransferCountersigned,
@@ -50,7 +50,7 @@ func NewTransactionRestorer(unpacked interface{}, packed interface{}, handles Ha
 	case *transactionrecord.ShareGrant:
 
 		return &grantRestoreData{
-			unpacked:          unpacked.(*transactionrecord.ShareGrant),
+			unpacked:          t,
 			shareQuantity:     handles.ShareQuantity,
 			share:             handles.Share,
 			ownerData:         handles.OwnerData,
@@ -60,7 +60,7 @@ func NewTransactionRestorer(unpacked interface{}, packed interface{}, handles Ha
 	case *transactionrecord.ShareSwap:
 
 		return &swapRestoreData{
-			unpacked:          unpacked.(*transactionrecord.ShareSwap),
+			unpacked:          t,
 			shareQuantity:     handles.ShareQuantity,
 			share:             handles.Share,
 			ownerData:         handles.OwnerData,
