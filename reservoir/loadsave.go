@@ -37,7 +37,7 @@ var bofData = []byte("bitmark-cache v1.0")
 
 // LoadFromFile - load transactions from file
 // called later when system is able to handle the tx and proofs
-func LoadFromFile(assetHandle storage.Handle, blockOwnerPaymentHandle storage.Handle, transactionHandle storage.Handle, ownerTxHandle storage.Handle, ownerDataHandle storage.Handle, shareQualityHandle storage.Handle, shareHandle storage.Handle) error {
+func LoadFromFile(assetHandle storage.Handle, blockOwnerPaymentHandle storage.Handle, transactionHandle storage.Handle, ownerTxHandle storage.Handle, ownerDataHandle storage.Handle, shareQuantityHandle storage.Handle, shareHandle storage.Handle) error {
 	Disable()
 	defer Enable()
 
@@ -127,7 +127,7 @@ restore_loop:
 				}
 
 			case *transactionrecord.ShareGrant:
-				restorer, err := NewRestorer(unpacked, shareQualityHandle, shareHandle, ownerDataHandle, blockOwnerPaymentHandle)
+				restorer, err := NewRestorer(unpacked, shareQuantityHandle, shareHandle, ownerDataHandle, blockOwnerPaymentHandle)
 				if nil != err {
 					log.Errorf("create grant restorer with error: %s", err)
 					continue
@@ -135,6 +135,18 @@ restore_loop:
 				err = restorer.Restore()
 				if nil != err {
 					log.Errorf("restore grant with error: %s", err)
+					continue
+				}
+
+			case *transactionrecord.ShareSwap:
+				restorer, err := NewRestorer(unpacked, shareQuantityHandle, shareHandle, ownerDataHandle, blockOwnerPaymentHandle)
+				if nil != err {
+					log.Errorf("create swap restorer with error: %s", err)
+					continue
+				}
+				err = restorer.Restore()
+				if nil != err {
+					log.Errorf("restore swap with error: %s", err)
 					continue
 				}
 

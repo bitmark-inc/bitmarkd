@@ -259,7 +259,7 @@ func (share *Share) Swap(arguments *transactionrecord.ShareSwap, reply *ShareSwa
 	}
 
 	// save transfer/check for duplicate
-	stored, duplicate, err := reservoir.StoreSwap(arguments)
+	stored, duplicate, err := reservoir.StoreSwap(arguments, storage.Pool.ShareQuantity, storage.Pool.Shares, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
 	if nil != err {
 		return err
 	}

@@ -52,19 +52,30 @@ func NewRestorer(t interface{}, args ...interface{}) (Restorer, error) {
 		}, nil
 
 	case *transactionrecord.ShareGrant:
-
 		if 4 != len(args) {
 			return nil, fmt.Errorf("insufficient parameter")
 		}
 
 		return &grantRestoreData{
 			packed:            t.(*transactionrecord.ShareGrant),
-			shareQuality:      args[0].(storage.Handle),
+			shareQuantity:     args[0].(storage.Handle),
 			share:             args[1].(storage.Handle),
 			ownerData:         args[2].(storage.Handle),
 			blockOwnerPayment: args[3].(storage.Handle),
 		}, nil
 
+	case *transactionrecord.ShareSwap:
+		if 4 != len(args) {
+			return nil, fmt.Errorf("insufficient parameter")
+		}
+
+		return &swapRestoreData{
+			packed:            t.(*transactionrecord.ShareSwap),
+			shareQuantity:     args[0].(storage.Handle),
+			share:             args[1].(storage.Handle),
+			ownerData:         args[2].(storage.Handle),
+			blockOwnerPayment: args[3].(storage.Handle),
+		}, nil
 	}
 	return nil, nil
 }
@@ -136,17 +147,33 @@ func (t *transferRestoreData) Restore() error {
 
 type grantRestoreData struct {
 	packed            *transactionrecord.ShareGrant
-	shareQuality      storage.Handle
+	shareQuantity     storage.Handle
 	share             storage.Handle
 	ownerData         storage.Handle
 	blockOwnerPayment storage.Handle
 }
 
 func (g *grantRestoreData) Restore() error {
-	_, _, err := StoreGrant(g.packed, g.shareQuality, g.share, g.ownerData, g.blockOwnerPayment)
+	_, _, err := StoreGrant(g.packed, g.shareQuantity, g.share, g.ownerData, g.blockOwnerPayment)
 
 	if nil != err {
 		log.Errorf("fail to restore grant: %s", err)
+	}
+	return err
+}
+
+type swapRestoreData struct {
+	packed            *transactionrecord.ShareSwap
+	shareQuantity     storage.Handle
+	share             storage.Handle
+	ownerData         storage.Handle
+	blockOwnerPayment storage.Handle
+}
+
+func (s *swapRestoreData) Restore() error {
+	_, _, err := StoreSwap(s.packed, s.shareQuantity, s.share, s.ownerData, s.blockOwnerPayment)
+	if nil != err {
+		log.Errorf("create swap restorer with error: %s", err)
 	}
 	return err
 }

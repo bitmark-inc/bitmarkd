@@ -471,7 +471,7 @@ func rescanItem(item *transactionData) {
 		}
 
 	case *transactionrecord.ShareSwap:
-		_, _, err := CheckSwapBalances(nil, tx)
+		_, _, err := CheckSwapBalances(nil, tx, storage.Pool.ShareQuantity)
 		if nil != err {
 			internalDeleteByTxId(txId)
 		} else {
