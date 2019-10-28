@@ -45,3 +45,9 @@ func (m *MetricsNetwork) GetConnCount() counter.Counter {
 	globalData.Log.Warnf("GetConnCount:%d", m.connCount)
 	return m.connCount
 }
+
+//GetNetworkMetricConnCount return current connection counts
+func GetNetworkMetricConnCount() counter.Counter {
+	globalData.Log.Warnf("GetConnCount:%d", globalData.MetricsNetwork.connCount)
+	return globalData.MetricsNetwork.connCount
+}

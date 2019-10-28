@@ -103,7 +103,8 @@ func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 		return err
 	}
 
-	incoming, outgoing := p2p.GetCounts()
+	connCounts := uint64(p2p.GetNetworkMetricConnCount())
+
 	reply.Chain = mode.ChainName()
 	reply.Mode = mode.String()
 	reply.Block = BlockInfo{
@@ -111,7 +112,7 @@ func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 		Hash:   block.LastBlockHash(),
 	}
 	reply.RPCs = connectionCount.Uint64()
-	reply.Peers = incoming + outgoing
+	reply.Peers = connCounts
 	reply.TransactionCounters.Pending, reply.TransactionCounters.Verified = reservoir.ReadCounters()
 	reply.Difficulty = difficulty.Current.Value()
 	reply.Hashrate = difficulty.Hashrate()

@@ -147,17 +147,12 @@ func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 		Hash    string  `json:"hash"`
 	}
 
-	type peerCounts struct {
-		Incoming uint64 `json:"incoming"`
-		Outgoing uint64 `json:"outgoing"`
-	}
-
 	type theReply struct {
 		Chain               string     `json:"chain"`
 		Mode                string     `json:"mode"`
 		Block               blockInfo  `json:"block"`
 		RPCs                uint64     `json:"rpcs"`
-		Peers               peerCounts `json:"peers"`
+		Peers               uint64     `json:"peers"`
 		TransactionCounters Counters   `json:"transactionCounters"`
 		Difficulty          float64    `json:"difficulty"`
 		Hashrate            float64    `json:"hashrate,omitempty"`
@@ -185,7 +180,7 @@ func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 		PeerID:     p2p.ID(),
 	}
 
-	reply.Peers.Incoming, reply.Peers.Outgoing = p2p.GetCounts()
+	reply.Peers = uint64(p2p.GetNetworkMetricConnCount())
 	reply.TransactionCounters.Pending, reply.TransactionCounters.Verified = reservoir.ReadCounters()
 
 	sendReply(w, reply)
