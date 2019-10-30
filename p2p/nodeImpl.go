@@ -31,7 +31,6 @@ func (n *Node) Setup(configuration *Configuration, version string) error {
 		panic(err)
 	}
 	n.PrivateKey = prvKey
-
 	n.NewHost(configuration.NodeType, maAddrs, n.PrivateKey)
 	if n.NodeType != "Servant" {
 		n.setAnnounce(configuration.Announce)

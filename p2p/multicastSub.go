@@ -46,91 +46,84 @@ loop:
 			}
 			util.LogDebug(log, util.CoRed, fmt.Sprintf("-->>received block: %x", parameters[0]))
 			if !mode.Is(mode.Normal) {
-				err := fault.ErrNotAvailableDuringSynchronise
-				log.Debugf("-->>failed assets: error: %s", err)
+				util.LogDebug(log, util.CoWhite, fmt.Sprintf("-->>failed assets: error: %s", fault.ErrNotAvailableDuringSynchronise))
 				continue loop
 			} else {
 				messagebus.Bus.Blockstore.Send("remote", parameters[0])
 			}
 		case "assets":
 			if dataLength < 1 {
-				log.Warnf("\x1b[31m-->>assets with too few data: %d items\x1b[0m", dataLength)
+				util.LogWarn(log, util.CoLightRed, fmt.Sprintf("-->>assets with too few data: %d items", dataLength))
 				continue loop
 			}
-			log.Infof("\x1b[32m-->>received assets: %x\x1b[0m", parameters[0])
 			err := processAssets(parameters[0])
 			if nil != err {
-				log.Warnf("\x1b[31m-->>failed assets: error: %s\x1b[0m", err)
+				util.LogWarn(log, util.CoLightRed, fmt.Sprintf("-->>failed assets: error: %s", err))
 				continue loop
 			}
-			log.Infof("%assets: processAssets Succesful%s", util.CoGreen, util.CoReset)
 		case "issues":
 			if dataLength < 1 {
-				log.Warnf("\x1b[31m-->>issues with too few data: %d items\x1b[0m", dataLength)
+				util.LogWarn(log, util.CoLightRed, fmt.Sprintf("-->>issues with too few data: %d items", dataLength))
 				continue loop
 			}
-			log.Infof("-->>received issues: %x", parameters[0])
+			util.LogDebug(log, util.CoGreen, fmt.Sprintf("-->>received issues: %x", parameters[0]))
 			err := processIssues(parameters[0])
 			if nil != err {
-				log.Debugf("-->>failed issues: error: %s", err)
+				util.LogWarn(log, util.CoLightRed, fmt.Sprintf("-->>failed issues: error: %s", err))
 				continue loop
 			}
 		case "transfer":
 			if dataLength < 1 {
-				log.Debugf("-->>transfer with too few data: %d items", dataLength)
+				util.LogWarn(log, util.CoLightRed, fmt.Sprintf("-->>transfer with too few data: %d items", dataLength))
 				continue loop
 			}
-			log.Infof("-->>received transfer: %x", parameters[0])
 			err := processTransfer(parameters[0])
 			if nil != err {
-				log.Debugf("-->>failed transfer: error: %s", err)
+				util.LogWarn(log, util.CoLightRed, fmt.Sprintf("-->>failed transfer: error: %s", err))
 				continue loop
 			}
-
 		case "proof":
 			if dataLength < 1 {
-				log.Debugf("-->>proof with too few data: %d items", dataLength)
+				util.LogWarn(log, util.CoLightRed, fmt.Sprintf("-->>proof with too few data: %d items", dataLength))
 				continue loop
 			}
-			log.Infof("-->>received proof: %x", parameters[0])
+			util.LogInfo(log, util.CoLightRed, fmt.Sprintf("-->>received proof: %x", parameters[0]))
 			err := processProof(parameters[0])
 			if nil != err {
-				log.Warnf("-->>failed proof: error: %s", err)
+				util.LogWarn(log, util.CoLightRed, fmt.Sprintf("-->>failed proof: error: %s", err))
 				continue loop
 			}
 		case "rpc":
-
 			if dataLength < 3 {
-				log.Warnf("-->>rpc with too few data: %d items", dataLength)
+				util.LogWarn(log, util.CoLightRed, fmt.Sprintf("-->>rpc with too few data: %d items", dataLength))
 				continue loop
 			}
 			if 8 != len(parameters[2]) {
-				log.Warnf("-->>rpc with invalid timestamp")
+				util.LogWarn(log, util.CoLightRed, "-->>rpc with invalid timestamp")
 				continue loop
 			}
 			messagebus.Bus.Announce.Send("addrpc", parameters[0], parameters[1], parameters[2])
 		case "peer":
 			if dataLength < 3 {
-				log.Debugf("-->>peer with too few data: %d items", dataLength)
+				util.LogWarn(log, util.CoLightRed, fmt.Sprintf("-->>peer with too few data: %d items", dataLength))
 				continue loop
 			}
 			if 8 != len(parameters[2]) {
-				log.Debugf("-->>peer with invalid timestamp=%v", parameters[2])
+				util.LogWarn(log, util.CoLightRed, fmt.Sprintf("-->>peer with invalid timestamp=%v", parameters[2]))
 				continue loop
 			}
 			id, err := peer.IDFromBytes(parameters[0])
 			if err != nil {
-				log.Error("\x1b[31m-->>invalid id in requesting\x1b[0m")
+				util.LogWarn(log, util.CoLightRed, "-->>invalid id in requesting")
 				continue loop
 			}
-			log.Infof("\x1b[32mSubHandler fn=%s Send to Announce  ID:%s\x1b[0m \n", fn, id.ShortString())
+			util.LogDebug(log, util.CoGreen, fmt.Sprintf("-->>SubHandler fn=%s Send to Announce  ID:%s", fn, id.ShortString()))
 			messagebus.Bus.Announce.Send("addpeer", parameters[0], parameters[1], parameters[2])
 		default:
-			log.Infof("-->>unreganized Command:%s ", fn)
+			util.LogWarn(log, util.CoLightRed, fmt.Sprintf("-->>unreganized Command:%s", fn))
 			continue loop
 		}
 	}
-
 }
 
 // un pack each asset and cache them
