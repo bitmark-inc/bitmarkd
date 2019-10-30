@@ -202,13 +202,13 @@ func (s *httpHandler) connections(w http.ResponseWriter, r *http.Request) {
 	defer connectionCount.Decrement()
 
 	type reply struct {
-		ConnectedTo []peerlib.AddrInfo `json:"connectedTo"`
+		//ConnectedTo []peerlib.AddrInfo `json:"connectedTo"`
+		ConnectedTo []*p2p.Connected `json:"connectedTo"`
 	}
 
 	var info reply
-
-	info.ConnectedTo = p2p.FetchConnectors()
-
+	//TODO: Make libp2p version
+	info.ConnectedTo = p2p.GetAllPeers()
 	sendReply(w, info)
 }
 

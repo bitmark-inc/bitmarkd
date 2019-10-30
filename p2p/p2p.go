@@ -99,6 +99,12 @@ type Node struct {
 	concensusMachine Machine
 }
 
+// Connected - representation of a connected Peer (For Http RPC)
+type Connected struct {
+	Address string `json:"address"`
+	Server  string `json:"server"`
+}
+
 // Initialise initialize p2p module
 func Initialise(configuration *Configuration, version string) error {
 	globalData.Lock()
@@ -156,7 +162,7 @@ loop:
 						util.LogWarn(log, util.CoLightRed, fmt.Sprintf("Run:PackP2PMessage error:%v", err))
 						continue loop
 					}
-					err = n.MulticastCommand(p2pMsgPacked)
+					err = MulticastCommand(p2pMsgPacked)
 					if err != nil {
 						util.LogWarn(log, util.CoLightRed, fmt.Sprintf("Run:Multicast Publish error:%v", err))
 						continue loop
@@ -223,11 +229,55 @@ func Finalise() error {
 }
 
 //MulticastCommand muticasts packed message with given id  in binary. Use id=nil if there is no peer ID
-func (n *Node) MulticastCommand(packedMessage []byte) error {
-	err := n.Multicast.Publish(MulticastingTopic, packedMessage)
+func MulticastCommand(packedMessage []byte) error {
+	err := globalData.Multicast.Publish(MulticastingTopic, packedMessage)
 	if err != nil {
-		util.LogWarn(n.Log, util.CoLightRed, fmt.Sprintf("MulticastCommand Publish error:%v", err))
+		util.LogWarn(globalData.Log, util.CoLightRed, fmt.Sprintf("MulticastCommand Publish error:%v", err))
 		return err
 	}
 	return nil
+}
+
+// BlockHeight - return global block height
+func BlockHeight() uint64 {
+	return globalData.concensusMachine.electedHeight
+}
+
+//ID return this node host ID
+func ID() peerlib.ID {
+	return globalData.Host.ID()
+}
+
+// GetAllPeers - obtain a list of all connector clients
+func GetAllPeers() []*Connected {
+	//info := []Connected{}
+	globalData.RLock()
+	result := make([]*Connected, 0)
+	/*
+		for key, val := range globalData.Registers {
+			if val {
+				store := globalData.Host.Peerstore()
+
+				if len(store.PeerInfo(key).Addrs) > 0 {
+					//TODO: Make Address Connected Address not first one in peerstore
+					store.PeerInfo(key).Addrs[0].String()
+					c := Connected{
+						Server: key,
+					}
+					info = append(info, c)
+				}
+			}
+		}
+
+		for _, c := range globalData.connectorClients {
+			if nil != c {
+				connect := c.ConnectedTo()
+				if nil != connect {configuration.PrivateKey
+					result = append(result, connect)
+				}
+			}
+		}
+	*/
+	globalData.RUnlock()
+	return result
 }

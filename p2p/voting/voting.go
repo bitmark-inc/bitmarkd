@@ -148,7 +148,6 @@ func (v *VotingImpl) ElectedCandidate() (Candidate, uint64, error) {
 }
 
 func (v *VotingImpl) countVotes() error {
-	v.log.Infof("countVotes: count=%d", len(v.votes))
 	for _, voters := range v.votes {
 		if v.result.highestNumVotes < len(voters) {
 			v.updateTemporarilyVoteSummary(voters)
