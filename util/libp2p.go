@@ -7,7 +7,6 @@ import (
 
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
-	"github.com/prometheus/common/log"
 )
 
 // IDCompare The result will be 0 if a==b, -1 if a < b, and +1 if a > b.
@@ -23,18 +22,31 @@ func IDEqual(ida, idb peerlib.ID) bool {
 	return false
 }
 
-// MaAddrToAddrInfo Convert  multiAddr to peer.AddrInfo
-func MaAddrToAddrInfo(ma ma.Multiaddr) (*peerlib.AddrInfo, error) {
-	info, err := peerlib.AddrInfoFromP2pAddr(ma)
+// MaAddrToAddrInfo Convert  multiAddr to peer.AddrInfo; Must Include  ID
+func MaAddrToAddrInfo(maAddr ma.Multiaddr) (*peerlib.AddrInfo, error) {
+	info, err := peerlib.AddrInfoFromP2pAddr(maAddr)
 	if err != nil {
-		log.Error(err.Error())
 		return nil, err
 	}
 	if nil == info {
 		return nil, errors.New("AddrInfo is nil")
 	}
-	//p.PeersRemote.AddAddrs(info.ID, info.Addrs, peerstore.PermanentAddrTTL)
 	return info, nil
+}
+
+// MaAddrsToAddrInfos Convert  []multiAddr to []peer.AddrInfo
+func MaAddrsToAddrInfos(maAddrs []ma.Multiaddr) ([]peerlib.AddrInfo, error) {
+	if len(maAddrs) < 1 {
+		return nil, errors.New("No Address")
+	}
+	infos, err := peerlib.AddrInfosFromP2pAddrs(maAddrs...)
+	if err != nil {
+		return nil, err
+	}
+	if nil == infos {
+		return nil, errors.New("AddrInfo is nil")
+	}
+	return infos, nil
 }
 
 // GetMultiAddrsFromBytes take  [][]byte listeners and convert them into []Multiaddr format

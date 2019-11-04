@@ -37,7 +37,7 @@ loop:
 			continue loop
 		}
 		dataLength := len(parameters)
-		util.LogInfo(log, util.CoGreen, fmt.Sprintf("-->>sub Recieve: chain:%s, fn=%s, len(param)=%d", chain, fn, len(parameters)))
+		//	util.LogInfo(log, util.CoGreen, fmt.Sprintf("-->>sub Recieve: chain:%s, fn=%s, len(param)=%d", chain, fn, len(parameters)))
 		switch fn {
 		case "block":
 			if dataLength < 1 {

@@ -25,7 +25,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/util"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
-	"github.com/prometheus/common/log"
 
 	//	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
@@ -254,7 +253,7 @@ item_loop:
 	for i := 0; i < count; i += 1 {
 		startID, err := peerlib.IDB58Decode(startkey)
 		if err != nil {
-			log.Warnf("ID DecodeBase58 Error :%v ID::%v", err, startkey)
+			s.log.Warnf("ID DecodeBase58 Error :%v ID::%v", err, startkey)
 			continue item_loop
 		}
 		id, listeners, timestamp, err := announce.GetNext(startID)

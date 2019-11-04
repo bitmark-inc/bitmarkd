@@ -12,7 +12,6 @@ import (
 	proto "github.com/golang/protobuf/proto"
 
 	libp2p "github.com/libp2p/go-libp2p"
-	connmgr "github.com/libp2p/go-libp2p-connmgr"
 	crypto "github.com/libp2p/go-libp2p-core/crypto"
 	tls "github.com/libp2p/go-libp2p-tls"
 	ma "github.com/multiformats/go-multiaddr"
@@ -55,8 +54,7 @@ func (n *Node) Setup(configuration *Configuration, version string) error {
 
 // NewHost create a NewHost according to nodetype
 func (n *Node) NewHost(nodetype string, listenAddrs []ma.Multiaddr, prvKey crypto.PrivKey) error {
-	cm := connmgr.NewConnManager(lowConn, maxConn, connGraceTime)
-	options := []libp2p.Option{libp2p.Identity(prvKey), libp2p.Security(tls.ID, tls.New), libp2p.ConnectionManager(cm)}
+	options := []libp2p.Option{libp2p.Identity(prvKey), libp2p.Security(tls.ID, tls.New)}
 	if "client" != nodetype {
 		options = append(options, libp2p.ListenAddrs(listenAddrs...))
 	}
@@ -75,12 +73,12 @@ func (n *Node) NewHost(nodetype string, listenAddrs []ma.Multiaddr, prvKey crypt
 func (n *Node) setAnnounce(announceAddrs []string) {
 	maAddrs := IPPortToMultiAddr(announceAddrs)
 	fullAddr := announceMuxAddr(maAddrs, nodeProtocol, n.Host.ID())
+	util.LogInfo(n.Log, util.CoLightGyan, fmt.Sprintf("setAnnounce:%v", util.PrintMaAddrs(fullAddr)))
 	byteMessage, err := proto.Marshal(&Addrs{Address: util.GetBytesFromMultiaddr(fullAddr)})
 	param0, idErr := n.Host.ID().Marshal()
 	if nil == err && nil == idErr {
 		messagebus.Bus.Announce.Send("self", param0, byteMessage)
 	}
-
 }
 
 func (n *Node) listen(announceAddrs []string) {

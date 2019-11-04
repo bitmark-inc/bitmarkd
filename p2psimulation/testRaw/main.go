@@ -13,9 +13,9 @@ import (
 	"github.com/bitmark-inc/logger"
 	"github.com/libp2p/go-libp2p"
 	p2pcore "github.com/libp2p/go-libp2p-core"
+	crypto "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/network"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
-	crypto "github.com/libp2p/go-libp2p-crypto"
 	tls "github.com/libp2p/go-libp2p-tls"
 	ma "github.com/multiformats/go-multiaddr"
 )

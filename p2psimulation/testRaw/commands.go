@@ -19,7 +19,7 @@ func runInfo(info *peerlib.AddrInfo) {
 	nodeChain := "local"
 	globalData.Log.Info("---- start to query server info---")
 	if err != nil {
-		globalData.Log.Warn(err.Error())
+		globalData.Log.Warn("runInfo NewStream Error:" + err.Error())
 		return
 	}
 	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
@@ -61,7 +61,7 @@ func runReg(info *peerlib.AddrInfo) {
 	nodeChain := "local"
 	globalData.Log.Info("---- start to register ---")
 	if err != nil {
-		globalData.Log.Warn(err.Error())
+		globalData.Log.Warn("RunReg Error:" + err.Error())
 		return
 	}
 	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
