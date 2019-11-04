@@ -125,7 +125,7 @@ filter='
 
 filter='
   (.[0] | map(.publicKey)) as $p |
-  (reduce .[0][] as $p ({}; . + {($p.publicKey):($p.listeners[0]) | ltrimstr("127.0.0.1:")})) as $m |
+  (reduce .[0][] as $p ({}; . + {($p.publicKey):($p.listeners[0]) | ltrimstr("127.0.0.1:") | ltrimstr("[::1]:")})) as $m |
   (.[1].connectedTo | map(.server)) as $ct |
   (.[2].publicKey) as $pk |
 {
