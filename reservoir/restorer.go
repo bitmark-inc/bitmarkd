@@ -1,16 +1,18 @@
+// SPDX-License-Identifier: ISC
+// Copyright (c) 2014-2019 Bitmark Inc.
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
 package reservoir
 
 import (
 	"fmt"
 
-	"github.com/bitmark-inc/bitmarkd/asset"
-
-	"github.com/bitmark-inc/bitmarkd/storage"
-
 	"github.com/prometheus/common/log"
 
+	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/mode"
-
+	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 

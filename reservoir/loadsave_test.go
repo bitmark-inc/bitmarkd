@@ -1,33 +1,29 @@
+// SPDX-License-Identifier: ISC
+// Copyright (c) 2014-2019 Bitmark Inc.
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
 package reservoir_test
 
 import (
-	"crypto/ed25519"
 	"encoding/binary"
 	"fmt"
 	"os"
 	"testing"
 
-	"github.com/bitmark-inc/bitmarkd/chain"
-	"github.com/bitmark-inc/bitmarkd/ownership"
-
-	"github.com/bitmark-inc/bitmarkd/merkle"
-
-	"github.com/bitmark-inc/bitmarkd/fault"
-
-	"github.com/bitmark-inc/bitmarkd/asset"
-
-	"github.com/bitmark-inc/bitmarkd/currency"
-
-	"github.com/bitmark-inc/bitmarkd/reservoir/mocks"
-
 	"github.com/golang/mock/gomock"
-
 	"github.com/stretchr/testify/assert"
-
-	"github.com/bitmark-inc/bitmarkd/reservoir"
+	"golang.org/x/crypto/ed25519"
 
 	"github.com/bitmark-inc/bitmarkd/account"
-
+	"github.com/bitmark-inc/bitmarkd/asset"
+	"github.com/bitmark-inc/bitmarkd/chain"
+	"github.com/bitmark-inc/bitmarkd/currency"
+	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/bitmark-inc/bitmarkd/ownership"
+	"github.com/bitmark-inc/bitmarkd/reservoir"
+	"github.com/bitmark-inc/bitmarkd/reservoir/mocks"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 
