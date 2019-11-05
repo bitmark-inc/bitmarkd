@@ -17,12 +17,13 @@ import (
 // a block of configuration data
 // this is read from the configuration file
 type Configuration struct {
-	Publish     []string          `gluamapper:"publish" json:"publish"`
-	Submit      []string          `gluamapper:"submit" json:"submit"`
-	PrivateKey  string            `gluamapper:"private_key" json:"private_key"`
-	PublicKey   string            `gluamapper:"public_key" json:"public_key"`
-	SigningKey  string            `gluamapper:"signing_key" json:"signing_key"`
-	PaymentAddr map[string]string `gluamapper:"payment_address" json:"payment_address"`
+	Publish       []string          `gluamapper:"publish" json:"publish"`
+	Submit        []string          `gluamapper:"submit" json:"submit"`
+	PrivateKey    string            `gluamapper:"private_key" json:"private_key"`
+	PublicKey     string            `gluamapper:"public_key" json:"public_key"`
+	SigningKey    string            `gluamapper:"signing_key" json:"signing_key"`
+	PaymentAddr   map[string]string `gluamapper:"payment_address" json:"payment_address"`
+	P2PPrivateKey string            `gluamapper:"p2p_private_key" json:"p2p_private_key"`
 }
 
 // globals for background process

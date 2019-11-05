@@ -6,13 +6,24 @@
 package main
 
 import (
+	"bufio"
+	"context"
+	"crypto/rand"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
+
+	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p-core/peerstore"
+
+	"github.com/multiformats/go-multiaddr"
+
+	"github.com/libp2p/go-libp2p"
+	crypto "github.com/libp2p/go-libp2p-core/crypto"
 
 	"github.com/bitmark-inc/bitmarkd/mode"
-	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/bitmark-inc/getoptions"
@@ -187,11 +198,11 @@ func main() {
 	proofer.StartHashing()
 
 	// initialise encryption
-	err = zmqutil.StartAuthentication()
-	if nil != err {
-		log.Criticalf("zmq.AuthStart(): error: %s", err)
-		exitwithstatus.Message("%s: zmq.AuthStart() error: %s", program, err)
-	}
+	//err = zmqutil.StartAuthentication()
+	//if nil != err {
+	//	log.Criticalf("zmq.AuthStart(): error: %s", err)
+	//	exitwithstatus.Message("%s: zmq.AuthStart() error: %s", program, err)
+	//}
 	managerLogger := logger.New(JobManagerPrefix)
 	jobManager := newJobManager(
 		calendar,
@@ -206,51 +217,111 @@ func main() {
 	reader.FirstTimeRun()
 	reader.Start()
 
+	r := rand.Reader
+	p2pPrivateKey, _, err := crypto.GenerateKeyPairWithReader(crypto.RSA, 2048, r)
+	if nil != err {
+		panic(err)
+	}
+
 	// start up bitmarkd clients these subscribe to bitmarkd
 	// blocks publisher to obtain blocks for mining
-connection_setup:
-	for i, remote := range masterConfiguration.Peering.Connect {
+	//connection_setup:
+	for _, c := range masterConfiguration.Peering.Connect {
 
-		serverPublicKey, err := zmqutil.ReadPublicKey(remote.PublicKey)
+		//serverPublicKey, err := zmqutil.ReadPublicKey(remote.PublicKey)
+		//if nil != err {
+		//	log.Warnf("client: %d invalid server publickey: %q error: %s", i, remote.PublicKey, err)
+		//	continue connection_setup
+		//}
+		//
+		//bc, err := util.NewConnection(remote.Blocks)
+		//if nil != err {
+		//	log.Warnf("client: %d invalid blocks publisher: %q error: %s", i, remote.Blocks, err)
+		//	continue connection_setup
+		//}
+		//blocksAddress, blocksv6 := bc.CanonicalIPandPort("tcp://")
+		//
+		//sc, err := util.NewConnection(remote.Submit)
+		//if nil != err {
+		//	log.Warnf("client: %d invalid submit address: %q error: %s", i, remote.Submit, err)
+		//	continue connection_setup
+		//}
+		//submitAddress, submitv6 := sc.CanonicalIPandPort("tcp://")
+		//
+		//log.Infof("client: %d subscribe: %q  submit: %q", i, remote.Blocks, remote.Submit)
+		//
+		//mlog := logger.New(fmt.Sprintf("submitter-%d", i))
+		// TODO: libp2p
+		//err = Submitter(i, submitAddress, submitv6, serverPublicKey, publicKey, privateKey, mlog)
+		//if nil != err {
+		//	log.Warnf("submitter: %d failed error: %s", i, err)
+		//	continue connection_setup
+		//}
+
+		//host.SetStreamHandler("/recorderd/1.0.0", SubmitterHandler)
+		//var port string
+		//for _, la := range host.Network().ListenAddresses() {
+		//	if p, err := la.ValueForProtocol(multiaddr.P_TCP); nil == err {
+		//		port = p
+		//		break
+		//	}
+		//}
+		//if "" == port {
+		//	panic("was not able to find actual local port")
+		//}
+
+		//slog := logger.New(fmt.Sprintf("subscriber-%d", i))
+		// TODO: libp2p
+		//err = Subscribe(i, blocksAddress, blocksv6, serverPublicKey, publicKey, privateKey, slog, proofer)
+		//if nil != err {
+		//	log.Warnf("subscribe: %d failed error: %s", i, err)
+		//	continue connection_setup
+		//}
+
+		//r := rand.Reader
+		//prvKey, _, err := crypto.GenerateKeyPairWithReader(crypto.Ed25519, 2048, r)
+		//prvKeyBytes, _ := prvKey.Bytes()
+
+		//marshalKey, err := crypto.MarshalPrivateKey(prvKey)
+		//if err != nil {
+		//	fmt.Printf("marshal private key with error: %s\n", err)
+		//}
+		//hexEncodeKey := make([]byte, hex.EncodedLen(len(marshalKey)))
+		//hex.Encode(hexEncodeKey, marshalKey)
+
+		host, err := libp2p.New(context.Background(), libp2p.Identity(p2pPrivateKey))
 		if nil != err {
-			log.Warnf("client: %d invalid server publickey: %q error: %s", i, remote.PublicKey, err)
-			continue connection_setup
+			panic(err)
 		}
 
-		bc, err := util.NewConnection(remote.Blocks)
+		fmt.Printf("p2p: %s\n", c.P2P)
+		maddr, err := multiaddr.NewMultiaddr(c.P2P)
 		if nil != err {
-			log.Warnf("client: %d invalid blocks publisher: %q error: %s", i, remote.Blocks, err)
-			continue connection_setup
-		}
-		blocksAddress, blocksv6 := bc.CanonicalIPandPort("tcp://")
-
-		sc, err := util.NewConnection(remote.Submit)
-		if nil != err {
-			log.Warnf("client: %d invalid submit address: %q error: %s", i, remote.Submit, err)
-			continue connection_setup
-		}
-		submitAddress, submitv6 := sc.CanonicalIPandPort("tcp://")
-
-		log.Infof("client: %d subscribe: %q  submit: %q", i, remote.Blocks, remote.Submit)
-
-		mlog := logger.New(fmt.Sprintf("submitter-%d", i))
-		err = Submitter(i, submitAddress, submitv6, serverPublicKey, publicKey, privateKey, mlog)
-		if nil != err {
-			log.Warnf("submitter: %d failed error: %s", i, err)
-			continue connection_setup
+			panic(err)
 		}
 
-		slog := logger.New(fmt.Sprintf("subscriber-%d", i))
-		err = Subscribe(i, blocksAddress, blocksv6, serverPublicKey, publicKey, privateKey, slog, proofer)
+		info, err := peer.AddrInfoFromP2pAddr(maddr)
 		if nil != err {
-			log.Warnf("subscribe: %d failed error: %s", i, err)
-			continue connection_setup
+			panic(err)
 		}
+		fmt.Printf("info: %#v\n", info)
+
+		host.Peerstore().AddAddrs(info.ID, info.Addrs, peerstore.PermanentAddrTTL)
+
+		s, err := host.NewStream(context.Background(), info.ID, "/recorderd/1.0.0")
+		if nil != err {
+			panic(err)
+		}
+
+		rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
+
+		go readData(rw)
+		go writeData(rw)
 	}
 
 	// erase the private key from memory
 	//lint:ignore SA4006 we want to make sure we clean privateKey
-	privateKey = []byte{}
+	//privateKey = []byte{}
 
 	// abort if no clients were connected
 
@@ -268,5 +339,27 @@ connection_setup:
 	if 0 == len(options["quiet"]) {
 		fmt.Printf("\nreceived signal: %v\n", sig)
 		fmt.Printf("\nshutting down...\n")
+	}
+}
+
+func readData(rw *bufio.ReadWriter) {
+	for {
+		str, _ := rw.ReadString('\n')
+		if "" == str {
+			return
+		}
+		if str != "\n" {
+			fmt.Printf("%s", str)
+		}
+	}
+}
+
+func writeData(rw *bufio.ReadWriter) {
+	for {
+		select {
+		case <-time.After(8 * time.Second):
+			rw.WriteString(fmt.Sprintf("from recorderd - %s\n", time.Now()))
+			rw.Flush()
+		}
 	}
 }

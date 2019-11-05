@@ -75,6 +75,8 @@ func (sub *submission) Run(args interface{}, shutdown <-chan struct{}) {
 
 	log.Info("starting…")
 
+	return
+
 	go func() {
 		poller := zmq.NewPoller()
 		if nil != sub.socket4 {

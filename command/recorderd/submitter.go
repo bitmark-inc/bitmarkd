@@ -163,6 +163,7 @@ func Submitter(i int, connectTo string, v6 bool, serverPublicKey []byte, publicK
 
 			data, err := json.Marshal(toSend)
 			if nil != err {
+
 				log.Errorf("JSON encode error: %s", err)
 				continue dequeue_items
 			}

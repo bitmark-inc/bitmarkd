@@ -42,6 +42,7 @@ type Connection struct {
 	PublicKey string `gluamapper:"public_key" json:"public_key"`
 	Blocks    string `gluamapper:"blocks" json:"blocks"`
 	Submit    string `gluamapper:"submit" json:"submit"`
+	P2P       string `gluamapper:"p2p" json:"p2p"`
 }
 
 // PeerType - configuration of a peer

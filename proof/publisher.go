@@ -6,6 +6,8 @@
 package proof
 
 import (
+	"bufio"
+	"context"
 	"crypto/rand"
 	"encoding/binary"
 	"encoding/hex"
@@ -13,6 +15,15 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/libp2p/go-libp2p"
+	crypto "github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/protocol"
+	"github.com/multiformats/go-multiaddr"
+
+	"github.com/prometheus/common/log"
+
+	"github.com/libp2p/go-libp2p-core/network"
 
 	zmq "github.com/pebbe/zmq4"
 	"golang.org/x/crypto/ed25519"
@@ -29,15 +40,15 @@ import (
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
-	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
 )
 
 // tags for the signing key data
 const (
-	taggedSeed    = "SEED:"    // followed by base58 encoded seed as produced by desktop/cli client
-	taggedPrivate = "PRIVATE:" // followed by 64 bytes of hex Ed25519 private key
+	taggedSeed        = "SEED:"    // followed by base58 encoded seed as produced by desktop/cli client
+	taggedPrivate     = "PRIVATE:" // followed by 64 bytes of hex Ed25519 private key
+	recorderdProtocol = "/recorderd/1.0.0"
 )
 
 const (
@@ -160,14 +171,14 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 	log.Tracef("server private: %x", privateKey)
 
 	// create connections
-	c, _ := util.NewConnections(configuration.Publish)
+	//c, _ := util.NewConnections(configuration.Publish)
 
 	// allocate IPv4 and IPv6 sockets
-	pub.socket4, pub.socket6, err = zmqutil.NewBind(log, zmq.PUB, publisherZapDomain, privateKey, publicKey, c)
-	if nil != err {
-		log.Errorf("bind error: %s", err)
-		return err
-	}
+	//pub.socket4, pub.socket6, err = zmqutil.NewBind(log, zmq.PUB, publisherZapDomain, privateKey, publicKey, c)
+	//if nil != err {
+	//	log.Errorf("bind error: %s", err)
+	//	return err
+	//}
 
 	return nil
 }
@@ -180,10 +191,28 @@ func (pub *publisher) Run(args interface{}, shutdown <-chan struct{}) {
 
 	log.Info("starting…")
 
-	publishInterval := publishBitmarkInterval
-	if mode.IsTesting() {
-		publishInterval = publishTestingInterval
+	//publishInterval := publishBitmarkInterval
+	//if mode.IsTesting() {
+	//	publishInterval = publishTestingInterval
+	//}
+
+	// libp2p
+	r := rand.Reader
+	p2pPrivateKey, _, err := crypto.GenerateKeyPairWithReader(crypto.RSA, 2048, r)
+	if nil != err {
+		log.Errorf("crypto generate ed25519 key with error: %s", err)
 	}
+
+	mAddrs, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/2138")
+
+	host, err := libp2p.New(context.Background(), libp2p.ListenAddrs(mAddrs), libp2p.Identity(p2pPrivateKey))
+	if nil != err {
+		log.Errorf("create libp2p host with error: %s", err)
+	}
+
+	log.Infof("host: /ip4/127.0.0.1/tcp/2138/p2p/%s", host.ID().Pretty())
+
+	host.SetStreamHandler(protocol.ID(recorderdProtocol), pub.proofHandler)
 
 loop:
 	for {
@@ -191,16 +220,16 @@ loop:
 		select {
 		case <-shutdown:
 			break loop
-		case <-time.After(publishInterval): // timeout
-			pub.process()
+			//case <-time.After(publishInterval): // timeout
+			//	pub.process()
 		}
 	}
-	if nil != pub.socket4 {
-		pub.socket4.Close()
-	}
-	if nil != pub.socket6 {
-		pub.socket6.Close()
-	}
+	//if nil != pub.socket4 {
+	//	pub.socket4.Close()
+	//}
+	//if nil != pub.socket6 {
+	//	pub.socket6.Close()
+	//}
 }
 
 // process some items into a block and publish it
@@ -325,4 +354,162 @@ func (pub *publisher) process() {
 	}
 
 	time.Sleep(10 * time.Second)
+}
+
+func (pub *publisher) proofHandler(s network.Stream) {
+	// only create new blocks if in normal mode
+	//if !mode.Is(mode.Normal) {
+	//	pub.log.Errorf("not in normal mode")
+	//	return
+	//}
+
+	// read data
+	go pub.readData(s)
+
+	// write data
+	go pub.writeData(s)
+
+	return
+
+	// note: fetch one less tx because of foundation record
+	pooledTxIds, transactions, err := reservoir.FetchVerified(blockrecord.MaximumTransactions - 1)
+	if nil != err {
+		pub.log.Errorf("Error on Fetch: %v", err)
+		return
+	}
+
+	txCount := len(pooledTxIds)
+
+	if 0 == txCount {
+		pub.log.Info("verified pool is empty")
+		return
+	}
+
+	// create record for each supported currency
+	p := make(currency.Map)
+	for c := currency.First; c <= currency.Last; c++ {
+		p[c] = pub.paymentAddress[c]
+	}
+
+	blockFoundation := &transactionrecord.BlockFoundation{
+		Version:  transactionrecord.FoundationVersion,
+		Payments: p,
+		Owner:    pub.owner,
+		Nonce:    1234,
+	}
+
+	// sign the record and attach signature
+	partiallyPacked, _ := blockFoundation.Pack(pub.owner) // ignore error to get packed without signature
+	signature := ed25519.Sign(pub.privateKey[:], partiallyPacked)
+	blockFoundation.Signature = signature[:]
+
+	// re-pack to makesure signature is valid
+	packedBI, err := blockFoundation.Pack(pub.owner)
+	if nil != err {
+		pub.log.Criticalf("pack block foundation error: %s", err)
+		logger.Panicf("publisher packed block foundation error: %s", err)
+	}
+
+	// the first two are base records
+	txIds := make([]merkle.Digest, 1, len(pooledTxIds)*2) // allow room for inserted assets & allocate base
+	txIds[0] = merkle.NewDigest(packedBI)
+	txIds = append(txIds, pooledTxIds...)
+
+	// build the tree of transaction IDs
+	fullMerkleTree := merkle.FullMerkleTree(txIds)
+	merkleRoot := fullMerkleTree[len(fullMerkleTree)-1]
+
+	transactionCount := len(txIds)
+	if transactionCount > blockrecord.MaximumTransactions {
+		pub.log.Criticalf("too many transactions in block: %d", transactionCount)
+		logger.Panicf("too many transactions in block: %d", transactionCount)
+	}
+
+	// 64 bit nonce (8 bytes)
+	randomBytes := make([]byte, 8)
+	_, err = rand.Read(randomBytes)
+	if err != nil {
+		pub.log.Criticalf("random number generate with error: %s", err)
+		logger.Panicf("random number generate with error: %s", err)
+	}
+	nonce := blockrecord.NonceType(binary.LittleEndian.Uint64(randomBytes))
+
+	timestamp := uint64(time.Now().Unix())
+
+	// PreviousBlock is all zero
+	message := &PublishedItem{
+		Job: "?", // set by enqueue
+		Header: blockrecord.Header{
+			Version:          blockrecord.Version,
+			TransactionCount: uint16(transactionCount),
+			MerkleRoot:       merkleRoot,
+			Timestamp:        timestamp,
+			Difficulty:       difficulty.Current,
+			Nonce:            nonce,
+		},
+		TxZero: packedBI,
+		TxIds:  txIds,
+	}
+
+	pub.log.Tracef("message: %v", message)
+
+	message.Header.PreviousBlock, message.Header.Number = blockheader.GetNew()
+
+	pub.log.Debugf("current difficulty: %f", message.Header.Difficulty.Value())
+	if blockrecord.IsBlockToAdjustDifficulty(message.Header.Number, message.Header.Version) {
+		newDifficulty, _ := blockrecord.DifficultyByPreviousTimespanAtBlock(message.Header.Number)
+
+		diff := difficulty.New()
+		diff.Set(newDifficulty)
+		message.Header.Difficulty = diff
+
+		pub.log.Debugf("difficulty adjust block %d, new difficulty: %f", message.Header.Number, newDifficulty)
+	}
+
+	// add job to the queue
+	enqueueToJobQueue(message, transactions)
+
+	data, err := json.Marshal(message)
+	logger.PanicIfError("JSON encode error: %s", err)
+
+	pub.log.Infof("json to send: %s", data)
+
+	// ***** FIX THIS: is the DONTWAIT flag needed or not?
+	if nil != pub.socket4 {
+		_, err = pub.socket4.SendBytes(data, 0|zmq.DONTWAIT)
+		logger.PanicIfError("publisher 4", err)
+	}
+	if nil != pub.socket6 {
+		_, err = pub.socket6.SendBytes(data, 0|zmq.DONTWAIT)
+		logger.PanicIfError("publisher 6", err)
+	}
+
+	time.Sleep(10 * time.Second)
+}
+
+func (pub *publisher) readData(s network.Stream) {
+	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
+
+	for {
+		str, _ := rw.ReadString('\n')
+
+		if "" == str {
+			return
+		}
+
+		if "\n" != str {
+			log.Infof("received %s", str)
+		}
+	}
+}
+
+func (pub *publisher) writeData(s network.Stream) {
+	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
+	for {
+		select {
+		case <-time.After(10 * time.Second):
+			rw.WriteString(fmt.Sprintf("%s\n", time.Now()))
+			rw.Flush()
+		}
+	}
 }
