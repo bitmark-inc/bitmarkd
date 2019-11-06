@@ -13,6 +13,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/prometheus/common/log"
 	"strings"
 	"time"
 
@@ -55,6 +56,10 @@ const (
 	publishBitmarkInterval = 60 * time.Second
 	publishTestingInterval = 15 * time.Second
 	publisherZapDomain     = "publisher"
+)
+
+var (
+	jobToSendCh = make(chan []byte, 10)
 )
 
 type publisher struct {
@@ -191,10 +196,10 @@ func (pub *publisher) Run(args interface{}, shutdown <-chan struct{}) {
 
 	log.Info("starting…")
 
-	//publishInterval := publishBitmarkInterval
-	//if mode.IsTesting() {
-	//	publishInterval = publishTestingInterval
-	//}
+	publishInterval := publishBitmarkInterval
+	if mode.IsTesting() {
+		publishInterval = publishTestingInterval
+	}
 
 	// libp2p
 	r := rand.Reader
@@ -220,8 +225,8 @@ loop:
 		select {
 		case <-shutdown:
 			break loop
-			//case <-time.After(publishInterval): // timeout
-			//	pub.process()
+		case <-time.After(publishInterval): // timeout
+			pub.process()
 		}
 	}
 	//if nil != pub.socket4 {
@@ -341,17 +346,20 @@ func (pub *publisher) process() {
 	data, err := json.Marshal(message)
 	logger.PanicIfError("JSON encode error: %s", err)
 
+	jobToSendCh <- data
+
 	pub.log.Infof("json to send: %s", data)
 
 	// ***** FIX THIS: is the DONTWAIT flag needed or not?
-	if nil != pub.socket4 {
-		_, err = pub.socket4.SendBytes(data, 0|zmq.DONTWAIT)
-		logger.PanicIfError("publisher 4", err)
-	}
-	if nil != pub.socket6 {
-		_, err = pub.socket6.SendBytes(data, 0|zmq.DONTWAIT)
-		logger.PanicIfError("publisher 6", err)
-	}
+	//if nil != pub.socket4 {
+	//	_, err = pub.socket4.SendBytes(data, 0|zmq.DONTWAIT)
+	//	logger.PanicIfError("publisher 4", err)
+	//}
+	//if nil != pub.socket6 {
+	//	_, err = pub.socket6.SendBytes(data, 0|zmq.DONTWAIT)
+	//	logger.PanicIfError("publisher 6", err)
+	//}
+	// TODO: temp disable by libp2p
 
 	time.Sleep(10 * time.Second)
 }
@@ -366,130 +374,13 @@ func (pub *publisher) proofHandler(s network.Stream) {
 	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
 
 	// read data
-	go pub.readData(s, rw)
+	go pub.readData(rw)
 
 	// write data
-	go pub.writeData(s, rw)
-
-	return
-
-	// note: fetch one less tx because of foundation record
-	pooledTxIds, transactions, err := reservoir.FetchVerified(blockrecord.MaximumTransactions - 1)
-	if nil != err {
-		pub.log.Errorf("Error on Fetch: %v", err)
-		return
-	}
-
-	txCount := len(pooledTxIds)
-
-	if 0 == txCount {
-		pub.log.Info("verified pool is empty")
-		return
-	}
-
-	// create record for each supported currency
-	p := make(currency.Map)
-	for c := currency.First; c <= currency.Last; c++ {
-		p[c] = pub.paymentAddress[c]
-	}
-
-	blockFoundation := &transactionrecord.BlockFoundation{
-		Version:  transactionrecord.FoundationVersion,
-		Payments: p,
-		Owner:    pub.owner,
-		Nonce:    1234,
-	}
-
-	// sign the record and attach signature
-	partiallyPacked, _ := blockFoundation.Pack(pub.owner) // ignore error to get packed without signature
-	signature := ed25519.Sign(pub.privateKey[:], partiallyPacked)
-	blockFoundation.Signature = signature[:]
-
-	// re-pack to makesure signature is valid
-	packedBI, err := blockFoundation.Pack(pub.owner)
-	if nil != err {
-		pub.log.Criticalf("pack block foundation error: %s", err)
-		logger.Panicf("publisher packed block foundation error: %s", err)
-	}
-
-	// the first two are base records
-	txIds := make([]merkle.Digest, 1, len(pooledTxIds)*2) // allow room for inserted assets & allocate base
-	txIds[0] = merkle.NewDigest(packedBI)
-	txIds = append(txIds, pooledTxIds...)
-
-	// build the tree of transaction IDs
-	fullMerkleTree := merkle.FullMerkleTree(txIds)
-	merkleRoot := fullMerkleTree[len(fullMerkleTree)-1]
-
-	transactionCount := len(txIds)
-	if transactionCount > blockrecord.MaximumTransactions {
-		pub.log.Criticalf("too many transactions in block: %d", transactionCount)
-		logger.Panicf("too many transactions in block: %d", transactionCount)
-	}
-
-	// 64 bit nonce (8 bytes)
-	randomBytes := make([]byte, 8)
-	_, err = rand.Read(randomBytes)
-	if err != nil {
-		pub.log.Criticalf("random number generate with error: %s", err)
-		logger.Panicf("random number generate with error: %s", err)
-	}
-	nonce := blockrecord.NonceType(binary.LittleEndian.Uint64(randomBytes))
-
-	timestamp := uint64(time.Now().Unix())
-
-	// PreviousBlock is all zero
-	message := &PublishedItem{
-		Job: "?", // set by enqueue
-		Header: blockrecord.Header{
-			Version:          blockrecord.Version,
-			TransactionCount: uint16(transactionCount),
-			MerkleRoot:       merkleRoot,
-			Timestamp:        timestamp,
-			Difficulty:       difficulty.Current,
-			Nonce:            nonce,
-		},
-		TxZero: packedBI,
-		TxIds:  txIds,
-	}
-
-	pub.log.Tracef("message: %v", message)
-
-	message.Header.PreviousBlock, message.Header.Number = blockheader.GetNew()
-
-	pub.log.Debugf("current difficulty: %f", message.Header.Difficulty.Value())
-	if blockrecord.IsBlockToAdjustDifficulty(message.Header.Number, message.Header.Version) {
-		newDifficulty, _ := blockrecord.DifficultyByPreviousTimespanAtBlock(message.Header.Number)
-
-		diff := difficulty.New()
-		diff.Set(newDifficulty)
-		message.Header.Difficulty = diff
-
-		pub.log.Debugf("difficulty adjust block %d, new difficulty: %f", message.Header.Number, newDifficulty)
-	}
-
-	// add job to the queue
-	enqueueToJobQueue(message, transactions)
-
-	data, err := json.Marshal(message)
-	logger.PanicIfError("JSON encode error: %s", err)
-
-	pub.log.Infof("json to send: %s", data)
-
-	// ***** FIX THIS: is the DONTWAIT flag needed or not?
-	if nil != pub.socket4 {
-		_, err = pub.socket4.SendBytes(data, 0|zmq.DONTWAIT)
-		logger.PanicIfError("publisher 4", err)
-	}
-	if nil != pub.socket6 {
-		_, err = pub.socket6.SendBytes(data, 0|zmq.DONTWAIT)
-		logger.PanicIfError("publisher 6", err)
-	}
-
-	time.Sleep(10 * time.Second)
+	go pub.writeData(rw)
 }
 
-func (pub *publisher) readData(s network.Stream, rw *bufio.ReadWriter) {
+func (pub *publisher) readData(rw *bufio.ReadWriter) {
 	maxBytes := 1000
 	data := make([]byte, maxBytes)
 	for {
@@ -501,26 +392,34 @@ func (pub *publisher) readData(s network.Stream, rw *bufio.ReadWriter) {
 		if 0 == length {
 			return
 		}
-		chain, fn, parameters, err := p2p.UnPackP2PMessage(data[:length])
+		_, _, parameters, err := p2p.UnPackP2PMessage(data[:length])
 		if nil != err {
 			panic(err)
 		}
-		fmt.Printf("received chain: %s, fn: %s, parameter: %s\n", chain, fn, string(parameters[0]))
+		//fmt.Printf("received chain: %s, fn: %s, parameter: %s\n", chain, fn, string(parameters[0]))
+		log.Infof("receive: %#v", parameters[0])
 	}
 }
 
-func (pub *publisher) writeData(s network.Stream, rw *bufio.ReadWriter) {
-	for {
-		select {
-		case <-time.After(10 * time.Second):
-			str := fmt.Sprintf("%s\n", time.Now())
-			packed, err := p2p.PackP2PMessage("testing", "R", [][]byte{[]byte(str)})
-			if nil != err {
-				panic(err)
-			}
-
-			rw.Write(packed)
-			rw.Flush()
+func (pub *publisher) writeData(rw *bufio.ReadWriter) {
+	for j := range jobToSendCh {
+		//select {
+		//case <-time.After(10 * time.Second):
+		//	str := fmt.Sprintf("%s\n", time.Now())
+		//	packed, err := p2p.PackP2PMessage("testing", "R", [][]byte{[]byte(str)})
+		//	if nil != err {
+		//		panic(err)
+		//	}
+		//
+		//	rw.Write(packed)
+		//	rw.Flush()
+		//}
+		packed, err := p2p.PackP2PMessage("testing", "R", [][]byte{j})
+		if nil != err {
+			panic(err)
 		}
+		log.Infof("published item: %#v", j)
+		rw.Write(packed)
+		rw.Flush()
 	}
 }

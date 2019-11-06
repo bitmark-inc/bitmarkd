@@ -9,13 +9,13 @@ import (
 	"bufio"
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
+	"github.com/bitmark-inc/bitmarkd/p2p"
+	"github.com/prometheus/common/log"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
-
-	"github.com/bitmark-inc/bitmarkd/p2p"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/peerstore"
@@ -355,25 +355,31 @@ func readData(rw *bufio.ReadWriter) {
 		if length == 0 {
 			return
 		}
-		chain, fn, parameters, err := p2p.UnPackP2PMessage(data[:length])
+		_, fn, parameters, err := p2p.UnPackP2PMessage(data[:length])
+		if nil != err || "R" != fn {
+			panic(err)
+		}
+		var item PublishedItem
+		err = json.Unmarshal(parameters[0], &item)
 		if nil != err {
 			panic(err)
 		}
-		fmt.Printf("received chain: %s, fn: %s, parameter: %s\n", chain, fn, string(parameters[0]))
+		log.Infof("received item: %#v", item)
+		//fmt.Printf("received chain: %s, fn: %s, parameter: %s\n", chain, fn, string(parameters[0]))
 	}
 }
 
 func writeData(rw *bufio.ReadWriter) {
-	for {
-		select {
-		case <-time.After(8 * time.Second):
-			str := fmt.Sprintf("%s\n", time.Now())
-			packed, err := p2p.PackP2PMessage("testing", "R", [][]byte{[]byte(str)})
-			if nil != err {
-				panic(err)
-			}
-			rw.Write(packed)
-			rw.Flush()
-		}
-	}
+	//for {
+	//select {
+	//case <-time.After(8 * time.Second):
+	//	str := fmt.Sprintf("%s\n", time.Now())
+	//	packed, err := p2p.PackP2PMessage("testing", "R", [][]byte{[]byte(str)})
+	//	if nil != err {
+	//		panic(err)
+	//	}
+	//	rw.Write(packed)
+	//	rw.Flush()
+	//}
+	//}
 }
