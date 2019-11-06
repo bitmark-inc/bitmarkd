@@ -16,12 +16,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/p2p"
+
 	"github.com/libp2p/go-libp2p"
 	crypto "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	"github.com/multiformats/go-multiaddr"
-
-	"github.com/prometheus/common/log"
 
 	"github.com/libp2p/go-libp2p-core/network"
 
@@ -363,11 +363,13 @@ func (pub *publisher) proofHandler(s network.Stream) {
 	//	return
 	//}
 
+	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
+
 	// read data
-	go pub.readData(s)
+	go pub.readData(s, rw)
 
 	// write data
-	go pub.writeData(s)
+	go pub.writeData(s, rw)
 
 	return
 
@@ -487,28 +489,37 @@ func (pub *publisher) proofHandler(s network.Stream) {
 	time.Sleep(10 * time.Second)
 }
 
-func (pub *publisher) readData(s network.Stream) {
-	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
-
+func (pub *publisher) readData(s network.Stream, rw *bufio.ReadWriter) {
+	maxBytes := 1000
+	data := make([]byte, maxBytes)
 	for {
-		str, _ := rw.ReadString('\n')
+		length, err := rw.Read(data)
+		if nil != err {
+			panic(err)
+		}
 
-		if "" == str {
+		if 0 == length {
 			return
 		}
-
-		if "\n" != str {
-			log.Infof("received %s", str)
+		chain, fn, parameters, err := p2p.UnPackP2PMessage(data[:length])
+		if nil != err {
+			panic(err)
 		}
+		fmt.Printf("received chain: %s, fn: %s, parameter: %s\n", chain, fn, string(parameters[0]))
 	}
 }
 
-func (pub *publisher) writeData(s network.Stream) {
-	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
+func (pub *publisher) writeData(s network.Stream, rw *bufio.ReadWriter) {
 	for {
 		select {
 		case <-time.After(10 * time.Second):
-			rw.WriteString(fmt.Sprintf("%s\n", time.Now()))
+			str := fmt.Sprintf("%s\n", time.Now())
+			packed, err := p2p.PackP2PMessage("testing", "R", [][]byte{[]byte(str)})
+			if nil != err {
+				panic(err)
+			}
+
+			rw.Write(packed)
 			rw.Flush()
 		}
 	}

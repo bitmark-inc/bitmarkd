@@ -36,7 +36,7 @@ func UnPackP2PMessage(packed []byte) (chain string, fn string, parameters [][]by
 	return chain, fn, parameters, nil
 }
 
-//UnPackRegisterData Unpack register binary  data into objectr information
+//UnPackRegisterData Unpack register binary  data into object information
 func UnPackRegisterData(parameters [][]byte) (nodeType string, id peerlib.ID, addrs []ma.Multiaddr, ts uint64, err error) {
 	if len(parameters) < 4 {
 		return nodeType, id, addrs, ts, errors.New("Invalid data")

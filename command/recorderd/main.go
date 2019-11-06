@@ -15,6 +15,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/p2p"
+
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/peerstore"
 
@@ -343,14 +345,21 @@ func main() {
 }
 
 func readData(rw *bufio.ReadWriter) {
+	maxBytes := 1000
+	data := make([]byte, maxBytes)
 	for {
-		str, _ := rw.ReadString('\n')
-		if "" == str {
+		length, err := rw.Read(data)
+		if nil != err {
+			panic(err)
+		}
+		if length == 0 {
 			return
 		}
-		if str != "\n" {
-			fmt.Printf("%s", str)
+		chain, fn, parameters, err := p2p.UnPackP2PMessage(data[:length])
+		if nil != err {
+			panic(err)
 		}
+		fmt.Printf("received chain: %s, fn: %s, parameter: %s\n", chain, fn, string(parameters[0]))
 	}
 }
 
@@ -358,7 +367,12 @@ func writeData(rw *bufio.ReadWriter) {
 	for {
 		select {
 		case <-time.After(8 * time.Second):
-			rw.WriteString(fmt.Sprintf("from recorderd - %s\n", time.Now()))
+			str := fmt.Sprintf("%s\n", time.Now())
+			packed, err := p2p.PackP2PMessage("testing", "R", [][]byte{[]byte(str)})
+			if nil != err {
+				panic(err)
+			}
+			rw.Write(packed)
 			rw.Flush()
 		}
 	}
