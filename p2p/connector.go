@@ -6,46 +6,46 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/util"
+
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
+	ma "github.com/multiformats/go-multiaddr"
 )
-
-// ConnectPeers connect to all peers in host peerstore
-func (n *Node) connectPeers() {
-loop:
-	for _, peerID := range n.Host.Peerstore().PeersWithAddrs() {
-		peerInfo := n.Host.Peerstore().PeerInfo(peerID)
-		//n.Log.Infof("connect to peer[%s] %s... ", peerInfo.ID, util.PrintMaAddrs(peerInfo.Addrs))
-		if len(peerInfo.Addrs) == 0 {
-			n.Log.Infof("no Addr: %s", peerID)
-			continue loop
-		} else if n.isSameNode(peerInfo) {
-			n.Log.Infof("The same node: %s", peerID)
-			continue loop
-		} else {
-			err := n.DirectConnect(peerInfo)
-			if err != nil {
-				continue loop
-			}
-			_, err = n.Register(&peerInfo)
-			if err != nil {
-				n.Log.Warn(fmt.Sprintf(":\x1b[31mRegister Failed: %v:\x1b[0m", err))
-				n.Host.Network().ClosePeer(peerInfo.ID)
-				continue loop
-			}
-		}
-	}
-}
 
 //DirectConnect connect to the peer with given peer AddrInfo
 func (n *Node) DirectConnect(info peer.AddrInfo) error {
 	cctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancel()
+	if n.isSameNode(info) { // check if the same node
+		util.LogDebug(n.Log, util.CoLightGray, "DirectConnect to the self node")
+		return nil
+	}
+	if connected, _ := n.connectStatus(info.ID); connected { // If connected, don't need to reconnect
+		util.LogDebug(n.Log, util.CoLightGreen, fmt.Sprintf("DirectConnect ID:%v connected", info.ID.ShortString()))
+		return nil
+	}
+	for _, addr := range info.Addrs {
+		if n.PreferIPv6 && util.IsMultiAddrIPV6(addr) {
+			ipv6Addr, ipv6Err := ma.NewMultiaddr(fmt.Sprintf("%s/%v/%s", addr, nodeProtocol, info.ID.ShortString()))
+			ipv6Info, ipv6Err := util.MaAddrToAddrInfo(ipv6Addr)
+			ipv6Err = n.Host.Connect(cctx, *ipv6Info)
+			if ipv6Err == nil {
+				n.setConnectStatus(info.ID, true)
+				util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("DirectConnect to IPV6 addr:%v", ipv6Addr))
+				return nil
+			}
+			util.LogWarn(n.Log, util.CoLightRed, fmt.Sprintf("DirectConnect to ID:%v IPV6 Error:%v", info.ID.ShortString(), ipv6Err))
+		}
+	}
 	err := n.Host.Connect(cctx, info)
 	if err != nil {
-		n.Log.Warn(err.Error())
+		n.setConnectStatus(info.ID, false)
+		util.LogWarn(n.Log, util.CoLightRed, fmt.Sprintf("DirectConnect ID:%v Error:%v", info.ID.ShortString(), err))
 		return err
 	}
+	n.setConnectStatus(info.ID, true)
+	util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("DirectConnect to addr:%v/%v", util.PrintMaAddrs(info.Addrs), info.ID.ShortString()))
 	return nil
 }
 

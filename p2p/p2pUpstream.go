@@ -26,7 +26,7 @@ func (n *Node) Register(peerInfo *peerlib.AddrInfo) (network.Stream, error) {
 		n.Log.Warn(err.Error())
 		return nil, err
 	}
-	defer s.Close()
+	defer s.Reset()
 	//nodeChain := mode.ChainName()
 	nodeChain := "local"
 	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
@@ -97,7 +97,7 @@ func (n *Node) QueryBlockHeight(peerID peerlib.ID) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer s.Close()
+	defer s.Reset()
 	fn := "N"
 	if n.IsRegister(peerID) { // stream has registered
 		rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
@@ -162,7 +162,8 @@ func (n *Node) RemoteDigestOfHeight(peerID peerlib.ID, blockNumber uint64) (bloc
 		n.Log.Warn(err.Error())
 		return blockdigest.Digest{}, err
 	}
-	defer s.Close()
+	defer s.Reset()
+
 	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
 	//nodeChain := mode.ChainName()
 	nodeChain := "local"
@@ -226,7 +227,7 @@ func (n *Node) GetBlockData(peerID peerlib.ID, blockNumber uint64) ([]byte, erro
 		n.Log.Warn(err.Error())
 		return nil, err
 	}
-	defer s.Close()
+	defer s.Reset()
 	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
 	//nodeChain := mode.ChainName()
 	nodeChain := "local"
@@ -278,6 +279,7 @@ func (n *Node) PushMessageBus(item BusMessage, peerID peerlib.ID) error {
 		n.Log.Warn(err.Error())
 		return err
 	}
+	defer s.Reset()
 	if n.IsRegister(peerID) { // stream has registered
 		rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
 		packedP2PMsg, err := PackP2PMessage(mode.ChainName(), item.Command, item.Parameters)
@@ -336,6 +338,7 @@ func (n *Node) QueryPeerInfo(id peerlib.ID) error {
 		n.Log.Error(err.Error())
 		return err
 	}
+	defer s.Reset()
 	if s != nil {
 		rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
 		//p2pMsgPacked, err := PackP2PMessage(nodeChain, "I", [][]byte{})
@@ -343,51 +346,5 @@ func (n *Node) QueryPeerInfo(id peerlib.ID) error {
 		rw.Write([]byte("p2pMsgPacked"))
 		rw.Flush()
 	}
-
-	/*
-		s, err := n.Host.NewStream(context.Background(), n.Host.ID(), "p2pstream")
-		n.Log.Info(fmt.Sprintf("--> Write:\x1b[32mQueryPeerInfoxx\x1b[0m>"))
-		rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
-
-		n.Log.Info(fmt.Sprintf("--> Write:\x1b[32mQueryPeerInfo\x1b[0m>"))
-
-		p2pMsgPacked, err := PackP2PMessage(nodeChain, "I", [][]byte{})
-		if err != nil {
-			n.Log.Error(err.Error())
-			return err
-		}
-		n.Log.Info(fmt.Sprintf("--> Write:\x1b[32mQueryPeerInfo22\x1b[0m>"))
-		_, err = rw.Write(p2pMsgPacked)
-
-		if err != nil {
-			n.Log.Error(err.Error())
-			return err
-		}
-
-		rw.Flush()
-
-		resp := make([]byte, maxBytesRecieve)
-		respLen, err := rw.Read(resp)
-		n.Log.Info(fmt.Sprintf("--> Read:\x1b[32m%d\x1b[0m> ", respLen))
-		if err != nil {
-			n.Log.Infof("Error:%v", err)
-			return err
-		}
-		if respLen < 1 {
-			n.Log.Info(errors.New("length of byte recieved is less than 1").Error())
-		}
-		_, _, parameters, err := UnPackP2PMessage(resp[:respLen])
-		if err != nil {
-			n.Log.Infof("Error:%v", err)
-			return err
-		}
-		var servInfo serverInfo
-		err = json.Unmarshal(parameters[0], &servInfo)
-		if err != nil {
-			n.Log.Infof("Error:%v", err)
-			return err
-		}
-		n.Log.Infof("\x1b[32m ServerInfo : %v \x1b[0m", servInfo)
-	*/
 	return nil
 }

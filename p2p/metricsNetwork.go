@@ -23,10 +23,12 @@ func (m *MetricsNetwork) networkMonitor(host p2pcore.Host, log *logger.L) {
 		},
 		ConnectedF: func(net p2pnet.Network, conn p2pnet.Conn) {
 			m.connCount.Increment()
+			globalData.setConnectStatus(host.ID(), true)
 			log.Infof("@@: Conn: %v Connected at %v ConnCount:%d\n", conn.RemoteMultiaddr().String(), time.Now(), m.connCount)
 		},
 		DisconnectedF: func(net p2pnet.Network, conn p2pnet.Conn) {
 			m.connCount.Decrement()
+			globalData.setConnectStatus(host.ID(), false)
 			log.Infof("@@Conn: %v Disconnected at %v  ConnCount:%d\n", conn.RemoteMultiaddr().String(), time.Now(), m.connCount)
 		},
 		OpenedStreamF: func(net p2pnet.Network, stream p2pnet.Stream) {
@@ -42,12 +44,12 @@ func (m *MetricsNetwork) networkMonitor(host p2pcore.Host, log *logger.L) {
 
 //GetConnCount return current connection counts
 func (m *MetricsNetwork) GetConnCount() counter.Counter {
-	globalData.Log.Warnf("GetConnCount:%d", m.connCount)
+	globalData.Log.Infof("GetConnCount:%d", m.connCount)
 	return m.connCount
 }
 
 //GetNetworkMetricConnCount return current connection counts
 func GetNetworkMetricConnCount() counter.Counter {
-	globalData.Log.Warnf("GetConnCount:%d", globalData.MetricsNetwork.connCount)
+	globalData.Log.Infof("GetConnCount:%d", globalData.MetricsNetwork.connCount)
 	return globalData.MetricsNetwork.connCount
 }

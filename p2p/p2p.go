@@ -79,16 +79,17 @@ const (
 
 //Node  A p2p node
 type Node struct {
-	Version      string
-	NodeType     string
-	Host         p2pcore.Host
-	Announce     []ma.Multiaddr
-	sync.RWMutex           // to allow locking
-	Log          *logger.L // logger
-	Registers    map[string]bool
-	Multicast    *pubsub.PubSub
-	PreferIPv6   bool
-	PrivateKey   crypto.PrivKey
+	Version       string
+	NodeType      string
+	Host          p2pcore.Host
+	Announce      []ma.Multiaddr
+	sync.RWMutex            // to allow locking
+	Log           *logger.L // logger
+	Registers     map[string]bool
+	ConnectStatus map[string]bool
+	Multicast     *pubsub.PubSub
+	PreferIPv6    bool
+	PrivateKey    crypto.PrivKey
 	// for background
 	background *background.T
 	// set once during initialise
@@ -185,6 +186,7 @@ loop:
 					"X3" == item.Command || "X4" == item.Command || "X5" == item.Command || "X6" == item.Command ||
 					"X7" == item.Command || "P1" == item.Command || "P2" == item.Command {
 					peerID, err := peerlib.IDFromBytes(item.Parameters[0])
+					util.LogInfo(n.Log, util.CoYellow, fmt.Sprintf("Recieve Command:%v ID:%v", item.Command, peerID.ShortString()))
 					if err != nil {
 						util.LogWarn(log, util.CoLightRed, fmt.Sprintf("Unmarshal peer ID error:%x", item.Parameters[0]))
 						continue loop
@@ -199,8 +201,7 @@ loop:
 							util.LogWarn(log, util.CoLightRed, fmt.Sprintf("peer Address error:%v", err))
 							continue loop
 						}
-						n.addPeerAddrs(*info)
-						n.connectPeers()
+						n.DirectConnect(*info)
 					}
 				} // ignore if command is not one of it ie. "ignore:"
 			}
