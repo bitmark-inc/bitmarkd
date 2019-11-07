@@ -9,13 +9,13 @@ import (
 	"bufio"
 	"context"
 	"crypto/rand"
-	"encoding/json"
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/p2p"
-	"github.com/prometheus/common/log"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/bitmark-inc/bitmarkd/p2p"
+	"github.com/prometheus/common/log"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/peerstore"
@@ -228,7 +228,7 @@ func main() {
 	// start up bitmarkd clients these subscribe to bitmarkd
 	// blocks publisher to obtain blocks for mining
 	//connection_setup:
-	for _, c := range masterConfiguration.Peering.Connect {
+	for i, c := range masterConfiguration.Peering.Connect {
 
 		//serverPublicKey, err := zmqutil.ReadPublicKey(remote.PublicKey)
 		//if nil != err {
@@ -260,36 +260,13 @@ func main() {
 		//	continue connection_setup
 		//}
 
-		//host.SetStreamHandler("/recorderd/1.0.0", SubmitterHandler)
-		//var port string
-		//for _, la := range host.Network().ListenAddresses() {
-		//	if p, err := la.ValueForProtocol(multiaddr.P_TCP); nil == err {
-		//		port = p
-		//		break
-		//	}
-		//}
-		//if "" == port {
-		//	panic("was not able to find actual local port")
-		//}
-
-		//slog := logger.New(fmt.Sprintf("subscriber-%d", i))
+		slog := logger.New(fmt.Sprintf("subscriber-%d", i))
 		// TODO: libp2p
 		//err = Subscribe(i, blocksAddress, blocksv6, serverPublicKey, publicKey, privateKey, slog, proofer)
 		//if nil != err {
 		//	log.Warnf("subscribe: %d failed error: %s", i, err)
 		//	continue connection_setup
 		//}
-
-		//r := rand.Reader
-		//prvKey, _, err := crypto.GenerateKeyPairWithReader(crypto.Ed25519, 2048, r)
-		//prvKeyBytes, _ := prvKey.Bytes()
-
-		//marshalKey, err := crypto.MarshalPrivateKey(prvKey)
-		//if err != nil {
-		//	fmt.Printf("marshal private key with error: %s\n", err)
-		//}
-		//hexEncodeKey := make([]byte, hex.EncodedLen(len(marshalKey)))
-		//hex.Encode(hexEncodeKey, marshalKey)
 
 		host, err := libp2p.New(context.Background(), libp2p.Identity(p2pPrivateKey))
 		if nil != err {
@@ -315,9 +292,12 @@ func main() {
 			panic(err)
 		}
 
+		hashRequestChan := make(chan []byte, 10)
+		err = SubscribeP2P(i, slog, proofer, hashRequestChan)
+
 		rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
 
-		go readData(rw)
+		go receiveHashRequest(rw, hashRequestChan)
 		go writeData(rw)
 	}
 
@@ -344,7 +324,7 @@ func main() {
 	}
 }
 
-func readData(rw *bufio.ReadWriter) {
+func receiveHashRequest(rw *bufio.ReadWriter, hashRequestChan chan<- []byte) {
 	maxBytes := 1000
 	data := make([]byte, maxBytes)
 	for {
@@ -359,12 +339,8 @@ func readData(rw *bufio.ReadWriter) {
 		if nil != err || "R" != fn {
 			panic(err)
 		}
-		var item PublishedItem
-		err = json.Unmarshal(parameters[0], &item)
-		if nil != err {
-			panic(err)
-		}
-		log.Infof("received item: %#v", item)
+		log.Infof("received item: %#v", parameters[0])
+		hashRequestChan <- parameters[0]
 		//fmt.Printf("received chain: %s, fn: %s, parameter: %s\n", chain, fn, string(parameters[0]))
 	}
 }

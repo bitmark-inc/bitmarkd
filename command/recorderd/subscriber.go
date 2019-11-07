@@ -125,3 +125,62 @@ func Subscribe(
 	}()
 	return nil
 }
+
+func SubscribeP2P(
+	i int,
+	log *logger.L,
+	proofer Proofer,
+	hashRequestChan <-chan []byte,
+) error {
+
+	log.Info("starting…")
+
+	identity := fmt.Sprintf("subscriber-%d", i)
+	mySubmitterIdentity := fmt.Sprintf("submitter-%d", i) // ***** FIX THIS: sync up with submitter so names match *****
+
+	// to submit hashing requests
+	proof, err := zmq.NewSocket(zmq.PUSH)
+	if nil != err {
+		return err
+	}
+
+	proof.SetLinger(0)
+	proof.SetIdentity(identity)
+	err = proof.Connect(proofRequest)
+	if nil != err {
+		proof.Close()
+	}
+
+	// background process
+	go func() {
+		defer proof.Close()
+
+	loop:
+		for {
+			select {
+			case data := <-hashRequestChan:
+				log.Infof("received data: %v", data)
+
+				// prevent queuing outdated request
+				if !proofer.IsWorking() {
+					log.Infof("Rest time, discard request")
+					continue loop
+				}
+
+				// ***** FIX THIS: just debugging? or really split block into multiple nonce ranges
+				var item PublishedItem
+				json.Unmarshal([]byte(data), &item)
+				log.Infof("received : %v", item)
+
+				// initial try just forward block
+				_, err = proof.Send(mySubmitterIdentity, zmq.SNDMORE)
+				logger.PanicIfError("subscriber sending 1", err)
+				_, err = proof.Send(string(data), 0)
+				logger.PanicIfError("subscriber sending 2", err)
+				ProofQueueIncrement()
+				log.Infof("queue depth: %d", proofQueueDepth)
+			}
+		}
+	}()
+	return nil
+}

@@ -119,13 +119,6 @@ func Submitter(i int, connectTo string, v6 bool, serverPublicKey []byte, publicK
 	rpc.SetTcpKeepaliveIdle(60)
 	rpc.SetTcpKeepaliveIntvl(60)
 
-	// ***** FIX THIS: enabling this causes complete failure
-	// ***** FIX THIS: socket disconnects, perhaps after IVL value
-	// heartbeat
-	// rpc.SetHeartbeatIvl(heartbeatInterval)
-	// rpc.SetHeartbeatTimeout(heartbeatTimeout)
-	// rpc.SetHeartbeatTtl(heartbeatTTL)
-
 	rpc.Connect(connectTo)
 	if nil != err {
 		dequeue.Close()
