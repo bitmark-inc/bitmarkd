@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
@@ -29,16 +30,21 @@ func (n *Node) Setup(configuration *Configuration, version string) error {
 		n.Log.Error(err.Error())
 		panic(err)
 	}
+
 	n.PrivateKey = prvKey
 	n.NewHost(configuration.NodeType, maAddrs, n.PrivateKey)
+
 	if n.NodeType != "Servant" {
 		n.setAnnounce(configuration.Announce)
 	}
+
 	go n.listen(configuration.Announce)
 	go n.MetricsNetwork.networkMonitor(n.Host, n.Log)
+
 	//Start a block & concensus machine
 	n.metricsVoting = NewMetricsPeersVoting(n)
 	n.concensusMachine = NewConcensusMachine(n, &n.metricsVoting)
+
 	//Start Broadcsting
 	ps, err := pubsub.NewGossipSub(context.Background(), n.Host)
 	if err != nil {
@@ -84,7 +90,6 @@ func (n *Node) setAnnounce(announceAddrs []string) {
 func (n *Node) listen(announceAddrs []string) {
 	maAddrs := IPPortToMultiAddr(announceAddrs)
 	shandler := NewListenHandler(n.Host.ID(), n, n.Log)
-
 	n.Host.SetStreamHandler("p2pstream", shandler.handleStream)
 	n.Log.Infof("A servant is listen to %s", util.PrintMaAddrs(maAddrs))
 	// Hang forever
@@ -100,6 +105,21 @@ func (n *Node) delRegister(id peerlib.ID) {
 	n.Lock()
 	n.Registers[id.Pretty()] = false
 	n.Unlock()
+}
+
+func (n *Node) setConnectStatus(id peerlib.ID, status bool) {
+	n.Lock()
+	n.Registers[id.Pretty()] = status
+	n.Unlock()
+}
+func (n *Node) connectStatus(id peerlib.ID) (bool, error) {
+	n.Lock()
+	val, ok := n.Registers[id.Pretty()]
+	n.Unlock()
+	if ok {
+		return val, nil
+	}
+	return false, errors.New("peer ID does not exist")
 }
 
 //IsRegister if given id has a registered stream
