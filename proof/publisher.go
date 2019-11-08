@@ -418,11 +418,11 @@ func (pub *publisher) writeData(rw *bufio.ReadWriter) {
 		//	rw.Write(packed)
 		//	rw.Flush()
 		//}
+		log.Infof("item to marshal: %#v", j)
 		packed, err := p2p.PackP2PMessage("testing", "R", [][]byte{j})
 		if nil != err {
 			panic(err)
 		}
-		log.Infof("published item: %#v", j)
 		rw.Write(packed)
 		rw.Flush()
 	}

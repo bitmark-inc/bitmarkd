@@ -159,8 +159,7 @@ func SubscribeP2P(
 		for {
 			select {
 			case data := <-hashRequestChan:
-				log.Infof("received data: %v", data)
-
+				log.Infof("receive hash request chan")
 				// prevent queuing outdated request
 				if !proofer.IsWorking() {
 					log.Infof("Rest time, discard request")
@@ -170,7 +169,7 @@ func SubscribeP2P(
 				// ***** FIX THIS: just debugging? or really split block into multiple nonce ranges
 				var item PublishedItem
 				json.Unmarshal([]byte(data), &item)
-				log.Infof("received : %v", item)
+				log.Infof("unmarshal received: %v", item)
 
 				// initial try just forward block
 				_, err = proof.Send(mySubmitterIdentity, zmq.SNDMORE)

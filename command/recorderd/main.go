@@ -15,7 +15,6 @@ import (
 	"syscall"
 
 	"github.com/bitmark-inc/bitmarkd/p2p"
-	"github.com/prometheus/common/log"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/peerstore"
@@ -339,7 +338,6 @@ func receiveHashRequest(rw *bufio.ReadWriter, hashRequestChan chan<- []byte) {
 		if nil != err || "R" != fn {
 			panic(err)
 		}
-		log.Infof("received item: %#v", parameters[0])
 		hashRequestChan <- parameters[0]
 		//fmt.Printf("received chain: %s, fn: %s, parameter: %s\n", chain, fn, string(parameters[0]))
 	}
