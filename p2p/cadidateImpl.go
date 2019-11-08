@@ -52,7 +52,7 @@ func (p *P2PCandidatesImpl) ActiveInPastSeconds(sec time.Duration) bool {
 	limit := now.Add(time.Second * sec * -1)
 	active := limit.Before(p.Metrics.lastResponseTime)
 	difference := now.Sub(p.Metrics.lastResponseTime).Seconds()
-	globalData.concensusMachine.log.Debugf("\x1b[33mActiveInPastSeconds active: %t, last response time %s, difference %f seconds\x1b[0m",
+	globalData.concensusMachine.log.Debugf("ActiveInPastSeconds active: %t, last response time %s, difference %f seconds",
 		active,
 		p.Metrics.lastResponseTime.Format("2006-01-02, 15:04:05 -0700"),
 		difference,
