@@ -385,7 +385,7 @@ func (pub *publisher) proofHandler(s network.Stream) {
 }
 
 func (pub *publisher) readData(rw *bufio.ReadWriter) {
-	maxBytes := 1000
+	maxBytes := 3000
 	data := make([]byte, maxBytes)
 	for {
 		length, err := rw.Read(data)
