@@ -16,6 +16,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 	"github.com/gogo/protobuf/proto"
+	p2phelp "github.com/libp2p/go-libp2p-core/helpers"
 	"github.com/libp2p/go-libp2p-core/network"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 )
@@ -42,7 +43,9 @@ func NewListenHandler(ID peerlib.ID, node *Node, log *logger.L) ListenHandler {
 }
 
 func (l *ListenHandler) handleStream(stream network.Stream) {
-	defer stream.Close()
+	defer func() {
+		go p2phelp.FullClose(stream)
+	}()
 	log := l.log
 	//log.Info("--- Start A New stream --")
 	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))

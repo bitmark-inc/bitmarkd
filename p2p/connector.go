@@ -21,7 +21,8 @@ func (n *Node) DirectConnect(info peer.AddrInfo) error {
 		util.LogDebug(n.Log, util.CoLightGray, "DirectConnect to the self node")
 		return nil
 	}
-	if connected, _ := n.connectStatus(info.ID); connected { // If connected, don't need to reconnect
+	connected, _ := n.connectStatus(info.ID)
+	if connected { // If connected, don't need to reconnect
 		util.LogDebug(n.Log, util.CoLightGreen, fmt.Sprintf("DirectConnect ID:%v connected", info.ID.ShortString()))
 		return nil
 	}
@@ -33,6 +34,12 @@ func (n *Node) DirectConnect(info peer.AddrInfo) error {
 			if ipv6Err == nil {
 				n.setConnectStatus(info.ID, true)
 				util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("DirectConnect to IPV6 addr:%v", ipv6Addr))
+				_, err := n.Register(ipv6Info)
+				if err == nil {
+					n.addRegister(info.ID)
+				} else {
+					n.delRegister(info.ID)
+				}
 				return nil
 			}
 			util.LogWarn(n.Log, util.CoLightRed, fmt.Sprintf("DirectConnect to ID:%v IPV6 Error:%v", info.ID.ShortString(), ipv6Err))
@@ -46,6 +53,12 @@ func (n *Node) DirectConnect(info peer.AddrInfo) error {
 	}
 	n.setConnectStatus(info.ID, true)
 	util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("DirectConnect to addr:%v/%v", util.PrintMaAddrs(info.Addrs), info.ID.ShortString()))
+	_, err = n.Register(&info)
+	if err == nil {
+		n.addRegister(info.ID)
+	} else {
+		n.delRegister(info.ID)
+	}
 	return nil
 }
 

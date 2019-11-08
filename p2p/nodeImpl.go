@@ -25,6 +25,7 @@ func (n *Node) Setup(configuration *Configuration, version string) error {
 	globalData.PreferIPv6 = configuration.PreferIPv6
 	maAddrs := IPPortToMultiAddr(configuration.Listen)
 	n.Registers = make(map[string]bool)
+	n.ConnectStatus = make(map[string]bool)
 	prvKey, err := DecodeHexToPrvKey([]byte(configuration.PrivateKey)) //Hex Decoded binaryString
 	if err != nil {
 		n.Log.Error(err.Error())
@@ -107,21 +108,6 @@ func (n *Node) delRegister(id peerlib.ID) {
 	n.Unlock()
 }
 
-func (n *Node) setConnectStatus(id peerlib.ID, status bool) {
-	n.Lock()
-	n.Registers[id.Pretty()] = status
-	n.Unlock()
-}
-func (n *Node) connectStatus(id peerlib.ID) (bool, error) {
-	n.Lock()
-	val, ok := n.Registers[id.Pretty()]
-	n.Unlock()
-	if ok {
-		return val, nil
-	}
-	return false, errors.New("peer ID does not exist")
-}
-
 //IsRegister if given id has a registered stream
 func (n *Node) IsRegister(id peerlib.ID) (registered bool) {
 	n.Lock()
@@ -130,4 +116,19 @@ func (n *Node) IsRegister(id peerlib.ID) (registered bool) {
 	}
 	n.Unlock()
 	return
+}
+func (n *Node) setConnectStatus(id peerlib.ID, status bool) {
+	n.Lock()
+	n.ConnectStatus[id.Pretty()] = status
+	n.Unlock()
+}
+
+func (n *Node) connectStatus(id peerlib.ID) (bool, error) {
+	n.Lock()
+	val, ok := n.ConnectStatus[id.Pretty()]
+	n.Unlock()
+	if ok {
+		return val, nil
+	}
+	return false, errors.New("peer ID does not exist")
 }

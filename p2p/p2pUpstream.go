@@ -45,7 +45,6 @@ func (n *Node) Register(peerInfo *peerlib.AddrInfo) (network.Stream, error) {
 		n.Log.Error(err.Error())
 		return nil, err
 	}
-	n.Log.Debug(fmt.Sprintf("WRITE:\x1b[32mLength:%d\x1b[0m> ", len(p2pMsgPacked)))
 	rw.Flush()
 	// Wait for response
 	resp := make([]byte, maxBytesRecieve)
