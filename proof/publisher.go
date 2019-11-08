@@ -13,9 +13,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/prometheus/common/log"
 	"strings"
 	"time"
+
+	"github.com/prometheus/common/log"
 
 	"github.com/bitmark-inc/bitmarkd/p2p"
 
@@ -69,6 +70,7 @@ type publisher struct {
 	paymentAddress map[currency.Currency]string
 	owner          *account.Account
 	privateKey     []byte
+	port           string
 }
 
 // initialise the publisher
@@ -185,6 +187,9 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 	//	return err
 	//}
 
+	// TODO: Aaron update to real format
+	pub.port = configuration.Port
+
 	return nil
 }
 
@@ -208,16 +213,15 @@ func (pub *publisher) Run(args interface{}, shutdown <-chan struct{}) {
 		log.Errorf("crypto generate ed25519 key with error: %s", err)
 	}
 
-	mAddrs, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/2138")
-
-	host, err := libp2p.New(context.Background(), libp2p.ListenAddrs(mAddrs), libp2p.Identity(p2pPrivateKey))
-	if nil != err {
-		log.Errorf("create libp2p host with error: %s", err)
+	if pub.port != "" {
+		mAddrs, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/2138")
+		host, err := libp2p.New(context.Background(), libp2p.ListenAddrs(mAddrs), libp2p.Identity(p2pPrivateKey))
+		if nil != err {
+			log.Errorf("create libp2p host with error: %s", err)
+		}
+		log.Infof("host: /ip4/127.0.0.1/tcp/2138/p2p/%s", host.ID().Pretty())
+		host.SetStreamHandler(protocol.ID(recorderdProtocol), pub.proofHandler)
 	}
-
-	log.Infof("host: /ip4/127.0.0.1/tcp/2138/p2p/%s", host.ID().Pretty())
-
-	host.SetStreamHandler(protocol.ID(recorderdProtocol), pub.proofHandler)
 
 loop:
 	for {
