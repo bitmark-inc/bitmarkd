@@ -108,7 +108,7 @@ func (n *Node) QueryBlockHeight(peerID peerlib.ID) (uint64, error) {
 		sendLen, err := rw.Write(packedP2PMsg)
 		if err != nil {
 			n.Unlock()
-			n.Log.Warnf("\x1b[30m QueryBlockHeight:PeerID Write Error:%s\x1b[0m> ", err.Error())
+			util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight:PeerID Write Error:%v", err))
 			return 0, err
 		}
 		rw.Flush()

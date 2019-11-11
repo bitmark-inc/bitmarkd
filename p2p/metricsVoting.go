@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -90,15 +91,15 @@ loop:
 				go func(id peerlib.ID) {
 					height, err := p.watchNode.QueryBlockHeight(id)
 					if err != nil {
-						p.Log.Errorf("\x1b[31mRun QueryBlockHeight Error : %v\x1b[0m", err)
+						util.LogWarn(p.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight Error:%v", err))
 						return
 					}
 					digest, err := p.watchNode.RemoteDigestOfHeight(id, height)
 					if err != nil {
-						p.Log.Errorf("\x1b[31mRun RemoteDigestOfHeight Error : %v\x1b[0m", err)
+						util.LogWarn(p.Log, util.CoRed, fmt.Sprintf("RemoteDigestOfHeight Error:%v", err))
 						return
 					}
-					p.Log.Debugf("\x1b[33mID Query Return height: %d candidates\x1b[0m", height)
+					util.LogInfo(p.Log, util.CoWhite, fmt.Sprintf("Query Return height: %d candidates ID:%v", height, id.ShortString()))
 					p.setMetrics(id, height, digest)
 				}(peer.ID)
 			}

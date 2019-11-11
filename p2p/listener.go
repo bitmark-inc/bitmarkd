@@ -43,9 +43,7 @@ func NewListenHandler(ID peerlib.ID, node *Node, log *logger.L) ListenHandler {
 }
 
 func (l *ListenHandler) handleStream(stream network.Stream) {
-	defer func() {
-		go p2phelp.FullClose(stream)
-	}()
+	defer p2phelp.FullClose(stream)
 	log := l.log
 	//log.Info("--- Start A New stream --")
 	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
@@ -189,7 +187,6 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 			listenerSendError(rw, nodeChain, err, "-><- Radom node", log)
 			return
 		}
-		log.Info(fmt.Sprintf("register:\x1b[32m message packed :%d\x1b[0m>", len(p2pMessagePacked)))
 		l.node.addRegister(reqID)
 		_, err = rw.Write(p2pMessagePacked)
 		rw.Flush()
