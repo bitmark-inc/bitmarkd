@@ -14,22 +14,39 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
+// Handle - interface for storage operations
 type Handle interface {
 	Begin()
 	Commit() error
-	Empty() bool
+	Query
+	Retrieve
+	Update
+}
+
+// Retrieve - interface for storage retrieve data
+type Retrieve interface {
 	Get([]byte) []byte
 	GetN([]byte) (uint64, bool)
 	GetNB([]byte) (uint64, []byte)
+	LastElement() (Element, bool)
+	NewFetchCursor() *FetchCursor
+}
+
+// Update - interface for storage update data
+type Update interface {
+	Put([]byte, []byte, []byte)
+	PutN([]byte, uint64)
+	Remove([]byte)
+}
+
+// Query - interface for storage query data status
+type Query interface {
 	Has([]byte) bool
-	put([]byte, []byte, []byte)
-	putN([]byte, uint64)
-	remove([]byte)
+	Ready() bool
 }
 
 // PoolHandle - the structure of a pool handle
 type PoolHandle struct {
-	Handle
 	prefix     byte
 	limit      []byte
 	dataAccess Access
@@ -49,7 +66,7 @@ func (p *PoolHandle) prefixKey(key []byte) []byte {
 }
 
 // Put - store a key/value bytes pair to the database
-func (p *PoolHandle) put(key []byte, value []byte, dummy []byte) {
+func (p *PoolHandle) Put(key []byte, value []byte, dummy []byte) {
 	poolData.RLock()
 	defer poolData.RUnlock()
 	if nil == p.dataAccess {
@@ -60,13 +77,13 @@ func (p *PoolHandle) put(key []byte, value []byte, dummy []byte) {
 }
 
 // PutN - store a uint8 as an 8 byte sequence
-func (p *PoolHandle) putN(key []byte, value uint64) {
+func (p *PoolHandle) PutN(key []byte, value uint64) {
 	buffer := make([]byte, 8)
 	binary.BigEndian.PutUint64(buffer, value)
-	p.put(key, buffer, []byte{})
+	p.Put(key, buffer, []byte{})
 }
 
-func (p *PoolHandle) remove(key []byte) {
+func (p *PoolHandle) Remove(key []byte) {
 	poolData.RLock()
 	defer poolData.RUnlock()
 	p.dataAccess.Delete(p.prefixKey(key))
@@ -183,7 +200,7 @@ func (p *PoolHandle) Commit() error {
 	return p.dataAccess.Commit()
 }
 
-// Empty - check if struct is empty
-func (p *PoolHandle) Empty() bool {
-	return nil == p || 0 == p.prefix
+// Ready - check if db is ready
+func (p *PoolHandle) Ready() bool {
+	return 0 != p.prefix
 }

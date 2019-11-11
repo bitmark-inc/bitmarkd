@@ -8,6 +8,8 @@ package peer
 import (
 	"encoding/binary"
 
+	"github.com/bitmark-inc/bitmarkd/storage"
+
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -146,7 +148,7 @@ func processAssets(packed []byte) error {
 
 		switch tx := transaction.(type) {
 		case *transactionrecord.AssetData:
-			_, packedAsset, err := asset.Cache(tx)
+			_, packedAsset, err := asset.Cache(tx, storage.Pool.Assets)
 			if nil != err {
 				return err
 			}
@@ -201,7 +203,7 @@ func processIssues(packed []byte) error {
 		return fault.MissingParameters
 	}
 
-	_, duplicate, err := reservoir.StoreIssues(issues)
+	_, duplicate, err := reservoir.StoreIssues(issues, storage.Pool.Assets, storage.Pool.BlockOwnerPayment)
 	if nil != err {
 		return err
 	}
@@ -234,16 +236,16 @@ func processTransfer(packed []byte) error {
 	transfer, ok := transaction.(transactionrecord.BitmarkTransfer)
 	if ok {
 
-		_, duplicate, err = reservoir.StoreTransfer(transfer)
+		_, duplicate, err = reservoir.StoreTransfer(transfer, storage.Pool.Transactions, storage.Pool.OwnerTxIndex, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
 
 	} else {
 		switch tx := transaction.(type) {
 
 		case *transactionrecord.ShareGrant:
-			_, duplicate, err = reservoir.StoreGrant(tx)
+			_, duplicate, err = reservoir.StoreGrant(tx, storage.Pool.ShareQuantity, storage.Pool.Shares, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
 
 		case *transactionrecord.ShareSwap:
-			_, duplicate, err = reservoir.StoreSwap(tx)
+			_, duplicate, err = reservoir.StoreSwap(tx, storage.Pool.ShareQuantity, storage.Pool.Shares, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
 
 		default:
 			return fault.TransactionIsNotATransfer

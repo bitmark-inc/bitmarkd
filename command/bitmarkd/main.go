@@ -194,7 +194,7 @@ func main() {
 
 	// block data storage - depends on storage and mode
 	log.Info("initialise block")
-	err = block.Initialise()
+	err = block.Initialise(storage.Pool.Blocks)
 	if nil != err {
 		log.Criticalf("block initialise error: %s", err)
 		exitwithstatus.Message("block initialise error: %s", err)
@@ -220,7 +220,16 @@ func main() {
 	// reservoir and block are both ready
 	// so can restore any previously saved transactions
 	// before any peer services are started
-	err = reservoir.LoadFromFile()
+	handles := reservoir.Handles{
+		Assets:            storage.Pool.Assets,
+		BlockOwnerPayment: storage.Pool.BlockOwnerPayment,
+		Transaction:       storage.Pool.Transactions,
+		OwnerTx:           storage.Pool.OwnerTxIndex,
+		OwnerData:         storage.Pool.OwnerData,
+		Share:             storage.Pool.ShareQuantity,
+		ShareQuantity:     storage.Pool.Shares,
+	}
+	err = reservoir.LoadFromFile(handles)
 	if nil != err && !os.IsNotExist(err) {
 		log.Criticalf("reservoir reload error: %s", err)
 		exitwithstatus.Message("reservoir reload error: %s", err)

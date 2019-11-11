@@ -40,12 +40,15 @@ type verifiedGrantInfo struct {
 }
 
 // StoreGrant - validate and store a grant request
-func StoreGrant(grant *transactionrecord.ShareGrant) (*GrantInfo, bool, error) {
+func StoreGrant(grant *transactionrecord.ShareGrant, shareQuantityHandle storage.Handle, shareHandle storage.Handle, ownerDataHandle storage.Handle, blockOwnerPaymentHandle storage.Handle) (*GrantInfo, bool, error) {
+	if nil == shareQuantityHandle || nil == shareHandle || nil == ownerDataHandle || nil == blockOwnerPaymentHandle {
+		return nil, false, fault.NilPointer
+	}
 
 	globalData.Lock()
 	defer globalData.Unlock()
 
-	verifyResult, duplicate, err := verifyGrant(grant)
+	verifyResult, duplicate, err := verifyGrant(grant, shareQuantityHandle, shareHandle, ownerDataHandle)
 	if err != nil {
 		return nil, false, err
 	}
@@ -56,7 +59,7 @@ func StoreGrant(grant *transactionrecord.ShareGrant) (*GrantInfo, bool, error) {
 
 	txId := verifyResult.txId
 
-	payments := getPayments(verifyResult.transferBlockNumber, verifyResult.issueBlockNumber, nil)
+	payments := getPayments(verifyResult.transferBlockNumber, verifyResult.issueBlockNumber, nil, blockOwnerPaymentHandle)
 
 	spendKey := makeSpendKey(grant.Owner, grant.ShareId)
 
@@ -142,7 +145,10 @@ func makeSpendKey(owner *account.Account, shareId merkle.Digest) spendKey {
 }
 
 // CheckGrantBalance - check sufficient balance to be able to execute a grant request
-func CheckGrantBalance(trx storage.Transaction, grant *transactionrecord.ShareGrant) (uint64, error) {
+func CheckGrantBalance(trx storage.Transaction, grant *transactionrecord.ShareGrant, shareQuantityHandle storage.Handle) (uint64, error) {
+	if nil == shareQuantityHandle {
+		return 0, fault.NilPointer
+	}
 
 	// check incoming quantity
 	if 0 == grant.Quantity {
@@ -153,9 +159,9 @@ func CheckGrantBalance(trx storage.Transaction, grant *transactionrecord.ShareGr
 	var balance uint64
 	var ok bool
 	if nil == trx {
-		balance, ok = storage.Pool.ShareQuantity.GetN(oKey)
+		balance, ok = shareQuantityHandle.GetN(oKey)
 	} else {
-		balance, ok = trx.GetN(storage.Pool.ShareQuantity, oKey)
+		balance, ok = trx.GetN(shareQuantityHandle, oKey)
 	}
 
 	// check if sufficient funds
@@ -167,14 +173,17 @@ func CheckGrantBalance(trx storage.Transaction, grant *transactionrecord.ShareGr
 }
 
 // verify that a grant is ok
-func verifyGrant(grant *transactionrecord.ShareGrant) (*verifiedGrantInfo, bool, error) {
+func verifyGrant(grant *transactionrecord.ShareGrant, shareQuantityHandle storage.Handle, shareHandle storage.Handle, ownerDataHandle storage.Handle) (*verifiedGrantInfo, bool, error) {
+	if nil == shareQuantityHandle || nil == shareHandle || nil == ownerDataHandle {
+		return nil, false, fault.NilPointer
+	}
 
 	height := blockheader.Height()
 	if grant.BeforeBlock <= height {
 		return nil, false, fault.RecordHasExpired
 	}
 
-	balance, err := CheckGrantBalance(nil, grant)
+	balance, err := CheckGrantBalance(nil, grant, shareQuantityHandle)
 	if nil != err {
 		return nil, false, err
 	}
@@ -211,12 +220,12 @@ func verifyGrant(grant *transactionrecord.ShareGrant) (*verifiedGrantInfo, bool,
 	// log.Infof("share: %x", grant.Share)
 
 	// the owner data is under tx id of share record
-	_ /*totalValue*/, shareTxId := storage.Pool.Shares.GetNB(grant.ShareId[:])
+	_ /*totalValue*/, shareTxId := shareHandle.GetNB(grant.ShareId[:])
 	if nil == shareTxId {
 		return nil, false, fault.DoubleTransferAttempt
 	}
 
-	ownerData, err := ownership.GetOwnerDataB(nil, shareTxId)
+	ownerData, err := ownership.GetOwnerDataB(nil, shareTxId, ownerDataHandle)
 	if nil != err {
 		return nil, false, fault.DoubleTransferAttempt
 	}

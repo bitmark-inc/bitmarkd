@@ -66,15 +66,15 @@ func (t *TransactionData) Put(
 	value []byte,
 	additional []byte,
 ) {
-	h.put(key, value, additional)
+	h.Put(key, value, additional)
 }
 
 func (t *TransactionData) PutN(h Handle, key []byte, value uint64) {
-	h.putN(key, value)
+	h.PutN(key, value)
 }
 
 func (t *TransactionData) Delete(h Handle, key []byte) {
-	h.remove(key)
+	h.Remove(key)
 }
 
 func (t *TransactionData) Commit() error {

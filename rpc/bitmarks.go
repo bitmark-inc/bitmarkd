@@ -8,6 +8,8 @@ package rpc
 import (
 	"encoding/hex"
 
+	"github.com/bitmark-inc/bitmarkd/storage"
+
 	"golang.org/x/time/rate"
 
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -89,7 +91,7 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 	var stored *reservoir.IssueInfo
 	duplicate := false
 	if issueCount > 0 {
-		stored, duplicate, err = reservoir.StoreIssues(arguments.Issues)
+		stored, duplicate, err = reservoir.StoreIssues(arguments.Issues, storage.Pool.Assets, storage.Pool.BlockOwnerPayment)
 		if nil != err {
 			return err
 		}

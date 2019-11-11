@@ -46,7 +46,7 @@ func assetRegister(assets []*transactionrecord.AssetData) ([]AssetStatus, []byte
 	packed := []byte{}
 	for i, argument := range assets {
 
-		assetId, packedAsset, err := asset.Cache(argument)
+		assetId, packedAsset, err := asset.Cache(argument, storage.Pool.Assets)
 		if nil != err {
 			return nil, nil, err
 		}

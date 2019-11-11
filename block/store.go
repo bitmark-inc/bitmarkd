@@ -214,7 +214,7 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 					return fault.DoubleTransferAttempt
 				}
 
-				ownerData, err := ownership.GetOwnerData(nil, link)
+				ownerData, err := ownership.GetOwnerData(nil, link, storage.Pool.OwnerData)
 				if nil != err {
 					return fault.DoubleTransferAttempt
 				}
@@ -267,7 +267,7 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 					return err
 				}
 
-				ownerData, err := ownership.GetOwnerData(nil, link)
+				ownerData, err := ownership.GetOwnerData(nil, link, storage.Pool.OwnerData)
 				if nil != err {
 					return fault.DoubleTransferAttempt
 				}
@@ -283,7 +283,7 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 				if nil != err {
 					return err
 				}
-				_, err = reservoir.CheckGrantBalance(nil, tx)
+				_, err = reservoir.CheckGrantBalance(nil, tx, storage.Pool.ShareQuantity)
 				if nil != err {
 					return err
 				}
@@ -293,7 +293,7 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 				if nil != err {
 					return err
 				}
-				_, _, err = reservoir.CheckSwapBalances(nil, tx)
+				_, _, err = reservoir.CheckSwapBalances(nil, tx, storage.Pool.ShareQuantity)
 				if nil != err {
 					return err
 				}

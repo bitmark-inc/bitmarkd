@@ -15,6 +15,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/pay"
+	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
 )
@@ -33,9 +34,20 @@ const (
 // exact match is required
 var bofData = []byte("bitmark-cache v1.0")
 
+// Handles - storage handles used when restore from cache file
+type Handles struct {
+	Assets            storage.Handle
+	BlockOwnerPayment storage.Handle
+	Transaction       storage.Handle
+	OwnerTx           storage.Handle
+	OwnerData         storage.Handle
+	Share             storage.Handle
+	ShareQuantity     storage.Handle
+}
+
 // LoadFromFile - load transactions from file
 // called later when system is able to handle the tx and proofs
-func LoadFromFile() error {
+func LoadFromFile(handles Handles) error {
 	Disable()
 	defer Enable()
 
@@ -69,63 +81,32 @@ restore_loop:
 	for {
 		tag, packed, err := readRecord(f)
 		if nil != err {
-			return err
+			log.Errorf("read record with error: %s\n", err)
+			continue restore_loop
 		}
+
 		switch tag {
 
 		case taggedEOF:
 			break restore_loop
 
 		case taggedTransaction:
-
 			unpacked, _, err := packed.Unpack(mode.IsTesting())
 			if nil != err {
 				log.Errorf("unable to unpack asset: %s", err)
 				continue restore_loop
 			}
-			switch tx := unpacked.(type) {
 
-			case *transactionrecord.AssetData:
-				_, _, err := asset.Cache(tx)
-				if nil != err {
-					log.Errorf("fail to cache asset: %s", err)
-				}
+			restorer, err := NewTransactionRestorer(unpacked, packed, handles)
+			if nil != err {
+				log.Errorf("create transaction restorer with error: %s", err)
+				continue restore_loop
+			}
 
-			case *transactionrecord.BitmarkIssue:
-				packedIssues := packed
-				issues := make([]*transactionrecord.BitmarkIssue, 0, 100)
-				for len(packedIssues) > 0 {
-					transaction, n, err := packedIssues.Unpack(mode.IsTesting())
-					if nil != err {
-						log.Errorf("unable to unpack issue: %s", err)
-						continue restore_loop
-					}
-
-					if issue, ok := transaction.(*transactionrecord.BitmarkIssue); ok {
-						issues = append(issues, issue)
-					} else {
-						log.Errorf("issue block contains non-issue: %+v", transaction)
-						continue restore_loop
-					}
-					packedIssues = packedIssues[n:]
-				}
-
-				_, _, err := StoreIssues(issues)
-				if nil != err {
-					log.Errorf("fail to store issue: %s", err)
-				}
-
-			case *transactionrecord.BitmarkTransferUnratified,
-				*transactionrecord.BitmarkTransferCountersigned:
-				tr := tx.(transactionrecord.BitmarkTransfer)
-				_, _, err := StoreTransfer(tr)
-				if nil != err {
-					log.Errorf("fail to store transfer: %s", err)
-				}
-
-			default:
-				log.Errorf("read invalid transaction: %+v", tx)
-				return fmt.Errorf("read invalid transaction")
+			err = restorer.Restore()
+			if nil != err {
+				log.Errorf("restore %s with error: %s", restorer, err)
+				continue restore_loop
 			}
 
 		case taggedProof:
@@ -140,8 +121,10 @@ restore_loop:
 			TryProof(payId, nonce)
 
 		default:
-			log.Errorf("read invalid tag: 0x%02x", tag)
-			return fmt.Errorf("read invalid tag: 0x%02x", tag)
+			// in case any unsupported tag exist
+			msg := fmt.Errorf("abort, read invalid tag: 0x%02x", tag)
+			log.Error(msg.Error())
+			return msg
 		}
 	}
 	log.Info("restore completed")

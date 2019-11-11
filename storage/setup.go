@@ -22,19 +22,19 @@ import (
 //
 // note all must be exported (i.e. initial capital) or initialisation will panic
 type pools struct {
-	Blocks            *PoolHandle `prefix:"B"`
-	BlockHeaderHash   *PoolHandle `prefix:"2"`
-	BlockOwnerPayment *PoolHandle `prefix:"H"`
-	BlockOwnerTxIndex *PoolHandle `prefix:"I"`
-	Assets            *PoolNB     `prefix:"A"`
-	Transactions      *PoolNB     `prefix:"T"`
-	OwnerNextCount    *PoolHandle `prefix:"N"`
-	OwnerList         *PoolHandle `prefix:"L"`
-	OwnerTxIndex      *PoolHandle `prefix:"D"`
-	OwnerData         *PoolHandle `prefix:"O"`
-	Shares            *PoolHandle `prefix:"F"`
-	ShareQuantity     *PoolHandle `prefix:"Q"`
-	TestData          *PoolHandle `prefix:"Z"`
+	Blocks            Handle `prefix:"B" pool:"PoolHandle"`
+	BlockHeaderHash   Handle `prefix:"2" pool:"PoolHandle"`
+	BlockOwnerPayment Handle `prefix:"H" pool:"PoolHandle"`
+	BlockOwnerTxIndex Handle `prefix:"I" pool:"PoolHandle"`
+	Assets            Handle `prefix:"A" pool:"PoolNB"`
+	Transactions      Handle `prefix:"T" pool:"PoolNB"`
+	OwnerNextCount    Handle `prefix:"N" pool:"PoolHandle"`
+	OwnerList         Handle `prefix:"L" pool:"PoolHandle"`
+	OwnerTxIndex      Handle `prefix:"D" pool:"PoolHandle"`
+	OwnerData         Handle `prefix:"O" pool:"PoolHandle"`
+	Shares            Handle `prefix:"F" pool:"PoolHandle"`
+	ShareQuantity     Handle `prefix:"Q" pool:"PoolHandle"`
+	TestData          Handle `prefix:"Z" pool:"PoolHandle"`
 }
 
 // Pool - the set of exported pools
@@ -155,9 +155,10 @@ func setupPools(bitmarksDBAccess Access) error {
 	for i := 0; i < poolType.NumField(); i += 1 {
 		fieldInfo := poolType.Field(i)
 		prefixTag := fieldInfo.Tag.Get("prefix")
+		poolTag := fieldInfo.Tag.Get("pool")
 
-		if 1 != len(prefixTag) {
-			return fmt.Errorf("pool: %v has invalid prefix: %q", fieldInfo, prefixTag)
+		if 1 != len(prefixTag) || 0 == len(poolTag) {
+			return fmt.Errorf("pool: %v has invalid prefix: %q, poolTag: %s", fieldInfo, prefixTag, poolTag)
 		}
 
 		prefix := prefixTag[0]
@@ -172,7 +173,7 @@ func setupPools(bitmarksDBAccess Access) error {
 			dataAccess: bitmarksDBAccess,
 		}
 
-		if poolValue.Field(i).Type() == reflect.TypeOf((*PoolNB)(nil)) {
+		if poolTag == "PoolNB" {
 			pNB := &PoolNB{
 				pool: p,
 			}
@@ -182,7 +183,6 @@ func setupPools(bitmarksDBAccess Access) error {
 			newPool := reflect.ValueOf(p)
 			poolValue.Field(i).Set(newPool)
 		}
-
 	}
 	return nil
 }

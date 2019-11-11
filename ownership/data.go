@@ -105,12 +105,16 @@ type OwnerData interface {
 type PackedOwnerData []byte
 
 // GetOwnerData - fetch and unpack owner data
-func GetOwnerData(trx storage.Transaction, txId merkle.Digest) (OwnerData, error) {
+func GetOwnerData(trx storage.Transaction, txId merkle.Digest, ownerDataHandle storage.Handle) (OwnerData, error) {
+	if nil == ownerDataHandle {
+		return nil, fault.NilPointer
+	}
+
 	var packed []byte
 	if nil == trx {
-		packed = storage.Pool.OwnerData.Get(txId[:])
+		packed = ownerDataHandle.Get(txId[:])
 	} else {
-		packed = trx.Get(storage.Pool.OwnerData, txId[:])
+		packed = trx.Get(ownerDataHandle, txId[:])
 	}
 
 	if nil == packed {
@@ -121,12 +125,16 @@ func GetOwnerData(trx storage.Transaction, txId merkle.Digest) (OwnerData, error
 }
 
 // GetOwnerDataB - fetch and unpack owner data
-func GetOwnerDataB(trx storage.Transaction, txId []byte) (OwnerData, error) {
+func GetOwnerDataB(trx storage.Transaction, txId []byte, ownerDataHandle storage.Handle) (OwnerData, error) {
+	if nil == ownerDataHandle {
+		return nil, fault.NilPointer
+	}
+
 	var packed []byte
 	if nil == trx {
-		packed = storage.Pool.OwnerData.Get(txId)
+		packed = ownerDataHandle.Get(txId)
 	} else {
-		packed = trx.Get(storage.Pool.OwnerData, txId)
+		packed = trx.Get(ownerDataHandle, txId)
 	}
 
 	if nil == packed {

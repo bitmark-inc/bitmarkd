@@ -115,7 +115,11 @@ func Finalise() error {
 }
 
 // Cache - cache an incoming asset
-func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIdentifier, transactionrecord.Packed, error) {
+func Cache(asset *transactionrecord.AssetData, assetHandle storage.Handle) (*transactionrecord.AssetIdentifier, transactionrecord.Packed, error) {
+	if nil == assetHandle {
+		return nil, transactionrecord.Packed{}, fault.NilPointer
+	}
+
 	packedAsset, err := asset.Pack(asset.Registrant)
 	if nil != err {
 		return nil, nil, err
@@ -130,7 +134,7 @@ func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIdentifi
 	assetId := asset.AssetId()
 
 	// already confirmed
-	if storage.Pool.Assets.Has(assetId[:]) {
+	if assetHandle.Has(assetId[:]) {
 		return &assetId, nil, nil
 	}
 
@@ -182,11 +186,14 @@ func Cache(asset *transactionrecord.AssetData) (*transactionrecord.AssetIdentifi
 	return &assetId, packedAsset, nil
 }
 
-// Exists - check if an asset is exist and is confirmed
-func Exists(assetId transactionrecord.AssetIdentifier) bool {
+// Exists - check if an item confirmed in storage handle
+func Exists(assetId transactionrecord.AssetIdentifier, assetHandle storage.Handle) bool {
+	if nil == assetHandle {
+		return false
+	}
 
 	// already confirmed
-	if storage.Pool.Assets.Has(assetId[:]) {
+	if assetHandle.Has(assetId[:]) {
 		return true
 	}
 

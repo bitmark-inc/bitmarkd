@@ -100,7 +100,7 @@ func (bitmark *BlockOwner) Transfer(transfer *transactionrecord.BlockOwnerTransf
 	}
 
 	// save transfer/check for duplicate
-	stored, duplicate, err := reservoir.StoreTransfer(transfer)
+	stored, duplicate, err := reservoir.StoreTransfer(transfer, storage.Pool.Transactions, storage.Pool.OwnerTxIndex, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
 	if nil != err {
 		return err
 	}
