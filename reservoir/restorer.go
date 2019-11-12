@@ -8,8 +8,6 @@ package reservoir
 import (
 	"fmt"
 
-	"github.com/prometheus/common/log"
-
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/storage"
@@ -83,9 +81,7 @@ func (a *assetRestoreData) String() string {
 func (a *assetRestoreData) Restore() error {
 	_, _, err := asset.Cache(a.unpacked, storage.Pool.Assets)
 	if nil != err {
-		msg := fmt.Errorf("fail to cache asset: %s", err)
-		log.Errorf("%s", msg)
-		return msg
+		return fmt.Errorf("fail to cache asset: %s", err)
 	}
 	return nil
 }
@@ -106,24 +102,20 @@ func (i *issueRestoreData) Restore() error {
 	for len(i.packed) > 0 {
 		transaction, n, err := i.packed.Unpack(mode.IsTesting())
 		if nil != err {
-			msg := fmt.Errorf("unable to unpack issue: %s", err)
-			log.Errorf("%s", msg)
-			return msg
+			return fmt.Errorf("unable to unpack issue: %s", err)
 		}
 
 		if issue, ok := transaction.(*transactionrecord.BitmarkIssue); ok {
 			issues = append(issues, issue)
 		} else {
-			msg := fmt.Errorf("issue block contains non-issue: %+v", transaction)
-			log.Errorf("%s", msg)
-			return msg
+			return fmt.Errorf("issue block contains non-issue: %+v", transaction)
 		}
 		i.packed = i.packed[n:]
 	}
 
 	_, _, err := StoreIssues(issues, i.assetHandle, i.blockOwnerPaymentHandle)
 	if nil != err {
-		log.Errorf("fail to store issue: %s", err)
+		return fmt.Errorf("store issue with error: %s", err)
 	}
 
 	return nil
@@ -144,7 +136,7 @@ func (t *transferRestoreData) String() string {
 func (t *transferRestoreData) Restore() error {
 	_, _, err := StoreTransfer(t.unpacked, t.transaction, t.ownerTx, t.ownerData, t.blockOwnerPayment)
 	if nil != err {
-		log.Errorf("fail to restore transfer: %s", err)
+		return fmt.Errorf("fail to restore transfer: %s", err)
 	}
 	return err
 }
@@ -165,7 +157,7 @@ func (g *grantRestoreData) Restore() error {
 	_, _, err := StoreGrant(g.unpacked, g.shareQuantity, g.share, g.ownerData, g.blockOwnerPayment)
 
 	if nil != err {
-		log.Errorf("fail to restore grant: %s", err)
+		return fmt.Errorf("fail to restore grant: %s", err)
 	}
 	return err
 }
@@ -185,7 +177,7 @@ func (s *swapRestoreData) String() string {
 func (s *swapRestoreData) Restore() error {
 	_, _, err := StoreSwap(s.unpacked, s.shareQuantity, s.share, s.ownerData, s.blockOwnerPayment)
 	if nil != err {
-		log.Errorf("create swap restorer with error: %s", err)
+		return fmt.Errorf("create swap restorer with error: %s", err)
 	}
 	return err
 }
