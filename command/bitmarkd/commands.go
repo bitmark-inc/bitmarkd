@@ -40,9 +40,11 @@ const (
 )
 
 // setup command handler
-// commands that run to create key and certificate files
-// these commands cannot access any internal database or states
-func processSetupCommand(arguments []string) bool {
+//
+// commands that run to create key and certificate files these
+// commands cannot access any internal database or states or the
+// configuration file
+func processSetupCommand(program string, arguments []string) bool {
 
 	command := "help"
 	if len(arguments) > 0 {
@@ -104,7 +106,7 @@ func processSetupCommand(arguments []string) bool {
 
 		fmt.Printf("generated private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
 		fmt.Printf("generated signing keys: %q and %q\n", liveSigningKeyFilename, testSigningKeyFilename)
-		goto done
+		return true
 
 	signing_key_failed:
 		_ = os.Remove(publicKeyFilename)
@@ -125,6 +127,10 @@ func processSetupCommand(arguments []string) bool {
 	case "config-test", "cfg":
 		return false
 
+	case "version", "v":
+		fmt.Printf("%s\n", version)
+		return true
+
 	default:
 		switch command {
 		case "help", "h", "?":
@@ -133,9 +139,11 @@ func processSetupCommand(arguments []string) bool {
 		default:
 			fmt.Printf("error: no such command: %q\n", command)
 		}
+		fmt.Printf("usage: %s [--help] [--verbose] [--quiet] --config-file=FILE [[command|help] arguments...]", program)
 
 		fmt.Printf("supported commands:\n\n")
 		fmt.Printf("  help                       (h)      - display this message\n\n")
+		fmt.Printf("  version                    (v)      - display version sting\n\n")
 
 		fmt.Printf("  gen-peer-identity [DIR]    (peer)   - create private key in: %q\n", "DIR/"+peerPrivateKeyFilename)
 		fmt.Printf("                                        and the public key in: %q\n", "DIR/"+peerPublicKeyFilename)
@@ -180,8 +188,7 @@ func processSetupCommand(arguments []string) bool {
 		exitwithstatus.Exit(1)
 	}
 
-done:
-	// indicate processing complete and prefor normal exit from main
+	// indicate processing complete and preform normal exit from main
 	return true
 }
 

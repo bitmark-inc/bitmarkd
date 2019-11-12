@@ -57,16 +57,18 @@ func main() {
 	}
 
 	if len(options["version"]) > 0 {
-		exitwithstatus.Message("%s: version: %s", program, version)
+		processSetupCommand(program, []string{"version"})
+		return
 	}
 
 	if len(options["help"]) > 0 {
-		exitwithstatus.Message("usage: %s [--help] [--verbose] [--quiet] --config-file=FILE [[command|help] arguments...]", program)
+		processSetupCommand(program, []string{"help"})
+		return
 	}
 
 	// these commands do not require the configuration and
 	// process data needed for initial setup
-	if len(arguments) > 0 && processSetupCommand(arguments) {
+	if len(arguments) > 0 && processSetupCommand(program, arguments) {
 		return
 	}
 

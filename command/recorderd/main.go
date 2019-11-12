@@ -41,19 +41,22 @@ func main() {
 	}
 
 	if len(options["version"]) > 0 {
-		exitwithstatus.Message("%s: version: %s", program, version)
+		processSetupCommand(program, []string{"version"})
+		return
 	}
 
 	if len(options["help"]) > 0 {
-		exitwithstatus.Message("usage: %s [--help] [--verbose] [--quiet] --config-file=FILE [[command|help] arguments...]", program)
+		processSetupCommand(program, []string{"help"})
+		return
 	}
 
 	// command processing - need lock so do not affect an already running process
 	// these commands don't require the configuration and
 	// process data needed for initial setup
 	if len(arguments) > 0 {
-		processSetupCommand(arguments)
-		return
+		if processSetupCommand(program, arguments) {
+			return
+		}
 	}
 
 	if 1 != len(options["config-file"]) {

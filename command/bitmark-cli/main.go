@@ -47,6 +47,10 @@ func main() {
 			Name:  "verbose, v",
 			Usage: " verbose result",
 		},
+		cli.BoolFlag{
+			Name:  "version, V",
+			Usage: " show version",
+		},
 		cli.StringFlag{
 			Name:  "network, n",
 			Value: "",
@@ -473,12 +477,24 @@ func main() {
 		},
 	}
 
+	app.Action = func(c *cli.Context) error {
+		w := c.App.Writer
+		if c.GlobalBool("version") {
+			fmt.Fprintf(w, "%s\n", version)
+		}
+		return nil
+	}
+
 	// read the configuration
 	app.Before = func(c *cli.Context) error {
 
 		e := c.App.ErrWriter
 		w := c.App.Writer
 		verbose := c.GlobalBool("verbose")
+
+		if c.GlobalBool("version") {
+			return nil
+		}
 
 		// to suppress reading config params for certain commands
 		command := c.Args().Get(0)
