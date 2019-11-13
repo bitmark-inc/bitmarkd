@@ -23,9 +23,8 @@ pkg install libzmq4 libargon2 git
 
 (be sure that homebrew is installed correctly)
 ~~~
-brew tap bitmark-inc/bitmark
 brew install argon2
-brew install zeromq43
+brew install zeromq
 brew install git
 ~~~
 
