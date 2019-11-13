@@ -34,40 +34,24 @@ func NewMetricsPeersVoting(thisNode *Node) MetricsPeersVoting {
 	return metrics
 }
 
-//UpdateCandidates update Candidate by current peer
+//UpdateCandidates update Candidate by registered peer
 func (p *MetricsPeersVoting) UpdateCandidates() {
 	var Candidates []*P2PCandidatesImpl
-	var candidate P2PCandidatesImpl
-	peerstore := p.watchNode.Host.Peerstore()
 	p.mutex.Lock()
-
-	for _, id := range peerstore.PeersWithAddrs() {
-		if p.watchNode.IsRegister(id) && !util.IDEqual(p.watchNode.Host.ID(), id) {
-			candidate = P2PCandidatesImpl{ID: id}
-			addrs := peerstore.Addrs(id)
-			if len(addrs) > 1 {
-				candidate.Addr = addrs[0]
-				if p.watchNode.PreferIPv6 {
-					for _, addr := range addrs {
-						if util.IsMultiAddrIPV6(addr) {
-							candidate.Addr = addr
-							break
-						}
-					}
-				}
+	for peerID, registered := range p.watchNode.Registers {
+		util.LogInfo(p.Log, util.CoWhite, fmt.Sprintf("UpdateCandidates:peerID:%v!", peerID.ShortString()))
+		if registered && !util.IDEqual(p.watchNode.Host.ID(), peerID) { // register and not self
+			peerInfo := p.watchNode.Host.Peerstore().PeerInfo(peerID)
+			if len(peerInfo.Addrs) > 0 {
+				Candidates = append(Candidates, &P2PCandidatesImpl{ID: peerID, Addr: peerInfo.Addrs[0]})
+			} else {
+				Candidates = append(Candidates, &P2PCandidatesImpl{ID: peerID})
 			}
-			Candidates = append(Candidates, &candidate)
 		}
 	}
 	p.Candidates = Candidates
 	p.mutex.Unlock()
-	/*
-		if p.Candidates != nil {
-			for _, c := range p.Candidates {
-				p.Log.Debugf("Current candidate ID :%s addr:%v", c.ID, c.Addr)
-			}
-		}
-	*/
+	util.LogInfo(p.Log, util.CoWhite, fmt.Sprintf("UpdateCandidates:%d Candidates!", len(Candidates)))
 }
 
 //Run  is a Routine to get peer info
@@ -89,6 +73,7 @@ loop:
 			}
 			for _, peer := range p.Candidates {
 				go func(id peerlib.ID) {
+					util.LogInfo(p.Log, util.CoGreen, fmt.Sprintf("UpdateMetrics ID:%v!", id.ShortString()))
 					height, err := p.watchNode.QueryBlockHeight(id)
 					if err != nil {
 						util.LogWarn(p.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight Error:%v", err))

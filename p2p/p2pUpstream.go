@@ -213,6 +213,7 @@ func (n *Node) RemoteDigestOfHeight(peerID peerlib.ID, blockNumber uint64) (bloc
 			err := blockdigest.DigestFromBytes(&d, parameters[0])
 			return d, err
 		}
+		util.LogInfo(n.Log, util.CoYellow, fmt.Sprintf("RemoteDigestOfHeight Success!"))
 	default:
 		n.Log.Warn(fmt.Sprintf("\x1b[31mdefaul: fn :%s\x1b[0m>", fn))
 	}
@@ -264,6 +265,7 @@ func (n *Node) GetBlockData(peerID peerlib.ID, blockNumber uint64) ([]byte, erro
 	case "E":
 		return nil, fault.ErrorFromRunes(parameters[0])
 	case "B":
+		util.LogInfo(n.Log, util.CoYellow, fmt.Sprintf("GetBlockData Success!"))
 		return parameters[0], nil
 	default:
 	}

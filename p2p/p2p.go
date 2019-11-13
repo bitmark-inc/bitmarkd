@@ -85,8 +85,8 @@ type Node struct {
 	Announce      []ma.Multiaddr
 	sync.RWMutex            // to allow locking
 	Log           *logger.L // logger
-	Registers     map[string]bool
-	ConnectStatus map[string]bool
+	Registers     map[peerlib.ID]bool
+	ConnectStatus map[peerlib.ID]bool
 	Multicast     *pubsub.PubSub
 	PreferIPv6    bool
 	PrivateKey    crypto.PrivKey
