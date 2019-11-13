@@ -34,7 +34,7 @@ func (n *Node) DirectConnect(info peer.AddrInfo) error {
 			if ipv6Err == nil {
 				n.setConnectStatus(info.ID, true)
 				util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("DirectConnect to IPV6 addr:%v", ipv6Addr))
-				_, err := n.Register(ipv6Info)
+				_, err := n.Register(ipv6Info.ID, nil, nil)
 				if err == nil {
 					n.addRegister(info.ID)
 				} else {
@@ -53,7 +53,7 @@ func (n *Node) DirectConnect(info peer.AddrInfo) error {
 	}
 	n.setConnectStatus(info.ID, true)
 	util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("DirectConnect to addr:%v/%v", util.PrintMaAddrs(info.Addrs), info.ID.ShortString()))
-	_, err = n.Register(&info)
+	_, err = n.Register(info.ID, nil, nil)
 	if err == nil {
 		n.addRegister(info.ID)
 	} else {

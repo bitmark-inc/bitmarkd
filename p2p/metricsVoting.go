@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	votingCycleInterval = 10 * time.Second
+	votingCycleInterval = 30 * time.Second
 	votingQueryTimeout  = 5 * time.Second
 )
 
@@ -39,7 +39,6 @@ func (p *MetricsPeersVoting) UpdateCandidates() {
 	var Candidates []*P2PCandidatesImpl
 	p.mutex.Lock()
 	for peerID, registered := range p.watchNode.Registers {
-		util.LogInfo(p.Log, util.CoWhite, fmt.Sprintf("UpdateCandidates:peerID:%v!", peerID.ShortString()))
 		if registered && !util.IDEqual(p.watchNode.Host.ID(), peerID) { // register and not self
 			peerInfo := p.watchNode.Host.Peerstore().PeerInfo(peerID)
 			if len(peerInfo.Addrs) > 0 {
@@ -73,19 +72,7 @@ loop:
 			}
 			for _, peer := range p.Candidates {
 				go func(id peerlib.ID) {
-					util.LogInfo(p.Log, util.CoGreen, fmt.Sprintf("UpdateMetrics ID:%v!", id.ShortString()))
-					height, err := p.watchNode.QueryBlockHeight(id)
-					if err != nil {
-						util.LogWarn(p.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight Error:%v", err))
-						return
-					}
-					digest, err := p.watchNode.RemoteDigestOfHeight(id, height)
-					if err != nil {
-						util.LogWarn(p.Log, util.CoRed, fmt.Sprintf("RemoteDigestOfHeight Error:%v", err))
-						return
-					}
-					util.LogInfo(p.Log, util.CoWhite, fmt.Sprintf("Query Return height: %d candidates ID:%v", height, id.ShortString()))
-					p.setMetrics(id, height, digest)
+					p.watchNode.UpdateVotingMetrics(id, p)
 				}(peer.ID)
 			}
 		}

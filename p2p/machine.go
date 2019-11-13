@@ -139,7 +139,7 @@ func (m *Machine) transitions() bool {
 					m.toState(cStateHighestBlock) // retry
 					break check_digests
 				}
-				d, err := m.attachedNode.RemoteDigestOfHeight(m.electedWiner.(*P2PCandidatesImpl).ID, h)
+				d, err := m.attachedNode.RemoteDigestOfHeight(m.electedWiner.(*P2PCandidatesImpl).ID, h, nil, nil)
 				if nil != err {
 					log.Infof("block number: %d  fetch digest error: %s", h, err)
 					m.toState(cStateHighestBlock) // retry

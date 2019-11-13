@@ -33,11 +33,11 @@ func (m *MetricsNetwork) networkMonitor(host p2pcore.Host, log *logger.L) {
 		},
 		OpenedStreamF: func(net p2pnet.Network, stream p2pnet.Stream) {
 			m.streamCount.Increment()
-			log.Debugf("@@Stream : %v-%v is Opened at %v streamCount:%d\n", stream.Conn().RemoteMultiaddr().String(), stream.Protocol(), time.Now(), m.streamCount)
+			log.Infof("@@Stream : %v-%v is Opened at %v streamCount:%d\n", stream.Conn().RemoteMultiaddr().String(), stream.Protocol(), time.Now(), m.streamCount)
 		},
 		ClosedStreamF: func(net p2pnet.Network, stream p2pnet.Stream) {
 			m.streamCount.Decrement()
-			log.Debugf("@@Stream :%v-%v is Closed at %v streamCount:%d\n", stream.Conn().RemoteMultiaddr().String(), stream.Protocol(), time.Now(), m.streamCount)
+			log.Infof("@@Stream :%v-%v is Closed at %v streamCount:%d\n", stream.Conn().RemoteMultiaddr().String(), stream.Protocol(), time.Now(), m.streamCount)
 		},
 	})
 }
