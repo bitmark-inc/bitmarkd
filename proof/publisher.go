@@ -59,8 +59,11 @@ const (
 	publisherZapDomain     = "publisher"
 )
 
+// TODO: Aaron, put these channels into struct instead of global
 var (
-	jobToSendCh = make(chan []byte, 10)
+	jobToSendCh    = make(chan []byte, 10)
+	possibleHashCh = make(chan []byte, 10)
+	resultToSendCh = make(chan []byte, 10)
 )
 
 type publisher struct {
@@ -377,14 +380,17 @@ func (pub *publisher) proofHandler(s network.Stream) {
 
 	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
 
-	// read data
-	go pub.readData(rw)
+	// receive hash from recorderd
+	go pub.receivePossibleHash(rw)
 
-	// write data
-	go pub.writeData(rw)
+	// send hash job to recorderd
+	go pub.sendHashRequest(rw)
+
+	// send hash result to recorderd
+	go pub.sendResult(rw)
 }
 
-func (pub *publisher) readData(rw *bufio.ReadWriter) {
+func (pub *publisher) receivePossibleHash(rw *bufio.ReadWriter) {
 	maxBytes := 3000
 	data := make([]byte, maxBytes)
 	for {
@@ -394,18 +400,19 @@ func (pub *publisher) readData(rw *bufio.ReadWriter) {
 		}
 
 		if 0 == length {
-			return
+			continue
 		}
-		_, _, parameters, err := p2p.UnPackP2PMessage(data[:length])
-		if nil != err {
-			panic(err)
-		}
+		possibleHashCh <- data[:length]
+		//_, _, parameters, err := p2p.UnPackP2PMessage(data[:length])
+		//if nil != err {
+		//	panic(err)
+		//}
 		//fmt.Printf("received chain: %s, fn: %s, parameter: %s\n", chain, fn, string(parameters[0]))
-		log.Infof("receive: %#v", parameters[0])
+		//log.Infof("receive: %#v", parameters[0])
 	}
 }
 
-func (pub *publisher) writeData(rw *bufio.ReadWriter) {
+func (pub *publisher) sendHashRequest(rw *bufio.ReadWriter) {
 	for j := range jobToSendCh {
 		//select {
 		//case <-time.After(10 * time.Second):
@@ -421,7 +428,20 @@ func (pub *publisher) writeData(rw *bufio.ReadWriter) {
 		log.Infof("item to marshal: %#v", j)
 		packed, err := p2p.PackP2PMessage("testing", "R", [][]byte{j})
 		if nil != err {
-			panic(err)
+			log.Errorf("pack message with error: %s", err)
+			continue
+		}
+		rw.Write(packed)
+		rw.Flush()
+	}
+}
+
+func (pub *publisher) sendResult(rw *bufio.ReadWriter) {
+	for r := range resultToSendCh {
+		packed, err := p2p.PackP2PMessage("testing", "S", [][]byte{r})
+		if nil != err {
+			log.Infof("pack message with error: %s", err)
+			continue
 		}
 		rw.Write(packed)
 		rw.Flush()

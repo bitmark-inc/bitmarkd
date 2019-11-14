@@ -19,14 +19,6 @@ const (
 	subdeal    = "inproc://proof.dealer" // to route to specific submitter
 )
 
-// ***** FIX THIS: enabling this causes complete failure
-// ***** FIX THIS: socket disconnects, perhaps after IVL value
-// const (
-// 	heartbeatInterval = 15 * time.Second
-// 	heartbeatTimeout  = 60 * time.Second
-// 	heartbeatTTL      = 120 * time.Second
-// )
-
 // routes messages to the correct Submitter
 func SubmitQueue() {
 	go func() {
@@ -174,6 +166,76 @@ func Submitter(i int, connectTo string, v6 bool, serverPublicKey []byte, publicK
 			err = json.Unmarshal([]byte(response), &r)
 			logger.PanicIfError("unmarshal response: error: ", err)
 			log.Infof("rpc: received from server: %v", r)
+		}
+
+	}()
+	return nil
+}
+
+func SubmitterP2P(i int, v6 bool, log *logger.L, ch chan<- []byte) error {
+	log.Info("starting…")
+
+	// socket to dequeue submissions
+	dequeue, err := zmq.NewSocket(zmq.DEALER)
+	if nil != err {
+		return err
+	}
+
+	identity := fmt.Sprintf("submitter-%d", i)
+	dequeue.SetLinger(0)
+	dequeue.SetIdentity(identity) // set the identity of this thread
+
+	err = dequeue.Connect(subdeal)
+	if nil != err {
+		dequeue.Close()
+		return err
+	}
+
+	// background process
+	go func() {
+		defer dequeue.Close()
+
+	dequeue_items:
+		for {
+			request, err := dequeue.RecvMessageBytes(0)
+			logger.PanicIfError("dequeue.RecvMessageBytes", err)
+			log.Debugf("received data: %x", request)
+
+			// safety check
+			if identity != string(request[0]) {
+				log.Errorf("received data for wrong submitter: %q  expected: %q", request[0], identity)
+				continue dequeue_items
+			}
+
+			// compose a request for bitmarkd
+			toSend := struct {
+				Request string
+				Job     string
+				Packed  []byte
+			}{
+				Request: "block.nonce",
+				Job:     string(request[1]),
+				Packed:  request[2],
+			}
+
+			data, err := json.Marshal(toSend)
+			if nil != err {
+				log.Errorf("JSON encode error: %s", err)
+				continue dequeue_items
+			}
+			log.Infof("rpc: json to send: %s", data)
+
+			ch <- data
+
+			// server response
+			//response, err := rpc.Recv(0)
+			//logger.PanicIfError("rpc recv", err)
+			//log.Debugf("rpc: received data: %s", response)
+			//
+			//var r interface{}
+			//err = json.Unmarshal([]byte(response), &r)
+			//logger.PanicIfError("unmarshal response: error: ", err)
+			//log.Infof("rpc: received from server: %v", r)
 		}
 
 	}()

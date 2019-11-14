@@ -70,7 +70,7 @@ func (j *JobManagerData) waitForRefresh() {
 	// j.log.Info("stop...")
 }
 
-func (j *JobManagerData) waitNextHasingStartEvent(duration time.Duration) {
+func (j *JobManagerData) waitNextHashingStartEvent(duration time.Duration) {
 	j.log.Infof("create goroutine for start events, next event duration: %.1f minutes",
 		duration.Minutes())
 	d := duration
@@ -155,7 +155,7 @@ func (j *JobManagerData) rescheduleStartEvent() {
 	intf := j.calendar.PickInitialiseStartEvent(now)
 	nextEvent := intf.(time.Time)
 	duration := nextEvent.Sub(now)
-	go j.waitNextHasingStartEvent(duration)
+	go j.waitNextHashingStartEvent(duration)
 }
 
 func (j *JobManagerData) rescheduleStopEvent() {

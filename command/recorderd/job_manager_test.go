@@ -104,7 +104,7 @@ func TestWaitNextHashingStartEvent(t *testing.T) {
 	j.initialized = true
 	hashingCalled = false
 	j.wg.Add(1)
-	go j.waitNextHasingStartEvent(defaultDelay)
+	go j.waitNextHashingStartEvent(defaultDelay)
 	time.Sleep(defaultCheckTime)
 	j.channels.startEventChannel <- struct{}{}
 	j.wg.Wait()

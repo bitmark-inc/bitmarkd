@@ -110,5 +110,9 @@ func Finalise() error {
 	globalData.log.Info("finished")
 	globalData.log.Flush()
 
+	// close channel
+	close(jobToSendCh)
+	close(possibleHashCh)
+
 	return nil
 }

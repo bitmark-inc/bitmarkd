@@ -10,7 +10,6 @@ import (
 
 	zmq "github.com/pebbe/zmq4"
 
-	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
 )
@@ -55,14 +54,14 @@ func (sub *submission) initialise(configuration *Configuration) error {
 	}
 
 	// create connections
-	c, _ := util.NewConnections(configuration.Submit)
+	//c, _ := util.NewConnections(configuration.Submit)
 
 	// allocate IPv4 and IPv6 sockets
-	sub.socket4, sub.socket6, err = zmqutil.NewBind(log, zmq.REP, submissionZapDomain, privateKey, publicKey, c)
-	if nil != err {
-		log.Errorf("bind error: %s", err)
-		return err
-	}
+	//sub.socket4, sub.socket6, err = zmqutil.NewBind(log, zmq.REP, submissionZapDomain, privateKey, publicKey, c)
+	//if nil != err {
+	//	log.Errorf("bind error: %s", err)
+	//	return err
+	//}
 
 	return nil
 }
@@ -75,37 +74,40 @@ func (sub *submission) Run(args interface{}, shutdown <-chan struct{}) {
 
 	log.Info("starting…")
 
-	return
-
 	go func() {
-		poller := zmq.NewPoller()
-		if nil != sub.socket4 {
-			poller.Add(sub.socket4, zmq.POLLIN)
-		}
-		if nil != sub.socket6 {
-			poller.Add(sub.socket6, zmq.POLLIN)
-		}
-		poller.Add(sub.sigReceive, zmq.POLLIN)
-	loop:
-		for {
-			log.Debug("waiting…")
-			sockets, _ := poller.Poll(-1)
-			for _, socket := range sockets {
-				switch s := socket.Socket; s {
-				case sub.sigReceive:
-					s.Recv(0)
-					break loop
-				default:
-					sub.process(s)
-				}
-			}
-		}
-		sub.sigReceive.Close()
-		if nil != sub.socket4 {
-			sub.socket4.Close()
-		}
-		if nil != sub.socket6 {
-			sub.socket6.Close()
+		//poller := zmq.NewPoller()
+		//if nil != sub.socket4 {
+		//	poller.Add(sub.socket4, zmq.POLLIN)
+		//}
+		//if nil != sub.socket6 {
+		//	poller.Add(sub.socket6, zmq.POLLIN)
+		//}
+		//poller.Add(sub.sigReceive, zmq.POLLIN)
+		//loop:
+		//	for {
+		//		log.Debug("waiting…")
+		//		sockets, _ := poller.Poll(-1)
+		//		for _, socket := range sockets {
+		//			switch s := socket.Socket; s {
+		//			case sub.sigReceive:
+		//				s.Recv(0)
+		//				break loop
+		//			default:
+		//				sub.process(s)
+		//			}
+		//		}
+		//	}
+		//	sub.sigReceive.Close()
+		//if nil != sub.socket4 {
+		//	sub.socket4.Close()
+		//}
+		//if nil != sub.socket6 {
+		//	sub.socket6.Close()
+		//}
+
+		for j := range possibleHashCh {
+			log.Debug("receive possible hash")
+			sub.processP2P(j)
 		}
 	}()
 
@@ -117,7 +119,6 @@ func (sub *submission) Run(args interface{}, shutdown <-chan struct{}) {
 
 // process the request and return response to prooferd
 func (sub *submission) process(socket *zmq.Socket) {
-
 	log := sub.log
 
 	data, err := socket.RecvMessage(0)
@@ -139,7 +140,7 @@ func (sub *submission) process(socket *zmq.Socket) {
 
 		ok = matchToJobQueue(&request, log)
 
-		log.Infof("maches: %v", ok)
+		log.Infof("matches: %v", ok)
 	}
 
 	response := struct {
@@ -163,4 +164,35 @@ func (sub *submission) process(socket *zmq.Socket) {
 	// }
 	_, err = socket.SendBytes(result, 0|zmq.DONTWAIT)
 	logger.PanicIfError("Submission", err)
+}
+
+func (sub *submission) processP2P(data []byte) {
+	log := sub.log
+
+	log.Infof("received message: %q", data)
+
+	ok := false
+	var request SubmittedItem
+	err := json.Unmarshal(data, &request)
+	if nil != err {
+		log.Errorf("JSON decode error: %s", err)
+	} else {
+		log.Infof("received message: %v", request)
+		ok = matchToJobQueue(&request, log)
+		log.Infof("matches: %v", ok)
+	}
+
+	response := struct {
+		Job string `json:"job"`
+		OK  bool   `json:"ok"`
+	}{
+		Job: request.Job,
+		OK:  ok,
+	}
+
+	result, err := json.Marshal(response)
+	logger.PanicIfError("JSON encode error", err)
+	log.Infof("json to send: %s", result)
+
+	resultToSendCh <- result
 }

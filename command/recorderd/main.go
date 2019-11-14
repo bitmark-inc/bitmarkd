@@ -9,12 +9,16 @@ import (
 	"bufio"
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/prometheus/common/log"
+
 	"github.com/bitmark-inc/bitmarkd/p2p"
+	"github.com/bitmark-inc/bitmarkd/util"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/peerstore"
@@ -226,7 +230,7 @@ func main() {
 
 	// start up bitmarkd clients these subscribe to bitmarkd
 	// blocks publisher to obtain blocks for mining
-	//connection_setup:
+connection_setup:
 	for i, c := range masterConfiguration.Peering.Connect {
 
 		//serverPublicKey, err := zmqutil.ReadPublicKey(remote.PublicKey)
@@ -294,10 +298,24 @@ func main() {
 		hashRequestChan := make(chan []byte, 10)
 		err = SubscribeP2P(i, slog, proofer, hashRequestChan)
 
+		possibleHashChan := make(chan []byte, 10)
 		rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
 
-		go receiveHashRequest(rw, hashRequestChan)
-		go writeData(rw)
+		sc, err := util.NewConnection(c.Submit)
+		if nil != err {
+			log.Warnf("client: %d invalid submit address: %q error: %s", i, c.Submit, err)
+			continue connection_setup
+		}
+		_, submitv6 := sc.CanonicalIPandPort("tcp://")
+		mlog := logger.New(fmt.Sprintf("submitter-%d", i))
+		err = SubmitterP2P(i, submitv6, mlog, possibleHashChan)
+		if nil != err {
+			log.Errorf("create submitter with error: %s", err)
+			continue connection_setup
+		}
+
+		go receiveMessage(rw, hashRequestChan)
+		go sendPossibleHash(rw, possibleHashChan)
 	}
 
 	// erase the private key from memory
@@ -323,8 +341,8 @@ func main() {
 	}
 }
 
-func receiveHashRequest(rw *bufio.ReadWriter, hashRequestChan chan<- []byte) {
-	maxBytes := 1000
+func receiveMessage(rw *bufio.ReadWriter, hashRequestChan chan<- []byte) {
+	maxBytes := 3000
 	data := make([]byte, maxBytes)
 	for {
 		length, err := rw.Read(data)
@@ -335,25 +353,40 @@ func receiveHashRequest(rw *bufio.ReadWriter, hashRequestChan chan<- []byte) {
 			return
 		}
 		_, fn, parameters, err := p2p.UnPackP2PMessage(data[:length])
-		if nil != err || "R" != fn {
+		if nil != err {
 			panic(err)
 		}
-		hashRequestChan <- parameters[0]
+
+		if fn == "R" {
+			hashRequestChan <- parameters[0]
+		} else if fn == "S" {
+			_, _, parameters, err := p2p.UnPackP2PMessage(data[:length])
+			if nil != err {
+				panic(err)
+			}
+			var r interface{}
+			err = json.Unmarshal(parameters[0], &r)
+			if nil != err {
+				panic(err)
+			}
+			log.Infof("receive server result: %#v", r)
+		} else {
+			log.Errorf("receive unknown operation: %s", fn)
+		}
 		//fmt.Printf("received chain: %s, fn: %s, parameter: %s\n", chain, fn, string(parameters[0]))
 	}
 }
 
-func writeData(rw *bufio.ReadWriter) {
-	//for {
-	//select {
-	//case <-time.After(8 * time.Second):
-	//	str := fmt.Sprintf("%s\n", time.Now())
-	//	packed, err := p2p.PackP2PMessage("testing", "R", [][]byte{[]byte(str)})
-	//	if nil != err {
-	//		panic(err)
-	//	}
-	//	rw.Write(packed)
-	//	rw.Flush()
-	//}
-	//}
+func sendPossibleHash(rw *bufio.ReadWriter, possibleHashChan <-chan []byte) {
+	for {
+		select {
+		case <-possibleHashChan:
+			packed, err := p2p.PackP2PMessage("testing", "S", [][]byte{[]byte(str)})
+			if nil != err {
+				panic(err)
+			}
+			rw.Write(packed)
+			rw.Flush()
+		}
+	}
 }
