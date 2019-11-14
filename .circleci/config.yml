@@ -3,7 +3,7 @@
 # Check https://circleci.com/docs/2.0/language-go/ for more details
 version: 2
 jobs:
-  build:
+  test:
     docker:
       # specify the version
       - image: circleci/golang:1.13
@@ -21,7 +21,7 @@ jobs:
             sudo sh -c 'echo "deb-src http://ftp.de.debian.org/debian/ testing main contrib non-free" >> /etc/apt/sources.list.d/testing.list'
             sudo sh -c 'echo "deb http://security.debian.org/ testing/updates  main contrib non-free" >> /etc/apt/source.list.d/testing.list'
       - run:
-          name: Add repo stable 
+          name: Add repo stable
           command: |
             sudo sh -c 'echo "deb http://ftp.de.debian.org/debian/ stable main contrib non-free" >> /etc/apt/sources.list.d/stable.list'
             sudo sh -c 'echo "deb-src http://ftp.de.debian.org/debian/ stable main contrib non-free" >> /etc/apt/sources.list.d/stable.list'
@@ -64,3 +64,34 @@ jobs:
       - run:
           name: Run golangcli-lint
           command: ./golangci-lint run --no-config --disable=ineffassign,errcheck,govet
+  publish_image:
+    docker:
+      - image: bitmark/packer:1.4.5
+    working_directory: /go/src/github.com/bitmark-inc/bitmarkd
+    steps:
+      - checkout
+      - run:
+          name: Validate configuration
+          command: cd ./.circleci/packer && packer validate -only amazon-ebs packer_build.json
+      - run:
+          name: Build AWS image
+          command: cd ./.circleci/packer && packer build -force -only amazon-ebs -var 'bitmarkd_version=0.12.2' packer_build.json
+          # Only build the AWS image at this moment
+          # This job assumes that the AWS environment configured well either by circleci context or project permissions
+
+workflows:
+  version: 2
+  commit:
+    jobs:
+      - test
+  release:
+    jobs:
+      - publish_image:
+          context: bitmarkd
+          filters:
+            tags:
+              only: /v\d+(.\d+){2}(-(alpha|beta))?/
+              # since circleci use a different way to fetch git tags, the ssh client is required in our docker image
+              # if a job requires another task, the required job must to have the same filter to this one.
+            branches:
+              ignore: /.*/
