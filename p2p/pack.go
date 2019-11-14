@@ -51,6 +51,9 @@ func UnPackRegisterData(parameters [][]byte) (nodeType string, id peerlib.ID, ad
 	if err != nil {
 		return "", id, addrs, ts, err
 	}
+	if len(listeners.Address) <= 0 {
+		return "", id, addrs, ts, errors.New("UnPackRegisterData Announce Address == 0")
+	}
 	addrs = util.GetMultiAddrsFromBytes(listeners.Address)
 	ts = binary.BigEndian.Uint64(parameters[3])
 	return nType, id, addrs, ts, nil

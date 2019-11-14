@@ -34,13 +34,8 @@ func (n *Node) DirectConnect(info peer.AddrInfo) error {
 			if ipv6Err == nil {
 				n.setConnectStatus(info.ID, true)
 				util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("DirectConnect to IPV6 addr:%v", ipv6Addr))
-				_, err := n.Register(ipv6Info.ID, nil, nil)
-				if err == nil {
-					n.addRegister(info.ID)
-				} else {
-					n.delRegister(info.ID)
-				}
-				return nil
+				_, err := n.RequestRegister(ipv6Info.ID, nil, nil)
+				return err
 			}
 			util.LogWarn(n.Log, util.CoLightRed, fmt.Sprintf("DirectConnect to ID:%v IPV6 Error:%v", info.ID.ShortString(), ipv6Err))
 		}
@@ -53,13 +48,12 @@ func (n *Node) DirectConnect(info peer.AddrInfo) error {
 	}
 	n.setConnectStatus(info.ID, true)
 	util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("DirectConnect to addr:%v/%v", util.PrintMaAddrs(info.Addrs), info.ID.ShortString()))
-	_, err = n.Register(info.ID, nil, nil)
-	if err == nil {
-		n.addRegister(info.ID)
-	} else {
-		n.delRegister(info.ID)
+	_, err = n.RequestRegister(info.ID, nil, nil)
+	if err != nil {
+		util.LogWarn(n.Log, util.CoLightRed, fmt.Sprintf("DirectConnect ID:%v RequestRegister  Error:%v", info.ID.ShortString(), err))
 	}
-	return nil
+	util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("DirectConnect Registered %v", info.ID.ShortString()))
+	return err
 }
 
 // Check on IP and Port and also local addr with the same port

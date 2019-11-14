@@ -66,16 +66,21 @@ type Configuration struct {
 }
 
 // NodeType to inidcate a node is a servant or client
-type NodeType int
+//type NodeType int
 
 const (
-	// Servant acts as both server and client
-	Servant NodeType = iota
-	// Client acts as a client only
-	Client
-	// Server acts as a server only, not supported at first draft
-	Server
+// Servant acts as both server and client
+//	Servant NodeType = iota
+// Client acts as a client only
+//	Client
+// Server acts as a server only, not supported at first draft
+//	Server
 )
+
+type RegisterStatus struct {
+	Registered   bool
+	RegisterTime time.Time
+}
 
 //Node  A p2p node
 type Node struct {
@@ -85,7 +90,7 @@ type Node struct {
 	Announce      []ma.Multiaddr
 	sync.RWMutex            // to allow locking
 	Log           *logger.L // logger
-	Registers     map[peerlib.ID]bool
+	Registers     map[peerlib.ID]RegisterStatus
 	ConnectStatus map[peerlib.ID]bool
 	Multicast     *pubsub.PubSub
 	PreferIPv6    bool
@@ -192,7 +197,12 @@ loop:
 						continue loop
 					}
 					pbPeerAddrs := Addrs{}
-					proto.Unmarshal(item.Parameters[1], &pbPeerAddrs)
+					err = proto.Unmarshal(item.Parameters[1], &pbPeerAddrs)
+					if err != nil {
+						util.LogWarn(log, util.CoLightRed, fmt.Sprintf("Unmarshal  Errorr:%x Error:%v", item.Parameters[0], err))
+						continue loop
+					}
+					util.LogInfo(log, util.CoYellow, fmt.Sprintf("Unmarshal address length:%d", len(pbPeerAddrs.Address)))
 					maAddrs := util.GetMultiAddrsFromBytes(pbPeerAddrs.Address)
 					if len(maAddrs) > 0 {
 						info, err := peerlib.AddrInfoFromP2pAddr(maAddrs[0])
@@ -201,7 +211,10 @@ loop:
 							util.LogWarn(log, util.CoLightRed, fmt.Sprintf("peer Address error:%v", err))
 							continue loop
 						}
+						util.LogInfo(log, util.CoYellow, fmt.Sprintf("Try to DirectConnect:%v", peerID))
 						n.DirectConnect(*info)
+					} else {
+						util.LogWarn(log, util.CoLightRed, fmt.Sprintf("peer Address length:%d", len(maAddrs)))
 					}
 				} // ignore if command is not one of it ie. "ignore:"
 			}

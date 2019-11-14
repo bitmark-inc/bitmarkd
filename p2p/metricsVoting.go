@@ -38,8 +38,8 @@ func NewMetricsPeersVoting(thisNode *Node) MetricsPeersVoting {
 func (p *MetricsPeersVoting) UpdateCandidates() {
 	var Candidates []*P2PCandidatesImpl
 	p.mutex.Lock()
-	for peerID, registered := range p.watchNode.Registers {
-		if registered && !util.IDEqual(p.watchNode.Host.ID(), peerID) { // register and not self
+	for peerID, status := range p.watchNode.Registers {
+		if status.Registered && !util.IDEqual(p.watchNode.Host.ID(), peerID) { // register and not self
 			peerInfo := p.watchNode.Host.Peerstore().PeerInfo(peerID)
 			if len(peerInfo.Addrs) > 0 {
 				Candidates = append(Candidates, &P2PCandidatesImpl{ID: peerID, Addr: peerInfo.Addrs[0]})

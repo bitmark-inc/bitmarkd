@@ -169,21 +169,18 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 				return
 			}
 			if nType != "client" {
-				log.Info(fmt.Sprintf("register:\x1b[32m Servant registered:%s\x1b[0m>", reqID.String()))
 				announce.AddPeer(reqID, reqMaAddrs, timestamp) // id, listeners, timestam
 			} else {
 				log.Info(fmt.Sprintf("register:\x1b[32m Client registered:%s\x1b[0m>", reqID.String()))
 			}
-			log.Debug(fmt.Sprintf("register:\x1b[32m requestID  :%s\x1b[0m>", reqID.ShortString()))
 			randPeerID, randListeners, randTs, err := announce.GetRandom(reqID)
 			var randData [][]byte
-
 			if nil != err || util.IDEqual(reqID, randPeerID) { // No Random Node sendback this Node
 				randData, err = PackRegisterData(nodeChain, fn, nType, reqID, reqMaAddrs, time.Now())
-				log.Debug(fmt.Sprintf("register:\x1b[32m No Random Request PeerID:%s\x1b[0m>", reqID.ShortString()))
-			} else {
-				randData, err = PackRegisterData(nodeChain, fn, "servant", randPeerID, randListeners, randTs)
-				log.Debug(fmt.Sprintf("register:\x1b[32m Random  PeerID:%s\x1b[0m>", randPeerID.ShortString()))
+				util.LogDebug(log, util.CoReset, fmt.Sprintf("Send back peer as a random node ID:%v addrs:%v", reqID.ShortString(), util.PrintMaAddrs(reqMaAddrs)))
+			} else { //Get a Random Node
+				randData, err = PackRegisterData(nodeChain, fn, nType, randPeerID, randListeners, randTs)
+				util.LogDebug(log, util.CoReset, fmt.Sprintf("Send a random node ID:%v addrs:%v", randPeerID.ShortString(), util.PrintMaAddrs(randListeners)))
 			}
 
 			p2pMessagePacked, err := proto.Marshal(&P2PMessage{Data: randData})
@@ -194,7 +191,6 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 			l.node.addRegister(reqID)
 			_, err = rw.Write(p2pMessagePacked)
 			rw.Flush()
-			log.Debug(fmt.Sprintf("<--WRITE:\x1b[32mLength:%d\x1b[0m> ", len(p2pMessagePacked)))
 		default: // other commands as subscription-type commands // this will move to pubsub
 			listenerSendError(rw, nodeChain, errors.New("subscription-type command"), "-> Subscription type command , should send through pubsub", log)
 			//processSubscription(log, fn, parameters)

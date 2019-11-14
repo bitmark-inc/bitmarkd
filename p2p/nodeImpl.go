@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -24,7 +25,7 @@ func (n *Node) Setup(configuration *Configuration, version string) error {
 	globalData.NodeType = configuration.NodeType
 	globalData.PreferIPv6 = configuration.PreferIPv6
 	maAddrs := IPPortToMultiAddr(configuration.Listen)
-	n.Registers = make(map[peerlib.ID]bool)
+	n.Registers = make(map[peerlib.ID]RegisterStatus)
 	n.ConnectStatus = make(map[peerlib.ID]bool)
 	prvKey, err := DecodeHexToPrvKey([]byte(configuration.PrivateKey)) //Hex Decoded binaryString
 	if err != nil {
@@ -35,7 +36,7 @@ func (n *Node) Setup(configuration *Configuration, version string) error {
 	n.PrivateKey = prvKey
 	n.NewHost(configuration.NodeType, maAddrs, n.PrivateKey)
 
-	if n.NodeType != "Servant" {
+	if n.NodeType != "Client" {
 		n.setAnnounce(configuration.Announce)
 	}
 
@@ -80,7 +81,8 @@ func (n *Node) NewHost(nodetype string, listenAddrs []ma.Multiaddr, prvKey crypt
 func (n *Node) setAnnounce(announceAddrs []string) {
 	maAddrs := IPPortToMultiAddr(announceAddrs)
 	fullAddr := announceMuxAddr(maAddrs, nodeProtocol, n.Host.ID())
-	util.LogInfo(n.Log, util.CoLightGyan, fmt.Sprintf("setAnnounce:%v", util.PrintMaAddrs(fullAddr)))
+	n.Announce = fullAddr
+	util.LogInfo(n.Log, util.CoReset, fmt.Sprintf("setAnnounce:%v", util.PrintMaAddrs(fullAddr)))
 	byteMessage, err := proto.Marshal(&Addrs{Address: util.GetBytesFromMultiaddr(fullAddr)})
 	param0, idErr := n.Host.ID().Marshal()
 	if nil == err && nil == idErr {
@@ -99,19 +101,30 @@ func (n *Node) listen(announceAddrs []string) {
 
 func (n *Node) addRegister(id peerlib.ID) {
 	n.Lock()
-	n.Registers[id] = true
+	status, ok := n.Registers[id]
+	if ok {
+		status.Registered = true
+		status.RegisterTime = time.Now()
+		n.Unlock()
+		return
+	}
+	n.Registers[id] = RegisterStatus{Registered: true, RegisterTime: time.Now()}
 	n.Unlock()
 }
 func (n *Node) delRegister(id peerlib.ID) {
 	n.Lock()
-	n.Registers[id] = false
-	n.Unlock()
+	status, ok := n.Registers[id]
+	if ok { // keep RegisterTime for last record purpose
+		status.Registered = false
+		n.Unlock()
+	}
+	return
 }
 
 //IsRegister if given id has a registered stream
 func (n *Node) IsRegister(id peerlib.ID) (registered bool) {
 	n.Lock()
-	if isRegistered, ok := n.Registers[id]; ok && isRegistered {
+	if status, ok := n.Registers[id]; ok && status.Registered {
 		registered = true
 	}
 	n.Unlock()

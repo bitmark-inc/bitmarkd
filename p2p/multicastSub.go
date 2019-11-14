@@ -117,8 +117,8 @@ loop:
 				util.LogWarn(log, util.CoLightRed, "-->>invalid id in requesting")
 				continue loop
 			}
-			util.LogDebug(log, util.CoGreen, fmt.Sprintf("-->>SubHandler fn=%s Send to Announce  ID:%s", fn, id.ShortString()))
 			messagebus.Bus.Announce.Send("addpeer", parameters[0], parameters[1], parameters[2])
+			util.LogDebug(log, util.CoYellow, fmt.Sprintf("--><-- SubHandler fn=%s Send to Announce  ID:%s Address len:%d", fn, id.ShortString(), len(parameters[1])))
 		default:
 			util.LogWarn(log, util.CoLightRed, fmt.Sprintf("-->>unreganized Command:%s", fn))
 			continue loop
