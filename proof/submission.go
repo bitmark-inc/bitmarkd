@@ -8,6 +8,8 @@ package proof
 import (
 	"encoding/json"
 
+	"github.com/bitmark-inc/bitmarkd/p2p"
+
 	zmq "github.com/pebbe/zmq4"
 
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
@@ -170,10 +172,15 @@ func (sub *submission) processP2P(data []byte) {
 	log := sub.log
 
 	log.Infof("received message: %q", data)
+	_, fn, parameters, err := p2p.UnPackP2PMessage(data)
+	if nil != err || fn != "S" {
+		log.Error("unpack received message error")
+		return
+	}
 
 	ok := false
 	var request SubmittedItem
-	err := json.Unmarshal(data, &request)
+	err = json.Unmarshal(parameters[0], &request)
 	if nil != err {
 		log.Errorf("JSON decode error: %s", err)
 	} else {
