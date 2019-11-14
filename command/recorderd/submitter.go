@@ -172,7 +172,7 @@ func Submitter(i int, connectTo string, v6 bool, serverPublicKey []byte, publicK
 	return nil
 }
 
-func SubmitterP2P(i int, v6 bool, log *logger.L, ch chan<- []byte) error {
+func SubmitterP2P(i int, v6 bool, log *logger.L, resultCh chan<- []byte) error {
 	log.Info("starting…")
 
 	// socket to dequeue submissions
@@ -225,7 +225,7 @@ func SubmitterP2P(i int, v6 bool, log *logger.L, ch chan<- []byte) error {
 			}
 			log.Infof("rpc: json to send: %s", data)
 
-			ch <- data
+			resultCh <- data
 
 			// server response
 			//response, err := rpc.Recv(0)

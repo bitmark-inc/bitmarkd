@@ -296,9 +296,10 @@ connection_setup:
 		}
 
 		hashRequestChan := make(chan []byte, 10)
+		possibleHashChan := make(chan []byte, 10)
+
 		err = SubscribeP2P(i, slog, proofer, hashRequestChan)
 
-		possibleHashChan := make(chan []byte, 10)
 		rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
 
 		sc, err := util.NewConnection(c.Submit)
@@ -380,8 +381,8 @@ func receiveMessage(rw *bufio.ReadWriter, hashRequestChan chan<- []byte) {
 func sendPossibleHash(rw *bufio.ReadWriter, possibleHashChan <-chan []byte) {
 	for {
 		select {
-		case <-possibleHashChan:
-			packed, err := p2p.PackP2PMessage("testing", "S", [][]byte{[]byte(str)})
+		case msg := <-possibleHashChan:
+			packed, err := p2p.PackP2PMessage("testing", "S", [][]byte{[]byte(msg)})
 			if nil != err {
 				panic(err)
 			}

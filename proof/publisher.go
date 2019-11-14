@@ -438,6 +438,7 @@ func (pub *publisher) sendHashRequest(rw *bufio.ReadWriter) {
 
 func (pub *publisher) sendResult(rw *bufio.ReadWriter) {
 	for r := range resultToSendCh {
+		log.Debug("hash result")
 		packed, err := p2p.PackP2PMessage("testing", "S", [][]byte{r})
 		if nil != err {
 			log.Infof("pack message with error: %s", err)

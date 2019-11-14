@@ -192,7 +192,7 @@ func (sub *submission) processP2P(data []byte) {
 
 	result, err := json.Marshal(response)
 	logger.PanicIfError("JSON encode error", err)
-	log.Infof("json to send: %s", result)
+	log.Infof("json hash result to send: %s", result)
 
 	resultToSendCh <- result
 }
