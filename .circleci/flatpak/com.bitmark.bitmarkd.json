@@ -1,0 +1,125 @@
+{
+  "app-id": "com.bitmark.bitmarkd",
+  "runtime": "org.freedesktop.Platform",
+  "sdk": "org.freedesktop.Sdk",
+  "runtime-version": "1.6",
+  "cleanup": [
+      "/usr/lib/sdk/golang",
+      "/app/src"
+  ],
+  "command": "run.sh",
+  "finish-args": [
+      "--filesystem=~/bitmarkd-data:create"
+  ],
+  "modules": [
+      {
+          "name": "golang",
+          "buildsystem": "simple",
+          "sources": [
+              {
+                  "type": "archive",
+                  "url": "https://dl.google.com/go/go1.13.4.linux-amd64.tar.gz",
+                  "sha256": "692d17071736f74be04a72a06dab9cac1cd759377bd85316e52b2227604c004c"
+              }
+          ],
+          "build-commands": [
+              "install -d /app",
+              "cp -rpv * /app"
+          ]
+      },
+      {
+          "name": "libargon2",
+          "sources": [
+              {
+                  "type": "file",
+                  "url": "https://codeload.github.com/P-H-C/phc-winner-argon2/tar.gz/20171227",
+                  "sha256": "eaea0172c1f4ee4550d1b6c9ce01aab8d1ab66b4207776aa67991eb5872fdcd8"
+              }
+          ],
+          "buildsystem": "simple",
+          "build-commands": [
+              "tar zxf 20171227",
+              "cd phc-winner-argon2-20171227 && make",
+              "cd phc-winner-argon2-20171227 && make install PREFIX=/app",
+              "cd phc-winner-argon2-20171227 && mkdir -p /app/lib/pkgconfig",
+              "cd phc-winner-argon2-20171227 && sed -i -- 's/usr/app/g' libargon2.pc",
+              "cd phc-winner-argon2-20171227 && sed -i -- 's/@HOST_MULTIARCH@//g' libargon2.pc",
+              "cd phc-winner-argon2-20171227 && cp libargon2.pc /app/lib/pkgconfig"
+          ]
+      },
+      {
+          "name": "zeromq4",
+          "sources": [
+              {
+                  "type": "archive",
+                  "url": "https://github.com/zeromq/libzmq/releases/download/v4.2.5/zeromq-4.2.5.tar.gz",
+                  "sha256": "cc9090ba35713d59bb2f7d7965f877036c49c5558ea0c290b0dcc6f2a17e489f"
+              }
+          ],
+          "buildsystem": "simple",
+          "build-commands": [
+              "./configure --prefix=/app",
+              "make install"
+          ]
+      },
+      {
+        "name": "goenv-setup",
+        "sources": [
+          {
+            "type": "script",
+            "commands": [
+              "export GOROOT=/app",
+              "export PATH=$PATH:$GOROOT/bin",
+              "export GOPATH=/app"
+            ],
+            "dest-filename": "enable.sh"
+          }
+        ],
+        "buildsystem": "simple",
+        "build-commands": [
+          "cp enable.sh /app"
+        ]
+      },
+      {
+          "name": "run",
+          "sources": [
+              {
+                  "type": "script",
+                  "commands": [
+                      "if [  ] && [ \"\" = '--init' ]; then",
+                      "bitmarkd --config-file=./bitmarkd-data/bitmarkd.conf gen-peer-identity",
+                      "bitmarkd --config-file=./bitmarkd-data/bitmarkd.conf gen-rpc-cert",
+                      "bitmarkd --config-file=./bitmarkd-data/bitmarkd.conf gen-proof-identity",
+                      "fi",
+                      "bitmarkd --config-file=./bitmarkd-data/bitmarkd.conf"
+                  ],
+                  "dest-filename": "run.sh"
+              }
+          ],
+          "buildsystem": "simple",
+          "build-commands": [
+              "install run.sh /app/bin/"
+          ]
+      },
+      {
+          "name": "bitmarkd",
+          "sources": [
+              {
+                  "type": "file",
+                  "url": "https://codeload.github.com/lemonlatte/bitmarkd/tar.gz/v0.0.5",
+                  "sha256": "4b2f14678fbf15eb3d74b650f61056f6ba5c17235d939ddc6ff1e05c049261b2"
+              }
+          ],
+          "build-options": {
+              "build-args": [
+                  "--share=network"
+              ]
+          },
+          "buildsystem": "simple",
+          "build-commands": [
+              "tar zxf v0.0.5",
+              "cd bitmarkd-0.0.5 && go install github.com/bitmark-inc/bitmarkd/command/bitmarkd"
+          ]
+      }
+  ]
+}
