@@ -32,7 +32,7 @@ const (
 	//  time interval
 	nodeInitial        = 5 * time.Second // startup delay before first send
 	nodeInterval       = 2 * time.Minute // regular
-	lowConn            = 3
+	lowConn            = 5
 	maxConn            = 12
 	connGraceTime      = 30 * time.Second
 	registerExpireTime = 5 * time.Minute
