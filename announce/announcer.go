@@ -22,11 +22,11 @@ const (
 	//announceInitial     = 2 * time.Minute // startup delay before first send
 	announceInitial = 1 * time.Minute // startup delay before first send
 	//announceRebroadcast = 7 * time.Minute // to prevent too frequent rebroadcasts
-	announceRebroadcast = 30 * time.Second // to prevent too frequent rebroadcasts
+	announceRebroadcast = 2 * time.Minute // to prevent too frequent rebroadcasts //TODO: We may not need it anymore
 	//announceInterval    = 11 * time.Minute     // regular polling time
-	announceInterval = 1 * time.Minute
+	announceInterval = 5 * time.Minute
 	//announceExpiry   = 5 * announceInterval // if no responses received within this time, delete the entry
-	announceExpiry = 10 * announceInterval
+	announceExpiry = 4 * announceInterval
 )
 
 type announcer struct {
@@ -253,13 +253,15 @@ scan_nodes:
 		if globalData.peerID.String() == peer.peerID.String() {
 			continue scan_nodes
 		}
-		log.Debugf("PeerID: %v timestamp: %s", peer.peerID, peer.timestamp.Format(timeFormat))
 		if peer.timestamp.Add(announceExpiry).Before(now) {
 			globalData.peerTree.Delete(key)
 			globalData.treeChanged = true
-			// TODO: Send to P2P to Expire
-			//messagebus.Bus.Connector.Send("@D", peer.peerID, peer.listeners) //@D means: @->Internal Command, D->delete
-			log.Infof("Peer Expired! public key: %x timestamp: %s is removed", peer.peerID, peer.timestamp.Format(timeFormat))
+			util.LogInfo(log, util.CoReset, fmt.Sprintf("expirePeer : PeerID: %v! timestamp: %s", peer.peerID.ShortString(), peer.timestamp.Format(timeFormat)))
+			idBinary, errID := peer.peerID.Marshal()
+			if nil == errID {
+				messagebus.Bus.P2P.Send("@D", idBinary)
+				util.LogInfo(log, util.CoYellow, fmt.Sprintf("--><-- Send @D to P2P  PeerID: %v", peer.peerID.ShortString()))
+			}
 		}
 
 	}

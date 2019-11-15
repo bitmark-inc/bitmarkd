@@ -111,11 +111,24 @@ func (n *Node) addRegister(id peerlib.ID) {
 	n.Registers[id] = RegisterStatus{Registered: true, RegisterTime: time.Now()}
 	n.Unlock()
 }
-func (n *Node) delRegister(id peerlib.ID) {
+
+//unRegister unRegister change a peers's  Registered status  to false,  but it doe not not delete the register in the Registers
+func (n *Node) unRegister(id peerlib.ID) {
 	n.Lock()
 	status, ok := n.Registers[id]
 	if ok { // keep RegisterTime for last record purpose
 		status.Registered = false
+		n.Unlock()
+	}
+	return
+}
+
+//delRegister delete a Registerer  in the Registers map
+func (n *Node) delRegister(id peerlib.ID) {
+	n.Lock()
+	_, ok := n.Registers[id]
+	if ok { // keep RegisterTime for last record purpose
+		delete(n.Registers, id)
 		n.Unlock()
 	}
 	return
@@ -144,4 +157,28 @@ func (n *Node) connectStatus(id peerlib.ID) (bool, error) {
 		return val, nil
 	}
 	return false, errors.New("peer ID does not exist")
+}
+
+//IsExpire is the register expire
+func (n *Node) IsExpire(id peerlib.ID) bool {
+	if status, ok := n.Registers[id]; ok && status.Registered {
+		expire := status.RegisterTime.Add(registerExpireTime)
+		passInterval := time.Since(expire)
+		if passInterval > 0 { // expire
+			return true
+		}
+	}
+	return false
+}
+
+//updateRegistersExpiry mark Registered false when time is expired
+func (n *Node) updateRegistersExpiry() {
+	for id, status := range n.Registers {
+		if n.IsExpire(id) { //Keep time for record of last registered time
+			n.Lock()
+			status.Registered = false
+			util.LogInfo(n.Log, util.CoWhite, fmt.Sprintf("IsExpire ID:%v not expire", id.ShortString()))
+			n.Unlock()
+		}
+	}
 }

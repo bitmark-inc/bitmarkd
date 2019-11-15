@@ -87,7 +87,7 @@ loop:
 				util.LogWarn(log, util.CoLightRed, fmt.Sprintf("-->>proof with too few data: %d items", dataLength))
 				continue loop
 			}
-			util.LogInfo(log, util.CoYellow, fmt.Sprintf("-->>received proof: %x", parameters[0]))
+			util.LogInfo(log, util.CoGreen, fmt.Sprintf("-->>received proof: %x", parameters[0]))
 			err := processProof(parameters[0])
 			if nil != err {
 				util.LogWarn(log, util.CoWhite, fmt.Sprintf("-->>process proof: error: %s", err))

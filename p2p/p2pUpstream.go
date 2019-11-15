@@ -23,7 +23,7 @@ import (
 func (n *Node) UpdateVotingMetrics(id peerlib.ID, metrics *MetricsPeersVoting) error {
 	s, err := n.Host.NewStream(context.Background(), id, "p2pstream")
 	if err != nil {
-		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("UpdateVotingMetrics: Create new stream error Error:%v", err))
+		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("UpdateVotingMetrics: Create new stream for ID:%v Error:%v", id.ShortString(), err))
 		n.Log.Warn(err.Error())
 		return err
 	}
@@ -45,7 +45,10 @@ func (n *Node) UpdateVotingMetrics(id peerlib.ID, metrics *MetricsPeersVoting) e
 	return nil
 }
 
-//determineStreamRWerHelper  to detemine stream and readwriter to use in request. streamCreated tells if newStream is created in the function. If it does , return stream may need to be reset in defer
+//determineStreamRWerHelper
+// to detemine stream and readwriter to use in request.
+//streamCreated tells if newStream is created in the function.
+//If it does , return stream may need to be reset in defer
 func (n *Node) determineStreamRWerHelper(id peerlib.ID, s *network.Stream, rw *bufio.ReadWriter) (stream *network.Stream, readwriter *bufio.ReadWriter, streamCreated bool) {
 	if nil == s {
 		createStream, newErr := n.Host.NewStream(context.Background(), id, "p2pstream")
@@ -70,7 +73,7 @@ func (n *Node) determineStreamRWerHelper(id peerlib.ID, s *network.Stream, rw *b
 func (n *Node) RequestRegister(id peerlib.ID, stream *network.Stream, readwriter *bufio.ReadWriter) (*network.Stream, error) {
 	s, rw, created := n.determineStreamRWerHelper(id, stream, readwriter)
 	if nil == s && nil == rw {
-		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("RequestRegister:No Useful Stream and ReadWrite ID:%v", id.ShortString()))
+		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf(" RequestRegister:No Useful Stream and ReadWrite ID:%v", id.ShortString()))
 		return nil, errors.New("No Useful Stream and ReadWriter")
 	}
 	if created && s != nil {
@@ -114,8 +117,8 @@ func (n *Node) RequestRegister(id peerlib.ID, stream *network.Stream, readwriter
 	switch fn {
 	case "E": //Register error
 		errMessage, _ := UnpackListenError(parameters)
-		n.delRegister(id)
-		n.Log.Warn(fmt.Sprintf("\x1b[31mRequestRegister Error:%s\x1b[0m>", errMessage))
+		n.unRegister(id)
+		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf(" RequestRegister: Receive  E errorMessage:%v", errMessage))
 		return nil, err
 	case "R":
 		nType, randID, randAddrs, randTs, err := UnPackRegisterData(parameters)
@@ -128,7 +131,7 @@ func (n *Node) RequestRegister(id peerlib.ID, stream *network.Stream, readwriter
 			if nType != "client" { // client does not in the peer Tree
 				announce.AddPeer(randID, randAddrs, randTs) // id, listeners, timestam
 			}
-			util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("Register Successful:%v", id.ShortString()))
+			util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("<<--RequestRegister to  Successful:%v", id.ShortString()))
 		}
 	}
 	return s, nil
@@ -139,7 +142,7 @@ func (n *Node) QueryBlockHeight(id peerlib.ID, stream *network.Stream, readwrite
 	fn := "N"
 	s, rw, created := n.determineStreamRWerHelper(id, stream, readwriter)
 	if nil == s && nil == rw {
-		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("Register:No Useful Stream and ReadWrite ID:%v", id.ShortString()))
+		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf(" Register:No Useful Stream and ReadWrite ID:%v", id.ShortString()))
 		return 0, errors.New("No Useful Stream and ReadWriter")
 	}
 	if created && s != nil {
@@ -159,7 +162,7 @@ func (n *Node) QueryBlockHeight(id peerlib.ID, stream *network.Stream, readwrite
 	_, err = rw.Write(packedP2PMsg)
 	if err != nil {
 		n.Unlock()
-		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight:PeerID Write Error:%v", err))
+		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf(" QueryBlockHeight:PeerID Write Error:%v", err))
 		return 0, err
 	}
 	rw.Flush()
@@ -198,14 +201,12 @@ func (n *Node) QueryBlockHeight(id peerlib.ID, stream *network.Stream, readwrite
 			return 0, fmt.Errorf("highestBlock:  invalid response: %q", parameters[0])
 		}
 		height := binary.BigEndian.Uint64(parameters[0])
-		util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("QueryBlockHeight ID:%v Success,", id.ShortString()))
+		util.LogDebug(n.Log, util.CoGreen, fmt.Sprintf("<<--QueryBlockHeight ID:%v Success,", id.ShortString()))
 		return height, nil
 	default:
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight unexpected response:%v", fn))
 		return 0, fmt.Errorf("unexpected response: %v", fn)
 	}
-
-	return 0, errors.New("Peer :" + id.Pretty() + " is not registered")
 }
 
 //RemoteDigestOfHeight - fetch block digest from a specific block number
@@ -274,10 +275,12 @@ func (n *Node) RemoteDigestOfHeight(id peerlib.ID, blockNumber uint64, stream *n
 			if err != nil {
 				util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("RemoteDigestOfHeight: Response Success but error:%v digest ID:%v  hash:%q ", err, id.ShortString(), d))
 			}
-			util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("RemoteDigestOfHeight: Success! digest ID:%v  hash:%q ", id.ShortString(), d))
+			util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("<<--RemoteDigestOfHeight: Success ID:%v", id.ShortString()))
+
 			return d, err
 		}
-		util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("RemoteDigestOfHeight: Success ID:%v", id.ShortString()))
+		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("RemoteDigestOfHeight:  ID:%v Digest length does not match", id.ShortString()))
+
 	default:
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("RemoteDigestOfHeight:  unexpected response:%v  ID%v", fn, id.ShortString()))
 	}
@@ -344,7 +347,7 @@ func (n *Node) GetBlockData(id peerlib.ID, blockNumber uint64, stream *network.S
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("GetBlockData: Response Fail,  E msg:%v ID:%v", errMessage, id.ShortString()))
 		return nil, fault.ErrorFromRunes(parameters[0])
 	case "B":
-		util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("GetBlockData Success! ID:%v", id.ShortString()))
+		util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("<<--GetBlockData Success! ID:%v", id.ShortString()))
 		return parameters[0], nil
 	default:
 	}
@@ -372,18 +375,16 @@ func (n *Node) PushMessageBus(item BusMessage, id peerlib.ID, stream *network.St
 		return err
 	}
 	n.Lock()
-	sendLen, err := rw.Write(packedP2PMsg)
+	_, err = rw.Write(packedP2PMsg)
 	if err != nil {
 		n.Unlock()
 		log.Error(err.Error())
 		return err
 	}
-	log.Debug(fmt.Sprintf("WRITE:\x1b[32mLength:%d\x1b[0m> ", sendLen))
 	rw.Flush()
 	respPacked := make([]byte, maxBytesRecieve)
-	respLen, err := rw.Read(respPacked) //Expected data chain, fn, block-height
+	_, err = rw.Read(respPacked) //Expected data chain, fn, block-height
 	n.Unlock()
-	log.Info(fmt.Sprintf("%s RECIEVED:\x1b[32m%d\x1b[0m> ", "listener", respLen))
 	if err != nil {
 		return err
 	}
@@ -403,12 +404,11 @@ func (n *Node) PushMessageBus(item BusMessage, id peerlib.ID, stream *network.St
 	case "E":
 		return fmt.Errorf("rpc error response: %q", parameters[0])
 	case item.Command:
-		log.Debugf("push: client: %s complete: %q", id.Pretty(), parameters[0])
+		util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("<<--push: client: %s complete: %q", id.ShortString(), parameters[0]))
 		return nil
 	default:
 		return fmt.Errorf("rpc unexpected response: %q", parameters[0])
 	}
-	return errors.New("no register stream")
 }
 
 //QueryPeerInfo query peer info

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/bitmark-inc/bitmarkd/util"
 
@@ -15,7 +14,7 @@ import (
 
 //DirectConnect connect to the peer with given peer AddrInfo
 func (n *Node) DirectConnect(info peer.AddrInfo) error {
-	cctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
+	cctx, cancel := context.WithTimeout(context.Background(), connectCancelTime)
 	defer cancel()
 	if n.isSameNode(info) { // check if the same node
 		util.LogDebug(n.Log, util.CoLightGray, "DirectConnect to the self node")

@@ -30,11 +30,13 @@ const (
 	domainBitamrk = "nodes.test.bitmark.com"
 	domainTest    = "nodes.test.bitmark.com"
 	//  time interval
-	nodeInitial   = 5 * time.Second // startup delay before first send
-	nodeInterval  = 3 * time.Minute // regular polling time
-	lowConn       = 3
-	maxConn       = 20
-	connGraceTime = 30 * time.Second
+	nodeInitial        = 5 * time.Second // startup delay before first send
+	nodeInterval       = 2 * time.Minute // regular
+	lowConn            = 3
+	maxConn            = 12
+	connGraceTime      = 30 * time.Second
+	registerExpireTime = 5 * time.Minute
+	connectCancelTime  = 30 * time.Second
 )
 
 var (
@@ -66,16 +68,6 @@ type Configuration struct {
 }
 
 // NodeType to inidcate a node is a servant or client
-//type NodeType int
-
-const (
-// Servant acts as both server and client
-//	Servant NodeType = iota
-// Client acts as a client only
-//	Client
-// Server acts as a server only, not supported at first draft
-//	Server
-)
 
 type RegisterStatus struct {
 	Registered   bool
@@ -107,8 +99,8 @@ type Node struct {
 
 // Connected - representation of a connected Peer (For Http RPC)
 type Connected struct {
-	Address string `json:"address"`
-	Server  string `json:"server"`
+	Address []string `json:"address"`
+	Server  string   `json:"server"`
 }
 
 // Initialise initialize p2p module
@@ -147,8 +139,21 @@ loop:
 		case <-shutdown:
 			break loop
 		case item := <-queue:
-			util.LogInfo(log, util.CoYellow, fmt.Sprintf("-><- P2P received command:%s", item.Command))
 			switch item.Command {
+			case "@D":
+				if len(item.Parameters) != 1 {
+					util.LogWarn(log, util.CoLightRed, fmt.Sprintf("@D parameter != 1"))
+					continue loop
+				}
+				id := item.Parameters[0]
+				if id != nil && len(id) > 0 {
+					displayID, err := peerlib.IDFromBytes(id)
+					if nil != err {
+						util.LogInfo(log, util.CoGreen, fmt.Sprintf("@D parse id Error %v", err))
+					}
+					n.delRegister(displayID)
+					util.LogInfo(log, util.CoCyan, fmt.Sprintf("@D  ID:%v is deleted", displayID.ShortString()))
+				}
 			case "peer": // only servant broadcast its peer and rpc
 				fallthrough
 			case "rpc":
@@ -191,7 +196,7 @@ loop:
 					"X3" == item.Command || "X4" == item.Command || "X5" == item.Command || "X6" == item.Command ||
 					"X7" == item.Command || "P1" == item.Command || "P2" == item.Command {
 					peerID, err := peerlib.IDFromBytes(item.Parameters[0])
-					util.LogInfo(n.Log, util.CoYellow, fmt.Sprintf("Recieve Command:%v ID:%v", item.Command, peerID.ShortString()))
+					util.LogDebug(n.Log, util.CoYellow, fmt.Sprintf("Recieve Command:%v ID:%v", item.Command, peerID.ShortString()))
 					if err != nil {
 						util.LogWarn(log, util.CoLightRed, fmt.Sprintf("Unmarshal peer ID error:%x", item.Parameters[0]))
 						continue loop
@@ -202,7 +207,6 @@ loop:
 						util.LogWarn(log, util.CoLightRed, fmt.Sprintf("Unmarshal  Errorr:%x Error:%v", item.Parameters[0], err))
 						continue loop
 					}
-					util.LogInfo(log, util.CoYellow, fmt.Sprintf("Unmarshal address length:%d", len(pbPeerAddrs.Address)))
 					maAddrs := util.GetMultiAddrsFromBytes(pbPeerAddrs.Address)
 					if len(maAddrs) > 0 {
 						info, err := peerlib.AddrInfoFromP2pAddr(maAddrs[0])
@@ -211,7 +215,6 @@ loop:
 							util.LogWarn(log, util.CoLightRed, fmt.Sprintf("peer Address error:%v", err))
 							continue loop
 						}
-						util.LogInfo(log, util.CoYellow, fmt.Sprintf("Try to DirectConnect:%v", peerID))
 						n.DirectConnect(*info)
 					} else {
 						util.LogWarn(log, util.CoLightRed, fmt.Sprintf("peer Address length:%d", len(maAddrs)))
@@ -220,6 +223,7 @@ loop:
 			}
 		case <-delay:
 			delay = time.After(nodeInterval) // periodical process
+			go n.updateRegistersExpiry()
 		}
 	}
 }
@@ -266,32 +270,17 @@ func ID() peerlib.ID {
 func GetAllPeers() []*Connected {
 	//info := []Connected{}
 	globalData.RLock()
-	result := make([]*Connected, 0)
-	/*
-		for key, val := range globalData.Registers {
-			if val {
-				store := globalData.Host.Peerstore()
-
-				if len(store.PeerInfo(key).Addrs) > 0 {
-					//TODO: Make Address Connected Address not first one in peerstore
-					store.PeerInfo(key).Addrs[0].String()
-					c := Connected{
-						Server: key,
-					}
-					info = append(info, c)
-				}
+	var peers []*Connected
+	for key, status := range globalData.Registers {
+		if status.Registered {
+			addrInfo := globalData.Host.Peerstore().PeerInfo(key)
+			addrs := []string{}
+			for _, addr := range addrInfo.Addrs {
+				addrs = append(addrs, addr.String())
 			}
+			peers = append(peers, &Connected{Server: addrInfo.ID.String(), Address: addrs})
 		}
-
-		for _, c := range globalData.connectorClients {
-			if nil != c {
-				connect := c.ConnectedTo()
-				if nil != connect {configuration.PrivateKey
-					result = append(result, connect)
-				}
-			}
-		}
-	*/
+	}
 	globalData.RUnlock()
-	return result
+	return peers
 }

@@ -93,6 +93,7 @@ func addPeer(peerID peerlib.ID, listeners []ma.Multiaddr, timestamp uint64) bool
 		if ts.Sub(peer.timestamp) < announceRebroadcast {
 			return false
 		}
+
 	}
 
 	// add or update the timestamp in the tree
