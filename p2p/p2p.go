@@ -36,7 +36,7 @@ const (
 	maxConn            = 12
 	connGraceTime      = 30 * time.Second
 	registerExpireTime = 5 * time.Minute
-	connectCancelTime  = 30 * time.Second
+	connectCancelTime  = 60 * time.Second
 )
 
 var (
