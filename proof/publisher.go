@@ -52,6 +52,12 @@ const (
 	maxJobChannelSize = 64
 )
 
+var (
+	jobToSendCh    = make(chan []byte, maxJobChannelSize)
+	possibleHashCh = make(chan []byte, maxJobChannelSize)
+	resultToSendCh = make(chan []byte, maxJobChannelSize)
+)
+
 const (
 	publishBitmarkInterval = 60 * time.Second
 	publishTestingInterval = 15 * time.Second
@@ -64,9 +70,6 @@ type publisher struct {
 	privateKey     []byte
 	p2pPrivateKey  crypto.PrivKey
 	maddrs         []ma.Multiaddr
-	jobToSendCh    chan []byte
-	possibleHashCh chan []byte
-	resultToSendCh chan []byte
 	clientCount    int32
 }
 
@@ -82,10 +85,6 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 	if nil != err {
 		return err
 	}
-
-	pub.jobToSendCh = make(chan []byte, maxJobChannelSize)
-	pub.possibleHashCh = make(chan []byte, maxJobChannelSize)
-	pub.resultToSendCh = make(chan []byte, maxJobChannelSize)
 
 	pub.maddrs = p2p.IPPortToMultiAddr(configuration.Addrs)
 
@@ -332,7 +331,7 @@ func (pub *publisher) process() {
 	pub.log.Infof("json to send: %s", data)
 
 	if pub.clientCount > 0 {
-		pub.jobToSendCh <- data
+		jobToSendCh <- data
 	}
 }
 
@@ -374,12 +373,12 @@ func (pub *publisher) receivePossibleHash(rw *bufio.ReadWriter) {
 		if length == 0 {
 			continue
 		}
-		pub.possibleHashCh <- data[:length]
+		possibleHashCh <- data[:length]
 	}
 }
 
 func (pub *publisher) sendHashRequest(rw *bufio.ReadWriter) {
-	for j := range pub.jobToSendCh {
+	for j := range jobToSendCh {
 		pub.log.Infof("item to marshal: %#v", j)
 		packed, err := p2p.PackP2PMessage("testing", "R", [][]byte{j})
 		if nil != err {
@@ -392,7 +391,7 @@ func (pub *publisher) sendHashRequest(rw *bufio.ReadWriter) {
 }
 
 func (pub *publisher) sendResult(rw *bufio.ReadWriter) {
-	for r := range pub.resultToSendCh {
+	for r := range resultToSendCh {
 		pub.log.Debug("hash result")
 		packed, err := p2p.PackP2PMessage("testing", "S", [][]byte{r})
 		if nil != err {
