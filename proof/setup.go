@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: ISC
 // Copyright (c) 2014-2019 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
@@ -24,7 +23,7 @@ type Configuration struct {
 	SigningKey    string            `gluamapper:"signing_key" json:"signing_key"`
 	PaymentAddr   map[string]string `gluamapper:"payment_address" json:"payment_address"`
 	P2PPrivateKey string            `gluamapper:"p2p_private_key" json:"p2p_private_key"`
-	Port          string            `gluamapper:"port" json:"port"`
+	Addrs         []string          `gluamapper:"addrs" json:"addrs"`
 }
 
 // globals for background process

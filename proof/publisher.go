@@ -16,16 +16,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/prometheus/common/log"
-
 	"github.com/bitmark-inc/bitmarkd/p2p"
 
 	"github.com/libp2p/go-libp2p"
-	crypto "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/protocol"
-	"github.com/multiformats/go-multiaddr"
 
+	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/network"
+	ma "github.com/multiformats/go-multiaddr"
 
 	zmq "github.com/pebbe/zmq4"
 	"golang.org/x/crypto/ed25519"
@@ -73,7 +71,11 @@ type publisher struct {
 	paymentAddress map[currency.Currency]string
 	owner          *account.Account
 	privateKey     []byte
-	port           string
+	p2pPrivateKey  crypto.PrivKey
+	maddrs         []ma.Multiaddr
+	jobToSendCh    chan []byte
+	possibleHashCh chan []byte
+	resultToSendCh chan []byte
 }
 
 // initialise the publisher
@@ -81,8 +83,15 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 
 	log := logger.New("publisher")
 	pub.log = log
-
 	log.Info("initialising…")
+
+	var err error
+	pub.p2pPrivateKey, err = p2p.DecodeHexToPrvKey([]byte(configuration.P2PPrivateKey))
+	if nil != err {
+		return err
+	}
+
+	pub.maddrs = p2p.IPPortToMultiAddr(configuration.Addrs)
 
 	// set up payment address for each supported currency
 	pub.paymentAddress = make(map[currency.Currency]string)
@@ -180,19 +189,6 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 	log.Tracef("server public:  %x", publicKey)
 	log.Tracef("server private: %x", privateKey)
 
-	// create connections
-	//c, _ := util.NewConnections(configuration.Publish)
-
-	// allocate IPv4 and IPv6 sockets
-	//pub.socket4, pub.socket6, err = zmqutil.NewBind(log, zmq.PUB, publisherZapDomain, privateKey, publicKey, c)
-	//if nil != err {
-	//	log.Errorf("bind error: %s", err)
-	//	return err
-	//}
-
-	// TODO: Aaron update to real format
-	pub.port = configuration.Port
-
 	return nil
 }
 
@@ -209,20 +205,12 @@ func (pub *publisher) Run(args interface{}, shutdown <-chan struct{}) {
 		publishInterval = publishTestingInterval
 	}
 
-	// libp2p
-	r := rand.Reader
-	p2pPrivateKey, _, err := crypto.GenerateKeyPairWithReader(crypto.RSA, 2048, r)
-	if nil != err {
-		log.Errorf("crypto generate ed25519 key with error: %s", err)
-	}
-
-	if pub.port != "" {
-		mAddrs, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/2138")
-		host, err := libp2p.New(context.Background(), libp2p.ListenAddrs(mAddrs), libp2p.Identity(p2pPrivateKey))
+	for _, maddr := range pub.maddrs {
+		host, err := libp2p.New(context.Background(), libp2p.ListenAddrs(maddr), libp2p.Identity(pub.p2pPrivateKey))
 		if nil != err {
 			log.Errorf("create libp2p host with error: %s", err)
 		}
-		log.Infof("host: /ip4/127.0.0.1/tcp/2138/p2p/%s", host.ID().Pretty())
+		log.Debugf("listen addr: %s\n", maddr.String())
 		host.SetStreamHandler(protocol.ID(recorderdProtocol), pub.proofHandler)
 	}
 
@@ -236,17 +224,10 @@ loop:
 			pub.process()
 		}
 	}
-	//if nil != pub.socket4 {
-	//	pub.socket4.Close()
-	//}
-	//if nil != pub.socket6 {
-	//	pub.socket6.Close()
-	//}
 }
 
 // process some items into a block and publish it
 func (pub *publisher) process() {
-
 	// only create new blocks if in normal mode
 	if !mode.Is(mode.Normal) {
 		return
@@ -425,10 +406,10 @@ func (pub *publisher) sendHashRequest(rw *bufio.ReadWriter) {
 		//	rw.Write(packed)
 		//	rw.Flush()
 		//}
-		log.Infof("item to marshal: %#v", j)
+		pub.log.Infof("item to marshal: %#v", j)
 		packed, err := p2p.PackP2PMessage("testing", "R", [][]byte{j})
 		if nil != err {
-			log.Errorf("pack message with error: %s", err)
+			pub.log.Errorf("pack message with error: %s", err)
 			continue
 		}
 		rw.Write(packed)
@@ -438,10 +419,10 @@ func (pub *publisher) sendHashRequest(rw *bufio.ReadWriter) {
 
 func (pub *publisher) sendResult(rw *bufio.ReadWriter) {
 	for r := range resultToSendCh {
-		log.Debug("hash result")
+		pub.log.Debug("hash result")
 		packed, err := p2p.PackP2PMessage("testing", "S", [][]byte{r})
 		if nil != err {
-			log.Infof("pack message with error: %s", err)
+			pub.log.Infof("pack message with error: %s", err)
 			continue
 		}
 		rw.Write(packed)

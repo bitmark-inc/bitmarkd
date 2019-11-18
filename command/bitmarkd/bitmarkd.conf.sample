@@ -234,11 +234,17 @@ M.proofing = {
     public_key = read_file("proof.public"),
     private_key = read_file("proof.private"),
     signing_key = read_file(M.chain == "bitmark" and 'proof.live' or 'proof.test'),
+    p2p_private_key = read_file("p2ppeer.prv"),
 
     -- payments for future transfers auto detected from *coin_address near top of this file
     payment_address = {
         bitcoin = M.chain == "bitmark" and bitcoin_address.live or bitcoin_address.test,
         litecoin = M.chain == "bitmark" and litecoin_address.live or litecoin_address.test,
+    },
+
+    addrs = {
+        "0.0.0.0:2138",
+        "[::]:2138"
     },
 
     publish = {
