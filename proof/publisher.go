@@ -197,7 +197,6 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 func (pub *publisher) Run(args interface{}, shutdown <-chan struct{}) {
 
 	log := pub.log
-
 	log.Info("starting…")
 
 	publishInterval := publishBitmarkInterval
@@ -265,7 +264,7 @@ func (pub *publisher) process() {
 	signature := ed25519.Sign(pub.privateKey[:], partiallyPacked)
 	blockFoundation.Signature = signature[:]
 
-	// re-pack to makesure signature is valid
+	// re-pack to make sure signature is valid
 	packedBI, err := blockFoundation.Pack(pub.owner)
 	if nil != err {
 		pub.log.Criticalf("pack block foundation error: %s", err)
@@ -354,10 +353,10 @@ func (pub *publisher) process() {
 
 func (pub *publisher) proofHandler(s network.Stream) {
 	// only create new blocks if in normal mode
-	//if !mode.Is(mode.Normal) {
-	//	pub.log.Errorf("not in normal mode")
-	//	return
-	//}
+	if !mode.Is(mode.Normal) {
+		pub.log.Errorf("not in normal mode")
+		return
+	}
 
 	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
 
