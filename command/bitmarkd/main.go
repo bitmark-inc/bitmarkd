@@ -125,7 +125,7 @@ func main() {
 	}
 	defer mode.Finalise()
 
-	// // if requested start profiling
+	// if requested start profiling
 	// if "" != masterConfiguration.ProfileFile {
 	// 	f, err := os.Create(masterConfiguration.ProfileFile)
 	// 	if nil != err {
@@ -306,16 +306,6 @@ func main() {
 		}
 		defer publish.Finalise()
 	*/
-	// start up the rpc background processes
-	/*
-		err = rpc.Initialise(&masterConfiguration.ClientRPC, &masterConfiguration.HttpsRPC, version)
-		if nil != err {
-			log.Criticalf("rpc initialise error: %s", err)
-			exitwithstatus.Message("peer initialise error: %s", err)
-		}
-		defer rpc.Finalise()
-	*/
-
 	// start proof background processes
 	/*
 		err = proof.Initialise(&masterConfiguration.Proofing)
