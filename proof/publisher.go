@@ -14,18 +14,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/p2p"
 
 	"github.com/libp2p/go-libp2p"
-	"github.com/libp2p/go-libp2p-core/protocol"
 
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/network"
 	ma "github.com/multiformats/go-multiaddr"
 
-	zmq "github.com/pebbe/zmq4"
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/bitmark-inc/bitmarkd/account"
@@ -49,25 +48,17 @@ const (
 	taggedSeed        = "SEED:"    // followed by base58 encoded seed as produced by desktop/cli client
 	taggedPrivate     = "PRIVATE:" // followed by 64 bytes of hex Ed25519 private key
 	recorderdProtocol = "/recorderd/1.0.0"
+	maxBytes          = 3000
+	maxJobChannelSize = 64
 )
 
 const (
 	publishBitmarkInterval = 60 * time.Second
 	publishTestingInterval = 15 * time.Second
-	publisherZapDomain     = "publisher"
-)
-
-// TODO: Aaron, put these channels into struct instead of global
-var (
-	jobToSendCh    = make(chan []byte, 10)
-	possibleHashCh = make(chan []byte, 10)
-	resultToSendCh = make(chan []byte, 10)
 )
 
 type publisher struct {
 	log            *logger.L
-	socket4        *zmq.Socket
-	socket6        *zmq.Socket
 	paymentAddress map[currency.Currency]string
 	owner          *account.Account
 	privateKey     []byte
@@ -76,6 +67,7 @@ type publisher struct {
 	jobToSendCh    chan []byte
 	possibleHashCh chan []byte
 	resultToSendCh chan []byte
+	clientCount    int32
 }
 
 // initialise the publisher
@@ -90,6 +82,10 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 	if nil != err {
 		return err
 	}
+
+	pub.jobToSendCh = make(chan []byte, maxJobChannelSize)
+	pub.possibleHashCh = make(chan []byte, maxJobChannelSize)
+	pub.resultToSendCh = make(chan []byte, maxJobChannelSize)
 
 	pub.maddrs = p2p.IPPortToMultiAddr(configuration.Addrs)
 
@@ -210,7 +206,7 @@ func (pub *publisher) Run(args interface{}, shutdown <-chan struct{}) {
 			log.Errorf("create libp2p host with error: %s", err)
 		}
 		log.Debugf("listen addr: %s\n", maddr.String())
-		host.SetStreamHandler(protocol.ID(recorderdProtocol), pub.proofHandler)
+		host.SetStreamHandler(recorderdProtocol, pub.proofHandler)
 	}
 
 loop:
@@ -333,22 +329,11 @@ func (pub *publisher) process() {
 	data, err := json.Marshal(message)
 	logger.PanicIfError("JSON encode error: %s", err)
 
-	jobToSendCh <- data
-
 	pub.log.Infof("json to send: %s", data)
 
-	// ***** FIX THIS: is the DONTWAIT flag needed or not?
-	//if nil != pub.socket4 {
-	//	_, err = pub.socket4.SendBytes(data, 0|zmq.DONTWAIT)
-	//	logger.PanicIfError("publisher 4", err)
-	//}
-	//if nil != pub.socket6 {
-	//	_, err = pub.socket6.SendBytes(data, 0|zmq.DONTWAIT)
-	//	logger.PanicIfError("publisher 6", err)
-	//}
-	// TODO: temp disable by libp2p
-
-	time.Sleep(10 * time.Second)
+	if pub.clientCount > 0 {
+		pub.jobToSendCh <- data
+	}
 }
 
 func (pub *publisher) proofHandler(s network.Stream) {
@@ -357,6 +342,14 @@ func (pub *publisher) proofHandler(s network.Stream) {
 		pub.log.Errorf("not in normal mode")
 		return
 	}
+
+	// reduce client count if handler terminated
+	defer func(p *publisher) {
+		atomic.AddInt32(&p.clientCount, -1)
+	}(pub)
+
+	// increase client count by one
+	atomic.AddInt32(&pub.clientCount, 1)
 
 	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
 
@@ -371,7 +364,6 @@ func (pub *publisher) proofHandler(s network.Stream) {
 }
 
 func (pub *publisher) receivePossibleHash(rw *bufio.ReadWriter) {
-	maxBytes := 3000
 	data := make([]byte, maxBytes)
 	for {
 		length, err := rw.Read(data)
@@ -382,18 +374,12 @@ func (pub *publisher) receivePossibleHash(rw *bufio.ReadWriter) {
 		if 0 == length {
 			continue
 		}
-		possibleHashCh <- data[:length]
-		//_, _, parameters, err := p2p.UnPackP2PMessage(data[:length])
-		//if nil != err {
-		//	panic(err)
-		//}
-		//fmt.Printf("received chain: %s, fn: %s, parameter: %s\n", chain, fn, string(parameters[0]))
-		//log.Infof("receive: %#v", parameters[0])
+		pub.possibleHashCh <- data[:length]
 	}
 }
 
 func (pub *publisher) sendHashRequest(rw *bufio.ReadWriter) {
-	for j := range jobToSendCh {
+	for j := range pub.jobToSendCh {
 		//select {
 		//case <-time.After(10 * time.Second):
 		//	str := fmt.Sprintf("%s\n", time.Now())
@@ -411,20 +397,20 @@ func (pub *publisher) sendHashRequest(rw *bufio.ReadWriter) {
 			pub.log.Errorf("pack message with error: %s", err)
 			continue
 		}
-		rw.Write(packed)
-		rw.Flush()
+		_, _ = rw.Write(packed)
+		_ = rw.Flush()
 	}
 }
 
 func (pub *publisher) sendResult(rw *bufio.ReadWriter) {
-	for r := range resultToSendCh {
+	for r := range pub.resultToSendCh {
 		pub.log.Debug("hash result")
 		packed, err := p2p.PackP2PMessage("testing", "S", [][]byte{r})
 		if nil != err {
 			pub.log.Infof("pack message with error: %s", err)
 			continue
 		}
-		rw.Write(packed)
-		rw.Flush()
+		_, _ = rw.Write(packed)
+		_ = rw.Flush()
 	}
 }
