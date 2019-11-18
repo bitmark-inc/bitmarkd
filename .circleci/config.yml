@@ -100,11 +100,7 @@ jobs:
             docker cp recorderd.flatpak .
             docker rm -f flatpak-builder
 
-            # flatpak-builder --disable-rofiles-fuse --force-clean --repo=repo-bitmarkd build-bitmarkd /flatpak/com.bitmark.bitmarkd.json
-            # flatpak build-bundle repo-bitmarkd bitmarkd.flatpak com.bitmark.bitmarkd
-
       - aws-s3/copy:
-          name: Push flatpak file to S3
           from: bitmarkd.flatpak
           to: 's3://flatpak'
           arguments: '--dryrun'
