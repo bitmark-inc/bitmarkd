@@ -15,10 +15,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/prometheus/common/log"
-
 	"github.com/bitmark-inc/bitmarkd/p2p"
-	"github.com/bitmark-inc/bitmarkd/util"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/peerstore"
@@ -37,6 +34,11 @@ import (
 
 // set by the linker: go build -ldflags "-X main.version=M.N" ./...
 var version = "zero" // do not change this value
+
+const (
+	recorderdProtocol = "/recorderd/1.0.0"
+	maxBytes          = 3000
+)
 
 // main program
 func main() {
@@ -202,12 +204,6 @@ func main() {
 	// then submit a block to the right bitmarkd for verification
 	proofer.StartHashing()
 
-	// initialise encryption
-	//err = zmqutil.StartAuthentication()
-	//if nil != err {
-	//	log.Criticalf("zmq.AuthStart(): error: %s", err)
-	//	exitwithstatus.Message("%s: zmq.AuthStart() error: %s", program, err)
-	//}
 	managerLogger := logger.New(JobManagerPrefix)
 	jobManager := newJobManager(
 		calendar,
@@ -217,15 +213,15 @@ func main() {
 	)
 	jobManager.Start()
 
-	watcher.Start()
+	_ = watcher.Start()
 
 	reader.FirstTimeRun()
 	reader.Start()
 
-	r := rand.Reader
-	p2pPrivateKey, _, err := crypto.GenerateKeyPairWithReader(crypto.RSA, 2048, r)
+	p2pPrivateKey, _, err := crypto.GenerateKeyPairWithReader(crypto.Ed25519, 2048, rand.Reader)
 	if nil != err {
-		panic(err)
+		log.Errorf("generate p2p key-pair with error: %s", err)
+		return
 	}
 
 	// start up bitmarkd clients these subscribe to bitmarkd
@@ -233,95 +229,55 @@ func main() {
 connection_setup:
 	for i, c := range masterConfiguration.Peering.Connect {
 
-		//serverPublicKey, err := zmqutil.ReadPublicKey(remote.PublicKey)
-		//if nil != err {
-		//	log.Warnf("client: %d invalid server publickey: %q error: %s", i, remote.PublicKey, err)
-		//	continue connection_setup
-		//}
-		//
-		//bc, err := util.NewConnection(remote.Blocks)
-		//if nil != err {
-		//	log.Warnf("client: %d invalid blocks publisher: %q error: %s", i, remote.Blocks, err)
-		//	continue connection_setup
-		//}
-		//blocksAddress, blocksv6 := bc.CanonicalIPandPort("tcp://")
-		//
-		//sc, err := util.NewConnection(remote.Submit)
-		//if nil != err {
-		//	log.Warnf("client: %d invalid submit address: %q error: %s", i, remote.Submit, err)
-		//	continue connection_setup
-		//}
-		//submitAddress, submitv6 := sc.CanonicalIPandPort("tcp://")
-		//
-		//log.Infof("client: %d subscribe: %q  submit: %q", i, remote.Blocks, remote.Submit)
-		//
-		//mlog := logger.New(fmt.Sprintf("submitter-%d", i))
-		// TODO: libp2p
-		//err = Submitter(i, submitAddress, submitv6, serverPublicKey, publicKey, privateKey, mlog)
-		//if nil != err {
-		//	log.Warnf("submitter: %d failed error: %s", i, err)
-		//	continue connection_setup
-		//}
-
 		slog := logger.New(fmt.Sprintf("subscriber-%d", i))
-		// TODO: libp2p
-		//err = Subscribe(i, blocksAddress, blocksv6, serverPublicKey, publicKey, privateKey, slog, proofer)
-		//if nil != err {
-		//	log.Warnf("subscribe: %d failed error: %s", i, err)
-		//	continue connection_setup
-		//}
 
 		host, err := libp2p.New(context.Background(), libp2p.Identity(p2pPrivateKey))
 		if nil != err {
-			panic(err)
+			slog.Errorf("new p2p host with error: %s", err)
+			continue connection_setup
 		}
 
-		fmt.Printf("p2p: %s\n", c.P2P)
 		maddr, err := multiaddr.NewMultiaddr(c.P2P)
 		if nil != err {
-			panic(err)
+			slog.Errorf("new p2p maddr from %v with error: %s", c.P2P, err)
+			continue connection_setup
 		}
 
 		info, err := peer.AddrInfoFromP2pAddr(maddr)
 		if nil != err {
-			panic(err)
+			slog.Errorf("p2p info from maddr %v with error: %s", maddr, err)
+			continue connection_setup
 		}
-		fmt.Printf("info: %#v\n", info)
 
 		host.Peerstore().AddAddrs(info.ID, info.Addrs, peerstore.PermanentAddrTTL)
 
-		s, err := host.NewStream(context.Background(), info.ID, "/recorderd/1.0.0")
+		s, err := host.NewStream(context.Background(), info.ID, recorderdProtocol)
 		if nil != err {
-			panic(err)
+			slog.Errorf("new stream with error: %s", err)
+			continue connection_setup
 		}
 
 		hashRequestChan := make(chan []byte, 10)
 		possibleHashChan := make(chan []byte, 10)
 
-		err = SubscribeP2P(i, slog, proofer, hashRequestChan)
+		err = Subscriber(i, slog, proofer, hashRequestChan)
 
 		rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
 
-		sc, err := util.NewConnection(c.Submit)
-		if nil != err {
-			log.Warnf("client: %d invalid submit address: %q error: %s", i, c.Submit, err)
-			continue connection_setup
-		}
-		_, submitv6 := sc.CanonicalIPandPort("tcp://")
 		mlog := logger.New(fmt.Sprintf("submitter-%d", i))
-		err = SubmitterP2P(i, submitv6, mlog, possibleHashChan)
+		err = Submitter(i, mlog, possibleHashChan)
 		if nil != err {
-			log.Errorf("create submitter with error: %s", err)
+			mlog.Errorf("create submitter with error: %s", err)
 			continue connection_setup
 		}
 
-		go receiveMessage(rw, hashRequestChan)
-		go sendPossibleHash(rw, possibleHashChan)
+		go receiveMessage(rw, hashRequestChan, log)
+		go sendPossibleHash(rw, possibleHashChan, log)
 	}
 
 	// erase the private key from memory
 	//lint:ignore SA4006 we want to make sure we clean privateKey
-	//privateKey = []byte{}
+	p2pPrivateKey = nil
 
 	// abort if no clients were connected
 
@@ -342,20 +298,21 @@ connection_setup:
 	}
 }
 
-func receiveMessage(rw *bufio.ReadWriter, hashRequestChan chan<- []byte) {
-	maxBytes := 3000
+func receiveMessage(rw *bufio.ReadWriter, hashRequestChan chan<- []byte, log *logger.L) {
 	data := make([]byte, maxBytes)
 	for {
 		length, err := rw.Read(data)
 		if nil != err {
-			panic(err)
+			log.Errorf("read from stream with error: %s", err)
+			continue
 		}
 		if length == 0 {
 			return
 		}
 		_, fn, parameters, err := p2p.UnPackP2PMessage(data[:length])
 		if nil != err {
-			panic(err)
+			log.Errorf("unpack p2p message %v with error: %s", data[:length], err)
+			continue
 		}
 
 		if fn == "R" {
@@ -363,31 +320,33 @@ func receiveMessage(rw *bufio.ReadWriter, hashRequestChan chan<- []byte) {
 		} else if fn == "S" {
 			_, _, parameters, err := p2p.UnPackP2PMessage(data[:length])
 			if nil != err {
-				panic(err)
+				log.Errorf("unpack p2p message %v with error: %s", data[:length], err)
+				continue
 			}
 			var r interface{}
 			err = json.Unmarshal(parameters[0], &r)
 			if nil != err {
-				panic(err)
+				log.Errorf("json unmarshal %v with error: %s", parameters[0], err)
+				continue
 			}
 			log.Infof("receive server result: %#v", r)
 		} else {
 			log.Errorf("receive unknown operation: %s", fn)
 		}
-		//fmt.Printf("received chain: %s, fn: %s, parameter: %s\n", chain, fn, string(parameters[0]))
 	}
 }
 
-func sendPossibleHash(rw *bufio.ReadWriter, possibleHashChan <-chan []byte) {
+func sendPossibleHash(rw *bufio.ReadWriter, possibleHashChan <-chan []byte, log *logger.L) {
 	for {
 		select {
 		case msg := <-possibleHashChan:
 			packed, err := p2p.PackP2PMessage("testing", "S", [][]byte{[]byte(msg)})
 			if nil != err {
-				panic(err)
+				log.Errorf("pack p2p message %v with error: %s", msg, err)
+				continue
 			}
-			rw.Write(packed)
-			rw.Flush()
+			_, _ = rw.Write(packed)
+			_ = rw.Flush()
 		}
 	}
 }

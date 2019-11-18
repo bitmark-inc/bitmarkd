@@ -22,111 +22,7 @@ type PublishedItem struct {
 	Header blockrecord.Header
 }
 
-// subscriber thread
-func Subscribe(
-	i int,
-	connectTo string,
-	v6 bool,
-	serverPublicKey []byte,
-	publicKey []byte,
-	privateKey []byte,
-	log *logger.L,
-	proofer Proofer,
-) error {
-
-	log.Info("starting…")
-
-	socket, err := zmq.NewSocket(zmq.SUB)
-	if nil != err {
-		return err
-	}
-
-	log.Infof("connect to: %q", connectTo)
-
-	socket.SetCurveServer(0)
-	socket.SetCurvePublickey(string(publicKey))
-	socket.SetCurveSecretkey(string(privateKey))
-	socket.SetCurveServerkey(string(serverPublicKey))
-
-	socket.SetIdentity(string(publicKey)) // just use public key for identity
-
-	// basic socket options
-	socket.SetIpv6(v6)
-
-	// keep-alive settings
-	socket.SetTcpKeepalive(1)
-	socket.SetTcpKeepaliveCnt(5)
-	socket.SetTcpKeepaliveIdle(60)
-	socket.SetTcpKeepaliveIntvl(60)
-
-	// ***** FIX THIS: enabling this causes complete failure
-	// ***** FIX THIS: socket disconnects, perhaps after IVL value
-	// heartbeat
-	// socket.SetHeartbeatIvl(heartbeatInterval)
-	// socket.SetHeartbeatTimeout(heartbeatTimeout)
-	// socket.SetHeartbeatTtl(heartbeatTTL)
-
-	// set subscription prefix - empty => receive everything
-	socket.SetSubscribe("")
-
-	socket.Connect(connectTo)
-	if nil != err {
-		socket.Close()
-	}
-
-	// to submit hashing requests
-	proof, err := zmq.NewSocket(zmq.PUSH)
-	if nil != err {
-		socket.Close()
-		return err
-	}
-
-	identity := fmt.Sprintf("subscriber-%d", i)
-	mySubmitterIdentity := fmt.Sprintf("submitter-%d", i) // ***** FIX THIS: sync up with submitter so names match *****
-
-	proof.SetLinger(0)
-	proof.SetIdentity(identity)
-	err = proof.Connect(proofRequest)
-	if nil != err {
-		socket.Close()
-		proof.Close()
-	}
-
-	// background process
-	go func() {
-		defer socket.Close()
-		defer proof.Close()
-
-	loop:
-		for {
-			data, err := socket.Recv(0)
-			logger.PanicIfError("subscriber", err)
-			log.Infof("received data: %s", data)
-
-			// prevent queuing outdated request
-			if !proofer.IsWorking() {
-				log.Infof("Rest time, discard request")
-				continue loop
-			}
-
-			// ***** FIX THIS: just debugging? or really split block into multiple nonce ranges
-			var item PublishedItem
-			json.Unmarshal([]byte(data), &item)
-			log.Infof("received : %v", item)
-
-			// initial try just forward block
-			_, err = proof.Send(mySubmitterIdentity, zmq.SNDMORE)
-			logger.PanicIfError("subscriber sending 1", err)
-			_, err = proof.Send(data, 0)
-			logger.PanicIfError("subscriber sending 2", err)
-			ProofQueueIncrement()
-			log.Infof("queue depth: %d", proofQueueDepth)
-		}
-	}()
-	return nil
-}
-
-func SubscribeP2P(
+func Subscriber(
 	i int,
 	log *logger.L,
 	proofer Proofer,
@@ -144,11 +40,11 @@ func SubscribeP2P(
 		return err
 	}
 
-	proof.SetLinger(0)
-	proof.SetIdentity(identity)
+	_ = proof.SetLinger(0)
+	_ = proof.SetIdentity(identity)
 	err = proof.Connect(proofRequest)
 	if nil != err {
-		proof.Close()
+		_ = proof.Close()
 	}
 
 	// background process
@@ -168,7 +64,11 @@ func SubscribeP2P(
 
 				// ***** FIX THIS: just debugging? or really split block into multiple nonce ranges
 				var item PublishedItem
-				json.Unmarshal([]byte(data), &item)
+				err = json.Unmarshal([]byte(data), &item)
+				if nil != err {
+					log.Errorf("unmarshal json %v with error: %s", data, err)
+					continue
+				}
 				log.Infof("unmarshal received: %v", item)
 
 				// initial try just forward block
