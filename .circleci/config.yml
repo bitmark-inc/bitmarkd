@@ -1,10 +1,7 @@
 # Golang CircleCI 2.0 configuration file
 #
 # Check https://circleci.com/docs/2.0/language-go/ for more details
-version: 2.1
-
-orbs:
-  aws-s3: circleci/aws-s3@1.0.11
+version: 2
 
 jobs:
   test:
@@ -82,28 +79,6 @@ jobs:
           command: cd ./.circleci/packer && packer build -force -only amazon-ebs -var 'bitmarkd_version=0.12.2' packer_build.json
           # Only build the AWS image at this moment
           # This job assumes that the AWS environment configured well either by circleci context or project permissions
-  build_flatpak_image:
-    machine:
-      image: ubuntu-1604:201903-01
-    steps:
-      - checkout
-      - run:
-          name: "Build bitmarkd"
-          command: |
-            docker pull bitmark/flatpak-builder
-            docker run -id --name flatpak-builder --privileged -v /Users/jimyeh/Code/bitmark-inc/bitmarkd/.circleci/flatpak:/flatpak bitmark/flatpak-builder sh
-            docker exec -t flatpak-builder flatpak-builder --repo=repo-bitmarkd build-bitmarkd /flatpak/com.bitmark.bitmarkd.json
-            docker exec -t flatpak-builder flatpak-builder --repo=repo-recorderd build-recorderd /flatpak/com.bitmark.recorderd.json
-            docker exec -t flatpak-builder flatpak build-bundle repo-bitmarkd bitmarkd.flatpak com.bitmark.bitmarkd
-            docker exec -t flatpak-builder flatpak build-bundle repo-recorderd recorderd.flatpak com.bitmark.recorderd
-            docker cp bitmarkd.flatpak .
-            docker cp recorderd.flatpak .
-            docker rm -f flatpak-builder
-
-      - aws-s3/copy:
-          from: bitmarkd.flatpak
-          to: 's3://flatpak'
-          arguments: '--dryrun'
 
 workflows:
   version: 2
@@ -112,15 +87,6 @@ workflows:
       - test
   release:
     jobs:
-      - build_flatpak_image:
-          filters:
-            tags:
-              only: /v\d+(.\d+){2}(-(alpha|beta))?/
-              # since circleci use a different way to fetch git tags, the ssh client is required in our docker image
-              # if a job requires another task, the required job must to have the same filter to this one.
-            branches:
-              ignore: /.*/
-
       - publish_image:
           context: bitmarkd
           filters:
