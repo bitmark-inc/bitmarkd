@@ -73,10 +73,10 @@ jobs:
       - checkout
       - run:
           name: Validate configuration
-          command: cd ./.circleci/packer && packer validate -only amazon-ebs packer_build.json
+          command: cd ./.circleci/packer && packer validate -only aws-ubuntu,aws-freebsd packer_build.json
       - run:
           name: Build AWS image
-          command: cd ./.circleci/packer && packer build -force -only amazon-ebs -var 'bitmarkd_version=0.12.2' packer_build.json
+          command: cd ./.circleci/packer && packer build -force -only aws-ubuntu,aws-freebsd -var 'bitmarkd_version=0.12.2' packer_build.json
           # Only build the AWS image at this moment
           # This job assumes that the AWS environment configured well either by circleci context or project permissions
 

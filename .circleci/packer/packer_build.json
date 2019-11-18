@@ -4,6 +4,7 @@
   },
   "builders": [
     {
+      "name": "aws-freebsd",
       "type": "amazon-ebs",
       "region": "ap-northeast-1",
       "source_ami": "ami-09674965b0d4019fb",
@@ -11,9 +12,23 @@
       "ssh_username": "ec2-user",
       "force_delete_snapshot": true,
       "ami_groups": ["all"],
-      "ami_name": "bitmarkd-{{ user `bitmarkd_version` }}",
+      "ami_name": "bitmarkd-{{ user `bitmarkd_version` }}-freebsd",
       "tags": {
-        "Name": "bitmarkd-image-{{ user `bitmarkd_version` }}"
+        "Name": "bitmarkd-image-{{ user `bitmarkd_version` }}-freebsd"
+      }
+    },
+    {
+      "name": "aws-ubuntu",
+      "type": "amazon-ebs",
+      "region": "ap-northeast-1",
+      "source_ami": "ami-0cd744adeca97abb1",
+      "instance_type": "t3.micro",
+      "ssh_username": "ubuntu",
+      "force_delete_snapshot": true,
+      "ami_groups": ["all"],
+      "ami_name": "bitmarkd-{{ user `bitmarkd_version` }}-linux-ubuntu",
+      "tags": {
+        "Name": "bitmarkd-image-{{ user `bitmarkd_version` }}-linux-ubuntu"
       }
     },
     {
