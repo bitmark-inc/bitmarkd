@@ -371,7 +371,7 @@ func (pub *publisher) receivePossibleHash(rw *bufio.ReadWriter) {
 			panic(err)
 		}
 
-		if 0 == length {
+		if length == 0 {
 			continue
 		}
 		pub.possibleHashCh <- data[:length]
@@ -380,17 +380,6 @@ func (pub *publisher) receivePossibleHash(rw *bufio.ReadWriter) {
 
 func (pub *publisher) sendHashRequest(rw *bufio.ReadWriter) {
 	for j := range pub.jobToSendCh {
-		//select {
-		//case <-time.After(10 * time.Second):
-		//	str := fmt.Sprintf("%s\n", time.Now())
-		//	packed, err := p2p.PackP2PMessage("testing", "R", [][]byte{[]byte(str)})
-		//	if nil != err {
-		//		panic(err)
-		//	}
-		//
-		//	rw.Write(packed)
-		//	rw.Flush()
-		//}
 		pub.log.Infof("item to marshal: %#v", j)
 		packed, err := p2p.PackP2PMessage("testing", "R", [][]byte{j})
 		if nil != err {
