@@ -32,6 +32,7 @@
       }
     },
     {
+      "name": "do-freebsd",
       "type": "digitalocean",
       "image": "freebsd-12-x64",
       "region": "sgp1",
@@ -44,10 +45,22 @@
     {
       "type": "shell",
       "scripts": [
-        "./packer_aws.sh",
-        "./packer_do.sh"
+        "./packer_aws_freebsd.sh"
       ],
       "execute_command": "chmod +x {{ .Path }}; env {{ .Vars }} {{ .Path }}",
+      "only": [ "aws-freebsd" ],
+      "environment_vars": [
+        "BITMARKD_VERSION={{ user `bitmarkd_version` }}"
+      ]
+    },
+    {
+      "type": "shell",
+      "scripts": [
+        "./packer_aws_ubuntu.sh",
+        "./packer_aws_ubuntu_cleanup.sh"
+      ],
+      "execute_command": "chmod +x {{ .Path }}; {{ .Vars }} sudo -S -E bash -e '{{ .Path }}'",
+      "only": [ "aws-ubuntu" ],
       "environment_vars": [
         "BITMARKD_VERSION={{ user `bitmarkd_version` }}"
       ]
