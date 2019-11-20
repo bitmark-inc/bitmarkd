@@ -20,7 +20,7 @@ func setup(t *testing.T) {
 	t.Logf("running %s\n", t.Name())
 }
 
-func teardown(t *testing.T) {
+func teardown() {
 	messagebus.Bus.Announce.Release()
 	messagebus.Bus.Blockstore.Release()
 	messagebus.Bus.Connector.Release()
@@ -31,7 +31,7 @@ func teardown(t *testing.T) {
 func TestQueue(t *testing.T) {
 
 	setup(t)
-	defer teardown(t)
+	defer teardown()
 
 	items := []messagebus.Message{
 		{
@@ -59,13 +59,12 @@ func TestQueue(t *testing.T) {
 			t.Errorf("actual: %q  expected: %q", received.Command, item.Command)
 		}
 	}
-
 }
 
 func TestBroadcast(t *testing.T) {
 
 	setup(t)
-	defer teardown(t)
+	defer teardown()
 
 	items := []messagebus.Message{
 		{
@@ -84,7 +83,7 @@ func TestBroadcast(t *testing.T) {
 
 	// nothing listening so these messages should be dropped
 	for _, item := range items {
-		messagebus.Bus.P2P.Send("ignored:" + item.Command)
+		messagebus.Bus.Broadcast.Send("ignored:" + item.Command)
 	}
 
 	// create some listeners
@@ -129,18 +128,18 @@ func TestBroadcast(t *testing.T) {
 	// all listening so one copy of each messages should be received
 	for _, item := range items {
 		for i := 0; i < 10; i += 1 {
-			messagebus.Bus.P2P.Send(item.Command)
+			messagebus.Bus.Broadcast.Send(item.Command)
 		}
 	}
 
 	for _, item := range items {
-		messagebus.Bus.P2P.Send(item.Command)
+		messagebus.Bus.Broadcast.Send(item.Command)
 	}
 
 	// wait for at least one item removed from all queues
 	wgFirst.Wait()
 
-	messagebus.Bus.P2P.Send(DONE)
+	messagebus.Bus.Broadcast.Send(DONE)
 
 	// wait for final completion
 	wgStop.Wait()
@@ -156,7 +155,7 @@ func TestBroadcast(t *testing.T) {
 func TestQueueOverflow(t *testing.T) {
 
 	setup(t)
-	defer teardown(t)
+	defer teardown()
 
 	const queueSize = 15
 
@@ -169,14 +168,14 @@ func TestQueueOverflow(t *testing.T) {
 		c := cmd[rand.Intn(len(cmd))]
 		p := make([]byte, rand.Intn(1024))
 		rand.Read(p)
-		messagebus.Bus.P2P.Send(c, p)
+		messagebus.Bus.Broadcast.Send(c, p)
 	}
 
 	if len(queue) >= queueSize {
 		t.Fatal("queue was filled by normal messages")
 	}
 
-	messagebus.Bus.P2P.Send("block", []byte{0x11, 0x99})
+	messagebus.Bus.Broadcast.Send("block", []byte{0x11, 0x99})
 
 	if len(queue) != queueSize {
 		t.Fatal("queue could not accept block")
