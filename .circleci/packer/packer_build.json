@@ -12,9 +12,10 @@
       "ssh_username": "ec2-user",
       "force_delete_snapshot": true,
       "ami_groups": ["all"],
-      "ami_name": "bitmarkd-{{ user `bitmarkd_version` }}-freebsd",
+      "ami_name": "bitmarkd-{{ user `bitmarkd_version` }}-freebsd-{{ timestamp }}",
+      "ami_description": "bitmarkd {{ user `bitmarkd_version` }}",
       "tags": {
-        "Name": "bitmarkd-image-{{ user `bitmarkd_version` }}-freebsd"
+        "Name": "bitmarkd-{{ user `bitmarkd_version` }}-freebsd-{{ timestamp }}"
       }
     },
     {
@@ -26,9 +27,10 @@
       "ssh_username": "ubuntu",
       "force_delete_snapshot": true,
       "ami_groups": ["all"],
-      "ami_name": "bitmarkd-{{ user `bitmarkd_version` }}-linux-ubuntu",
+      "ami_name": "bitmarkd-{{ user `bitmarkd_version` }}-linux-ubuntu-{{ timestamp }}",
+      "ami_description": "bitmarkd {{ user `bitmarkd_version` }}",
       "tags": {
-        "Name": "bitmarkd-image-{{ user `bitmarkd_version` }}-linux-ubuntu"
+        "Name": "bitmarkd-{{ user `bitmarkd_version` }}-linux-ubuntu-{{ timestamp }}"
       }
     },
     {
@@ -36,7 +38,7 @@
       "type": "digitalocean",
       "image": "freebsd-12-x64",
       "region": "sgp1",
-      "snapshot_name": "packer-bitmarkd-{{ user `bitmarkd_version` }}",
+      "snapshot_name": "bitmarkd-{{ user `bitmarkd_version` }}-freebsd-{{ timestamp }}",
       "size": "s-1vcpu-1gb",
       "ssh_username": "freebsd"
     }
