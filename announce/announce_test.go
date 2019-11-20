@@ -37,20 +37,22 @@ func TestMain(m *testing.M) {
 func TestStorePeers(t *testing.T) {
 	fmt.Println("TestStorePeers")
 	curPath := os.Getenv("PWD")
-	peerfile := path.Join(curPath, "peers")
+	peerFile := path.Join(curPath, "peers")
 	// domain from bind9
-	err := Initialise("nodes.rachael.bitmark", peerfile)
+	err := Initialise("nodes.test.bitmark.com", peerFile)
 	assert.NoError(t, err, "routing initialized error")
-	storePeers(peerfile)
+	err = storePeers(peerFile)
 	assert.NoError(t, err, "routing backupPeers error")
 }
+
 func TestReadPeers(t *testing.T) {
 	curPath := os.Getenv("PWD")
-	peerfile := path.Join(curPath, "peers")
+	peerFile := path.Join(curPath, "peers")
 	var peers PeerList
-	readin, err := ioutil.ReadFile(peerfile)
+	readIN, err := ioutil.ReadFile(peerFile)
 	assert.NoError(t, err, "TestReadPeers:readFile Error")
-	proto.Unmarshal(readin, &peers)
+	err = proto.Unmarshal(readIN, &peers)
+	assert.NoError(t, err, "proto unmarshal error")
 	for _, peer := range peers.Peers {
 		addrList := util.ByteAddrsToString(peer.Listeners.Address)
 		fmt.Printf("peerID:%s, listener:%v timestamp:%d\n", string(peer.PeerID), addrList, peer.Timestamp)

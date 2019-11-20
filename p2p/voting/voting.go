@@ -79,7 +79,7 @@ func (v *VotingImpl) SetMinHeight(height uint64) {
 	v.minHeight = height
 }
 
-// NumVoteOfDigest - number of votest for a digest
+// NumVoteOfDigest - vote count for a digest
 func (v *VotingImpl) NumVoteOfDigest(digest blockdigest.Digest) int {
 	if v.existVoteForDigest(digest) {
 		return len(v.votes[digest])
@@ -92,7 +92,7 @@ func (v *VotingImpl) existVoteForDigest(digest blockdigest.Digest) bool {
 	return ok
 }
 
-// VoteBy - vote by some upstream
+// VoteBy - vote by candidates
 func (v *VotingImpl) VoteBy(candidate Candidate) {
 	height := candidate.CachedRemoteHeight()
 	digest := candidate.CachedRemoteDigestOfLocalHeight()
@@ -125,7 +125,7 @@ func (v *VotingImpl) VoteBy(candidate Candidate) {
 		v.votes[digest] = append(v.votes[digest], e)
 		return
 	}
-	v.log.Debugf("\x1b[32m%s connect to remote %s, vote success\x1b[0m", candidate.Name(), remoteAddr)
+	v.log.Debugf("\x1b[32m%s connect to remote %s, vote success\x1b[0m", remoteName, remoteAddr)
 	v.votes[digest] = []*voters{e}
 }
 
@@ -239,9 +239,7 @@ func (v *VotingImpl) sameVoteCandidates(numVote int) []Candidate {
 	return candidates
 }
 
-func (v *VotingImpl) smallerDigestWinnerFrom(
-	candidates []Candidate,
-) Candidate {
+func (v *VotingImpl) smallerDigestWinnerFrom(candidates []Candidate) Candidate {
 	v.log.Debug("select candidate with smaller digest")
 
 	elected := candidates[0]

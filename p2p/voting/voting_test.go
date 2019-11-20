@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
-	"github.com/bitmark-inc/bitmarkd/peer/mocks"
+	"github.com/bitmark-inc/bitmarkd/p2p/mocks"
 	"github.com/bitmark-inc/logger"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -69,21 +69,16 @@ func teardownTestLogger() {
 }
 
 func removeFiles() {
-	os.RemoveAll(testingDirName)
+	_ = os.RemoveAll(testingDirName)
 }
 
 func newTestVoting() Voting {
 	return NewVoting()
 }
 
-func newTestVotingUpstream(t *testing.T) (*gomock.Controller, *mocks.MockUpstreamIntf) {
+func newTestVotingCandidate(t *testing.T) (*gomock.Controller, *mocks.MockCandidate) {
 	ctl := gomock.NewController(t)
-	return ctl, mocks.NewMockUpstreamIntf(ctl)
-}
-
-func newTestVotingZmqClient(t *testing.T) (*gomock.Controller, *mocks.MockClientIntf) {
-	ctl := gomock.NewController(t)
-	return ctl, mocks.NewMockClientIntf(ctl)
+	return ctl, mocks.NewMockCandidate(ctl)
 }
 
 func newTestVotingImpl() *VotingImpl {
@@ -107,7 +102,7 @@ func TestNumVoteOfDigestWhenOverMinHeight(t *testing.T) {
 	v := newTestVotingImpl()
 	defer teardownTestLogger()
 
-	ctl, mock := newTestVotingUpstream(t)
+	ctl, mock := newTestVotingCandidate(t)
 	defer ctl.Finish()
 
 	e := &voters{
@@ -126,16 +121,12 @@ func TestNumVoteOfDigestWhenOverMinHeight(t *testing.T) {
 
 func TestVoteByWhenOverMinHeight(t *testing.T) {
 	v := newTestVoting()
-	ctl, mock := newTestVotingUpstream(t)
+	ctl, mock := newTestVotingCandidate(t)
 	defer ctl.Finish()
-
-	ctl2, mock2 := newTestVotingZmqClient(t)
-	defer ctl2.Finish()
-	mock2.EXPECT().String().Return("testing").Times(2)
 
 	mock.EXPECT().CachedRemoteHeight().Return(testHeight).Times(1)
 	mock.EXPECT().CachedRemoteDigestOfLocalHeight().Return(defaultDigest).Times(1)
-	mock.EXPECT().Client().Return(mock2).Times(2)
+	mock.EXPECT().RemoteAddr().Return("addr").Times(2)
 	mock.EXPECT().CachedRemoteHeight().Return(largerHeight).Times(1)
 	mock.EXPECT().CachedRemoteDigestOfLocalHeight().Return(defaultDigest).Times(1)
 	mock.EXPECT().Name().Return("test").Times(2)
@@ -155,17 +146,12 @@ func TestVoteByWhenOverMinHeight(t *testing.T) {
 func TestVoteByWhenBelowMinHeight(t *testing.T) {
 	v := newTestVoting()
 
-	ctl, mock := newTestVotingUpstream(t)
+	ctl, mock := newTestVotingCandidate(t)
 	defer ctl.Finish()
 
-	ctl2, mock2 := newTestVotingZmqClient(t)
-	defer ctl2.Finish()
-
-	mock2.EXPECT().String().Return("testing").Times(1)
-
-	mock.EXPECT().Client().Return(mock2).Times(1)
 	mock.EXPECT().CachedRemoteHeight().Return(testHeight).Times(1)
 	mock.EXPECT().CachedRemoteDigestOfLocalHeight().Return(defaultDigest).Times(1)
+	mock.EXPECT().RemoteAddr().Return("addr").Times(1)
 	mock.EXPECT().Name().Return("test").Times(1)
 
 	v.SetMinHeight(largerHeight)
@@ -179,17 +165,17 @@ func TestElectedCandidateWhenMajority(t *testing.T) {
 	v := newTestVotingImpl()
 	defer teardownTestLogger()
 
-	ctl3, mockZmq := newTestVotingZmqClient(t)
-	mockZmq.EXPECT().String().Return("testing").AnyTimes()
-	defer ctl3.Finish()
+	//ctl3, mockZmq := newTestVotingZmqClient(t)
+	//mockZmq.EXPECT().String().Return("testing").AnyTimes()
+	//defer ctl3.Finish()
 
-	ctl1, mock1 := newTestVotingUpstream(t)
-	mock1.EXPECT().Client().Return(mockZmq).AnyTimes()
+	ctl1, mock1 := newTestVotingCandidate(t)
+	//mock1.EXPECT().Client().Return(mockZmq).AnyTimes()
 	mock1.EXPECT().CachedRemoteHeight().Return(testHeight).Times(1)
 	defer ctl1.Finish()
 
-	ctl2, mock2 := newTestVotingUpstream(t)
-	mock2.EXPECT().Client().Return(mockZmq).AnyTimes()
+	ctl2, mock2 := newTestVotingCandidate(t)
+	//mock2.EXPECT().Client().Return(mockZmq).AnyTimes()
 	defer ctl2.Finish()
 
 	// shorter chain with more votes
@@ -217,13 +203,13 @@ func TestElectedCandidateWhenInSufficient(t *testing.T) {
 	v := newTestVotingImpl()
 	defer teardownTestLogger()
 
-	ctl3, _ := newTestVotingZmqClient(t)
-	defer ctl3.Finish()
+	//ctl3, _ := newTestVotingZmqClient(t)
+	//defer ctl3.Finish()
 
-	ctl1, mock1 := newTestVotingUpstream(t)
+	ctl1, mock1 := newTestVotingCandidate(t)
 	defer ctl1.Finish()
 
-	ctl2, mock2 := newTestVotingUpstream(t)
+	ctl2, mock2 := newTestVotingCandidate(t)
 	defer ctl2.Finish()
 
 	// shorter chain with more votes
@@ -249,17 +235,14 @@ func TestElectedCandidateWhenDraw(t *testing.T) {
 	v := newTestVotingImpl()
 	defer teardownTestLogger()
 
-	clientStr := "test"
-	ctl1, mock1 := newTestVotingUpstream(t)
+	ctl1, mock1 := newTestVotingCandidate(t)
 	defer ctl1.Finish()
 	mock1.EXPECT().CachedRemoteDigestOfLocalHeight().Return(smallerDigest).AnyTimes()
-	mock1.EXPECT().RemoteAddr().Return(clientStr, nil).AnyTimes()
 	mock1.EXPECT().CachedRemoteHeight().Return(testHeight).Times(1)
 
-	ctl2, mock2 := newTestVotingUpstream(t)
+	ctl2, mock2 := newTestVotingCandidate(t)
 	defer ctl2.Finish()
 	mock2.EXPECT().CachedRemoteDigestOfLocalHeight().Return(defaultDigest).AnyTimes()
-	mock2.EXPECT().RemoteAddr().Return(clientStr, nil).AnyTimes()
 
 	e1 := &voters{
 		candidate: mock1,
@@ -283,7 +266,7 @@ func TestReset(t *testing.T) {
 	v := newTestVotingImpl()
 	defer teardownTestLogger()
 
-	ctl, mock := newTestVotingUpstream(t)
+	ctl, mock := newTestVotingCandidate(t)
 	defer ctl.Finish()
 	e := &voters{
 		candidate: mock,

@@ -21,8 +21,8 @@ var supportedTags = map[string]struct{}{
 }
 
 const (
-	publicKeyLength   = 2 * 32 // characters
 	fingerprintLength = 2 * 32 // characters
+	p2pIdentityLength = 52     // from host.ID().Pretty()
 )
 
 type tagline struct {
@@ -101,13 +101,17 @@ words:
 		case 'c':
 			t.connectPort, err = getPort(parameter)
 			countC += 1
-		case 's': // not actually used but stil check
+		case 's': // not actually used but still check
 			_, err = getPort(parameter)
 		case 'r':
 			t.rpcPort, err = getPort(parameter)
 			countR += 1
 		case 'i':
-			t.peerID = parameter
+			if len(parameter) != p2pIdentityLength {
+				err = fault.ErrInvalidIdentity
+			} else {
+				t.peerID = parameter
+			}
 			countI += 1
 		case 'f':
 			if len(parameter) != fingerprintLength {
