@@ -23,7 +23,10 @@ import (
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 )
 
-const maxBytesRecieve = 3000
+const maxBytesRecieve = 1024 * 100 //TODO: MaxBlock Size
+const maxBytesBlock = 1024 * 100   //TODO:Future
+const maxBytesRegister = 1024 * 1  //TODO:Future
+const maxBytesHeight = 1024        //TODO:Future
 
 //ListenHandler is a host Listening  handler
 type ListenHandler struct {
@@ -116,6 +119,7 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 		case "B": // get packed block
 			if 1 != len(parameters) {
 				err = fault.ErrMissingParameters
+				util.LogError(log, util.CoRed, fmt.Sprintf("-->Block length is not equal 1 , length=%d", len(parameters)))
 			} else if 8 == len(parameters[0]) { //it 8 or 6 ??
 				result := storage.Pool.Blocks.Get(parameters[0])
 				if nil == result {

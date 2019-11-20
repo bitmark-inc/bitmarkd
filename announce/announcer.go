@@ -22,11 +22,11 @@ const (
 	//announceInitial     = 2 * time.Minute // startup delay before first send
 	announceInitial = 1 * time.Minute // startup delay before first send
 	//announceRebroadcast = 7 * time.Minute // to prevent too frequent rebroadcasts
-	announceRebroadcast = 2 * time.Minute // to prevent too frequent rebroadcasts //TODO: We may not need it anymore
+	announceRebroadcast = 30 * time.Second // to prevent too frequent rebroadcasts //TODO: We may not need it anymore
 	//announceInterval    = 11 * time.Minute     // regular polling time
-	announceInterval = 5 * time.Minute
+	announceInterval = 3 * time.Minute
 	//announceExpiry   = 5 * announceInterval // if no responses received within this time, delete the entry
-	announceExpiry = 4 * announceInterval
+	announceExpiry = 5 * announceInterval
 )
 
 type announcer struct {

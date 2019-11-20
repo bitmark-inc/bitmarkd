@@ -167,14 +167,14 @@ func (n *Node) QueryBlockHeight(id peerlib.ID, stream *network.Stream, readwrite
 	}
 	rw.Flush()
 	respPacked := make([]byte, maxBytesRecieve)
-	_, err = rw.Read(respPacked) //Expected data :  chain, fn, block-height
+	respLen, err := rw.Read(respPacked) //Expected data :  chain, fn, block-height
 	if err != nil {
 		n.Unlock()
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight:Response  Error:%v", err))
 		return 0, err
 	}
 	n.Unlock()
-	chain, fn, parameters, err := UnPackP2PMessage(respPacked)
+	chain, fn, parameters, err := UnPackP2PMessage(respPacked[:respLen])
 	if err != nil {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight:UnPackP2PMessage  Error:%v", err))
 		return 0, fmt.Errorf("invalid message response: %v", err)
@@ -245,9 +245,9 @@ func (n *Node) RemoteDigestOfHeight(id peerlib.ID, blockNumber uint64, stream *n
 	rw.Flush()
 
 	respPacked := make([]byte, maxBytesRecieve)
-	_, err = rw.Read(respPacked)
+	respLen, err := rw.Read(respPacked)
 	n.Unlock()
-	chain, fn, parameters, err := UnPackP2PMessage(respPacked)
+	chain, fn, parameters, err := UnPackP2PMessage(respPacked[:respLen])
 	if err != nil {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("RemoteDigestOfHeight:UnPackP2PMessage Error:%v", err))
 		return blockdigest.Digest{}, err
@@ -275,7 +275,7 @@ func (n *Node) RemoteDigestOfHeight(id peerlib.ID, blockNumber uint64, stream *n
 			if err != nil {
 				util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("RemoteDigestOfHeight: Response Success but error:%v digest ID:%v  hash:%q ", err, id.ShortString(), d))
 			}
-			util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("<<--RemoteDigestOfHeight: Success ID:%v", id.ShortString()))
+			util.LogDebug(n.Log, util.CoGreen, fmt.Sprintf("<<--RemoteDigestOfHeight: Success ID:%v", id.ShortString()))
 
 			return d, err
 		}
@@ -320,13 +320,13 @@ func (n *Node) GetBlockData(id peerlib.ID, blockNumber uint64, stream *network.S
 	rw.Write(p2pMsgPacked)
 	rw.Flush()
 	respPacked := make([]byte, maxBytesRecieve)
-	_, err = rw.Read(respPacked) //Expected data :  chain, fn, block
+	respLen, err := rw.Read(respPacked) //Expected data :  chain, fn, block
 	n.Unlock()
 	if err != nil {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("GetBlockData: Read  Error:%v ID:%v", err, id.ShortString()))
 		return nil, err
 	}
-	chain, fn, parameters, err := UnPackP2PMessage(respPacked)
+	chain, fn, parameters, err := UnPackP2PMessage(respPacked[:respLen])
 	if err != nil {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("GetBlockData: UnPackP2PMessage  Error:%v ID:%v", err, id.ShortString()))
 		return nil, fmt.Errorf("invalid message response: %v", err)
@@ -337,7 +337,7 @@ func (n *Node) GetBlockData(id peerlib.ID, blockNumber uint64, stream *network.S
 	}
 
 	if 1 != len(parameters) {
-		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("GetBlockData:   Error:%v ID:%v", fault.ErrInvalidPeerResponse, id.ShortString()))
+		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("GetBlockData:   Error:%v  ID:%v parameter length=%d NOT equal 1", fault.ErrInvalidPeerResponse, id.ShortString(), len(parameters)))
 		return nil, fault.ErrInvalidPeerResponse
 	}
 
@@ -347,7 +347,7 @@ func (n *Node) GetBlockData(id peerlib.ID, blockNumber uint64, stream *network.S
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("GetBlockData: Response Fail,  E msg:%v ID:%v", errMessage, id.ShortString()))
 		return nil, fault.ErrorFromRunes(parameters[0])
 	case "B":
-		util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("<<--GetBlockData Success! ID:%v", id.ShortString()))
+		util.LogDebug(n.Log, util.CoGreen, fmt.Sprintf("<<--GetBlockData Success! ID:%v", id.ShortString()))
 		return parameters[0], nil
 	default:
 	}
@@ -404,7 +404,7 @@ func (n *Node) PushMessageBus(item BusMessage, id peerlib.ID, stream *network.St
 	case "E":
 		return fmt.Errorf("rpc error response: %q", parameters[0])
 	case item.Command:
-		util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("<<--push: client: %s complete: %q", id.ShortString(), parameters[0]))
+		util.LogDebug(n.Log, util.CoGreen, fmt.Sprintf("<<--push: client: %s complete: %q", id.ShortString(), parameters[0]))
 		return nil
 	default:
 		return fmt.Errorf("rpc unexpected response: %q", parameters[0])

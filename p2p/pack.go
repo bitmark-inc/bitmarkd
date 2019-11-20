@@ -3,6 +3,7 @@ package p2p
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/util"
@@ -30,13 +31,17 @@ func UnPackP2PMessage(packed []byte) (chain string, fn string, parameters [][]by
 	}
 	chain = string(unpacked.Data[0])
 	fn = string(unpacked.Data[1])
+	if fn == "B" {
+		fmt.Println("\x1b[33m UnPackP2PMessage unpacked BLOCK data length=\x1b[0m", len(unpacked.Data))
+	}
+
 	if len(unpacked.Data) > 2 {
 		parameters = unpacked.Data[2:]
 	}
 	return chain, fn, parameters, nil
 }
 
-//UnPackRegisterData Unpack register binary  data into objectr information
+//UnPackRegisterData Unpack register binary  data into object information
 func UnPackRegisterData(parameters [][]byte) (nodeType string, id peerlib.ID, addrs []ma.Multiaddr, ts uint64, err error) {
 	if len(parameters) < 4 {
 		return nodeType, id, addrs, ts, errors.New("Invalid data")

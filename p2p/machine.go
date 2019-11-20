@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/block"
@@ -9,6 +10,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/genesis"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/p2p/voting"
+	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 )
 
@@ -90,7 +92,7 @@ func (m *Machine) transitions() bool {
 	switch m.state {
 	case cStateConnecting:
 		mode.Set(mode.Resynchronise)
-		log.Infof("Enter \x1b[33mConnecting State mode:%s \x1b[0m", mode.String())
+		util.LogInfo(log, util.CoYellow, fmt.Sprintf("Enter Connecting state, mode:%s", mode.String()))
 		if isConnectionEnough(m.attachedNode.MetricsNetwork.GetConnCount()) {
 			m.nextState()
 		} else {
@@ -98,7 +100,7 @@ func (m *Machine) transitions() bool {
 		}
 		stop = true
 	case cStateHighestBlock:
-		log.Infof("Enter \x1b[33mHighestBlock state, mode:%s \x1b[0m", mode.String())
+		util.LogInfo(log, util.CoYellow, fmt.Sprintf("Enter HighestBlock state, mode:%s", mode.String()))
 		winerHeight, winer := m.newElection()
 		if winer == nil || 0 == winerHeight {
 			stop = true
@@ -106,19 +108,18 @@ func (m *Machine) transitions() bool {
 			m.electedHeight = winerHeight
 			m.electedWiner = winer
 			if m.hasBetterChain(blockheader.Height()) {
-				log.Infof("new chain from %s, height %d, digest %s",
-					m.electedWiner.Name(), m.electedWiner.CachedRemoteHeight(), m.electedWiner.CachedRemoteDigestOfLocalHeight().String())
+				util.LogInfo(log, util.CoReset, fmt.Sprintf("new chain from %s, height %d, digest %s",
+					m.electedWiner.Name(), m.electedWiner.CachedRemoteHeight(), m.electedWiner.CachedRemoteDigestOfLocalHeight().String()))
 				m.nextState()
 			} else if m.isSameChain() {
-				log.Info("remote same chain")
 				m.toState(cStateRebuild)
 			} else {
-				log.Info("remote chain invalid, stop looping for now")
+				util.LogError(log, util.CoRed, fmt.Sprintf("remote chain invalid, stop looping for now"))
 				stop = true
 			}
 		}
 	case cStateForkDetect:
-		log.Infof("Enter \x1b[33mForkDetect state, mode:%s \x1b[0m", mode.String())
+		util.LogInfo(log, util.CoYellow, fmt.Sprintf("Enter ForkDetect state, mode:%s", mode.String()))
 		height := blockheader.Height()
 		if !m.hasBetterChain(height) {
 			m.toState(cStateRebuild)
@@ -164,33 +165,60 @@ func (m *Machine) transitions() bool {
 			}
 		}
 	case cStateFetchBlocks:
-		log.Infof("Enter\x1b[33mFetchBlocks state, mode:%s \x1b[0m", mode.String())
+		util.LogInfo(log, util.CoYellow, fmt.Sprintf("Enter FetchBlocks state, mode:%s", mode.String()))
 		stop = true
+	fetch_blocks:
+		for n := 0; n < fetchBlocksPerCycle; n++ {
+			if m.startBlockNumber > m.electedHeight {
+				// just in case block height has changed
+				m.toState(cStateHighestBlock)
+				stop = false
+				break fetch_blocks
+			}
+			packedBlock, err := m.attachedNode.GetBlockData(m.electedWiner.(*P2PCandidatesImpl).ID, m.startBlockNumber, nil, nil)
+			if nil != err {
+				log.Errorf("fetch block number: %d  error: %s", m.startBlockNumber, err)
+				m.toState(cStateHighestBlock) // retry
+				break fetch_blocks
+			}
+			err = block.StoreIncoming(packedBlock, block.NoRescanVerified)
+			if nil != err {
+				util.LogInfo(log, util.CoRed, fmt.Sprintf(
+					"store block number: %d  error: %s",
+					m.startBlockNumber,
+					err,
+				))
+				m.toState(cStateHighestBlock) // retry
+				break fetch_blocks
+			}
+
+			// next block
+			m.startBlockNumber++
+
+		}
 	case cStateRebuild:
-		log.Infof("Enter \x1b[33mRebuild state, mode:%s \x1b[0m", mode.String())
+		util.LogInfo(log, util.CoYellow, fmt.Sprintf("Enter Rebuild state, mode:%s", mode.String()))
 		// return to normal operations
 		m.nextState()
 		m.samples = 0 // zero out the counter
 		mode.Set(mode.Normal)
 		stop = true
 	case cStateSampling:
-		log.Infof("Enter \x1b[33mSampling state, mode:%s \x1b[0m", mode.String())
+		util.LogInfo(log, util.CoYellow, fmt.Sprintf("Enter Sampling state, mode:%s", mode.String()))
 		// check peers
 		//globalData.clientCount = conn.getConnectedClientCount()
 		connCount := m.attachedNode.MetricsNetwork.GetConnCount()
 		if !isConnectionEnough(connCount) {
-			log.Debugf("connections: %d below minimum client count: %d", connCount, minimumClients)
 			stop = false
 			m.toState(cStateConnecting)
 			return stop
 		}
-		log.Infof("connections: %d", connCount)
 		// check height
 		winerHeight, winer := m.newElection()
 		m.electedHeight = winerHeight
 		m.electedWiner = winer
 		height := blockheader.Height()
-		log.Infof("height remote: %d, local: %d", m.electedHeight, height)
+		util.LogInfo(log, util.CoWhite, fmt.Sprintf("height remote: %d, local: %d", m.electedHeight, height))
 		stop = true
 		if m.hasBetterChain(height) {
 			m.toState(cStateForkDetect)
@@ -236,11 +264,11 @@ func (m *Machine) newElection() (uint64, voting.Candidate) {
 	winnerName := elected.Name()
 	remoteAddr := elected.RemoteAddr()
 
-	m.log.Debugf("winner %s majority height %d, connect to %s",
+	util.LogDebug(m.log, util.CoReset, fmt.Sprintf("winner %s majority height %d, connect to %s",
 		winnerName,
 		height,
 		remoteAddr,
-	)
+	))
 	if height > uint64(0) && nil != elected {
 		m.electedHeight = height
 	}
@@ -256,13 +284,13 @@ func (m *Machine) elected() (voting.Candidate, uint64) {
 
 	remoteAddr := elected.RemoteAddr()
 	digest := elected.CachedRemoteDigestOfLocalHeight()
-	m.log.Infof(
+	util.LogDebug(m.log, util.CoReset, fmt.Sprintf(
 		"digest: %s elected with %d votes, remote addr: %s, height: %d",
 		digest,
 		m.votes.NumVoteOfDigest(digest),
 		remoteAddr,
 		height,
-	)
+	))
 
 	return elected, height
 }
