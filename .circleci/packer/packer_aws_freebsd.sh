@@ -8,7 +8,17 @@ cd bitmarkd && git checkout v$BITMARKD_VERSION && mkdir bin
 go build -o bin -ldflags "-X main.version=$BITMARKD_VERSION" ./...
 cd
 
-su root -c "cp bitmarkd/bin/* /usr/local/sbin/"
+git clone https://github.com/bitmark-inc/bitmark-wallet
+cd bitmark-wallet && git checkout v0.6.3 && mkdir bin
+go build -o bin -ldflags "-X main.version=0.6.3" ./...
+cd
+
+su root -c "mv bitmarkd/bin/bitmarkd /usr/local/sbin/"
+su root -c "mv bitmarkd/bin/recorderd /usr/local/sbin/"
+
+su root -c "mv bitmarkd/bin/* /usr/local/bin/"
+su root -c "mv bitmark-wallet/bin/* /usr/local/bin/"
+
 su root -c "rm -rf go bitmarkd"
 
 rm -f .ssh/authorized_keys
