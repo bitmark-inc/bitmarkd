@@ -79,8 +79,7 @@ func (n *Node) RequestRegister(id peerlib.ID, stream *network.Stream, readwriter
 	if created && s != nil {
 		defer (*s).Reset()
 	}
-	//nodeChain := mode.ChainName()
-	nodeChain := "local"
+	nodeChain := mode.ChainName()
 	p2pData, err := PackRegisterData(nodeChain, "R", n.NodeType, n.Host.ID(), n.Announce, time.Now())
 	if err != nil {
 		return nil, err
@@ -219,8 +218,7 @@ func (n *Node) RemoteDigestOfHeight(id peerlib.ID, blockNumber uint64, stream *n
 	if created && s != nil {
 		defer (*s).Reset()
 	}
-	//nodeChain := mode.ChainName()
-	nodeChain := "local"
+	nodeChain := mode.ChainName()
 	if !n.IsRegister(id) { // stream has registered {
 		_, regErr := n.RequestRegister(id, stream, readwriter)
 		if regErr != nil {
@@ -303,9 +301,7 @@ func (n *Node) GetBlockData(id peerlib.ID, blockNumber uint64, stream *network.S
 			return nil, regErr
 		}
 	}
-	//nodeChain := mode.ChainName()
-	nodeChain := "local"
-
+	nodeChain := mode.ChainName()
 	packedData, err := PackQueryBlockData(nodeChain, blockNumber)
 	if err != nil {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("GetBlockData: PackQueryBlockData  Error:%v ID:%v", err, id.ShortString()))
@@ -413,9 +409,9 @@ func (n *Node) PushMessageBus(item BusMessage, id peerlib.ID, stream *network.St
 
 //QueryPeerInfo query peer info
 func (n *Node) QueryPeerInfo(id peerlib.ID, stream *network.Stream) error {
-	//nodeChain := mode.ChainName()
 	var s network.Stream
-	nodeChain := "local"
+	nodeChain := mode.ChainName()
+
 	if nil == stream {
 		createStream, newErr := n.Host.NewStream(context.Background(), id, "p2pstream")
 		if newErr != nil {

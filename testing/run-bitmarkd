@@ -43,7 +43,7 @@ reset=no
 from=
 generate=no
 count=
-config="${xdg_home}/bitmarkd/bitmarkd.conf"
+config="${xdg_home}/bitmarkd/p2pbitmarkd.conf"
 generate_items='gen-peer-identity gen-rpc-cert gen-proof-identity'
 sleep=
 
@@ -86,13 +86,14 @@ do
       case "$2" in
         (%[1-9]|%[1-9][0-9]|%T[1-9]|%T[1-9][0-9]|%L[1-9]|%L[1-9][0-9])
           n="${2#%}"
-          config="${xdg_home}/bitmarkd${n}/bitmarkd.conf"
+          config="${xdg_home}/bitmarkd${n}/p2pbitmarkd.conf"
           ;;
         (%*)
           ERROR 'unsupported config shortcut: %s' "$2"
           ;;
         (*)
           config="$2"
+          echo "config-file="${config}
           ;;
       esac
       shift

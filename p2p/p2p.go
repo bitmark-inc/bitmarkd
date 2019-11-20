@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/messagebus"
+	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
 
 	"github.com/bitmark-inc/bitmarkd/background"
@@ -130,8 +131,7 @@ func (n *Node) Run(args interface{}, shutdown <-chan struct{}) {
 	log.Info("starting…")
 	queue := messagebus.Bus.P2P.Chan()
 	delay := time.After(nodeInitial)
-	//nodeChain:= mode.ChainName()
-	nodeChain := "local"
+	nodeChain := mode.ChainName()
 loop:
 	for {
 		log.Debug("waiting…")
@@ -272,7 +272,7 @@ func GetAllPeers() []*Connected {
 	globalData.RLock()
 	var peers []*Connected
 	for key, status := range globalData.Registers {
-		if status.Registered {
+		if status.Registered && globalData.ConnectStatus[key] {
 			addrInfo := globalData.Host.Peerstore().PeerInfo(key)
 			addrs := []string{}
 			for _, addr := range addrInfo.Addrs {

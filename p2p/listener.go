@@ -52,9 +52,8 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 	log := l.log
 	//log.Info("--- Start A New stream --")
 	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
-	//nodeChain := mode.ChainName()
+	nodeChain := mode.ChainName()
 	for {
-		nodeChain := "local"
 		req := make([]byte, maxBytesRecieve)
 		reqLen, err := rw.Read(req)
 		if err != nil {
