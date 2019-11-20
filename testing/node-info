@@ -132,19 +132,22 @@ ONCE() {
 
     if [ -z "${r}" -o "${rc}" -ne 0 ]
     then
-      #printf 'timeout: rc: %s  r: "%s"\n' "${rc}" "${r}"
+      printf 'timeout: rc: %s  r: "%s"\n' "${rc}" "${r}"
       eval info_${n}='{}'
       continue
     fi
 
     r=$(printf '%s' "${r}" | jq --slurp '{node:.[0],conn:.[1].connectedTo}' 2> /dev/null)
-
+   
     eval info_${n}="'${r}'"
-    keys="${keys}\"$(printf '%s' "${r}" | jq --raw-output .node.publicKey 2> /dev/null)\":${n},"
+    keys="${keys}\"$(printf '%s' "${r}" | jq --raw-output .node.peerid 2> /dev/null)\":${n},"
 
   done
-  keys="${keys}\"\":9999}"
+  keys="${keys}\"\":9999}" 
   printf '\n'
+
+  #printf '%s' "${info_1}" | jq .
+  #printf '%s' "${info_2}" | jq .
 
   filter='
     def rj($f;$w): ("          "+($f|tostring))[-$w:];
@@ -156,8 +159,7 @@ ONCE() {
     "  \u001b[1;34mp: " + rj(.node.transactionCounters.pending;3) +
     "  \u001b[1;31mv: " + rj(.node.transactionCounters.verified;3) +
     "  \u001b[1;35msw: " + (.node.version|tostring) +
-    "  \u001b[1;34min: " + rj(.node.peers.incoming;2) +
-    "  \u001b[1;31mout: " + rj(.node.peers.outgoing;2) +
+    "  \u001b[1;34mp: " + rj(.node.peers;2) +
     "  \u001b[1;33mc: [" + (.conn|map($keys[.server])|map(if . == null then 0 else . end) |
       reduce .[] as $n (
         "................" | split("");
