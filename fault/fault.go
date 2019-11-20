@@ -94,6 +94,7 @@ var (
 	ErrInvalidPrivateKey                     = invalidError("invalid private key")
 	ErrInvalidProofSigningKey                = invalidError("invalid proof signing key")
 	ErrInvalidPublicKey                      = invalidError("invalid public key")
+	ErrInvalidIdentity                       = invalidError("invalid identity")
 	ErrInvalidRecoveryPhraseLength           = invalidError("invalid recovery phrase length")
 	ErrInvalidSecretKeyLength                = invalidError("invalid secret key length")
 	ErrInvalidSeedHeader                     = invalidError("invalid seed header")

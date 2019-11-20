@@ -7,6 +7,7 @@ package announce
 
 import (
 	"io/ioutil"
+	"os"
 
 	"github.com/bitmark-inc/bitmarkd/util"
 
@@ -73,6 +74,9 @@ func restorePeers(peerFile string) (PeerList, error) {
 	var peers PeerList
 	readin, err := ioutil.ReadFile(peerFile)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return PeerList{}, nil
+		}
 		globalData.log.Errorf("Failed to read peers from a file:%v", err)
 		return PeerList{}, err
 	}
