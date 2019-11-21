@@ -248,10 +248,14 @@ func (conn *connector) allClients(
 	f func(client upstream.Upstream, e *list.Element),
 ) {
 	for _, client := range conn.staticClients {
-		f(client, nil)
+		if client != nil {
+			f(client, nil)
+		}
 	}
 	for e := conn.dynamicClients.Front(); nil != e; e = e.Next() {
-		f(e.Value.(upstream.Upstream), e)
+		if client := e.Value.(upstream.Upstream); client != nil {
+			f(client, e)
+		}
 	}
 }
 

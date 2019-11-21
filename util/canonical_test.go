@@ -70,28 +70,33 @@ func TestCanonical(t *testing.T) {
 // Test IP address
 func TestCanonicalIP(t *testing.T) {
 
-	testData := []string{
-		"256.0.0.0:1234",
-		"0.256.0.0:1234",
-		"0.0.256.0:1234",
-		"0.0.0.256:1234",
-		"0:0:1234",
-		"[]:1234",
-		"[as34::]:1234",
-		"[1ffff::]:1234",
-		"[2404:6800:4008:0c07:0000:0000:0000:0066:1234]:443",
-		"*:1234",
+	type item struct {
+		ip  string
+		err string
+	}
+
+	testData := []item{
+		{"256.0.0.0:1234", "no such host"},
+		{"0.256.0.0:1234", "no such host"},
+		{"0.0.256.0:1234", "no such host"},
+		{"0.0.0.256:1234", "no such host"},
+		{"0:0:1234", "too many colons in address"},
+		{"[]:1234", "no such host"},
+		{"[as34::]:1234", "no such host"},
+		{"[1ffff::]:1234", "no such host"},
+		{"[2404:6800:4008:0c07:0000:0000:0000:0066:1234]:443", "no such host"},
+		{"*:1234", "no such host"},
+		{"127.0.0.1", "missing port in address"},
+		{"[2001:0db8:85a3:08d3:1319:8a2e:0370:7344]", "missing port in address"},
 	}
 
 	for i, d := range testData {
-		c, err := NewConnection(d)
+		c, err := NewConnection(d.ip)
 		if nil == err {
 			s, v6 := c.CanonicalIPandPort("")
-			t.Fatalf("eroneoulssly converted:[%d]: %q  to(%t): %q", i, d, v6, s)
+			t.Fatalf("eroneoulssly converted:[%d]: %q  to(%t): %q", i, d.ip, v6, s)
 		}
-		if strings.Contains(err.Error(), "no such host") {
-			// expected error
-		} else if fault.InvalidIpAddress != err {
+		if !strings.Contains(err.Error(), d.err) {
 			t.Fatalf("NewConnection failed on:[%d] %q  error: %s", i, d, err)
 		}
 	}
