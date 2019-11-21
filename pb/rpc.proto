@@ -1,9 +1,0 @@
-syntax = "proto3";
-package p2p;
-  
-  // to parse Listeners parameter from announce module
-  message Addrs {
-    repeated bytes Address =1;
-  }
-
-    // protoc --proto_path=$HOME/wks_go/src/github.com/bitmark-inc/bitmarkd/pb  --go_out=$HOME/wks_go/src/github.com/bitmark-inc/bitmarkd/rpc query.proto
