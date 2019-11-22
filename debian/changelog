@@ -1,3 +1,11 @@
+bitmarkd (0.12.3-1ubuntu1) bionic; urgency=medium
+
+  * prevent nil pointer when port missed from static connections
+  * give correct missing port error
+  * convert some error logs to warnings
+
+ -- Christopher Hall <hsw@bitmark.com>  Fri, 22 Nov 2019 09:16:40 +0000
+
 bitmarkd (0.12.2-1ubuntu3) bionic; urgency=medium
 
   * create rpc, peer and proof key in postinst script
