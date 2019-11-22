@@ -465,7 +465,11 @@ func (conn *connector) runStateMachine() bool {
 				break fetch_blocks
 			}
 
-			log.Infof("fetch block number: %d", conn.startBlockNumber)
+			if conn.startBlockNumber%100 == 0 {
+				log.Warnf("fetch block number: %d", conn.startBlockNumber)
+			} else {
+				log.Infof("fetch block number: %d", conn.startBlockNumber)
+			}
 			if packedNextBlock == nil {
 				p, err := conn.theClient.GetBlockData(conn.startBlockNumber)
 				if nil != err {
@@ -690,7 +694,7 @@ func (conn *connector) startElection() {
 func (conn *connector) elected() (upstream.Upstream, uint64) {
 	elected, height, err := conn.votes.ElectedCandidate()
 	if nil != err {
-		conn.log.Errorf("get elected with error: %s", err)
+		conn.log.Warnf("get elected with error: %s", err)
 		return nil, 0
 	}
 

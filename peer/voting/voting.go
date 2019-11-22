@@ -134,7 +134,7 @@ func (v *VotingData) validHeight(height uint64) bool {
 func (v *VotingData) ElectedCandidate() (upstream.Upstream, uint64, error) {
 	err := v.countVotes()
 	if nil != err {
-		v.log.Errorf("count votes with error: %s", err)
+		v.log.Warnf("count votes with error: %s", err)
 		return nil, uint64(0), err
 	}
 
