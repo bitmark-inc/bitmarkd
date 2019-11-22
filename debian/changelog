@@ -1,3 +1,21 @@
+bitmarkd (0.12.2-1ubuntu3) bionic; urgency=medium
+
+  * create rpc, peer and proof key in postinst script
+
+ -- Jim Yeh <jim@bitmark.com>  Fri, 22 Nov 2019 03:56:44 +0000
+
+bitmarkd (0.12.2-1ubuntu2) bionic; urgency=medium
+
+  * add bitmarkd.conf.sub in build
+
+ -- Jim Yeh <jim@bitmark.com>  Fri, 22 Nov 2019 03:03:44 +0000
+
+bitmarkd (0.12.2-1ubuntu1) bionic; urgency=medium
+
+  * release bitmark 0.12.2 in launchpad
+
+ -- Jim Yeh <jim@bitmark.com>  Thu, 21 Nov 2019 09:32:25 +0000
+
 bitmarkd (0.12.2-1) unstable; urgency=medium
 
   * remove extraneous log module (left over debug code)

@@ -1,2 +1,3 @@
 etc/bitmarkd.conf etc
+etc/bitmarkd.conf.sub etc
 bin/bitmarkd usr/sbin
