@@ -47,6 +47,17 @@
     {
       "type": "shell",
       "scripts": [
+        "./packer_do_freebsd.sh"
+      ],
+      "execute_command": "chmod +x {{ .Path }}; env {{ .Vars }} {{ .Path }}",
+      "only": [ "do-freebsd" ],
+      "environment_vars": [
+        "BITMARKD_VERSION={{ user `bitmarkd_version` }}"
+      ]
+    },
+    {
+      "type": "shell",
+      "scripts": [
         "./packer_aws_freebsd.sh"
       ],
       "execute_command": "chmod +x {{ .Path }}; env {{ .Vars }} {{ .Path }}",

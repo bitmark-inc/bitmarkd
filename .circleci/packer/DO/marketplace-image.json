@@ -2,7 +2,7 @@
   "variables": {
     "token": "{{env `DIGITALOCEAN_TOKEN`}}",
     "bitmarkd_version": "0.12.2",
-    "image_name": "marketplace-snapshot-bitmarkd-{{ user `bitmarkd_version` }}-{{timestamp}}",
+    "image_name": "bitmarkd-{{ user `bitmarkd_version` }}-marketplace-ubuntu-{{timestamp}}",
     "apt_packages": "software-properties-common libargon2-0-dev libzmq3-dev git"
   },
   "builders": [
