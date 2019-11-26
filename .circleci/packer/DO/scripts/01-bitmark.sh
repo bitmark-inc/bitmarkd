@@ -1,23 +1,18 @@
 #!/bin/bash
 
 add-apt-repository -y ppa:longsleep/golang-backports
-apt-get -yqq update && apt-get -yqq install golang
+apt-get -q update && apt-get -yqq install golang git
 
-git clone https://github.com/bitmark-inc/bitmarkd
-cd bitmarkd && git checkout v$BITMARKD_VERSION && mkdir bin
-go build -o bin -ldflags "-X main.version=$BITMARKD_VERSION" ./...
-cd
+add-apt-repository -y ppa:bitmark/bitmarkd
+add-apt-repository -y ppa:bitmark/bitmark-wallet
+apt-get -q update && apt-get -yqq install bitmarkd bitmark-cli bitmark-info bitmark-wallet
 
-git clone https://github.com/bitmark-inc/bitmark-wallet
-cd bitmark-wallet && git checkout v0.6.3 && mkdir bin
-go build -o bin -ldflags "-X main.version=0.6.3" ./...
-cd
-
-mv bitmarkd/bin/bitmarkd /usr/local/sbin/
-mv bitmarkd/bin/recorderd /usr/local/sbin/
-
-mv bitmarkd/bin/* /usr/local/bin/
-mv bitmark-wallet/bin/* /usr/local/bin/
+sed -ie '/add_port("0.0.0.0", 2135)/d' /etc/bitmarkd.conf.sub
+sed -ie '/add_port("0.0.0.0", 2136)/d' /etc/bitmarkd.conf.sub
+sed -ie '/add_port("0.0.0.0", 2138)/d' /etc/bitmarkd.conf.sub
+sed -ie '/add_port("0.0.0.0", 2139)/d' /etc/bitmarkd.conf.sub
+sed -ie '/announce_ips\ =\ interface_public_ips/s/^--//g' /etc/bitmarkd.conf
 
 rm -rf go bitmarkd
-apt-get -y purge golang
+apt-get -y purge golang git
+
