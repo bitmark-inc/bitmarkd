@@ -18,6 +18,7 @@ import (
 var supportedTags = map[string]struct{}{
 	"bitmark=v2": {},
 	"bitmark=v3": {},
+	"bitmark=v4": {},
 }
 
 const (
