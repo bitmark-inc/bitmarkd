@@ -2,7 +2,6 @@ package p2p
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -26,7 +25,6 @@ func (n *Node) Setup(configuration *Configuration, version string) error {
 	globalData.PreferIPv6 = configuration.PreferIPv6
 	maAddrs := IPPortToMultiAddr(configuration.Listen)
 	n.Registers = make(map[peerlib.ID]RegisterStatus)
-	n.ConnectStatus = make(map[peerlib.ID]bool)
 	prvKey, err := DecodeHexToPrvKey([]byte(configuration.PrivateKey)) //Hex Decoded binaryString
 	if err != nil {
 		n.Log.Error(err.Error())
@@ -41,7 +39,7 @@ func (n *Node) Setup(configuration *Configuration, version string) error {
 	}
 
 	go n.listen(configuration.Announce)
-	go n.MetricsNetwork.networkMonitor(n.Host, n.Log)
+	n.MetricsNetwork = NewMetricsNetwork(n.Host, n.Log)
 
 	//Start a block & concensus machine
 	n.metricsVoting = NewMetricsPeersVoting(n)
@@ -85,6 +83,7 @@ func (n *Node) setAnnounce(announceAddrs []string) {
 	util.LogInfo(n.Log, util.CoReset, fmt.Sprintf("setAnnounce:%v", util.PrintMaAddrs(fullAddr)))
 	byteMessage, err := proto.Marshal(&Addrs{Address: util.GetBytesFromMultiaddr(fullAddr)})
 	param0, idErr := n.Host.ID().Marshal()
+
 	if nil == err && nil == idErr {
 		messagebus.Bus.Announce.Send("self", param0, byteMessage)
 	}
@@ -109,6 +108,7 @@ func (n *Node) addRegister(id peerlib.ID) {
 		return
 	}
 	n.Registers[id] = RegisterStatus{Registered: true, RegisterTime: time.Now()}
+	util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("addRegister ID:%s Registered:%v time:%v", id.ShortString(), n.Registers[id].Registered, n.Registers[id].RegisterTime.String()))
 	n.Unlock()
 }
 
@@ -120,6 +120,7 @@ func (n *Node) unRegister(id peerlib.ID) {
 		status.Registered = false
 		n.Unlock()
 	}
+	util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("unRegister ID:%s Registered:%v time:%v", id.ShortString(), n.Registers[id].Registered, n.Registers[id].RegisterTime.String()))
 	return
 }
 
@@ -143,21 +144,6 @@ func (n *Node) IsRegister(id peerlib.ID) (registered bool) {
 	n.Unlock()
 	return
 }
-func (n *Node) setConnectStatus(id peerlib.ID, status bool) {
-	n.Lock()
-	n.ConnectStatus[id] = status
-	n.Unlock()
-}
-
-func (n *Node) connectStatus(id peerlib.ID) (bool, error) {
-	n.Lock()
-	val, ok := n.ConnectStatus[id]
-	n.Unlock()
-	if ok {
-		return val, nil
-	}
-	return false, errors.New("peer ID does not exist")
-}
 
 //IsExpire is the register expire
 func (n *Node) IsExpire(id peerlib.ID) bool {
@@ -177,7 +163,7 @@ func (n *Node) updateRegistersExpiry() {
 		if n.IsExpire(id) { //Keep time for record of last registered time
 			n.Lock()
 			status.Registered = false
-			util.LogInfo(n.Log, util.CoWhite, fmt.Sprintf("IsExpire ID:%v not expire", id.ShortString()))
+			util.LogDebug(n.Log, util.CoWhite, fmt.Sprintf("IsExpire ID:%v not expire", id.ShortString()))
 			n.Unlock()
 		}
 	}

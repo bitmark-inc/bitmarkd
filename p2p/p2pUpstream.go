@@ -19,9 +19,13 @@ import (
 	"github.com/prometheus/common/log"
 )
 
+const waitingRespTime = 5 * time.Second
+
 //UpdateVotingMetrics Register first and get info for voting metrics. This is an  efficient way to get data without create a new stream
 func (n *Node) UpdateVotingMetrics(id peerlib.ID, metrics *MetricsPeersVoting) error {
-	s, err := n.Host.NewStream(context.Background(), id, "p2pstream")
+	cctx, cancel := context.WithTimeout(context.Background(), waitingRespTime)
+	defer cancel()
+	s, err := n.Host.NewStream(cctx, id, "p2pstream")
 	if err != nil {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("UpdateVotingMetrics: Create new stream for ID:%v Error:%v", id.ShortString(), err))
 		n.Log.Warn(err.Error())
@@ -41,7 +45,7 @@ func (n *Node) UpdateVotingMetrics(id peerlib.ID, metrics *MetricsPeersVoting) e
 	if err != nil {
 		return err
 	}
-	metrics.setMetrics(id, height, digest)
+	metrics.SetMetrics(id, height, digest)
 	return nil
 }
 
@@ -50,8 +54,10 @@ func (n *Node) UpdateVotingMetrics(id peerlib.ID, metrics *MetricsPeersVoting) e
 //streamCreated tells if newStream is created in the function.
 //If it does , return stream may need to be reset in defer
 func (n *Node) determineStreamRWerHelper(id peerlib.ID, s *network.Stream, rw *bufio.ReadWriter) (stream *network.Stream, readwriter *bufio.ReadWriter, streamCreated bool) {
+	cctx, cancel := context.WithTimeout(context.Background(), waitingRespTime)
+	defer cancel()
 	if nil == s {
-		createStream, newErr := n.Host.NewStream(context.Background(), id, "p2pstream")
+		createStream, newErr := n.Host.NewStream(cctx, id, "p2pstream")
 		if newErr != nil {
 			return nil, nil, false
 		}
@@ -124,9 +130,9 @@ func (n *Node) RequestRegister(id peerlib.ID, stream *network.Stream, readwriter
 		if err != nil {
 			return nil, err
 		}
+		n.addRegister(id)
 		if !util.IDEqual(randID, id) {
 			// peer return the info, register send. don't add into peer tree
-			n.addRegister(id)
 			if nType != "client" { // client does not in the peer Tree
 				announce.AddPeer(randID, randAddrs, randTs) // id, listeners, timestam
 			}
@@ -411,9 +417,10 @@ func (n *Node) PushMessageBus(item BusMessage, id peerlib.ID, stream *network.St
 func (n *Node) QueryPeerInfo(id peerlib.ID, stream *network.Stream) error {
 	var s network.Stream
 	nodeChain := mode.ChainName()
-
+	cctx, cancel := context.WithTimeout(context.Background(), waitingRespTime)
+	defer cancel()
 	if nil == stream {
-		createStream, newErr := n.Host.NewStream(context.Background(), id, "p2pstream")
+		createStream, newErr := n.Host.NewStream(cctx, id, "p2pstream")
 		if newErr != nil {
 			return newErr
 		}

@@ -33,11 +33,11 @@ const (
 	//  time interval
 	nodeInitial        = 5 * time.Second // startup delay before first send
 	nodeInterval       = 2 * time.Minute // regular
-	lowConn            = 5
-	maxConn            = 12
+	lowConn            = 8
+	maxConn            = 15
 	connGraceTime      = 30 * time.Second
-	registerExpireTime = 5 * time.Minute
-	connectCancelTime  = 60 * time.Second
+	registerExpireTime = 2 * time.Minute
+	connectCancelTime  = 30 * time.Second
 )
 
 var (
@@ -77,22 +77,21 @@ type RegisterStatus struct {
 
 //Node  A p2p node
 type Node struct {
-	Version       string
-	NodeType      string
-	Host          p2pcore.Host
-	Announce      []ma.Multiaddr
-	sync.RWMutex            // to allow locking
-	Log           *logger.L // logger
-	Registers     map[peerlib.ID]RegisterStatus
-	ConnectStatus map[peerlib.ID]bool
-	Multicast     *pubsub.PubSub
-	PreferIPv6    bool
-	PrivateKey    crypto.PrivKey
+	Version      string
+	NodeType     string
+	Host         p2pcore.Host
+	Announce     []ma.Multiaddr
+	sync.RWMutex           // to allow locking
+	Log          *logger.L // logger
+	Registers    map[peerlib.ID]RegisterStatus
+	Multicast    *pubsub.PubSub
+	PreferIPv6   bool
+	PrivateKey   crypto.PrivKey
 	// for background
 	background *background.T
 	// set once during initialise
 	initialised bool
-	MetricsNetwork
+	*MetricsNetwork
 	metricsVoting MetricsPeersVoting
 	// statemachine
 	concensusMachine Machine
@@ -152,7 +151,7 @@ loop:
 						util.LogInfo(log, util.CoGreen, fmt.Sprintf("@D parse id Error %v", err))
 					}
 					n.delRegister(displayID)
-					util.LogInfo(log, util.CoCyan, fmt.Sprintf("@D  ID:%v is deleted", displayID.ShortString()))
+					util.LogInfo(log, util.CoWhite, fmt.Sprintf("@D  ID:%v is deleted", displayID.ShortString()))
 				}
 			case "peer": // only servant broadcast its peer and rpc
 				fallthrough
@@ -196,7 +195,7 @@ loop:
 					"X3" == item.Command || "X4" == item.Command || "X5" == item.Command || "X6" == item.Command ||
 					"X7" == item.Command || "P1" == item.Command || "P2" == item.Command {
 					peerID, err := peerlib.IDFromBytes(item.Parameters[0])
-					util.LogDebug(n.Log, util.CoYellow, fmt.Sprintf("Recieve Command:%v ID:%v", item.Command, peerID.ShortString()))
+					util.LogInfo(n.Log, util.CoYellow, fmt.Sprintf("Recieve Command:%v ID:%v", item.Command, peerID.ShortString()))
 					if err != nil {
 						util.LogWarn(log, util.CoLightRed, fmt.Sprintf("Unmarshal peer ID error:%x", item.Parameters[0]))
 						continue loop
@@ -268,11 +267,9 @@ func ID() peerlib.ID {
 
 // GetAllPeers - obtain a list of all connector clients
 func GetAllPeers() []*Connected {
-	//info := []Connected{}
-	globalData.RLock()
 	var peers []*Connected
 	for key, status := range globalData.Registers {
-		if status.Registered && globalData.ConnectStatus[key] {
+		if status.Registered && globalData.MetricsNetwork.IsConnected(key) {
 			addrInfo := globalData.Host.Peerstore().PeerInfo(key)
 			addrs := []string{}
 			for _, addr := range addrInfo.Addrs {
@@ -281,6 +278,5 @@ func GetAllPeers() []*Connected {
 			peers = append(peers, &Connected{Server: addrInfo.ID.String(), Address: addrs})
 		}
 	}
-	globalData.RUnlock()
 	return peers
 }

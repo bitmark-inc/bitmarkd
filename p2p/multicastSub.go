@@ -37,7 +37,6 @@ loop:
 			continue loop
 		}
 		dataLength := len(parameters)
-		//	util.LogInfo(log, util.CoGreen, fmt.Sprintf("-->>sub Recieve: chain:%s, fn=%s, len(param)=%d", chain, fn, len(parameters)))
 		switch fn {
 		case "block":
 			if dataLength < 1 {
@@ -118,7 +117,7 @@ loop:
 				continue loop
 			}
 			messagebus.Bus.Announce.Send("addpeer", parameters[0], parameters[1], parameters[2])
-			util.LogDebug(log, util.CoYellow, fmt.Sprintf("--><-- SubHandler fn=%s Send to Announce  ID:%s Address len:%d", fn, id.ShortString(), len(parameters[1])))
+			util.LogInfo(log, util.CoGreen, fmt.Sprintf("-->> SubHandler fn=%s Send to Announce  ID:%s Address len:%d", fn, id.ShortString(), len(parameters[1])))
 		default:
 			util.LogWarn(log, util.CoLightRed, fmt.Sprintf("-->>unreganized Command:%s", fn))
 			continue loop

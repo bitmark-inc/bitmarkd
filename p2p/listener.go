@@ -173,8 +173,6 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 			}
 			if nType != "client" {
 				announce.AddPeer(reqID, reqMaAddrs, timestamp) // id, listeners, timestam
-			} else {
-				log.Info(fmt.Sprintf("register:\x1b[32m Client registered:%s\x1b[0m>", reqID.String()))
 			}
 			randPeerID, randListeners, randTs, err := announce.GetRandom(reqID)
 			var randData [][]byte
@@ -208,7 +206,7 @@ func listenerSendError(sender *bufio.ReadWriter, chain string, err error, logPre
 	packedP2PMessage, err := proto.Marshal(&P2PMessage{Data: errorMessage})
 	_, wErr := sender.Write(packedP2PMessage)
 	if wErr != nil && log != nil {
-		util.LogWarn(log, util.CoMagenta, fmt.Sprintf("%s Error:%v", logPrefix, wErr))
+		util.LogWarn(log, util.CoRed, fmt.Sprintf("%s Error:%v", logPrefix, wErr))
 	}
 	if log == nil {
 		fmt.Printf("%s  \x1b[31mError:%v \x1b[0m\n", logPrefix, err)

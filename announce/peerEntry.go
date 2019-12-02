@@ -51,7 +51,6 @@ func setSelf(peerID peerlib.ID, listeners []ma.Multiaddr) error {
 	globalData.peerSet = true
 
 	addPeer(peerID, listeners, uint64(time.Now().Unix()))
-
 	globalData.thisNode, _ = globalData.peerTree.Search(peerIDkey(peerID))
 	determineConnections(globalData.log)
 

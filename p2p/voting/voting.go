@@ -10,6 +10,7 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 )
 
@@ -99,20 +100,17 @@ func (v *VotingImpl) VoteBy(candidate Candidate) {
 	remoteAddr := candidate.RemoteAddr()
 	remoteName := candidate.Name()
 
-	v.log.Debugf(
-		"\x1b[32m%s connects to remote %s, cached remote height: %d with digest: %s\x1b[0m",
+	util.LogDebug(v.log, util.CoWhite, fmt.Sprintf("VoteBy: %s connects to remote %s, cached remote height: %d with digest: %s",
 		remoteName,
 		remoteAddr,
 		height,
-		digest.String(),
-	)
+		digest.String()))
 
 	if !v.validHeight(height) {
-		v.log.Infof(
-			"\x1b[32mremote cached height: %d, below minimum height %d, discard\x1b[0m",
+		util.LogWarn(v.log, util.CoRed, fmt.Sprintf("VoteBy : %s remote cached height: %d, below minimum height %d, discard",
+			remoteName,
 			height,
-			v.minHeight,
-		)
+			v.minHeight))
 		return
 	}
 
@@ -137,7 +135,7 @@ func (v *VotingImpl) validHeight(height uint64) bool {
 func (v *VotingImpl) ElectedCandidate() (Candidate, uint64, error) {
 	err := v.countVotes()
 	if nil != err {
-		v.log.Errorf("count votes with error: %s", err)
+		util.LogWarn(v.log, util.CoRed, fmt.Sprintf("count votes with error: %s", err))
 		return nil, uint64(0), err
 	}
 
@@ -155,12 +153,12 @@ func (v *VotingImpl) countVotes() error {
 			v.result.draw = true
 		}
 	}
-	v.log.Debugf(
+	util.LogDebug(v.log, util.CoWhite, fmt.Sprintf(
 		"vote draw: %t, most votes: %d, majority height: %d",
 		v.result.draw,
 		v.result.highestNumVotes,
 		v.result.majorityHeight,
-	)
+	))
 
 	if nil == v.result.winner {
 		return fmt.Errorf("%s", fault.ErrVotesEmptyWinner)

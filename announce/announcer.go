@@ -61,11 +61,10 @@ loop:
 		case <-shutdown:
 			break loop
 		case item := <-queue:
-			log.Infof("received control: %s  parameters: %x", item.Command, item.Parameters)
+			util.LogInfo(log, util.CoReset, fmt.Sprintf("received control: %s  parameters: %x", item.Command, item.Parameters))
 			switch item.Command {
 			case "reconnect":
 				determineConnections(log)
-				log.Infof("-><- reconnect")
 			case "updatetime":
 				id, err := peerlib.IDFromBytes(item.Parameters[0])
 				if err != nil {
@@ -129,8 +128,7 @@ func (ann *announcer) process() {
 
 	log := ann.log
 
-	log.Debug("process starting…")
-
+	util.LogInfo(log, util.CoReset, "process starting…")
 	globalData.Lock()
 	defer globalData.Unlock()
 
@@ -144,10 +142,10 @@ func (ann *announcer) process() {
 		messagebus.Bus.P2P.Send("rpc", globalData.fingerprint[:], globalData.rpcs, timestamp)
 	}
 	if globalData.peerSet {
-		log.Debugf("send peer: %x", globalData.peerID)
 		addrsBinary, errAddr := proto.Marshal(&Addrs{Address: util.GetBytesFromMultiaddr(globalData.listeners)})
 		idBinary, errID := globalData.peerID.MarshalBinary()
 		if nil == errAddr && nil == errID {
+			util.LogInfo(log, util.CoCyan, fmt.Sprintf("-><-send self data to P2P ID:%v address:%v", globalData.peerID.ShortString(), util.PrintMaAddrs(globalData.listeners)))
 			messagebus.Bus.P2P.Send("peer", idBinary, addrsBinary, timestamp)
 		}
 	}
@@ -163,14 +161,13 @@ func (ann *announcer) process() {
 
 func determineConnections(log *logger.L) {
 	if nil == globalData.thisNode {
-		log.Errorf("determineConnections called to early")
+		util.LogWarn(log, util.CoRed, fmt.Sprintf("determineConnections called to early"))
 		return // called to early
 	}
 
 	// locate this node in the tree
 	_, index := globalData.peerTree.Search(globalData.thisNode.Key())
 	count := globalData.peerTree.Count()
-	util.LogDebug(log, util.CoYellow, fmt.Sprintf("determine thisNode index: %d  tree: %d  peerID: %v ", index, count, globalData.peerID))
 
 	// various increment values
 	e := count / 8
@@ -256,7 +253,7 @@ scan_nodes:
 		if peer.timestamp.Add(announceExpiry).Before(now) {
 			globalData.peerTree.Delete(key)
 			globalData.treeChanged = true
-			util.LogInfo(log, util.CoReset, fmt.Sprintf("expirePeer : PeerID: %v! timestamp: %s", peer.peerID.ShortString(), peer.timestamp.Format(timeFormat)))
+			util.LogDebug(log, util.CoReset, fmt.Sprintf("expirePeer : PeerID: %v! timestamp: %s", peer.peerID.ShortString(), peer.timestamp.Format(timeFormat)))
 			idBinary, errID := peer.peerID.Marshal()
 			if nil == errID {
 				messagebus.Bus.P2P.Send("@D", idBinary)

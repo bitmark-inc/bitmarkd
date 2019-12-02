@@ -20,9 +20,9 @@ func (n *Node) DirectConnect(info peer.AddrInfo) error {
 		util.LogDebug(n.Log, util.CoLightGray, "DirectConnect to the self node")
 		return nil
 	}
-	connected, _ := n.connectStatus(info.ID)
-	if connected { // If connected, don't need to reconnect
-		util.LogDebug(n.Log, util.CoLightGreen, fmt.Sprintf("DirectConnect ID:%v connected", info.ID.ShortString()))
+
+	if n.MetricsNetwork.IsConnected(info.ID) { // If connected, don't need to reconnect
+		util.LogInfo(n.Log, util.CoLightGreen, fmt.Sprintf("DirectConnect ID:%v is already connected", info.ID.ShortString()))
 		return nil
 	}
 	for _, addr := range info.Addrs {
@@ -31,7 +31,6 @@ func (n *Node) DirectConnect(info peer.AddrInfo) error {
 			ipv6Info, ipv6Err := util.MaAddrToAddrInfo(ipv6Addr)
 			ipv6Err = n.Host.Connect(cctx, *ipv6Info)
 			if ipv6Err == nil {
-				n.setConnectStatus(info.ID, true)
 				util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("DirectConnect to IPV6 addr:%v", ipv6Addr))
 				_, err := n.RequestRegister(ipv6Info.ID, nil, nil)
 				return err
@@ -41,11 +40,9 @@ func (n *Node) DirectConnect(info peer.AddrInfo) error {
 	}
 	err := n.Host.Connect(cctx, info)
 	if err != nil {
-		n.setConnectStatus(info.ID, false)
 		util.LogWarn(n.Log, util.CoLightRed, fmt.Sprintf("DirectConnect ID:%v Error:%v", info.ID.ShortString(), err))
 		return err
 	}
-	n.setConnectStatus(info.ID, true)
 	util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("DirectConnect to addr:%v/%v", util.PrintMaAddrs(info.Addrs), info.ID.ShortString()))
 	_, err = n.RequestRegister(info.ID, nil, nil)
 	if err != nil {

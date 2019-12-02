@@ -7,7 +7,6 @@ package rpc
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -209,7 +208,6 @@ func (s *httpHandler) connections(w http.ResponseWriter, r *http.Request) {
 	var info reply
 	//TODO: Make libp2p version
 	info.ConnectedTo = p2p.GetAllPeers()
-	util.LogInfo(globalData.log, util.CoCyan, fmt.Sprintf("HTTP RPC info.Connected len: %d", len(info.ConnectedTo)))
 	sendReply(w, info)
 }
 

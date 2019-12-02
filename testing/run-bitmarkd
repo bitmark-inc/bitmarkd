@@ -45,7 +45,7 @@ generate=no
 count=
 config="${xdg_home}/bitmarkd/p2pbitmarkd.conf"
 generate_items='gen-peer-identity gen-rpc-cert gen-proof-identity'
-sleep=
+sleep= 2
 
 getopt=
 case "$(uname)" in

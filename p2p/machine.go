@@ -246,9 +246,13 @@ func isConnectionEnough(count counter.Counter) bool {
 }
 
 func (m *Machine) startElection() {
+	candidatNum := 0
+	voteCandidatNum := 0
 	m.votingMetrics.allCandidates(func(c *P2PCandidatesImpl) {
+		candidatNum++
 		if c.ActiveInPastSeconds(activePastSec) {
 			m.votes.VoteBy(c)
+			voteCandidatNum++
 		}
 	})
 }
@@ -263,8 +267,7 @@ func (m *Machine) newElection() (uint64, voting.Candidate) {
 	}
 	winnerName := elected.Name()
 	remoteAddr := elected.RemoteAddr()
-
-	util.LogDebug(m.log, util.CoReset, fmt.Sprintf("winner %s majority height %d, connect to %s",
+	util.LogDebug(m.log, util.CoWhite, fmt.Sprintf("winner %s majority height %d, connect to %s",
 		winnerName,
 		height,
 		remoteAddr,
