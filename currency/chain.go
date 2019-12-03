@@ -8,6 +8,7 @@
 package currency
 
 import (
+	"math"
 	"math/big"
 	"time"
 
@@ -15,11 +16,13 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 
+	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/logger"
 )
 
 var btcMainNetParams *chaincfg.Params = &chaincfg.MainNetParams
 var btcTestNet3Params *chaincfg.Params = &chaincfg.TestNet3Params
+var btcRegressionNetParams *chaincfg.Params = &chaincfg.RegressionNetParams
 
 // A group of variables for Litecoin Mainnet
 var (
@@ -280,6 +283,110 @@ var (
 		// address generation.
 		HDCoinType: 1,
 	}
+
+	bigOne = big.NewInt(1)
+	// regressionPowLimit is the highest proof of work value a Litecoin block
+	// can have for the regression test network.  It is the value 2^255 - 1.
+	regressionPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
+
+	// regTestGenesisHash is the hash of the first block in the block chain for the
+	// regression test network (genesis block).
+	regTestGenesisHash = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
+		0xf9, 0x16, 0xc4, 0x56, 0xfc, 0x51, 0xdf, 0x62,
+		0x78, 0x85, 0xd7, 0xd6, 0x74, 0xed, 0x02, 0xdc,
+		0x88, 0xa2, 0x25, 0xad, 0xb3, 0xf0, 0x2a, 0xd1,
+		0x3e, 0xb4, 0x93, 0x8f, 0xf3, 0x27, 0x08, 0x53,
+	})
+
+	// regTestGenesisMerkleRoot is the hash of the first transaction in the genesis
+	// block for the regression test network.  It is the same as the merkle root for
+	// the main network.
+	regTestGenesisMerkleRoot = genesisMerkleRoot
+
+	// regTestGenesisBlock defines the genesis block of the block chain which serves
+	// as the public transaction ledger for the regression test network.
+	regTestGenesisBlock = wire.MsgBlock{
+		Header: wire.BlockHeader{
+			Version:    1,
+			PrevBlock:  chainhash.Hash{},         // 0000000000000000000000000000000000000000000000000000000000000000
+			MerkleRoot: regTestGenesisMerkleRoot, // 97ddfbbae6be97fd6cdf3e7ca13232a3afff2353e29badfab7f73011edd4ced9
+			Timestamp:  time.Unix(1296688602, 0), // 2011-02-02 23:16:42 +0000 UTC
+			Bits:       0x207fffff,               // 545259519 [7fffff0000000000000000000000000000000000000000000000000000000000]
+			Nonce:      0,
+		},
+		Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
+	}
+
+	ltcRegressionNetParams = &chaincfg.Params{
+		Name:        "regtest",
+		Net:         wire.TestNet,
+		DefaultPort: "18444",
+		DNSSeeds:    []chaincfg.DNSSeed{},
+
+		// Chain parameters
+		GenesisBlock:             &regTestGenesisBlock,
+		GenesisHash:              &regTestGenesisHash,
+		PowLimit:                 regressionPowLimit,
+		PowLimitBits:             0x207fffff,
+		CoinbaseMaturity:         100,
+		BIP0034Height:            100000000, // Not active - Permit ver 1 blocks
+		BIP0065Height:            1351,      // Used by regression tests
+		BIP0066Height:            1251,      // Used by regression tests
+		SubsidyReductionInterval: 150,
+		TargetTimespan:           time.Hour * 24 * 14, // 14 days
+		TargetTimePerBlock:       time.Minute * 10,    // 10 minutes
+		RetargetAdjustmentFactor: 4,                   // 25% less, 400% more
+		ReduceMinDifficulty:      true,
+		MinDiffReductionTime:     time.Minute * 20, // TargetTimePerBlock * 2
+		GenerateSupported:        true,
+
+		// Checkpoints ordered from oldest to newest.
+		Checkpoints: nil,
+
+		// Consensus rule change deployments.
+		//
+		// The miner confirmation window is defined as:
+		//   target proof of work timespan / target proof of work spacing
+		RuleChangeActivationThreshold: 108, // 75%  of MinerConfirmationWindow
+		MinerConfirmationWindow:       144,
+		Deployments: [chaincfg.DefinedDeployments]chaincfg.ConsensusDeployment{
+			chaincfg.DeploymentTestDummy: {
+				BitNumber:  28,
+				StartTime:  0,             // Always available for vote
+				ExpireTime: math.MaxInt64, // Never expires
+			},
+			chaincfg.DeploymentCSV: {
+				BitNumber:  0,
+				StartTime:  0,             // Always available for vote
+				ExpireTime: math.MaxInt64, // Never expires
+			},
+			chaincfg.DeploymentSegwit: {
+				BitNumber:  1,
+				StartTime:  0,             // Always available for vote
+				ExpireTime: math.MaxInt64, // Never expires.
+			},
+		},
+
+		// Mempool parameters
+		RelayNonStdTxs: true,
+
+		// Human-readable part for Bech32 encoded segwit addresses, as defined in
+		// BIP 173.
+		Bech32HRPSegwit: "bcrt", // always bcrt for reg test net
+
+		// Address encoding magics
+		PubKeyHashAddrID: 0x6f, // starts with m or n
+		ScriptHashAddrID: 0xc4, // starts with 2
+		PrivateKeyID:     0xef, // starts with 9 (uncompressed) or c (compressed)
+
+		// BIP32 hierarchical deterministic extended key magics
+		HDPrivateKeyID: [4]byte{0x04, 0x35, 0x83, 0x94}, // starts with tprv
+		HDPublicKeyID:  [4]byte{0x04, 0x35, 0x87, 0xcf}, // starts with tpub
+
+		// BIP44 coin type used in the hierarchical deterministic path for
+		// address generation.
+		HDCoinType: 1,
+	}
 )
 
 func newHashFromStr(hashString string) *chainhash.Hash {
@@ -295,21 +402,25 @@ func init() {
 	ltcTestNet4Params.Checkpoints = []chaincfg.Checkpoint{{1162128, newHashFromStr("1b0bb65ecba47aa1991cbf1d2adb9348a493040becb871ce1d750e027d900cf4")}}
 }
 
-func (currency Currency) ChainParam(testnet bool) *chaincfg.Params {
+func (currency Currency) ChainParam(chainName string) *chaincfg.Params {
 	switch currency {
 	case Nothing:
 		return nil // for genesis blocks
 	case Bitcoin:
-		if testnet {
+		if chainName == chain.Testing {
 			return btcTestNet3Params
-		} else {
+		} else if chainName == chain.Bitmark {
 			return btcMainNetParams
+		} else {
+			return btcRegressionNetParams
 		}
 	case Litecoin:
-		if testnet {
+		if chainName == chain.Testing {
 			return ltcTestNet4Params
-		} else {
+		} else if chainName == chain.Bitmark {
 			return ltcMainNetParams
+		} else {
+			return ltcRegressionNetParams
 		}
 	default:
 		logger.Panicf("non supported currency: %s", currency)

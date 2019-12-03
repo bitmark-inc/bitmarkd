@@ -310,6 +310,10 @@ M.payment = {
 
     -- the mode should be one of the following: p2p, discovery, rest
     mode = "p2p",
+    bootstrap_nodes = p2p_bootstrap_nodes or{
+        bitcoin = {},
+        litecoin = {}
+    },
 
     -- setup proxy addresses based on selected chain
     -- required if the mode is set to "rest"

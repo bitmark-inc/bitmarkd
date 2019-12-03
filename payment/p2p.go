@@ -43,14 +43,15 @@ type p2pWatcher struct {
 	connectedPeers *PeerMap
 	currency       currency.Currency
 
-	addrManager   *addrmgr.AddrManager
-	connManager   *connmgr.ConnManager
-	networkParams *chaincfg.Params
-	srcAddr       *wire.NetAddress
-	checkpoint    chaincfg.Checkpoint
-	storage       storage.P2PStorage
-	blockCache    *cache.Cache
-	log           *logger.L
+	bootstrapNodes []string
+	addrManager    *addrmgr.AddrManager
+	connManager    *connmgr.ConnManager
+	networkParams  *chaincfg.Params
+	srcAddr        *wire.NetAddress
+	checkpoint     chaincfg.Checkpoint
+	storage        storage.P2PStorage
+	blockCache     *cache.Cache
+	log            *logger.L
 
 	lastHash     *chainhash.Hash
 	lastHeight   int32
@@ -59,7 +60,7 @@ type p2pWatcher struct {
 	shutdown     chan struct{}
 }
 
-func newP2pWatcher(c currency.Currency) (*p2pWatcher, error) {
+func newP2pWatcher(c currency.Currency, bootstrapNodes []string) (*p2pWatcher, error) {
 	var attemptLock sync.Mutex
 	log := logger.New(c.String() + "_watcher")
 	var paymentStore storage.P2PStorage
@@ -72,7 +73,7 @@ func newP2pWatcher(c currency.Currency) (*p2pWatcher, error) {
 		return nil, fault.UnsupportedCurrency
 	}
 
-	networkParams := c.ChainParam(mode.IsTesting())
+	networkParams := c.ChainParam(mode.ChainName())
 
 	defaultPort, err := strconv.ParseInt(networkParams.DefaultPort, 10, 16)
 	if err != nil {
@@ -81,20 +82,28 @@ func newP2pWatcher(c currency.Currency) (*p2pWatcher, error) {
 	log.Tracef("watcher default port: %d", defaultPort)
 
 	addrManager := addrmgr.New(".", nil)
-	checkpoint := networkParams.Checkpoints[len(networkParams.Checkpoints)-1]
 
 	w := &p2pWatcher{
 		currency:       c,
 		connectedPeers: NewPeerMap(),
+		bootstrapNodes: bootstrapNodes,
 		addrManager:    addrManager,
 		networkParams:  networkParams,
 		srcAddr:        wire.NewNetAddressIPPort(net.ParseIP("0.0.0.0"), uint16(defaultPort), 0),
-		checkpoint:     checkpoint,
 		storage:        paymentStore,
 		blockCache:     cache.New(time.Hour, 2*time.Hour),
 		log:            log,
 		onHeadersErr:   make(chan error),
 		shutdown:       make(chan struct{}),
+	}
+
+	if l := len(networkParams.Checkpoints); l > 0 {
+		w.checkpoint = networkParams.Checkpoints[l-1]
+	} else {
+		w.checkpoint = chaincfg.Checkpoint{
+			Hash:   networkParams.GenesisHash,
+			Height: 0,
+		}
 	}
 
 	//	prepare configuration for the connection manager
@@ -349,6 +358,17 @@ outer:
 		}
 	}
 
+	for _, hostPort := range w.bootstrapNodes {
+		conn, err := net.Dial("tcp", hostPort)
+		if err != nil {
+			w.log.Warnf("Can not establish connection to nodes. Error: %s", err)
+		}
+
+		if _, err := w.peerNeogotiate(conn); err != nil {
+			w.log.Warnf("Can not establish connection to nodes. Error: %s", err)
+		}
+	}
+
 	w.connManager.Start()
 
 	go func() {
@@ -441,23 +461,6 @@ func (w *p2pWatcher) onPeerAddr(p *peer.Peer, msg *wire.MsgAddr) {
 	}
 }
 
-func (w *p2pWatcher) isNewHeader(hash *chainhash.Hash) bool {
-	newHashByte := hash.CloneBytes()
-	newHeight, _ := w.storage.GetHeight(hash)
-	if newHeight != 0 {
-		// If there is any error here, the hash would be nil.
-		// That means the height is not correctly set. We will do nothing and
-		// assume it is a new hash
-		if hash, _ := w.storage.GetHash(newHeight); hash != nil {
-			if reflect.DeepEqual(hash.CloneBytes(), newHashByte) {
-				return false
-			}
-		}
-	}
-
-	return true
-}
-
 // onPeerHeaders handles messages from peer for updating header data
 func (w *p2pWatcher) onPeerHeaders(p *peer.Peer, msg *wire.MsgHeaders) {
 	var headersErr error
@@ -480,10 +483,21 @@ func (w *p2pWatcher) onPeerHeaders(p *peer.Peer, msg *wire.MsgHeaders) {
 loop:
 	for _, h := range msg.Headers {
 		newHash = h.BlockHash()
-
-		if !w.isNewHeader(&newHash) {
-			w.log.Tracef("Omit the same hash: %s", newHash)
-			continue loop
+		nh, _ := w.storage.GetHeight(&newHash)
+		if nh > 0 {
+			// If there is any error here, the hash would be nil.
+			// That means the height is not correctly set. We will do nothing and
+			// assume it is a new hash
+			if hash, _ := w.storage.GetHash(nh); hash != nil {
+				if reflect.DeepEqual(hash.CloneBytes(), newHash.CloneBytes()) {
+					w.log.Tracef("Omit the same hash: %s, %d", newHash, nh)
+					if nh > w.lastHeight {
+						w.lastHash = hash
+						w.lastHeight = nh
+					}
+					continue loop
+				}
+			}
 		}
 
 		hasNewHeader = true
@@ -492,7 +506,7 @@ loop:
 		// If a fork has happened then return an error
 		// The event will break the sync loop and trigger a rollback process
 		prevHeight, err := w.storage.GetHeight(&h.PrevBlock)
-		if err != nil || prevHeight == 0 {
+		if err != nil || prevHeight == -1 {
 			p.Disconnect()
 			headersErr = fault.MissingPreviousBlockHeader
 			return
@@ -596,7 +610,7 @@ func (w *p2pWatcher) onPeerBlock(p *peer.Peer, msg *wire.MsgBlock, buf []byte) e
 
 	hash := msg.BlockHash()
 	blockHeight, _ := w.storage.GetHeight(&hash)
-	if blockHeight == 0 {
+	if blockHeight == -1 {
 		return fault.BlockHeaderNotFound
 	}
 

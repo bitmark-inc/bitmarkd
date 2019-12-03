@@ -55,6 +55,15 @@ https_allow = nil
 --     "::1/128",
 -- }
 
+p2p_bootstrap_nodes = {
+    bitcoin = {
+        "127.0.0.1:18444",
+    },
+    litecoin = {
+        "127.0.0.1:19444",
+    }
+}
+
 -- set log level default value
 --log_level = "error"
 
