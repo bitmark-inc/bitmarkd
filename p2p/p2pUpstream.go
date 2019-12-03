@@ -28,7 +28,6 @@ func (n *Node) UpdateVotingMetrics(id peerlib.ID, metrics *MetricsPeersVoting) e
 	s, err := n.Host.NewStream(cctx, id, "p2pstream")
 	if err != nil {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("UpdateVotingMetrics: Create new stream for ID:%v Error:%v", id.ShortString(), err))
-		n.Log.Warn(err.Error())
 		return err
 	}
 	defer s.Reset()
@@ -72,6 +71,7 @@ func (n *Node) determineStreamRWerHelper(id peerlib.ID, s *network.Stream, rw *b
 			readwriter = bufio.NewReadWriter(bufio.NewReader(*stream), bufio.NewWriter(*stream))
 		}
 	}
+	util.LogDebug(n.Log, util.CoGreen, fmt.Sprintf("determineStreamRWerHelper:  ID:%s", id.ShortString()))
 	return
 }
 
@@ -79,7 +79,7 @@ func (n *Node) determineStreamRWerHelper(id peerlib.ID, s *network.Stream, rw *b
 func (n *Node) RequestRegister(id peerlib.ID, stream *network.Stream, readwriter *bufio.ReadWriter) (*network.Stream, error) {
 	s, rw, created := n.determineStreamRWerHelper(id, stream, readwriter)
 	if nil == s && nil == rw {
-		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf(" RequestRegister:No Useful Stream and ReadWrite ID:%v", id.ShortString()))
+		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf(" RequestRegister: ID:%v No Useful Stream and ReadWriter", id.ShortString()))
 		return nil, errors.New("No Useful Stream and ReadWriter")
 	}
 	if created && s != nil {
@@ -94,10 +94,8 @@ func (n *Node) RequestRegister(id peerlib.ID, stream *network.Stream, readwriter
 	if err != nil {
 		return nil, err
 	}
-	n.Lock()
 	_, err = rw.Write(p2pMsgPacked)
 	if err != nil {
-		n.Unlock()
 		n.Log.Error(err.Error())
 		return nil, err
 	}
@@ -105,7 +103,6 @@ func (n *Node) RequestRegister(id peerlib.ID, stream *network.Stream, readwriter
 	// Wait for response
 	resp := make([]byte, maxBytesRecieve)
 	respLen, err := rw.Read(resp)
-	n.Unlock()
 	if err != nil {
 		return nil, err
 	}
@@ -163,10 +160,8 @@ func (n *Node) QueryBlockHeight(id peerlib.ID, stream *network.Stream, readwrite
 	if err != nil {
 		return 0, err
 	}
-	n.Lock()
 	_, err = rw.Write(packedP2PMsg)
 	if err != nil {
-		n.Unlock()
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf(" QueryBlockHeight:PeerID Write Error:%v", err))
 		return 0, err
 	}
@@ -174,11 +169,9 @@ func (n *Node) QueryBlockHeight(id peerlib.ID, stream *network.Stream, readwrite
 	respPacked := make([]byte, maxBytesRecieve)
 	respLen, err := rw.Read(respPacked) //Expected data :  chain, fn, block-height
 	if err != nil {
-		n.Unlock()
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight:Response  Error:%v", err))
 		return 0, err
 	}
-	n.Unlock()
 	chain, fn, parameters, err := UnPackP2PMessage(respPacked[:respLen])
 	if err != nil {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight:UnPackP2PMessage  Error:%v", err))
@@ -240,17 +233,14 @@ func (n *Node) RemoteDigestOfHeight(id peerlib.ID, blockNumber uint64, stream *n
 	if nil != err {
 		return blockdigest.Digest{}, err
 	}
-	n.Lock()
 	_, err = rw.Write(p2pMsgPacked)
 	if nil != err {
-		n.Unlock()
 		return blockdigest.Digest{}, err
 	}
 	rw.Flush()
 
 	respPacked := make([]byte, maxBytesRecieve)
 	respLen, err := rw.Read(respPacked)
-	n.Unlock()
 	chain, fn, parameters, err := UnPackP2PMessage(respPacked[:respLen])
 	if err != nil {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("RemoteDigestOfHeight:UnPackP2PMessage Error:%v", err))
@@ -318,12 +308,10 @@ func (n *Node) GetBlockData(id peerlib.ID, blockNumber uint64, stream *network.S
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("GetBlockData: Marshal  Error:%v ID:%v", err, id.ShortString()))
 		return nil, err
 	}
-	n.Lock()
 	rw.Write(p2pMsgPacked)
 	rw.Flush()
 	respPacked := make([]byte, maxBytesRecieve)
 	respLen, err := rw.Read(respPacked) //Expected data :  chain, fn, block
-	n.Unlock()
 	if err != nil {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("GetBlockData: Read  Error:%v ID:%v", err, id.ShortString()))
 		return nil, err
@@ -376,17 +364,14 @@ func (n *Node) PushMessageBus(item BusMessage, id peerlib.ID, stream *network.St
 	if err != nil {
 		return err
 	}
-	n.Lock()
 	_, err = rw.Write(packedP2PMsg)
 	if err != nil {
-		n.Unlock()
 		log.Error(err.Error())
 		return err
 	}
 	rw.Flush()
 	respPacked := make([]byte, maxBytesRecieve)
 	_, err = rw.Read(respPacked) //Expected data chain, fn, block-height
-	n.Unlock()
 	if err != nil {
 		return err
 	}

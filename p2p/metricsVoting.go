@@ -48,9 +48,6 @@ func (p *MetricsPeersVoting) UpdateCandidates() {
 				} else {
 					Candidates = append(Candidates, &P2PCandidatesImpl{ID: peerID})
 				}
-				util.LogDebug(p.Log, util.CoCyan, fmt.Sprintf("UpdateCandidates:Candidate append ID:%v len:%d", peerID.ShortString(), len(Candidates)))
-			} else {
-				util.LogDebug(p.Log, util.CoCyan, fmt.Sprintf("UpdateCandidates:ID%v not registered!", peerID.ShortString()))
 			}
 		}
 
@@ -76,13 +73,16 @@ loop:
 			delay = time.After(votingCycleInterval)
 			p.UpdateCandidates()
 			if nil == p.Candidates {
+				util.LogInfo(p.Log, util.CoRed, "Candidates: no Candidates")
 				continue loop
 			}
 			for _, peer := range p.Candidates {
-				err := p.watchNode.UpdateVotingMetrics(peer.ID, p)
-				if err != nil {
-					util.LogWarn(p.Log, util.CoRed, fmt.Sprintf("UpdateVotingMetrics Error:%v", err))
-				}
+				go func(id peerlib.ID) {
+					err := p.watchNode.UpdateVotingMetrics(id, p)
+					if err != nil {
+						util.LogWarn(p.Log, util.CoRed, fmt.Sprintf("UpdateVotingMetrics Error:%v", err))
+					}
+				}(peer.ID)
 			}
 		}
 	}

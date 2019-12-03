@@ -61,7 +61,7 @@ func GetMultiAddrsFromBytes(listners [][]byte) []ma.Multiaddr {
 	return maAddrs
 }
 
-// GetBytesFromMultiaddr take []Multiaddr format listeners and convert them into   [][]byte
+//GetBytesFromMultiaddr take []Multiaddr format listeners and convert them into   [][]byte
 func GetBytesFromMultiaddr(listners []ma.Multiaddr) [][]byte {
 	var byteAddrs [][]byte
 	for _, addr := range listners {

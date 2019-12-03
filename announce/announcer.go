@@ -145,7 +145,7 @@ func (ann *announcer) process() {
 		addrsBinary, errAddr := proto.Marshal(&Addrs{Address: util.GetBytesFromMultiaddr(globalData.listeners)})
 		idBinary, errID := globalData.peerID.MarshalBinary()
 		if nil == errAddr && nil == errID {
-			util.LogInfo(log, util.CoCyan, fmt.Sprintf("-><-send self data to P2P ID:%v address:%v", globalData.peerID.ShortString(), util.PrintMaAddrs(globalData.listeners)))
+			util.LogInfo(log, util.CoYellow, fmt.Sprintf("-><-send self data to P2P ID:%v address:%v", globalData.peerID.ShortString(), util.PrintMaAddrs(globalData.listeners)))
 			messagebus.Bus.P2P.Send("peer", idBinary, addrsBinary, timestamp)
 		}
 	}

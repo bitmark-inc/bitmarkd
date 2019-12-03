@@ -22,7 +22,7 @@ func (n *Node) DirectConnect(info peer.AddrInfo) error {
 	}
 
 	if n.MetricsNetwork.IsConnected(info.ID) { // If connected, don't need to reconnect
-		util.LogInfo(n.Log, util.CoLightGreen, fmt.Sprintf("DirectConnect ID:%v is already connected", info.ID.ShortString()))
+		util.LogInfo(n.Log, util.CoReset, fmt.Sprintf("DirectConnect ID:%v is already connected", info.ID.ShortString()))
 		return nil
 	}
 	for _, addr := range info.Addrs {
