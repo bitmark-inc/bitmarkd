@@ -80,6 +80,37 @@ jobs:
           # Only build the AWS image at this moment
           # This job assumes that the AWS environment configured well either by circleci context or project permissions
 
+  publish_debian_package:
+    docker:
+      - image: bitmark/deb-builder
+    working_directory: /bitmarkd
+    steps:
+      - checkout
+      - run:
+          name: Download dependencies
+          command: go mod download
+      - run:
+          name: Prepare package tarfile
+          command: |
+            archive_version=$(dpkg-parsechangelog --show-field Version | cut -f1 -d-) && \
+            archive_name="bitmarkd_${archive_version}.orig.tar.gz" && \
+            transform_source="--transform=s@^@${service}_${archive_version}/@" && \
+            curl -L --output ../${archive_name} --fail https://launchpad.net/~bitmark/+archive/ubuntu/bitmarkd/+files/${archive_name} || \
+            ([ ! -f ../${archive_name} ] && tar zcf go.tar.gz $GOPATH && tar zcf "../${archive_name}" --exclude-vcs --exclude='debian' --exclude='vendor' --exclude=".circleci" ${transform_source} .)
+      - run:
+          name: Build debian package
+          command: |
+            archive_version=$(dpkg-parsechangelog --show-field Version | cut -f1 -d-) && \
+            DEBFULLNAME="Jim Yeh" DEBEMAIL=jim@bitmark.com dch -a "release bitmark ${archive_version} to launchpad" -u medium -D bionic && \
+            DEBFULLNAME="Jim Yeh" DEBEMAIL=jim@bitmark.com dch -r "" -u medium -D bionic && \
+            echo "${gpg_key}" | base64 --decode | gpg --pinentry-mode loopback --passphrase "${gpg_passphrase}" --import -- && \
+            debuild -S -sa -p"gpg --pinentry-mode loopback --passphrase ${gpg_passphrase}" --diff-ignore='.*'
+      - run:
+          name: Publish new build
+          command: |
+            release_version=$(dpkg-parsechangelog --show-field Version) && \
+            dput ppa:bitmark/bitmarkd ../bitmarkd_${release_version}_source.changes
+
 workflows:
   version: 2
   commit:
@@ -94,5 +125,13 @@ workflows:
               only: /v\d+(.\d+){2}(-(alpha|beta))?/
               # since circleci use a different way to fetch git tags, the ssh client is required in our docker image
               # if a job requires another task, the required job must to have the same filter to this one.
+            branches:
+              ignore: /.*/
+
+      - publish_debian_package:
+          context: launchpad
+          filters:
+            tags:
+              only: /v\d+(.\d+){2}(-(alpha|beta))?/
             branches:
               ignore: /.*/
