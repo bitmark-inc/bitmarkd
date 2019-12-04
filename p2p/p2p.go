@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"fmt"
+	"runtime"
 	"sync"
 	"time"
 
@@ -223,6 +224,7 @@ loop:
 		case <-delay:
 			delay = time.After(nodeInterval) // periodical process
 			go n.updateRegistersExpiry()
+			util.LogInfo(n.Log, util.CoWhite, fmt.Sprintf("@@NumOfGoRoutine:%d", runtime.NumGoroutine()))
 		}
 	}
 }

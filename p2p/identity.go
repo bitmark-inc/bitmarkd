@@ -26,11 +26,11 @@ func GenRandPrvKey() (crypto.PrivKey, error) {
 // PublicKey get the public key of identity
 func PublicKey(prvKey crypto.PrivKey) (crypto.PubKey, error) {
 	if nil == prvKey {
-		return nil, errors.New("private key is not initialized")
+		return nil, errors.New("private key is nil")
 	}
 	publicKey := prvKey.GetPublic()
 	if nil == publicKey {
-		return nil, errors.New("generate public key error")
+		return nil, errors.New("generate public key from private key failed")
 	}
 	return publicKey, nil
 }

@@ -19,7 +19,10 @@ import (
 	"github.com/prometheus/common/log"
 )
 
-const waitingRespTime = 5 * time.Second
+const (
+	waitingRespTime    = 5 * time.Second
+	readDefaultTimeout = 5 * time.Second
+)
 
 //UpdateVotingMetrics Register first and get info for voting metrics. This is an  efficient way to get data without create a new stream
 func (n *Node) UpdateVotingMetrics(id peerlib.ID, metrics *MetricsPeersVoting) error {
@@ -71,8 +74,22 @@ func (n *Node) determineStreamRWerHelper(id peerlib.ID, s *network.Stream, rw *b
 			readwriter = bufio.NewReadWriter(bufio.NewReader(*stream), bufio.NewWriter(*stream))
 		}
 	}
-	util.LogDebug(n.Log, util.CoGreen, fmt.Sprintf("determineStreamRWerHelper:  ID:%s", id.ShortString()))
+	//util.LogDebug(n.Log, util.CoGreen, fmt.Sprintf("determineStreamRWerHelper:  ID:%s", id.ShortString()))
 	return
+}
+
+func (n *Node) readWithTimeout(readwriter *bufio.ReadWriter, buf []byte, timeout time.Duration) (size int, err error) {
+	ch := make(chan bool)
+	go func() {
+		size, err = readwriter.Read(buf)
+		ch <- true
+	}()
+	select {
+	case <-ch:
+		return
+	case <-time.After(timeout):
+		return 0, errors.New("Read Timeout")
+	}
 }
 
 //RequestRegister this node register itself to the peer node. If stream is  nil, the function will create a new stream
@@ -102,7 +119,7 @@ func (n *Node) RequestRegister(id peerlib.ID, stream *network.Stream, readwriter
 	rw.Flush()
 	// Wait for response
 	resp := make([]byte, maxBytesRecieve)
-	respLen, err := rw.Read(resp)
+	respLen, err := n.readWithTimeout(readwriter, resp, readDefaultTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +184,7 @@ func (n *Node) QueryBlockHeight(id peerlib.ID, stream *network.Stream, readwrite
 	}
 	rw.Flush()
 	respPacked := make([]byte, maxBytesRecieve)
-	respLen, err := rw.Read(respPacked) //Expected data :  chain, fn, block-height
+	respLen, err := n.readWithTimeout(readwriter, respPacked, readDefaultTimeout)
 	if err != nil {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight:Response  Error:%v", err))
 		return 0, err
@@ -240,7 +257,7 @@ func (n *Node) RemoteDigestOfHeight(id peerlib.ID, blockNumber uint64, stream *n
 	rw.Flush()
 
 	respPacked := make([]byte, maxBytesRecieve)
-	respLen, err := rw.Read(respPacked)
+	respLen, err := n.readWithTimeout(readwriter, respPacked, readDefaultTimeout)
 	chain, fn, parameters, err := UnPackP2PMessage(respPacked[:respLen])
 	if err != nil {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("RemoteDigestOfHeight:UnPackP2PMessage Error:%v", err))
@@ -311,7 +328,7 @@ func (n *Node) GetBlockData(id peerlib.ID, blockNumber uint64, stream *network.S
 	rw.Write(p2pMsgPacked)
 	rw.Flush()
 	respPacked := make([]byte, maxBytesRecieve)
-	respLen, err := rw.Read(respPacked) //Expected data :  chain, fn, block
+	respLen, err := n.readWithTimeout(readwriter, respPacked, readDefaultTimeout)
 	if err != nil {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("GetBlockData: Read  Error:%v ID:%v", err, id.ShortString()))
 		return nil, err
@@ -371,7 +388,7 @@ func (n *Node) PushMessageBus(item BusMessage, id peerlib.ID, stream *network.St
 	}
 	rw.Flush()
 	respPacked := make([]byte, maxBytesRecieve)
-	_, err = rw.Read(respPacked) //Expected data chain, fn, block-height
+	_, err = n.readWithTimeout(readwriter, respPacked, readDefaultTimeout)
 	if err != nil {
 		return err
 	}
