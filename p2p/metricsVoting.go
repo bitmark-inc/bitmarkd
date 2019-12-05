@@ -1,10 +1,11 @@
 package p2p
 
 import (
-	"errors"
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/bitmark-inc/bitmarkd/fault"
 
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 
@@ -110,7 +111,7 @@ func (p *MetricsPeersVoting) GetMetrics(id peerlib.ID) (name string, remoteHeigh
 			return candidate.Metrics.name, candidate.Metrics.remoteHeight, candidate.Metrics.localHeight, candidate.Metrics.remoteDigestOfLocalHeight, candidate.Metrics.lastResponseTime, nil
 		}
 	}
-	return "", 0, 0, blockdigest.Digest{}, time.Time{}, errors.New("No Peer ID")
+	return "", 0, 0, blockdigest.Digest{}, time.Time{}, fault.ErrNoPeerID
 }
 
 func (p *MetricsPeersVoting) allCandidates(

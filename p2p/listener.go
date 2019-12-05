@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/binary"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -193,7 +192,7 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 			_, err = rw.Write(p2pMessagePacked)
 			rw.Flush()
 		default: // other commands as subscription-type commands // this will move to pubsub
-			listenerSendError(rw, nodeChain, errors.New("subscription-type command"), "-> Subscription type command , should send through pubsub", log)
+			listenerSendError(rw, nodeChain, fault.ErrNotAP2PCommand, "-> Subscription type command , should send through pubsub", log)
 			//processSubscription(log, fn, parameters)
 			//result = []byte{'A'}
 			break

@@ -223,7 +223,7 @@ loop:
 			}
 		case <-delay:
 			delay = time.After(nodeInterval) // periodical process
-			util.LogInfo(n.Log, util.CoMagenta, fmt.Sprintf("@@NumOfGoRoutine:%d", runtime.NumGoroutine()))
+			util.LogDebug(n.Log, util.CoMagenta, fmt.Sprintf("@@NumOfGoRoutine:%d", runtime.NumGoroutine()))
 			go n.updateRegistersExpiry()
 		}
 	}

@@ -1,12 +1,12 @@
 package p2p
 
 import (
-	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/counter"
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 	p2pcore "github.com/libp2p/go-libp2p-core"
@@ -81,7 +81,7 @@ func (m *MetricsNetwork) ConnectStatus(id peerlib.ID) (bool, error) {
 	if ok {
 		return val, nil
 	}
-	return false, errors.New("peer ID does not exist")
+	return false, fault.ErrNoPeerID
 }
 
 //GetConnCount return current connection counts

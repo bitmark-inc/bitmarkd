@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/gogo/protobuf/proto"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
@@ -27,7 +28,7 @@ func UnPackP2PMessage(packed []byte) (chain string, fn string, parameters [][]by
 	unpacked := P2PMessage{}
 	proto.Unmarshal(packed, &unpacked)
 	if len(unpacked.Data) == 0 {
-		return "", "", nil, errors.New("No Data")
+		return "", "", nil, fault.ErrDataFieldEmpty
 	}
 	chain = string(unpacked.Data[0])
 	fn = string(unpacked.Data[1])
@@ -44,22 +45,22 @@ func UnPackP2PMessage(packed []byte) (chain string, fn string, parameters [][]by
 //UnPackRegisterData Unpack register binary  data into object information
 func UnPackRegisterData(parameters [][]byte) (nodeType string, id peerlib.ID, addrs []ma.Multiaddr, ts uint64, err error) {
 	if len(parameters) < 4 {
-		return nodeType, id, addrs, ts, errors.New("Invalid data")
+		return nodeType, id, addrs, ts, fault.ErrParametersLessThanExpect
 	}
 	nType := string(parameters[0])
 	id, err = peerlib.IDFromBytes(parameters[1])
 	if err != nil {
 		return "", id, addrs, ts, err
 	}
-	var listeners Addrs
-	err = proto.Unmarshal(parameters[2], &listeners)
+	var announce Addrs
+	err = proto.Unmarshal(parameters[2], &announce)
 	if err != nil {
 		return "", id, addrs, ts, err
 	}
-	if len(listeners.Address) <= 0 {
-		return "", id, addrs, ts, errors.New("UnPackRegisterData Announce Address == 0")
+	if len(announce.Address) <= 0 {
+		return "", id, addrs, ts, fault.ErrNoAnnounceAddress
 	}
-	addrs = util.GetMultiAddrsFromBytes(listeners.Address)
+	addrs = util.GetMultiAddrsFromBytes(announce.Address)
 	ts = binary.BigEndian.Uint64(parameters[3])
 	return nType, id, addrs, ts, nil
 }

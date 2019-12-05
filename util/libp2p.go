@@ -1,10 +1,10 @@
 package util
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/bitmark-inc/bitmarkd/fault"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 )
@@ -29,7 +29,7 @@ func MaAddrToAddrInfo(maAddr ma.Multiaddr) (*peerlib.AddrInfo, error) {
 		return nil, err
 	}
 	if nil == info {
-		return nil, errors.New("AddrInfo is nil")
+		return nil, fault.ErrAddInfoNil
 	}
 	return info, nil
 }
@@ -37,14 +37,14 @@ func MaAddrToAddrInfo(maAddr ma.Multiaddr) (*peerlib.AddrInfo, error) {
 // MaAddrsToAddrInfos Convert  []multiAddr to []peer.AddrInfo
 func MaAddrsToAddrInfos(maAddrs []ma.Multiaddr) ([]peerlib.AddrInfo, error) {
 	if len(maAddrs) < 1 {
-		return nil, errors.New("No Address")
+		return nil, fault.ErrNoAddress
 	}
 	infos, err := peerlib.AddrInfosFromP2pAddrs(maAddrs...)
 	if err != nil {
 		return nil, err
 	}
 	if nil == infos {
-		return nil, errors.New("AddrInfo is nil")
+		return nil, fault.ErrAddInfoNil
 	}
 	return infos, nil
 }

@@ -96,7 +96,7 @@ func (n *Node) readWithTimeout(readwriter *bufio.ReadWriter, buf []byte, timeout
 	case <-ch:
 		return
 	case <-time.After(timeout):
-		return 0, errors.New("Read Timeout")
+		return 0, fault.ErrReadTimeout
 	}
 }
 
@@ -105,7 +105,7 @@ func (n *Node) RequestRegister(id peerlib.ID, stream *network.Stream, readwriter
 	s, rw, created := n.determineStreamRWerHelper(id, stream, readwriter)
 	if nil == s || nil == rw {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf(" RequestRegister: ID:%v No Useful Stream and ReadWriter", id.ShortString()))
-		return nil, errors.New("No Useful Stream and ReadWriter")
+		return nil, fault.ErrStreamReadWriter
 	}
 	if created && s != nil {
 		defer (*s).Reset()
@@ -133,14 +133,14 @@ func (n *Node) RequestRegister(id peerlib.ID, stream *network.Stream, readwriter
 		return nil, err
 	}
 	if respLen < 1 {
-		return nil, errors.New("length of byte recieved is less than 1")
+		return nil, fault.ErrDataLengthLessThanOne
 	}
 	chain, fn, parameters, err := UnPackP2PMessage(resp[:respLen])
 	if err != nil {
 		return nil, err
 	}
 	if chain != nodeChain {
-		return nil, errors.New("Different chain")
+		return nil, fault.ErrDifferentChain
 	}
 	switch fn {
 	case "E": //Register error
@@ -171,7 +171,7 @@ func (n *Node) QueryBlockHeight(id peerlib.ID, stream *network.Stream, readwrite
 	s, rw, created := n.determineStreamRWerHelper(id, stream, readwriter)
 	if nil == s || nil == rw {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf(" Register:No Useful Stream and ReadWrite ID:%v", id.ShortString()))
-		return 0, errors.New("No Useful Stream and ReadWriter")
+		return 0, fault.ErrStreamReadWriter
 	}
 	if created && s != nil {
 		defer (*s).Reset()
@@ -206,30 +206,30 @@ func (n *Node) QueryBlockHeight(id peerlib.ID, stream *network.Stream, readwrite
 
 	if mode.ChainName() != chain {
 		util.LogWarn(n.Log, util.CoRed, "QueryBlockHeight:Different Chain  Error")
-		return 0, fmt.Errorf("different chain")
-	}
+		return 0, fault.ErrDifferentChain
 
-	if fn == "" || len(parameters[0]) < 1 { // not enough  data return
-		util.LogWarn(n.Log, util.CoRed, "QueryBlockHeight:Not valid parameters  Error")
-		return 0, fmt.Errorf("Not valid parameters")
-	}
-
-	switch fn {
-	case "E":
-		errMessage, _ := UnpackListenError(parameters)
-		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight Response Fail,  E msg:%v", errMessage))
-		return 0, errMessage
-	case "N":
-		if 8 != len(parameters[0]) {
-			util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight Response Success, but invalid response  param:%q", parameters[0]))
-			return 0, fmt.Errorf("highestBlock:  invalid response: %q", parameters[0])
+		if fn == "" || len(parameters[0]) < 1 { // not enough  data return
+			util.LogWarn(n.Log, util.CoRed, "QueryBlockHeight:Not valid parameters  Error")
+			return 0, fmt.Errorf("Not valid parameters")
 		}
-		height := binary.BigEndian.Uint64(parameters[0])
-		util.LogDebug(n.Log, util.CoGreen, fmt.Sprintf("<<--QueryBlockHeight ID:%v Success,", id.ShortString()))
-		return height, nil
-	default:
-		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight unexpected response:%v", fn))
-		return 0, fmt.Errorf("unexpected response: %v", fn)
+
+		switch fn {
+		case "E":
+			errMessage, _ := UnpackListenError(parameters)
+			util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight Response Fail,  E msg:%v", errMessage))
+			return 0, errMessage
+		case "N":
+			if 8 != len(parameters[0]) {
+				util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight Response Success, but invalid response  param:%q", parameters[0]))
+				return 0, fmt.Errorf("highestBlock:  invalid response: %q", parameters[0])
+			}
+			height := binary.BigEndian.Uint64(parameters[0])
+			util.LogDebug(n.Log, util.CoGreen, fmt.Sprintf("<<--QueryBlockHeight ID:%v Success,", id.ShortString()))
+			return height, nil
+		default:
+			util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight unexpected response:%v", fn))
+			return 0, fmt.Errorf("unexpected response: %v", fn)
+		}
 	}
 }
 
@@ -238,7 +238,7 @@ func (n *Node) RemoteDigestOfHeight(id peerlib.ID, blockNumber uint64, stream *n
 	s, rw, created := n.determineStreamRWerHelper(id, stream, readwriter)
 	if nil == s || nil == rw {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("Register:No Useful Stream and ReadWrite ID:%v", id.ShortString()))
-		return blockdigest.Digest{}, errors.New("No Useful Stream and ReadWriter")
+		return blockdigest.Digest{}, fault.ErrStreamReadWriter
 	}
 	if created && s != nil {
 		defer (*s).Reset()
@@ -311,7 +311,7 @@ func (n *Node) GetBlockData(id peerlib.ID, blockNumber uint64, stream *network.S
 	s, rw, created := n.determineStreamRWerHelper(id, stream, readwriter)
 	if nil == s || nil == rw {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("Register:No Useful Stream and ReadWrite ID:%v", id.ShortString()))
-		return nil, errors.New("No Useful Stream and ReadWriter")
+		return nil, fault.ErrStreamReadWriter
 	}
 	if created && s != nil {
 		defer (*s).Reset()
@@ -348,7 +348,7 @@ func (n *Node) GetBlockData(id peerlib.ID, blockNumber uint64, stream *network.S
 	}
 	if mode.ChainName() != chain {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("GetBlockData: Different Chain ErrorID:%v", id.ShortString()))
-		return nil, fmt.Errorf("different chain")
+		return nil, fault.ErrDifferentChain
 	}
 
 	if 1 != len(parameters) {
@@ -374,7 +374,7 @@ func (n *Node) PushMessageBus(item BusMessage, id peerlib.ID, stream *network.St
 	s, rw, created := n.determineStreamRWerHelper(id, stream, readwriter)
 	if nil == s || nil == rw {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("Register:No Useful Stream and ReadWrite ID:%v", id.ShortString()))
-		return errors.New("No Useful Stream and ReadWriter")
+		return fault.ErrStreamReadWriter
 	}
 	if created && s != nil {
 		defer (*s).Reset()
@@ -407,7 +407,7 @@ func (n *Node) PushMessageBus(item BusMessage, id peerlib.ID, stream *network.St
 	}
 
 	if mode.ChainName() != chain {
-		return fmt.Errorf("different chain")
+		return fault.ErrDifferentChain
 	}
 
 	if command == "" || len(parameters[0]) < 1 { // not enough  data return

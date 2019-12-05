@@ -163,8 +163,8 @@ func (n *Node) updateRegistersExpiry() {
 		if n.IsExpire(id) { //Keep time for record of last registered time
 			n.Lock()
 			status.Registered = false
-			util.LogDebug(n.Log, util.CoWhite, fmt.Sprintf("IsExpire ID:%v not expire", id.ShortString()))
 			n.Unlock()
+			util.LogDebug(n.Log, util.CoWhite, fmt.Sprintf("IsExpire ID:%v is expire", id.ShortString()))
 		}
 	}
 }

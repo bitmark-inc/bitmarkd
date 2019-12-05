@@ -19,6 +19,7 @@ type processError genericError
 type recordError genericError
 type valueError genericError
 type validationError genericError
+type expireError genericError
 
 // common errors - keep in alphabetic order
 var (
@@ -152,7 +153,7 @@ var (
 	ErrRateLimiting                          = lengthError("rate limiting")
 	ErrReceiptIdIsRequired                   = invalidError("receipt id is required")
 	ErrReceiptTooLong                        = lengthError("receipt too long")
-	ErrRecordHasExpired                      = invalidError("record has expired")
+	ErrRecordHasExpired                      = expireError("record has expired")
 	ErrShareIdsCannotBeIdentical             = valueError("share ids cannot be identical")
 	ErrShareQuantityTooSmall                 = valueError("share quantity too small")
 	ErrSignatureTooLong                      = lengthError("signature too long")
@@ -181,10 +182,20 @@ var (
 	ErrDifficultyNotRightBlock               = invalidError("difficulty should not adjust at this block")
 	ErrDifficultyTimespan                    = invalidError("previous block time larger than after block time")
 	ErrDifficultyNotMatch                    = invalidError("incoming difficulty not match local calculated difficulty")
-	ErrPrivateKeyIsNil                       = invalidError("private key is nil")
-	ErrGenPublicKeyFromPrivateKey            = processError("generate public key from private key fail")
-	ErrDataLengthLessThanOne                 = invalidError("length of byte recieved is less than 1")
-	ErrDifferentChain                        = invalidError("Different Chain")
+	//P2P package errors
+	ErrPrivateKeyIsNil            = invalidError("private key is nil")
+	ErrGenPublicKeyFromPrivateKey = processError("generate public key from private key fail")
+	ErrDataLengthLessThanOne      = valueError("length of byte recieved is less than 1")
+	ErrDifferentChain             = invalidError("different chain")
+	ErrNotAP2PCommand             = invalidError("not a p2p  command")
+	ErrNoPeerID                   = notFoundError("no peer ID")
+	ErrReadTimeout                = expireError("read timeout")
+	ErrStreamReadWriter           = invalidError("no good Stream and ReadWriter")
+	ErrDataFieldEmpty             = invalidError("data field is empty ")
+	ErrParametersLessThanExpect   = invalidError("not enough parameters")
+	ErrNoAnnounceAddress          = invalidError("no announce address")
+	ErrAddInfoNil                 = invalidError("AddrInfo is nil")
+	ErrNoAddress                  = invalidError("No address")
 )
 
 // the error interface base method
@@ -199,6 +210,7 @@ func (e processError) Error() string    { return string(e) }
 func (e recordError) Error() string     { return string(e) }
 func (e valueError) Error() string      { return string(e) }
 func (e validationError) Error() string { return string(e) }
+func (e expireError) Error() string     { return string(e) }
 
 // determine the class of an error
 func IsErrExists(e error) bool     { _, ok := e.(existsError); return ok }
