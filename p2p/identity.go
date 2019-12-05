@@ -3,7 +3,8 @@ package p2p
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"errors"
+
+	"github.com/bitmark-inc/bitmarkd/fault"
 
 	crypto "github.com/libp2p/go-libp2p-core/crypto"
 )
@@ -23,14 +24,14 @@ func GenRandPrvKey() (crypto.PrivKey, error) {
 	return prvKey, nil
 }
 
-// PublicKey get the public key of identity
+// PublicKey get the public key from private key
 func PublicKey(prvKey crypto.PrivKey) (crypto.PubKey, error) {
 	if nil == prvKey {
-		return nil, errors.New("private key is nil")
+		return nil, fault.ErrPrivateKeyIsNil
 	}
 	publicKey := prvKey.GetPublic()
 	if nil == publicKey {
-		return nil, errors.New("generate public key from private key failed")
+		return nil, fault.ErrGenPublicKeyFromPrivateKey
 	}
 	return publicKey, nil
 }

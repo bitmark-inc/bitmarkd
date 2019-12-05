@@ -181,6 +181,10 @@ var (
 	ErrDifficultyNotRightBlock               = invalidError("difficulty should not adjust at this block")
 	ErrDifficultyTimespan                    = invalidError("previous block time larger than after block time")
 	ErrDifficultyNotMatch                    = invalidError("incoming difficulty not match local calculated difficulty")
+	ErrPrivateKeyIsNil                       = invalidError("private key is nil")
+	ErrGenPublicKeyFromPrivateKey            = processError("generate public key from private key fail")
+	ErrDataLengthLessThanOne                 = invalidError("length of byte recieved is less than 1")
+	ErrDifferentChain                        = invalidError("Different Chain")
 )
 
 // the error interface base method

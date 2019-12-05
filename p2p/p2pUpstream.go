@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	waitingRespTime    = 5 * time.Second
+	waitingRespTime    = 30 * time.Second
 	readDefaultTimeout = 5 * time.Second
 )
 
@@ -80,10 +80,18 @@ func (n *Node) determineStreamRWerHelper(id peerlib.ID, s *network.Stream, rw *b
 
 func (n *Node) readWithTimeout(readwriter *bufio.ReadWriter, buf []byte, timeout time.Duration) (size int, err error) {
 	ch := make(chan bool)
-	go func() {
-		size, err = readwriter.Read(buf)
+	if nil == readwriter {
+		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("readWithTimeout:readwriter is nil"))
+		return size, errors.New("readwriter is nil")
+	}
+	if nil == buf {
+		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("readWithTimeout:buf is nil"))
+		return size, errors.New("buf is nil")
+	}
+	go func(reader *bufio.ReadWriter, readbuf []byte) {
+		size, err = reader.Read(readbuf)
 		ch <- true
-	}()
+	}(readwriter, buf)
 	select {
 	case <-ch:
 		return
@@ -95,7 +103,7 @@ func (n *Node) readWithTimeout(readwriter *bufio.ReadWriter, buf []byte, timeout
 //RequestRegister this node register itself to the peer node. If stream is  nil, the function will create a new stream
 func (n *Node) RequestRegister(id peerlib.ID, stream *network.Stream, readwriter *bufio.ReadWriter) (*network.Stream, error) {
 	s, rw, created := n.determineStreamRWerHelper(id, stream, readwriter)
-	if nil == s && nil == rw {
+	if nil == s || nil == rw {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf(" RequestRegister: ID:%v No Useful Stream and ReadWriter", id.ShortString()))
 		return nil, errors.New("No Useful Stream and ReadWriter")
 	}
@@ -119,8 +127,9 @@ func (n *Node) RequestRegister(id peerlib.ID, stream *network.Stream, readwriter
 	rw.Flush()
 	// Wait for response
 	resp := make([]byte, maxBytesRecieve)
-	respLen, err := n.readWithTimeout(readwriter, resp, readDefaultTimeout)
+	respLen, err := n.readWithTimeout(rw, resp, readDefaultTimeout)
 	if err != nil {
+		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf(" RequestRegister: Read Error:%v ID:%v", err, id.ShortString()))
 		return nil, err
 	}
 	if respLen < 1 {
@@ -160,7 +169,7 @@ func (n *Node) RequestRegister(id peerlib.ID, stream *network.Stream, readwriter
 func (n *Node) QueryBlockHeight(id peerlib.ID, stream *network.Stream, readwriter *bufio.ReadWriter) (uint64, error) {
 	fn := "N"
 	s, rw, created := n.determineStreamRWerHelper(id, stream, readwriter)
-	if nil == s && nil == rw {
+	if nil == s || nil == rw {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf(" Register:No Useful Stream and ReadWrite ID:%v", id.ShortString()))
 		return 0, errors.New("No Useful Stream and ReadWriter")
 	}
@@ -184,9 +193,9 @@ func (n *Node) QueryBlockHeight(id peerlib.ID, stream *network.Stream, readwrite
 	}
 	rw.Flush()
 	respPacked := make([]byte, maxBytesRecieve)
-	respLen, err := n.readWithTimeout(readwriter, respPacked, readDefaultTimeout)
+	respLen, err := n.readWithTimeout(rw, respPacked, readDefaultTimeout)
 	if err != nil {
-		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight:Response  Error:%v", err))
+		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf(" QueryBlockHeight: Read Error:%v ID:%v", err, id.ShortString()))
 		return 0, err
 	}
 	chain, fn, parameters, err := UnPackP2PMessage(respPacked[:respLen])
@@ -227,7 +236,7 @@ func (n *Node) QueryBlockHeight(id peerlib.ID, stream *network.Stream, readwrite
 //RemoteDigestOfHeight - fetch block digest from a specific block number
 func (n *Node) RemoteDigestOfHeight(id peerlib.ID, blockNumber uint64, stream *network.Stream, readwriter *bufio.ReadWriter) (blockdigest.Digest, error) {
 	s, rw, created := n.determineStreamRWerHelper(id, stream, readwriter)
-	if nil == s && nil == rw {
+	if nil == s || nil == rw {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("Register:No Useful Stream and ReadWrite ID:%v", id.ShortString()))
 		return blockdigest.Digest{}, errors.New("No Useful Stream and ReadWriter")
 	}
@@ -257,13 +266,12 @@ func (n *Node) RemoteDigestOfHeight(id peerlib.ID, blockNumber uint64, stream *n
 	rw.Flush()
 
 	respPacked := make([]byte, maxBytesRecieve)
-	respLen, err := n.readWithTimeout(readwriter, respPacked, readDefaultTimeout)
-	chain, fn, parameters, err := UnPackP2PMessage(respPacked[:respLen])
+	respLen, err := n.readWithTimeout(rw, respPacked, readDefaultTimeout)
 	if err != nil {
-		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("RemoteDigestOfHeight:UnPackP2PMessage Error:%v", err))
+		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf(" RemoteDigestOfHeight: Read Error:%v ID:%v stream:%v readriter:%v", err, id.ShortString(), s, rw))
 		return blockdigest.Digest{}, err
 	}
-
+	chain, fn, parameters, err := UnPackP2PMessage(respPacked[:respLen])
 	if mode.ChainName() != chain {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("RemoteDigestOfHeight:Different Chain ID:%v", id.ShortString()))
 		return blockdigest.Digest{}, err
@@ -301,7 +309,7 @@ func (n *Node) RemoteDigestOfHeight(id peerlib.ID, blockNumber uint64, stream *n
 // GetBlockData - fetch block data from a specific block number
 func (n *Node) GetBlockData(id peerlib.ID, blockNumber uint64, stream *network.Stream, readwriter *bufio.ReadWriter) ([]byte, error) {
 	s, rw, created := n.determineStreamRWerHelper(id, stream, readwriter)
-	if nil == s && nil == rw {
+	if nil == s || nil == rw {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("Register:No Useful Stream and ReadWrite ID:%v", id.ShortString()))
 		return nil, errors.New("No Useful Stream and ReadWriter")
 	}
@@ -328,9 +336,9 @@ func (n *Node) GetBlockData(id peerlib.ID, blockNumber uint64, stream *network.S
 	rw.Write(p2pMsgPacked)
 	rw.Flush()
 	respPacked := make([]byte, maxBytesRecieve)
-	respLen, err := n.readWithTimeout(readwriter, respPacked, readDefaultTimeout)
+	respLen, err := n.readWithTimeout(rw, respPacked, readDefaultTimeout)
 	if err != nil {
-		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("GetBlockData: Read  Error:%v ID:%v", err, id.ShortString()))
+		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf(" GetBlockData: Read Error:%v ID:%v", err, id.ShortString()))
 		return nil, err
 	}
 	chain, fn, parameters, err := UnPackP2PMessage(respPacked[:respLen])
@@ -364,7 +372,7 @@ func (n *Node) GetBlockData(id peerlib.ID, blockNumber uint64, stream *network.S
 //PushMessageBus  send the CommandBus Message to the peer with given ID
 func (n *Node) PushMessageBus(item BusMessage, id peerlib.ID, stream *network.Stream, readwriter *bufio.ReadWriter) error {
 	s, rw, created := n.determineStreamRWerHelper(id, stream, readwriter)
-	if nil == s && nil == rw {
+	if nil == s || nil == rw {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("Register:No Useful Stream and ReadWrite ID:%v", id.ShortString()))
 		return errors.New("No Useful Stream and ReadWriter")
 	}
@@ -388,8 +396,9 @@ func (n *Node) PushMessageBus(item BusMessage, id peerlib.ID, stream *network.St
 	}
 	rw.Flush()
 	respPacked := make([]byte, maxBytesRecieve)
-	_, err = n.readWithTimeout(readwriter, respPacked, readDefaultTimeout)
+	_, err = n.readWithTimeout(rw, respPacked, readDefaultTimeout)
 	if err != nil {
+		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf(" PushMessageBus: Read Error:%v ID:%v", err, id.ShortString()))
 		return err
 	}
 	chain, command, parameters, err := UnPackP2PMessage(respPacked)

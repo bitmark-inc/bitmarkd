@@ -64,7 +64,7 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 			break
 		}
 		if reqLen < 1 {
-			listenerSendError(rw, nodeChain, errors.New("length of byte recieved is less than 1"), "-->READ", log)
+			listenerSendError(rw, nodeChain, fault.ErrDataLengthLessThanOne, "-->READ", log)
 			break
 		}
 		reqChain, fn, parameters, err := UnPackP2PMessage(req[:reqLen])
@@ -73,11 +73,11 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 			break
 		}
 		if len(reqChain) < 2 {
-			listenerSendError(rw, nodeChain, errors.New("Invalid Chain"), "-->Unpack", log)
+			listenerSendError(rw, nodeChain, fault.ErrInvalidChain, "-->Unpack", log)
 			break
 		}
 		if reqChain != nodeChain {
-			listenerSendError(rw, nodeChain, errors.New("Different Chain"), "-->Chain", log)
+			listenerSendError(rw, nodeChain, fault.ErrDifferentChain, "-->Chain", log)
 			break
 		}
 

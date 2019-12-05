@@ -43,7 +43,6 @@ loop:
 				util.LogDebug(log, util.CoRed, fmt.Sprintf("-->>block with too few data: %d items", dataLength))
 				continue loop
 			}
-			util.LogDebug(log, util.CoRed, fmt.Sprintf("-->>received block: %x", parameters[0]))
 			if !mode.Is(mode.Normal) {
 				util.LogDebug(log, util.CoWhite, fmt.Sprintf("-->>failed assets: error: %s", fault.ErrNotAvailableDuringSynchronise))
 				continue loop

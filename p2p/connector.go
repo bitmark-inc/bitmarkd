@@ -47,6 +47,7 @@ func (n *Node) DirectConnect(info peer.AddrInfo) error {
 	_, err = n.RequestRegister(info.ID, nil, nil)
 	if err != nil {
 		util.LogWarn(n.Log, util.CoLightRed, fmt.Sprintf("DirectConnect ID:%v RequestRegister  Error:%v", info.ID.ShortString(), err))
+		return err
 	}
 	util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("DirectConnect Registered %v", info.ID.ShortString()))
 	return err
