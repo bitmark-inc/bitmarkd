@@ -8,7 +8,7 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/logger"
-	peer "github.com/libp2p/go-libp2p-peer"
+	peerlib "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -50,12 +50,12 @@ func TestIDMarshalUnmarshal(t *testing.T) {
 	fmt.Println(conf.PrivateKey)
 	prvKey, err := DecodeHexToPrvKey([]byte(conf.PrivateKey))
 	assert.NoError(t, err, "Decode Hex Key Error")
-	id, err := peer.IDFromPrivateKey(prvKey)
+	id, err := peerlib.IDFromPrivateKey(prvKey)
 	assert.NoError(t, err, "IDFromPrivateKey Error:")
 	fmt.Println("id:", id)
 	mID, err := id.Marshal()
 	assert.NoError(t, err, "ID Marshal Error:")
-	id2, err := peer.IDFromBytes(mID)
+	id2, err := peerlib.IDFromBytes(mID)
 	assert.NoError(t, err, "not a valid id bytes")
 	fmt.Println("id2:", id2.String(), " shortID:", id2.ShortString())
 	assert.Equal(t, id.String(), id2.String(), "Convert ID fail")

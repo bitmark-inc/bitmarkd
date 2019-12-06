@@ -207,29 +207,29 @@ func (n *Node) QueryBlockHeight(id peerlib.ID, stream *network.Stream, readwrite
 	if mode.ChainName() != chain {
 		util.LogWarn(n.Log, util.CoRed, "QueryBlockHeight:Different Chain  Error")
 		return 0, fault.ErrDifferentChain
+	}
 
-		if fn == "" || len(parameters[0]) < 1 { // not enough  data return
-			util.LogWarn(n.Log, util.CoRed, "QueryBlockHeight:Not valid parameters  Error")
-			return 0, fmt.Errorf("Not valid parameters")
-		}
+	if fn == "" || len(parameters[0]) < 1 { // not enough  data return
+		util.LogWarn(n.Log, util.CoRed, "QueryBlockHeight:Not valid parameters  Error")
+		return 0, fmt.Errorf("Not valid parameters")
+	}
 
-		switch fn {
-		case "E":
-			errMessage, _ := UnpackListenError(parameters)
-			util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight Response Fail,  E msg:%v", errMessage))
-			return 0, errMessage
-		case "N":
-			if 8 != len(parameters[0]) {
-				util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight Response Success, but invalid response  param:%q", parameters[0]))
-				return 0, fmt.Errorf("highestBlock:  invalid response: %q", parameters[0])
-			}
-			height := binary.BigEndian.Uint64(parameters[0])
-			util.LogDebug(n.Log, util.CoGreen, fmt.Sprintf("<<--QueryBlockHeight ID:%v Success,", id.ShortString()))
-			return height, nil
-		default:
-			util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight unexpected response:%v", fn))
-			return 0, fmt.Errorf("unexpected response: %v", fn)
+	switch fn {
+	case "E":
+		errMessage, _ := UnpackListenError(parameters)
+		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight Response Fail,  E msg:%v", errMessage))
+		return 0, errMessage
+	case "N":
+		if 8 != len(parameters[0]) {
+			util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight Response Success, but invalid response  param:%q", parameters[0]))
+			return 0, fmt.Errorf("highestBlock:  invalid response: %q", parameters[0])
 		}
+		height := binary.BigEndian.Uint64(parameters[0])
+		util.LogDebug(n.Log, util.CoGreen, fmt.Sprintf("<<--QueryBlockHeight ID:%v Success,", id.ShortString()))
+		return height, nil
+	default:
+		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight unexpected response:%v", fn))
+		return 0, fmt.Errorf("unexpected response: %v", fn)
 	}
 }
 
