@@ -1,0 +1,19 @@
+syntax = "proto3";
+package bitmark.bitmarkd.discovery;
+option go_package = "discovery";
+
+message PeerList {
+  repeated PeerItem Peers=1;
+}
+
+ message PeerItem {
+    bytes PeerID = 1;
+    AnnounceAddrs Listeners = 2;
+    uint64 Timestamp = 3;  
+  }
+
+  message AnnounceAddrs {
+    repeated bytes AnnounceAddress =1;
+  }
+
+  // protoc --proto_path=$HOME/wks_go/src/github.com/bitmark-inc/bitmarkd/discovery/pb/ --go_out=$HOME/wks_go/src/github.com/bitmark-inc/bitmarkd/discovery/ peerstore.proto

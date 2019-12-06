@@ -1,0 +1,22 @@
+syntax = "proto3";
+package bitmark.bitmarkd.p2p;
+option go_package = "p2p";
+
+message P2PMessage {
+  repeated bytes Data= 1;
+}
+ message BusMessage {
+    string command = 1;
+    repeated bytes Parameters = 2;
+  }
+
+  // to parse Listeners parameter from announce module
+  message Addrs {
+    repeated bytes Address =1;
+  }
+  message MockProtoMessage {
+    string Data = 1;
+  }
+  // protoc --proto_path=$HOME/wks_go/src/bitmark-network/p2p/pb/ --go_out=$HOME/wks_go/src/bitmark-network/p2p/ p2pMessage.proto
+//protoc --proto_path=./ --go_out=./ *.proto
+  // protoc --proto_path=$HOME/wks_go/src/github.com/bitmark-inc/bitmarkd/p2p/pb  --go_out=$HOME/wks_go/src/github.com/bitmark-inc/bitmarkd/p2p  *.proto
