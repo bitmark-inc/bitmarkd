@@ -27,10 +27,16 @@ const (
 
 // Configuration - structure for configuration file
 type Configuration struct {
-	Mode      string                  `gluamapper:"mode" hcl:"mode" json:"mode"`
-	Discovery *discoveryConfiguration `gluamapper:"discovery" hcl:"discovery" json:"discovery"`
-	Bitcoin   *currencyConfiguration  `gluamapper:"bitcoin" hcl:"bitcoin" json:"bitcoin"`
-	Litecoin  *currencyConfiguration  `gluamapper:"litecoin" hcl:"litecoin" json:"litecoin"`
+	Mode           string                      `gluamapper:"mode" hcl:"mode" json:"mode"`
+	BootstrapNodes bootstrapNodesConfiguration `gluamapper:"bootstrap_nodes" hcl:"bootstrap_nodes" json:"bootstrap_nodes"`
+	Discovery      *discoveryConfiguration     `gluamapper:"discovery" hcl:"discovery" json:"discovery"`
+	Bitcoin        *currencyConfiguration      `gluamapper:"bitcoin" hcl:"bitcoin" json:"bitcoin"`
+	Litecoin       *currencyConfiguration      `gluamapper:"litecoin" hcl:"litecoin" json:"litecoin"`
+}
+
+type bootstrapNodesConfiguration struct {
+	Bitcoin  []string `gluamapper:"bitcoin" hcl:"bitcoin" json:"bitcoin"`
+	Litecoin []string `gluamapper:"litecoin" hcl:"litecoin" json:"litecoin"`
 }
 
 type discoveryConfiguration struct {
@@ -107,11 +113,11 @@ func Initialise(configuration *Configuration) error {
 	case "p2p":
 		globalData.log.Info("p2p watcher…")
 
-		btcP2pWatcher, err := newP2pWatcher(currency.Bitcoin)
+		btcP2pWatcher, err := newP2pWatcher(currency.Bitcoin, configuration.BootstrapNodes.Bitcoin)
 		if err != nil {
 			return err
 		}
-		ltcP2pWatcher, err := newP2pWatcher(currency.Litecoin)
+		ltcP2pWatcher, err := newP2pWatcher(currency.Litecoin, configuration.BootstrapNodes.Litecoin)
 		if err != nil {
 			return err
 		}
