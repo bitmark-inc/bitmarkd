@@ -142,7 +142,7 @@ func String() string {
 	return globalData.mode.String()
 }
 
-// String - current mode rep[resented as a string
+// String - current mode represented as a string
 func (m Mode) String() string {
 	switch m {
 	case Stopped:
