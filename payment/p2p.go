@@ -23,6 +23,7 @@ import (
 	"github.com/patrickmn/go-cache"
 
 	"github.com/bitmark-inc/bitmarkd/currency"
+	"github.com/bitmark-inc/bitmarkd/currency/litecoin"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/pay"
@@ -593,6 +594,12 @@ loop:
 				continue loop
 			}
 			amounts[addr.String()] = uint64(txout.Value)
+
+			address2, err := litecoin.TransformAddress(addr.String())
+			if nil == err && address2 != addr.String() {
+				amounts[address2] = uint64(txout.Value)
+			}
+
 		}
 	}
 
