@@ -30,7 +30,7 @@ const (
 	taggedProof       tagType = iota
 )
 
-// the BOF tag to chec file version
+// the BOF tag to check file version
 // exact match is required
 var bofData = []byte("bitmark-cache v1.0")
 
