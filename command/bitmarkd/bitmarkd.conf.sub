@@ -310,6 +310,10 @@ M.payment = {
 
     -- the mode should be one of the following: p2p, discovery, rest, noverify
     mode = "p2p",
+    p2p_cache = {
+        btc_directory = "btc-local",
+        ltc_directory = "ltc-local"
+    },
     bootstrap_nodes = p2p_bootstrap_nodes or{
         bitcoin = {},
         litecoin = {}

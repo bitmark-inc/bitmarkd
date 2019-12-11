@@ -39,6 +39,9 @@ const (
 	defaultTestingReservoirFile = "reservoir-" + chain.Testing + ".cache"
 	defaultLocalReservoirFile   = "reservoir-" + chain.Local + ".cache"
 
+	defaultBtcLocalDirectory = "btc-local"
+	defaultLtcLocalDirectory = "ltc-local"
+
 	defaultLogDirectory = "log"
 	defaultLogFile      = "bitmarkd.log"
 	defaultLogCount     = 10          //  number of log files retained
@@ -124,6 +127,13 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 			PreferIPv6:         true,
 		},
 
+		Payment: payment.Configuration{
+			P2PCache: payment.P2PCache{
+				BtcDirectory: defaultBtcLocalDirectory,
+				LtcDirectory: defaultLtcLocalDirectory,
+			},
+		},
+
 		Logging: logger.Configuration{
 			Directory: defaultLogDirectory,
 			File:      defaultLogFile,
@@ -185,6 +195,8 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 		&options.PeerFile,
 		&options.ReservoirFile,
 		&options.Database.Directory,
+		&options.Payment.P2PCache.BtcDirectory,
+		&options.Payment.P2PCache.LtcDirectory,
 		&options.Logging.Directory,
 	}
 	for _, f := range mustBeAbsolute {
@@ -224,6 +236,8 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 	for _, d := range []*string{
 		&options.Database.Directory,
 		&options.Logging.Directory,
+		&options.Payment.P2PCache.BtcDirectory,
+		&options.Payment.P2PCache.LtcDirectory,
 	} {
 		*d = util.EnsureAbsolute(options.DataDirectory, *d)
 		if err := os.MkdirAll(*d, 0700); nil != err {

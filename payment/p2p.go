@@ -61,7 +61,7 @@ type p2pWatcher struct {
 	shutdown     chan struct{}
 }
 
-func newP2pWatcher(c currency.Currency, bootstrapNodes []string) (*p2pWatcher, error) {
+func newP2pWatcher(c currency.Currency, peerDirectory string, bootstrapNodes []string) (*p2pWatcher, error) {
 	var attemptLock sync.Mutex
 	log := logger.New(c.String() + "_watcher")
 	var paymentStore storage.P2PStorage
@@ -82,7 +82,7 @@ func newP2pWatcher(c currency.Currency, bootstrapNodes []string) (*p2pWatcher, e
 	}
 	log.Tracef("watcher default port: %d", defaultPort)
 
-	addrManager := addrmgr.New(".", nil)
+	addrManager := addrmgr.New(peerDirectory, nil)
 
 	w := &p2pWatcher{
 		currency:       c,
