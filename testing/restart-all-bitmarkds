@@ -4,9 +4,16 @@
 ERROR()
 {
   printf 'error: '
-  printf "$@"
+  # shellcheck disable=SC2059
+  printf -- "$@"
   printf '\n'
   exit 1
+}
+
+VERBOSE()
+{
+  # shellcheck disable=SC2059
+  [ X"${verbose}" = X"yes" ] && printf -- "$@"
 }
 
 USAGE()
@@ -14,10 +21,11 @@ USAGE()
   if [ -n "$1" ]
   then
     printf 'error: '
-    printf "$@"
+    # shellcheck disable=SC2059
+    printf -- "$@"
     printf '\n'
   fi
-  echo usage: $(basename "$0") '<options>'
+  echo usage: "$(basename "$0")" '<options>'
   echo '       --help           -h         this message'
   echo '       --verbose        -v         more messages'
   echo '       --copy-from N    -f N       copy database from node N, backup first'
@@ -130,7 +138,7 @@ then
 fi
 
 # need to backup/reset database?
-if [ -n "${src_dir}" -o X"${reset}" = X"yes" ]
+if [ -n "${src_dir}" ] || [ X"${reset}" = X"yes" ]
 then
   date=$(date +'%Y-%m-%d_%H-%M-%S')
   for i in $(seq 1 "${bitmarkd_count}")
@@ -157,7 +165,8 @@ then
 fi
 
 tmux list-panes -a -F '#{pane_id} #{pane_title}' | (
-  while read id command config other
+  # shellcheck disable=SC2034
+  while read -r id command config other
   do
     case "${command}" in
       (run-bitmarkd)

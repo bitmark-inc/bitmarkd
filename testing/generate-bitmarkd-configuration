@@ -4,7 +4,8 @@
 ERROR()
 {
   printf 'error: '
-  printf "$@"
+  # shellcheck disable=SC2059
+  printf -- "$@"
   printf '\n'
   exit 1
 }
@@ -13,7 +14,8 @@ VERBOSE()
 {
   if [ X"${verbose}" = X"yes" ]
   then
-    printf "$@"
+    # shellcheck disable=SC2059
+    printf -- "$@"
     printf '\n'
   fi
 }
@@ -21,7 +23,8 @@ VERBOSE()
 WARNING()
 {
   printf 'WARNING: '
-  printf "$@"
+  # shellcheck disable=SC2059
+  printf -- "$@"
   printf '\n'
 }
 
@@ -30,13 +33,14 @@ USAGE()
   if [ -n "$1" ]
   then
     printf 'error: '
-    printf "$@"
+    # shellcheck disable=SC2059
+    printf -- "$@"
     printf '\n'
   fi
-  echo usage: $(basename "$0") '[options] index-numbers...'
+  echo usage: "$(basename "$0")" '[options] index-numbers...'
   echo '       --help                -h            this message'
   echo '       --verbose             -v            more messages'
-  echo '       --chain=chain         -c CHAIN      set the chain [bitmark|testing|local]: ['"${network}"']'
+  echo '       --chain=chain         -c CHAIN      set the chain [bitmark|testing|local]: ['"${chain}"']'
   echo '       --nodes=DOMAIN        -n DOMAIN     set the nodes [none|chain|nodes.domain.tld]: ['"${nodes}"']'
   echo '       --connect=K:H:P       -C K:H:P      connect to specific bitmarkd public_key:host:port'
   echo '       --payment=PRD         -p PRD        set payment mode [p2p|rest|discovery]: ['"${payment_mode}"']'
@@ -58,7 +62,7 @@ xdg_home="${XDG_CONFIG_HOME}"
 verbose=no
 chain=local
 nodes=none
-bitmark_connect=
+bitmarkd_connect=
 payment_mode=discovery
 recorderd_public=0
 log_size=1048576
@@ -105,13 +109,9 @@ do
       ;;
 
     (-c|--chain)
-      testnet_only=''
-      livenet_only="${comment_string}"
       case "${2}" in
         (bitmark)
           chain=bitmark
-          testnet_only="${comment_string}"
-          livenet_only=''
           ;;
         (testing)
           chain=testing
@@ -133,8 +133,7 @@ do
           ;;
         (*.*)
           nodes="${2}"
-          n=$(host -t TXT "${nodes}")
-          [ $? -ne 0 ] && USAGE 'nodes cannot fetch TXT record for: "%s"' "${nodes}"
+          n=$(host -t TXT "${nodes}") || USAGE 'nodes cannot fetch TXT record for: "%s"' "${nodes}"
           [ -z "${n}" ] && USAGE 'nodes cannot empty TXT record for: "%s"' "${nodes}"
           ;;
         (*)
@@ -241,34 +240,35 @@ done
 # T = testnet   L = livenet
 for i in "$@"
 do
-  external_net_comment=
   j="${i#[LT]}"
-  [ X"${j}" != X"${i}" ] && external_net_comment="${comment_string}"
 
-  [ "${j}" -lt 1 -o "${j}" -gt 99 ] && ERROR 'index is out of range: %s' "${j}"
+  # shellcheck disable=SC2015
+  [ "${j}" -ge 1 ] && [ "${j}" -le 99 ] || ERROR 'index is out of range: %s' "${j}"
 
   dir="${xdg_home}/bitmarkd${i}"
   config="${dir}/bitmarkd.conf"
 
   # stop if a config exists and not update
-  [ X"${update}" = X"no" ] && [ -d "${dir}" -o -f "${config}" ] && ERROR 'index: %s is already used: %s' "${i}" "${dir}"
+  if [ X"${update}" = X"no" ]
+  then
+    [ -d "${dir}" ] || [ -f "${config}" ] && ERROR 'index: %s is already used: %s' "${i}" "${dir}"
+  fi
 
   port_offset=$(( 100 * ( j - 1 ) ))
   [ -d "${dir}" ] || mkdir -p "${dir}"
 
   VERBOSE 'config: %s  ports: %d' "${config}" "${port_offset}"
-  VERBOSE 'recorderd IPv4: %s  IPv6: %s' "${recorderd_ipv4}" "${recorderd_ipv6}"
 
   # just for demonstration
-  bitcoin_key="cPcHEqnqNG3Ze27Yqqxk8fQXmFVAgme1h1UT3HBN3MV4gERUVbVc"
+  ## bitcoin_key="cPcHEqnqNG3Ze27Yqqxk8fQXmFVAgme1h1UT3HBN3MV4gERUVbVc"
   bitcoin_test="msxN7C7cRNgbgyUzt3EcvrpmWXc59sZVN4"
   bitcoin_live="1HeFjMrDTjheiZrBYViLGgjovRZK9Ba5EQ"
 
-  litecoin_key="cUhoPFEKgWzxX9Ycynemjtvh4kEv3vcoVW6RgLaxzEVTGHFWF6WY"
+  ## litecoin_key="cUhoPFEKgWzxX9Ycynemjtvh4kEv3vcoVW6RgLaxzEVTGHFWF6WY"
   litecoin_test="mjPkDNakVA4w4hJZ6WF7p8yKUV2merhyCM"
   litecoin_live="LYg45SVcJALHWHSMVkHSKAnbAEXAbhei7h"
 
-  awk < "$(dirname "${0}")/../command/bitmarkd/bitmarkd.conf.sample" > "${config}" '
+  awk < "$(dirname "${0}")/../command/bitmarkd/bitmarkd.conf.sub" > "${config}" '
 
     BEGIN {
       check_logging = 0
@@ -330,22 +330,32 @@ do
       drop_this = 1
     }
 
-    # coins
-    /"[*][*][*]REPLACE-WITH-REAL-TEST-BTC-ADDRESS[*][*][*]",/ {
+    # global variables
+    /dofile[(]"bitmarkd.conf.sub"[)]/ {
+      print "chain = \"" chain "\""
+
+      print "announce_ips = {"
+      if (chain == "local") {
+        print "    \"::1\","
+      }
+      print "}"
+
+      print "bitcoin_address = {"
       print "    test = \"" bitcoin_test"\","
-      drop_this = 1
-    }
-    /"[*][*][*]REPLACE-WITH-REAL-LIVE-BTC-ADDRESS[*][*][*]",/ {
       print "    live = \"" bitcoin_live "\","
-      drop_this = 1
-    }
-    /"[*][*][*]REPLACE-WITH-REAL-TEST-LTC-ADDRESS[*][*][*]",/ {
+      print "}"
+      print "litecoin_address = {"
       print "    test = \"" litecoin_test "\","
-      drop_this = 1
-    }
-    /"[*][*][*]REPLACE-WITH-REAL-LIVE-LTC-ADDRESS[*][*][*]",/ {
       print "    live = \"" litecoin_live "\","
-      drop_this = 1
+      print "}"
+      print "p2p_bootstrap_nodes = {"
+      print "    bitcoin = {"
+      print "        \"127.0.0.1:18444\","
+      print "    },"
+      print "    litecoin = {"
+      print "        \"127.0.0.1:19444\","
+      print "    },"
+      print "}"
     }
 
     # port_offset for bitmarkds 2..N
@@ -373,18 +383,6 @@ do
         }
       }
       drop_this = 0
-    }
-
-    # set the chain
-    /^--local chain = "local"/ {
-      print "local chain = \"" chain "\""
-    }
-
-    # announce for local
-    /^local[[:space:]]+announce_ips/ {
-        if (chain == "local") {
-            print "    \"::1\","
-        }
     }
 
     # static connections

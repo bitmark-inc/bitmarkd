@@ -13,7 +13,7 @@ user_2=second
 next_user=3
 for i in 1 2 3 4 5 6 7 8 9
 do
-  eval user_${next_user}=\"node-${i}\"
+  eval "user_${next_user}=\"node-${i}\""
   next_user=$((next_user + 1))
 done
 
@@ -52,6 +52,7 @@ USAGE() {
   if [ -n "${1}" ]
      then
        printf 'error:'
+       # shellcheck disable=SC2059
        printf -- "$@"
        printf '\n'
   fi
@@ -70,6 +71,7 @@ EOF
 
 ERROR() {
   printf 'error:'
+  # shellcheck disable=SC2059
   printf -- "$@"
   printf '\n'
   exit 1
@@ -77,6 +79,7 @@ ERROR() {
 
 VERBOSE() {
   [ X"${verbose}" = X"yes" ] || return
+  # shellcheck disable=SC2059
   printf -- "$@"
   printf '\n'
 }
@@ -120,8 +123,7 @@ CLI() {
   done
   user="${1}"; shift
   [ X"${verbose}" = X"yes" ] && printf '\033[1;33mCLI[%s]: \033[1;31m%s\033[0m\n' "${user}" "$*"
-  r=$(bitmark-cli -i "${user}" -p 1234567890 -n local "$@")
-  if [ X"${check}" = X"yes" -a $? -ne 0 ]
+  if ! r=$(bitmark-cli -i "${user}" -p 1234567890 -n local "$@") && [ X"${check}" = X"yes" ]
   then
     [ -n "${r}" ] && ERROR 'failed: stdout:\n%s' "${r}"
     ERROR 'failed: stdout empty'
@@ -150,6 +152,7 @@ READY() {
   done
   printf '\bOK\n'
 
+  # shellcheck disable=SC2016
   blocks_q='
     (.block  | type) as $tb |
     (.blocks | type) as $ts |
@@ -227,8 +230,9 @@ SET() {
   do
     var="${1}"; shift
     jq_expr="${1}"; shift
+    # shellcheck disable=SC2034
     val=$(GET "${jq_expr}")
-    eval ${var}=\"\${val}\"
+    eval "${var}=\"\${val}\""
   done
 }
 
@@ -250,6 +254,7 @@ PAY() {
 
   if [ X"${status}" = X"Pending" ]
   then
+    # shellcheck disable=SC2086
     eval env WALLET_PASSWORD='1234567890' ${pay} | jq .
     printf '\n'
     eval GEN_${currency}
@@ -271,6 +276,8 @@ GEN_LTC() {
 
 SHOW_BALANCE() {
   local q i user
+
+  # shellcheck disable=SC2016
   q='
 def s($f): ("          "+($f|tostring))[-10:] + " ";
 def n($f): (($f|tostring)+"          ")[:10] + " ";
@@ -283,7 +290,7 @@ def n($f): (($f|tostring)+"          ")[:10] + " ";
   i=1
   while :
   do
-    eval user=\"\${user_${i}}\"
+    eval "user=\"\${user_${i}}\""
     [ -z "${user}" ] && break
     CLI "${user_1}" balance -o "${user}"
     PRETTY --join-output --arg name "${user}" "${q}"
@@ -295,6 +302,8 @@ def n($f): (($f|tostring)+"          ")[:10] + " ";
 
 SHOW_OWNERSHIP() {
   local q i user
+
+  # shellcheck disable=SC2016
   q='
 def s($f): ("          "+($f|tostring))[-10:] + " ";
 def n($f): (($f|tostring)+"          ")[:10] + " ";
@@ -317,7 +326,7 @@ def n($f): (($f|tostring)+"          ")[:10] + " ";
   i=1
   while :
   do
-    eval user=\"\${user_${i}}\"
+    eval "user=\"\${user_${i}}\""
     [ -z "${user}" ] && break
     CLI "${user_1}" owned -c 100 -o "${user}"
     PRETTY --join-output --arg name "${user}" "${q}"
@@ -333,6 +342,7 @@ OWNER_OF_BLOCK() {
   [ -z "${block_number}" ] && block_number=2
   [ "${block_number}" -lt 2 ] && block_number=2
 
+  # shellcheck disable=SC2016
   q='
 .data | reduce .[] as $item (
   ""; . + if "Block"==$item.item and ($block_number|tonumber)==$item.blockNumber then $item.txId else "" end)'
@@ -342,7 +352,7 @@ OWNER_OF_BLOCK() {
   i=1
   while :
   do
-    eval user=\"\${user_${i}}\"
+    eval "user=\"\${user_${i}}\""
     [ -z "${user}" ] && break
     next='0'
     while :
@@ -531,19 +541,19 @@ ISSUE_NN() {
   user_x="${1}" ; shift
   user_y="${1}" ; shift
 
-  [ -z "${qty}" -o -z "${tr}" -o -z "${asset}" -o -z "${user_x}" -o -z "${user_y}" ] && ERROR 'ISSUE_NN: parameters cannot be empty'
+  [ -z "${qty}" ] || [ -z "${tr}" ] || [ -z "${asset}" ] || [ -z "${user_x}" ] || [ -z "${user_y}" ] && ERROR 'ISSUE_NN: parameters cannot be empty'
   [ "${qty}" -lt "${tr}" ] && ERROR 'ISSUE_NN: qty: %d < tranfer: %d' "${qty}" "${tr}"
 
-  eval name=\"\${asset_name_${asset}}\"
-  eval meta=\"\${asset_meta_${asset}}\"
-  eval fp=\"\${asset_fp_${asset}}\"
+  eval "name=\"\${asset_name_${asset}}\""
+  eval "meta=\"\${asset_meta_${asset}}\""
+  eval "fp=\"\${asset_fp_${asset}}\""
 
-  [ -z "${name}" -o -z "${meta}" -o -z "${fp}" ] && ERROR 'ISSUE_NN: asset cannot be empty'
+  [ -z "${name}" ] || [ -z "${meta}" ] || [ -z "${fp}" ] && ERROR 'ISSUE_NN: asset cannot be empty'
 
-  eval user_x=\"\${user_${user_x}}\"
-  eval user_y=\"\${user_${user_y}}\"
+  eval "user_x=\"\${user_${user_x}}\""
+  eval "user_y=\"\${user_${user_y}}\""
 
-  [ -z "${user_x}" -o -z "${user_y}" ] && ERROR 'ISSUE_NN: users cannot be empty'
+  [ -z "${user_x}" ] || [ -z "${user_y}" ] && ERROR 'ISSUE_NN: users cannot be empty'
   [ X"${user_x}" = X"${user_y}" ] && ERROR 'ISSUE_NN: userss cannot be identical'
 
   # ------------------------------------------------------------------------------------------
@@ -555,10 +565,10 @@ ISSUE_NN() {
   VERBOSE 'issue_id: %s' "${issue_id}"
 
   n=0
-  while [ ${n} -lt ${tr} ]
+  while [ "${n}" -lt "${tr}" ]
   do
     n=$(( n + 1 ))
-    eval SET issue_id_${n} '.issueIds['"${n}"']'
+    eval SET "issue_id_${n}" '.issueIds['"${n}"']'
   done
 
   PAY "${issue_id}" "${pay}"
@@ -570,10 +580,10 @@ ISSUE_NN() {
   # ------------------------------------------------------------------------------------------
 
   n=0
-  while [ ${n} -lt ${tr} ]
+  while [ "${n}" -lt "${tr}" ]
   do
     n=$(( n + 1 ))
-    eval issue_id=\"\${issue_id_${n}}\"
+    eval "issue_id=\"\${issue_id_${n}}\""
 
     CLI -v "${user_x}" transfer -r "${user_y}" -t "${issue_id}"
     SET transfer .transfer
@@ -666,8 +676,7 @@ BLOCK_TRANSFER() {
 # check programs are available
 for p in ${programs}
 do
-  x=$(which "${p}")
-  [ $? -ne 0 ] && ERROR 'program: "%s" is not on the path' "${p}"
+  x=$(command -v "${p}") || ERROR 'program: "%s" is not on the path' "${p}"
   [ -x "${x}" ] || ERROR 'program: "%s" (%s) is not executable' "${p}" "${x}"
 done
 

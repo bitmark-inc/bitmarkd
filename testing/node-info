@@ -14,9 +14,16 @@ done
 ERROR()
 {
   printf 'error: '
-  printf "$@"
+  # shellcheck disable=SC2059
+  printf -- "$@"
   printf '\n'
   exit 1
+}
+
+VERBOSE()
+{
+  # shellcheck disable=SC2059
+  [ X"${verbose}" = X"yes" ] && printf -- "$@"
 }
 
 USAGE()
@@ -24,10 +31,11 @@ USAGE()
   if [ -n "$1" ]
   then
     printf 'error: '
-    printf "$@"
+    # shellcheck disable=SC2059
+    printf -- "$@"
     printf '\n'
   fi
-  echo usage: $(basename "$0") '[options] [N...|all]'
+  echo usage: "$(basename "$0")" '[options] [N...|all]'
   echo '       --help             -h            this message'
   echo '       --verbose          -v            more messages'
   echo '       --repeat           -r            clear screen and display like top'
@@ -35,10 +43,6 @@ USAGE()
   exit 1
 }
 
-VERBOSE()
-{
-  [ X"${verbose}" = X"yes" ] && printf "$@"
-}
 
 # main program
 verbose=no
@@ -124,7 +128,7 @@ ONCE() {
     r=$(curl -sk "https://${host}:${port}/bitmarkd/details" "https://${host}:${port}/bitmarkd/connections")
     rc="$?"
 
-    if [ -z "${r}" -o "${rc}" -ne 0 ]
+    if [ -z "${r}" ] || [ "${rc}" -ne 0 ]
     then
       #printf 'timeout: rc: %s  r: "%s"\n' "${rc}" "${r}"
       eval info_${n}='{}'
@@ -140,6 +144,7 @@ ONCE() {
   keys="${keys}\"\":9999}"
   printf '\n'
 
+  # shellcheck disable=SC2016
   filter='
     def rj($f;$w): ("          "+($f|tostring))[-$w:];
     def lj($f;$w): (($f|tostring)+"          ")[:$w];
@@ -164,8 +169,8 @@ ONCE() {
   for s in ${servers}
   do
     n=$((n + 1))
-    eval info="\"\${info_${n}}\""
-
+    eval "info=\"\${info_${n}}\""
+    # shellcheck disable=SC2154
     r=$(printf '%s' "${info}" | jq --raw-output --argjson keys "${keys}" "${filter}" 2> /dev/null)
     [ -z "${r}" ] && r='OFFLINE'
     printf '[%2d]: %s\n' "${n}" "${r}"
@@ -179,7 +184,7 @@ then
   do
     clear
     ONCE
-    sleep 15
+    sleep 10
   done
 else
   ONCE

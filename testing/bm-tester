@@ -16,7 +16,8 @@ session=LOCAL
 # error handler
 ERROR() {
   printf 'error: '
-  printf "$@"
+  # shellcheck disable=SC2059
+  printf -- "$@"
   printf '\n'
   exit 1
 }
@@ -28,15 +29,13 @@ pgrep
 killall
 run-bitmarkd
 run-recorderd
-run-discovery
 run-bitcoin
 run-litecoin
 '
 
 for c in ${list}
 do
-  x="$(which "${c}" 2> /dev/null)"
-  [ $? -ne 0 ] && ERROR 'missing program: %s' "${c}"
+  x="$(command -v "${c}" 2> /dev/null)" || ERROR 'missing program: %s' "${c}"
   [ -x "${x}" ] || ERROR 'program: "%s" is not executable' "${x}"
 done
 
@@ -65,7 +64,7 @@ DELETE_BLOCKS() {
   i="${first}"
 
   # delete blocks on each bitmarkd
-  while [ ${i} -le ${last} ]
+  while [ "${i}" -le "${last}" ]
   do
     run-bitmarkd --config=%${i} -- delete-down "${block}"
     i=$(( i + 1 ))
@@ -76,7 +75,8 @@ DELETE_BLOCKS() {
 START_ALL_BITMARKD() {
   local id command config other
   tmux list-panes -a -F '#{pane_id} #{pane_title}' | (
-    while read id command config other
+    # shellcheck disable=SC2034
+    while read -r id command config other
     do
       case "${command}" in
         (run-bitmarkd)
@@ -122,14 +122,13 @@ MAKE_WINDOW() {
 
 
 NEW_TEST_SESSION() {
-  local command command_list target window cmd1 cmd2 n m
+  local command command_list target window cmd1 cmd2 n
 
   # format: "tab1 tab2 tab3"
   #   tabN: tab-name:prog1,arg,arg:prog2,arg,arg
   # if two progs then split window vertically
   command_list='
 coin:run-bitcoin,--server:run-litecoin,--server
-dsc-upd:run-discovery
 rec:run-recorderd
 '
   n="${first}"
@@ -200,7 +199,7 @@ if [ -n "${1}" ]
 then
   n="$(printf '%s' -- "${1}" | tr -cd 0-9)"
   [ X"${n}" != X"${1}" ] && ERROR 'parameter: "%s" is not a number' "${1}"
-  [ ${n} -le 1 ] && ERROR 'parameter: "%d" is too small expect ≥ 2' "${n}"
+  [ "${n}" -le 1 ] && ERROR 'parameter: "%d" is too small expect ≥ 2' "${n}"
   blocks=yes
 fi
 
