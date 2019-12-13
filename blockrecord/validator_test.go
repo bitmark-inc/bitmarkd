@@ -11,6 +11,7 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
+	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
@@ -50,7 +51,7 @@ func TestValidBlockTimeSpacingWhenCurrentVersionInvalid(t *testing.T) {
 	assert.Equal(t, fault.InvalidBlockHeaderTimestamp, err, "invalid current block time spacing")
 }
 
-func TestValidIncomingDifficutyWhenDifficultyNotAppliedAndInvalid(t *testing.T) {
+func TestValidIncomingDifficultyWhenDifficultyNotAppliedAndInvalid(t *testing.T) {
 	difficulty.Current.Set(2)
 	incoming := difficulty.New()
 	incoming.Set(4)
@@ -59,12 +60,12 @@ func TestValidIncomingDifficutyWhenDifficultyNotAppliedAndInvalid(t *testing.T) 
 	header.Difficulty = incoming
 	header.Version = 2
 
-	err := blockrecord.ValidIncomingDifficulty(header)
+	err := blockrecord.ValidIncomingDifficulty(header, chain.Testing)
 
 	assert.Equal(t, nil, err, "invalid difficulty header checking")
 }
 
-func TestValidIncomingDifficutyWhenDifficultyAppliedAndValid(t *testing.T) {
+func TestValidIncomingDifficultyWhenDifficultyAppliedAndValid(t *testing.T) {
 	difficulty.Current.Set(2)
 	incoming := difficulty.New()
 	incoming.Set(2)
@@ -72,12 +73,12 @@ func TestValidIncomingDifficutyWhenDifficultyAppliedAndValid(t *testing.T) {
 	header := setupHeader()
 	header.Difficulty = incoming
 
-	err := blockrecord.ValidIncomingDifficulty(header)
+	err := blockrecord.ValidIncomingDifficulty(header, chain.Testing)
 
 	assert.Equal(t, nil, err, "valid incoming difficulty")
 }
 
-func TestValidIncomingDifficutyWhenDifficultyAppliedAndInValid(t *testing.T) {
+func TestValidIncomingDifficultyWhenDifficultyAppliedAndInValid(t *testing.T) {
 	difficulty.Current.Set(2)
 	incoming := difficulty.New()
 	incoming.Set(4)
@@ -85,9 +86,24 @@ func TestValidIncomingDifficutyWhenDifficultyAppliedAndInValid(t *testing.T) {
 	header := setupHeader()
 	header.Difficulty = incoming
 
-	err := blockrecord.ValidIncomingDifficulty(header)
+	err := blockrecord.ValidIncomingDifficulty(header, chain.Testing)
 
 	assert.Equal(t, fault.DifficultyDoesNotMatchCalculated, err, "invalid incoming difficulty")
+}
+
+func TestValidIncomingDifficultyWhenDifferentChain(t *testing.T) {
+	difficulty.Current.Set(2)
+	incoming := difficulty.New()
+	incoming.Set(4)
+
+	header := setupHeader()
+	header.Difficulty = incoming
+
+	err := blockrecord.ValidIncomingDifficulty(header, chain.Local)
+	assert.Equal(t, nil, err, "local difficulty not match")
+
+	err = blockrecord.ValidIncomingDifficulty(header, chain.Testing)
+	assert.Equal(t, fault.DifficultyDoesNotMatchCalculated, err, "local difficulty not match")
 }
 
 func TestIsDifficultyAppliedVersionWhenApplied(t *testing.T) {

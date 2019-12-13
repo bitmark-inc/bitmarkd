@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/bitmark-inc/bitmarkd/chain"
+
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/go-argon2"
@@ -67,7 +69,11 @@ func (digest Digest) IsEmpty() bool {
 }
 
 // IsValidByDifficulty - is digest valid by difficulty
-func (digest Digest) IsValidByDifficulty(diff *difficulty.Difficulty) bool {
+func (digest Digest) IsValidByDifficulty(diff *difficulty.Difficulty, chainName string) bool {
+	if chainName == chain.Local {
+		return true
+	}
+
 	reversedDigest := reversed(digest)
 	bigEndian := new(big.Int)
 	bigEndian.SetBytes(reversedDigest[:])
