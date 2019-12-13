@@ -36,10 +36,10 @@ type announcer struct {
 // initialise the announcer
 func (ann *announcer) initialise() error {
 
-	log := logger.New("announcer")
+	log := logger.New("p2pannouncer")
 	ann.log = log
 
-	log.Info("initialising…")
+	log.Info("p2pannouncer initialising…")
 
 	return nil
 }
