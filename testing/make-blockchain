@@ -568,7 +568,7 @@ ISSUE_NN() {
   while [ "${n}" -lt "${tr}" ]
   do
     n=$(( n + 1 ))
-    eval SET "issue_id_${n}" '.issueIds['"${n}"']'
+    SET "issue_id_${n}" '.issueIds['"${n}"']'
   done
 
   PAY "${issue_id}" "${pay}"
