@@ -31,7 +31,7 @@ func PublicKey(prvKey crypto.PrivKey) (crypto.PubKey, error) {
 	}
 	publicKey := prvKey.GetPublic()
 	if nil == publicKey {
-		return nil, fault.FailGenPublicKeyFromPrivateKey
+		return nil, fault.GenPublicKeyFromPrivateKey
 	}
 	return publicKey, nil
 }

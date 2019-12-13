@@ -13,6 +13,7 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/configuration"
+	"github.com/bitmark-inc/bitmarkd/p2p"
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/peer"
 	"github.com/bitmark-inc/bitmarkd/proof"
@@ -70,14 +71,18 @@ type Configuration struct {
 	PidFile       string       `gluamapper:"pidfile" json:"pidfile"`
 	Chain         string       `gluamapper:"chain" json:"chain"`
 	Nodes         string       `gluamapper:"nodes" json:"nodes"`
+	P2PNodes      string       `gluamapper:"p2pnodes" json:"p2pnodes"`
+	BridgeNode    bool         `gluamapper:"bridge_node" json:"bridge_node"`
 	Fastsync      bool         `gluamapper:"fast_sync" json:"fast_sync"`
 	Database      DatabaseType `gluamapper:"database" json:"database"`
 
 	PeerFile      string `gluamapper:"peer_file" json:"peer_file"`
+	P2PPeerFile   string `gluamapper:"p2ppeer_file" json:"p2ppeer_file"`
 	ReservoirFile string `gluamapper:"reservoir_file" json:"reservoir_file"`
 
 	ClientRPC  rpc.RPCConfiguration   `gluamapper:"client_rpc" json:"client_rpc"`
 	HttpsRPC   rpc.HTTPSConfiguration `gluamapper:"https_rpc" json:"https_rpc"`
+	P2P        p2p.Configuration      `gluamapper:"p2p" json:"p2p"`
 	Peering    peer.Configuration     `gluamapper:"peering" json:"peering"`
 	Publishing publish.Configuration  `gluamapper:"publishing" json:"publishing"`
 	Proofing   proof.Configuration    `gluamapper:"proofing" json:"proofing"`

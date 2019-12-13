@@ -58,6 +58,7 @@ type busses struct {
 	Connector  *Queue          `size:"50"`   // to control connector
 	Announce   *Queue          `size:"50"`   // to control the announcer
 	Blockstore *Queue          `size:"50"`   // to sequentially store blocks
+	P2P        *Queue          `size:"50"`   // to sequentially store blocks
 	TestQueue  *Queue          `size:"50"`   // for testing use
 }
 

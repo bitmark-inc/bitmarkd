@@ -112,7 +112,8 @@ func Initialise(configuration *Configuration, version string) error {
 		return fault.AlreadyInitialised
 	}
 	globalData.Log = logger.New("p2p")
-	globalData.Log.Info("starting…")
+	globalData.Log.Info("p2p starting…")
+	util.LogInfo(globalData.Log, util.CoCyan, fmt.Sprintf("p2pconfiguration:%v", configuration))
 	globalData.Setup(configuration, version)
 	globalData.Log.Info("start background…")
 

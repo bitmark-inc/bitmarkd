@@ -181,7 +181,7 @@ func (m *Machine) transitions() bool {
 				m.toState(cStateHighestBlock) // retry
 				break fetch_blocks
 			}
-			err = block.StoreIncoming(packedBlock, block.NoRescanVerified)
+			err = block.StoreIncoming(packedBlock, nil, block.NoRescanVerified)
 			if nil != err {
 				util.LogInfo(log, util.CoRed, fmt.Sprintf(
 					"store block number: %d  error: %s",

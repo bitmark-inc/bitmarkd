@@ -32,7 +32,7 @@ import (
 )
 
 const checkpointBackLimit = 2000
-const MaximumOutboundPeers = 32
+const MaximumOutboundPeers = 1
 const PaymentExpiry = 12 * time.Hour
 const HeaderSyncTimeout = time.Minute
 

@@ -21,6 +21,8 @@ import (
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/p2p"
+	"github.com/bitmark-inc/bitmarkd/p2pannounce"
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/peer"
 	"github.com/bitmark-inc/bitmarkd/proof"
@@ -236,24 +238,51 @@ func main() {
 		log.Criticalf("reservoir reload error: %s", err)
 		exitwithstatus.Message("reservoir reload error: %s", err)
 	}
-
+	bridgeNode := masterConfiguration.BridgeNode
 	// network announcements need to be before peer and rpc initialisation
 	log.Info("initialise announce")
 	nodesDomain := "" // initially none
-	switch masterConfiguration.Nodes {
+	if bridgeNode {
+		switch masterConfiguration.Nodes {
+		case "":
+			log.Critical("nodes cannot be blank choose from: none, chain or sub.domain.tld")
+			exitwithstatus.Message("nodes cannot be blank choose from: none, chain or sub.domain.tld")
+		case "none":
+			nodesDomain = "" // nodes disabled
+		case "chain":
+			switch cn := mode.ChainName(); cn { // ***** FIX THIS: is there a better way?
+			case chain.Local:
+				nodesDomain = "nodes.localdomain"
+			case chain.Testing:
+				nodesDomain = "nodes.test.bitmark.com"
+			case chain.Bitmark:
+				nodesDomain = "nodes.live.bitmark.com"
+			default:
+				log.Criticalf("unexpected chain name: %q", cn)
+				exitwithstatus.Message("unexpected chain name: %q", cn)
+			}
+		default:
+			// domain names are complex to validate so just rely on
+			// trying to fetch the TXT records for validation
+			nodesDomain = masterConfiguration.Nodes // just assume it is a domain name
+		}
+	}
+
+	p2pnodesDomain := "" // initially none
+	switch masterConfiguration.P2PNodes {
 	case "":
 		log.Critical("nodes cannot be blank choose from: none, chain or sub.domain.tld")
 		exitwithstatus.Message("nodes cannot be blank choose from: none, chain or sub.domain.tld")
 	case "none":
-		nodesDomain = "" // nodes disabled
+		p2pnodesDomain = "" // nodes disabled
 	case "chain":
 		switch cn := mode.ChainName(); cn { // ***** FIX THIS: is there a better way?
 		case chain.Local:
-			nodesDomain = "nodes.localdomain"
+			p2pnodesDomain = "nodes.localdomain"
 		case chain.Testing:
-			nodesDomain = "nodes.test.bitmark.com"
+			p2pnodesDomain = "nodes.test.bitmark.com"
 		case chain.Bitmark:
-			nodesDomain = "nodes.live.bitmark.com"
+			p2pnodesDomain = "nodes.live.bitmark.com"
 		default:
 			log.Criticalf("unexpected chain name: %q", cn)
 			exitwithstatus.Message("unexpected chain name: %q", cn)
@@ -261,9 +290,19 @@ func main() {
 	default:
 		// domain names are complex to validate so just rely on
 		// trying to fetch the TXT records for validation
-		nodesDomain = masterConfiguration.Nodes // just assume it is a domain name
+		p2pnodesDomain = masterConfiguration.P2PNodes // just assume it is a domain name
 	}
-	err = announce.Initialise(nodesDomain, masterConfiguration.PeerFile)
+
+	if bridgeNode {
+		err = announce.Initialise(nodesDomain, masterConfiguration.PeerFile)
+		if nil != err {
+			log.Criticalf("announce initialise error: %s", err)
+			exitwithstatus.Message("announce initialise error: %s", err)
+		}
+		defer announce.Finalise()
+	}
+
+	err = p2pannounce.Initialise(p2pnodesDomain, masterConfiguration.PeerFile)
 	if nil != err {
 		log.Criticalf("announce initialise error: %s", err)
 		exitwithstatus.Message("announce initialise error: %s", err)
@@ -285,13 +324,21 @@ func main() {
 		exitwithstatus.Message("zmq.AuthStart: error: %s", err)
 	}
 
-	// start up the peering background processes
-	err = peer.Initialise(&masterConfiguration.Peering, version, masterConfiguration.Fastsync)
-	if nil != err {
-		log.Criticalf("peer initialise error: %s", err)
-		exitwithstatus.Message("peer initialise error: %s", err)
+	if bridgeNode {
+		// start up the peering background processes
+		err = peer.Initialise(&masterConfiguration.Peering, version, masterConfiguration.Fastsync)
+		if nil != err {
+			log.Criticalf("peer initialise error: %s", err)
+			exitwithstatus.Message("peer initialise error: %s", err)
+		}
+		defer peer.Finalise()
 	}
-	defer peer.Finalise()
+	err = p2p.Initialise(&masterConfiguration.P2P, version)
+	if nil != err {
+		log.Criticalf("p2p initialise error: %s", err)
+		exitwithstatus.Message("p2p initialise error: %s", err)
+	}
+	defer p2p.Finalise()
 
 	// start up the publishing background processes
 	err = publish.Initialise(&masterConfiguration.Publishing, version)

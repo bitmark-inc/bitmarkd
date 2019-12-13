@@ -8,10 +8,10 @@ import (
 	"io"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/p2pannounce"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
@@ -171,9 +171,9 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 				return
 			}
 			if nType != "client" {
-				announce.AddPeer(reqID, reqMaAddrs, timestamp) // id, listeners, timestam
+				p2pannounce.AddPeer(reqID, reqMaAddrs, timestamp) // id, listeners, timestam
 			}
-			randPeerID, randListeners, randTs, err := announce.GetRandom(reqID)
+			randPeerID, randListeners, randTs, err := p2pannounce.GetRandom(reqID)
 			var randData [][]byte
 			if nil != err || util.IDEqual(reqID, randPeerID) { // No Random Node sendback this Node
 				randData, err = PackRegisterData(nodeChain, fn, nType, reqID, reqMaAddrs, time.Now())

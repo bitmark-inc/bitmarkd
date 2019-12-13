@@ -196,4 +196,5 @@ var (
 	NoAnnounceAddress          = e("no announce address")
 	AddInfoNil                 = e("AddrInfo is nil")
 	NoAddress                  = e("No address")
+	NotP2PCommand              = e("Not a P2PCommand")
 )

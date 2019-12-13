@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/p2pannounce"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -157,7 +157,7 @@ func (n *Node) RequestRegister(id peerlib.ID, stream *network.Stream, readwriter
 		if !util.IDEqual(randID, id) {
 			// peer return the info, register send. don't add into peer tree
 			if nType != "client" { // client does not in the peer Tree
-				announce.AddPeer(randID, randAddrs, randTs) // id, listeners, timestam
+				p2pannounce.AddPeer(randID, randAddrs, randTs) // id, listeners, timestam
 			}
 			util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("<<--RequestRegister to  Successful:%v", id.ShortString()))
 		}
@@ -207,29 +207,29 @@ func (n *Node) QueryBlockHeight(id peerlib.ID, stream *network.Stream, readwrite
 	if mode.ChainName() != chain {
 		util.LogWarn(n.Log, util.CoRed, "QueryBlockHeight:Different Chain  Error")
 		return 0, fault.DifferentChain
+	}
 
-		if fn == "" || len(parameters[0]) < 1 { // not enough  data return
-			util.LogWarn(n.Log, util.CoRed, "QueryBlockHeight:Not valid parameters  Error")
-			return 0, fmt.Errorf("Not valid parameters")
-		}
+	if fn == "" || len(parameters[0]) < 1 { // not enough  data return
+		util.LogWarn(n.Log, util.CoRed, "QueryBlockHeight:Not valid parameters  Error")
+		return 0, fmt.Errorf("Not valid parameters")
+	}
 
-		switch fn {
-		case "E":
-			errMessage, _ := UnpackListenError(parameters)
-			util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight Response Fail,  E msg:%v", errMessage))
-			return 0, errMessage
-		case "N":
-			if 8 != len(parameters[0]) {
-				util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight Response Success, but invalid response  param:%q", parameters[0]))
-				return 0, fmt.Errorf("highestBlock:  invalid response: %q", parameters[0])
-			}
-			height := binary.BigEndian.Uint64(parameters[0])
-			util.LogDebug(n.Log, util.CoGreen, fmt.Sprintf("<<--QueryBlockHeight ID:%v Success,", id.ShortString()))
-			return height, nil
-		default:
-			util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight unexpected response:%v", fn))
-			return 0, fmt.Errorf("unexpected response: %v", fn)
+	switch fn {
+	case "E":
+		errMessage, _ := UnpackListenError(parameters)
+		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight Response Fail,  E msg:%v", errMessage))
+		return 0, errMessage
+	case "N":
+		if 8 != len(parameters[0]) {
+			util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight Response Success, but invalid response  param:%q", parameters[0]))
+			return 0, fmt.Errorf("highestBlock:  invalid response: %q", parameters[0])
 		}
+		height := binary.BigEndian.Uint64(parameters[0])
+		util.LogDebug(n.Log, util.CoGreen, fmt.Sprintf("<<--QueryBlockHeight ID:%v Success,", id.ShortString()))
+		return height, nil
+	default:
+		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight unexpected response:%v", fn))
+		return 0, fmt.Errorf("unexpected response: %v", fn)
 	}
 }
 
@@ -286,7 +286,7 @@ func (n *Node) RemoteDigestOfHeight(id peerlib.ID, blockNumber uint64, stream *n
 	case "E":
 		errMessage, _ := UnpackListenError(parameters)
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("RemoteDigestOfHeight: Response Fail,  E msg:%v ID:%v", errMessage, id.ShortString()))
-		return blockdigest.Digest{}, fault.ErrorFromRunes(parameters[0])
+		return blockdigest.Digest{}, fault.BlockNotFound
 	case "H":
 		d := blockdigest.Digest{}
 		if blockdigest.Length == len(parameters[0]) {
@@ -360,7 +360,7 @@ func (n *Node) GetBlockData(id peerlib.ID, blockNumber uint64, stream *network.S
 	case "E":
 		errMessage, _ := UnpackListenError(parameters)
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("GetBlockData: Response Fail,  E msg:%v ID:%v", errMessage, id.ShortString()))
-		return nil, fault.ErrorFromRunes(parameters[0])
+		return nil, fault.BlockNotFound
 	case "B":
 		util.LogDebug(n.Log, util.CoGreen, fmt.Sprintf("<<--GetBlockData Success! ID:%v", id.ShortString()))
 		return parameters[0], nil
