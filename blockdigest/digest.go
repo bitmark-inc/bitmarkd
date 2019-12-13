@@ -62,21 +62,21 @@ func (digest Digest) Cmp(difficulty *big.Int) int {
 }
 
 //IsEmpty - is digest empty
-func (d Digest) IsEmpty() bool {
-	return d == (Digest{})
+func (digest Digest) IsEmpty() bool {
+	return digest == (Digest{})
 }
 
 // IsValidByDifficulty - is digest valid by difficulty
-func (d Digest) IsValidByDifficulty(diff *difficulty.Difficulty) bool {
-	reversedDigest := reversed(d)
+func (digest Digest) IsValidByDifficulty(diff *difficulty.Difficulty) bool {
+	reversedDigest := reversed(digest)
 	bigEndian := new(big.Int)
 	bigEndian.SetBytes(reversedDigest[:])
 	return bigEndian.Cmp(diff.BigInt()) <= 0
 }
 
-func (d Digest) SmallerDigestThan(target Digest) bool {
-	for i := len(d) - 1; i >= 0; i-- {
-		if d[i] < target[i] {
+func (digest Digest) SmallerDigestThan(target Digest) bool {
+	for i := len(digest) - 1; i >= 0; i-- {
+		if digest[i] < target[i] {
 			return true
 		}
 	}
@@ -84,10 +84,10 @@ func (d Digest) SmallerDigestThan(target Digest) bool {
 }
 
 // internal function to return a reversed byte order copy of a digest
-func reversed(d Digest) []byte {
+func reversed(digest Digest) []byte {
 	result := make([]byte, Length)
 	for i := 0; i < Length; i += 1 {
-		result[i] = d[Length-1-i]
+		result[i] = digest[Length-1-i]
 	}
 	return result
 }
