@@ -21,7 +21,7 @@ const (
 	MaximumNonceLength = 64
 )
 const (
-	requiredConfirmations = 3
+	requiredConfirmations = 1
 	maximumBlockRate      = 500.0 // blocks per second
 )
 
@@ -73,6 +73,11 @@ func Initialise(configuration *Configuration) error {
 
 	globalData.log = logger.New("payment")
 	globalData.log.Info("starting…")
+
+	if configuration.Mode == "noverify" {
+		globalData.initialised = true
+		return nil
+	}
 
 	// initialise the handler for each currency
 	globalData.handlers = make(map[string]currencyHandler)

@@ -308,7 +308,7 @@ end
 -- setup for every payment service
 M.payment = {
 
-    -- the mode should be one of the following: p2p, discovery, rest
+    -- the mode should be one of the following: p2p, discovery, rest, noverify
     mode = "p2p",
     bootstrap_nodes = p2p_bootstrap_nodes or{
         bitcoin = {},
