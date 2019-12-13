@@ -33,8 +33,8 @@ func ValidBlockTimeSpacingAtVersion(version uint16, timeSpacing uint64) error {
 	return nil
 }
 
-// ValidIncomingDifficuty - valid incoming difficulty
-func ValidIncomingDifficuty(header *Header) error {
+// ValidIncomingDifficulty - valid incoming difficulty
+func ValidIncomingDifficulty(header *Header) error {
 	if !IsDifficultyAppliedVersion(header.Version) {
 		return nil
 	}

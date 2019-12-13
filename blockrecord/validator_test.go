@@ -59,7 +59,7 @@ func TestValidIncomingDifficutyWhenDifficultyNotAppliedAndInvalid(t *testing.T) 
 	header.Difficulty = incoming
 	header.Version = 2
 
-	err := blockrecord.ValidIncomingDifficuty(header)
+	err := blockrecord.ValidIncomingDifficulty(header)
 
 	assert.Equal(t, nil, err, "invalid difficulty header checking")
 }
@@ -72,7 +72,7 @@ func TestValidIncomingDifficutyWhenDifficultyAppliedAndValid(t *testing.T) {
 	header := setupHeader()
 	header.Difficulty = incoming
 
-	err := blockrecord.ValidIncomingDifficuty(header)
+	err := blockrecord.ValidIncomingDifficulty(header)
 
 	assert.Equal(t, nil, err, "valid incoming difficulty")
 }
@@ -85,7 +85,7 @@ func TestValidIncomingDifficutyWhenDifficultyAppliedAndInValid(t *testing.T) {
 	header := setupHeader()
 	header.Difficulty = incoming
 
-	err := blockrecord.ValidIncomingDifficuty(header)
+	err := blockrecord.ValidIncomingDifficulty(header)
 
 	assert.Equal(t, fault.DifficultyDoesNotMatchCalculated, err, "invalid incoming difficulty")
 }

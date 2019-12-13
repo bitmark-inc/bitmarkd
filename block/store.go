@@ -103,7 +103,7 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 		globalData.log.Infof("previous difficulty: %f, current difficulty: %f", prevDifficulty, nextDifficulty)
 	}
 
-	if err := blockrecord.ValidIncomingDifficuty(header); err != nil {
+	if err := blockrecord.ValidIncomingDifficulty(header); err != nil {
 		globalData.log.Errorf("incoming block difficulty %f different from local %f", header.Difficulty.Value(), difficulty.Current.Value())
 		return err
 	}
