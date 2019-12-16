@@ -51,7 +51,7 @@ func (ann *announcer) Run(args interface{}, shutdown <-chan struct{}) {
 
 	log.Info("starting…")
 
-	queue := messagebus.Bus.Announce.Chan()
+	queue := messagebus.Bus.P2PAnnounce.Chan()
 
 	delay := time.After(announceInitial)
 loop:

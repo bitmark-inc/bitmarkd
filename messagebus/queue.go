@@ -54,12 +54,13 @@ type BroadcastQueue struct {
 // any item with a size option will be allocated that size
 // absent then default size is used
 type busses struct {
-	Broadcast  *BroadcastQueue `size:"1000"` // to broadcast to other nodes
-	Connector  *Queue          `size:"50"`   // to control connector
-	Announce   *Queue          `size:"50"`   // to control the announcer
-	Blockstore *Queue          `size:"50"`   // to sequentially store blocks
-	P2P        *Queue          `size:"50"`   // to sequentially store blocks
-	TestQueue  *Queue          `size:"50"`   // for testing use
+	Broadcast   *BroadcastQueue `size:"1000"` // to broadcast to other nodes
+	Connector   *Queue          `size:"50"`   // to control connector
+	Announce    *Queue          `size:"50"`   // to control the announcer
+	Blockstore  *Queue          `size:"50"`   // to sequentially store blocks
+	P2P         *Queue          `size:"50"`   // to sequentially store blocks
+	P2PAnnounce *Queue          `size:"50"`   // to control the announcer
+	TestQueue   *Queue          `size:"50"`   // for testing use
 }
 
 // Bus - all available message queues
