@@ -94,9 +94,9 @@ end
 
 
 -- set the directory for data and log files
---M.data_directory = arg[0]:match("^(.*/)")  -- dir from configuration file
+M.data_directory = arg[0]:match("^(.*/)")  -- dir from configuration file
 --M.data_directory = "."                     -- current directory
-M.data_directory = "/var/lib/bitmarkd"    -- absolute path
+--M.data_directory = "/var/lib/bitmarkd"    -- absolute path
 
 
 -- optional pid file if not absolute path then is created relative to
@@ -110,7 +110,8 @@ M.chain = chain
 -- select the default node configuration
 -- choose from: none, chain OR sub.domain.tld
 M.nodes = nodes or "chain"
-
+-- same as for above but for p2p package
+M.p2pnodes= nodes or "chain"
 -- optional reservoir file if not absolute path then is created relative to
 -- the data directory
 M.reservoir_file = "reservoir-" .. M.chain .. ".cache"
@@ -118,10 +119,14 @@ M.reservoir_file = "reservoir-" .. M.chain .. ".cache"
 -- optional peer file if not absolute path then is created relative to
 -- the data directory
 M.peer_file = "peers-" .. M.chain .. ".json"
+M.p2ppeer_file = "p2ppeers-" .. M.chain .. ".json"
 
 -- fast sync mode introduces a new mechanism for initial synchronization
 -- that speeds up the bitmark node to get it ready operating.
 M.fast_sync = true
+-- set bridge_node true to run both p2p and peer modules. 
+-- the bidge node  is a relay node which forward two networks messages
+M.bridge_node = false
 
 -- for JSON clients on TLS connection
 M.client_rpc = {
@@ -188,6 +193,26 @@ M.https_rpc = {
     private_key = read_file("rpc.key")
 }
 
+-- set  peer a bridge (a bridge node between bidirectional and unidirectional)
+M.p2p= {
+     -- set node types (servant|client)
+    nodetype = "servant",
+    -- set port numbers
+    -- for incoming peer connections
+     listen = {
+        add_port("0.0.0.0", 1136),
+        -- add_port("::", 1136),
+    },
+    announce = {
+        -- add_port("a.b.c.d", 1136),
+        -- add_port("x::y:z", 1136),
+        -- only use if minimum announce setup varible is set
+        -- or if PUBLIC_IPV[46] variables are set
+        make_announcements(1136),
+    },
+    private_key = read_file("p2ppeer.prv"),
+}
+
 
 -- peer-to-peer connections
 M.peering = {
@@ -200,7 +225,7 @@ M.peering = {
     -- for incoming peer connections
     listen = {
         add_port("0.0.0.0", 2136),
-        add_port("::", 2136),
+        -- add_port("::", 2136),
     },
 
     -- announce certain public IP:ports to network
@@ -233,7 +258,7 @@ M.publishing = {
 
     broadcast = {
         add_port("0.0.0.0", 2135),
-        add_port("::", 2135),
+        -- add_port("::", 2135),
     },
 
     -- ok to use the same keys as peer
@@ -257,11 +282,11 @@ M.proofing = {
 
     publish = {
         add_port("0.0.0.0", 2138),
-        add_port("::", 2138),
+        -- add_port("::", 2138),
     },
     submit = {
         add_port("0.0.0.0", 2139),
-        add_port("::", 2139),
+        -- add_port("::", 2139),
     },
 }
 
@@ -350,7 +375,14 @@ M.logging = {
         -- some specific logging channels: (there may be others)
         -- announce = "info",
         -- announcer = "info",
-        -- asset = "info",
+	p2p = "debug",
+        p2pannounce = "info",
+        p2pannouncer = "info",
+        p2pnodeslookup = "info",   
+        concensus = "info",
+       	voting = "debug",
+        votingMetrics = "debug",
+         -- asset = "info",
         -- asset-expiry = "info",
         -- bitcoin = "info",
         -- block = "info",
