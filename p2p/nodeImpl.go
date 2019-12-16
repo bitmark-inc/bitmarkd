@@ -19,7 +19,7 @@ import (
 )
 
 //Setup setup a node
-func (n *Node) Setup(configuration *Configuration, version string) error {
+func (n *Node) Setup(configuration *Configuration, version string, fastsync bool) error {
 	globalData.Version = version
 	globalData.NodeType = configuration.NodeType
 	globalData.PreferIPv6 = configuration.PreferIPv6
@@ -30,7 +30,6 @@ func (n *Node) Setup(configuration *Configuration, version string) error {
 		n.Log.Error(err.Error())
 		panic(err)
 	}
-
 	n.PrivateKey = prvKey
 	n.NewHost(configuration.NodeType, maAddrs, n.PrivateKey)
 
@@ -43,7 +42,7 @@ func (n *Node) Setup(configuration *Configuration, version string) error {
 
 	//Start a block & concensus machine
 	n.metricsVoting = NewMetricsPeersVoting(n)
-	n.concensusMachine = NewConcensusMachine(n, &n.metricsVoting)
+	n.concensusMachine = NewConcensusMachine(n, &n.metricsVoting, fastsync)
 
 	//Start Broadcsting
 	ps, err := pubsub.NewGossipSub(context.Background(), n.Host)

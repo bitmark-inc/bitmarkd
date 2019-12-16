@@ -35,7 +35,7 @@ const (
 	nodeInitial        = 5 * time.Second // startup delay before first send
 	nodeInterval       = 2 * time.Minute // regular
 	lowConn            = 8
-	maxConn            = 15
+	maxConn            = 25
 	connGraceTime      = 30 * time.Second
 	registerExpireTime = 2 * time.Minute
 	connectCancelTime  = 30 * time.Second
@@ -105,7 +105,7 @@ type Connected struct {
 }
 
 // Initialise initialize p2p module
-func Initialise(configuration *Configuration, version string) error {
+func Initialise(configuration *Configuration, version string, fastsync bool) error {
 	globalData.Lock()
 	defer globalData.Unlock()
 	if globalData.initialised {
@@ -114,7 +114,7 @@ func Initialise(configuration *Configuration, version string) error {
 	globalData.Log = logger.New("p2p")
 	globalData.Log.Info("p2p starting…")
 	util.LogInfo(globalData.Log, util.CoCyan, fmt.Sprintf("p2pconfiguration:%v", configuration))
-	globalData.Setup(configuration, version)
+	globalData.Setup(configuration, version, fastsync)
 	globalData.Log.Info("start background…")
 
 	processes := background.Processes{

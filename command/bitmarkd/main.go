@@ -333,7 +333,7 @@ func main() {
 		}
 		defer peer.Finalise()
 	}
-	err = p2p.Initialise(&masterConfiguration.P2P, version)
+	err = p2p.Initialise(&masterConfiguration.P2P, version, masterConfiguration.Fastsync)
 	if nil != err {
 		log.Criticalf("p2p initialise error: %s", err)
 		exitwithstatus.Message("p2p initialise error: %s", err)
