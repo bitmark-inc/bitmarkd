@@ -27,6 +27,7 @@ type Connection struct {
 // Configuration - a block of configuration data
 // this is read from the configuration file
 type Configuration struct {
+	Bridge             bool         `gluamapper:"bridge" json:"bridge"`
 	DynamicConnections bool         `gluamapper:"dynamic_connections" json:"dynamic_connections"`
 	PreferIPv6         bool         `gluamapper:"prefer_ipv6" json:"prefer_ipv6"`
 	Listen             []string     `gluamapper:"listen" json:"listen"`
@@ -51,7 +52,7 @@ type peerData struct {
 
 	clientCount int
 	blockHeight uint64
-
+	bridge      bool //bridge mode , pass zmq message to libp2p peer module
 	// for background
 	background *background.T
 
@@ -97,12 +98,16 @@ func Initialise(configuration *Configuration, version string, fastsync bool) err
 	if nil != err {
 		return err
 	}
-
+	// Bridge mode
+	globalData.bridge = configuration.Bridge
 	if err := globalData.lstn.initialise(privateKey, publicKey, configuration.Listen, version); nil != err {
 		return err
 	}
-	if err := globalData.conn.initialise(privateKey, publicKey, configuration.Connect, configuration.DynamicConnections, configuration.PreferIPv6, fastsync); nil != err {
-		return err
+
+	if !globalData.bridge { //TODO: implementation of unidirectional bridge zmq to libp2p
+		if err := globalData.conn.initialise(privateKey, publicKey, configuration.Connect, configuration.DynamicConnections, configuration.PreferIPv6, fastsync); nil != err {
+			return err
+		}
 	}
 
 	// all data initialised

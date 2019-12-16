@@ -121,7 +121,6 @@ func processSubscription(log *logger.L, command string, arguments [][]byte) {
 		if announce.AddPeer(arguments[0], arguments[1], timestamp) {
 			messagebus.Bus.Broadcast.Send("peer", arguments[0:3]...)
 		}
-
 	default:
 		log.Debugf("received unhandled command: %q arguments: %x", command, arguments)
 

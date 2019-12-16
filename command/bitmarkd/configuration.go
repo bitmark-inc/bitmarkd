@@ -72,7 +72,7 @@ type Configuration struct {
 	Chain         string       `gluamapper:"chain" json:"chain"`
 	Nodes         string       `gluamapper:"nodes" json:"nodes"`
 	P2PNodes      string       `gluamapper:"p2pnodes" json:"p2pnodes"`
-	BridgeNode    bool         `gluamapper:"bridge_node" json:"bridge_node"`
+	PeerModule    string       `gluamapper:"peer_module" json:"peer_module"`
 	Fastsync      bool         `gluamapper:"fast_sync" json:"fast_sync"`
 	Database      DatabaseType `gluamapper:"database" json:"database"`
 

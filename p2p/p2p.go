@@ -59,6 +59,7 @@ type StaticConnection struct {
 // this is read from the configuration file
 type Configuration struct {
 	NodeType           string             `gluamapper:"nodetype" json:"nodetype"`
+	Bridge             bool               `gluamapper:"bridge" json:"bridge"`
 	Port               int                `gluamapper:"port" json:"port"`
 	DynamicConnections bool               `gluamapper:"dynamic_connections" json:"dynamic_connections"`
 	PreferIPv6         bool               `gluamapper:"prefer_ipv6" json:"prefer_ipv6"`
@@ -79,6 +80,7 @@ type RegisterStatus struct {
 //Node  A p2p node
 type Node struct {
 	Version      string
+	Bridge       bool
 	NodeType     string
 	Host         p2pcore.Host
 	Announce     []ma.Multiaddr

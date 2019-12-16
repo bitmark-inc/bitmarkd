@@ -262,17 +262,20 @@ func (lstn *listener) processOne(i int, socket *zmq.Socket) bool {
 
 		var binTs [8]byte
 		binary.BigEndian.PutUint64(binTs[:], uint64(ts.Unix()))
+		if !globalData.bridge {
+			_, err = socket.Send(fn, zmq.SNDMORE)
+			logger.PanicIfError("Listener", err)
+			_, err = socket.Send(chain, zmq.SNDMORE)
+			logger.PanicIfError("Listener", err)
+			_, err = socket.SendBytes(publicKey, zmq.SNDMORE)
+			logger.PanicIfError("Listener", err)
+			_, err = socket.SendBytes(listeners, zmq.SNDMORE)
+			logger.PanicIfError("Listener", err)
+			_, err = socket.SendBytes(binTs[:], 0)
+			logger.PanicIfError("Listener", err)
+		} else { //bridge mode send to p2p module, there are p2p message
 
-		_, err = socket.Send(fn, zmq.SNDMORE)
-		logger.PanicIfError("Listener", err)
-		_, err = socket.Send(chain, zmq.SNDMORE)
-		logger.PanicIfError("Listener", err)
-		_, err = socket.SendBytes(publicKey, zmq.SNDMORE)
-		logger.PanicIfError("Listener", err)
-		_, err = socket.SendBytes(listeners, zmq.SNDMORE)
-		logger.PanicIfError("Listener", err)
-		_, err = socket.SendBytes(binTs[:], 0)
-		logger.PanicIfError("Listener", err)
+		}
 
 		return true
 

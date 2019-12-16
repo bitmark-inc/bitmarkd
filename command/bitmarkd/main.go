@@ -238,11 +238,11 @@ func main() {
 		log.Criticalf("reservoir reload error: %s", err)
 		exitwithstatus.Message("reservoir reload error: %s", err)
 	}
-	bridgeNode := masterConfiguration.BridgeNode
+	peerModule := masterConfiguration.PeerModule
 	// network announcements need to be before peer and rpc initialisation
 	log.Info("initialise announce")
 	nodesDomain := "" // initially none
-	if bridgeNode {
+	if peerModule == "zmq" || peerModule == "zmqlibp2p" {
 		switch masterConfiguration.Nodes {
 		case "":
 			log.Critical("nodes cannot be blank choose from: none, chain or sub.domain.tld")
@@ -269,31 +269,33 @@ func main() {
 	}
 
 	p2pnodesDomain := "" // initially none
-	switch masterConfiguration.P2PNodes {
-	case "":
-		log.Critical("nodes cannot be blank choose from: none, chain or sub.domain.tld")
-		exitwithstatus.Message("nodes cannot be blank choose from: none, chain or sub.domain.tld")
-	case "none":
-		p2pnodesDomain = "" // nodes disabled
-	case "chain":
-		switch cn := mode.ChainName(); cn { // ***** FIX THIS: is there a better way?
-		case chain.Local:
-			p2pnodesDomain = "nodes.localdomain"
-		case chain.Testing:
-			p2pnodesDomain = "nodes.test.bitmark.com"
-		case chain.Bitmark:
-			p2pnodesDomain = "nodes.live.bitmark.com"
+	if peerModule == "libp2p" || peerModule == "zmqlibp2p" || peerModule == "" {
+		switch masterConfiguration.P2PNodes {
+		case "":
+			log.Critical("nodes cannot be blank choose from: none, chain or sub.domain.tld")
+			exitwithstatus.Message("nodes cannot be blank choose from: none, chain or sub.domain.tld")
+		case "none":
+			p2pnodesDomain = "" // nodes disabled
+		case "chain":
+			switch cn := mode.ChainName(); cn { // ***** FIX THIS: is there a better way?
+			case chain.Local:
+				p2pnodesDomain = "p2pnodes.localdomain"
+			case chain.Testing:
+				p2pnodesDomain = "p2pnodes.test.bitmark.com"
+			case chain.Bitmark:
+				p2pnodesDomain = "p2pnodes.live.bitmark.com"
+			default:
+				log.Criticalf("unexpected chain name: %q", cn)
+				exitwithstatus.Message("unexpected chain name: %q", cn)
+			}
 		default:
-			log.Criticalf("unexpected chain name: %q", cn)
-			exitwithstatus.Message("unexpected chain name: %q", cn)
+			// domain names are complex to validate so just rely on
+			// trying to fetch the TXT records for validation
+			p2pnodesDomain = masterConfiguration.P2PNodes // just assume it is a domain name
 		}
-	default:
-		// domain names are complex to validate so just rely on
-		// trying to fetch the TXT records for validation
-		p2pnodesDomain = masterConfiguration.P2PNodes // just assume it is a domain name
 	}
 
-	if bridgeNode {
+	if peerModule == "zmq" || peerModule == "zmqlibp2p" {
 		err = announce.Initialise(nodesDomain, masterConfiguration.PeerFile)
 		if nil != err {
 			log.Criticalf("announce initialise error: %s", err)
@@ -302,12 +304,14 @@ func main() {
 		defer announce.Finalise()
 	}
 
-	err = p2pannounce.Initialise(p2pnodesDomain, masterConfiguration.PeerFile)
-	if nil != err {
-		log.Criticalf("announce initialise error: %s", err)
-		exitwithstatus.Message("announce initialise error: %s", err)
+	if peerModule == "libp2p" || peerModule == "zmqlibp2p" || peerModule == "" {
+		err = p2pannounce.Initialise(p2pnodesDomain, masterConfiguration.PeerFile)
+		if nil != err {
+			log.Criticalf("announce initialise error: %s", err)
+			exitwithstatus.Message("announce initialise error: %s", err)
+		}
+		defer p2pannounce.Finalise()
 	}
-	defer announce.Finalise()
 
 	// start payment services
 	err = payment.Initialise(&masterConfiguration.Payment)
@@ -324,7 +328,7 @@ func main() {
 		exitwithstatus.Message("zmq.AuthStart: error: %s", err)
 	}
 
-	if bridgeNode {
+	if peerModule == "zmq" || peerModule == "zmqlibp2p" {
 		// start up the peering background processes
 		err = peer.Initialise(&masterConfiguration.Peering, version, masterConfiguration.Fastsync)
 		if nil != err {
@@ -333,12 +337,14 @@ func main() {
 		}
 		defer peer.Finalise()
 	}
-	err = p2p.Initialise(&masterConfiguration.P2P, version, masterConfiguration.Fastsync)
-	if nil != err {
-		log.Criticalf("p2p initialise error: %s", err)
-		exitwithstatus.Message("p2p initialise error: %s", err)
+	if peerModule == "libp2p" || peerModule == "zmqlibp2p" || peerModule == "" {
+		err = p2p.Initialise(&masterConfiguration.P2P, version, masterConfiguration.Fastsync)
+		if nil != err {
+			log.Criticalf("p2p initialise error: %s", err)
+			exitwithstatus.Message("p2p initialise error: %s", err)
+		}
+		defer p2p.Finalise()
 	}
-	defer p2p.Finalise()
 
 	// start up the publishing background processes
 	err = publish.Initialise(&masterConfiguration.Publishing, version)
