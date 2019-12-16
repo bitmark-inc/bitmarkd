@@ -21,16 +21,28 @@ const (
 	MaximumNonceLength = 64
 )
 const (
-	requiredConfirmations = 3
+	requiredConfirmations = 1
 	maximumBlockRate      = 500.0 // blocks per second
 )
 
+type P2PCache struct {
+	BtcDirectory string `gluamapper:"btc_directory" json:"btc_directory"`
+	LtcDirectory string `gluamapper:"ltc_directory" json:"ltc_directory"`
+}
+
 // Configuration - structure for configuration file
 type Configuration struct {
-	Mode      string                  `gluamapper:"mode" hcl:"mode" json:"mode"`
-	Discovery *discoveryConfiguration `gluamapper:"discovery" hcl:"discovery" json:"discovery"`
-	Bitcoin   *currencyConfiguration  `gluamapper:"bitcoin" hcl:"bitcoin" json:"bitcoin"`
-	Litecoin  *currencyConfiguration  `gluamapper:"litecoin" hcl:"litecoin" json:"litecoin"`
+	Mode           string                      `gluamapper:"mode" hcl:"mode" json:"mode"`
+	P2PCache       P2PCache                    `gluamapper:"p2p_cache" json:"p2p_cache"`
+	BootstrapNodes bootstrapNodesConfiguration `gluamapper:"bootstrap_nodes" hcl:"bootstrap_nodes" json:"bootstrap_nodes"`
+	Discovery      *discoveryConfiguration     `gluamapper:"discovery" hcl:"discovery" json:"discovery"`
+	Bitcoin        *currencyConfiguration      `gluamapper:"bitcoin" hcl:"bitcoin" json:"bitcoin"`
+	Litecoin       *currencyConfiguration      `gluamapper:"litecoin" hcl:"litecoin" json:"litecoin"`
+}
+
+type bootstrapNodesConfiguration struct {
+	Bitcoin  []string `gluamapper:"bitcoin" hcl:"bitcoin" json:"bitcoin"`
+	Litecoin []string `gluamapper:"litecoin" hcl:"litecoin" json:"litecoin"`
 }
 
 type discoveryConfiguration struct {
@@ -67,6 +79,11 @@ func Initialise(configuration *Configuration) error {
 
 	globalData.log = logger.New("payment")
 	globalData.log.Info("starting…")
+
+	if configuration.Mode == "noverify" {
+		globalData.initialised = true
+		return nil
+	}
 
 	// initialise the handler for each currency
 	globalData.handlers = make(map[string]currencyHandler)
@@ -107,11 +124,15 @@ func Initialise(configuration *Configuration) error {
 	case "p2p":
 		globalData.log.Info("p2p watcher…")
 
-		btcP2pWatcher, err := newP2pWatcher(currency.Bitcoin)
+		btcP2pWatcher, err := newP2pWatcher(currency.Bitcoin,
+			configuration.P2PCache.BtcDirectory,
+			configuration.BootstrapNodes.Bitcoin)
 		if err != nil {
 			return err
 		}
-		ltcP2pWatcher, err := newP2pWatcher(currency.Litecoin)
+		ltcP2pWatcher, err := newP2pWatcher(currency.Litecoin,
+			configuration.P2PCache.LtcDirectory,
+			configuration.BootstrapNodes.Litecoin)
 		if err != nil {
 			return err
 		}

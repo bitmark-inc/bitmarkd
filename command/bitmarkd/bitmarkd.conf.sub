@@ -333,8 +333,16 @@ end
 -- setup for every payment service
 M.payment = {
 
-    -- the mode should be one of the following: p2p, discovery, rest
+    -- the mode should be one of the following: p2p, discovery, rest, noverify
     mode = "p2p",
+    p2p_cache = {
+        btc_directory = M.chain .. "-btc-cache",
+        ltc_directory = M.chain .. "-ltc-cache"
+    },
+    bootstrap_nodes = p2p_bootstrap_nodes or{
+        bitcoin = {},
+        litecoin = {}
+    },
 
     -- setup proxy addresses based on selected chain
     -- required if the mode is set to "rest"

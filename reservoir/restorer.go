@@ -66,8 +66,11 @@ func NewTransactionRestorer(unpacked interface{}, packed interface{}, handles Ha
 			ownerData:         handles.OwnerData,
 			blockOwnerPayment: handles.BlockOwnerPayment,
 		}, nil
+
+	default:
+		return nil, fmt.Errorf("unhandled restore tx type: %d", t)
 	}
-	return nil, nil
+	panic("cannot get here")
 }
 
 type assetRestoreData struct {

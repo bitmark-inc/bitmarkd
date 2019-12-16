@@ -13,6 +13,40 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
+func TestPaymentStorageHeightNotFound(t *testing.T) {
+	hash, err := chainhash.NewHashFromStr("d10ff375832ef8ca311669c17d87b435000f3542ee0aa36028c1902d9a40cd40")
+	if err != nil {
+		t.Fatalf("unable create hash: %s", err.Error())
+	}
+
+	store := PaymentStorage.Btc
+	height, err := store.GetHeight(hash)
+	if -1 != height {
+		t.Fatalf("height value should be -1")
+	}
+
+	if err != nil {
+		t.Fatalf("errors during get height: %s", err.Error())
+	}
+}
+
+func TestPaymentStorageHashNotFound(t *testing.T) {
+	store := PaymentStorage.Btc
+	hash, err := store.GetHash(987)
+
+	if hash != nil {
+		t.Fatal("hash should be nil")
+	}
+
+	if err == nil {
+		t.Fatal("the error should be hash not found")
+	}
+
+	if err.Error() != "hash not found" {
+		t.Fatal("the error should be hash not found")
+	}
+}
+
 func TestPaymentStorageStoreBlock(t *testing.T) {
 	db := PaymentStorage.Btc.DB()
 

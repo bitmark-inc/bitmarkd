@@ -4,9 +4,16 @@
 ERROR()
 {
   printf 'error: '
-  printf "$@"
+  # shellcheck disable=SC2059
+  printf -- "$@"
   printf '\n'
   exit 1
+}
+
+VERBOSE()
+{
+  # shellcheck disable=SC2059
+  [ X"${verbose}" = X"yes" ] && printf -- "$@"
 }
 
 USAGE()
@@ -14,10 +21,11 @@ USAGE()
   if [ -n "$1" ]
   then
     printf 'error: '
-    printf "$@"
+    # shellcheck disable=SC2059
+    printf -- "$@"
     printf '\n'
   fi
-  echo usage: $(basename "$0") '[options] discovery-arguments...'
+  echo usage: "$(basename "$0")" '[options] litecoin-arguments...'
   echo '       --help             -h            this message'
   echo '       --verbose          -v            more messages'
   echo '       --config=FILE      -c FILE       set configuration file ['"${config}"']'
@@ -62,7 +70,7 @@ case "$(uname)" in
 esac
 [ -x "${getopt}" ] || ERROR 'getopt: "%s" is not executable or not installed' "${getopt}"
 
-args=$(${getopt} -o hvc:gisD --long=help,verbose,config:,generate,info,server,debug -- "$@") || exit 1
+args=$(${getopt} -o hvc:gsD --long=help,verbose,config:,generate,server,debug -- "$@") || exit 1
 
 # replace the arguments with the parsed values
 eval set -- "${args}"
@@ -94,10 +102,6 @@ do
       generate=yes
       ;;
 
-    (-i|--info)
-      info=yes
-      ;;
-
     (-s|--server)
       server=yes
       ;;
@@ -125,6 +129,7 @@ done
 # verify arguments
 [ -f "${config}" ] || USAGE 'configuration file: "%s" does not exist' "${config}"
 config_dir=$(dirname "${config}")
+VERBOSE 'config dir: "%s"\n' "${config_dir}"
 
 # enable debuging
 [ X"${debug}" = X"yes" ] && set -x
@@ -166,7 +171,8 @@ run_again()
   program="$1"
   while :
   do
-    read -p "Run ${program} again? " yorn junk
+    # shellcheck disable=SC2034
+    read -r -p "Run ${program} again? " yorn junk
     case "${yorn}" in
       ([yY]|[yY][eE][sS])
         return 0

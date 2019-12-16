@@ -1,13 +1,19 @@
 #!/bin/sh
 # test bitmarkd
-dir=$(dirname "$0")
 
 ERROR()
 {
   printf 'error: '
-  printf "$@"
+  # shellcheck disable=SC2059
+  printf -- "$@"
   printf '\n'
   exit 1
+}
+
+VERBOSE()
+{
+  # shellcheck disable=SC2059
+  [ X"${verbose}" = X"yes" ] && printf -- "$@"
 }
 
 USAGE()
@@ -15,10 +21,11 @@ USAGE()
   if [ -n "$1" ]
   then
     printf 'error: '
-    printf "$@"
+    # shellcheck disable=SC2059
+    printf -- "$@"
     printf '\n'
   fi
-  echo usage: $(basename "$0") '[options] bitmarkd-arguments...'
+  echo usage: "$(basename "$0")" '[options] bitmarkd-arguments...'
   echo '       --help             -h            this message'
   echo '       --verbose          -v            more messages'
   echo '       --quiet            -q            less messages'
@@ -44,7 +51,6 @@ debug=no
 reset=no
 from=
 generate=no
-count=
 config="${xdg_home}/bitmarkd/bitmarkd.conf"
 generate_items='gen-peer-identity gen-rpc-cert gen-proof-identity'
 sleep=
@@ -124,7 +130,7 @@ do
     (-s|--sleep)
       sleep="$2"
       [ -z "${sleep}" ] && USAGE 'sleep cannot be blank'
-      [ -z "$(printf '%s' "${sleep}" | tr -d '[0-9]')" ] || USAGE 'sleep value: "%s" is not a number' "${sleep}"
+      [ -z "$(printf '%s' "${sleep}" | tr -d '[:digit:]')" ] || USAGE 'sleep value: "%s" is not a number' "${sleep}"
       shift
       ;;
 
@@ -149,10 +155,11 @@ do
 done
 
 # verify arguments
-[ X"${reset}" = X"no" -a -n "${from}" ] && USAGE 'conflicting --from requires --reset'
+[ X"${reset}" = X"no" ] && [ -n "${from}" ] && USAGE 'conflicting --from requires --reset'
 
 [ -f "${config}" ] || USAGE 'configuration file: "%s" does not exist' "${config}"
 config_dir=$(dirname "${config}")
+VERBOSE 'config dir: "%s"\n' "${config_dir}"
 
 # enable debuging
 [ X"${debug}" = X"yes" ] && set -x
@@ -197,7 +204,8 @@ run_again()
   program="$1"
   while :
   do
-    read -p "Run ${program} again? " yorn junk
+    # shellcheck disable=SC2034
+    read -r -p "Run ${program} again? " yorn junk
     case "${yorn}" in
       ([yY]|[yY][eE][sS])
         return 0
@@ -213,9 +221,10 @@ run_again()
 }
 
 # delay if running without arguments
-[ -n "${sleep}" -a $# -eq 0 ] && sleep "${sleep}"
+[ -n "${sleep}" ] && [ $# -eq 0 ] && sleep "${sleep}"
 
 # finally run the program
+cd "${config_dir}" || ERROR 'cannot cd "%s"' "${config_dir}"
 while :
 do
   [ X"${quiet}" = X"no" ] && printf 'configuration: %s\n' "${config}"

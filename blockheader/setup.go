@@ -112,8 +112,8 @@ func Set(height uint64, digest blockdigest.Digest, version uint16, timestamp uin
 // Get - return all header data
 func Get() (uint64, blockdigest.Digest, uint16, uint64) {
 
-	globalData.Lock()
-	defer globalData.Unlock()
+	globalData.RLock()
+	defer globalData.RUnlock()
 
 	return globalData.height, globalData.previousBlock, globalData.previousVersion, globalData.previousTimestamp
 }
@@ -121,8 +121,8 @@ func Get() (uint64, blockdigest.Digest, uint16, uint64) {
 // GetNew - return block data for initialising a new block
 // returns: previous block digest and the number for the new block
 func GetNew() (blockdigest.Digest, uint64) {
-	globalData.Lock()
-	defer globalData.Unlock()
+	globalData.RLock()
+	defer globalData.RUnlock()
 	nextBlockNumber := globalData.height + 1
 	return globalData.previousBlock, nextBlockNumber
 }
@@ -130,8 +130,8 @@ func GetNew() (blockdigest.Digest, uint64) {
 // Height - return current height
 func Height() uint64 {
 
-	globalData.Lock()
-	defer globalData.Unlock()
+	globalData.RLock()
+	defer globalData.RUnlock()
 
 	return globalData.height
 }

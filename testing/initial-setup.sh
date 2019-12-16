@@ -15,7 +15,8 @@ dns_txt='1 2'
 
 ERROR() {
   printf 'error: '
-  printf "$@"
+  # shellcheck disable=SC2059
+  printf -- "$@"
   printf '\n'
   exit 1
 }
@@ -24,7 +25,8 @@ SEP() {
   printf '==================================================\n'
   [ -z "${1}" ] && return
   printf '== '
-  printf "$@"
+  # shellcheck disable=SC2059
+  printf -- "$@"
   printf '\n'
   printf '==================================================\n'
 }
@@ -45,8 +47,7 @@ CHECK_PROGRAM() {
       [ -z "${p}" ] && break
       alt="${alt#*:}"
       printf '%2d: %-32s ' "${i}" "${p}"
-      x=$(which "${p}")
-      if [ $? -ne 0 ]
+      if ! x=$(command -v "${p}")
       then
         printf 'is not on the path\n'
       elif [ ! -x "${x}" ]
@@ -72,6 +73,7 @@ if [ -f "${cfg}" ]
 then
   printf 'using configuration override: %s\n' "${cfg}"
   sleep 2
+  # shellcheck source=/dev/null
   . "${cfg}"
 fi
 
@@ -80,7 +82,7 @@ if [ -n "${1}" ]
 then
   old_nd="${nodes_domain}"
   nodes_domain="${1}"
-  if [ -n "${old_nd}" -a X"${old_nd}" != "${nodes_domain}" ]
+  if [ -n "${old_nd}" ] && [ X"${old_nd}" != "${nodes_domain}" ]
   then
     printf 'command-line override: %s (was: %s}\n' "${nodes_domain}" "${old_nd}"
     sleep 2
@@ -90,6 +92,7 @@ fi
 [ -z "${nodes_domain}" ] && ERROR 'missing nodes-domain argument'
 
 xdg_home="${XDG_CONFIG_HOME}"
+# shellcheck disable=SC2016
 [ -z "${xdg_home}" ] && ERROR 'export XDG_CONFIG_HOME="${HOME}/.config"  or similar'
 [ -d "${xdg_home}" ] || ERROR 'missing directory: "%s" please create first' "${xdg_home}"
 
@@ -99,14 +102,14 @@ samples="${this_dir}/samples"
 
 # check programs
 ok=yes
-CHECK_PROGRAM bitmarkd bitmark-cli recorderd discovery bitmark-wallet
+CHECK_PROGRAM bitmarkd bitmark-cli recorderd bitmark-wallet
 CHECK_PROGRAM bitcoind bitcoin-cli
 CHECK_PROGRAM litecoind litecoin-cli
 CHECK_PROGRAM drill:host
 CHECK_PROGRAM awk jq lua52:lua5.2:lua53:lua5.3:lua
 CHECK_PROGRAM genbtcltc restart-all-bitmarkds bm-tester
 CHECK_PROGRAM generate-bitmarkd-configuration
-CHECK_PROGRAM run-bitcoin run-litecoin run-discovery
+CHECK_PROGRAM run-bitcoin run-litecoin
 CHECK_PROGRAM run-bitmarkd run-recorderd
 CHECK_PROGRAM make-blockchain node-info
 
@@ -138,7 +141,7 @@ esac
 [ -x "${getopt}" ] || ERROR 'getopt: "%s" is not executable or not installed' "${getopt}"
 
 # check coins setup
-for program in bitcoin litecoin discovery recorderd
+for program in bitcoin litecoin recorderd
 do
   d="${xdg_home}/${program}"
   mkdir -p "${d}" "${d}/log"
@@ -154,7 +157,7 @@ do
 done
 for i in ${more}
 do
-  eval "more_${i}"="\$(( more_${i} + 1 ))"
+  eval "more_${i}=\"\$(( more_${i} + 1 ))\""
 done
 
 opts=
@@ -167,16 +170,16 @@ SEP 'expect errors if here:'
 CONFIGURE() {
   for i in ${all}
   do
-    eval console=\"\${console_${i}}\"
-    eval more=\"\${more_${i}:-0}\"
+    eval "console=\"\${console_${i}}\""
+    eval "more=\"\${more_${i}:-0}\""
     opts=''
     OPT --chain=local
-    OPT --payment=discovery
+    OPT --payment=p2p
     OPT "$@"
     OPT --update
     [ X"${recorderd_public}" = X"yes" ] && OPT --recorderd-public
     [ X"${console}" = X"yes" ] && OPT --console
-    while [ ${more} -gt 0 ]
+    while [ "${more}" -gt 0 ]
     do
       OPT --more
       more=$(( more - 1 ))
@@ -202,7 +205,7 @@ done
 SEP 'checking the TXT records...'
 for p in drill host
 do
-  drill=$(which "${p}")
+  drill=$(command -v "${p}")
   [ -x "${drill}" ] && break
 done
 [ -x "${drill}" ] || ERROR 'cannot locate host or drill programs'

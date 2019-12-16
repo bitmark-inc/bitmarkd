@@ -124,17 +124,17 @@ func (l *LevelDBPaymentStore) Table(tableName string) *PaymentTable {
 // GetHeight returns height for a specific hash
 func (l *LevelDBPaymentStore) GetHeight(hash *chainhash.Hash) (int32, error) {
 	if hash == nil {
-		return 0, fault.HashCannotBeNil
+		return -1, fault.HashCannotBeNil
 	}
 
 	heightByte := l.Table("hash").Get(hash.CloneBytes())
 	if heightByte == nil {
-		return 0, nil
+		return -1, nil
 	}
 
 	h, err := strconv.ParseInt(string(heightByte), 16, 32)
 	if err != nil {
-		return 0, err
+		return -1, err
 	}
 
 	return int32(h), nil
