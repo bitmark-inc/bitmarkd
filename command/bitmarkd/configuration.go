@@ -39,8 +39,8 @@ const (
 	defaultTestingReservoirFile = "reservoir-" + chain.Testing + ".cache"
 	defaultLocalReservoirFile   = "reservoir-" + chain.Local + ".cache"
 
-	defaultBtcLocalDirectory = "btc-local"
-	defaultLtcLocalDirectory = "ltc-local"
+	defaultBitmarkBtcLocalDirectory = chain.Bitmark + "-btc-cache"
+	defaultBitmarkLtcLocalDirectory = chain.Bitmark + "-ltc-cache"
 
 	defaultLogDirectory = "log"
 	defaultLogFile      = "bitmarkd.log"
@@ -129,8 +129,8 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 
 		Payment: payment.Configuration{
 			P2PCache: payment.P2PCache{
-				BtcDirectory: defaultBtcLocalDirectory,
-				LtcDirectory: defaultLtcLocalDirectory,
+				BtcDirectory: defaultBitmarkBtcLocalDirectory,
+				LtcDirectory: defaultBitmarkLtcLocalDirectory,
 			},
 		},
 
