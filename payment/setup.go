@@ -172,8 +172,10 @@ func Finalise() error {
 	globalData.log.Info("shutting down…")
 	globalData.log.Flush()
 
-	// stop background
-	globalData.background.StopAndWait()
+	// stop background if one was started
+	if nil != globalData.background {
+		globalData.background.StopAndWait()
+	}
 
 	// finally...
 	globalData.initialised = false
