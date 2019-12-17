@@ -174,7 +174,7 @@ func main() {
 
 	// start the reservoir (verified transaction data cache)
 	log.Info("initialise reservoir")
-	err = reservoir.Initialise(masterConfiguration.ReservoirFile)
+	err = reservoir.Initialise(masterConfiguration.CacheDirectory)
 	if nil != err {
 		log.Criticalf("reservoir initialise error: %s", err)
 		exitwithstatus.Message("reservoir initialise error: %s", err)
@@ -263,7 +263,7 @@ func main() {
 		// trying to fetch the TXT records for validation
 		nodesDomain = masterConfiguration.Nodes // just assume it is a domain name
 	}
-	err = announce.Initialise(nodesDomain, masterConfiguration.PeerFile)
+	err = announce.Initialise(nodesDomain, masterConfiguration.CacheDirectory)
 	if nil != err {
 		log.Criticalf("announce initialise error: %s", err)
 		exitwithstatus.Message("announce initialise error: %s", err)

@@ -6,6 +6,7 @@
 package reservoir
 
 import (
+	"path"
 	"sync"
 	"time"
 
@@ -33,6 +34,9 @@ const (
 	maximumPendingPaidIssues   = blockrecord.MaximumTransactions * 2
 	maximumPendingTransactions = blockrecord.MaximumTransactions * 16
 )
+
+// the cache file
+const reservoirFile = "reservoir.cache"
 
 // single transactions of any type
 type transactionData struct {
@@ -124,7 +128,7 @@ type globalDataType struct {
 var globalData globalDataType
 
 // Initialise - create the cache
-func Initialise(reservoirDataFile string) error {
+func Initialise(cacheDirectory string) error {
 	globalData.Lock()
 	defer globalData.Unlock()
 
@@ -157,12 +161,12 @@ func Initialise(reservoirDataFile string) error {
 
 	globalData.enabled = true
 
-	globalData.filename = reservoirDataFile
+	globalData.filename = path.Join(cacheDirectory, reservoirFile)
 
 	// all data initialised
 	globalData.initialised = true
 
-	globalData.log.Debugf("load from file: %s", reservoirDataFile)
+	globalData.log.Debugf("load from file: %s", globalData.filename)
 
 	// start background processes
 	globalData.log.Info("start background…")

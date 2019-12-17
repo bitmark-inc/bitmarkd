@@ -7,6 +7,7 @@ package announce
 
 import (
 	"encoding/hex"
+	"path"
 	"sync"
 	"time"
 
@@ -22,6 +23,9 @@ const (
 	TypeRPC  = iota
 	TypePeer = iota
 )
+
+// file for storing saves peers
+const peerFile = "peers.json"
 
 // type for SHA3 fingerprints
 type fingerprintType [32]byte
@@ -80,7 +84,7 @@ var globalData announcerData
 // Initialise - set up the announcement system
 // pass a fully qualified domain for root node list
 // or empty string for no root nodes
-func Initialise(nodesDomain, peerFile string) error {
+func Initialise(nodesDomain, cacheDirectory string) error {
 
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -102,7 +106,7 @@ func Initialise(nodesDomain, peerFile string) error {
 
 	globalData.peerSet = false
 	globalData.rpcsSet = false
-	globalData.peerFile = peerFile
+	globalData.peerFile = path.Join(cacheDirectory, peerFile)
 
 	globalData.log.Info("start restoring peer data…")
 	if err := restorePeers(globalData.peerFile); err != nil {

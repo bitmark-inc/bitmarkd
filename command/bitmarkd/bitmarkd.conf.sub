@@ -99,7 +99,7 @@ end
 M.data_directory = "/var/lib/bitmarkd"    -- absolute path
 
 
--- optional pid file if not absolute path then is created relative to
+-- optional pid file if not absolute path then it is created relative to
 -- the data directory
 --M.pidfile = "bitmarkd.pid"
 
@@ -111,13 +111,9 @@ M.chain = chain
 -- choose from: none, chain OR sub.domain.tld
 M.nodes = nodes or "chain"
 
--- optional reservoir file if not absolute path then is created relative to
+-- cache directory if not absolute path then it is created relative to
 -- the data directory
-M.reservoir_file = "reservoir-" .. M.chain .. ".cache"
-
--- optional peer file if not absolute path then is created relative to
--- the data directory
-M.peer_file = "peers-" .. M.chain .. ".json"
+M.cache_directory = M.chain .. "-cache"
 
 -- fast sync mode introduces a new mechanism for initial synchronization
 -- that speeds up the bitmark node to get it ready operating.
