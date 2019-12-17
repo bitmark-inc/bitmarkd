@@ -39,7 +39,7 @@ func NewDummyMsgBlock(previousBlock *chainhash.Hash, timestamp *time.Time) *wire
 func TestOnPeerBlockEarlyBlocks(t *testing.T) {
 	testCurrency := currency.Bitcoin
 
-	w, err := newP2pWatcher(testCurrency, []string{})
+	w, err := newP2pWatcher(testCurrency, ".", []string{})
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
@@ -60,7 +60,7 @@ func TestOnPeerBlockEarlyBlocks(t *testing.T) {
 func TestOnPeerBlockHeaderNotFound(t *testing.T) {
 	testCurrency := currency.Bitcoin
 
-	w, err := newP2pWatcher(testCurrency, []string{})
+	w, err := newP2pWatcher(testCurrency, ".", []string{})
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
@@ -83,7 +83,7 @@ func TestOnPeerBlockHeaderNotFound(t *testing.T) {
 func TestOnPeerBlockProcessed(t *testing.T) {
 	testCurrency := currency.Bitcoin
 
-	w, err := newP2pWatcher(testCurrency, []string{})
+	w, err := newP2pWatcher(testCurrency, ".", []string{})
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
@@ -145,7 +145,7 @@ func TestExamineTx(t *testing.T) {
 
 	testCurrency := currency.Litecoin
 
-	w, err := newP2pWatcher(testCurrency, []string{})
+	w, err := newP2pWatcher(testCurrency, ".", []string{})
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
@@ -188,7 +188,7 @@ func TestExamineTxWithoutPayment(t *testing.T) {
 
 	testCurrency := currency.Litecoin
 
-	w, err := newP2pWatcher(testCurrency, []string{})
+	w, err := newP2pWatcher(testCurrency, ".", []string{})
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
@@ -203,7 +203,7 @@ func TestExamineTxWithoutPayment(t *testing.T) {
 func TestOnPeerNoHeaders(t *testing.T) {
 	testCurrency := currency.Litecoin
 
-	w, err := newP2pWatcher(testCurrency, []string{})
+	w, err := newP2pWatcher(testCurrency, ".", []string{})
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
@@ -228,7 +228,7 @@ func TestOnPeerNoHeaders(t *testing.T) {
 func TestOnPeerAllOldHeaders(t *testing.T) {
 	testCurrency := currency.Litecoin
 
-	w, err := newP2pWatcher(testCurrency, []string{})
+	w, err := newP2pWatcher(testCurrency, ".", []string{})
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
@@ -269,7 +269,7 @@ func TestOnPeerAllOldHeaders(t *testing.T) {
 func TestOnPeerInvalidPrevious(t *testing.T) {
 	testCurrency := currency.Litecoin
 
-	w, err := newP2pWatcher(testCurrency, []string{})
+	w, err := newP2pWatcher(testCurrency, ".", []string{})
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
@@ -309,7 +309,7 @@ func TestOnPeerInvalidPrevious(t *testing.T) {
 func TestRollbackToHeight(t *testing.T) {
 	testCurrency := currency.Litecoin
 
-	w, err := newP2pWatcher(testCurrency, []string{})
+	w, err := newP2pWatcher(testCurrency, ".", []string{})
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
