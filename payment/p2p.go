@@ -357,15 +357,24 @@ outer:
 		}
 	}
 
+	nodeCount := 0
+bootstrap_loop:
 	for _, hostPort := range w.bootstrapNodes {
 		conn, err := net.Dial("tcp", hostPort)
 		if err != nil {
 			w.log.Warnf("Can not establish connection to nodes. Error: %s", err)
+			continue bootstrap_loop
 		}
 
 		if _, err := w.peerNeogotiate(conn); err != nil {
 			w.log.Warnf("Can not establish connection to nodes. Error: %s", err)
+		} else {
+			nodeCount += 1
 		}
+	}
+
+	if len(w.bootstrapNodes) > 0 && nodeCount == 0 {
+		logger.Panicf("unable to connect to any %s nodes", w.currency)
 	}
 
 	w.connManager.Start()
@@ -438,7 +447,7 @@ func (w *p2pWatcher) getPeer() <-chan *peer.Peer {
 			}
 
 			peers <- p
-			break
+			break loop
 		}
 	}()
 	return peers
