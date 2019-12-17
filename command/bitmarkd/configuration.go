@@ -39,8 +39,13 @@ const (
 	defaultTestingReservoirFile = "reservoir-" + chain.Testing + ".cache"
 	defaultLocalReservoirFile   = "reservoir-" + chain.Local + ".cache"
 
-	defaultBitmarkBtcLocalDirectory = chain.Bitmark + "-btc-cache"
-	defaultBitmarkLtcLocalDirectory = chain.Bitmark + "-ltc-cache"
+	defaultBitmarkBtcCacheDirectory = chain.Bitmark + "-btc-cache"
+	defaultTestingBtcCacheDirectory = chain.Testing + "-btc-cache"
+	defaultLocalBtcCacheDirectory   = chain.Local + "-btc-cache"
+
+	defaultBitmarkLtcCacheDirectory = chain.Bitmark + "-ltc-cache"
+	defaultTestingLtcCacheDirectory = chain.Testing + "-ltc-cache"
+	defaultLocalLtcCacheDirectory   = chain.Local + "-ltc-cache"
 
 	defaultLogDirectory = "log"
 	defaultLogFile      = "bitmarkd.log"
@@ -129,8 +134,8 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 
 		Payment: payment.Configuration{
 			P2PCache: payment.P2PCache{
-				BtcDirectory: defaultBitmarkBtcLocalDirectory,
-				LtcDirectory: defaultBitmarkLtcLocalDirectory,
+				BtcDirectory: defaultBitmarkBtcCacheDirectory,
+				LtcDirectory: defaultBitmarkLtcCacheDirectory,
 			},
 		},
 
@@ -164,10 +169,14 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 			options.Database.Name = defaultTestingDatabase
 			options.PeerFile = defaultTestingPeerFile
 			options.ReservoirFile = defaultTestingReservoirFile
+			options.Payment.P2PCache.BtcDirectory = defaultTestingBtcCacheDirectory
+			options.Payment.P2PCache.LtcDirectory = defaultTestingLtcCacheDirectory
 		case chain.Local:
 			options.Database.Name = defaultLocalDatabase
 			options.PeerFile = defaultLocalPeerFile
 			options.ReservoirFile = defaultLocalReservoirFile
+			options.Payment.P2PCache.BtcDirectory = defaultLocalBtcCacheDirectory
+			options.Payment.P2PCache.LtcDirectory = defaultLocalLtcCacheDirectory
 		default:
 			return nil, fmt.Errorf("Chain: %s no default database setting", options.Chain)
 		}
