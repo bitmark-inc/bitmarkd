@@ -285,15 +285,19 @@ func (w *p2pWatcher) sync() {
 		// This is the loop for syncing process
 	SYNC_LOOP:
 		for {
-			p := w.getPeer()
-			w.log.Infof("Peer block height: %d, our block height: %d", p.LastBlock(), w.lastHeight)
-			err := w.syncHeaderFromPeer(p)
-
 			select {
 			case <-w.shutdown:
 				w.log.Trace("stop syncing…")
 				return
 			default:
+				p := w.getPeer(3)
+				if p == nil {
+					continue
+				}
+
+				w.log.Infof("Peer block height: %d, our block height: %d", p.LastBlock(), w.lastHeight)
+				err := w.syncHeaderFromPeer(p)
+
 				if err != nil {
 					switch err {
 					case fault.NoNewBlockHeadersFromPeer:
@@ -419,9 +423,10 @@ func (w *p2pWatcher) StopAndWait() {
 // iteration of a map
 // Note: This is not a perfect random mechanism. But what we need is
 // to have a way to have chances to get peers from different sources.
-func (w *p2pWatcher) getPeer() *peer.Peer {
+func (w *p2pWatcher) getPeer(retry int) *peer.Peer {
 loop:
-	for {
+	for retry > 0 {
+		retry -= 1
 		p := w.connectedPeers.First()
 		if p == nil {
 			time.Sleep(time.Second)
@@ -437,6 +442,7 @@ loop:
 
 		return p
 	}
+	return nil
 }
 
 // onPeerVerAck will be invoked right after a peer accepts our connection and will
