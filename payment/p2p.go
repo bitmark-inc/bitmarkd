@@ -281,7 +281,6 @@ func (w *p2pWatcher) sync() {
 
 	// This it the main loop that starts syncing loop and rollback if data is not consistent.
 	for !w.stopping {
-
 		// This is the loop for syncing process
 	SYNC_LOOP:
 		for {
@@ -289,12 +288,7 @@ func (w *p2pWatcher) sync() {
 			case <-w.shutdown:
 				w.log.Trace("stop syncing…")
 				return
-			default:
-				p := w.getPeer(3)
-				if p == nil {
-					continue
-				}
-
+			case p := <-w.getPeer():
 				w.log.Infof("Peer block height: %d, our block height: %d", p.LastBlock(), w.lastHeight)
 				err := w.syncHeaderFromPeer(p)
 
@@ -419,30 +413,35 @@ func (w *p2pWatcher) StopAndWait() {
 	w.Wait()
 }
 
-// getPeer will return a peer from connected peer randomly by the
-// iteration of a map
+// getPeer will return a peer channel which will pipe a peer from
+// connected peer randomly by the iteration of a map
+// the channel will closed immediately right after a peer is successfully submitted
 // Note: This is not a perfect random mechanism. But what we need is
 // to have a way to have chances to get peers from different sources.
-func (w *p2pWatcher) getPeer(retry int) *peer.Peer {
-loop:
-	for retry > 0 {
-		retry -= 1
-		p := w.connectedPeers.First()
-		if p == nil {
-			time.Sleep(time.Second)
-			continue loop
-		}
+func (w *p2pWatcher) getPeer() <-chan *peer.Peer {
+	peers := make(chan *peer.Peer)
+	go func() {
+		defer close(peers)
+	loop:
+		for {
+			p := w.connectedPeers.First()
+			if p == nil {
+				time.Sleep(time.Second)
+				continue loop
+			}
 
-		if w.lastHeight-p.LastBlock() > 100 {
-			p.Disconnect()
-			w.log.Tracef("Disconnect out-date peer: %s", p.Addr())
-			time.Sleep(time.Second)
-			continue loop
-		}
+			if w.lastHeight-p.LastBlock() > 100 {
+				p.Disconnect()
+				w.log.Tracef("Disconnect out-date peer: %s", p.Addr())
+				time.Sleep(time.Second)
+				continue loop
+			}
 
-		return p
-	}
-	return nil
+			peers <- p
+			break
+		}
+	}()
+	return peers
 }
 
 // onPeerVerAck will be invoked right after a peer accepts our connection and will
