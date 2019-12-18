@@ -1,3 +1,25 @@
+bitmarkd (0.12.4-beta.1-1ubuntu1) bionic; urgency=medium
+
+  * fail with critical error if cannot connect to any
+    currency bootstrap nodes
+  * move cache files "peers.json" "reservoir.cache" to sub-directory
+  * fix handling of all chain-specific directories, do not just depend on
+    database name being changed from default, check each one individually.
+  * BTC/LTC fix `sync` getting stuck in `getPeer` (#109)
+  * only stop payment background process if one was started
+  * Make p2p peer cache folder configurable (#108)
+  * add "noverify" mode, simply skips any payment setup
+    note: free issues will still verify as these only rely on the proof
+          P2P message, not on any payment.
+  * set payment "rest" mode confirmations same as p2p
+    i.e., to one (1) confirm
+  * transform litecoin addresses if necessary
+  * prevent crash if unknown transaction detected in reservoir reload
+  * reduce lock contention in blockheader block cache
+  * make p2p validation supporting regtest payment blockchains (#103)
+
+ -- Christopher Hall <hsw@bitmark.com>  Tue, 17 Dec 2019 09:34:52 +0000
+
 bitmarkd (0.12.3-1ubuntu1) bionic; urgency=medium
 
   * prevent nil pointer when port missed from static connections
