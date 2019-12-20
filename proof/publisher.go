@@ -147,9 +147,9 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 		return fault.InvalidProofSigningKey
 	}
 
-	// for local mode internal hasher
+	// when chain is local, use internal hasher
 	if mode.ChainName() == chain.Local {
-		if err := newInternalHasherRequester(pub); nil != err {
+		if err := newInternalHasherRequester(pub); err != nil {
 			return err
 		}
 		return nil
@@ -184,9 +184,10 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 
 func newInternalHasherRequester(pub *publisher) error {
 	var err error
+
 	pub.socket4, err = zmq.NewSocket(internalHasherProtocol)
 	if nil != err {
-		return fmt.Errorf("create internal hasher request socket with error: %s", err)
+		return fmt.Errorf("create internal request hasher socket with error: %s", err)
 	}
 
 	err = pub.socket4.Bind(internalHasherRequest)

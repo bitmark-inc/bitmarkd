@@ -41,9 +41,15 @@ func (sub *submission) initialise(configuration *Configuration) error {
 	log.Info("initialising…")
 
 	var err error
-	// for local mode internal hasher
+	// signalling channel
+	sub.sigReceive, sub.sigSend, err = zmqutil.NewSignalPair(submissionSignal)
+	if nil != err {
+		return err
+	}
+
+	// when chain is local, use internal hasher
 	if mode.ChainName() == chain.Local {
-		if err := newInternalHasherReplier(sub); nil != err {
+		if err := newInternalHasherReceiver(sub); err != nil {
 			return err
 		}
 		return nil
@@ -58,14 +64,9 @@ func (sub *submission) initialise(configuration *Configuration) error {
 	if nil != err {
 		return err
 	}
+
 	log.Tracef("server public:  %x", publicKey)
 	log.Tracef("server private: %x", privateKey)
-
-	// signalling channel
-	sub.sigReceive, sub.sigSend, err = zmqutil.NewSignalPair(submissionSignal)
-	if nil != err {
-		return err
-	}
 
 	// create connections
 	c, _ := util.NewConnections(configuration.Submit)
@@ -80,16 +81,17 @@ func (sub *submission) initialise(configuration *Configuration) error {
 	return nil
 }
 
-func newInternalHasherReplier(sub *submission) error {
+func newInternalHasherReceiver(sub *submission) error {
 	var err error
+
 	sub.socket4, err = zmq.NewSocket(internalHasherProtocol)
 	if nil != err {
-		return fmt.Errorf("create internal hasher reply socket with error: %s", err)
+		return fmt.Errorf("create internal reply hasher socket with error: %s", err)
 	}
 
 	err = sub.socket4.Connect(internalHasherReply)
 	if nil != err {
-		return fmt.Errorf("connect internal hasher reply socket with error: %s", err)
+		return fmt.Errorf("connect internal reply hasher socket with error: %s", err)
 	}
 
 	return nil
