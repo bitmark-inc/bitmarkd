@@ -7,6 +7,10 @@ package proof
 
 import (
 	"encoding/json"
+	"fmt"
+
+	"github.com/bitmark-inc/bitmarkd/chain"
+	"github.com/bitmark-inc/bitmarkd/mode"
 
 	zmq "github.com/pebbe/zmq4"
 
@@ -36,6 +40,15 @@ func (sub *submission) initialise(configuration *Configuration) error {
 
 	log.Info("initialising…")
 
+	var err error
+	// for local mode internal hasher
+	if mode.ChainName() == chain.Local {
+		if err := newInternalHasherReplier(sub); nil != err {
+			return err
+		}
+		return nil
+	}
+
 	// read the keys
 	privateKey, err := zmqutil.ReadPrivateKey(configuration.PrivateKey)
 	if nil != err {
@@ -62,6 +75,21 @@ func (sub *submission) initialise(configuration *Configuration) error {
 	if nil != err {
 		log.Errorf("bind error: %s", err)
 		return err
+	}
+
+	return nil
+}
+
+func newInternalHasherReplier(sub *submission) error {
+	var err error
+	sub.socket4, err = zmq.NewSocket(internalHasherProtocol)
+	if nil != err {
+		return fmt.Errorf("create internal hasher reply socket with error: %s", err)
+	}
+
+	err = sub.socket4.Connect(internalHasherReply)
+	if nil != err {
+		return fmt.Errorf("connect internal hasher reply socket with error: %s", err)
 	}
 
 	return nil
