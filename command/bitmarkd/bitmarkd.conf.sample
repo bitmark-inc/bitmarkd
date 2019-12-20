@@ -49,24 +49,28 @@ announce_ips = {
 ------------------------------------------------------------------------
 -- allow specific CIDRs to access the HTTPS monitoring port
 -- set nil to restict only to localhost
-https_allow = nil
 -- http_allow = {
 --     "127.0.0.0/8",
 --     "::1/128",
 -- }
 
-p2p_bootstrap_nodes = {
-    bitcoin = {
-        "127.0.0.1:18444",
-    },
-    litecoin = {
-        "127.0.0.1:19444",
-    }
-}
+------------------------------------------------------------------------
+-- to override the default "p2p" payment mode
+-- "p2p"       used as default if commented out
+-- "rest"      local bitcoind and litecoind with rest enabled
+-- "noverify"  turn off payment verification
+--payment_mode = "rest"
 
--- set log level default value
---log_level = "error"
+------------------------------------------------------------------------
+-- set log level default value (default is "error")
+--log_level = "info"
+--log_level = "warn"
 
+------------------------------------------------------------------------
+-- to disable IPv6 (default is true to enable IPv6)
+--prefer_ipv6 = false
+
+------------------------------------------------------------------------
 -- return the complete configuration
 local d = arg[0]:match("^(.*/)") or ""
 return dofile(d .. "bitmarkd.conf.sub")

@@ -22,9 +22,10 @@
 --     -- OR:     interface IPs
 --     announce_ips = interface_public_ips
 --
---     -- other variables for some more advanced features
---     -- normally can be left as nil:
---     --    https_allow, local_connections, log_level
+--     -- other global variables for some more advanced features
+--     -- normally these can be left as nil:
+--     --    https_allow, local_connections, payment_mode,
+--     --    prefer_ipv6, log_level
 --
 --     return dofile("bitmarkd.conf.sub")
 
@@ -47,6 +48,15 @@ function read_file(name)
     return r
 end
 
+-- ensure the prefer_ipv6 is setup correctly
+-- as a proper true or false boolean value
+if prefer_ipv6 == nil then
+    prefer_ipv6 = true
+else
+    prefer_ipv6 = not not prefer_ipv6
+end
+
+
 -- port selections based on chain selected
 -- bitmark:  XXXX
 -- testing: 1XXXX
@@ -60,11 +70,23 @@ function add_port(ip, port)
     if M.chain == "testing" then
         port_base = 10000
     end
+    local suffix = ":" .. (port_base + port_offset + port)
+    -- check for dual stack OS (via global os_name)
+    -- and listen on either "[::]" or "0.0.0.0"
+    if ip == "*" then
+        if os_name == "freebsd" then
+            return "[::]" .. suffix
+        elseif os_name == "linux" then
+            return "0.0.0.0" .. suffix
+        end
+        -- OS has separate IPv4 and IPv6 so need both
+        return "[::]" .. suffix, "0.0.0.0" .. suffix
+    end
     -- wrap unwrapped IPv6
     if ip:match(":") and ip:sub(1, 1) ~= "[" then
         ip = "[" .. ip .. "]"
     end
-    return ip .. ":" .. (port_base + port_offset + port)
+    return ip .. suffix
 end
 
 -- Let the node announce itself (ip:port) to the network.
@@ -126,8 +148,7 @@ M.client_rpc = {
     bandwidth = 25000000,
 
     listen = {
-        add_port("0.0.0.0", 2130),
-        add_port("::", 2130)
+        add_port("*", 2130),
     },
 
     -- announce certain public IP:ports to network
@@ -158,8 +179,7 @@ M.https_rpc = {
     -- GET  /bitmarkd/connections  (protected: list of all outgoing peer connections)
 
     listen = {
-        add_port("0.0.0.0", 2131),
-        add_port("::", 2131),
+        add_port("*", 2131),
     },
 
     -- IP networks in CIDR form that can access the /bitmarkd/* GET APIs
@@ -191,12 +211,11 @@ M.peering = {
     dynamic_connections = true,
 
     -- set to false to only use IPv4 for outgoing connections
-    prefer_ipv6 = true,
+    prefer_ipv6 = prefer_ipv6,
 
     -- for incoming peer connections
     listen = {
-        add_port("0.0.0.0", 2136),
-        add_port("::", 2136),
+        add_port("*", 2136),
     },
 
     -- announce certain public IP:ports to network
@@ -228,8 +247,7 @@ M.peering = {
 M.publishing = {
 
     broadcast = {
-        add_port("0.0.0.0", 2135),
-        add_port("::", 2135),
+        add_port("*", 2135),
     },
 
     -- ok to use the same keys as peer
@@ -252,12 +270,10 @@ M.proofing = {
     },
 
     publish = {
-        add_port("0.0.0.0", 2138),
-        add_port("::", 2138),
+        add_port("*", 2138),
     },
     submit = {
-        add_port("0.0.0.0", 2139),
-        add_port("::", 2139),
+        add_port("*", 2139),
     },
 }
 
@@ -301,16 +317,29 @@ function litecoin_port()
     return port
 end
 
+-- special override for a local regression testing node
+if M.chain == "local" and p2p_bootstrap_nodes == nil then
+    p2p_bootstrap_nodes = {
+        bitcoin = {
+            "127.0.0.1:18444",
+        },
+        litecoin = {
+            "127.0.0.1:19444",
+        },
+    }
+end
+
+
 -- setup for every payment service
 M.payment = {
 
-    -- the mode should be one of the following: p2p, discovery, rest, noverify
-    mode = "p2p",
+    -- the mode must be one of the following: p2p, discovery, rest, noverify
+    mode = payment_mode or "p2p",
     p2p_cache = {
         btc_directory = M.chain .. "-btc-cache",
         ltc_directory = M.chain .. "-ltc-cache"
     },
-    bootstrap_nodes = p2p_bootstrap_nodes or{
+    bootstrap_nodes = p2p_bootstrap_nodes or {
         bitcoin = {},
         litecoin = {}
     },

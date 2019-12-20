@@ -348,14 +348,6 @@ do
       print "    test = \"" litecoin_test "\","
       print "    live = \"" litecoin_live "\","
       print "}"
-      print "p2p_bootstrap_nodes = {"
-      print "    bitcoin = {"
-      print "        \"127.0.0.1:18444\","
-      print "    },"
-      print "    litecoin = {"
-      print "        \"127.0.0.1:19444\","
-      print "    },"
-      print "}"
     }
 
     # port_offset for bitmarkds 2..N
@@ -372,10 +364,11 @@ do
       if (!check_logging) {
         # ensure "local" uses localhost
         if (chain == "local" && !skip_proofing) {
-          if (match($0, "add_port[(]\"0[.]0[.]0[.]0\",")) {
-             sub("\"0[.]0[.]0[.]0\"", "\"127.0.0.1\"", $0)
-          } else if (match($0, "add_port[(]\"::\",")) {
-             sub("\"::\"", "\"::1\"", $0)
+          if (match($0, "add_port[(]\"[*]\",")) {
+             l6 = $0
+             sub("\"[*]\"", "\"::1\"", l6)
+             print l6
+             sub("\"[*]\"", "\"127.0.0.1\"", $0)
           }
         }
         if (!drop_this) {
