@@ -77,7 +77,7 @@ func Initialise(configuration *Configuration) error {
 		return err
 	}
 
-	// create the job queue
+	// create tae job queue
 	initialiseJobQueue()
 
 	// all data initialised

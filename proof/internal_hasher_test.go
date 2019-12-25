@@ -20,41 +20,42 @@ import (
 const (
 	endpointRequestStr         = "inproc://internal-hasher-request-test"
 	endpointReplyStr           = "inproc://internal-hasher-reply-test"
-	testStr1                   = "inproc://test1"
-	testStr2                   = "inproc://test2"
+	testInproc1                = "inproc://test1"
+	testInproc2                = "inproc://test2"
 	wrongEndpointRequestString = "tcp://wrong-request"
 	wrongEndpointReplyString   = "tcp://wrong-reply"
 	nonceStart                 = 1
+	protocol                   = zmq.PAIR
 )
 
 func TestNewInternalHasherForTestWhenInvalidSameString(t *testing.T) {
-	_, err := proof.NewInternalHasherForTest(testStr1, testStr1)
+	_, err := proof.NewInternalHasherForTest(testInproc1, testInproc1)
 	assert.NotNil(t, err, "wrong new internal hasher")
 }
 
 func TestInternalHasherInitialiseWhenValidString(t *testing.T) {
-	h, _ := proof.NewInternalHasherForTest(testStr1, testStr2)
+	h, _ := proof.NewInternalHasherForTest(testInproc1, testInproc2)
 	err := h.Initialise()
 
 	assert.Equal(t, nil, err, "wrong initialise")
 }
 
 func TestNewInternalHasherInitialiseWhenInvalidString(t *testing.T) {
-	h1, _ := proof.NewInternalHasherForTest(wrongEndpointRequestString, testStr1)
+	h1, _ := proof.NewInternalHasherForTest(wrongEndpointRequestString, testInproc1)
 	err := h1.Initialise()
 
 	assert.NotNil(t, err, "wrong initialise")
 
-	h2, _ := proof.NewInternalHasherForTest(testStr1, wrongEndpointReplyString)
+	h2, _ := proof.NewInternalHasherForTest(testInproc1, wrongEndpointReplyString)
 	err = h2.Initialise()
 
 	assert.NotNil(t, err, "wrong initialise")
 }
 
 func TestInternalHasherStart(t *testing.T) {
-	sender, _ := zmq.NewSocket(zmq.PAIR)
+	sender, _ := zmq.NewSocket(protocol)
 	_ = sender.Bind(endpointRequestStr)
-	receiver, _ := zmq.NewSocket(zmq.PAIR)
+	receiver, _ := zmq.NewSocket(protocol)
 	_ = receiver.Connect(endpointReplyStr)
 
 	h, _ := proof.NewInternalHasherForTest(endpointRequestStr, endpointReplyStr)

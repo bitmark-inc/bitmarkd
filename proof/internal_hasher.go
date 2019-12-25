@@ -71,7 +71,7 @@ func (h *internalHasher) Start() {
 			nonce := make([]byte, blockrecord.NonceSize)
 			binary.LittleEndian.PutUint64(nonce, uint64(i))
 
-			sendData := struct {
+			reply := struct {
 				Request string
 				Job     string
 				Packed  []byte
@@ -81,9 +81,9 @@ func (h *internalHasher) Start() {
 				Packed:  nonce,
 			}
 
-			data, err := json.Marshal(sendData)
+			replyData, err := json.Marshal(reply)
 
-			_, err = h.replySocket.SendBytes(data, 0)
+			_, err = h.replySocket.SendBytes(replyData, 0)
 			if nil != err {
 				continue
 			}
