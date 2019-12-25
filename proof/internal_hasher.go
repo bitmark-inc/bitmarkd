@@ -81,7 +81,7 @@ func (h *internalHasher) Start() {
 				Packed:  nonce,
 			}
 
-			replyData, err := json.Marshal(reply)
+			replyData, _ := json.Marshal(reply)
 
 			_, err = h.replySocket.SendBytes(replyData, 0)
 			if nil != err {
