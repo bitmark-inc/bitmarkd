@@ -70,7 +70,7 @@ func NewTransactionRestorer(unpacked interface{}, packed interface{}, handles Ha
 	default:
 		return nil, fmt.Errorf("unhandled restore tx type: %d", t)
 	}
-	panic("cannot get here")
+	//panic("cannot get here")
 }
 
 type assetRestoreData struct {

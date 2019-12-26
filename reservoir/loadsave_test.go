@@ -38,7 +38,8 @@ type handles struct {
 }
 
 const (
-	dataFile      = "test.cache"
+	dataDirectory = "test-load-save-data"
+	dataFile      = dataDirectory + "/reservoir.cache"
 	beforeBlock   = 5
 	shareQuantity = 100
 )
@@ -291,7 +292,7 @@ func writeEndOfFile(f *os.File) {
 }
 
 func teardownDataFile() {
-	_ = os.Remove(dataFile)
+	_ = os.RemoveAll(dataDirectory)
 }
 
 func setupMocks(t *testing.T) ([]*gomock.Controller, handles, reservoir.Handles) {
@@ -349,6 +350,7 @@ func writeAssetIssuance(f *os.File) {
 }
 
 func setupAssetIssuanceBackupFile() {
+	_ = os.Mkdir(dataDirectory, 0700)
 	f, _ := os.OpenFile(dataFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	defer f.Close()
 
@@ -381,7 +383,7 @@ func TestLoadFromFileWhenAssetIssuance(t *testing.T) {
 	data, _ := currencyMap.Pack(true)
 	mockHandles.blockOwnerPayment.EXPECT().Get(gomock.Any()).Return(data).Times(1)
 
-	_ = reservoir.Initialise(dataFile)
+	_ = reservoir.Initialise(dataDirectory)
 
 	err := reservoir.LoadFromFile(reservoirHandles)
 	assert.Equal(t, nil, err, "wrong error")
@@ -400,6 +402,7 @@ func writeAssetData(f *os.File) {
 }
 
 func setupAssetDataBackupFile() {
+	_ = os.Mkdir(dataDirectory, 0700)
 	f, _ := os.OpenFile(dataFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	defer f.Close()
 
@@ -447,6 +450,7 @@ func writeTransferUnratified(f *os.File) {
 }
 
 func setupTransferUnratifiedBackupFile() {
+	_ = os.Mkdir(dataDirectory, 0700)
 	f, _ := os.OpenFile(dataFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	defer f.Close()
 
@@ -507,6 +511,7 @@ func writeShareIssuance(f *os.File) {
 }
 
 func setupShareBackupFile() {
+	_ = os.Mkdir(dataDirectory, 0700)
 	f, _ := os.OpenFile(dataFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	defer f.Close()
 
@@ -570,6 +575,7 @@ func writeGrant(f *os.File) {
 }
 
 func setupGrantBackupFile() {
+	_ = os.Mkdir(dataDirectory, 0700)
 	f, _ := os.OpenFile(dataFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	defer f.Close()
 
@@ -622,6 +628,7 @@ func writeSwap(f *os.File) {
 }
 
 func setupSwapBackupFile() {
+	_ = os.Mkdir(dataDirectory, 0700)
 	f, _ := os.OpenFile(dataFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	defer f.Close()
 

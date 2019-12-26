@@ -102,11 +102,11 @@ var (
 		Net:         wire.BitcoinNet(0xdbb6c0fb),
 		DefaultPort: "9333",
 		DNSSeeds: []chaincfg.DNSSeed{
-			{"seed-a.litecoin.loshan.co.uk", true},
-			{"dnsseed.thrasher.io", true},
-			{"dnsseed.litecointools.com", false},
-			{"dnsseed.litecoinpool.org", false},
-			{"dnsseed.koin-project.com", false},
+			{Host: "seed-a.litecoin.loshan.co.uk", HasFiltering: true},
+			{Host: "dnsseed.thrasher.io", HasFiltering: true},
+			{Host: "dnsseed.litecointools.com", HasFiltering: false},
+			{Host: "dnsseed.litecoinpool.org", HasFiltering: false},
+			{Host: "dnsseed.koin-project.com", HasFiltering: false},
 		},
 
 		// Chain parameters
@@ -212,9 +212,9 @@ var (
 		Net:         wire.BitcoinNet(0xf1c8d2fd),
 		DefaultPort: "19335",
 		DNSSeeds: []chaincfg.DNSSeed{
-			{"testnet-seed.litecointools.com", false},
-			{"seed-b.litecoin.loshan.co.uk", true},
-			{"dnsseed-testnet.thrasher.io", true},
+			{Host: "testnet-seed.litecointools.com", HasFiltering: false},
+			{Host: "seed-b.litecoin.loshan.co.uk", HasFiltering: true},
+			{Host: "dnsseed-testnet.thrasher.io", HasFiltering: true},
 		},
 
 		// Chain parameters
