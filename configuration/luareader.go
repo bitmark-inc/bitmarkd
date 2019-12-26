@@ -7,6 +7,7 @@ package configuration
 
 import (
 	"net"
+	"runtime"
 
 	"github.com/yuin/gluamapper"
 	lua "github.com/yuin/gopher-lua"
@@ -82,6 +83,10 @@ func ParseConfigurationFile(fileName string, config interface{}) error {
 		}
 		L.SetGlobal("interface_public_ips", addr)
 	}
+
+	// some information about the platform
+	L.SetGlobal("arch_name", lua.LString(runtime.GOARCH))
+	L.SetGlobal("os_name", lua.LString(runtime.GOOS))
 
 	// execute configuration
 	if err := L.DoFile(fileName); err != nil {

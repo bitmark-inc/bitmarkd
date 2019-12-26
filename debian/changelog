@@ -1,3 +1,12 @@
+bitmarkd (0.12.4-beta.2-1ubuntu1) bionic; urgency=medium
+
+  * simplify configuration for prefer_ipv6 and setting "*" as listen all
+    interfaces
+  * global variables for config: `os_name` and `arch_name` to be able to
+    determine type of IPv6 stack
+
+ -- Christopher Hall <hsw@bitmark.com>  Fri, 20 Dec 2019 08:50:30 +0000
+
 bitmarkd (0.12.4-beta.1-1ubuntu1) bionic; urgency=medium
 
   * fail with critical error if cannot connect to any
