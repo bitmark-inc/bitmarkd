@@ -99,7 +99,7 @@ var (
 
 	ltcMainNetParams = &chaincfg.Params{
 		Name:        "mainnet",
-		Net:         wire.MainNet,
+		Net:         wire.BitcoinNet(0xdbb6c0fb),
 		DefaultPort: "9333",
 		DNSSeeds: []chaincfg.DNSSeed{
 			{"seed-a.litecoin.loshan.co.uk", true},
