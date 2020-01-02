@@ -21,11 +21,11 @@ import (
 func makeSelfSignedCertificate(name string, certificateFileName string, privateKeyFileName string, override bool, extraHosts []string) error {
 
 	if util.EnsureFileExists(certificateFileName) {
-		return fault.ErrCertificateFileAlreadyExists
+		return fault.CertificateFileAlreadyExists
 	}
 
 	if util.EnsureFileExists(privateKeyFileName) {
-		return fault.ErrKeyFileAlreadyExists
+		return fault.KeyFileAlreadyExists
 	}
 
 	org := "bitmarkd self signed cert for: " + name

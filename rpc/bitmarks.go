@@ -8,6 +8,8 @@ package rpc
 import (
 	"encoding/hex"
 
+	"github.com/bitmark-inc/bitmarkd/storage"
+
 	"golang.org/x/time/rate"
 
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -57,9 +59,9 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 	issueCount := len(arguments.Issues)
 
 	if assetCount > reservoir.MaximumIssues || issueCount > reservoir.MaximumIssues {
-		return fault.ErrTooManyItemsToProcess
+		return fault.TooManyItemsToProcess
 	} else if 0 == assetCount && 0 == issueCount {
-		return fault.ErrMissingParameters
+		return fault.MissingParameters
 	}
 
 	count := assetCount + issueCount
@@ -71,7 +73,7 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 	}
 
 	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
+		return fault.NotAvailableDuringSynchronise
 	}
 
 	log.Infof("Bitmarks.Create: %+v", arguments)
@@ -89,7 +91,7 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 	var stored *reservoir.IssueInfo
 	duplicate := false
 	if issueCount > 0 {
-		stored, duplicate, err = reservoir.StoreIssues(arguments.Issues)
+		stored, duplicate, err = reservoir.StoreIssues(arguments.Issues, storage.Pool.Assets, storage.Pool.BlockOwnerPayment)
 		if nil != err {
 			return err
 		}
@@ -103,7 +105,7 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 
 	// fail if no data sent
 	if 0 == len(assetStatus) && 0 == len(packedIssues) {
-		return fault.ErrMissingParameters
+		return fault.MissingParameters
 	}
 	// if data to send
 	if 0 != len(packedAssets) {
@@ -164,13 +166,13 @@ func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) er
 	log := bitmarks.log
 
 	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
+		return fault.NotAvailableDuringSynchronise
 	}
 
 	// arbitrary byte size limit
 	size := hex.DecodedLen(len(arguments.Nonce))
 	if size < payment.MinimumNonceLength || size > payment.MaximumNonceLength {
-		return fault.ErrInvalidNonce
+		return fault.InvalidNonce
 	}
 
 	log.Infof("proof for pay id: %v", arguments.PayId)
@@ -182,7 +184,7 @@ func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) er
 		return err
 	}
 	if byteCount != size {
-		return fault.ErrInvalidNonce
+		return fault.InvalidNonce
 	}
 
 	log.Infof("client nonce hex: %x", nonce)

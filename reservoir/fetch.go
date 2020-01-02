@@ -167,10 +167,10 @@ func (iter *transactionIter) Close() {
 // FetchVerified - fetch a series of verified transactions
 func FetchVerified(count int) ([]merkle.Digest, []byte, error) {
 	if count <= 0 {
-		return nil, nil, fault.ErrInvalidCount
+		return nil, nil, fault.InvalidCount
 	}
 	if count < minimumFetchTransactions {
-		return nil, nil, fault.ErrInvalidCount
+		return nil, nil, fault.InvalidCount
 	}
 
 	// data collection to return

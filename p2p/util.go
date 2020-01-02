@@ -27,7 +27,7 @@ func ParseHostPort(hostPort string) (string, string, string, error) {
 		return "", "", "", err
 	}
 	if numericPort < 1 || numericPort > 65535 {
-		return "", "", "", fault.ErrInvalidPortNumber
+		return "", "", "", fault.InvalidPortNumber
 	}
 	netIP := net.ParseIP(ip)
 	var ver string

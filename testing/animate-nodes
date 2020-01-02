@@ -4,7 +4,8 @@
 ERROR()
 {
   printf 'error: '
-  printf "$@"
+  # shellcheck disable=SC2059
+  printf -- "$@"
   printf '\n'
   exit 1
 }
@@ -14,10 +15,11 @@ USAGE()
   if [ -n "$1" ]
   then
     printf 'error: '
-    printf "$@"
+    # shellcheck disable=SC2059
+    printf -- "$@"
     printf '\n'
   fi
-  echo usage: $(basename "$0") '[options]'
+  echo usage: "$(basename "$0")" '[options]'
   echo '       --help             -h            this message'
   echo '       --verbose          -v            more messages'
   echo '       --output=FILE      -o FILE       the output PNG file ['"${output}"']'
@@ -27,7 +29,8 @@ USAGE()
 
 VERBOSE()
 {
-  [ X"${verbose}" = X"yes" ] && printf "$@"
+  # shellcheck disable=SC2059
+  [ X"${verbose}" = X"yes" ] && printf -- "$@"
 }
 
 # main program

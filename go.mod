@@ -5,7 +5,6 @@ require (
 	github.com/bitmark-inc/exitwithstatus v0.1.2
 	github.com/bitmark-inc/getoptions v0.1.1
 	github.com/bitmark-inc/go-argon2 v0.1.4
-	github.com/bitmark-inc/listener v0.2.0
 	github.com/bitmark-inc/logger v0.3.4
 	github.com/btcsuite/btcd v0.0.0-20190824003749-130ea5bddde3
 	github.com/fsnotify/fsnotify v1.4.7
@@ -14,15 +13,12 @@ require (
 	github.com/golang/protobuf v1.3.2
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/libp2p/go-libp2p v0.4.0
-	github.com/libp2p/go-libp2p-connmgr v0.1.1
+	github.com/libp2p/go-libp2p-connmgr v0.1.1 // indirect
 	github.com/libp2p/go-libp2p-core v0.2.3
-	github.com/libp2p/go-libp2p-crypto v0.1.0
-	github.com/libp2p/go-libp2p-peer v0.2.0
 	github.com/libp2p/go-libp2p-pubsub v0.1.1
 	github.com/libp2p/go-libp2p-tls v0.1.1
 	github.com/miekg/dns v1.1.16
 	github.com/multiformats/go-multiaddr v0.1.1
-	github.com/multiformats/go-multiaddr-dns v0.1.0
 	github.com/onsi/ginkgo v1.10.1 // indirect
 	github.com/onsi/gomega v1.7.0 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible

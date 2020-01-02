@@ -10,7 +10,7 @@ import (
 	"sync"
 )
 
-// Transaction RDBS transaction
+// Transaction - concept from RDBMS
 type Transaction interface {
 	Abort()
 	Begin() error
@@ -25,19 +25,22 @@ type Transaction interface {
 	PutN(Handle, []byte, uint64)
 }
 
-type TransactionImpl struct {
+// this interface contains too many behavior it doesn't need
+// could it use "delegate pattern" for better abstraction
+
+type TransactionData struct {
 	sync.Mutex
-	dataAccess []DataAccess
+	access []Access
 }
 
-func newTransaction(access []DataAccess) Transaction {
-	return &TransactionImpl{
-		dataAccess: access,
+func newTransaction(access []Access) Transaction {
+	return &TransactionData{
+		access: access,
 	}
 }
 
-func (t *TransactionImpl) InUse() bool {
-	for _, da := range t.dataAccess {
+func (t *TransactionData) InUse() bool {
+	for _, da := range t.access {
 		if da.InUse() {
 			return true
 		}
@@ -45,37 +48,37 @@ func (t *TransactionImpl) InUse() bool {
 	return false
 }
 
-func (t *TransactionImpl) Begin() error {
+func (t *TransactionData) Begin() error {
 	if t.InUse() {
 		return fmt.Errorf("transaction already in use")
 	}
 
-	for _, access := range t.dataAccess {
+	for _, access := range t.access {
 		access.Begin()
 	}
 
 	return nil
 }
 
-func (t *TransactionImpl) Put(
+func (t *TransactionData) Put(
 	h Handle,
 	key []byte,
 	value []byte,
 	additional []byte,
 ) {
-	h.put(key, value, additional)
+	h.Put(key, value, additional)
 }
 
-func (t *TransactionImpl) PutN(h Handle, key []byte, value uint64) {
-	h.putN(key, value)
+func (t *TransactionData) PutN(h Handle, key []byte, value uint64) {
+	h.PutN(key, value)
 }
 
-func (t *TransactionImpl) Delete(h Handle, key []byte) {
-	h.remove(key)
+func (t *TransactionData) Delete(h Handle, key []byte) {
+	h.Remove(key)
 }
 
-func (t *TransactionImpl) Commit() error {
-	for _, access := range t.dataAccess {
+func (t *TransactionData) Commit() error {
+	for _, access := range t.access {
 		err := access.Commit()
 		if nil != err {
 			return err
@@ -85,26 +88,26 @@ func (t *TransactionImpl) Commit() error {
 	return nil
 }
 
-func (t *TransactionImpl) Get(h Handle, key []byte) []byte {
+func (t *TransactionData) Get(h Handle, key []byte) []byte {
 	return h.Get(key)
 }
 
-func (t *TransactionImpl) GetN(h Handle, key []byte) (uint64, bool) {
+func (t *TransactionData) GetN(h Handle, key []byte) (uint64, bool) {
 	num, found := h.GetN(key)
 	return num, found
 }
 
-func (t *TransactionImpl) GetNB(h Handle, key []byte) (uint64, []byte) {
+func (t *TransactionData) GetNB(h Handle, key []byte) (uint64, []byte) {
 	num, buffer := h.GetNB(key)
 	return num, buffer
 }
 
-func (t *TransactionImpl) Abort() {
-	for _, da := range t.dataAccess {
+func (t *TransactionData) Abort() {
+	for _, da := range t.access {
 		da.Abort()
 	}
 }
 
-func (t *TransactionImpl) Has(h Handle, key []byte) bool {
+func (t *TransactionData) Has(h Handle, key []byte) bool {
 	return h.Has(key)
 }

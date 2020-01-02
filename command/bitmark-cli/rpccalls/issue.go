@@ -64,7 +64,7 @@ func (client *Client) Issue(issueConfig *IssueData) (*IssueReply, error) {
 			return nil, err
 		}
 		if nil == issue {
-			return nil, fault.ErrMakeIssueFailed
+			return nil, fault.MakeIssueFailed
 		}
 		issues[i] = issue
 	}
@@ -158,8 +158,8 @@ func internalMakeIssue(testnet bool, issueConfig *IssueData, nonce uint64, gener
 	// pack without signature
 	packed, err := r.Pack(issuerAccount)
 	if nil == err {
-		return nil, nil, fault.ErrMakeIssueFailed
-	} else if fault.ErrInvalidSignature != err {
+		return nil, nil, fault.MakeIssueFailed
+	} else if fault.InvalidSignature != err {
 		return nil, nil, err
 	}
 

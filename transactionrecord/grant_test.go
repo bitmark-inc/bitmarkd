@@ -187,7 +187,7 @@ func TestPackShareGrantValueNotZero(t *testing.T) {
 
 	// test the packer
 	_, err = r.Pack(ownerOneAccount)
-	if fault.ErrShareQuantityTooSmall != err {
+	if fault.ShareQuantityTooSmall != err {
 		t.Fatalf("unexpected pack error: %s", err)
 	}
 }

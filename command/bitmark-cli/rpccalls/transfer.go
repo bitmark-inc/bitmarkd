@@ -61,7 +61,7 @@ func (client *Client) Transfer(transferConfig *TransferData) (*TransferReply, er
 		return nil, err
 	}
 	if nil == transfer {
-		return nil, fault.ErrMakeTransferFailed
+		return nil, fault.MakeTransferFailed
 	}
 
 	client.printJson("Transfer Request", transfer)
@@ -111,7 +111,7 @@ func (client *Client) SingleSignedTransfer(transferConfig *TransferData) (*Trans
 		return nil, err
 	}
 	if nil == transfer {
-		return nil, fault.ErrMakeTransferFailed
+		return nil, fault.MakeTransferFailed
 	}
 
 	client.printJson("Transfer Request", transfer)
@@ -173,8 +173,8 @@ func makeTransferUnratified(testnet bool, link merkle.Digest, owner *configurati
 	// pack without signature
 	packed, err := r.Pack(ownerAccount)
 	if nil == err {
-		return nil, fault.ErrMakeTransferFailed
-	} else if fault.ErrInvalidSignature != err {
+		return nil, fault.MakeTransferFailed
+	} else if fault.InvalidSignature != err {
 		return nil, err
 	}
 
@@ -204,8 +204,8 @@ func makeTransferOneSignature(testnet bool, link merkle.Digest, owner *configura
 	// pack without signature
 	packed, err := r.Pack(ownerAccount)
 	if nil == err {
-		return nil, nil, fault.ErrMakeTransferFailed
-	} else if fault.ErrInvalidSignature != err {
+		return nil, nil, fault.MakeTransferFailed
+	} else if fault.InvalidSignature != err {
 		return nil, nil, err
 	}
 
@@ -216,8 +216,8 @@ func makeTransferOneSignature(testnet bool, link merkle.Digest, owner *configura
 	// include first signature by packing again
 	packed, err = r.Pack(ownerAccount)
 	if nil == err {
-		return nil, nil, fault.ErrMakeTransferFailed
-	} else if fault.ErrInvalidSignature != err {
+		return nil, nil, fault.MakeTransferFailed
+	} else if fault.InvalidSignature != err {
 		return nil, nil, err
 	}
 	return packed, &r, nil

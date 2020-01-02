@@ -41,19 +41,22 @@ func main() {
 	}
 
 	if len(options["version"]) > 0 {
-		exitwithstatus.Message("%s: version: %s", program, version)
+		processSetupCommand(program, []string{"version"})
+		return
 	}
 
 	if len(options["help"]) > 0 {
-		exitwithstatus.Message("usage: %s [--help] [--verbose] [--quiet] --config-file=FILE [[command|help] arguments...]", program)
+		processSetupCommand(program, []string{"help"})
+		return
 	}
 
 	// command processing - need lock so do not affect an already running process
 	// these commands don't require the configuration and
 	// process data needed for initial setup
 	if len(arguments) > 0 {
-		processSetupCommand(arguments)
-		return
+		if processSetupCommand(program, arguments) {
+			return
+		}
 	}
 
 	if 1 != len(options["config-file"]) {
@@ -249,7 +252,7 @@ connection_setup:
 	}
 
 	// erase the private key from memory
-	//lint:ignore SA4006 we want to make sure we clean privateKey
+	//nolint:ignore SA4006 we want to make sure we clean privateKey
 	privateKey = []byte{}
 
 	// abort if no clients were connected
@@ -260,8 +263,7 @@ connection_setup:
 	}
 
 	// turn Signals into channel messages
-	ch := make(chan os.Signal)
-	//lint:ignore SA1017 XXX: signal.Notify should be buffered here
+	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-ch
 	log.Infof("received signal: %v", sig)

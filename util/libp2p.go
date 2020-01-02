@@ -29,7 +29,7 @@ func MaAddrToAddrInfo(maAddr ma.Multiaddr) (*peerlib.AddrInfo, error) {
 		return nil, err
 	}
 	if nil == info {
-		return nil, fault.ErrAddInfoNil
+		return nil, fault.AddInfoNil
 	}
 	return info, nil
 }
@@ -37,14 +37,14 @@ func MaAddrToAddrInfo(maAddr ma.Multiaddr) (*peerlib.AddrInfo, error) {
 // MaAddrsToAddrInfos Convert  []multiAddr to []peer.AddrInfo
 func MaAddrsToAddrInfos(maAddrs []ma.Multiaddr) ([]peerlib.AddrInfo, error) {
 	if len(maAddrs) < 1 {
-		return nil, fault.ErrNoAddress
+		return nil, fault.NoAddress
 	}
 	infos, err := peerlib.AddrInfosFromP2pAddrs(maAddrs...)
 	if err != nil {
 		return nil, err
 	}
 	if nil == infos {
-		return nil, fault.ErrAddInfoNil
+		return nil, fault.AddInfoNil
 	}
 	return infos, nil
 }

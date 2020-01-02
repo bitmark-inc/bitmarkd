@@ -17,7 +17,7 @@ type PoolNB struct {
 }
 
 // Put - store a key/value bytes pair to the database
-func (p *PoolNB) put(key []byte, nValue []byte, bValue []byte) {
+func (p *PoolNB) Put(key []byte, nValue []byte, bValue []byte) {
 	if 8 != len(nValue) {
 		logger.Panic("pool.PutNB 1st parameter must be 8 bytes")
 		return
@@ -26,43 +26,27 @@ func (p *PoolNB) put(key []byte, nValue []byte, bValue []byte) {
 	data := make([]byte, len(nValue)+len(bValue))
 	copy(data, nValue)
 	copy(data[len(nValue):], bValue)
-	p.pool.put(key, data, []byte{})
+	p.pool.Put(key, data, []byte{})
 }
 
-// remove - internally remove a key from database
-func (p *PoolNB) remove(key []byte) {
-	p.pool.remove(key)
+// Remove - internally Remove a key from database
+func (p *PoolNB) Remove(key []byte) {
+	p.pool.Remove(key)
 }
 
-func (p *PoolNB) putN(key []byte, value uint64) {
-	logger.Panic("PoolNB has not putN method")
+func (p *PoolNB) PutN(key []byte, value uint64) {
+	logger.Panic("PoolNB has not PutN method")
 }
 
-// for interface
+// Get - for interface
 func (p *PoolNB) Get(key []byte) []byte {
 	return []byte{}
 }
 
-// for interface only
+// GetN - for interface only
 func (p *PoolNB) GetN(key []byte) (uint64, bool) {
 	return uint64(0), false
 }
-
-// // GetN - read a record and decode first 8 bytes as big endian uint64
-// //
-// // second parameter is false if record was not found
-// // panics if not 8 (or more) bytes in the record
-// func (p *PoolNB) GetN(key []byte) (uint64, bool) {
-// 	buffer := p.pool.Get(key)
-// 	if nil == buffer {
-// 		return 0, false
-// 	}
-// 	if len(buffer) < 8 {
-// 		logger.Panicf("pool.GetN truncated record for: %x: %s", key, buffer)
-// 	}
-// 	n := binary.BigEndian.Uint64(buffer[:8])
-// 	return n, true
-// }
 
 // GetNB - read a record and decode first 8 bytes as big endian uint64
 // and return the rest of the record as byte slice
@@ -95,7 +79,12 @@ func (p *PoolNB) Commit() error {
 	return p.pool.Commit()
 }
 
-// Empty - check if struct is empty
-func (p *PoolNB) Empty() bool {
+// Ready - check if struct is empty
+func (p *PoolNB) Ready() bool {
 	return nil == p || 0 == p.pool.prefix
+}
+
+// LastElement - last element
+func (p *PoolNB) LastElement() (Element, bool) {
+	return p.pool.LastElement()
 }

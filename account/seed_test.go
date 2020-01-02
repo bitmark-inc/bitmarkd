@@ -30,12 +30,12 @@ var validSeedTestItems = []seedTestItem{
 
 // invalid base58 seed
 var invalidBase58Seeds = []invalid{
-	{"5XEECqhR7QBkJezUJiUJBmHaSmffDfVN5atuLnQBHnvfxbsWHuBfQ", fault.ErrInvalidSeedLength},
-	{"9J877LVjhr3Xxd2nGzRVRVNUZpSKJF4THGaf", fault.ErrInvalidSeedLength},
-	{"5XEECqhR7QBkJezUJiUJBmHaSmffDfVN5atuLnQBHnvfxbsWHuBfQkw", fault.ErrChecksumMismatch},
-	{"9J877LVjhr3Xxd2nGzRVRVNUZpSKJF4TG", fault.ErrChecksumMismatch},
-	{"9J3KBhE3TBmVfpH4Xcw7hXsAxDCgdgvdg", fault.ErrInvalidSeedHeader},
-	{"5XBcj8Cz1Aj5yciJkivUrfYUbBk1LfgtfQ9oX8wsrA4QmmYw1miJSCE", fault.ErrInvalidSeedHeader},
+	{"5XEECqhR7QBkJezUJiUJBmHaSmffDfVN5atuLnQBHnvfxbsWHuBfQ", fault.InvalidSeedLength},
+	{"9J877LVjhr3Xxd2nGzRVRVNUZpSKJF4THGaf", fault.InvalidSeedLength},
+	{"5XEECqhR7QBkJezUJiUJBmHaSmffDfVN5atuLnQBHnvfxbsWHuBfQkw", fault.ChecksumMismatch},
+	{"9J877LVjhr3Xxd2nGzRVRVNUZpSKJF4TG", fault.ChecksumMismatch},
+	{"9J3KBhE3TBmVfpH4Xcw7hXsAxDCgdgvdg", fault.InvalidSeedHeader},
+	{"5XBcj8Cz1Aj5yciJkivUrfYUbBk1LfgtfQ9oX8wsrA4QmmYw1miJSCE", fault.InvalidSeedHeader},
 }
 
 // Test valid base58 seed parsing

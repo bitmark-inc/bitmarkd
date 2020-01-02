@@ -42,7 +42,7 @@ scan_currency:
 
 	// check that all items were packed
 	if len(m) != n {
-		return nil, fault.ErrInvalidCurrency
+		return nil, fault.InvalidCurrency
 	}
 
 	return buffer, nil
@@ -52,7 +52,7 @@ scan_currency:
 func UnpackMap(buffer []byte, testnet bool) (Map, Set, error) {
 
 	if nil == buffer || len(buffer) < 2 {
-		return nil, Set{}, fault.ErrInvalidBuffer
+		return nil, Set{}, fault.InvalidBuffer
 	}
 
 	m := make(map[Currency]string)
@@ -64,7 +64,7 @@ func UnpackMap(buffer []byte, testnet bool) (Map, Set, error) {
 		// currency
 		c, currencyLength := util.FromVarint64(buffer[n:])
 		if 0 == currencyLength {
-			return nil, Set{}, fault.ErrInvalidCurrency
+			return nil, Set{}, fault.InvalidCurrency
 		}
 		currency, err := FromUint64(c)
 		if nil != err {
@@ -72,7 +72,7 @@ func UnpackMap(buffer []byte, testnet bool) (Map, Set, error) {
 		}
 		// do not allow the empty value
 		if currency == Nothing {
-			return nil, Set{}, fault.ErrInvalidCurrency
+			return nil, Set{}, fault.InvalidCurrency
 		}
 
 		cs.Add(currency)
@@ -82,7 +82,7 @@ func UnpackMap(buffer []byte, testnet bool) (Map, Set, error) {
 		// paymentAddress (limit address length)
 		paymentAddressLength, paymentAddressOffset := util.ClippedVarint64(buffer[n:], 1, 255)
 		if 0 == paymentAddressOffset {
-			return nil, Set{}, fault.ErrInvalidCount
+			return nil, Set{}, fault.InvalidCount
 		}
 		n += paymentAddressOffset
 

@@ -21,7 +21,7 @@ const (
 // ValidateAddress - generic validate function
 func (currency Currency) ValidateAddress(address string, testnet bool) error {
 	if utf8.RuneCountInString(address) > maxPaymentAddressLength {
-		return fault.ErrPaymentAddressTooLong
+		return fault.PaymentAddressTooLong
 	}
 
 	switch currency {
@@ -35,7 +35,7 @@ func (currency Currency) ValidateAddress(address string, testnet bool) error {
 			return err
 		}
 		if bitcoin.IsTestnet(version) != testnet {
-			return fault.ErrBitcoinAddressForWrongNetwork
+			return fault.BitcoinAddressForWrongNetwork
 		}
 		return nil
 
@@ -45,12 +45,12 @@ func (currency Currency) ValidateAddress(address string, testnet bool) error {
 			return err
 		}
 		if litecoin.IsTestnet(version) != testnet {
-			return fault.ErrLitecoinAddressForWrongNetwork
+			return fault.LitecoinAddressForWrongNetwork
 		}
 		return nil
 
 	default:
 		logger.Panicf("missing validation routine for currency: %s", currency)
 	}
-	return fault.ErrInvalidCurrency
+	return fault.InvalidCurrency
 }

@@ -4,9 +4,16 @@
 ERROR()
 {
   printf 'error: '
-  printf "$@"
+  # shellcheck disable=SC2059
+  printf -- "$@"
   printf '\n'
   exit 1
+}
+
+VERBOSE()
+{
+  # shellcheck disable=SC2059
+  [ X"${verbose}" = X"yes" ] && printf -- "$@"
 }
 
 USAGE()
@@ -14,21 +21,17 @@ USAGE()
   if [ -n "$1" ]
   then
     printf 'error: '
-    printf "$@"
+    # shellcheck disable=SC2059
+    printf -- "$@"
     printf '\n'
   fi
-  echo usage: $(basename "$0") '[options] [start [finish]]'
+  echo usage: "$(basename "$0")" '[options] [start [finish]]'
   echo '       --help             -h            this message'
   echo '       --verbose          -v            more messages'
   echo '       --compact          -c            squash output'
   echo '       --network=NET      -n NET        network {live|test} ['"${network}"']'
   echo '       --debug            -D            debuging messages'
   exit 1
-}
-
-VERBOSE()
-{
-  [ X"${verbose}" = X"yes" ] && printf "$@"
 }
 
 # main program
@@ -133,15 +136,17 @@ then
   compact_ch='1'
   compact_sw=''
   compact_v='11'
-  compact_u=''
+  compact_up=''
 else
   compact_b='b: '
   compact_m='6'
   compact_ch=''
   compact_sw='sw: '
   compact_v='14'
-  compact_u='up: '
+  compact_up='up: '
 fi
+
+# shellcheck disable=SC2016
 filter='
     def rj($f;$w): ("                    "+($f|tostring))[-$w:];
     def lj($f;$w): (($f|tostring)+"                    ")[:$w];
@@ -167,8 +172,7 @@ filter='
 # loop through all nodes
 for i in $(seq "${start}" "${finish}")
 do
-  r=$(bitmark-cli --network="${network}" --connection="${i}" bitmarkd 2>&1)
-  if [ $? -ne 0 ]
+  if ! r=$(bitmark-cli --network="${network}" --connection="${i}" bitmarkd 2>&1)
   then
     printf 'conn %2d: %s\n' "${i}" "${r}"
   else

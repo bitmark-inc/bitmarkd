@@ -63,7 +63,7 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 			break
 		}
 		if reqLen < 1 {
-			listenerSendError(rw, nodeChain, fault.ErrDataLengthLessThanOne, "-->READ", log)
+			listenerSendError(rw, nodeChain, fault.DataLengthLessThanOne, "-->READ", log)
 			break
 		}
 		reqChain, fn, parameters, err := UnPackP2PMessage(req[:reqLen])
@@ -72,11 +72,11 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 			break
 		}
 		if len(reqChain) < 2 {
-			listenerSendError(rw, nodeChain, fault.ErrInvalidChain, "-->Unpack", log)
+			listenerSendError(rw, nodeChain, fault.InvalidChain, "-->Unpack", log)
 			break
 		}
 		if reqChain != nodeChain {
-			listenerSendError(rw, nodeChain, fault.ErrDifferentChain, "-->Chain", log)
+			listenerSendError(rw, nodeChain, fault.DifferentChain, "-->Chain", log)
 			break
 		}
 
@@ -116,12 +116,12 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 			rw.Flush()
 		case "B": // get packed block
 			if 1 != len(parameters) {
-				err = fault.ErrMissingParameters
+				err = fault.MissingParameters
 				util.LogError(log, util.CoRed, fmt.Sprintf("-->Block length is not equal 1 , length=%d", len(parameters)))
 			} else if 8 == len(parameters[0]) { //it 8 or 6 ??
 				result := storage.Pool.Blocks.Get(parameters[0])
 				if nil == result {
-					err = fault.ErrBlockNotFound
+					err = fault.BlockNotFound
 					listenerSendError(rw, nodeChain, err, "-->Query Block: block not found", log)
 				}
 				respParams := [][]byte{result}
@@ -133,12 +133,12 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 				rw.Write(packed)
 				rw.Flush()
 			} else {
-				err = fault.ErrBlockNotFound
+				err = fault.BlockNotFound
 				listenerSendError(rw, nodeChain, err, "-->Query Block: invalid parameter", log)
 			}
 		case "H": // get block hash
 			if 1 != len(parameters) {
-				err = fault.ErrMissingParameters
+				err = fault.MissingParameters
 			} else if 8 == len(parameters[0]) {
 				number := binary.BigEndian.Uint64(parameters[0])
 				d, e := blockheader.DigestForBlock(number)
@@ -161,7 +161,7 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 				rw.Write(packed)
 				rw.Flush()
 			} else {
-				err = fault.ErrBlockNotFound
+				err = fault.BlockNotFound
 				listenerSendError(rw, nodeChain, err, "-->Query Blockhash: invalid parameter", log)
 			}
 		case "R":
@@ -192,7 +192,7 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 			_, err = rw.Write(p2pMessagePacked)
 			rw.Flush()
 		default: // other commands as subscription-type commands // this will move to pubsub
-			listenerSendError(rw, nodeChain, fault.ErrNotAP2PCommand, "-> Subscription type command , should send through pubsub", log)
+			listenerSendError(rw, nodeChain, fault.NotP2PCommand, "-> Subscription type command , should send through pubsub", log)
 			//processSubscription(log, fn, parameters)
 			//result = []byte{'A'}
 			break

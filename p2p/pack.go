@@ -28,7 +28,7 @@ func UnPackP2PMessage(packed []byte) (chain string, fn string, parameters [][]by
 	unpacked := P2PMessage{}
 	proto.Unmarshal(packed, &unpacked)
 	if len(unpacked.Data) == 0 {
-		return "", "", nil, fault.ErrDataFieldEmpty
+		return "", "", nil, fault.DataFieldEmpty
 	}
 	chain = string(unpacked.Data[0])
 	fn = string(unpacked.Data[1])
@@ -45,7 +45,7 @@ func UnPackP2PMessage(packed []byte) (chain string, fn string, parameters [][]by
 //UnPackRegisterData Unpack register binary  data into object information
 func UnPackRegisterData(parameters [][]byte) (nodeType string, id peerlib.ID, addrs []ma.Multiaddr, ts uint64, err error) {
 	if len(parameters) < 4 {
-		return nodeType, id, addrs, ts, fault.ErrParametersLessThanExpect
+		return nodeType, id, addrs, ts, fault.ParametersLessThanExpect
 	}
 	nType := string(parameters[0])
 	id, err = peerlib.IDFromBytes(parameters[1])
@@ -58,7 +58,7 @@ func UnPackRegisterData(parameters [][]byte) (nodeType string, id peerlib.ID, ad
 		return "", id, addrs, ts, err
 	}
 	if len(announce.Address) <= 0 {
-		return "", id, addrs, ts, fault.ErrNoAnnounceAddress
+		return "", id, addrs, ts, fault.NoAnnounceAddress
 	}
 	addrs = util.GetMultiAddrsFromBytes(announce.Address)
 	ts = binary.BigEndian.Uint64(parameters[3])

@@ -11,6 +11,7 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/asset"
+	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/currency"
@@ -35,7 +36,7 @@ const (
 )
 
 // StoreIncoming - store an incoming block checking to make sure it is valid first
-func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
+func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType) (err error) {
 	start := time.Now()
 
 	globalData.Lock()
@@ -49,11 +50,36 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
 	// get current block header
 	height, previousBlock, previousVersion, previousTimestamp := blockheader.Get()
 
+	shouldFastSync := packedNextBlock != nil
+
 	// extract incoming block record, checking for correct sequence
-	header, digest, data, err := blockrecord.ExtractHeader(packedBlock, height+1)
-	if nil != err {
-		globalData.log.Errorf("extract header error: %s", err)
-		return err
+	var digest blockdigest.Digest
+	var header *blockrecord.Header
+	var data []byte
+
+	if shouldFastSync {
+		h, _, d, err := blockrecord.ExtractHeader(packedBlock, height+1, true)
+		if nil != err {
+			globalData.log.Errorf("extract header error: %s", err)
+			return err
+		}
+		nextH, _, _, err := blockrecord.ExtractHeader(packedNextBlock, height+2, true)
+		if nil != err {
+			globalData.log.Errorf("extract header error: %s", err)
+			return err
+		}
+		header = h
+		digest = nextH.PreviousBlock
+		data = d
+	} else {
+		h, di, d, err := blockrecord.ExtractHeader(packedBlock, height+1, false)
+		if nil != err {
+			globalData.log.Errorf("extract header error: %s", err)
+			return err
+		}
+		header = h
+		digest = di
+		data = d
 	}
 
 	// incoming version should always be larger or equal to current
@@ -82,14 +108,16 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
 		return err
 	}
 
-	if ok := digest.IsValidByDifficulty(header.Difficulty); !ok {
-		globalData.log.Warnf("digest error: %s", fault.ErrInvalidBlockHeaderDifficulty)
-		return fault.ErrInvalidBlockHeaderDifficulty
-	}
+	if !shouldFastSync {
+		if ok := digest.IsValidByDifficulty(header.Difficulty); !ok {
+			globalData.log.Warnf("digest error: %s", fault.InvalidBlockHeaderDifficulty)
+			return fault.InvalidBlockHeaderDifficulty
+		}
 
-	// ensure correct linkage
-	if err := blockrecord.ValidBlockLinkage(previousBlock, header.PreviousBlock); err != nil {
-		return err
+		// ensure correct linkage
+		if err := blockrecord.ValidBlockLinkage(previousBlock, header.PreviousBlock); err != nil {
+			return err
+		}
 	}
 
 	// create database key for block number
@@ -152,7 +180,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
 				}
 				assetId := tx.AssetId()
 				if !suppressDuplicateRecordChecks && storage.Pool.Assets.Has(assetId[:]) {
-					return fault.ErrTransactionAlreadyExists
+					return fault.TransactionAlreadyExists
 				}
 				localAssets[assetId] = struct{}{}
 
@@ -162,11 +190,11 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
 					return err
 				}
 				if !suppressDuplicateRecordChecks && storage.Pool.Transactions.Has(txId[:]) {
-					return fault.ErrTransactionAlreadyExists
+					return fault.TransactionAlreadyExists
 				}
 				if _, ok := localAssets[tx.AssetId]; !ok {
 					if !storage.Pool.Assets.Has(tx.AssetId[:]) {
-						return fault.ErrAssetNotFound
+						return fault.AssetNotFound
 					}
 				}
 
@@ -175,7 +203,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
 				link := tr.GetLink()
 				_, linkOwner := ownership.OwnerOf(nil, link)
 				if nil == linkOwner {
-					return fault.ErrLinkToInvalidOrUnconfirmedTransaction
+					return fault.LinkToInvalidOrUnconfirmedTransaction
 				}
 				_, err := tx.Pack(linkOwner)
 				if nil != err {
@@ -183,16 +211,16 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
 				}
 
 				if !ownership.CurrentlyOwns(nil, linkOwner, link) {
-					return fault.ErrDoubleTransferAttempt
+					return fault.DoubleTransferAttempt
 				}
 
-				ownerData, err := ownership.GetOwnerData(nil, link)
+				ownerData, err := ownership.GetOwnerData(nil, link, storage.Pool.OwnerData)
 				if nil != err {
-					return fault.ErrDoubleTransferAttempt
+					return fault.DoubleTransferAttempt
 				}
 				_, ok := ownerData.(*ownership.ShareOwnerData)
 				if ok {
-					return fault.ErrCannotConvertSharesBackToAssets
+					return fault.CannotConvertSharesBackToAssets
 				}
 
 				txs[i].linkOwner = linkOwner
@@ -211,13 +239,13 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
 					return err
 				}
 				if !ownership.CurrentlyOwns(nil, linkOwner, link) {
-					return fault.ErrDoubleTransferAttempt
+					return fault.DoubleTransferAttempt
 				}
 
 				// get the block number that is being transferred by this record
 				thisBN := storage.Pool.BlockOwnerTxIndex.Get(link[:])
 				if nil == thisBN {
-					return fault.ErrLinkToInvalidOrUnconfirmedTransaction
+					return fault.LinkToInvalidOrUnconfirmedTransaction
 				}
 
 				err = transactionrecord.CheckPayments(tx.Version, mode.IsTesting(), tx.Payments)
@@ -232,20 +260,20 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
 				link := tx.Link
 				_, linkOwner := ownership.OwnerOf(nil, link)
 				if nil == linkOwner {
-					return fault.ErrLinkToInvalidOrUnconfirmedTransaction
+					return fault.LinkToInvalidOrUnconfirmedTransaction
 				}
 				_, err := tx.Pack(linkOwner)
 				if nil != err {
 					return err
 				}
 
-				ownerData, err := ownership.GetOwnerData(nil, link)
+				ownerData, err := ownership.GetOwnerData(nil, link, storage.Pool.OwnerData)
 				if nil != err {
-					return fault.ErrDoubleTransferAttempt
+					return fault.DoubleTransferAttempt
 				}
 				_, ok := ownerData.(*ownership.AssetOwnerData)
 				if !ok {
-					return fault.ErrCanOnlyConvertAssetsToShares
+					return fault.CanOnlyConvertAssetsToShares
 				}
 
 				txs[i].linkOwner = linkOwner
@@ -255,7 +283,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
 				if nil != err {
 					return err
 				}
-				_, err = reservoir.CheckGrantBalance(nil, tx)
+				_, err = reservoir.CheckGrantBalance(nil, tx, storage.Pool.ShareQuantity)
 				if nil != err {
 					return err
 				}
@@ -265,7 +293,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
 				if nil != err {
 					return err
 				}
-				_, _, err = reservoir.CheckSwapBalances(nil, tx)
+				_, _, err = reservoir.CheckSwapBalances(nil, tx, storage.Pool.ShareQuantity)
 				if nil != err {
 					return err
 				}
@@ -287,7 +315,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
 
 			// fail if extraneous data after final transaction
 			if i+1 == header.TransactionCount && len(data) > 0 {
-				return fault.ErrTransactionCountOutOfRange
+				return fault.TransactionCountOutOfRange
 			}
 		}
 
@@ -296,7 +324,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
 		merkleRoot := fullMerkleTree[len(fullMerkleTree)-1]
 
 		if merkleRoot != header.MerkleRoot {
-			return fault.ErrMerkleRootDoesNotMatch
+			return fault.MerkleRootDoesNotMatch
 		}
 
 	} // end of validation
@@ -349,11 +377,11 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
 		blockOwner = tx.Owner
 
 	default:
-		return fault.ErrMissingBlockOwner
+		return fault.MissingBlockOwner
 	}
 
 	if len(txs) < txStart {
-		return fault.ErrTransactionCountOutOfRange
+		return fault.TransactionCountOutOfRange
 	}
 
 	trx, err := storage.NewDBTransaction()
@@ -591,7 +619,7 @@ func StoreIncoming(packedBlock []byte, performRescan rescanType) (err error) {
 	)
 
 	// create the foundation record
-	foundationTxId := blockrecord.FoundationTxId(header, digest)
+	foundationTxId := blockrecord.FoundationTxId(header.Number, digest)
 	trx.Put(
 		storage.Pool.Transactions,
 		foundationTxId[:],

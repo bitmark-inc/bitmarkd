@@ -7,6 +7,7 @@ package blockheader
 
 import (
 	"encoding/binary"
+	"sync"
 
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
@@ -27,11 +28,10 @@ type cachedBlockDigest struct {
 
 var cached [cacheSize]cachedBlockDigest
 var cacheIndex int
+var cacheLock sync.RWMutex
 
 // DigestForBlock - return the digest for a specific block number
 func DigestForBlock(number uint64) (blockdigest.Digest, error) {
-	globalData.Lock()
-	defer globalData.Unlock()
 
 	// valid block number
 	if number <= genesis.BlockNumber {
@@ -66,10 +66,15 @@ func DigestForBlock(number uint64) (blockdigest.Digest, error) {
 }
 
 func ClearCache() {
+	cacheLock.Lock()
 	cached = *new([cacheSize]cachedBlockDigest)
+	cacheLock.Unlock()
 }
 
 func digestFromCache(blockNumber uint64) blockdigest.Digest {
+	cacheLock.RLock()
+	defer cacheLock.RUnlock()
+
 	for _, c := range cached {
 		if c.blockNumber == blockNumber {
 			return c.digest
@@ -79,27 +84,27 @@ func digestFromCache(blockNumber uint64) blockdigest.Digest {
 }
 
 func addToCache(blockNumber uint64, digest blockdigest.Digest) {
+	cacheLock.Lock()
 	cached[cacheIndex] = cachedBlockDigest{
 		blockNumber: blockNumber,
 		digest:      digest,
 	}
-	incrementCacheIndex()
-}
 
-func incrementCacheIndex() {
 	if cacheSize-1 == cacheIndex {
 		cacheIndex = 0
 	} else {
 		cacheIndex++
 	}
+	cacheLock.Unlock()
 }
 
 func genDigestFromPool(pool storage.Handle, blockNumber []byte) (blockdigest.Digest, error) {
 	packed := pool.Get(blockNumber)
 	if nil == packed {
-		return blockdigest.Digest{}, fault.ErrBlockNotFound
+		return blockdigest.Digest{}, fault.BlockNotFound
 	}
 
-	_, digest, _, err := blockrecord.ExtractHeader(packed, 0)
+	_, digest, _, err := blockrecord.ExtractHeader(packed, 0, false)
+
 	return digest, err
 }

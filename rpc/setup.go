@@ -21,13 +21,12 @@ import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/util"
-	"github.com/bitmark-inc/listener"
 	"github.com/bitmark-inc/logger"
 )
 
 // RPCConfiguration - configuration file data for RPC setup
 type RPCConfiguration struct {
-	MaximumConnections int      `gluamapper:"maximum_connections" json:"maximum_connections"`
+	MaximumConnections uint64   `gluamapper:"maximum_connections" json:"maximum_connections"`
 	Bandwidth          float64  `gluamapper:"bandwidth" json:"bandwidth"`
 	Listen             []string `gluamapper:"listen" json:"listen"`
 	Certificate        string   `gluamapper:"certificate" json:"certificate"`
@@ -37,7 +36,7 @@ type RPCConfiguration struct {
 
 // HTTPSConfiguration - configuration file data for HTTPS setup
 type HTTPSConfiguration struct {
-	MaximumConnections int                 `gluamapper:"maximum_connections" json:"maximum_connections"`
+	MaximumConnections uint64              `gluamapper:"maximum_connections" json:"maximum_connections"`
 	Listen             []string            `gluamapper:"listen" json:"listen"`
 	Certificate        string              `gluamapper:"certificate" json:"certificate"`
 	PrivateKey         string              `gluamapper:"private_key" json:"private_key"`
@@ -78,8 +77,6 @@ type rpcData struct {
 
 	log *logger.L // logger
 
-	listener *listener.MultiListener
-
 	// set once during initialise
 	initialised bool
 }
@@ -95,7 +92,7 @@ func Initialise(rpcConfiguration *RPCConfiguration, httpsConfiguration *HTTPSCon
 
 	// no need to start if already started
 	if globalData.initialised {
-		return fault.ErrAlreadyInitialised
+		return fault.AlreadyInitialised
 	}
 
 	log := logger.New("rpc")
@@ -122,14 +119,14 @@ func Initialise(rpcConfiguration *RPCConfiguration, httpsConfiguration *HTTPSCon
 func Finalise() error {
 
 	if !globalData.initialised {
-		return fault.ErrNotInitialised
+		return fault.NotInitialised
 	}
 
 	globalData.log.Info("shutting down…")
 	globalData.log.Flush()
 
 	// stop background
-	globalData.listener.Stop()
+	//globalData.listener.Stop()
 
 	// finally...
 	globalData.initialised = false
@@ -144,37 +141,27 @@ func initialiseRPC(configuration *RPCConfiguration, version string) error {
 	name := "client_rpc"
 	log := globalData.log
 
-	if configuration.MaximumConnections <= 0 {
+	if configuration.MaximumConnections < 1 {
 		log.Errorf("invalid %s maximum connection limit: %d", name, configuration.MaximumConnections)
-		return fault.ErrMissingParameters
+		return fault.MissingParameters
 	}
 	if configuration.Bandwidth <= 1000000 { // fail if < 1Mbps
 		log.Errorf("invalid %s bandwidth: %d bps < 1Mbps", name, configuration.Bandwidth)
-		return fault.ErrMissingParameters
+		return fault.MissingParameters
 	}
 
 	if 0 == len(configuration.Listen) {
 		log.Errorf("missing %s listen", name)
-		return fault.ErrMissingParameters
+		return fault.MissingParameters
 	}
 
-	// create limiter
-	limiter := listener.NewLimiter(configuration.MaximumConnections)
-
+	// load certificate
 	tlsConfiguration, fingerprint, err := getCertificate(log, name, configuration.Certificate, configuration.PrivateKey)
 	if nil != err {
 		return err
 	}
 
 	log.Infof("%s: SHA3-256 fingerprint: %x", name, fingerprint)
-
-	log.Infof("multi listener for: %s", name)
-	ml, err := listener.NewMultiListener(name, configuration.Listen, tlsConfiguration, limiter, Callback)
-	if nil != err {
-		log.Errorf("invalid %s listen addresses", name)
-		return err
-	}
-	globalData.listener = ml
 
 	// setup announce
 	rpcs := make([]byte, 0, 100) // ***** FIX THIS: need a better default size
@@ -196,14 +183,37 @@ process_rpcs:
 		return err
 	}
 
+	// server structure for RPC function invocation
 	server := createRPCServer(log, version)
-	argument := &serverArgument{
-		Log:    log,
-		Server: server,
-	}
 
-	log.Infof("starting server: %s  with: %v", name, argument)
-	globalData.listener.Start(argument)
+	// validate all listen addresses
+	ipType := make([]string, len(configuration.Listen))
+	for i, listen := range configuration.Listen {
+		if '[' == listen[0] {
+			listen = strings.Split(listen[1:], "]:")[0]
+			ipType[i] = "tcp6"
+		} else {
+			listen = strings.Split(listen, ":")[0]
+			ipType[i] = "tcp4"
+		}
+		ip := net.ParseIP(listen)
+		if nil == ip {
+			err := fault.InvalidIpAddress
+			log.Errorf("rpc server listen error: %s", err)
+			return err
+		}
+	}
+	for i, listen := range configuration.Listen {
+		log.Infof("starting RPC server: %s", listen)
+
+		l, err := tls.Listen(ipType[i], listen, tlsConfiguration)
+		if err != nil {
+			log.Errorf("rpc server listen error: %s", err)
+			return err
+		}
+
+		go listenAndServeRPC(l, server, configuration.MaximumConnections, log)
+	}
 
 	return nil
 }
@@ -219,9 +229,9 @@ func initialiseHTTPS(configuration *HTTPSConfiguration, version string) error {
 		return nil
 	}
 
-	if configuration.MaximumConnections <= 0 {
+	if configuration.MaximumConnections < 1 {
 		log.Errorf("invalid %s maximum connection limit: %d", name, configuration.MaximumConnections)
-		return fault.ErrMissingParameters
+		return fault.MissingParameters
 	}
 
 	tlsConfiguration, fingerprint, err := getCertificate(globalData.log, name, configuration.Certificate, configuration.PrivateKey)
@@ -247,11 +257,12 @@ func initialiseHTTPS(configuration *HTTPSConfiguration, version string) error {
 
 	server := createRPCServer(log, version)
 	handler := &httpHandler{
-		log:     log,
-		server:  server,
-		version: version,
-		start:   time.Now(),
-		allow:   local,
+		log:                log,
+		server:             server,
+		version:            version,
+		start:              time.Now(),
+		allow:              local,
+		maximumConnections: configuration.MaximumConnections,
 	}
 
 	mux := http.NewServeMux()

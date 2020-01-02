@@ -59,7 +59,7 @@ func (salt *Salt) UnmarshalText(s []byte) error {
 	}
 
 	if saltSize != byteCount {
-		return fault.ErrUnmarshalTextFailed
+		return fault.UnmarshalTextFailed
 	}
 	copy(salt[:], buffer)
 	return nil

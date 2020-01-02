@@ -2,15 +2,14 @@
 
 ERROR() {
   printf 'error: '
-  printf "$@"
+  # shellcheck disable=SC2059
+  printf -- "$@"
   printf '\n'
   exit 1
 }
 
 
 # main program
-
-[ -n "${1}" ] && nodes_domain="${1}"
 
 xdg_home="${XDG_CONFIG_HOME}"
 [ -z "${xdg_home}" ] && xdg_home="${HOME}/.config"
@@ -34,14 +33,14 @@ walletdb = "wallet.dat"
 agent {
   btc {
     type = "daemon"
-    node = "localhost:18001"
+    node = "localhost:18443"
     user = "btcuser1"
     pass = "beis7uvei9ALei4ofeu6ahFaeQu0IephTheebuchuuXio5ia"
   }
 
   ltc {
     type = "daemon"
-    node = "localhost:19001"
+    node = "localhost:19443"
     user = "litecoinuser"
     pass = "gdbhrkztqxgnfsggqzpzsxrmkgzvksfjwgngwgjsgqjknrnqspxgrvrmxdwxbbmt"
   }
@@ -59,10 +58,10 @@ for c in ${currencies}
 do
   case "${c}" in
     (btc)
-      run=run-bitcoin
+      run='run-bitcoin'
       ;;
     (ltc)
-      run=run-litecoin
+      run='run-litecoin'
       ;;
     (*)
       ERROR 'unknown currency: %s' "${c}"
@@ -72,7 +71,8 @@ do
   printf '==================================================\n'
   bitmark-wallet --conf "${conf}" "${c}" sync --testnet
   bitmark-wallet --conf "${conf}" "${c}" newaddress --testnet | (
-    while read tag address junk
+    # shellcheck disable=SC2034
+    while read -r tag address junk
     do
       [ X"${tag}" = X"Address:" ] && ${run} sendtoaddress "${address}" 25
     done

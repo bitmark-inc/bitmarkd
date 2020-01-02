@@ -47,12 +47,12 @@ loop:
 func parseIPPort(hostPort string) (v string, ip string, port uint16, err error) {
 	host, portStr, err := net.SplitHostPort(hostPort)
 	if nil != err {
-		return "", "", 0, fault.ErrInvalidIpAddress
+		return "", "", 0, fault.InvalidIpAddress
 	}
 
 	IP := net.ParseIP(strings.Trim(host, " "))
 	if nil == IP {
-		return "", "", 0, fault.ErrInvalidIpAddress
+		return "", "", 0, fault.InvalidIpAddress
 	}
 	if nil != IP.To4() {
 		v = "ipv4"
@@ -65,7 +65,7 @@ func parseIPPort(hostPort string) (v string, ip string, port uint16, err error) 
 		return "", "", 0, err
 	}
 	if numericPort < 1 || numericPort > 65535 {
-		return "", "", 0, fault.ErrInvalidPortNumber
+		return "", "", 0, fault.InvalidPortNumber
 	}
 	return v, IP.String(), uint16(numericPort), nil
 }

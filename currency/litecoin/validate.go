@@ -37,7 +37,7 @@ func ValidateAddress(address string) (Version, AddressBytes, error) {
 	addressBytes := AddressBytes{}
 
 	if 25 != len(addr) {
-		return vNull, addressBytes, fault.ErrInvalidLitecoinAddress
+		return vNull, addressBytes, fault.InvalidLitecoinAddress
 	}
 
 	h := sha256.New()
@@ -48,14 +48,14 @@ func ValidateAddress(address string) (Version, AddressBytes, error) {
 	d = h.Sum([]byte{})
 
 	if !bytes.Equal(d[0:4], addr[21:]) {
-		return vNull, addressBytes, fault.ErrInvalidLitecoinAddress
+		return vNull, addressBytes, fault.InvalidLitecoinAddress
 	}
 
 	switch Version(addr[0]) {
 	case Livenet, LivenetScript, LivenetScript2, Testnet, TestnetScript, TestnetScript2:
 		// OK
 	default:
-		return vNull, addressBytes, fault.ErrInvalidLitecoinAddress
+		return vNull, addressBytes, fault.InvalidLitecoinAddress
 	}
 
 	copy(addressBytes[:], addr[1:21])
@@ -83,7 +83,7 @@ func TransformAddress(address string) (string, error) {
 	case TestnetScript2:
 		return compose(TestnetScript, addressBytes), nil
 	default:
-		return "", fault.ErrInvalidLitecoinAddress
+		return "", fault.InvalidLitecoinAddress
 	}
 }
 

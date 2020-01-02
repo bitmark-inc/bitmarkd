@@ -6,6 +6,7 @@
 package reservoir
 
 import (
+	"path"
 	"sync"
 	"time"
 
@@ -33,6 +34,9 @@ const (
 	maximumPendingPaidIssues   = blockrecord.MaximumTransactions * 2
 	maximumPendingTransactions = blockrecord.MaximumTransactions * 16
 )
+
+// the cache file
+const reservoirFile = "reservoir.cache"
 
 // single transactions of any type
 type transactionData struct {
@@ -124,13 +128,13 @@ type globalDataType struct {
 var globalData globalDataType
 
 // Initialise - create the cache
-func Initialise(reservoirDataFile string) error {
+func Initialise(cacheDirectory string) error {
 	globalData.Lock()
 	defer globalData.Unlock()
 
 	// no need to start if already started
 	if globalData.initialised {
-		return fault.ErrAlreadyInitialised
+		return fault.AlreadyInitialised
 	}
 
 	globalData.log = logger.New("reservoir")
@@ -157,12 +161,12 @@ func Initialise(reservoirDataFile string) error {
 
 	globalData.enabled = true
 
-	globalData.filename = reservoirDataFile
+	globalData.filename = path.Join(cacheDirectory, reservoirFile)
 
 	// all data initialised
 	globalData.initialised = true
 
-	globalData.log.Debugf("load from file: %s", reservoirDataFile)
+	globalData.log.Debugf("load from file: %s", globalData.filename)
 
 	// start background processes
 	globalData.log.Info("start background…")
@@ -181,7 +185,7 @@ func Initialise(reservoirDataFile string) error {
 func Finalise() error {
 
 	if !globalData.initialised {
-		return fault.ErrNotInitialised
+		return fault.NotInitialised
 	}
 
 	globalData.log.Info("shutting down…")
@@ -462,7 +466,7 @@ func rescanItem(item *transactionData) {
 		}
 
 	case *transactionrecord.ShareGrant:
-		_, err := CheckGrantBalance(nil, tx)
+		_, err := CheckGrantBalance(nil, tx, storage.Pool.ShareQuantity)
 		if nil != err {
 			internalDeleteByTxId(txId)
 		} else {
@@ -471,7 +475,7 @@ func rescanItem(item *transactionData) {
 		}
 
 	case *transactionrecord.ShareSwap:
-		_, _, err := CheckSwapBalances(nil, tx)
+		_, _, err := CheckSwapBalances(nil, tx, storage.Pool.ShareQuantity)
 		if nil != err {
 			internalDeleteByTxId(txId)
 		} else {

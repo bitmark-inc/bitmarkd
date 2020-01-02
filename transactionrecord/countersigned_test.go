@@ -415,7 +415,7 @@ func TestPackBitmarkTransferCountersignedFail(t *testing.T) {
 
 	// test the packer
 	_, err = r.Pack(ownerTwoAccount)
-	if fault.ErrInvalidSignature == err {
+	if fault.InvalidSignature == err {
 		return
 	}
 	if nil == err {
@@ -452,7 +452,7 @@ func TestPackBitmarkTransferCountersignedFromZeroAccount(t *testing.T) {
 	if nil == err {
 		t.Fatalf("pack should have failed")
 	}
-	if fault.ErrInvalidOwnerOrRegistrant != err {
+	if fault.InvalidOwnerOrRegistrant != err {
 		t.Fatalf("unexpected pack error: %s", err)
 	}
 }
@@ -482,7 +482,7 @@ func TestPackBitmarkTransferCountersignedToZeroAccount(t *testing.T) {
 	if nil == err {
 		t.Fatalf("pack should have failed")
 	}
-	if fault.ErrInvalidOwnerOrRegistrant != err {
+	if fault.InvalidOwnerOrRegistrant != err {
 		t.Fatalf("unexpected pack error: %s", err)
 	}
 }

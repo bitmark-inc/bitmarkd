@@ -31,13 +31,17 @@ const (
 	defaultTestingDatabase  = chain.Testing
 	defaultLocalDatabase    = chain.Local
 
-	defaultBitmarkPeerFile = "peers-" + chain.Bitmark + ".json"
-	defaultTestingPeerFile = "peers-" + chain.Testing + ".json"
-	defaultLocalPeerFile   = "peers-" + chain.Local + ".json"
+	defaultBitmarkCacheDirectory = chain.Bitmark + "-cache"
+	defaultTestingCacheDirectory = chain.Testing + "-cache"
+	defaultLocalCacheDirectory   = chain.Local + "-cache"
 
-	defaultBitmarkReservoirFile = "reservoir-" + chain.Bitmark + ".cache"
-	defaultTestingReservoirFile = "reservoir-" + chain.Testing + ".cache"
-	defaultLocalReservoirFile   = "reservoir-" + chain.Local + ".cache"
+	defaultBitmarkBtcCacheDirectory = chain.Bitmark + "-btc-cache"
+	defaultTestingBtcCacheDirectory = chain.Testing + "-btc-cache"
+	defaultLocalBtcCacheDirectory   = chain.Local + "-btc-cache"
+
+	defaultBitmarkLtcCacheDirectory = chain.Bitmark + "-ltc-cache"
+	defaultTestingLtcCacheDirectory = chain.Testing + "-ltc-cache"
+	defaultLocalLtcCacheDirectory   = chain.Local + "-ltc-cache"
 
 	defaultLogDirectory = "log"
 	defaultLogFile      = "bitmarkd.log"
@@ -70,10 +74,10 @@ type Configuration struct {
 	PidFile       string       `gluamapper:"pidfile" json:"pidfile"`
 	Chain         string       `gluamapper:"chain" json:"chain"`
 	Nodes         string       `gluamapper:"nodes" json:"nodes"`
+	Fastsync      bool         `gluamapper:"fast_sync" json:"fast_sync"`
 	Database      DatabaseType `gluamapper:"database" json:"database"`
 
-	PeerFile      string `gluamapper:"peer_file" json:"peer_file"`
-	ReservoirFile string `gluamapper:"reservoir_file" json:"reservoir_file"`
+	CacheDirectory string `gluamapper:"cache_directory" json:"cache_directory"`
 
 	ClientRPC  rpc.RPCConfiguration   `gluamapper:"client_rpc" json:"client_rpc"`
 	HttpsRPC   rpc.HTTPSConfiguration `gluamapper:"https_rpc" json:"https_rpc"`
@@ -97,11 +101,10 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 
 	options := &Configuration{
 
-		DataDirectory: defaultDataDirectory,
-		PidFile:       "", // no PidFile by default
-		Chain:         chain.Bitmark,
-		PeerFile:      defaultBitmarkPeerFile,
-		ReservoirFile: defaultBitmarkReservoirFile,
+		DataDirectory:  defaultDataDirectory,
+		PidFile:        "", // no PidFile by default
+		Chain:          chain.Bitmark,
+		CacheDirectory: defaultBitmarkCacheDirectory,
 
 		Database: DatabaseType{
 			Directory: defaultLevelDBDirectory,
@@ -121,6 +124,13 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 		Peering: p2p.Configuration{
 			DynamicConnections: true,
 			PreferIPv6:         true,
+		},
+
+		Payment: payment.Configuration{
+			P2PCache: payment.P2PCache{
+				BtcDirectory: defaultBitmarkBtcCacheDirectory,
+				LtcDirectory: defaultBitmarkLtcCacheDirectory,
+			},
 		},
 
 		Logging: logger.Configuration{
@@ -144,22 +154,39 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 		return nil, fmt.Errorf("Chain: %q is not supported", options.Chain)
 	}
 
-	// if database was not changed from default
-	if options.Database.Name == defaultBitmarkDatabase {
-		switch options.Chain {
-		case chain.Bitmark:
-			// already correct default
-		case chain.Testing:
+	// check if any option was not changed from its default above
+	// if not replace with chain-specific default
+	switch options.Chain {
+	case chain.Bitmark:
+		// already correct default
+	case chain.Testing:
+		if options.Database.Name == defaultBitmarkDatabase {
 			options.Database.Name = defaultTestingDatabase
-			options.PeerFile = defaultTestingPeerFile
-			options.ReservoirFile = defaultTestingReservoirFile
-		case chain.Local:
-			options.Database.Name = defaultLocalDatabase
-			options.PeerFile = defaultLocalPeerFile
-			options.ReservoirFile = defaultLocalReservoirFile
-		default:
-			return nil, fmt.Errorf("Chain: %s no default database setting", options.Chain)
 		}
+		if options.CacheDirectory == defaultBitmarkCacheDirectory {
+			options.CacheDirectory = defaultTestingCacheDirectory
+		}
+		if options.Payment.P2PCache.BtcDirectory == defaultBitmarkBtcCacheDirectory {
+			options.Payment.P2PCache.BtcDirectory = defaultTestingBtcCacheDirectory
+		}
+		if options.Payment.P2PCache.LtcDirectory == defaultBitmarkLtcCacheDirectory {
+			options.Payment.P2PCache.LtcDirectory = defaultTestingLtcCacheDirectory
+		}
+	case chain.Local:
+		if options.Database.Name == defaultBitmarkDatabase {
+			options.Database.Name = defaultLocalDatabase
+		}
+		if options.CacheDirectory == defaultBitmarkCacheDirectory {
+			options.CacheDirectory = defaultLocalCacheDirectory
+		}
+		if options.Payment.P2PCache.BtcDirectory == defaultBitmarkBtcCacheDirectory {
+			options.Payment.P2PCache.BtcDirectory = defaultLocalBtcCacheDirectory
+		}
+		if options.Payment.P2PCache.LtcDirectory == defaultBitmarkLtcCacheDirectory {
+			options.Payment.P2PCache.LtcDirectory = defaultLocalLtcCacheDirectory
+		}
+	default:
+		return nil, fmt.Errorf("Chain: %s no default database setting", options.Chain)
 	}
 
 	// ensure absolute data directory
@@ -181,9 +208,10 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 	// force all relevant items to be absolute paths
 	// if not, assign them to the data directory
 	mustBeAbsolute := []*string{
-		&options.PeerFile,
-		&options.ReservoirFile,
+		&options.CacheDirectory,
 		&options.Database.Directory,
+		&options.Payment.P2PCache.BtcDirectory,
+		&options.Payment.P2PCache.LtcDirectory,
 		&options.Logging.Directory,
 	}
 	for _, f := range mustBeAbsolute {
@@ -221,8 +249,11 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 
 	// make absolute and create directories if they do not already exist
 	for _, d := range []*string{
+		&options.CacheDirectory,
 		&options.Database.Directory,
 		&options.Logging.Directory,
+		&options.Payment.P2PCache.BtcDirectory,
+		&options.Payment.P2PCache.LtcDirectory,
 	} {
 		*d = util.EnsureAbsolute(options.DataDirectory, *d)
 		if err := os.MkdirAll(*d, 0700); nil != err {

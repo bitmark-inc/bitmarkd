@@ -41,7 +41,7 @@ func Base58EncodedSeedToPhrase(encodedSeed string) ([]string, error) {
 		phraseLength = phraseV2Length
 
 	default:
-		return nil, fault.ErrInvalidSecretKeyLength
+		return nil, fault.InvalidSecretKeyLength
 	}
 
 	phrase := make([]string, 0, phraseLength)
@@ -63,7 +63,7 @@ func Base58EncodedSeedToPhrase(encodedSeed string) ([]string, error) {
 	}
 
 	if phraseLength != len(phrase) {
-		return nil, fault.ErrInvalidRecoveryPhraseLength
+		return nil, fault.InvalidRecoveryPhraseLength
 	}
 
 	return phrase, nil

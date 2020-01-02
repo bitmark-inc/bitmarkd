@@ -185,7 +185,7 @@ func TestMapPackInvalid(t *testing.T) {
 			m: currency.Map{
 				currency.Nothing: "mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn",
 			},
-			err: fault.ErrInvalidCurrency,
+			err: fault.InvalidCurrency,
 		},
 		{
 			m: currency.Map{
@@ -193,13 +193,13 @@ func TestMapPackInvalid(t *testing.T) {
 				currency.Bitcoin:  "mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn",
 				currency.Last + 1: "mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn",
 			},
-			err: fault.ErrInvalidCurrency,
+			err: fault.InvalidCurrency,
 		},
 		{
 			m: currency.Map{
 				currency.Litecoin: "mmCKZS7toE69QgXNs1JZcjW6LFj8LfUb6z",
 			},
-			err: fault.ErrInvalidLitecoinAddress,
+			err: fault.InvalidLitecoinAddress,
 		},
 	}
 
@@ -230,7 +230,7 @@ func TestMapUnpackInvalid(t *testing.T) {
 				0x38, 0x74, 0x71, 0x71, 0x64, 0x67, 0x6f, 0x5a,
 				0x75, 0x62, 0x31, 0x5a, 0x4a, 0x52, 0x66, 0x6e,
 			},
-			err: fault.ErrInvalidCurrency,
+			err: fault.InvalidCurrency,
 		},
 		{
 			b: []byte{
@@ -245,7 +245,7 @@ func TestMapUnpackInvalid(t *testing.T) {
 				0x6f, 0x5a, 0x75, 0x62, 0x31, 0x5a, 0x4a, 0x52,
 				0x66, 0x6e,
 			},
-			err: fault.ErrInvalidCurrency,
+			err: fault.InvalidCurrency,
 		},
 		{
 			b: []byte{
@@ -259,7 +259,7 @@ func TestMapUnpackInvalid(t *testing.T) {
 				0x38, 0x74, 0x71, 0x71, 0x64, 0x67, 0x6f, 0x5a,
 				0x75, 0x62, 0x31, 0x5a, 0x4a, 0x52, 0x66, 0x6e,
 			},
-			err: fault.ErrInvalidLitecoinAddress,
+			err: fault.InvalidLitecoinAddress,
 		},
 		{
 			b: []byte{
@@ -274,7 +274,7 @@ func TestMapUnpackInvalid(t *testing.T) {
 				0x5a, 0x75, 0x62, 0x31, 0x5a, 0x4a, 0x52, 0x66,
 				0x6e,
 			},
-			err: fault.ErrInvalidCount,
+			err: fault.InvalidCount,
 		},
 	}
 

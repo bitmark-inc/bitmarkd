@@ -78,7 +78,7 @@ func (client *Client) Swap(swapConfig *SwapData) (*SwapSingleSignedReply, error)
 		return nil, err
 	}
 	if nil == swap {
-		return nil, fault.ErrMakeSwapFailed
+		return nil, fault.MakeSwapFailed
 	}
 
 	client.printJson("Swap Request", swap)
@@ -145,8 +145,8 @@ func makeSwapOneSignature(testnet bool, shareIdOne merkle.Digest, quantityOne ui
 	// pack without signature
 	packed, err := r.Pack(ownerOneAccount)
 	if nil == err {
-		return nil, nil, fault.ErrMakeSwapFailed
-	} else if fault.ErrInvalidSignature != err {
+		return nil, nil, fault.MakeSwapFailed
+	} else if fault.InvalidSignature != err {
 		return nil, nil, err
 	}
 
@@ -157,8 +157,8 @@ func makeSwapOneSignature(testnet bool, shareIdOne merkle.Digest, quantityOne ui
 	// include first signature by packing again
 	packed, err = r.Pack(ownerOneAccount)
 	if nil == err {
-		return nil, nil, fault.ErrMakeSwapFailed
-	} else if fault.ErrInvalidSignature != err {
+		return nil, nil, fault.MakeSwapFailed
+	} else if fault.InvalidSignature != err {
 		return nil, nil, err
 	}
 	return packed, &r, nil

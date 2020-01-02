@@ -6,8 +6,8 @@ Uploaders: Bitmark Developers <developers@bitmark.com>
 Build-Depends: debhelper (>=9),
                dh-systemd,
                autoconf, automake, libtool, pkgconf,
-               libzmq3-dev,
-               golang [!powerpc],
+               libzmq3-dev, libargon2-0-dev,
+               golang (>=1.13) [!powerpc],
                gccgo [powerpc]
 Standards-Version: 3.9.6
 Homepage: https://bitmark.com
@@ -16,7 +16,7 @@ Vcs-Git: git://github.com/bitmark-inc/bitmarkd.git
 
 Package: bitmarkd
 Architecture: linux-any
-Depends: ${misc:Depends}, ${shlibs:Depends}
+Depends: ${misc:Depends}, ${shlibs:Depends}, systemd
 Recommends:
 Description: Bitmark Blockchain Daemon
  This is the main program for the Bitmark P2P network.
@@ -25,7 +25,7 @@ Description: Bitmark Blockchain Daemon
 
 Package: recorderd
 Architecture: linux-any
-Depends: ${misc:Depends}, ${shlibs:Depends}
+Depends: ${misc:Depends}, ${shlibs:Depends}, systemd
 Recommends:
 Description: Bitmark Blockchain Recording Daemon
  This is the recording program for the Bitmark P2P network.

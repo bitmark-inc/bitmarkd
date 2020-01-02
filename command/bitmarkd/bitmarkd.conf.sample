@@ -5,23 +5,24 @@
 -- 2. Setup all test and live crypto currency addresses
 -- 3. If running a publicly visible node set up annouce_ips
 -- 4. Ensure _external_NAT_firewall_ forwards correct ports
---    (as a minimum, forward: 2130 and 2136)
+--    (as a minimum, forward:  2130 and  2136 for bitmark blockchain
+--                        or: 12130 and 12136 for testing blockchain)
 
 -- [1] select the chain of the network for peer connections
 --     cross chain networking connects will not work
 -- Uncomment One:
---local chain = "bitmark"
---local chain = "testing"
---local chain = "local"   -- for regression testing only
+--chain = "bitmark"
+--chain = "testing"
+--chain = "local"   -- for regression testing only
 
 -- [2] setup coin addresses for recorder payments
 --     the chain selection above will determine which
 --     address to use
-local bitcoin_addresses = {
+bitcoin_address = {
     test = "***REPLACE-WITH-REAL-TEST-BTC-ADDRESS***",
     live = "***REPLACE-WITH-REAL-LIVE-BTC-ADDRESS***",
 }
-local litecoin_addresses = {
+litecoin_address = {
     test = "***REPLACE-WITH-REAL-TEST-LTC-ADDRESS***",
     live = "***REPLACE-WITH-REAL-LIVE-LTC-ADDRESS***",
 }
@@ -29,325 +30,47 @@ local litecoin_addresses = {
 -- [3] public IPs of firewall or external interface
 --     Either or both IPv4 and IPv6 can be added depending
 --     on the network settings
-local announce_ips = {
-    --"a.b.c.d",   -- IPv4
-    --"[x::y:z]",  -- IPv6
+announce_ips = {
+    --"a.b.c.d",  -- IPv4
+    --"x::y:z",   -- IPv6
 }
 
 ------------------------------------------------------------------------
--- Advanced configuration below this point
+-- Optionally override with "interface_public_ips"
+-- see:
+--   RFC 4921 (IPv6 Addressing Architecture)
+-- This global variable excludes addresses defined by:
+--   RFC 1918 (Address Allocation for Private Internets)
+--   RFC 3927 (Dynamic Configuration of IPv4 Link-Local Addresses)
+--   RFC 4193 (Unique Local IPv6 Unicast Addresses)
 ------------------------------------------------------------------------
+--announce_ips = interface_public_ips
 
-local M = {}
+------------------------------------------------------------------------
+-- allow specific CIDRs to access the HTTPS monitoring port
+-- set nil to restict only to localhost
+-- http_allow = {
+--     "127.0.0.0/8",
+--     "::1/128",
+-- }
 
-local public_ip = {}
+------------------------------------------------------------------------
+-- to override the default "p2p" payment mode
+-- "p2p"       used as default if commented out
+-- "rest"      local bitcoind and litecoind with rest enabled
+-- "noverify"  turn off payment verification
+--payment_mode = "rest"
 
--- Read the named file in under the specified data directory
--- M.data_directory and return the contents.
-function read_file(name)
-    local f, err = io.open(M.data_directory .. "/" .. name, "r")
-    if f == nil then
-        return nil
-    end
-    local r = f:read("*a")
-    f:close()
-    return r
-end
+------------------------------------------------------------------------
+-- set log level default value (default is "error")
+--log_level = "info"
+--log_level = "warn"
 
--- Let the node announce itself (ip:port) to the network.
--- The ip should be provided using environment variables
--- either PUBLIC_IPV4 or PUBLIC_IPV6, or both
--- depends on the public IP addresses of the node.
-function make_announcements(ip_list, port)
-    local announcements = {}
-    for k, v in pairs(ip_list) do
-        announcements[#announcements+1] = v .. ":" .. port
-    end
-    return unpack(announcements)
-end
+------------------------------------------------------------------------
+-- to disable IPv6 (default is true to enable IPv6)
+--prefer_ipv6 = false
 
--- set the public IP addresses
-local public_ipv4 = os.getenv("PUBLIC_IPV4")
-if public_ipv4 ~= nil and public_ipv4 ~= "" then
-    public_ip[#public_ip+1] = public_ipv4
-end
-
-local public_ipv6 = os.getenv("PUBLIC_IPV6")
-if public_ipv6 ~= nil and public_ipv6 ~= "" then
-    public_ip[#public_ip+1] = public_ipv6
-end
-
-
--- set the directory for data and log files
---M.data_directory = arg[0]:match("(.*/)")  -- dir from configuration file
---M.data_directory = "."                    -- current directory
-M.data_directory = "/var/lib/bitmarkd"    -- absolute path
-
-
--- optional pid file if not absolute path then is created relative to
--- the data directory
---M.pidfile = "bitmarkd.pid"
-
--- select the chain of the network for peer connections
--- cross chain networking connects will not work (uncomment one)
-M.chain = chain
-
--- select the default node configuration
--- choose from: none, chain OR sub.domain.tld
-M.nodes = "chain"
-
--- optional reservoir file if not absolute path then is created relative to
--- the data directory
-M.reservoir_file = "reservoir-" .. M.chain .. ".cache"
-
--- optional peer file if not absolute path then is created relative to
--- the data directory
-M.peer_file = "peers-" .. M.chain .. ".json"
-
-
--- for JSON clients on TLS connection
-M.client_rpc = {
-
-    maximum_connections = 50,
-    bandwidth = 25000000,
-
-    listen = {
-        "0.0.0.0:2130",
-        "[::]:2130"
-    },
-
-    -- announce certain public IP:ports to network
-    -- if using firewall port forwarding use the firewall external IP:port
-    announce = {
-        -- "a.b.c.d:2130",
-        -- "[x::y:z]:2130",
-
-        -- only use if minimum announce setup varible is set
-        make_announcements(announce_ips, 2130),
-
-        -- only used if PUBLIC_IPV[46] variables are set
-        make_announcements(public_ip, 2130),
-    },
-
-    certificate = read_file("rpc.crt"),
-    private_key = read_file("rpc.key")
-}
-
-
--- for local monitoring
-M.https_rpc = {
-
-    maximum_connections = 100,
-    bandwidth = 25000000,
-
-    -- POST /bitmarkd/rpc          (unrestricted: json body as client rpc)
-    -- GET  /bitmarkd/details      (protected: more data than Node.Info))
-    -- GET  /bitmarkd/peers        (protected: list of all peers and their public key)
-    -- GET  /bitmarkd/connections  (protected: list of all outgoing peer connections)
-
-    listen = {
-        "0.0.0.0:2131",
-        "[::]:2131"
-    },
-
-    -- IP networks in CIDR form that can access the /bitmarkd/* GET APIs
-    -- default is deny
-    allow = {
-        details = {
-            "127.0.0.0/8",
-            "::1/128",
-        },
-        connections = {
-            "127.0.0.0/8",
-            "::1/128",
-        },
-        peers = {
-            "127.0.0.0/8",
-            "::1/128",
-        }
-    },
-
-    -- this example shares keys with client rpc
-    certificate = read_file("rpc.crt"),
-    private_key = read_file("rpc.key")
-}
-
-
--- peer-to-peer connections
-M.peering = {
-    -- set to false to prevent additional connections
-    dynamic_connections = true,
-
-    -- set to false to only use IPv4 for outgoing connections
-    prefer_ipv6 = true,
-
-    -- for incoming peer connections
-    listen = {
-        "0.0.0.0:2136",
-        "[::]:2136"
-    },
-
-    -- announce certain public IP:ports to network
-    -- if using firewall port forwarding use the firewall external IP:port
-    announce = {
-        -- "a.b.c.d:2136",
-        -- "[x::y:z]:2136",
-
-        -- only use if minimum announce setup varible is set
-        make_announcements(announce_ips, 2136),
-
-        -- only used if PUBLIC_IPV[46] variables are set
-        make_announcements(public_ip, 2136),
-    },
-
-    public_key = read_file("peer.public"),
-    private_key = read_file("peer.private"),
-
-    -- dedicated static peer connections
-    connect = {
-        -- {
-        --     public_key = "***BITMARKD-PEER-PUBLIC-KEY-INCLUDING-PUBLIC:-PREFIX***",
-        --     address = "p.q.r.s:2136"
-        -- },
-    }
-}
-
-
--- optional transaction/block publishing for subscribers to receive various announcements
--- intended for local services
-M.publishing = {
-
-    broadcast = {
-        "0.0.0.0:2135",
-        "[::]:2135"
-    },
-
-    -- ok to use the same keys as peer
-    public_key = read_file("peer.public"),
-    private_key = read_file("peer.private")
-}
-
-
--- configuration of recorderd connections
-M.proofing = {
-
-    public_key = read_file("proof.public"),
-    private_key = read_file("proof.private"),
-    signing_key = read_file(M.chain == "bitmark" and 'proof.live' or 'proof.test'),
-
-    -- payments for future transfers auto detected from *coin_address near top of this file
-    payment_address = {
-        bitcoin = M.chain == "bitmark" and bitcoin_address.live or bitcoin_address.test,
-        litecoin = M.chain == "bitmark" and litecoin_address.live or litecoin_address.test,
-    },
-
-    publish = {
-        "0.0.0.0:2138",
-        "[::]:2138"
-    },
-    submit = {
-        "0.0.0.0:2139",
-        "[::]:2139"
-    }
-}
-
--- determine proxy addresses based on the chain selected
-function proxy_address()
-    local proxy = {
-        sub_endpoint = "127.0.0.1:17008",
-        req_endpoint = "127.0.0.1:17009",
-    }
-    if M.chain == "bitmark" then
-        proxy.sub_endpoint = "dsc-1.live.bitmark.com:17008"
-        proxy.req_endpoint = "dsc-1.live.bitmark.com:17009"
-    end
-    if M.chain == "testing" then
-        proxy.sub_endpoint = "coins.test.bitmark.com:16008"
-        proxy.req_endpoint = "coins.test.bitmark.com:16009"
-    end
-    return proxy
-end
-
--- setup for every payment service
-M.payment = {
-
-    -- set to true to get payment transactions directly from the discovery proxy
-    use_discovery = true,
-
-    -- setup proxy addresses based on selected chain
-    discovery = proxy_address(),
-
-    -- local bitcoin access to REST API
-    bitcoin = {
-        url = "http://127.0.0.1:8332/rest"
-    },
-
-    -- local litecoin access to REST API
-    litecoin = {
-        url = "http://127.0.0.1:9332/rest"
-    }
-}
-
-
--- configure global or specific logger channel levels
-M.logging = {
-    size = 1048576,
-    count = 100,
-
-    -- set to true to log to console
-    console = false,
-
-    -- set the logging level for various modules
-    -- modules not overridden with get the value from DEFAULT
-    -- the default value for DEFAULT is "critical"
-    levels = {
-        -- DEFAULT = "debug",
-        -- DEFAULT = "info",
-        DEFAULT = "warn",
-        -- DEFAULT = "error",
-
-        -- some specific logging channels: (there may be others)
-        -- announce = "info",
-        -- announcer = "info",
-        -- asset = "info",
-        -- asset-expiry = "info",
-        -- bitcoin = "info",
-        -- block = "info",
-        -- blockheader = "info",
-        -- blockrecord = "info",
-        -- blockstore = "info",
-        -- broadcaster = "info",
-        -- checker = "info",
-        -- connector = "info",
-        -- discoverer = "info",
-        -- expiration = "info",
-        -- listener = "info",
-        -- litecoin = "info",
-        -- main = "info",
-        -- mode = "info",
-        -- nodeslookup = "info",
-        -- payment = "info",
-        -- peer = "info",
-        -- proof = "info",
-        -- publish = "info",
-        -- publisher = "info",
-        -- rebroadcaster = "info",
-        -- reservoir = "info",
-        -- rpc = "info",
-        -- submission = "info",
-        -- ["upstream@1"] = "info",
-        -- ["upstream@2"] = "info",
-        -- ["upstream@3"] = "info",
-        -- ["upstream@4"] = "info",
-        -- ["upstream@5"] = "info",
-        -- ["upstream@6"] = "info",
-        -- ["upstream@7"] = "info",
-        -- ["upstream@8"] = "info",
-        -- ["upstream@9"] = "info",
-        -- ["upstream@10"] = "info",
-    }
-}
-
-
+------------------------------------------------------------------------
 -- return the complete configuration
-return M
+local d = arg[0]:match("^(.*/)") or ""
+return dofile(d .. "bitmarkd.conf.sub")

@@ -157,7 +157,7 @@ func (digest *Digest) UnmarshalText(s []byte) error {
 // DigestFromBytes - convert and validate little endian binary byte slice to a digest
 func DigestFromBytes(digest *Digest, buffer []byte) error {
 	if Length != len(buffer) {
-		return fault.ErrNotLink
+		return fault.NotLink
 	}
 	for i := 0; i < Length; i += 1 {
 		digest[i] = buffer[i]

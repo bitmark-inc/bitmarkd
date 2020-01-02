@@ -105,15 +105,15 @@ type Connected struct {
 }
 
 // Initialise initialize p2p module
-func Initialise(configuration *Configuration, version string) error {
+func Initialise(configuration *Configuration, version string, fastsync bool) error {
 	globalData.Lock()
 	defer globalData.Unlock()
 	if globalData.initialised {
-		return fault.ErrAlreadyInitialised
+		return fault.AlreadyInitialised
 	}
 	globalData.Log = logger.New("p2p")
 	globalData.Log.Info("starting…")
-	globalData.Setup(configuration, version)
+	globalData.Setup(configuration, version, fastsync)
 	globalData.Log.Info("start background…")
 
 	processes := background.Processes{
@@ -232,7 +232,7 @@ loop:
 // Finalise - stop all background tasks
 func Finalise() error {
 	if !globalData.initialised {
-		return fault.ErrNotInitialised
+		return fault.NotInitialised
 	}
 	globalData.Log.Info("shutting down…")
 	globalData.Log.Flush()

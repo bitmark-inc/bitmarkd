@@ -27,11 +27,11 @@ func GenRandPrvKey() (crypto.PrivKey, error) {
 // PublicKey get the public key from private key
 func PublicKey(prvKey crypto.PrivKey) (crypto.PubKey, error) {
 	if nil == prvKey {
-		return nil, fault.ErrPrivateKeyIsNil
+		return nil, fault.PrivateKeyIsNil
 	}
 	publicKey := prvKey.GetPublic()
 	if nil == publicKey {
-		return nil, fault.ErrGenPublicKeyFromPrivateKey
+		return nil, fault.GenPublicKeyFromPrivateKey
 	}
 	return publicKey, nil
 }

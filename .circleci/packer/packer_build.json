@@ -1,0 +1,82 @@
+{
+  "variables": {
+    "bitmarkd_version": "0.12.0"
+  },
+  "builders": [
+    {
+      "name": "aws-freebsd",
+      "type": "amazon-ebs",
+      "region": "ap-northeast-1",
+      "source_ami": "ami-09674965b0d4019fb",
+      "instance_type": "t3.micro",
+      "ssh_username": "ec2-user",
+      "force_delete_snapshot": true,
+      "ami_groups": ["all"],
+      "ami_name": "bitmarkd-{{ user `bitmarkd_version` }}-freebsd-{{ timestamp }}",
+      "ami_description": "bitmarkd {{ user `bitmarkd_version` }}",
+      "tags": {
+        "Name": "bitmarkd-{{ user `bitmarkd_version` }}-freebsd-{{ timestamp }}"
+      }
+    },
+    {
+      "name": "aws-ubuntu",
+      "type": "amazon-ebs",
+      "region": "ap-northeast-1",
+      "source_ami": "ami-0cd744adeca97abb1",
+      "instance_type": "t3.micro",
+      "ssh_username": "ubuntu",
+      "force_delete_snapshot": true,
+      "ami_groups": ["all"],
+      "ami_name": "bitmarkd-{{ user `bitmarkd_version` }}-linux-ubuntu-{{ timestamp }}",
+      "ami_description": "bitmarkd {{ user `bitmarkd_version` }}",
+      "tags": {
+        "Name": "bitmarkd-{{ user `bitmarkd_version` }}-linux-ubuntu-{{ timestamp }}"
+      }
+    },
+    {
+      "name": "do-freebsd",
+      "type": "digitalocean",
+      "image": "freebsd-12-x64",
+      "region": "sgp1",
+      "snapshot_name": "bitmarkd-{{ user `bitmarkd_version` }}-freebsd-{{ timestamp }}",
+      "size": "s-1vcpu-1gb",
+      "ssh_username": "freebsd"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "scripts": [
+        "./packer_do_freebsd.sh"
+      ],
+      "execute_command": "chmod +x {{ .Path }}; env {{ .Vars }} {{ .Path }}",
+      "only": [ "do-freebsd" ],
+      "environment_vars": [
+        "BITMARKD_VERSION={{ user `bitmarkd_version` }}"
+      ]
+    },
+    {
+      "type": "shell",
+      "scripts": [
+        "./packer_aws_freebsd.sh"
+      ],
+      "execute_command": "chmod +x {{ .Path }}; env {{ .Vars }} {{ .Path }}",
+      "only": [ "aws-freebsd" ],
+      "environment_vars": [
+        "BITMARKD_VERSION={{ user `bitmarkd_version` }}"
+      ]
+    },
+    {
+      "type": "shell",
+      "scripts": [
+        "./packer_aws_ubuntu.sh",
+        "./packer_aws_ubuntu_cleanup.sh"
+      ],
+      "execute_command": "chmod +x {{ .Path }}; {{ .Vars }} sudo -S -E bash -e '{{ .Path }}'",
+      "only": [ "aws-ubuntu" ],
+      "environment_vars": [
+        "BITMARKD_VERSION={{ user `bitmarkd_version` }}"
+      ]
+    }
+  ]
+}

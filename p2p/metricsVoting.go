@@ -111,7 +111,7 @@ func (p *MetricsPeersVoting) GetMetrics(id peerlib.ID) (name string, remoteHeigh
 			return candidate.Metrics.name, candidate.Metrics.remoteHeight, candidate.Metrics.localHeight, candidate.Metrics.remoteDigestOfLocalHeight, candidate.Metrics.lastResponseTime, nil
 		}
 	}
-	return "", 0, 0, blockdigest.Digest{}, time.Time{}, fault.ErrNoPeerID
+	return "", 0, 0, blockdigest.Digest{}, time.Time{}, fault.NoPeerID
 }
 
 func (p *MetricsPeersVoting) allCandidates(

@@ -17,7 +17,7 @@ import (
 func rateLimit(limiter *rate.Limiter) error {
 	r := limiter.Reserve()
 	if !r.OK() {
-		return fault.ErrRateLimiting
+		return fault.RateLimiting
 	}
 	time.Sleep(r.Delay())
 	return nil
@@ -31,16 +31,16 @@ func rateLimitN(limiter *rate.Limiter, count int, maximumCount int) error {
 
 		r := limiter.Reserve()
 		if !r.OK() {
-			return fault.ErrRateLimiting
+			return fault.RateLimiting
 		}
 		time.Sleep(r.Delay())
 
-		return fault.ErrInvalidCount
+		return fault.InvalidCount
 	}
 
 	r := limiter.ReserveN(time.Now(), count)
 	if !r.OK() {
-		return fault.ErrRateLimiting
+		return fault.RateLimiting
 	}
 	time.Sleep(r.Delay())
 

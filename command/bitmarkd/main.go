@@ -23,6 +23,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/p2p"
 	"github.com/bitmark-inc/bitmarkd/payment"
+
 	"github.com/bitmark-inc/bitmarkd/proof"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/rpc"
@@ -56,16 +57,18 @@ func main() {
 	}
 
 	if len(options["version"]) > 0 {
-		exitwithstatus.Message("%s: version: %s", program, version)
+		processSetupCommand(program, []string{"version"})
+		return
 	}
 
 	if len(options["help"]) > 0 {
-		exitwithstatus.Message("usage: %s [--help] [--verbose] [--quiet] --config-file=FILE [[command|help] arguments...]", program)
+		processSetupCommand(program, []string{"help"})
+		return
 	}
 
 	// these commands do not require the configuration and
 	// process data needed for initial setup
-	if len(arguments) > 0 && processSetupCommand(arguments) {
+	if len(arguments) > 0 && processSetupCommand(program, arguments) {
 		return
 	}
 
@@ -81,7 +84,7 @@ func main() {
 	}
 
 	// these commands require the configuration and
-	// perform enquires on the configuration
+	// perform enquiries on the configuration
 	if len(arguments) > 0 && processConfigCommand(arguments, masterConfiguration) {
 		return
 	}
@@ -150,17 +153,15 @@ func main() {
 
 	// start the data storage
 	log.Info("initialise storage")
-	migrateRequired, reindexRequired, err := storage.Initialise(masterConfiguration.Database.Name, storage.ReadWrite)
+	err = storage.Initialise(masterConfiguration.Database.Name, storage.ReadWrite)
 	if nil != err {
 		log.Criticalf("storage initialise error: %s", err)
 		exitwithstatus.Message("storage initialise error: %s", err)
 	}
 	defer storage.Finalise()
-	if migrateRequired {
+
+	if storage.IsMigrationNeed() {
 		log.Warn("block database migration required")
-	}
-	if reindexRequired {
-		log.Warn("index database reindex required")
 	}
 
 	// start asset cache
@@ -173,7 +174,7 @@ func main() {
 
 	// start the reservoir (verified transaction data cache)
 	log.Info("initialise reservoir")
-	err = reservoir.Initialise(masterConfiguration.ReservoirFile)
+	err = reservoir.Initialise(masterConfiguration.CacheDirectory)
 	if nil != err {
 		log.Criticalf("reservoir initialise error: %s", err)
 		exitwithstatus.Message("reservoir initialise error: %s", err)
@@ -195,22 +196,12 @@ func main() {
 
 	// block data storage - depends on storage and mode
 	log.Info("initialise block")
-	err = block.Initialise(migrateRequired, reindexRequired)
+	err = block.Initialise(storage.Pool.Blocks)
 	if nil != err {
 		log.Criticalf("block initialise error: %s", err)
 		exitwithstatus.Message("block initialise error: %s", err)
 	}
 	defer block.Finalise()
-
-	// if reindexing was done
-	if reindexRequired {
-		err = storage.ReindexDone()
-		if nil != err {
-			log.Criticalf("index regeneration error: %s", err)
-			exitwithstatus.Message("index regeneration error: %s", err)
-		}
-		log.Warn("index was regenerated")
-	}
 
 	// these commands are allowed to access the internal database
 	if len(arguments) > 0 && processDataCommand(log, arguments, masterConfiguration) {
@@ -231,7 +222,16 @@ func main() {
 	// reservoir and block are both ready
 	// so can restore any previously saved transactions
 	// before any peer services are started
-	err = reservoir.LoadFromFile()
+	handles := reservoir.Handles{
+		Assets:            storage.Pool.Assets,
+		BlockOwnerPayment: storage.Pool.BlockOwnerPayment,
+		Transaction:       storage.Pool.Transactions,
+		OwnerTx:           storage.Pool.OwnerTxIndex,
+		OwnerData:         storage.Pool.OwnerData,
+		Share:             storage.Pool.ShareQuantity,
+		ShareQuantity:     storage.Pool.Shares,
+	}
+	err = reservoir.LoadFromFile(handles)
 	if nil != err && !os.IsNotExist(err) {
 		log.Criticalf("reservoir reload error: %s", err)
 		exitwithstatus.Message("reservoir reload error: %s", err)
@@ -263,7 +263,7 @@ func main() {
 		// trying to fetch the TXT records for validation
 		nodesDomain = masterConfiguration.Nodes // just assume it is a domain name
 	}
-	err = announce.Initialise(nodesDomain, masterConfiguration.PeerFile)
+	err = announce.Initialise(nodesDomain, masterConfiguration.CacheDirectory)
 	if nil != err {
 		log.Criticalf("announce initialise error: %s", err)
 		exitwithstatus.Message("announce initialise error: %s", err)
@@ -284,8 +284,7 @@ func main() {
 		log.Criticalf("zmq.AuthStart: error: %s", err)
 		exitwithstatus.Message("zmq.AuthStart: error: %s", err)
 	}
-
-	err = p2p.Initialise(&masterConfiguration.Peering, version)
+	err = p2p.Initialise(&masterConfiguration.Peering, version, masterConfiguration.Fastsync)
 	if nil != err {
 		log.Criticalf("p2p initialise error: %s", err)
 		exitwithstatus.Message("p2p initialise error: %s", err)
@@ -326,8 +325,7 @@ func main() {
 	}
 
 	// turn Signals into channel messages
-	ch := make(chan os.Signal)
-	//lint:ignore SA1017 signal.Notify could be buffered here
+	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-ch
 	log.Infof("received signal: %v", sig)

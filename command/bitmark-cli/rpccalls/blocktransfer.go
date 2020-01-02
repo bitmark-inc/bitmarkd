@@ -56,7 +56,7 @@ func (client *Client) SingleSignedBlockTransfer(blockTransferConfig *BlockTransf
 		return nil, err
 	}
 	if nil == blockTransfer {
-		return nil, fault.ErrMakeBlockTransferFailed
+		return nil, fault.MakeBlockTransferFailed
 	}
 
 	client.printJson("BlockTransfer Request", blockTransfer)
@@ -118,8 +118,8 @@ func makeBlockTransferOneSignature(testnet bool, link merkle.Digest, payments cu
 	// pack without signature
 	packed, err := r.Pack(ownerAccount)
 	if nil == err {
-		return nil, nil, fault.ErrMakeBlockTransferFailed
-	} else if fault.ErrInvalidSignature != err {
+		return nil, nil, fault.MakeBlockTransferFailed
+	} else if fault.InvalidSignature != err {
 		return nil, nil, err
 	}
 
@@ -130,8 +130,8 @@ func makeBlockTransferOneSignature(testnet bool, link merkle.Digest, payments cu
 	// include first signature by packing again
 	packed, err = r.Pack(ownerAccount)
 	if nil == err {
-		return nil, nil, fault.ErrMakeBlockTransferFailed
-	} else if fault.ErrInvalidSignature != err {
+		return nil, nil, fault.MakeBlockTransferFailed
+	} else if fault.InvalidSignature != err {
 		return nil, nil, err
 	}
 	return packed, &r, nil

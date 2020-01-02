@@ -1,13 +1,19 @@
 #!/bin/sh
 # test bitmarkd
-dir=$(dirname "$0")
 
 ERROR()
 {
   printf 'error: '
-  printf "$@"
+  # shellcheck disable=SC2059
+  printf -- "$@"
   printf '\n'
   exit 1
+}
+
+VERBOSE()
+{
+  # shellcheck disable=SC2059
+  [ X"${verbose}" = X"yes" ] && printf -- "$@"
 }
 
 USAGE()
@@ -15,12 +21,14 @@ USAGE()
   if [ -n "$1" ]
   then
     printf 'error: '
-    printf "$@"
+    # shellcheck disable=SC2059
+    printf -- "$@"
     printf '\n'
   fi
-  echo usage: $(basename "$0") '[options] bitmarkd-arguments...'
+  echo usage: "$(basename "$0")" '[options] bitmarkd-arguments...'
   echo '       --help             -h            this message'
   echo '       --verbose          -v            more messages'
+  echo '       --quiet            -q            less messages'
   echo '       --config=FILE      -c FILE       set configuration file ['"${config}"']'
   echo '                                        or %1..%99 or %T1..%T99 or %L1..%L99'
   echo '       --generate         -g            generate all keys/certificates'
@@ -38,11 +46,11 @@ xdg_home="${XDG_CONFIG_HOME}"
 [ -d "${xdg_home}" ] || ERROR 'missing directory: "%s" please create first' "${xdg_home}"
 
 verbose=no
+quiet=no
 debug=no
 reset=no
 from=
 generate=no
-count=
 config="${xdg_home}/bitmarkd/p2pbitmarkd.conf"
 generate_items='gen-peer-identity gen-rpc-cert gen-proof-identity'
 sleep= 2
@@ -70,7 +78,7 @@ case "$(uname)" in
 esac
 [ -x "${getopt}" ] || ERROR 'getopt: "%s" is not executable or not installed' "${getopt}"
 
-args=$(${getopt} -o hvc:grf:s:D --long=help,verbose,config:,generate,reset,from:,sleep:,debug -- "$@") || exit 1
+args=$(${getopt} -o hvqc:grf:s:D --long=help,verbose,quiet,config:,generate,reset,from:,sleep:,debug -- "$@") || exit 1
 
 # replace the arguments with the parsed values
 eval set -- "${args}"
@@ -80,6 +88,12 @@ do
   case "$1" in
     (-v|--verbose)
       verbose=yes
+      quiet=no
+      ;;
+
+    (-q|--quiet)
+      quiet=yes
+      verbose=no
       ;;
 
     (-c|--config)
@@ -117,7 +131,7 @@ do
     (-s|--sleep)
       sleep="$2"
       [ -z "${sleep}" ] && USAGE 'sleep cannot be blank'
-      [ -z "$(printf '%s' "${sleep}" | tr -d '[0-9]')" ] || USAGE 'sleep value: "%s" is not a number' "${sleep}"
+      [ -z "$(printf '%s' "${sleep}" | tr -d '[:digit:]')" ] || USAGE 'sleep value: "%s" is not a number' "${sleep}"
       shift
       ;;
 
@@ -142,10 +156,11 @@ do
 done
 
 # verify arguments
-[ X"${reset}" = X"no" -a -n "${from}" ] && USAGE 'conflicting --from requires --reset'
+[ X"${reset}" = X"no" ] && [ -n "${from}" ] && USAGE 'conflicting --from requires --reset'
 
 [ -f "${config}" ] || USAGE 'configuration file: "%s" does not exist' "${config}"
 config_dir=$(dirname "${config}")
+VERBOSE 'config dir: "%s"\n' "${config_dir}"
 
 # enable debuging
 [ X"${debug}" = X"yes" ] && set -x
@@ -161,7 +176,7 @@ do
   [ X"${pid}" = X"${pid2}" ] && ERROR 'bitmarkd already running: pid=%s' "${pid}"
 done
 
-echo starting bitmarkd...
+[ X"${quiet}" = X"no" ] && echo starting bitmarkd...
 rm -f "${pidfile}"
 rm -f "${config_dir}/log/bitmarkd.log"*
 if [ X"${reset}" = X"yes" ]
@@ -190,7 +205,8 @@ run_again()
   program="$1"
   while :
   do
-    read -p "Run ${program} again? " yorn junk
+    # shellcheck disable=SC2034
+    read -r -p "Run ${program} again? " yorn junk
     case "${yorn}" in
       ([yY]|[yY][eE][sS])
         return 0
@@ -206,12 +222,13 @@ run_again()
 }
 
 # delay if running without arguments
-[ -n "${sleep}" -a $# -eq 0 ] && sleep "${sleep}"
+[ -n "${sleep}" ] && [ $# -eq 0 ] && sleep "${sleep}"
 
 # finally run the program
+cd "${config_dir}" || ERROR 'cannot cd "%s"' "${config_dir}"
 while :
 do
-  printf 'configuration: %s\n' "${config}"
+  [ X"${quiet}" = X"no" ] && printf 'configuration: %s\n' "${config}"
   export GODEBUG=madvdontneed=1
   bitmarkd --config-file="${config}" "$@"
   [ $# -ne 0 ] && break

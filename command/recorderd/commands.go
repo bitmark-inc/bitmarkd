@@ -19,9 +19,11 @@ const (
 )
 
 // setup command handler
-// commands that run to create key and certificate files
-// these commands cannot access any internal database or states
-func processSetupCommand(arguments []string) {
+//
+// commands that run to create key and certificate files these
+// commands cannot access any internal database or states or the
+// configuration file
+func processSetupCommand(program string, arguments []string) bool {
 
 	command := "help"
 	if len(arguments) > 0 {
@@ -30,7 +32,7 @@ func processSetupCommand(arguments []string) {
 	}
 
 	switch command {
-	case "generate-identity":
+	case "generate-identity", "id":
 		publicKeyFilename := getFilenameWithDirectory(arguments, recorderdPublicKeyFilename)
 		privateKeyFilename := getFilenameWithDirectory(arguments, recorderdPrivateKeyFilename)
 
@@ -42,6 +44,12 @@ func processSetupCommand(arguments []string) {
 		}
 		fmt.Printf("generated private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
 
+	case "start", "run":
+		return false // continue processing
+
+	case "version", "v":
+		fmt.Printf("%s\n", version)
+
 	default:
 		switch command {
 		case "help", "h", "?":
@@ -51,15 +59,23 @@ func processSetupCommand(arguments []string) {
 			fmt.Printf("error: no such command: %v\n", command)
 		}
 
-		fmt.Printf("supported commands:\n\n")
-		fmt.Printf("  help                             - display this message\n\n")
+		fmt.Printf("usage: %s [--help] [--verbose] [--quiet] --config-file=FILE [[command|help] arguments...]", program)
 
-		fmt.Printf("  generate-identity [DIR]          - create private key in: %q\n", "DIR/"+recorderdPrivateKeyFilename)
-		fmt.Printf("                                     and the public key in: %q\n", "DIR/"+recorderdPublicKeyFilename)
+		fmt.Printf("supported commands:\n\n")
+		fmt.Printf("  help                       (h)      - display this message\n\n")
+		fmt.Printf("  version                    (v)      - display version sting\n\n")
+
+		fmt.Printf("  generate-identity [DIR]    (id)     - create private key in: %q\n", "DIR/"+recorderdPrivateKeyFilename)
+		fmt.Printf("                                        and the public key in: %q\n", "DIR/"+recorderdPublicKeyFilename)
+		fmt.Printf("\n")
+
+		fmt.Printf("  start                      (run)    - just run the program, same as no arguments\n")
+		fmt.Printf("                                        for convienience when passing script arguments\n")
 		fmt.Printf("\n")
 
 		exitwithstatus.Exit(1)
 	}
+	return true
 }
 
 // get the working directory; if not set in the arguments

@@ -160,10 +160,10 @@ func TestDeleteProofer(t *testing.T) {
 	wg.Add(count)
 
 	go func() {
-		//lint:ignore S1000 XXX: We should use for range here
+		//nolint:ignore S1000 XXX: We should use for range here
 		for i := 0; i < count; i++ {
 			select {
-			//lint:ignore S1000 for the test code it is OK to use for and select
+			//nolint:ignore S1000 for the test code it is OK to use for and select
 			//     instead of for range
 			case <-p.stopChannel:
 				received++

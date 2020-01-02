@@ -47,15 +47,15 @@ func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransferCou
 	log.Infof("Bitmark.Transfer: %+v", transfer)
 
 	if nil == arguments || nil == arguments.Owner {
-		return fault.ErrInvalidItem
+		return fault.InvalidItem
 	}
 
 	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
+		return fault.NotAvailableDuringSynchronise
 	}
 
 	if arguments.Owner.IsTesting() != mode.IsTesting() {
-		return fault.ErrWrongNetworkForPublicKey
+		return fault.WrongNetworkForPublicKey
 	}
 
 	// for unratified transfers
@@ -69,7 +69,7 @@ func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransferCou
 	}
 
 	// save transfer/check for duplicate
-	stored, duplicate, err := reservoir.StoreTransfer(transfer)
+	stored, duplicate, err := reservoir.StoreTransfer(transfer, storage.Pool.Transactions, storage.Pool.OwnerTxIndex, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
 	if nil != err {
 		return err
 	}
@@ -200,7 +200,7 @@ loop:
 			}
 
 			record, _ := transactionrecord.RecordName(assetTx)
-			h := ProvenanceRecord{
+			h = ProvenanceRecord{
 				Record:  record,
 				IsOwner: false,
 				TxId:    nil,

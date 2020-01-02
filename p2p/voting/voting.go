@@ -161,11 +161,11 @@ func (v *VotingImpl) countVotes() error {
 	))
 
 	if nil == v.result.winner {
-		return fmt.Errorf("%s", fault.ErrVotesEmptyWinner)
+		return fmt.Errorf("%s", fault.VotesWithEmptyWinner)
 	}
 
 	if !v.sufficientVotes() {
-		return fmt.Errorf("%s", fault.ErrVotesInsufficient)
+		return fmt.Errorf("%s", fault.VotesInsufficient)
 	}
 
 	return nil
@@ -212,11 +212,11 @@ func (v *VotingImpl) drawElection() (Candidate, uint64, error) {
 
 func (v *VotingImpl) drawWinner() (Candidate, error) {
 	if 0 == v.result.highestNumVotes {
-		return nil, fault.ErrVotesZeroCount
+		return nil, fault.VotesWithZeroCount
 	}
 
 	if uint64(0) == v.result.majorityHeight {
-		return nil, fault.ErrVotesZeroHeight
+		return nil, fault.VotesWithZeroHeight
 	}
 	v.log.Debug("start to decide which is best winner")
 	candidates := v.sameVoteCandidates(v.result.highestNumVotes)

@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: ISC
+// Copyright (c) 2014-2019 Bitmark Inc.
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
 package storage
 
 import (
@@ -11,7 +15,7 @@ import (
 )
 
 // for Database
-type DataAccess interface {
+type Access interface {
 	Abort()
 	Begin() error
 	Commit() error
@@ -24,7 +28,7 @@ type DataAccess interface {
 	Put([]byte, []byte)
 }
 
-type DataAccessImpl struct {
+type AccessData struct {
 	sync.Mutex
 	inUse bool
 	db    *leveldb.DB
@@ -32,8 +36,8 @@ type DataAccessImpl struct {
 	cache Cache
 }
 
-func newDA(db *leveldb.DB, trx *leveldb.Batch, cache Cache) DataAccess {
-	return &DataAccessImpl{
+func newDA(db *leveldb.DB, trx *leveldb.Batch, cache Cache) Access {
+	return &AccessData{
 		inUse: false,
 		db:    db,
 		batch: trx,
@@ -41,7 +45,7 @@ func newDA(db *leveldb.DB, trx *leveldb.Batch, cache Cache) DataAccess {
 	}
 }
 
-func (d *DataAccessImpl) Begin() error {
+func (d *AccessData) Begin() error {
 	d.Lock()
 	defer d.Unlock()
 
@@ -53,25 +57,25 @@ func (d *DataAccessImpl) Begin() error {
 	return nil
 }
 
-func (d *DataAccessImpl) Put(key []byte, value []byte) {
+func (d *AccessData) Put(key []byte, value []byte) {
 	d.cache.Set(dbPut, string(key), value)
 	d.batch.Put(key, value)
 }
 
-func (d *DataAccessImpl) Delete(key []byte) {
+func (d *AccessData) Delete(key []byte) {
 	d.cache.Set(dbDelete, string(key), []byte{})
 	d.batch.Delete(key)
 }
 
-func (d *DataAccessImpl) Commit() error {
+func (d *AccessData) Commit() error {
 	return d.db.Write(d.batch, nil)
 }
 
-func (d *DataAccessImpl) DumpTx() []byte {
+func (d *AccessData) DumpTx() []byte {
 	return d.batch.Dump()
 }
 
-func (d *DataAccessImpl) Get(key []byte) ([]byte, error) {
+func (d *AccessData) Get(key []byte) ([]byte, error) {
 	val, found := d.getFromCache(key)
 	if found {
 		return val, nil
@@ -79,19 +83,19 @@ func (d *DataAccessImpl) Get(key []byte) ([]byte, error) {
 	return d.getFromDB(key)
 }
 
-func (d *DataAccessImpl) getFromCache(key []byte) ([]byte, bool) {
+func (d *AccessData) getFromCache(key []byte) ([]byte, bool) {
 	return d.cache.Get(string(key))
 }
 
-func (d *DataAccessImpl) getFromDB(key []byte) ([]byte, error) {
+func (d *AccessData) getFromDB(key []byte) ([]byte, error) {
 	return d.db.Get(key, nil)
 }
 
-func (d *DataAccessImpl) Iterator(searchRange *ldb_util.Range) iterator.Iterator {
+func (d *AccessData) Iterator(searchRange *ldb_util.Range) iterator.Iterator {
 	return d.db.NewIterator(searchRange, nil)
 }
 
-func (d *DataAccessImpl) Has(key []byte) (bool, error) {
+func (d *AccessData) Has(key []byte) (bool, error) {
 	_, found := d.getFromCache(key)
 	if found {
 		return true, nil
@@ -99,11 +103,11 @@ func (d *DataAccessImpl) Has(key []byte) (bool, error) {
 	return d.db.Has(key, nil)
 }
 
-func (d *DataAccessImpl) InUse() bool {
+func (d *AccessData) InUse() bool {
 	return d.inUse
 }
 
-func (d *DataAccessImpl) Abort() {
+func (d *AccessData) Abort() {
 	d.Lock()
 	defer d.Unlock()
 

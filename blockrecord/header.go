@@ -96,9 +96,9 @@ func Finalise() {
 // ExtractHeader - extract a header from the front of a []byte
 // if checkHeight non-zero then verify correct block number first
 // to reduce hashing load for obviously incorrect blocks
-func ExtractHeader(block []byte, checkHeight uint64) (*Header, blockdigest.Digest, []byte, error) {
+func ExtractHeader(block []byte, checkHeight uint64, skipDigest bool) (*Header, blockdigest.Digest, []byte, error) {
 	if len(block) < totalBlockSize {
-		return nil, blockdigest.Digest{}, nil, fault.ErrInvalidBlockHeaderSize
+		return nil, blockdigest.Digest{}, nil, fault.InvalidBlockHeaderSize
 	}
 	packedHeader := PackedHeader{}
 	copy(packedHeader[:], block[:totalBlockSize])
@@ -116,6 +116,10 @@ func ExtractHeader(block []byte, checkHeight uint64) (*Header, blockdigest.Diges
 		}
 	}
 
+	if skipDigest {
+		return header, blockdigest.Digest{}, block[totalBlockSize:], nil
+	}
+
 	thisBlockNumberKey := make([]byte, 8)
 	binary.BigEndian.PutUint64(thisBlockNumberKey, header.Number)
 	digest := DigestFromHashPool(storage.Pool.BlockHeaderHash, thisBlockNumberKey)
@@ -131,7 +135,7 @@ func ExtractHeader(block []byte, checkHeight uint64) (*Header, blockdigest.Diges
 // DigestFromHashPool - get digest from hash pool
 func DigestFromHashPool(pool storage.Handle, blockNumber []byte) blockdigest.Digest {
 	var digest blockdigest.Digest
-	if !pool.Empty() {
+	if pool != nil && pool.Ready() {
 		digestBytes := pool.Get(blockNumber)
 		if err := blockdigest.DigestFromBytes(&digest, digestBytes); err == nil {
 			return digest
@@ -143,7 +147,7 @@ func DigestFromHashPool(pool storage.Handle, blockNumber []byte) blockdigest.Dig
 // ComputeHeaderHash - return the hash of a block's header
 func ComputeHeaderHash(block []byte) (blockdigest.Digest, error) {
 	if len(block) < totalBlockSize {
-		return blockdigest.Digest{}, fault.ErrInvalidBlockHeaderSize
+		return blockdigest.Digest{}, fault.InvalidBlockHeaderSize
 	}
 	packedHeader := PackedHeader{}
 	copy(packedHeader[:], block[:totalBlockSize])
@@ -167,11 +171,11 @@ func (record PackedHeader) Unpack() (*Header, error) {
 	} else {
 		// normal block
 		if header.Version < MinimumVersion || header.Number < MinimumBlockNumber {
-			return nil, fault.ErrInvalidBlockHeaderVersion
+			return nil, fault.InvalidBlockHeaderVersion
 		}
 
 		if header.TransactionCount < MinimumTransactions || header.TransactionCount > MaximumTransactions {
-			return nil, fault.ErrTransactionCountOutOfRange
+			return nil, fault.TransactionCountOutOfRange
 		}
 	}
 
@@ -188,7 +192,7 @@ func (record PackedHeader) Unpack() (*Header, error) {
 	header.Timestamp = binary.LittleEndian.Uint64(record[timestampOffset:difficultyOffset])
 
 	if header.Timestamp > uint64(time.Now().Add(5*time.Minute).Unix()) {
-		return nil, fault.ErrInvalidBlockHeaderTimestamp
+		return nil, fault.InvalidBlockHeaderTimestamp
 	}
 
 	header.Difficulty.SetBytes(record[difficultyOffset:nonceOffset])
@@ -225,9 +229,9 @@ func (header *Header) Pack() PackedHeader {
 
 // FoundationTxId - create the transaction id for a foundation record
 // its TxId is sha3-256 . concat blockDigest leBlockNumberUint64
-func FoundationTxId(header *Header, digest blockdigest.Digest) merkle.Digest {
+func FoundationTxId(blockNumber uint64, digest blockdigest.Digest) merkle.Digest {
 	leBlockNumber := make([]byte, 8)
-	binary.LittleEndian.PutUint64(leBlockNumber, header.Number)
+	binary.LittleEndian.PutUint64(leBlockNumber, blockNumber)
 	return merkle.NewDigest(append(digest[:], leBlockNumber...))
 }
 
@@ -322,7 +326,7 @@ func timespanOfBlockFromBeginToEnd(beginBlock uint64, endBlock uint64) (uint64, 
 
 	if endTime <= beginTime {
 		log.Error("block end time earlier than block begin time")
-		return uint64(0), fault.ErrDifficultyTimespan
+		return uint64(0), fault.BlockEndEarlierThanBegin
 	}
 
 	return endTime - beginTime, nil
@@ -334,10 +338,10 @@ func timestampOfBlock(height uint64) (uint64, error) {
 
 	packed := storage.Pool.Blocks.Get(blockKey)
 	if nil == packed {
-		return uint64(0), fault.ErrBlockNotFound
+		return uint64(0), fault.BlockNotFound
 	}
 
-	header, _, _, err := ExtractHeader(packed, 0)
+	header, _, _, err := ExtractHeader(packed, 0, true)
 	if err != nil {
 		return uint64(0), err
 	}
@@ -351,10 +355,10 @@ func difficultyOfBlock(height uint64) (float64, error) {
 
 	packed := storage.Pool.Blocks.Get(blockKey)
 	if nil == packed {
-		return float64(0), fault.ErrBlockNotFound
+		return float64(0), fault.BlockNotFound
 	}
 
-	header, _, _, err := ExtractHeader(packed, 0)
+	header, _, _, err := ExtractHeader(packed, 0, true)
 	if err != nil {
 		return float64(0), err
 	}
