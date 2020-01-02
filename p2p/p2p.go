@@ -65,7 +65,6 @@ type Configuration struct {
 	Listen             []string           `gluamapper:"listen" json:"listen"`
 	Announce           []string           `gluamapper:"announce" json:"announce"`
 	PrivateKey         string             `gluamapper:"private_key" json:"private_key"`
-	PublicKey          string             `gluamapper:"public_key" json:"public_key"` //TODO : REMOVE
 	Connect            []StaticConnection `gluamapper:"connect" json:"connect,omitempty"`
 }
 

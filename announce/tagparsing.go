@@ -37,7 +37,7 @@ type tagline struct {
 
 // decode DNS TXT records of these forms
 //
-//   <TAG> a=<IPv4;IPv6> c=<PORT> r=<PORT> f=<SHA3-256(cert)> p=<PUBLIC-KEY>
+//   <TAG> a=<IPv4;IPv6> c=<PORT> r=<PORT> f=<SHA3-256(cert)> i=<PEER-ID>
 //
 // other invalid combinations or extraneous items are ignored
 
