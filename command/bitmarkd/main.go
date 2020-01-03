@@ -23,6 +23,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/p2p"
 	"github.com/bitmark-inc/bitmarkd/payment"
+	"github.com/bitmark-inc/bitmarkd/publish"
 
 	"github.com/bitmark-inc/bitmarkd/proof"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
@@ -298,14 +299,14 @@ func main() {
 	defer rpc.Finalise()
 
 	// start up the publishing background processes
-	/*
-		err = publish.Initialise(&masterConfiguration.Publishing, version)
-		if nil != err {
-			log.Criticalf("publish initialise error: %s", err)
-			exitwithstatus.Message("publish initialise error: %s", err)
-		}
-		defer publish.Finalise()
-	*/
+
+	err = publish.Initialise(&masterConfiguration.Publishing, version)
+	if nil != err {
+		log.Criticalf("publish initialise error: %s", err)
+		exitwithstatus.Message("publish initialise error: %s", err)
+	}
+	defer publish.Finalise()
+
 	// start proof background processes
 	err = proof.Initialise(&masterConfiguration.Proofing)
 	if nil != err {
