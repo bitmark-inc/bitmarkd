@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/announce"
+	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/stretchr/testify/assert"
@@ -48,7 +49,7 @@ func mockConfiguration(nType string, port int) *Configuration {
 func TestIDMarshalUnmarshal(t *testing.T) {
 	conf := mockConfiguration("servant", 12136)
 	fmt.Println(conf.PrivateKey)
-	prvKey, err := DecodeHexToPrvKey([]byte(conf.PrivateKey))
+	prvKey, err := util.DecodePrivKeyFromHex(conf.PrivateKey)
 	assert.NoError(t, err, "Decode Hex Key Error")
 	id, err := peerlib.IDFromPrivateKey(prvKey)
 	assert.NoError(t, err, "IDFromPrivateKey Error:")
