@@ -378,7 +378,7 @@ func dnsTXT(options *Configuration) {
 		exitwithstatus.Message("error: cannot generate private key: %q  error: %s", peering.PrivateKey, err)
 	}
 
-	peerID, err := peer.IDFromPublicKey(privateKey.GetPublic())
+	peerID, err := peer.IDFromPrivateKey(privateKey)
 	if err != nil {
 		exitwithstatus.Message("error: cannot generate peer id  error: %s", err)
 	}
