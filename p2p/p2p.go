@@ -145,7 +145,7 @@ loop:
 					continue loop
 				}
 				id := item.Parameters[0]
-				if id != nil && len(id) > 0 {
+				if len(id) > 0 {
 					displayID, err := peerlib.IDFromBytes(id)
 					if nil != err {
 						util.LogInfo(log, util.CoGreen, fmt.Sprintf("@D parse id Error %v", err))
@@ -153,42 +153,34 @@ loop:
 					n.delRegister(displayID)
 					util.LogInfo(log, util.CoWhite, fmt.Sprintf("@D  ID:%v is deleted", displayID.ShortString()))
 				}
-			case "peer": // only servant broadcast its peer and rpc
-				fallthrough
-			case "rpc":
-				fallthrough
-			case "block":
-				fallthrough
-			case "proof":
-				fallthrough
-			case "transfer":
-				fallthrough
-			case "issues":
-				fallthrough
-			case "assets":
-				if n.NodeType != "client" {
-					p2pMsgPacked, err := PackP2PMessage(nodeChain, item.Command, item.Parameters)
-					if err != nil {
-						util.LogWarn(log, util.CoLightRed, fmt.Sprintf("Run:PackP2PMessage error:%v", err))
-						continue loop
-					}
-					err = MulticastCommand(p2pMsgPacked)
-					if err != nil {
-						util.LogWarn(log, util.CoLightRed, fmt.Sprintf("Run:Multicast Publish error:%v", err))
-						continue loop
-					}
-					if item.Command == "peer" {
-						id := item.Parameters[0]
-						if id != nil && len(id) > 0 {
-							displayID, err := peerlib.IDFromBytes(id)
-							if nil == err {
-								util.LogInfo(log, util.CoGreen, fmt.Sprintf("<<-- multicasting PEER : %v", displayID.ShortString()))
-							}
-						}
-					} else {
-						util.LogInfo(log, util.CoGreen, fmt.Sprintf("<<--Multicast Command:%s parameters:%d\n", item.Command, len(item.Parameters)))
-					}
+			case "peer", "rpc": // only servant broadcast its peer and rpc
+				if n.NodeType == "client" {
+					break
 				}
+				fallthrough
+			case "block", "proof", "transfer", "issues", "assets":
+				p2pMsgPacked, err := PackP2PMessage(nodeChain, item.Command, item.Parameters)
+				if err != nil {
+					util.LogWarn(log, util.CoLightRed, fmt.Sprintf("Run:PackP2PMessage error:%v", err))
+					continue loop
+				}
+				err = MulticastCommand(p2pMsgPacked)
+				if err != nil {
+					util.LogWarn(log, util.CoLightRed, fmt.Sprintf("Run:Multicast Publish error:%v", err))
+					continue loop
+				}
+				if item.Command == "peer" {
+					id := item.Parameters[0]
+					if len(id) > 0 {
+						displayID, err := peerlib.IDFromBytes(id)
+						if nil == err {
+							util.LogInfo(log, util.CoGreen, fmt.Sprintf("<<-- multicasting PEER : %v", displayID.ShortString()))
+						}
+					}
+				} else {
+					util.LogInfo(log, util.CoGreen, fmt.Sprintf("<<--Multicast Command:%s parameters:%d\n", item.Command, len(item.Parameters)))
+				}
+
 			//general broadcasting
 			default: //peers to connect
 				if "N1" == item.Command || "N3" == item.Command || "X1" == item.Command || "X2" == item.Command ||
