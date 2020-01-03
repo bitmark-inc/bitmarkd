@@ -35,15 +35,15 @@ func (n *Node) UpdateVotingMetrics(id peerlib.ID, metrics *MetricsPeersVoting) e
 	}
 	defer s.Reset()
 	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
-	_, err = n.RequestRegister(id, &s, rw)
+	_, err = n.RequestRegister(id, s, rw)
 	if err != nil {
 		return err
 	}
-	height, err := n.QueryBlockHeight(id, &s, rw)
+	height, err := n.QueryBlockHeight(id, s, rw)
 	if err != nil {
 		return err
 	}
-	digest, err := n.RemoteDigestOfHeight(id, height, &s, rw)
+	digest, err := n.RemoteDigestOfHeight(id, height, s, rw)
 	if err != nil {
 		return err
 	}
@@ -55,23 +55,24 @@ func (n *Node) UpdateVotingMetrics(id peerlib.ID, metrics *MetricsPeersVoting) e
 // to detemine stream and readwriter to use in request.
 //streamCreated tells if newStream is created in the function.
 //If it does , return stream may need to be reset in defer
-func (n *Node) determineStreamRWerHelper(id peerlib.ID, s *network.Stream, rw *bufio.ReadWriter) (stream *network.Stream, readwriter *bufio.ReadWriter, streamCreated bool) {
+func (n *Node) determineStreamRWerHelper(id peerlib.ID, s network.Stream, rw *bufio.ReadWriter) (stream network.Stream, readwriter *bufio.ReadWriter, streamCreated bool) {
 	cctx, cancel := context.WithTimeout(context.Background(), waitingRespTime)
 	defer cancel()
 	if nil == s {
-		createStream, newErr := n.Host.NewStream(cctx, id, "p2pstream")
+		newStream, newErr := n.Host.NewStream(cctx, id, "p2pstream")
 		if newErr != nil {
+			util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("fail to create a new stream: Error %v", newErr))
 			return nil, nil, false
 		}
-		stream = &createStream
+		stream = newStream
 		streamCreated = true
-		readwriter = bufio.NewReadWriter(bufio.NewReader(*stream), bufio.NewWriter(*stream))
+		readwriter = bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
 	} else {
 		stream = s
 		if readwriter != nil {
 			readwriter = rw
 		} else {
-			readwriter = bufio.NewReadWriter(bufio.NewReader(*stream), bufio.NewWriter(*stream))
+			readwriter = bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
 		}
 	}
 	//util.LogDebug(n.Log, util.CoGreen, fmt.Sprintf("determineStreamRWerHelper:  ID:%s", id.ShortString()))
@@ -101,14 +102,14 @@ func (n *Node) readWithTimeout(readwriter *bufio.ReadWriter, buf []byte, timeout
 }
 
 //RequestRegister this node register itself to the peer node. If stream is  nil, the function will create a new stream
-func (n *Node) RequestRegister(id peerlib.ID, stream *network.Stream, readwriter *bufio.ReadWriter) (*network.Stream, error) {
+func (n *Node) RequestRegister(id peerlib.ID, stream network.Stream, readwriter *bufio.ReadWriter) (network.Stream, error) {
 	s, rw, created := n.determineStreamRWerHelper(id, stream, readwriter)
 	if nil == s || nil == rw {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf(" RequestRegister: ID:%v No Useful Stream and ReadWriter", id.ShortString()))
 		return nil, fault.StreamReadWriter
 	}
 	if created && s != nil {
-		defer (*s).Reset()
+		defer s.Reset()
 	}
 	nodeChain := mode.ChainName()
 	p2pData, err := PackRegisterData(nodeChain, "R", n.NodeType, n.Host.ID(), n.Announce, time.Now())
@@ -166,7 +167,7 @@ func (n *Node) RequestRegister(id peerlib.ID, stream *network.Stream, readwriter
 }
 
 //QueryBlockHeight query the  block height of peer node with given peerID. Put nil when you don't want to reuse stream
-func (n *Node) QueryBlockHeight(id peerlib.ID, stream *network.Stream, readwriter *bufio.ReadWriter) (uint64, error) {
+func (n *Node) QueryBlockHeight(id peerlib.ID, stream network.Stream, readwriter *bufio.ReadWriter) (uint64, error) {
 	fn := "N"
 	s, rw, created := n.determineStreamRWerHelper(id, stream, readwriter)
 	if nil == s || nil == rw {
@@ -174,7 +175,7 @@ func (n *Node) QueryBlockHeight(id peerlib.ID, stream *network.Stream, readwrite
 		return 0, fault.StreamReadWriter
 	}
 	if created && s != nil {
-		defer (*s).Reset()
+		defer s.Reset()
 	}
 	if !n.IsRegister(id) { // stream has registered {
 		_, regErr := n.RequestRegister(id, stream, readwriter)
@@ -234,14 +235,14 @@ func (n *Node) QueryBlockHeight(id peerlib.ID, stream *network.Stream, readwrite
 }
 
 //RemoteDigestOfHeight - fetch block digest from a specific block number
-func (n *Node) RemoteDigestOfHeight(id peerlib.ID, blockNumber uint64, stream *network.Stream, readwriter *bufio.ReadWriter) (blockdigest.Digest, error) {
+func (n *Node) RemoteDigestOfHeight(id peerlib.ID, blockNumber uint64, stream network.Stream, readwriter *bufio.ReadWriter) (blockdigest.Digest, error) {
 	s, rw, created := n.determineStreamRWerHelper(id, stream, readwriter)
 	if nil == s || nil == rw {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("Register:No Useful Stream and ReadWrite ID:%v", id.ShortString()))
 		return blockdigest.Digest{}, fault.StreamReadWriter
 	}
 	if created && s != nil {
-		defer (*s).Reset()
+		defer s.Reset()
 	}
 	nodeChain := mode.ChainName()
 	if !n.IsRegister(id) { // stream has registered {
@@ -307,14 +308,14 @@ func (n *Node) RemoteDigestOfHeight(id peerlib.ID, blockNumber uint64, stream *n
 }
 
 // GetBlockData - fetch block data from a specific block number
-func (n *Node) GetBlockData(id peerlib.ID, blockNumber uint64, stream *network.Stream, readwriter *bufio.ReadWriter) ([]byte, error) {
+func (n *Node) GetBlockData(id peerlib.ID, blockNumber uint64, stream network.Stream, readwriter *bufio.ReadWriter) ([]byte, error) {
 	s, rw, created := n.determineStreamRWerHelper(id, stream, readwriter)
 	if nil == s || nil == rw {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("Register:No Useful Stream and ReadWrite ID:%v", id.ShortString()))
 		return nil, fault.StreamReadWriter
 	}
 	if created && s != nil {
-		defer (*s).Reset()
+		defer s.Reset()
 	}
 	if !n.IsRegister(id) { // stream has registered {
 		_, regErr := n.RequestRegister(id, stream, readwriter)
@@ -370,14 +371,14 @@ func (n *Node) GetBlockData(id peerlib.ID, blockNumber uint64, stream *network.S
 }
 
 //PushMessageBus  send the CommandBus Message to the peer with given ID
-func (n *Node) PushMessageBus(item BusMessage, id peerlib.ID, stream *network.Stream, readwriter *bufio.ReadWriter) error {
+func (n *Node) PushMessageBus(item BusMessage, id peerlib.ID, stream network.Stream, readwriter *bufio.ReadWriter) error {
 	s, rw, created := n.determineStreamRWerHelper(id, stream, readwriter)
 	if nil == s || nil == rw {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("Register:No Useful Stream and ReadWrite ID:%v", id.ShortString()))
 		return fault.StreamReadWriter
 	}
 	if created && s != nil {
-		defer (*s).Reset()
+		defer s.Reset()
 	}
 	if !n.IsRegister(id) { // stream has registered {
 		_, regErr := n.RequestRegister(id, stream, readwriter)
