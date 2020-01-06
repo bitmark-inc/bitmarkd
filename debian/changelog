@@ -1,3 +1,10 @@
+bitmarkd (0.12.4-beta.4-1ubuntu1) bionic; urgency=medium
+
+  * problem with dual stack OS FreeBSD, Linux and RPC.  Was only TCP4
+    change to be TCP46
+
+ -- Christopher Hall <hsw@bitmark.com>  Mon, 06 Jan 2020 02:22:48 +0000
+
 bitmarkd (0.12.4-beta.3-1ubuntu1) bionic; urgency=medium
 
   * fix litecoin mainnet magic number (#110)
