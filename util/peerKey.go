@@ -7,15 +7,21 @@ import (
 	crypto "github.com/libp2p/go-libp2p-core/crypto"
 )
 
-//GenEd25519Key Generate a random ED29919, 2048 key
-func GenEd25519Key() (crypto.PrivKey, error) {
+//GenEd25519Key Generate a random ED29919
+func MakeEd25519PeerKey() (string, error) {
 	r := rand.Reader
-	prvKey, _, err := crypto.GenerateKeyPairWithReader(crypto.Ed25519, 2048, r)
+	prvKey, _, err := crypto.GenerateKeyPairWithReader(crypto.Ed25519, 0, r)
 
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	return prvKey, nil
+
+	keyBytes, err := crypto.MarshalPrivateKey(prvKey)
+	if err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(keyBytes), nil
 }
 
 //DecodeHexToPrvKey decode a hex encoded key to a PrivKey
