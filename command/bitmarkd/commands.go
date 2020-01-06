@@ -61,7 +61,7 @@ func processSetupCommand(program string, arguments []string) bool {
 		privateKeyFilename := getFilenameWithDirectory(arguments, peerPrivateKeyFilename)
 
 		if util.EnsureFileExists(peerPrivateKeyFilename) {
-			fmt.Printf("generate private key: %q error: %s\n", privateKeyFilename, fault.ErrCertificateFileAlreadyExists)
+			fmt.Printf("generate private key: %q error: %s\n", privateKeyFilename, fault.CertificateFileAlreadyExists)
 			exitwithstatus.Exit(1)
 		}
 
