@@ -45,7 +45,7 @@ func TestValidTag(t *testing.T) {
 		{
 			id:  4,
 			txt: "bitmark=v3 a= i=",
-			err: fault.ErrInvalidDnsTxtRecord,
+			err: fault.InvalidDnsTxtRecord,
 		},
 		{
 			id:  5,
@@ -62,22 +62,22 @@ func TestValidTag(t *testing.T) {
 		{
 			id:  7,
 			txt: "bitmark=v3 r=33566 f=48137A7A76934CAFE7635C9AC05339C20F4C00A724D7FA1DC0DC3875476ED004 c=32136 i=12D3KooWFuZgAPcKGyaG5HqVKjUWptf4m8BYXk3XFzo8vSzi7vPA",
-			err: fault.ErrInvalidDnsTxtRecord,
+			err: fault.InvalidDnsTxtRecord,
 		},
 		{
 			id:  8,
 			txt: "bitmark=v3 a=118.163.120.178;[2001:b030:2314:0200:4649:583d:0001:0120] f=48137A7A76934CAFE7635C9AC05339C20F4C00A724D7FA1DC0DC3875476ED004 c=32136 i=12D3KooWFuZgAPcKGyaG5HqVKjUWptf4m8BYXk3XFzo8vSzi7vPA",
-			err: fault.ErrInvalidDnsTxtRecord,
+			err: fault.InvalidDnsTxtRecord,
 		},
 		{
 			id:  9,
 			txt: "bitmark=v3 a=118.163.120.178;[2001:b030:2314:0200:4649:583d:0001:0120] r=33566 c=32136 i=12D3KooWFuZgAPcKGyaG5HqVKjUWptf4m8BYXk3XFzo8vSzi7vPA",
-			err: fault.ErrInvalidDnsTxtRecord,
+			err: fault.InvalidDnsTxtRecord,
 		},
 		{
 			id:  10,
 			txt: "bitmark=v3 a=118.163.120.178;[2001:b030:2314:0200:4649:583d:0001:0120] r=33566 f=48137A7A76934CAFE7635C9AC05339C20F4C00A724D7FA1DC0DC3875476ED004 i=12D3KooWFuZgAPcKGyaG5HqVKjUWptf4m8BYXk3XFzo8vSzi7vPA",
-			err: fault.ErrInvalidDnsTxtRecord,
+			err: fault.InvalidDnsTxtRecord,
 		},
 		{
 			id:  11,
@@ -89,62 +89,62 @@ func TestValidTag(t *testing.T) {
 		{
 			id:  12,
 			txt: "bitmark=v3 a=300.163.120.178;2001:b030:2314:0200:4649:583d:0001:0120 r=33566 f=48137A7A76934CAFE7635C9AC05339C20F4C00A724D7FA1DC0DC3875476ED004 c=32136 i=12D3KooWFuZgAPcKGyaG5HqVKjUWptf4m8BYXk3XFzo8vSzi7vPA",
-			err: fault.ErrInvalidIpAddress,
+			err: fault.InvalidIpAddress,
 		},
 		{
 			id:  13,
 			txt: "bitmark=v3 a=118.163.120.178;2001:x030:2314:0200:4649:583d:0001:0120 r=33566 f=48137A7A76934CAFE7635C9AC05339C20F4C00A724D7FA1DC0DC3875476ED004 c=32136 i=12D3KooWFuZgAPcKGyaG5HqVKjUWptf4m8BYXk3XFzo8vSzi7vPA",
-			err: fault.ErrInvalidIpAddress,
+			err: fault.InvalidIpAddress,
 		},
 		{
 			id:  14,
 			txt: "bitmark=v3 a=118.163.120.178;2001:b030:2314:0200:4649:583d:0001:0120 r=335669 f=48137A7A76934CAFE7635C9AC05339C20F4C00A724D7FA1DC0DC3875476ED004 s=32135 c=32136 i=12D3KooWFuZgAPcKGyaG5HqVKjUWptf4m8BYXk3XFzo8vSzi7vPA",
-			err: fault.ErrInvalidPortNumber,
+			err: fault.InvalidPortNumber,
 		},
 		{
 			id:  15,
 			txt: "bitmark=v3 a=118.163.120.178;2001:b030:2314:0200:4649:583d:0001:0120 r=0 f=48137A7A76934CAFE7635C9AC05339C20F4C00A724D7FA1DC0DC3875476ED004 c=32136 i=12D3KooWFuZgAPcKGyaG5HqVKjUWptf4m8BYXk3XFzo8vSzi7vPA",
-			err: fault.ErrInvalidPortNumber,
+			err: fault.InvalidPortNumber,
 		},
 		{
 			id:  16,
 			txt: "bitmark=v3 a=118.163.120.178;2001:b030:2314:0200:4649:583d:0001:0120 r=-12 f=48137A7A76934CAFE7635C9AC05339C20F4C00A724D7FA1DC0DC3875476ED004 c=32136 i=12D3KooWFuZgAPcKGyaG5HqVKjUWptf4m8BYXk3XFzo8vSzi7vPA",
-			err: fault.ErrInvalidPortNumber,
+			err: fault.InvalidPortNumber,
 		},
 		{
 			id:  17,
 			txt: "bitmark=v3 a=118.163.120.178;2001:b030:2314:0200:4649:583d:0001:0120 r=335x669 f=48137A7A76934CAFE7635C9AC05339C20F4C00A724D7FA1DC0DC3875476ED004 c=32136 i=12D3KooWFuZgAPcKGyaG5HqVKjUWptf4m8BYXk3XFzo8vSzi7vPA",
-			err: fault.ErrInvalidPortNumber,
+			err: fault.InvalidPortNumber,
 		},
 		{
 			id:  18,
 			txt: "bitmark=v3 a=118.163.120.178;2001:b030:2314:0200:4649:583d:0001:0120 r=33566 f=48137A7A761934CAFE7635C9AC05339C20F4C00A724D7FA1DC0DC3875476ED004 c=32136 i=12D3KooWFuZgAPcKGyaG5HqVKjUWptf4m8BYXk3XFzo8vSzi7vPA",
-			err: fault.ErrInvalidFingerprint,
+			err: fault.InvalidFingerprint,
 		},
 		{
 			id:  19,
 			txt: "bitmark=v3 a=118.163.120.178;2001:b030:2314:0200:4649:583d:0001:0120 r=33566 f=461934CAFE7635C9AC05339C20F4C00A724D7FA1DC0DC3875476ED04 c=32136 i=12D3KooWFuZgAPcKGyaG5HqVKjUWptf4m8BYXk3XFzo8vSzi7vPA",
-			err: fault.ErrInvalidFingerprint,
+			err: fault.InvalidFingerprint,
 		},
 		{
 			id:  20,
 			txt: "bitmark=v3 a=118.163.120.178;2001:b030:2314:0200:4649:583d:0001:0120 r=33566 f=48137A7A76934CZFE7635C9AC05339C20F4C00A724D7FA1DC0DC3875476ED04 c=32136 i=12D3KooWFuZgAPcKGyaG5HqVKjUWptf4m8BYXk3XFzo8vSzi7vPA",
-			err: fault.ErrInvalidFingerprint,
+			err: fault.InvalidFingerprint,
 		},
 		{
 			id:  21,
 			txt: "bitmark=v3 a=118.163.120.178;2001:b030:2314:0200:4649:583d:0001:0120 r=33566 f=48137A7A76934CAFE7635C9AC05339C20F4C00A724D7FA1DC0DC3875476ED004 c=321369 i=12D3KooWFuZgAPcKGyaG5HqVKjUWptf4m8BYXk3XFzo8vSzi7vPA",
-			err: fault.ErrInvalidPortNumber,
+			err: fault.InvalidPortNumber,
 		},
 		{
 			id:  22,
 			txt: "bitmark=v3 a=118.163.120.178;2001:b030:2314:0200:4649:583d:0001:0120 r=33566 f=48137A7A76934CAFE7635C9AC05339C20F4C00A724D7FA1DC0DC3875476ED004 c=32136 i=12D3KooWFuZgAPcKGyaG5HqVKjUWptf4m8BYXk3XFzo8vSzi7vPAQQQ",
-			err: fault.ErrInvalidIdentity,
+			err: fault.InvalidIdentityName,
 		},
 		{
 			id:  23,
 			txt: "bitmark=v3 a=118.163.120.178;2001:b030:2314:0200:4649:583d:0001:0120 r=33566 f=48137A7A76934CAFE7635C9AC05339C20F4C00A724D7FA1DC0DC3875476ED004 c=32136 i=abc123",
-			err: fault.ErrInvalidIdentity,
+			err: fault.InvalidIdentityName,
 		},
 
 		// old V2 tags still ok
@@ -158,7 +158,7 @@ func TestValidTag(t *testing.T) {
 		{
 			id:  25,
 			txt: "bitmark=v0 a=118.163.120.178;2001:b030:2314:0200:4649:583d:0001:0120 r=33566 f=48137A7A76934CAFE7635C9AC05339C20F4C00A724D7FA1DC0DC3875476ED004 s=32135 c=32136 i=202c1pec485c21d0d18e9dfd096bd760a558d5ee1139f8e4b2e15863433e7d51",
-			err: fault.ErrInvalidDnsTxtRecord,
+			err: fault.InvalidDnsTxtRecord,
 		},
 		{
 			id:  26,
