@@ -8,6 +8,7 @@ package main
 import (
 	"bytes"
 	"crypto/tls"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -21,9 +22,12 @@ import (
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/bitmark-inc/logger"
+	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 const (
@@ -54,14 +58,26 @@ func processSetupCommand(program string, arguments []string) bool {
 
 	switch command {
 	case "gen-peer-identity", "peer":
-		publicKeyFilename := getFilenameWithDirectory(arguments, peerPublicKeyFilename)
 		privateKeyFilename := getFilenameWithDirectory(arguments, peerPrivateKeyFilename)
-		err := zmqutil.MakeKeyPair(publicKeyFilename, privateKeyFilename)
-		if nil != err {
-			fmt.Printf("generate private key: %q and public key: %q error: %s\n", privateKeyFilename, publicKeyFilename, err)
+
+		if util.EnsureFileExists(peerPrivateKeyFilename) {
+			fmt.Printf("generate private key: %q error: %s\n", privateKeyFilename, fault.ErrCertificateFileAlreadyExists)
 			exitwithstatus.Exit(1)
 		}
-		fmt.Printf("generated private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
+
+		key, err := util.MakeEd25519PeerKey()
+		if err != nil {
+			fmt.Printf("generate private key: %q error: %s\n", privateKeyFilename, err.Error())
+			exitwithstatus.Exit(1)
+		}
+
+		if err := ioutil.WriteFile(privateKeyFilename, []byte(key), 0600); err != nil {
+			os.Remove(privateKeyFilename)
+			fmt.Printf("generate private key: %q error: %s\n", privateKeyFilename, err.Error())
+			exitwithstatus.Exit(1)
+		}
+
+		fmt.Printf("generated private key: %q\n", privateKeyFilename)
 
 	case "gen-rpc-cert", "rpc":
 		certificateFilename := getFilenameWithDirectory(arguments, rpcCertificateKeyFilename)
@@ -352,7 +368,7 @@ func processDataCommand(log *logger.L, arguments []string, options *Configuratio
 // print out the DNS TXT record
 func dnsTXT(options *Configuration) {
 	//   <TAG> a=<IPv4;IPv6> c=<PEER-PORT> r=<RPC-PORT> f=<SHA3-256(cert)> p=<PUBLIC-KEY>
-	const txtRecord = `TXT "bitmark=v3 a=%s c=%d r=%d f=%x p=%x"` + "\n"
+	const txtRecord = `TXT "bitmark=v3 a=%s c=%d r=%d f=%x i=%s"` + "\n"
 
 	rpc := options.ClientRPC
 
@@ -374,9 +390,19 @@ func dnsTXT(options *Configuration) {
 
 	peering := options.Peering
 
-	publicKey, err := zmqutil.ReadPublicKey(peering.PublicKey)
-	if nil != err {
-		exitwithstatus.Message("error: cannot read public key: %q  error: %s", peering.PublicKey, err)
+	privateKeyBytes, err := hex.DecodeString(peering.PrivateKey)
+	if err != nil {
+		exitwithstatus.Message("error: cannot decode private key: %q  error: %s", peering.PrivateKey, err)
+	}
+
+	privateKey, err := crypto.UnmarshalPrivateKey(privateKeyBytes)
+	if err != nil {
+		exitwithstatus.Message("error: cannot generate private key: %q  error: %s", peering.PrivateKey, err)
+	}
+
+	peerID, err := peer.IDFromPrivateKey(privateKey)
+	if err != nil {
+		exitwithstatus.Message("error: cannot generate peer id  error: %s", err)
 	}
 
 	if 0 == len(peering.Announce) {
@@ -402,11 +428,11 @@ func dnsTXT(options *Configuration) {
 
 	fmt.Printf("rpc fingerprint: %x\n", fingerprint)
 	fmt.Printf("rpc port:        %d\n", rpcPort)
-	fmt.Printf("public key:      %x\n", publicKey)
 	fmt.Printf("connect port:    %d\n", listenPort)
+	fmt.Printf("peer id:         %s\n", peerID)
 	fmt.Printf("IP4 IP6:         %s\n", IPs)
 
-	fmt.Printf(txtRecord, IPs, listenPort, rpcPort, fingerprint, publicKey)
+	fmt.Printf(txtRecord, IPs, listenPort, rpcPort, fingerprint, peerID)
 }
 
 // extract first IP4 and/or IP6 connection
