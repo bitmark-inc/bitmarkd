@@ -141,7 +141,7 @@ func lookupNodesDomain(domain string, log *logger.L) error {
 
 	if "" == domain {
 		log.Error("invalid node domain")
-		return fault.ErrInvalidNodeDomain
+		return fault.InvalidNodeDomain
 	}
 
 	texts, err := net.LookupTXT(domain)

@@ -238,7 +238,7 @@ func TestPackAssetDataWithEmptyFingerprint(t *testing.T) {
 	if nil == err {
 		t.Fatalf("pack should have failed")
 	}
-	if fault.ErrFingerprintTooShort != err {
+	if fault.FingerprintTooShort != err {
 		t.Fatalf("unexpected pack error: %s", err)
 	}
 }
@@ -261,7 +261,7 @@ func TestPackAssetDataWithInvalidMetadata(t *testing.T) {
 	if nil == err {
 		t.Fatalf("pack should have failed")
 	}
-	if fault.ErrMetadataIsNotMap != err {
+	if fault.MetadataIsNotMap != err {
 		t.Fatalf("unexpected pack error: %s", err)
 	}
 }
@@ -395,7 +395,7 @@ func TestPackAssetDataWithZeroAccount(t *testing.T) {
 	if nil == err {
 		t.Fatalf("pack should have failed")
 	}
-	if fault.ErrInvalidOwnerOrRegistrant != err {
+	if fault.InvalidOwnerOrRegistrant != err {
 		t.Fatalf("unexpected pack error: %s", err)
 	}
 }

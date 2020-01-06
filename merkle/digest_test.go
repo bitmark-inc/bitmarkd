@@ -103,9 +103,9 @@ func TestInvalidLinks(t *testing.T) {
 	for i, textLink := range invalid {
 		var link merkle.Digest
 		n, err := fmt.Sscan(textLink, &link)
-		if fault.ErrNotLink != err {
+		if fault.NotLink != err {
 			t.Errorf("%d: testing: %q", i, textLink)
-			t.Errorf("%d: expected ErrNotLink but got: %v", i, err)
+			t.Errorf("%d: expected: %s  but got: %s", i, fault.NotLink, err)
 			return
 		}
 		if 0 != n {
@@ -218,7 +218,7 @@ func TestLinkFromBytes(t *testing.T) {
 	}
 
 	err = merkle.DigestFromBytes(&link, valid[1:])
-	if fault.ErrNotLink != err {
+	if fault.NotLink != err {
 		t.Fatalf("LinkFromBytes error: %s", err)
 	}
 }

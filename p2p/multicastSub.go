@@ -12,6 +12,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
+	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
 
@@ -44,7 +45,7 @@ loop:
 				continue loop
 			}
 			if !mode.Is(mode.Normal) {
-				util.LogDebug(log, util.CoWhite, fmt.Sprintf("-->>failed assets: error: %s", fault.ErrNotAvailableDuringSynchronise))
+				util.LogDebug(log, util.CoWhite, fmt.Sprintf("-->>failed assets: error: %s", fault.NotAvailableDuringSynchronise))
 				continue loop
 			} else {
 				messagebus.Bus.Blockstore.Send("remote", parameters[0])
@@ -127,11 +128,11 @@ loop:
 // un pack each asset and cache them
 func processAssets(packed []byte) error {
 	if 0 == len(packed) {
-		return fault.ErrMissingParameters
+		return fault.MissingParameters
 	}
 
 	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
+		return fault.NotAvailableDuringSynchronise
 	}
 
 	ok := false
@@ -142,7 +143,7 @@ func processAssets(packed []byte) error {
 		}
 		switch tx := transaction.(type) {
 		case *transactionrecord.AssetData:
-			_, packedAsset, err := asset.Cache(tx)
+			_, packedAsset, err := asset.Cache(tx, storage.Pool.Assets)
 			if nil != err {
 				return err
 			}
@@ -151,14 +152,14 @@ func processAssets(packed []byte) error {
 			}
 
 		default:
-			return fault.ErrTransactionIsNotAnAsset
+			return fault.TransactionIsNotAnAsset
 		}
 		packed = packed[n:]
 	}
 
 	// all items were duplicates
 	if !ok {
-		return fault.ErrNoNewTransactions
+		return fault.NoNewTransactions
 	}
 	return nil
 }
@@ -167,11 +168,11 @@ func processAssets(packed []byte) error {
 func processIssues(packed []byte) error {
 
 	if 0 == len(packed) {
-		return fault.ErrMissingParameters
+		return fault.MissingParameters
 	}
 
 	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
+		return fault.NotAvailableDuringSynchronise
 	}
 
 	packedIssues := transactionrecord.Packed(packed)
@@ -189,21 +190,21 @@ func processIssues(packed []byte) error {
 			issues = append(issues, tx)
 			issueCount += 1
 		default:
-			return fault.ErrTransactionIsNotAnIssue
+			return fault.TransactionIsNotAnIssue
 		}
 		packedIssues = packedIssues[n:]
 	}
 	if 0 == len(issues) {
-		return fault.ErrMissingParameters
+		return fault.MissingParameters
 	}
 
-	_, duplicate, err := reservoir.StoreIssues(issues)
+	_, duplicate, err := reservoir.StoreIssues(issues, storage.Pool.Assets, storage.Pool.BlockOwnerPayment)
 	if nil != err {
 		return err
 	}
 
 	if duplicate {
-		return fault.ErrTransactionAlreadyExists
+		return fault.TransactionAlreadyExists
 	}
 
 	return nil
@@ -213,11 +214,11 @@ func processIssues(packed []byte) error {
 func processTransfer(packed []byte) error {
 
 	if 0 == len(packed) {
-		return fault.ErrMissingParameters
+		return fault.MissingParameters
 	}
 
 	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
+		return fault.NotAvailableDuringSynchronise
 	}
 
 	transaction, _, err := transactionrecord.Packed(packed).Unpack(mode.IsTesting())
@@ -229,20 +230,18 @@ func processTransfer(packed []byte) error {
 
 	transfer, ok := transaction.(transactionrecord.BitmarkTransfer)
 	if ok {
-
-		_, duplicate, err = reservoir.StoreTransfer(transfer)
-
+		_, duplicate, err = reservoir.StoreTransfer(transfer, storage.Pool.Transactions, storage.Pool.OwnerTxIndex, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
 	} else {
 		switch tx := transaction.(type) {
 
 		case *transactionrecord.ShareGrant:
-			_, duplicate, err = reservoir.StoreGrant(tx)
+			_, duplicate, err = reservoir.StoreGrant(tx, storage.Pool.ShareQuantity, storage.Pool.Shares, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
 
 		case *transactionrecord.ShareSwap:
-			_, duplicate, err = reservoir.StoreSwap(tx)
+			_, duplicate, err = reservoir.StoreSwap(tx, storage.Pool.ShareQuantity, storage.Pool.Shares, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
 
 		default:
-			return fault.ErrTransactionIsNotATransfer
+			return fault.TransactionIsNotATransfer
 		}
 	}
 
@@ -251,7 +250,7 @@ func processTransfer(packed []byte) error {
 	}
 
 	if duplicate {
-		return fault.ErrTransactionAlreadyExists
+		return fault.TransactionAlreadyExists
 	}
 
 	return nil
@@ -261,23 +260,23 @@ func processTransfer(packed []byte) error {
 func processProof(packed []byte) error {
 
 	if 0 == len(packed) {
-		return fault.ErrMissingParameters
+		return fault.MissingParameters
 	}
 
 	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
+		return fault.NotAvailableDuringSynchronise
 	}
 	var payId pay.PayId
 	nonceLength := len(packed) - len(payId) // could be negative
 	if nonceLength < payment.MinimumNonceLength || nonceLength > payment.MaximumNonceLength {
-		return fault.ErrInvalidNonce
+		return fault.InvalidNonce
 	}
 	copy(payId[:], packed[:len(payId)])
 	nonce := packed[len(payId):]
 	status := reservoir.TryProof(payId, nonce)
 	if reservoir.TrackingAccepted != status {
 		// pay id already processed or was invalid
-		return fault.ErrPayIdAlreadyUsed
+		return fault.PayIdAlreadyUsed
 	}
 
 	return nil

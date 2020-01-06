@@ -6,13 +6,13 @@
 package main
 
 import (
-	"errors"
 	"os"
 	"path"
 	"path/filepath"
 
 	"github.com/fsnotify/fsnotify"
 
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/logger"
 )
 
@@ -54,7 +54,7 @@ func newFileWatcher(targetFile string, log *logger.L, channel WatcherChannel) (F
 
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		log.Errorf("file %s not exist", filePath)
-		return nil, errors.New("file does not exist")
+		return nil, fault.FileDoesNotExist
 	}
 
 	return &FileWatcherData{

@@ -1,13 +1,19 @@
 #!/bin/sh
 # test recorderd
-dir=$(dirname "$0")
 
 ERROR()
 {
   printf 'error: '
-  printf "$@"
+  # shellcheck disable=SC2059
+  printf -- "$@"
   printf '\n'
   exit 1
+}
+
+VERBOSE()
+{
+  # shellcheck disable=SC2059
+  [ X"${verbose}" = X"yes" ] && printf -- "$@"
 }
 
 USAGE()
@@ -15,10 +21,11 @@ USAGE()
   if [ -n "$1" ]
   then
     printf 'error: '
-    printf "$@"
+    # shellcheck disable=SC2059
+    printf -- "$@"
     printf '\n'
   fi
-  echo usage: $(basename "$0") '[options] recorderd-arguments...'
+  echo usage: "$(basename "$0")" '[options] recorderd-arguments...'
   echo '       --help             -h            this message'
   echo '       --verbose          -v            more messages'
   echo '       --config=FILE      -c FILE       set configuration file ['"${config}"']'
@@ -118,6 +125,7 @@ done
 # verify arguments
 [ -f "${config}" ] || USAGE 'configuration file: "%s" does not exist' "${config}"
 config_dir=$(dirname "${config}")
+VERBOSE 'config dir: "%s"\n' "${config_dir}"
 
 # enable debuging
 [ X"${debug}" = X"yes" ] && set -x
@@ -156,7 +164,8 @@ run_again()
   program="$1"
   while :
   do
-    read -p "Run ${program} again? " yorn junk
+    # shellcheck disable=SC2034
+    read -r -p "Run ${program} again? " yorn junk
     case "${yorn}" in
       ([yY]|[yY][eE][sS])
         return 0
@@ -176,6 +185,5 @@ while :
 do
   export GODEBUG=madvdontneed=1
   recorderd --config-file="${config}" "$@"
-  rc="$?"
   run_again 'recorderd' || break
 done

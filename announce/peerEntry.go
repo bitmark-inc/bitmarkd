@@ -44,7 +44,7 @@ func setSelf(peerID peerlib.ID, listeners []ma.Multiaddr) error {
 	defer globalData.Unlock()
 
 	if globalData.peerSet {
-		return fault.ErrAlreadyInitialised
+		return fault.AlreadyInitialised
 	}
 	globalData.peerID = peerID
 	globalData.listeners = listeners
@@ -135,7 +135,7 @@ func GetNext(peerID peerlib.ID) (peerlib.ID, []ma.Multiaddr, time.Time, error) {
 		node = globalData.peerTree.First()
 	}
 	if nil == node {
-		return peerlib.ID(""), nil, time.Now(), fault.ErrInvalidPublicKey
+		return peerlib.ID(""), nil, time.Now(), fault.InvalidPublicKey
 	}
 	peer := node.Value().(*peerEntry)
 	return peer.peerID, peer.listeners, peer.timestamp, nil
@@ -169,11 +169,11 @@ retry_loop:
 		}
 		return peer.peerID, peer.listeners, peer.timestamp, nil
 	}
-	return peerlib.ID(""), nil, time.Now(), fault.ErrInvalidPublicKey
+	return peerlib.ID(""), nil, time.Now(), fault.InvalidPublicKey
 }
 
 // SendRegistration - send a peer registration request to a client channel
-func SendRegistration(client zmqutil.ClientIntf, fn string) error {
+func SendRegistration(client zmqutil.Client, fn string) error {
 	chain := mode.ChainName()
 
 	// get a big endian timestamp

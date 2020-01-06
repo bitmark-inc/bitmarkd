@@ -46,7 +46,7 @@ func assetRegister(assets []*transactionrecord.AssetData) ([]AssetStatus, []byte
 	packed := []byte{}
 	for i, argument := range assets {
 
-		assetId, packedAsset, err := asset.Cache(argument)
+		assetId, packedAsset, err := asset.Cache(argument, storage.Pool.Assets)
 		if nil != err {
 			return nil, nil, err
 		}
@@ -93,7 +93,7 @@ func (assets *Assets) Get(arguments *AssetGetArguments, reply *AssetGetReply) er
 	}
 
 	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
+		return fault.NotAvailableDuringSynchronise
 	}
 
 	log.Infof("Assets.Get: %+v", arguments)

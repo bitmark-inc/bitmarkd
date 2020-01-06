@@ -6,6 +6,7 @@
 package rpc
 
 import (
+	"github.com/bitmark-inc/bitmarkd/storage"
 	"golang.org/x/time/rate"
 
 	"github.com/bitmark-inc/bitmarkd/account"
@@ -51,11 +52,11 @@ func (share *Share) Create(bmfr *transactionrecord.BitmarkShare, reply *ShareCre
 	log.Infof("Share.Create: %+v", bmfr)
 
 	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
+		return fault.NotAvailableDuringSynchronise
 	}
 
 	// save transfer/check for duplicate
-	stored, duplicate, err := reservoir.StoreTransfer(bmfr)
+	stored, duplicate, err := reservoir.StoreTransfer(bmfr, storage.Pool.Transactions, storage.Pool.OwnerTxIndex, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
 	if nil != err {
 		return err
 	}
@@ -113,23 +114,23 @@ func (share *Share) Balance(arguments *ShareBalanceArguments, reply *ShareBalanc
 	log.Infof("Share.Balance: %+v", arguments)
 
 	if nil == arguments || nil == arguments.Owner {
-		return fault.ErrInvalidItem
+		return fault.InvalidItem
 	}
 
 	count := arguments.Count
 	if count <= 0 {
-		return fault.ErrInvalidCount
+		return fault.InvalidCount
 	}
 	if count > maximumBitmarksCount {
 		count = maximumBitmarksCount
 	}
 
 	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
+		return fault.NotAvailableDuringSynchronise
 	}
 
 	if arguments.Owner.IsTesting() != mode.IsTesting() {
-		return fault.ErrWrongNetworkForPublicKey
+		return fault.WrongNetworkForPublicKey
 	}
 
 	result, err := reservoir.ShareBalance(arguments.Owner, arguments.ShareId, arguments.Count)
@@ -165,27 +166,27 @@ func (share *Share) Grant(arguments *transactionrecord.ShareGrant, reply *ShareG
 	log.Infof("Share.Grant: %+v", arguments)
 
 	if nil == arguments || nil == arguments.Owner || nil == arguments.Recipient {
-		return fault.ErrInvalidItem
+		return fault.InvalidItem
 	}
 
 	if arguments.Quantity < 1 {
-		return fault.ErrShareQuantityTooSmall
+		return fault.ShareQuantityTooSmall
 	}
 
 	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
+		return fault.NotAvailableDuringSynchronise
 	}
 
 	if arguments.Owner.IsTesting() != mode.IsTesting() {
-		return fault.ErrWrongNetworkForPublicKey
+		return fault.WrongNetworkForPublicKey
 	}
 
 	if arguments.Recipient.IsTesting() != mode.IsTesting() {
-		return fault.ErrWrongNetworkForPublicKey
+		return fault.WrongNetworkForPublicKey
 	}
 
 	// save transfer/check for duplicate
-	stored, duplicate, err := reservoir.StoreGrant(arguments)
+	stored, duplicate, err := reservoir.StoreGrant(arguments, storage.Pool.ShareQuantity, storage.Pool.Shares, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
 	if nil != err {
 		return err
 	}
@@ -238,27 +239,27 @@ func (share *Share) Swap(arguments *transactionrecord.ShareSwap, reply *ShareSwa
 	log.Infof("Share.Swap: %+v", arguments)
 
 	if nil == arguments || nil == arguments.OwnerOne || nil == arguments.OwnerTwo {
-		return fault.ErrInvalidItem
+		return fault.InvalidItem
 	}
 
 	if arguments.QuantityOne < 1 || arguments.QuantityTwo < 1 {
-		return fault.ErrShareQuantityTooSmall
+		return fault.ShareQuantityTooSmall
 	}
 
 	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
+		return fault.NotAvailableDuringSynchronise
 	}
 
 	if arguments.OwnerOne.IsTesting() != mode.IsTesting() {
-		return fault.ErrWrongNetworkForPublicKey
+		return fault.WrongNetworkForPublicKey
 	}
 
 	if arguments.OwnerTwo.IsTesting() != mode.IsTesting() {
-		return fault.ErrWrongNetworkForPublicKey
+		return fault.WrongNetworkForPublicKey
 	}
 
 	// save transfer/check for duplicate
-	stored, duplicate, err := reservoir.StoreSwap(arguments)
+	stored, duplicate, err := reservoir.StoreSwap(arguments, storage.Pool.ShareQuantity, storage.Pool.Shares, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
 	if nil != err {
 		return err
 	}

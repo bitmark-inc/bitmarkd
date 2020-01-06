@@ -19,7 +19,7 @@ func SetRPC(fingerprint fingerprintType, rpcs []byte) error {
 	defer globalData.Unlock()
 
 	if globalData.rpcsSet {
-		return fault.ErrAlreadyInitialised
+		return fault.AlreadyInitialised
 	}
 	globalData.fingerprint = fingerprint
 	globalData.rpcs = rpcs
@@ -126,7 +126,7 @@ type RPCEntry struct {
 // FetchRPCs - fetch some records
 func FetchRPCs(start uint64, count int) ([]RPCEntry, uint64, error) {
 	if count <= 0 {
-		return nil, 0, fault.ErrInvalidCount
+		return nil, 0, fault.InvalidCount
 	}
 
 	globalData.Lock()

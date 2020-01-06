@@ -4,9 +4,16 @@
 ERROR()
 {
   printf 'error: '
-  printf "$@"
+  # shellcheck disable=SC2059
+  printf -- "$@"
   printf '\n'
   exit 1
+}
+
+VERBOSE()
+{
+  # shellcheck disable=SC2059
+  [ X"${verbose}" = X"yes" ] && printf -- "$@"
 }
 
 USAGE()
@@ -14,10 +21,11 @@ USAGE()
   if [ -n "$1" ]
   then
     printf 'error: '
-    printf "$@"
+    # shellcheck disable=SC2059
+    printf -- "$@"
     printf '\n'
   fi
-  echo usage: $(basename "$0") '[options] host:port'
+  echo usage: "$(basename "$0")" '[options] host:port'
   echo '       --help             -h            this message'
   echo '       --verbose          -v            more messages'
   echo '       --output=FILE      -o FILE       the output PNG file ['"${output}"']'
@@ -25,10 +33,6 @@ USAGE()
   exit 1
 }
 
-VERBOSE()
-{
-  [ X"${verbose}" = X"yes" ] && printf "$@"
-}
 
 # main program
 verbose=no
@@ -110,12 +114,13 @@ VERBOSE 'server: %s\n' "${server}"
 r=$(curl -sk "https://${server}/bitmarkd/peers?count=100" "https://${server}/bitmarkd/connections?count=100" "https://${server}/bitmarkd/details")
 rc="$?"
 
-if [ -z "${r}" -o "${rc}" -ne 0 ]
+if [ -z "${r}" ] || [ "${rc}" -ne 0 ]
 then
   #printf 'timeout: rc: %s  r: "%s"\n' "${rc}" "${r}"
   ERROR 'cannot retrieve data from: %s' "${server}"
 fi
 
+# shellcheck disable=SC2016
 filter='
 {p:.[0]|map(.publicKey),c:.[1].connectedTo|map(.server),d:.[2].publicKey} |
 (reduce .p[] as $p (""; . + $p + " -> ") + .p[0]) + "\n" +
@@ -123,9 +128,10 @@ filter='
 '
 
 
+# shellcheck disable=SC2016
 filter='
   (.[0] | map(.publicKey)) as $p |
-  (reduce .[0][] as $p ({}; . + {($p.publicKey):($p.listeners[0]) | ltrimstr("127.0.0.1:")})) as $m |
+  (reduce .[0][] as $p ({}; . + {($p.publicKey):($p.listeners[0]) | ltrimstr("127.0.0.1:") | ltrimstr("[::1]:")})) as $m |
   (.[1].connectedTo | map(.server)) as $ct |
   (.[2].publicKey) as $pk |
 {
@@ -135,10 +141,12 @@ filter='
 }
 '
 
+# shellcheck disable=SC2016
 filter_ring='
 (reduce .p[] as $p (""; . + $p + " -> ") + .p[0]) + "\n"
 '
 
+# shellcheck disable=SC2016
 filter_links='
 .pk as $pk |
 (reduce .ct[] as $ct (""; . + $pk + " -> " + $ct + "\n"))

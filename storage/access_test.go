@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: ISC
+// Copyright (c) 2014-2019 Bitmark Inc.
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
 package storage
 
 import (
@@ -47,7 +51,7 @@ func setupDummyMockCache(t *testing.T) *mocks.MockCache {
 	return mockCache
 }
 
-func setupTestDataAccess(mockCache *mocks.MockCache) DataAccess {
+func setupTestDataAccess(mockCache *mocks.MockCache) Access {
 	return newDA(db, trx, mockCache)
 }
 
@@ -59,13 +63,6 @@ func removeDir(dirName string) {
 func teardownTestDataAccess() {
 	_ = db.Close()
 	removeDir(dbName)
-}
-
-func TestMain(m *testing.M) {
-	initialiseVars()
-	result := m.Run()
-	teardownTestDataAccess()
-	os.Exit(result)
 }
 
 func TestBeginShouldErrorWhenAlreadyInTransaction(t *testing.T) {

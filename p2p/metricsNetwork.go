@@ -81,7 +81,7 @@ func (m *MetricsNetwork) ConnectStatus(id peerlib.ID) (bool, error) {
 	if ok {
 		return val, nil
 	}
-	return false, fault.ErrNoPeerID
+	return false, fault.NoPeerID
 }
 
 //GetConnCount return current connection counts

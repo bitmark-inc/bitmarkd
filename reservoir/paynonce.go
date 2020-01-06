@@ -56,14 +56,14 @@ func (paynonce PayNonce) MarshalText() ([]byte, error) {
 // UnmarshalText - convert little endian hex text into a pay nonce
 func (paynonce *PayNonce) UnmarshalText(s []byte) error {
 	if len(*paynonce) != hex.DecodedLen(len(s)) {
-		return fault.ErrNotAPayNonce
+		return fault.NotAPayNonce
 	}
 	byteCount, err := hex.Decode(paynonce[:], s)
 	if nil != err {
 		return err
 	}
 	if len(paynonce) != byteCount {
-		return fault.ErrNotAPayNonce
+		return fault.NotAPayNonce
 	}
 	return nil
 }

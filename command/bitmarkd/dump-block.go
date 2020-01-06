@@ -39,10 +39,10 @@ func dumpBlock(number uint64) (*blockResult, error) {
 
 	packed := storage.Pool.Blocks.Get(n)
 	if nil == packed {
-		return nil, fault.ErrBlockNotFound
+		return nil, fault.BlockNotFound
 	}
 
-	header, digest, data, err := blockrecord.ExtractHeader(packed, number)
+	header, digest, data, err := blockrecord.ExtractHeader(packed, number, false)
 	if nil != err {
 		return nil, err
 	}

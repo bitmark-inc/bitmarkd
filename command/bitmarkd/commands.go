@@ -6,6 +6,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
@@ -43,9 +44,11 @@ const (
 )
 
 // setup command handler
-// commands that run to create key and certificate files
-// these commands cannot access any internal database or states
-func processSetupCommand(arguments []string) bool {
+//
+// commands that run to create key and certificate files these
+// commands cannot access any internal database or states or the
+// configuration file
+func processSetupCommand(program string, arguments []string) bool {
 
 	command := "help"
 	if len(arguments) > 0 {
@@ -58,7 +61,7 @@ func processSetupCommand(arguments []string) bool {
 		privateKeyFilename := getFilenameWithDirectory(arguments, peerPrivateKeyFilename)
 
 		if util.EnsureFileExists(peerPrivateKeyFilename) {
-			fmt.Printf("generate private key: %q error: %s\n", privateKeyFilename, fault.ErrCertificateFileAlreadyExists)
+			fmt.Printf("generate private key: %q error: %s\n", privateKeyFilename, fault.CertificateFileAlreadyExists)
 			exitwithstatus.Exit(1)
 		}
 
@@ -119,7 +122,7 @@ func processSetupCommand(arguments []string) bool {
 
 		fmt.Printf("generated private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
 		fmt.Printf("generated signing keys: %q and %q\n", liveSigningKeyFilename, testSigningKeyFilename)
-		goto done
+		return true
 
 	signing_key_failed:
 		_ = os.Remove(publicKeyFilename)
@@ -134,11 +137,15 @@ func processSetupCommand(arguments []string) bool {
 	case "start", "run":
 		return false // continue processing
 
-		// case "block-times":
-		// 	return false // defer processing until database is loaded
-
 	case "block", "b", "save-blocks", "save", "load-blocks", "load", "delete-down", "dd":
 		return false // defer processing until database is loaded
+
+	case "config-test", "cfg":
+		return false
+
+	case "version", "v":
+		fmt.Printf("%s\n", version)
+		return true
 
 	default:
 		switch command {
@@ -148,9 +155,11 @@ func processSetupCommand(arguments []string) bool {
 		default:
 			fmt.Printf("error: no such command: %q\n", command)
 		}
+		fmt.Printf("usage: %s [--help] [--verbose] [--quiet] --config-file=FILE [[command|help] arguments...]", program)
 
 		fmt.Printf("supported commands:\n\n")
 		fmt.Printf("  help                       (h)      - display this message\n\n")
+		fmt.Printf("  version                    (v)      - display version sting\n\n")
 
 		fmt.Printf("  gen-peer-identity [DIR]    (peer)   - create private key in: %q\n", "DIR/"+peerPrivateKeyFilename)
 		fmt.Printf("                                        and the public key in: %q\n", "DIR/"+peerPublicKeyFilename)
@@ -176,6 +185,9 @@ func processSetupCommand(arguments []string) bool {
 		fmt.Printf("                                        for convienience when passing script arguments\n")
 		fmt.Printf("\n")
 
+		fmt.Printf("  config-test                (cfg)    - just check the configuration file\n")
+		fmt.Printf("\n")
+
 		fmt.Printf("  block S [E [FILE]]         (b)      - dump block(s) as a JSON structures to stdout/file\n")
 		fmt.Printf("\n")
 
@@ -192,8 +204,7 @@ func processSetupCommand(arguments []string) bool {
 		exitwithstatus.Exit(1)
 	}
 
-done:
-	// indicate processing complete and prefor normal exit from main
+	// indicate processing complete and preform normal exit from main
 	return true
 }
 
@@ -209,6 +220,17 @@ func processConfigCommand(arguments []string, options *Configuration) bool {
 	switch command {
 	case "dns-txt", "txt":
 		dnsTXT(options)
+
+	case "config-test", "cfg":
+		b, err := json.Marshal(options)
+		if err != nil {
+			exitwithstatus.Message("error: %s", err)
+		}
+		var out bytes.Buffer
+		json.Indent(&out, b, "", "  ")
+		out.WriteTo(os.Stdout)
+		os.Stdout.WriteString("\n")
+
 	default: // unknown commands fall through to data command
 		return false
 	}
@@ -452,12 +474,12 @@ scan_connections:
 func splitConnection(hostPort string) (bool, string, int, error) {
 	host, port, err := net.SplitHostPort(hostPort)
 	if nil != err {
-		return false, "", 0, fault.ErrInvalidIpAddress
+		return false, "", 0, fault.InvalidIpAddress
 	}
 
 	IP := net.ParseIP(strings.Trim(host, " "))
 	if nil == IP {
-		return false, "", 0, fault.ErrInvalidIpAddress
+		return false, "", 0, fault.InvalidIpAddress
 	}
 
 	numericPort, err := strconv.Atoi(strings.Trim(port, " "))
@@ -465,7 +487,7 @@ func splitConnection(hostPort string) (bool, string, int, error) {
 		return false, "", 0, err
 	}
 	if numericPort < 1 || numericPort > 65535 {
-		return false, "", 0, fault.ErrInvalidPortNumber
+		return false, "", 0, fault.InvalidPortNumber
 	}
 
 	if nil != IP.To4() {

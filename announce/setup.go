@@ -7,6 +7,7 @@ package announce
 
 import (
 	"encoding/hex"
+	"path"
 	"sync"
 	"time"
 
@@ -25,6 +26,9 @@ const (
 	TypeRPC  = iota
 	TypePeer = iota
 )
+
+// file for storing saves peers
+const peerFile = "peers.json"
 
 // type for SHA3 fingerprints
 type fingerprintType [32]byte
@@ -83,14 +87,14 @@ const timeFormat = "2006-01-02 15:04:05"
 // Initialise - set up the announcement system
 // pass a fully qualified domain for root node list
 // or empty string for no root nodes
-func Initialise(nodesDomain, peerFile string) error {
+func Initialise(nodesDomain, cacheDirectory string) error {
 
 	globalData.Lock()
 	defer globalData.Unlock()
 
 	// no need to start if already started
 	if globalData.initialised {
-		return fault.ErrAlreadyInitialised
+		return fault.AlreadyInitialised
 	}
 
 	globalData.log = logger.New("announce")
@@ -105,7 +109,7 @@ func Initialise(nodesDomain, peerFile string) error {
 
 	globalData.peerSet = false
 	globalData.rpcsSet = false
-	globalData.peerFile = peerFile
+	globalData.peerFile = path.Join(cacheDirectory, peerFile)
 
 	globalData.log.Info("start restoring peer data…")
 	if _, err := restorePeers(globalData.peerFile); err != nil {
@@ -140,7 +144,7 @@ func Initialise(nodesDomain, peerFile string) error {
 func Finalise() error {
 
 	if !globalData.initialised {
-		return fault.ErrNotInitialised
+		return fault.NotInitialised
 	}
 
 	globalData.log.Info("shutting down…")

@@ -71,12 +71,12 @@ func (config *Configuration) Identity(name string) (*Identity, error) {
 	// account names cannot be identities to prevent confusion
 	_, err := account.AccountFromBase58(name)
 	if nil == err {
-		return nil, fault.ErrInvalidIdentityName
+		return nil, fault.InvalidIdentityName
 	}
 
 	id, ok := config.Identities[name]
 	if !ok {
-		return nil, fault.ErrIdentityNameNotFound
+		return nil, fault.IdentityNameNotFound
 	}
 
 	return &id, nil
@@ -116,7 +116,7 @@ func (config *Configuration) Private(password string, name string) (*Private, er
 func (config *Configuration) AddIdentity(name string, description string, seed string, password string) error {
 
 	if _, ok := config.Identities[name]; ok {
-		return fault.ErrIdentityNameAlreadyExists
+		return fault.IdentityNameAlreadyExists
 	}
 
 	salt, secretKey, err := hashPassword(password)
@@ -148,7 +148,7 @@ func (config *Configuration) AddIdentity(name string, description string, seed s
 func (config *Configuration) AddReceiveOnlyIdentity(name string, description string, acc string) error {
 
 	if _, ok := config.Identities[name]; ok {
-		return fault.ErrIdentityNameAlreadyExists
+		return fault.IdentityNameAlreadyExists
 	}
 
 	_, err := account.AccountFromBase58(acc)

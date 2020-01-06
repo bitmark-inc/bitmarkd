@@ -19,5 +19,5 @@ func FromUint64(n uint64) (Currency, error) {
 	if Currency(n) < maximumValue {
 		return Currency(n), nil
 	}
-	return Nothing, fault.ErrInvalidCurrency
+	return Nothing, fault.InvalidCurrency
 }

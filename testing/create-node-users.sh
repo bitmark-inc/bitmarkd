@@ -4,7 +4,8 @@
 
 ERROR() {
   printf 'error: '
-  printf "$@"
+  # shellcheck disable=SC2059
+  printf -- "$@"
   printf '\n'
   exit 1
 }
@@ -20,7 +21,7 @@ xdg_home="${XDG_CONFIG_HOME}"
 [ -d "${xdg_home}" ] || ERROR 'missing directory: "%s" please create first' "${xdg_home}"
 
 # create first and second users
-bitmark-cli --network=local --identity=first --password="${password}" setup --connect=127.0.0.1:2130 --description='first user' --new
+bitmark-cli --network=local --identity=first --password="${password}" setup --connect=127.0.0.1:22130 --description='first user' --new
 bitmark-cli --network=local --identity=second --password="${password}" add --description='second user' --new
 
 # create users for all bitmarkds

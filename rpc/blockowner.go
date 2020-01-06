@@ -56,15 +56,15 @@ func (bitmark *BlockOwner) TxIdForBlock(info *TxIdForBlockArguments, reply *TxId
 	binary.BigEndian.PutUint64(blockNumberKey, info.BlockNumber)
 	packedBlock := storage.Pool.Blocks.Get(blockNumberKey)
 	if nil == packedBlock {
-		return fault.ErrBlockNotFound
+		return fault.BlockNotFound
 	}
 
-	header, digest, _, err := blockrecord.ExtractHeader(packedBlock, 0)
+	header, digest, _, err := blockrecord.ExtractHeader(packedBlock, 0, false)
 	if nil != err {
 		return err
 	}
 
-	reply.TxId = blockrecord.FoundationTxId(header, digest)
+	reply.TxId = blockrecord.FoundationTxId(header.Number, digest)
 
 	return nil
 }
@@ -92,15 +92,15 @@ func (bitmark *BlockOwner) Transfer(transfer *transactionrecord.BlockOwnerTransf
 	log.Infof("BlockOwner.Transfer: %+v", transfer)
 
 	if !mode.Is(mode.Normal) {
-		return fault.ErrNotAvailableDuringSynchronise
+		return fault.NotAvailableDuringSynchronise
 	}
 
 	if transfer.Owner.IsTesting() != mode.IsTesting() {
-		return fault.ErrWrongNetworkForPublicKey
+		return fault.WrongNetworkForPublicKey
 	}
 
 	// save transfer/check for duplicate
-	stored, duplicate, err := reservoir.StoreTransfer(transfer)
+	stored, duplicate, err := reservoir.StoreTransfer(transfer, storage.Pool.Transactions, storage.Pool.OwnerTxIndex, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
 	if nil != err {
 		return err
 	}

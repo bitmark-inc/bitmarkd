@@ -51,7 +51,7 @@ func PrivateKeyFromBase58(privateKeyBase58Encoded string) (*PrivateKey, error) {
 	// Decode the privateKey
 	privateKeyDecoded := util.FromBase58(privateKeyBase58Encoded)
 	if 0 == len(privateKeyDecoded) {
-		return nil, fault.ErrCannotDecodePrivateKey
+		return nil, fault.CannotDecodePrivateKey
 	}
 
 	// Parse the key variant
@@ -59,13 +59,13 @@ func PrivateKeyFromBase58(privateKeyBase58Encoded string) (*PrivateKey, error) {
 
 	// Check key type
 	if 0 == keyVariantLength || keyVariant&publicKeyCode == publicKeyCode {
-		return nil, fault.ErrNotPrivateKey
+		return nil, fault.NotPrivateKey
 	}
 
 	// compute algorithm
 	keyAlgorithm := keyVariant >> algorithmShift
 	if keyAlgorithm >= algorithmLimit {
-		return nil, fault.ErrInvalidKeyType
+		return nil, fault.InvalidKeyType
 	}
 
 	// network selection
@@ -74,21 +74,21 @@ func PrivateKeyFromBase58(privateKeyBase58Encoded string) (*PrivateKey, error) {
 	// Compute key length
 	keyLength := len(privateKeyDecoded) - keyVariantLength - checksumLength
 	if keyLength <= 0 {
-		return nil, fault.ErrInvalidKeyLength
+		return nil, fault.InvalidKeyLength
 	}
 
 	// Checksum
 	checksumStart := len(privateKeyDecoded) - checksumLength
 	checksum := sha3.Sum256(privateKeyDecoded[:checksumStart])
 	if !bytes.Equal(checksum[:checksumLength], privateKeyDecoded[checksumStart:]) {
-		return nil, fault.ErrChecksumMismatch
+		return nil, fault.ChecksumMismatch
 	}
 
 	// return a pointer to the specific private key type
 	switch keyAlgorithm {
 	case ED25519:
 		if keyLength != ed25519.PrivateKeySize {
-			return nil, fault.ErrInvalidKeyLength
+			return nil, fault.InvalidKeyLength
 		}
 		priv := privateKeyDecoded[keyVariantLength:checksumStart]
 		privateKey := &PrivateKey{
@@ -100,7 +100,7 @@ func PrivateKeyFromBase58(privateKeyBase58Encoded string) (*PrivateKey, error) {
 		return privateKey, nil
 	case Nothing:
 		if 2 != keyLength {
-			return nil, fault.ErrInvalidKeyLength
+			return nil, fault.InvalidKeyLength
 		}
 		priv := privateKeyDecoded[keyVariantLength:checksumStart]
 		privateKey := &PrivateKey{
@@ -111,7 +111,7 @@ func PrivateKeyFromBase58(privateKeyBase58Encoded string) (*PrivateKey, error) {
 		}
 		return privateKey, nil
 	default:
-		return nil, fault.ErrInvalidKeyType
+		return nil, fault.InvalidKeyType
 	}
 }
 
@@ -126,13 +126,13 @@ func PrivateKeyFromBytes(privateKeyBytes []byte) (*PrivateKey, error) {
 
 	// Check key type
 	if 0 == keyVariantLength || keyVariant&publicKeyCode == publicKeyCode {
-		return nil, fault.ErrNotPrivateKey
+		return nil, fault.NotPrivateKey
 	}
 
 	// compute algorithm
 	keyAlgorithm := keyVariant >> algorithmShift
 	if keyAlgorithm >= algorithmLimit {
-		return nil, fault.ErrInvalidKeyType
+		return nil, fault.InvalidKeyType
 	}
 
 	// network selection
@@ -141,14 +141,14 @@ func PrivateKeyFromBytes(privateKeyBytes []byte) (*PrivateKey, error) {
 	// Compute key length
 	keyLength := len(privateKeyBytes) - keyVariantLength
 	if keyLength <= 0 {
-		return nil, fault.ErrInvalidKeyLength
+		return nil, fault.InvalidKeyLength
 	}
 
 	// return a pointer to the specific private key type
 	switch keyAlgorithm {
 	case ED25519:
 		if keyLength != ed25519.PrivateKeySize {
-			return nil, fault.ErrInvalidKeyLength
+			return nil, fault.InvalidKeyLength
 		}
 		priv := privateKeyBytes[keyVariantLength:]
 		privateKey := &PrivateKey{
@@ -160,7 +160,7 @@ func PrivateKeyFromBytes(privateKeyBytes []byte) (*PrivateKey, error) {
 		return privateKey, nil
 	case Nothing:
 		if 2 != keyLength {
-			return nil, fault.ErrInvalidKeyLength
+			return nil, fault.InvalidKeyLength
 		}
 		priv := privateKeyBytes[keyVariantLength:]
 		privateKey := &PrivateKey{
@@ -171,7 +171,7 @@ func PrivateKeyFromBytes(privateKeyBytes []byte) (*PrivateKey, error) {
 		}
 		return privateKey, nil
 	default:
-		return nil, fault.ErrInvalidKeyType
+		return nil, fault.InvalidKeyType
 	}
 }
 

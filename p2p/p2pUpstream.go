@@ -96,7 +96,7 @@ func (n *Node) readWithTimeout(readwriter *bufio.ReadWriter, buf []byte, timeout
 	case <-ch:
 		return
 	case <-time.After(timeout):
-		return 0, fault.ErrReadTimeout
+		return 0, fault.ReadTimeout
 	}
 }
 
@@ -105,7 +105,7 @@ func (n *Node) RequestRegister(id peerlib.ID, stream *network.Stream, readwriter
 	s, rw, created := n.determineStreamRWerHelper(id, stream, readwriter)
 	if nil == s || nil == rw {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf(" RequestRegister: ID:%v No Useful Stream and ReadWriter", id.ShortString()))
-		return nil, fault.ErrStreamReadWriter
+		return nil, fault.StreamReadWriter
 	}
 	if created && s != nil {
 		defer (*s).Reset()
@@ -133,14 +133,14 @@ func (n *Node) RequestRegister(id peerlib.ID, stream *network.Stream, readwriter
 		return nil, err
 	}
 	if respLen < 1 {
-		return nil, fault.ErrDataLengthLessThanOne
+		return nil, fault.DataLengthLessThanOne
 	}
 	chain, fn, parameters, err := UnPackP2PMessage(resp[:respLen])
 	if err != nil {
 		return nil, err
 	}
 	if chain != nodeChain {
-		return nil, fault.ErrDifferentChain
+		return nil, fault.DifferentChain
 	}
 	switch fn {
 	case "E": //Register error
@@ -171,7 +171,7 @@ func (n *Node) QueryBlockHeight(id peerlib.ID, stream *network.Stream, readwrite
 	s, rw, created := n.determineStreamRWerHelper(id, stream, readwriter)
 	if nil == s || nil == rw {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf(" Register:No Useful Stream and ReadWrite ID:%v", id.ShortString()))
-		return 0, fault.ErrStreamReadWriter
+		return 0, fault.StreamReadWriter
 	}
 	if created && s != nil {
 		defer (*s).Reset()
@@ -206,7 +206,7 @@ func (n *Node) QueryBlockHeight(id peerlib.ID, stream *network.Stream, readwrite
 
 	if mode.ChainName() != chain {
 		util.LogWarn(n.Log, util.CoRed, "QueryBlockHeight:Different Chain  Error")
-		return 0, fault.ErrDifferentChain
+		return 0, fault.DifferentChain
 	}
 
 	if fn == "" || len(parameters[0]) < 1 { // not enough  data return
@@ -238,7 +238,7 @@ func (n *Node) RemoteDigestOfHeight(id peerlib.ID, blockNumber uint64, stream *n
 	s, rw, created := n.determineStreamRWerHelper(id, stream, readwriter)
 	if nil == s || nil == rw {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("Register:No Useful Stream and ReadWrite ID:%v", id.ShortString()))
-		return blockdigest.Digest{}, fault.ErrStreamReadWriter
+		return blockdigest.Digest{}, fault.StreamReadWriter
 	}
 	if created && s != nil {
 		defer (*s).Reset()
@@ -286,7 +286,7 @@ func (n *Node) RemoteDigestOfHeight(id peerlib.ID, blockNumber uint64, stream *n
 	case "E":
 		errMessage, _ := UnpackListenError(parameters)
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("RemoteDigestOfHeight: Response Fail,  E msg:%v ID:%v", errMessage, id.ShortString()))
-		return blockdigest.Digest{}, fault.ErrorFromRunes(parameters[0])
+		return blockdigest.Digest{}, fault.BlockNotFound
 	case "H":
 		d := blockdigest.Digest{}
 		if blockdigest.Length == len(parameters[0]) {
@@ -303,7 +303,7 @@ func (n *Node) RemoteDigestOfHeight(id peerlib.ID, blockNumber uint64, stream *n
 	default:
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("RemoteDigestOfHeight:  unexpected response:%v  ID%v", fn, id.ShortString()))
 	}
-	return blockdigest.Digest{}, fault.ErrInvalidPeerResponse
+	return blockdigest.Digest{}, fault.InvalidPeerResponse
 }
 
 // GetBlockData - fetch block data from a specific block number
@@ -311,7 +311,7 @@ func (n *Node) GetBlockData(id peerlib.ID, blockNumber uint64, stream *network.S
 	s, rw, created := n.determineStreamRWerHelper(id, stream, readwriter)
 	if nil == s || nil == rw {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("Register:No Useful Stream and ReadWrite ID:%v", id.ShortString()))
-		return nil, fault.ErrStreamReadWriter
+		return nil, fault.StreamReadWriter
 	}
 	if created && s != nil {
 		defer (*s).Reset()
@@ -348,25 +348,25 @@ func (n *Node) GetBlockData(id peerlib.ID, blockNumber uint64, stream *network.S
 	}
 	if mode.ChainName() != chain {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("GetBlockData: Different Chain ErrorID:%v", id.ShortString()))
-		return nil, fault.ErrDifferentChain
+		return nil, fault.DifferentChain
 	}
 
 	if 1 != len(parameters) {
-		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("GetBlockData:   Error:%v  ID:%v parameter length=%d NOT equal 1", fault.ErrInvalidPeerResponse, id.ShortString(), len(parameters)))
-		return nil, fault.ErrInvalidPeerResponse
+		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("GetBlockData:   Error:%v  ID:%v parameter length=%d NOT equal 1", fault.InvalidPeerResponse, id.ShortString(), len(parameters)))
+		return nil, fault.InvalidPeerResponse
 	}
 
 	switch string(fn) {
 	case "E":
 		errMessage, _ := UnpackListenError(parameters)
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("GetBlockData: Response Fail,  E msg:%v ID:%v", errMessage, id.ShortString()))
-		return nil, fault.ErrorFromRunes(parameters[0])
+		return nil, fault.BlockNotFound
 	case "B":
 		util.LogDebug(n.Log, util.CoGreen, fmt.Sprintf("<<--GetBlockData Success! ID:%v", id.ShortString()))
 		return parameters[0], nil
 	default:
 	}
-	return nil, fault.ErrInvalidPeerResponse
+	return nil, fault.InvalidPeerResponse
 }
 
 //PushMessageBus  send the CommandBus Message to the peer with given ID
@@ -374,7 +374,7 @@ func (n *Node) PushMessageBus(item BusMessage, id peerlib.ID, stream *network.St
 	s, rw, created := n.determineStreamRWerHelper(id, stream, readwriter)
 	if nil == s || nil == rw {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("Register:No Useful Stream and ReadWrite ID:%v", id.ShortString()))
-		return fault.ErrStreamReadWriter
+		return fault.StreamReadWriter
 	}
 	if created && s != nil {
 		defer (*s).Reset()
@@ -407,7 +407,7 @@ func (n *Node) PushMessageBus(item BusMessage, id peerlib.ID, stream *network.St
 	}
 
 	if mode.ChainName() != chain {
-		return fault.ErrDifferentChain
+		return fault.DifferentChain
 	}
 
 	if command == "" || len(parameters[0]) < 1 { // not enough  data return

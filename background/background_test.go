@@ -134,3 +134,34 @@ func (state *bg2) Run(args interface{}, shutdown <-chan struct{}) {
 		time.Sleep(time.Second)
 	}
 }
+
+type bg3 struct {
+	timeout time.Duration
+}
+
+func (state *bg3) Run(args interface{}, shutdown <-chan struct{}) {
+	time.Sleep(state.timeout)
+}
+
+func TestStopAndWait(t *testing.T) {
+
+	proc := &bg3{
+		timeout: 50 * time.Millisecond,
+	}
+
+	// list of background processes to start
+	processes := background.Processes{
+		proc,
+	}
+
+	start := time.Now()
+	p := background.Start(processes, t)
+	p.StopAndWait()
+	finish := time.Now()
+	deltaT := finish.Sub(start)
+	if deltaT > time.Second {
+		t.Errorf("too long: %s", deltaT)
+	} else {
+		t.Logf("shutdown time: %s", deltaT)
+	}
+}

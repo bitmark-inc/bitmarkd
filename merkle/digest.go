@@ -67,7 +67,7 @@ func (digest *Digest) Scan(state fmt.ScanState, verb rune) error {
 		return err
 	}
 	if len(token) != hex.EncodedLen(DigestLength) {
-		return fault.ErrNotLink
+		return fault.NotLink
 	}
 
 	buffer := make([]byte, hex.DecodedLen(len(token)))
@@ -93,14 +93,14 @@ func (digest Digest) MarshalText() ([]byte, error) {
 // UnmarshalText - convert Little Endian hex text into a digest
 func (digest *Digest) UnmarshalText(s []byte) error {
 	if DigestLength != hex.DecodedLen(len(s)) {
-		return fault.ErrNotLink
+		return fault.NotLink
 	}
 	// byteCount, err := hex.Decode(digest[:], s)
 	// if nil != err {
 	// 	return err
 	// }
 	// if DigestLength != byteCount {
-	// 	return fault.ErrNotLink
+	// 	return fault.NotLink
 	// }
 	// return nil
 
@@ -124,7 +124,7 @@ func (digest Digest) Bytes() []byte {
 // the input bytes are Little Endian
 func DigestFromBytes(digest *Digest, buffer []byte) error {
 	if DigestLength != len(buffer) {
-		return fault.ErrNotLink
+		return fault.NotLink
 	}
 	copy(digest[:], buffer)
 	return nil

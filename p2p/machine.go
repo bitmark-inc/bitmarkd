@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"fmt"
+	"math/rand"
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/block"
@@ -36,6 +37,10 @@ const (
 
 	// client should exist at least 1 response with in this number
 	activePastSec = 60
+
+	// fast sync option to fetch block
+	fastSyncFetchBlocksPerCycle = 2048
+	fastSyncSkipPerBlocks       = 100
 )
 
 // Machine voting concensus state machine
@@ -49,13 +54,17 @@ type Machine struct {
 	electedHeight    uint64           //voting winner block height
 	startBlockNumber uint64
 	samples          int
+	fastsyncEnabled  bool   // fast sync mode enabled?
+	blocksPerCycle   int    // number of blocks to fetch per cycle
+	pivotPoint       uint64 // block number to stop fast syncing
 }
 
 // NewConcensusMachine get a new StateMachine
-func NewConcensusMachine(node *Node, metric *MetricsPeersVoting) Machine {
+func NewConcensusMachine(node *Node, metric *MetricsPeersVoting, fastsync bool) Machine {
 	machine := Machine{log: logger.New("concensus"), votingMetrics: metric, attachedNode: node}
 	machine.toState(cStateConnecting)
 	machine.votes = voting.NewVoting()
+	machine.fastsyncEnabled = fastsync
 	return machine
 }
 
@@ -124,7 +133,11 @@ func (m *Machine) transitions() bool {
 		if !m.hasBetterChain(height) {
 			m.toState(cStateRebuild)
 		} else {
-			mode.Set(mode.Resynchronise)
+			//mode.Set(mode.Resynchronise)
+			//FastSync
+			// determine pivot point to stop fast sync
+			m.pivotPoint = m.electedHeight - 1024
+			log.Debugf("Pivot point for fast sync: %d", m.pivotPoint)
 			// first block number
 			m.startBlockNumber = genesis.BlockNumber + 1
 			m.nextState() // assume success
@@ -167,21 +180,92 @@ func (m *Machine) transitions() bool {
 	case cStateFetchBlocks:
 		util.LogInfo(log, util.CoYellow, fmt.Sprintf("Enter FetchBlocks state, mode:%s", mode.String()))
 		stop = true
+		var packedBlock []byte
+		var packedNextBlock []byte
+
+		// Check fast sync state on each loop
+		if m.fastsyncEnabled &&
+			m.pivotPoint >= m.startBlockNumber+fastSyncFetchBlocksPerCycle {
+			m.blocksPerCycle = fastSyncFetchBlocksPerCycle
+		} else {
+			m.blocksPerCycle = fetchBlocksPerCycle
+		}
 	fetch_blocks:
-		for n := 0; n < fetchBlocksPerCycle; n++ {
+		for n := 0; n < m.blocksPerCycle; n++ {
 			if m.startBlockNumber > m.electedHeight {
 				// just in case block height has changed
 				m.toState(cStateHighestBlock)
 				stop = false
 				break fetch_blocks
 			}
-			packedBlock, err := m.attachedNode.GetBlockData(m.electedWiner.(*P2PCandidatesImpl).ID, m.startBlockNumber, nil, nil)
-			if nil != err {
-				log.Errorf("fetch block number: %d  error: %s", m.startBlockNumber, err)
-				m.toState(cStateHighestBlock) // retry
-				break fetch_blocks
+			/*
+				packedBlock, err := m.attachedNode.GetBlockData(m.electedWiner.(*P2PCandidatesImpl).ID, m.startBlockNumber, nil, nil)
+				if nil != err {
+					log.Errorf("fetch block number: %d  error: %s", m.startBlockNumber, err)
+					m.toState(cStateHighestBlock) // retry
+					break fetch_blocks
+				}
+			*/
+			if packedNextBlock == nil {
+				p, err := m.attachedNode.GetBlockData(m.electedWiner.(*P2PCandidatesImpl).ID, m.startBlockNumber, nil, nil)
+				if nil != err {
+					log.Errorf("fetch block number: %d  error: %s", m.startBlockNumber, err)
+					m.toState(cStateHighestBlock) // retry
+					break fetch_blocks
+				}
+				packedBlock = p
+			} else {
+				packedBlock = packedNextBlock
 			}
-			err = block.StoreIncoming(packedBlock, block.NoRescanVerified)
+
+			if m.fastsyncEnabled {
+				// test a random block for forgery
+				if n > 0 && n%fastSyncSkipPerBlocks == 0 {
+					h := m.startBlockNumber - uint64(rand.Intn(fastSyncSkipPerBlocks))
+					log.Debugf("select random block: %d to test for forgery", h)
+					digest, err := blockheader.DigestForBlock(h)
+					if nil != err {
+						log.Infof("block number: %d  local digest error: %s", h, err)
+						m.toState(cStateHighestBlock) // retry
+						break fetch_blocks
+					}
+					d, err := m.attachedNode.RemoteDigestOfHeight(m.electedWiner.(*P2PCandidatesImpl).ID, h, nil, nil)
+					if nil != err {
+						log.Infof("block number: %d  fetch digest error: %s", h, err)
+						m.toState(cStateHighestBlock) // retry
+						break fetch_blocks
+					}
+
+					if d != digest {
+						log.Warnf("potetial block forgery: %d", h)
+
+						// remove old blocks
+						startingPoint := m.startBlockNumber - uint64(n)
+						err := block.DeleteDownToBlock(startingPoint)
+						if nil != err {
+							log.Errorf("delete down to block number: %d  error: %s", startingPoint, err)
+						}
+
+						m.fastsyncEnabled = false
+						m.toState(cStateHighestBlock)
+						m.startBlockNumber = startingPoint
+						break fetch_blocks
+					}
+				}
+
+				// get next block
+				nextBlock, err := m.attachedNode.GetBlockData(m.electedWiner.(*P2PCandidatesImpl).ID, m.startBlockNumber+1, nil, nil)
+				if nil != err {
+					log.Errorf("fetch block number: %d  error: %s", m.startBlockNumber+1, err)
+					m.toState(cStateHighestBlock) // retry
+					break fetch_blocks
+				}
+				packedNextBlock = nextBlock
+			} else {
+				packedNextBlock = nil
+			}
+
+			err := block.StoreIncoming(packedBlock, nil, block.NoRescanVerified)
 			if nil != err {
 				util.LogInfo(log, util.CoRed, fmt.Sprintf(
 					"store block number: %d  error: %s",

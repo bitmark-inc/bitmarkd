@@ -495,7 +495,7 @@ func TestPackBitmarkTransferWithZeroAccount(t *testing.T) {
 	if nil == err {
 		t.Fatalf("pack should have failed")
 	}
-	if fault.ErrInvalidOwnerOrRegistrant != err {
+	if fault.InvalidOwnerOrRegistrant != err {
 		t.Fatalf("unexpected pack error: %s", err)
 	}
 }

@@ -27,6 +27,12 @@ case "$1" in
     conf="/etc/bitmarkd.conf"
     chown root:bitmarkd "${conf}"
     chmod 640 "${conf}"
+
+    [ ! -f /var/lib/bitmarkd/peer.public ] && bitmarkd --config-file /etc/bitmarkd.conf gen-peer-identity /var/lib/bitmarkd/
+    [ ! -f /var/lib/bitmarkd/rpc.crt ] && bitmarkd --config-file /etc/bitmarkd.conf gen-rpc-cert /var/lib/bitmarkd/
+    [ ! -f /var/lib/bitmarkd/proof.public ] && bitmarkd --config-file /etc/bitmarkd.conf gen-proof-identity /var/lib/bitmarkd/
+    chown bitmarkd:bitmarkd -R /var/lib/bitmarkd
+
     # enable the unit, but don't start it
     [ -x /bin/systemctl ] && systemctl enable bitmarkd.service >/dev/null 2>&1 || true
     ;;

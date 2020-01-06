@@ -23,13 +23,13 @@ import (
 // identity is required, but not check the config file
 func checkName(name string) (string, error) {
 	if "" == name {
-		return "", fault.ErrIdentityNameIsRequired
+		return "", fault.IdentityNameIsRequired
 	}
 
 	// account names cannot be identities to prevent confusion
 	_, err := account.AccountFromBase58(name)
 	if nil == err {
-		return "", fault.ErrInvalidIdentityName
+		return "", fault.InvalidIdentityName
 	}
 
 	return name, nil
@@ -38,7 +38,7 @@ func checkName(name string) (string, error) {
 // check for non-blank file name
 func checkFileName(fileName string) (string, error) {
 	if "" == fileName {
-		return "", fault.ErrFileNameIsRequired
+		return "", fault.FileNameIsRequired
 	}
 
 	return fileName, nil
@@ -48,11 +48,11 @@ func checkFileName(fileName string) (string, error) {
 func checkConnect(connect string) (string, error) {
 	connect = strings.TrimSpace(connect)
 	if "" == connect {
-		return "", fault.ErrConnectIsRequired
+		return "", fault.ConnectIsRequired
 	}
 
 	// XXX: We should not need to []string{} variable s
-	//lint:ignore SA4006 ignore this lint till somebody revisit this code
+	//nolint:ignore SA4006 ignore this lint till somebody revisit this code
 	s := []string{}
 	if '[' == connect[0] { // IPv6
 		s = strings.Split(connect, "]:")
@@ -60,12 +60,12 @@ func checkConnect(connect string) (string, error) {
 		s = strings.Split(connect, ":")
 	}
 	if 2 != len(s) {
-		return "", fault.ErrConnectRequiresPortNumberSuffix
+		return "", fault.ConnectRequiresPortNumberSuffix
 	}
 
 	port, err := strconv.Atoi(s[1])
 	if nil != err || port < 1 || port > 65535 {
-		return "", fault.ErrInvalidPortNumber
+		return "", fault.InvalidPortNumber
 	}
 
 	return connect, nil
@@ -74,7 +74,7 @@ func checkConnect(connect string) (string, error) {
 // description is required
 func checkDescription(description string) (string, error) {
 	if "" == description {
-		return "", fault.ErrDescriptionIsRequired
+		return "", fault.DescriptionIsRequired
 	}
 
 	return description, nil
@@ -83,7 +83,7 @@ func checkDescription(description string) (string, error) {
 // asset fingerprint is required field
 func checkAssetFingerprint(fingerprint string) (string, error) {
 	if "" == fingerprint {
-		return "", fault.ErrAssetFingerprintIsRequired
+		return "", fault.AssetFingerprintIsRequired
 	}
 	return fingerprint, nil
 }
@@ -91,14 +91,14 @@ func checkAssetFingerprint(fingerprint string) (string, error) {
 // asset metadata is required field
 func checkAssetMetadata(meta string) (string, error) {
 	if "" == meta {
-		return "", fault.ErrAssetMetadataIsRequired
+		return "", fault.AssetMetadataIsRequired
 	}
 	meta, err := strconv.Unquote(`"` + meta + `"`)
 	if nil != err {
 		return "", err
 	}
 	if 1 == len(strings.Split(meta, "\u0000"))%2 {
-		return "", fault.ErrAssetMetadataMustBeMap
+		return "", fault.AssetMetadataMustBeMap
 	}
 	return meta, nil
 }
@@ -106,7 +106,7 @@ func checkAssetMetadata(meta string) (string, error) {
 // txid is required field ensure 32 hex bytes
 func checkTxId(txId string) (string, error) {
 	if 64 != len(txId) {
-		return "", fault.ErrTransactionIdIsRequired
+		return "", fault.TransactionIdIsRequired
 	}
 	_, err := hex.DecodeString(txId)
 	if nil != err {
@@ -119,7 +119,7 @@ func checkTxId(txId string) (string, error) {
 // transfer tx is required field
 func checkTransferTx(txId string) (string, error) {
 	if "" == txId {
-		return "", fault.ErrTransactionHexDataIsRequired
+		return "", fault.TransactionHexDataIsRequired
 	}
 
 	return txId, nil
@@ -140,7 +140,7 @@ func checkSeed(seed string, new bool, testnet bool) (string, error) {
 
 	// failed to get a seed
 	if "" == seed {
-		return "", fault.ErrIncompatibleOptions
+		return "", fault.IncompatibleOptions
 	}
 
 	// ensure can decode
@@ -204,7 +204,7 @@ func checkRecipient(c *cli.Context, name string, config *configuration.Configura
 // coin address is a required field
 func checkCoinAddress(c currency.Currency, address string, testnet bool) (string, error) {
 	if "" == address {
-		return "", fault.ErrCurrencyAddressIsRequired
+		return "", fault.CurrencyAddressIsRequired
 	}
 	err := c.ValidateAddress(address, testnet)
 	return address, err
@@ -213,7 +213,7 @@ func checkCoinAddress(c currency.Currency, address string, testnet bool) (string
 // signature is required field ensure 64 hex bytes
 func checkSignature(s string) ([]byte, error) {
 	if 128 != len(s) {
-		return nil, fault.ErrTransactionIdIsRequired
+		return nil, fault.TransactionIdIsRequired
 	}
 	h, err := hex.DecodeString(s)
 	if nil != err {

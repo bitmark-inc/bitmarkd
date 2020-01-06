@@ -23,11 +23,11 @@ const (
 // ValidBlockTimeSpacingAtVersion - valid block time spacing based on different version
 func ValidBlockTimeSpacingAtVersion(version uint16, timeSpacing uint64) error {
 	if version == initialVersion && timeSpacing > blockTimeSpacingInitialInSecond {
-		return fault.ErrInvalidBlockHeaderTimestamp
+		return fault.InvalidBlockHeaderTimestamp
 	}
 
 	if version >= modifiedTimeSpacingVersion && timeSpacing > blockTimeSpacingCurrentInSecond {
-		return fault.ErrInvalidBlockHeaderTimestamp
+		return fault.InvalidBlockHeaderTimestamp
 	}
 
 	return nil
@@ -40,7 +40,7 @@ func ValidIncomingDifficuty(header *Header) error {
 	}
 
 	if header.Difficulty.Value() != difficulty.Current.Value() {
-		return fault.ErrDifficultyNotMatch
+		return fault.DifficultyDoesNotMatchCalculated
 	}
 	return nil
 }
@@ -65,12 +65,12 @@ func isDifficultyAdjustmentBlock(height uint64) bool {
 // ValidHeaderVersion - valid incoming block version
 func ValidHeaderVersion(currentVersion uint16, incomingVersion uint16) error {
 	if incomingVersion < initialVersion {
-		return fault.ErrInvalidBlockHeaderVersion
+		return fault.InvalidBlockHeaderVersion
 	}
 
 	// incoming block version must be the same or higher than previous version
 	if currentVersion > incomingVersion {
-		return fault.ErrBlockVersionMustNotDecrease
+		return fault.BlockVersionMustNotDecrease
 	}
 
 	return nil
@@ -79,7 +79,7 @@ func ValidHeaderVersion(currentVersion uint16, incomingVersion uint16) error {
 // ValidBlockLinkage - valid incoming block linkage
 func ValidBlockLinkage(currentDigest blockdigest.Digest, incomingDigestOfPreviousBlock blockdigest.Digest) error {
 	if currentDigest != incomingDigestOfPreviousBlock {
-		return fault.ErrPreviousBlockDigestDoesNotMatch
+		return fault.PreviousBlockDigestDoesNotMatch
 	}
 
 	return nil
@@ -89,7 +89,7 @@ func ValidBlockLinkage(currentDigest blockdigest.Digest, incomingDigestOfPreviou
 // but it is also valid when incoming block is same height with smaller digest
 func validNextHeightFromExpected(expectedNextHeight uint64, nextHeight uint64) error {
 	if nextHeight < expectedNextHeight-1 || nextHeight > expectedNextHeight {
-		return fault.ErrHeightOutOfSequence
+		return fault.HeightOutOfSequence
 	}
 
 	return nil

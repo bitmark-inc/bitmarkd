@@ -30,12 +30,12 @@ var testPrivateKey = []privateKeyTest{
 
 // Invalid privateKey
 var testInvalidPrivateKeyFromBase58 = []invalid{
-	{"3gLJjLSociTmf4kgL3ztUK;tgADFvg9yjXt1jFbEx9KgpEEAFn", fault.ErrCannotDecodePrivateKey},                                   // invalid base58 string
-	{"ZxbhGmFUuwUd9XPFoRjPg77T1h29urd2e85pryntETtXCFS3FZ", fault.ErrChecksumMismatch},                                         // checksum mismatch
-	{"3iNEz7VJ29DyFeiXGu9gSCUg4K6ykynfPYeyST1AWAti72mpvLd", fault.ErrInvalidKeyType},                                          // undefined key algorithm
-	{"anF8SWxSRY5vnN3Bbyz9buRYW1hfCAAZxfbv8Fw9SFXaktvLCj", fault.ErrNotPrivateKey},                                            // public key
-	{"AaTfRXLmV59eCFGzBkkzYa1QbuXQBZCiAvjNdnHUaXCFJCyMCxMar6c3Qqaa1mzSPCqPK9XgpkDHcTSCTyAnMnKCHSA2H", fault.ErrNotPrivateKey}, // truncated
-	{"aTfRXLmV59eCFGzBkkzYa1QbuXQBZCiAvjNdnHUaXCFJCyMCxMar6c3Qqaa1mzSPCqPK9XgpkDHcTSCTyAnMnKCHSA2Hz", fault.ErrNotPrivateKey}, // truncated
+	{"3gLJjLSociTmf4kgL3ztUK;tgADFvg9yjXt1jFbEx9KgpEEAFn", fault.CannotDecodePrivateKey},                                   // invalid base58 string
+	{"ZxbhGmFUuwUd9XPFoRjPg77T1h29urd2e85pryntETtXCFS3FZ", fault.ChecksumMismatch},                                         // checksum mismatch
+	{"3iNEz7VJ29DyFeiXGu9gSCUg4K6ykynfPYeyST1AWAti72mpvLd", fault.InvalidKeyType},                                          // undefined key algorithm
+	{"anF8SWxSRY5vnN3Bbyz9buRYW1hfCAAZxfbv8Fw9SFXaktvLCj", fault.NotPrivateKey},                                            // public key
+	{"AaTfRXLmV59eCFGzBkkzYa1QbuXQBZCiAvjNdnHUaXCFJCyMCxMar6c3Qqaa1mzSPCqPK9XgpkDHcTSCTyAnMnKCHSA2H", fault.NotPrivateKey}, // truncated
+	{"aTfRXLmV59eCFGzBkkzYa1QbuXQBZCiAvjNdnHUaXCFJCyMCxMar6c3Qqaa1mzSPCqPK9XgpkDHcTSCTyAnMnKCHSA2Hz", fault.NotPrivateKey}, // truncated
 }
 
 // show manually created private keys

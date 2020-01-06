@@ -96,7 +96,7 @@ func transfer(
 	}
 
 	// delete the current owners records
-	ownerData, err := GetOwnerData(trx, previousTxId)
+	ownerData, err := GetOwnerData(trx, previousTxId, storage.Pool.OwnerData)
 	if nil != err {
 		logger.Criticalf("ownership.Transfer: invalid owner data for tx id: %s  error: %s", previousTxId, err)
 		logger.Panic("ownership.Transfer: Ownership database corrupt")

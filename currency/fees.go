@@ -19,6 +19,6 @@ func (currency Currency) GetFee() (uint64, error) {
 	case Litecoin:
 		return 100000, nil // as of 2017-07-28 Litecoin penalises any Vout < 100,000 Satoshi
 	default:
-		return 0, fault.ErrInvalidCurrency
+		return 0, fault.InvalidCurrency
 	}
 }

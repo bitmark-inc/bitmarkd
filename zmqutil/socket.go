@@ -47,12 +47,14 @@ func NewSignalPair(signal string) (receiver *zmq.Socket, sender *zmq.Socket, err
 	// PAIR Client, half of signalling channel
 	sender, err = zmq.NewSocket(zmq.PAIR)
 	if nil != err {
+		receiver.Close()
 		sender.Close()
 		return nil, nil, err
 	}
 	sender.SetLinger(0)
 	err = sender.Connect(signal)
 	if nil != err {
+		receiver.Close()
 		sender.Close()
 		return nil, nil, err
 	}
@@ -119,6 +121,9 @@ func NewServerSocket(socketType zmq.Type, zapDomain string, privateKey []byte, p
 		return nil, err
 	}
 
+	// all errors after here must goto failure to ensure proper
+	// cleanup
+
 	// allow any client to connect
 	//zmq.AuthAllow(zapDomain, "127.0.0.1/8")
 	//zmq.AuthAllow(zapDomain, "::1")
@@ -134,9 +139,11 @@ func NewServerSocket(socketType zmq.Type, zapDomain string, privateKey []byte, p
 		goto failure
 	}
 
-	socket.SetIdentity(string(publicKey)) // just use public key for identity
+	// use public key for identity
+	socket.SetIdentity(string(publicKey))
 
-	err = socket.SetIpv6(v6) // conditionally set IPv6 state
+	// conditionally set IPv6 state
+	err = socket.SetIpv6(v6)
 	if nil != err {
 		goto failure
 	}

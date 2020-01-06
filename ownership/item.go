@@ -32,7 +32,7 @@ func toString(item OwnedItem) ([]byte, error) {
 	case OwnedShare:
 		return []byte("Share"), nil
 	default:
-		return []byte{}, fault.ErrInvalidItem
+		return []byte{}, fault.InvalidItem
 	}
 }
 
@@ -64,7 +64,7 @@ func (item *OwnedItem) UnmarshalText(s []byte) error {
 	case "share":
 		*item = OwnedShare
 	default:
-		return fault.ErrNotOwnedItem
+		return fault.NotOwnedItem
 	}
 	return nil
 }

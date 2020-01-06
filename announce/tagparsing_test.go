@@ -40,7 +40,7 @@ func TestValidTag(t *testing.T) {
 		{
 			id:  3,
 			txt: "bitmark=v3 a=",
-			err: fault.ErrInvalidDnsTxtRecord,
+			err: fault.InvalidDnsTxtRecord,
 		},
 		{
 			id:  4,
@@ -50,12 +50,12 @@ func TestValidTag(t *testing.T) {
 		{
 			id:  5,
 			txt: "bitmark=v3 a",
-			err: fault.ErrInvalidDnsTxtRecord,
+			err: fault.InvalidDnsTxtRecord,
 		},
 		{
 			id:  6,
 			txt: "bitmark=v3 a p",
-			err: fault.ErrInvalidDnsTxtRecord,
+			err: fault.InvalidDnsTxtRecord,
 		},
 
 		// check for missing items
@@ -82,7 +82,7 @@ func TestValidTag(t *testing.T) {
 		{
 			id:  11,
 			txt: "bitmark=v3 a=118.163.120.178;[2001:b030:2314:0200:4649:583d:0001:0120] r=33566 f=48137A7A76934CAFE7635C9AC05339C20F4C00A724D7FA1DC0DC3875476ED004 c=32136",
-			err: fault.ErrInvalidDnsTxtRecord,
+			err: fault.InvalidDnsTxtRecord,
 		},
 
 		// check for incorrect items
@@ -163,7 +163,7 @@ func TestValidTag(t *testing.T) {
 		{
 			id:  26,
 			txt: "hello world",
-			err: fault.ErrInvalidDnsTxtRecord,
+			err: fault.InvalidDnsTxtRecord,
 		},
 	}
 

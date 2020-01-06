@@ -48,7 +48,7 @@ func promptNewPassword() (string, error) {
 
 	passwordLen := len(password)
 	if passwordLen < 8 {
-		return "", fault.ErrInvalidPasswordLength
+		return "", fault.InvalidPasswordLength
 	}
 
 	console, fd, state = getTerminal()
@@ -57,11 +57,11 @@ func promptNewPassword() (string, error) {
 
 	if nil != err {
 		fmt.Printf("verify failed: %s\n", err)
-		return "", fault.ErrPasswordMismatch
+		return "", fault.PasswordMismatch
 	}
 
 	if password != verifyPassword {
-		return "", fault.ErrPasswordMismatch
+		return "", fault.PasswordMismatch
 	}
 
 	return password, nil

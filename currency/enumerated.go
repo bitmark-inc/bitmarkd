@@ -37,7 +37,7 @@ func toString(c Currency) ([]byte, error) {
 	case Litecoin:
 		return []byte("LTC"), nil
 	default:
-		return []byte{}, fault.ErrInvalidCurrency
+		return []byte{}, fault.InvalidCurrency
 	}
 }
 
@@ -51,7 +51,7 @@ func fromString(in string) (Currency, error) {
 	case "ltc", "litecoin":
 		return Litecoin, nil
 	default:
-		return Nothing, fault.ErrInvalidCurrency
+		return Nothing, fault.InvalidCurrency
 	}
 }
 

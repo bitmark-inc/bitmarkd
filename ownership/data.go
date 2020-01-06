@@ -105,32 +105,40 @@ type OwnerData interface {
 type PackedOwnerData []byte
 
 // GetOwnerData - fetch and unpack owner data
-func GetOwnerData(trx storage.Transaction, txId merkle.Digest) (OwnerData, error) {
+func GetOwnerData(trx storage.Transaction, txId merkle.Digest, ownerDataHandle storage.Handle) (OwnerData, error) {
+	if nil == ownerDataHandle {
+		return nil, fault.NilPointer
+	}
+
 	var packed []byte
 	if nil == trx {
-		packed = storage.Pool.OwnerData.Get(txId[:])
+		packed = ownerDataHandle.Get(txId[:])
 	} else {
-		packed = trx.Get(storage.Pool.OwnerData, txId[:])
+		packed = trx.Get(ownerDataHandle, txId[:])
 	}
 
 	if nil == packed {
-		return nil, fault.ErrMissingOwnerData
+		return nil, fault.MissingOwnerData
 	}
 
 	return PackedOwnerData(packed).Unpack()
 }
 
 // GetOwnerDataB - fetch and unpack owner data
-func GetOwnerDataB(trx storage.Transaction, txId []byte) (OwnerData, error) {
+func GetOwnerDataB(trx storage.Transaction, txId []byte, ownerDataHandle storage.Handle) (OwnerData, error) {
+	if nil == ownerDataHandle {
+		return nil, fault.NilPointer
+	}
+
 	var packed []byte
 	if nil == trx {
-		packed = storage.Pool.OwnerData.Get(txId)
+		packed = ownerDataHandle.Get(txId)
 	} else {
-		packed = trx.Get(storage.Pool.OwnerData, txId)
+		packed = trx.Get(ownerDataHandle, txId)
 	}
 
 	if nil == packed {
-		return nil, fault.ErrMissingOwnerData
+		return nil, fault.MissingOwnerData
 	}
 
 	return PackedOwnerData(packed).Unpack()
@@ -234,13 +242,13 @@ func (a ShareOwnerData) IssueBlockNumber() uint64 {
 // Unpack - unpack record into the appropriate type
 func (packed PackedOwnerData) Unpack() (OwnerData, error) {
 	if len(packed) < 1 {
-		return nil, fault.ErrNotOwnerDataPack
+		return nil, fault.NotOwnerDataPack
 	}
 	switch OwnedItem(packed[itemStart]) {
 
 	case OwnedAsset:
 		if assetPackLength != len(packed) {
-			return nil, fault.ErrNotOwnerDataPack
+			return nil, fault.NotOwnerDataPack
 		}
 		a := &AssetOwnerData{
 			transferBlockNumber: binary.BigEndian.Uint64(packed[transferBlockNumberStart:transferBlockNumberFinish]),
@@ -253,7 +261,7 @@ func (packed PackedOwnerData) Unpack() (OwnerData, error) {
 
 	case OwnedBlock:
 		if blockPackLength != len(packed) {
-			return nil, fault.ErrNotOwnerDataPack
+			return nil, fault.NotOwnerDataPack
 		}
 		b := &BlockOwnerData{
 			transferBlockNumber: binary.BigEndian.Uint64(packed[transferBlockNumberStart:transferBlockNumberFinish]),
@@ -264,7 +272,7 @@ func (packed PackedOwnerData) Unpack() (OwnerData, error) {
 
 	case OwnedShare:
 		if sharePackLength != len(packed) {
-			return nil, fault.ErrNotOwnerDataPack
+			return nil, fault.NotOwnerDataPack
 		}
 		a := &ShareOwnerData{
 			transferBlockNumber: binary.BigEndian.Uint64(packed[transferBlockNumberStart:transferBlockNumberFinish]),
@@ -275,6 +283,6 @@ func (packed PackedOwnerData) Unpack() (OwnerData, error) {
 		return a, nil
 
 	default:
-		return nil, fault.ErrNotOwnerDataPack
+		return nil, fault.NotOwnerDataPack
 	}
 }

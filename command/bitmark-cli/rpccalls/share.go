@@ -47,7 +47,7 @@ func (client *Client) Share(shareConfig *ShareData) (*ShareReply, error) {
 		return nil, err
 	}
 	if nil == share {
-		return nil, fault.ErrMakeShareFailed
+		return nil, fault.MakeShareFailed
 	}
 
 	client.printJson("Share Request", share)
@@ -96,8 +96,8 @@ func makeShare(testnet bool, link merkle.Digest, quantity uint64, owner *configu
 	// pack without signature
 	packed, err := r.Pack(ownerAccount)
 	if nil == err {
-		return nil, fault.ErrMakeShareFailed
-	} else if fault.ErrInvalidSignature != err {
+		return nil, fault.MakeShareFailed
+	} else if fault.InvalidSignature != err {
 		return nil, err
 	}
 

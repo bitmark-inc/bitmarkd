@@ -82,7 +82,7 @@ func PrivateKeyFromBase58Seed(seedBase58Encoded string) (*PrivateKey, error) {
 				return nil, err
 			}
 			if secretKeyV2Length != n {
-				return nil, fault.ErrCannotDecodeSeed
+				return nil, fault.CannotDecodeSeed
 			}
 		}
 
@@ -92,11 +92,11 @@ func PrivateKeyFromBase58Seed(seedBase58Encoded string) (*PrivateKey, error) {
 			return nil, err
 		}
 		if ed25519.SeedSize != n {
-			return nil, fault.ErrCannotDecodeSeed
+			return nil, fault.CannotDecodeSeed
 		}
 
 	default:
-		return nil, fault.ErrInvalidSeedHeader
+		return nil, fault.InvalidSeedHeader
 	}
 
 	// generate key pair from encrypted secret key
@@ -122,7 +122,7 @@ func parseBase58Seed(seedBase58Encoded string) ([]byte, bool, error) {
 	seed := util.FromBase58(seedBase58Encoded)
 	seedLength := len(seed)
 	if seedV1Length != seedLength && seedV2Length != seedLength {
-		return nil, false, fault.ErrInvalidSeedLength
+		return nil, false, fault.InvalidSeedLength
 	}
 
 	// verify checksum
@@ -131,7 +131,7 @@ func parseBase58Seed(seedBase58Encoded string) ([]byte, bool, error) {
 	expectedChecksum := digest[:seedChecksumLength]
 	actualChecksum := seed[checksumStart:]
 	if !bytes.Equal(expectedChecksum, actualChecksum) {
-		return nil, false, fault.ErrChecksumMismatch
+		return nil, false, fault.ChecksumMismatch
 	}
 
 	header := seed[:seedHeaderLength]
@@ -155,7 +155,7 @@ func parseBase58Seed(seedBase58Encoded string) ([]byte, bool, error) {
 
 		// verify valid secret key
 		if secretKeyV2Length != len(sk) || 0 != sk[16]&0x0f {
-			return nil, false, fault.ErrInvalidSeedLength
+			return nil, false, fault.InvalidSeedLength
 		}
 
 		// parse network
@@ -163,7 +163,7 @@ func parseBase58Seed(seedBase58Encoded string) ([]byte, bool, error) {
 		testnet = mode == sk[15]&0xf0^0xf0
 
 	default:
-		return nil, false, fault.ErrInvalidSeedHeader
+		return nil, false, fault.InvalidSeedHeader
 	}
 
 	return sk, testnet, nil

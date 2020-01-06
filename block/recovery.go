@@ -47,11 +47,3 @@ func recoverBlockHeaderHash(blockNumberBytes []byte, packedBlock []byte) error {
 
 	return nil
 }
-
-func doRecovery() error {
-	return storage.Pool.Blocks.NewFetchCursor().Map(recoverRecord)
-}
-
-func recoverRecord(key []byte, value []byte) error {
-	return StoreIncoming(value, NoRescanVerified)
-}
