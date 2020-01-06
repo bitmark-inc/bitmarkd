@@ -62,7 +62,7 @@ func TestIDMarshalUnmarshal(t *testing.T) {
 	assert.Equal(t, id.String(), id2.String(), "Convert ID fail")
 }
 func TestNewP2P(t *testing.T) {
-	err := Initialise(mockConfiguration("servant", 12136), "v1.0.0")
+	err := Initialise(mockConfiguration("servant", 12136), "v1.0.0", false)
 	assert.NoError(t, err, "P2P  initialized error")
 	time.Sleep(8 * time.Second)
 	defer announce.Finalise()
