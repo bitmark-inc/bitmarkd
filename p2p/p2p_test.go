@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/announce"
+	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/stretchr/testify/assert"
@@ -48,7 +49,7 @@ func mockConfiguration(nType string, port int) *Configuration {
 func TestIDMarshalUnmarshal(t *testing.T) {
 	conf := mockConfiguration("servant", 12136)
 	fmt.Println(conf.PrivateKey)
-	prvKey, err := DecodeHexToPrvKey([]byte(conf.PrivateKey))
+	prvKey, err := util.DecodePrivKeyFromHex(conf.PrivateKey)
 	assert.NoError(t, err, "Decode Hex Key Error")
 	id, err := peerlib.IDFromPrivateKey(prvKey)
 	assert.NoError(t, err, "IDFromPrivateKey Error:")
@@ -61,7 +62,7 @@ func TestIDMarshalUnmarshal(t *testing.T) {
 	assert.Equal(t, id.String(), id2.String(), "Convert ID fail")
 }
 func TestNewP2P(t *testing.T) {
-	err := Initialise(mockConfiguration("servant", 12136), "v1.0.0")
+	err := Initialise(mockConfiguration("servant", 12136), "v1.0.0", false)
 	assert.NoError(t, err, "P2P  initialized error")
 	time.Sleep(8 * time.Second)
 	defer announce.Finalise()

@@ -25,7 +25,7 @@ func (n *Node) Setup(configuration *Configuration, version string, fastsync bool
 	globalData.PreferIPv6 = configuration.PreferIPv6
 	maAddrs := IPPortToMultiAddr(configuration.Listen)
 	n.Registers = make(map[peerlib.ID]RegisterStatus)
-	prvKey, err := DecodeHexToPrvKey([]byte(configuration.PrivateKey)) //Hex Decoded binaryString
+	prvKey, err := util.DecodePrivKeyFromHex(configuration.PrivateKey) //Hex Decoded binaryString
 	if err != nil {
 		n.Log.Error(err.Error())
 		panic(err)
