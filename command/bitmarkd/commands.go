@@ -31,8 +31,10 @@ import (
 )
 
 const (
-	peerPublicKeyFilename  = "peer.public"
 	peerPrivateKeyFilename = "peer.private"
+
+	publishingPublicKeyFilename  = "publishing.public"
+	publishingPrivateKeyFilename = "publishing.private"
 
 	rpcCertificateKeyFilename = "rpc.crt"
 	rpcPrivateKeyFilename     = "rpc.key"
@@ -58,26 +60,35 @@ func processSetupCommand(program string, arguments []string) bool {
 
 	switch command {
 	case "gen-peer-identity", "peer":
-		privateKeyFilename := getFilenameWithDirectory(arguments, peerPrivateKeyFilename)
+		peerPrivateKeyPath := getFilenameWithDirectory(arguments, peerPrivateKeyFilename)
+		publishingPublicKeyPath := getFilenameWithDirectory(arguments, publishingPublicKeyFilename)
+		publishingPrivateKeyPath := getFilenameWithDirectory(arguments, publishingPrivateKeyFilename)
 
-		if util.EnsureFileExists(peerPrivateKeyFilename) {
-			fmt.Printf("generate private key: %q error: %s\n", privateKeyFilename, fault.CertificateFileAlreadyExists)
+		err := zmqutil.MakeKeyPair(publishingPublicKeyPath, publishingPrivateKeyPath)
+		if nil != err {
+			fmt.Printf("generate private key: %q and public key: %q error: %s\n", publishingPrivateKeyFilename, publishingPublicKeyFilename, err)
+			exitwithstatus.Exit(1)
+		}
+
+		if util.EnsureFileExists(peerPrivateKeyPath) {
+			fmt.Printf("generate private key: %q error: %s\n", peerPrivateKeyFilename, fault.CertificateFileAlreadyExists)
 			exitwithstatus.Exit(1)
 		}
 
 		key, err := util.MakeEd25519PeerKey()
 		if err != nil {
-			fmt.Printf("generate private key: %q error: %s\n", privateKeyFilename, err.Error())
+			fmt.Printf("generate private key: %q error: %s\n", peerPrivateKeyFilename, err.Error())
 			exitwithstatus.Exit(1)
 		}
 
-		if err := ioutil.WriteFile(privateKeyFilename, []byte(key), 0600); err != nil {
-			os.Remove(privateKeyFilename)
-			fmt.Printf("generate private key: %q error: %s\n", privateKeyFilename, err.Error())
+		if err := ioutil.WriteFile(peerPrivateKeyPath, []byte(key), 0600); err != nil {
+			os.Remove(peerPrivateKeyPath)
+			fmt.Printf("generate private key: %q error: %s\n", peerPrivateKeyFilename, err.Error())
 			exitwithstatus.Exit(1)
 		}
 
-		fmt.Printf("generated private key: %q\n", privateKeyFilename)
+		fmt.Printf("generated peer private key: %q\n", peerPrivateKeyFilename)
+		fmt.Printf("generated publishing private key: %q and publishing public key: %q\n", publishingPrivateKeyPath, publishingPublicKeyPath)
 
 	case "gen-rpc-cert", "rpc":
 		certificateFilename := getFilenameWithDirectory(arguments, rpcCertificateKeyFilename)
@@ -161,8 +172,9 @@ func processSetupCommand(program string, arguments []string) bool {
 		fmt.Printf("  help                       (h)      - display this message\n\n")
 		fmt.Printf("  version                    (v)      - display version sting\n\n")
 
-		fmt.Printf("  gen-peer-identity [DIR]    (peer)   - create private key in: %q\n", "DIR/"+peerPrivateKeyFilename)
-		fmt.Printf("                                        and the public key in: %q\n", "DIR/"+peerPublicKeyFilename)
+		fmt.Printf("  gen-peer-identity [DIR]    (peer)   - create peer private key in: %q,\n", "DIR/"+peerPrivateKeyFilename)
+		fmt.Printf("                                        publishing private key in: %q\n", "DIR/"+publishingPrivateKeyFilename)
+		fmt.Printf("                                        and publishing public key in: %q\n", "DIR/"+publishingPublicKeyFilename)
 		fmt.Printf("\n")
 
 		fmt.Printf("  gen-rpc-cert [DIR]         (rpc)    - create private key in:  %q\n", "DIR/"+rpcPrivateKeyFilename)

@@ -251,8 +251,8 @@ M.publishing = {
     },
 
     -- ok to use the same keys as peer
-    public_key = read_file("peer.public"),
-    private_key = read_file("peer.private")
+    public_key = read_file("publishing.public"),
+    private_key = read_file("publishing.private")
 }
 
 
