@@ -23,20 +23,12 @@ import (
 
 // global data
 var globalData Node
-var bitmarkprotocol = "/bitmark/1.0.0"
 
 // const
 const (
-	// domains
-	domainLocal   = "nodes.rachael.bitmark"
-	domainBitamrk = "nodes.test.bitmark.com"
-	domainTest    = "nodes.test.bitmark.com"
 	//  time interval
 	nodeInitial        = 5 * time.Second // startup delay before first send
 	nodeInterval       = 2 * time.Minute // regular
-	lowConn            = 8
-	maxConn            = 15
-	connGraceTime      = 30 * time.Second
 	registerExpireTime = 2 * time.Minute
 	connectCancelTime  = 30 * time.Second
 )
@@ -61,7 +53,6 @@ type Configuration struct {
 	NodeType           string             `gluamapper:"nodetype" json:"nodetype"`
 	Port               int                `gluamapper:"port" json:"port"`
 	DynamicConnections bool               `gluamapper:"dynamic_connections" json:"dynamic_connections"`
-	PreferIPv6         bool               `gluamapper:"prefer_ipv6" json:"prefer_ipv6"`
 	Listen             []string           `gluamapper:"listen" json:"listen"`
 	Announce           []string           `gluamapper:"announce" json:"announce"`
 	PrivateKey         string             `gluamapper:"private_key" json:"private_key"`
@@ -85,7 +76,6 @@ type Node struct {
 	Log          *logger.L // logger
 	Registers    map[peerlib.ID]RegisterStatus
 	Multicast    *pubsub.PubSub
-	PreferIPv6   bool
 	PrivateKey   crypto.PrivKey
 	// for background
 	background *background.T

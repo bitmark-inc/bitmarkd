@@ -33,6 +33,10 @@ loop:
 			continue loop
 		}
 		chain, fn, parameters, err := UnPackP2PMessage(msg.Data)
+		if err != nil { //invalid message data
+			util.LogError(log, util.CoRed, fmt.Sprintf("-->>UnPackP2PMessage fail : %v ", err))
+			continue loop
+		}
 		if chain != nodeChain {
 			util.LogError(log, util.CoRed, fmt.Sprintf("-->>Different Chain Error: this chain %v peer chain %v", nodeChain, chain))
 			continue loop

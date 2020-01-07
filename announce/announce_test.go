@@ -16,8 +16,7 @@ import (
 
 func TestMain(m *testing.M) {
 	curPath := os.Getenv("PWD")
-	var logLevel map[string]string
-	logLevel = make(map[string]string, 0)
+	logLevel := make(map[string]string)
 	logLevel["DEFAULT"] = "info"
 	var logConfig = logger.Configuration{
 		Directory: curPath,

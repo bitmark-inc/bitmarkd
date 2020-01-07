@@ -22,7 +22,6 @@ import (
 func (n *Node) Setup(configuration *Configuration, version string, fastsync bool) error {
 	globalData.Version = version
 	globalData.NodeType = configuration.NodeType
-	globalData.PreferIPv6 = configuration.PreferIPv6
 	maAddrs := IPPortToMultiAddr(configuration.Listen)
 	n.Registers = make(map[peerlib.ID]RegisterStatus)
 	prvKey, err := util.DecodePrivKeyFromHex(configuration.PrivateKey) //Hex Decoded binaryString
@@ -52,6 +51,9 @@ func (n *Node) Setup(configuration *Configuration, version string, fastsync bool
 	}
 	n.Multicast = ps
 	sub, err := n.Multicast.Subscribe(MulticastingTopic)
+	if err != nil {
+		panic(err)
+	}
 	go n.SubHandler(context.Background(), sub)
 
 	globalData.initialised = true
@@ -121,7 +123,6 @@ func (n *Node) unRegister(id peerlib.ID) {
 		n.Unlock()
 	}
 	util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("unRegister ID:%s Registered:%v time:%v", id.ShortString(), n.Registers[id].Registered, n.Registers[id].RegisterTime.String()))
-	return
 }
 
 //delRegister delete a Registerer  in the Registers map
@@ -132,7 +133,6 @@ func (n *Node) delRegister(id peerlib.ID) {
 		delete(n.Registers, id)
 		n.Unlock()
 	}
-	return
 }
 
 //IsRegister if given id has a registered stream

@@ -9,7 +9,6 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
-	ma "github.com/multiformats/go-multiaddr"
 )
 
 //DirectConnect connect to the peer with given peer AddrInfo
@@ -25,19 +24,6 @@ func (n *Node) DirectConnect(info peer.AddrInfo) error {
 		util.LogInfo(n.Log, util.CoReset, fmt.Sprintf("DirectConnect ID:%v is already connected", info.ID.ShortString()))
 		return nil
 	}
-	for _, addr := range info.Addrs {
-		if n.PreferIPv6 && util.IsMultiAddrIPV6(addr) {
-			ipv6Addr, ipv6Err := ma.NewMultiaddr(fmt.Sprintf("%s/%v/%s", addr, nodeProtocol, info.ID.ShortString()))
-			ipv6Info, ipv6Err := util.MaAddrToAddrInfo(ipv6Addr)
-			ipv6Err = n.Host.Connect(cctx, *ipv6Info)
-			if ipv6Err == nil {
-				util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("DirectConnect to IPV6 addr:%v", ipv6Addr))
-				_, err := n.RequestRegister(ipv6Info.ID, nil, nil)
-				return err
-			}
-			util.LogWarn(n.Log, util.CoLightRed, fmt.Sprintf("DirectConnect to ID:%v IPV6 Error:%v", info.ID.ShortString(), ipv6Err))
-		}
-	}
 	err := n.Host.Connect(cctx, info)
 	if err != nil {
 		util.LogWarn(n.Log, util.CoLightRed, fmt.Sprintf("DirectConnect ID:%v Error:%v", info.ID.ShortString(), err))
@@ -50,7 +36,7 @@ func (n *Node) DirectConnect(info peer.AddrInfo) error {
 		return err
 	}
 	util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("DirectConnect Registered %v", info.ID.ShortString()))
-	return err
+	return nil
 }
 
 // Check on IP and Port and also local addr with the same port

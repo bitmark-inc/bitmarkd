@@ -262,8 +262,7 @@ func (s *httpHandler) peers(w http.ResponseWriter, r *http.Request) {
 
 	r.ParseForm()
 	// TODO:  check enCoding part of code
-	var startkey string
-	startkey = r.Form.Get("peerid")
+	startkey := r.Form.Get("peerid")
 
 	// count parsing
 	count := defaultCount
