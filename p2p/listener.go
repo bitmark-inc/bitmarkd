@@ -200,7 +200,6 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 
 		default: // other commands as subscription-type commands // this will move to pubsub
 			listenerSendError(rw, nodeChain, fault.NotP2PCommand, "-> Subscription type command , should send through pubsub", log)
-			break
 			//processSubscription(log, fn, parameters)
 			//result = []byte{'A'}
 		}
