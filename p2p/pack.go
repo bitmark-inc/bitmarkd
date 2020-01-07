@@ -76,7 +76,6 @@ func PackRegisterData(chain, fn string, nodeType string, id peerlib.ID, addrs []
 	if err != nil {
 		return nil
 	}
-
 	tsPacked := make([]byte, 8)
 	binary.BigEndian.PutUint64(tsPacked, uint64(ts.Unix()))
 	packedData := [][]byte{[]byte(chain), []byte(fn), typePacked, idPacked, addrsPackaed, tsPacked}
@@ -84,22 +83,28 @@ func PackRegisterData(chain, fn string, nodeType string, id peerlib.ID, addrs []
 }
 
 //UnpackListenError unpacked ErrorMessage
-func UnpackListenError(parameters [][]byte) (error, error) {
-	return errors.New(string(parameters[0])), nil
+func UnpackListenError(parameters [][]byte) error {
+	return errors.New(string(parameters[0]))
 }
 
 //PackQueryDigestData pack node message into p2pMessage
-func PackQueryDigestData(chain string, blockheight uint64) ([][]byte, error) {
+func PackQueryDigestData(chain string, blockheight uint64) [][]byte {
+	if len(chain) == 0 {
+		return nil
+	}
 	heightPacked := make([]byte, 8)
 	binary.BigEndian.PutUint64(heightPacked, blockheight)
 	packedData := [][]byte{[]byte(chain), []byte("H"), heightPacked}
-	return packedData, nil
+	return packedData
 }
 
 //PackQueryBlockData pack node message into p2pMessage
-func PackQueryBlockData(chain string, blockheight uint64) ([][]byte, error) {
+func PackQueryBlockData(chain string, blockheight uint64) [][]byte {
+	if len(chain) == 0 {
+		return nil
+	}
 	heightPacked := make([]byte, 8)
 	binary.BigEndian.PutUint64(heightPacked, blockheight)
 	packedData := [][]byte{[]byte(chain), []byte("B"), heightPacked}
-	return packedData, nil
+	return packedData
 }

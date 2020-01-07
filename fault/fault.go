@@ -197,4 +197,7 @@ var (
 	AddInfoNil                 = e("AddrInfo is nil")
 	NoAddress                  = e("No address")
 	PackRandomNodeFail         = e("pack random node fail")
+	PackDataError              = e("pack data error")
+	PackQueryDigestData        = e("pack query data error")
+	PackQueryBlockData         = e("pack query block data error")
 )

@@ -112,9 +112,9 @@ func (n *Node) RequestRegister(id peerlib.ID, stream network.Stream, readwriter 
 		defer s.Reset()
 	}
 	nodeChain := mode.ChainName()
-	p2pData, err := PackRegisterData(nodeChain, "R", n.NodeType, n.Host.ID(), n.Announce, time.Now())
-	if err != nil {
-		return nil, err
+	p2pData := PackRegisterData(nodeChain, "R", n.NodeType, n.Host.ID(), n.Announce, time.Now())
+	if nil == p2pData { //Package error
+		return nil, fault.PackDataError
 	}
 	p2pMsgPacked, err := proto.Marshal(&P2PMessage{Data: p2pData})
 	if err != nil {
@@ -145,7 +145,7 @@ func (n *Node) RequestRegister(id peerlib.ID, stream network.Stream, readwriter 
 	}
 	switch fn {
 	case "E": //Register error
-		errMessage, _ := UnpackListenError(parameters)
+		errMessage := UnpackListenError(parameters)
 		n.unRegister(id)
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf(" RequestRegister: Receive  E errorMessage:%v", errMessage))
 		return nil, err
@@ -217,7 +217,7 @@ func (n *Node) QueryBlockHeight(id peerlib.ID, stream network.Stream, readwriter
 
 	switch fn {
 	case "E":
-		errMessage, _ := UnpackListenError(parameters)
+		errMessage := UnpackListenError(parameters)
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("QueryBlockHeight Response Fail,  E msg:%v", errMessage))
 		return 0, errMessage
 	case "N":
@@ -251,10 +251,10 @@ func (n *Node) RemoteDigestOfHeight(id peerlib.ID, blockNumber uint64, stream ne
 			return blockdigest.Digest{}, regErr
 		}
 	}
-	packedData, err := PackQueryDigestData(nodeChain, blockNumber)
-	if err != nil {
-		n.Log.Warn(err.Error())
-		return blockdigest.Digest{}, err
+	packedData := PackQueryDigestData(nodeChain, blockNumber)
+	if nil == packedData {
+		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf(" RemoteDigestOfHeight: Read Error:%v ID:%v stream:%v readriter:%v", fault.PackQueryDigestData, id.ShortString(), s, rw))
+		return blockdigest.Digest{}, fault.PackQueryDigestData
 	}
 	p2pMsgPacked, err := proto.Marshal(&P2PMessage{Data: packedData})
 	if nil != err {
@@ -285,7 +285,7 @@ func (n *Node) RemoteDigestOfHeight(id peerlib.ID, blockNumber uint64, stream ne
 
 	switch string(fn) {
 	case "E":
-		errMessage, _ := UnpackListenError(parameters)
+		errMessage := UnpackListenError(parameters)
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("RemoteDigestOfHeight: Response Fail,  E msg:%v ID:%v", errMessage, id.ShortString()))
 		return blockdigest.Digest{}, fault.BlockNotFound
 	case "H":
@@ -324,10 +324,10 @@ func (n *Node) GetBlockData(id peerlib.ID, blockNumber uint64, stream network.St
 		}
 	}
 	nodeChain := mode.ChainName()
-	packedData, err := PackQueryBlockData(nodeChain, blockNumber)
-	if err != nil {
-		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("GetBlockData: PackQueryBlockData  Error:%v ID:%v", err, id.ShortString()))
-		return nil, err
+	packedData := PackQueryBlockData(nodeChain, blockNumber)
+	if nil == packedData {
+		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("GetBlockData: PackQueryBlockData  Error:%v ID:%v", fault.PackQueryBlockData, id.ShortString()))
+		return nil, fault.PackQueryBlockData
 	}
 	p2pMsgPacked, err := proto.Marshal(&P2PMessage{Data: packedData})
 	if nil != err {
@@ -359,7 +359,7 @@ func (n *Node) GetBlockData(id peerlib.ID, blockNumber uint64, stream network.St
 
 	switch string(fn) {
 	case "E":
-		errMessage, _ := UnpackListenError(parameters)
+		errMessage := UnpackListenError(parameters)
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("GetBlockData: Response Fail,  E msg:%v ID:%v", errMessage, id.ShortString()))
 		return nil, fault.BlockNotFound
 	case "B":
