@@ -66,21 +66,21 @@ func UnPackRegisterData(parameters [][]byte) (nodeType string, id peerlib.ID, ad
 }
 
 //PackRegisterData pack node message into p2pMessage
-func PackRegisterData(chain, fn string, nodeType string, id peerlib.ID, addrs []ma.Multiaddr, ts time.Time) ([][]byte, error) {
+func PackRegisterData(chain, fn string, nodeType string, id peerlib.ID, addrs []ma.Multiaddr, ts time.Time) [][]byte {
 	typePacked := []byte(nodeType)
 	idPacked, err := id.Marshal()
 	if err != nil {
-		return nil, err
+		return nil
 	}
 	addrsPackaed, err := proto.Marshal(&Addrs{Address: util.GetBytesFromMultiaddr(addrs)})
 	if err != nil {
-		return nil, err
+		return nil
 	}
 
 	tsPacked := make([]byte, 8)
 	binary.BigEndian.PutUint64(tsPacked, uint64(ts.Unix()))
 	packedData := [][]byte{[]byte(chain), []byte(fn), typePacked, idPacked, addrsPackaed, tsPacked}
-	return packedData, nil
+	return packedData
 }
 
 //UnpackListenError unpacked ErrorMessage
