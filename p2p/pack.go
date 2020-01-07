@@ -66,20 +66,20 @@ func UnPackRegisterData(parameters [][]byte) (nodeType string, id peerlib.ID, ad
 }
 
 //PackRegisterData pack node message into p2pMessage
-func PackRegisterData(chain, fn string, nodeType string, id peerlib.ID, addrs []ma.Multiaddr, ts time.Time) [][]byte {
+func PackRegisterData(chain, fn string, nodeType string, id peerlib.ID, addrs []ma.Multiaddr, ts time.Time) ([][]byte, error) {
 	typePacked := []byte(nodeType)
 	idPacked, err := id.Marshal()
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	addrsPackaed, err := proto.Marshal(&Addrs{Address: util.GetBytesFromMultiaddr(addrs)})
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	tsPacked := make([]byte, 8)
 	binary.BigEndian.PutUint64(tsPacked, uint64(ts.Unix()))
 	packedData := [][]byte{[]byte(chain), []byte(fn), typePacked, idPacked, addrsPackaed, tsPacked}
-	return packedData
+	return packedData, nil
 }
 
 //UnpackListenError unpacked ErrorMessage
@@ -88,23 +88,23 @@ func UnpackListenError(parameters [][]byte) error {
 }
 
 //PackQueryDigestData pack node message into p2pMessage
-func PackQueryDigestData(chain string, blockheight uint64) [][]byte {
+func PackQueryDigestData(chain string, blockheight uint64) ([][]byte, error) {
 	if len(chain) == 0 {
-		return nil
+		return nil, fault.EmptyChain
 	}
 	heightPacked := make([]byte, 8)
 	binary.BigEndian.PutUint64(heightPacked, blockheight)
 	packedData := [][]byte{[]byte(chain), []byte("H"), heightPacked}
-	return packedData
+	return packedData, nil
 }
 
 //PackQueryBlockData pack node message into p2pMessage
-func PackQueryBlockData(chain string, blockheight uint64) [][]byte {
+func PackQueryBlockData(chain string, blockheight uint64) ([][]byte, error) {
 	if len(chain) == 0 {
-		return nil
+		return nil, fault.EmptyChain
 	}
 	heightPacked := make([]byte, 8)
 	binary.BigEndian.PutUint64(heightPacked, blockheight)
 	packedData := [][]byte{[]byte(chain), []byte("B"), heightPacked}
-	return packedData
+	return packedData, nil
 }

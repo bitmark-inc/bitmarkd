@@ -112,10 +112,11 @@ func (n *Node) RequestRegister(id peerlib.ID, stream network.Stream, readwriter 
 		defer s.Reset()
 	}
 	nodeChain := mode.ChainName()
-	p2pData := PackRegisterData(nodeChain, "R", n.NodeType, n.Host.ID(), n.Announce, time.Now())
-	if nil == p2pData { //Package error
-		return nil, fault.PackDataError
+	p2pData, packError := PackRegisterData(nodeChain, "R", n.NodeType, n.Host.ID(), n.Announce, time.Now())
+	if packError != nil {
+		return nil, packError
 	}
+
 	p2pMsgPacked, err := proto.Marshal(&P2PMessage{Data: p2pData})
 	if err != nil {
 		return nil, err
@@ -251,10 +252,10 @@ func (n *Node) RemoteDigestOfHeight(id peerlib.ID, blockNumber uint64, stream ne
 			return blockdigest.Digest{}, regErr
 		}
 	}
-	packedData := PackQueryDigestData(nodeChain, blockNumber)
-	if nil == packedData {
-		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf(" RemoteDigestOfHeight: Read Error:%v ID:%v stream:%v readriter:%v", fault.PackQueryDigestData, id.ShortString(), s, rw))
-		return blockdigest.Digest{}, fault.PackQueryDigestData
+	packedData, packError := PackQueryDigestData(nodeChain, blockNumber)
+	if packError != nil {
+		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf(" RemoteDigestOfHeight: Read Error:%v ID:%v stream:%v readriter:%v", packError, id.ShortString(), s, rw))
+		return blockdigest.Digest{}, packError
 	}
 	p2pMsgPacked, err := proto.Marshal(&P2PMessage{Data: packedData})
 	if nil != err {
@@ -324,10 +325,10 @@ func (n *Node) GetBlockData(id peerlib.ID, blockNumber uint64, stream network.St
 		}
 	}
 	nodeChain := mode.ChainName()
-	packedData := PackQueryBlockData(nodeChain, blockNumber)
-	if nil == packedData {
-		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("GetBlockData: PackQueryBlockData  Error:%v ID:%v", fault.PackQueryBlockData, id.ShortString()))
-		return nil, fault.PackQueryBlockData
+	packedData, packError := PackQueryBlockData(nodeChain, blockNumber)
+	if packError != nil {
+		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("GetBlockData: PackQueryBlockData  Error:%v ID:%v", packError, id.ShortString()))
+		return nil, packError
 	}
 	p2pMsgPacked, err := proto.Marshal(&P2PMessage{Data: packedData})
 	if nil != err {

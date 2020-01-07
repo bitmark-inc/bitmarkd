@@ -177,16 +177,20 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 			}
 			randPeerID, randListeners, randTs, err := announce.GetRandom(reqID)
 			var randData [][]byte
+			var packError error
 			if nil != err || util.IDEqual(reqID, randPeerID) { // No Random Node sendback this Node
-				randData = PackRegisterData(nodeChain, fn, nType, reqID, reqMaAddrs, time.Now())
+				randData, packError = PackRegisterData(nodeChain, fn, nType, reqID, reqMaAddrs, time.Now())
+				if packError != nil {
+					listenerSendError(rw, nodeChain, packError, "-->Radom node", log)
+					break
+				}
 			} else { //Get a Random Node
-				randData = PackRegisterData(nodeChain, fn, nType, randPeerID, randListeners, randTs)
+				randData, packError = PackRegisterData(nodeChain, fn, nType, randPeerID, randListeners, randTs)
+				if packError != nil {
+					listenerSendError(rw, nodeChain, packError, "-->Radom node", log)
+					break
+				}
 			}
-			if nil == randData {
-				listenerSendError(rw, nodeChain, fault.PackRandomNodeFail, "-><- Radom node", log)
-				break
-			}
-
 			p2pMessagePacked, err := proto.Marshal(&P2PMessage{Data: randData})
 			if err != nil {
 				listenerSendError(rw, nodeChain, err, "-><- Radom node", log)
