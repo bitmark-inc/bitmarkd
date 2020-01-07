@@ -113,30 +113,33 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 			rw.Flush()
 		case "B": // get packed block
 			if 1 == len(parameters) {
-				listenerSendError(rw, nodeChain, fault.MissingParameters, "-->Query Block: invalid parameter", log)
-				if 8 == len(parameters[0]) { //it 8 or 6 ??
+				if 8 == len(parameters[0]) {
 					result := storage.Pool.Blocks.Get(parameters[0])
 					if nil == result {
 						err = fault.BlockNotFound
-						listenerSendError(rw, nodeChain, err, "-->Query Block: block not found", log)
+						listenerSendError(rw, nodeChain, err, "-->Query Block:", log)
+						break
 					}
 					respParams := [][]byte{result}
 					packed, err := PackP2PMessage(nodeChain, "B", respParams)
 					if err != nil {
-						listenerSendError(rw, nodeChain, err, "-->Query Block  Information", log)
+						listenerSendError(rw, nodeChain, err, "-->Query Block:", log)
 						break
 					}
 					rw.Write(packed)
 					rw.Flush()
+				} else {
+					listenerSendError(rw, nodeChain, fault.BlockNotFound, "-->Query Block: ", log)
+					break
 				}
 			} else {
-				err = fault.BlockNotFound
-				listenerSendError(rw, nodeChain, err, "-->Query Block: invalid parameter", log)
+				listenerSendError(rw, nodeChain, fault.MissingParameters, "-->Query Block:", log)
+				break
 			}
 		case "H": // get block hash
 			if 1 != len(parameters) {
 				listenerSendError(rw, nodeChain, fault.MissingParameters, "-->Query Blockhash  Information", log)
-				return
+				break
 			} else if 8 == len(parameters[0]) {
 				number := binary.BigEndian.Uint64(parameters[0])
 				d, e := blockheader.DigestForBlock(number)
@@ -148,41 +151,43 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 				}
 				if err != nil {
 					listenerSendError(rw, nodeChain, err, "-->Query Blockhash  Information", log)
-					return
+					break
 				}
 				respParams := [][]byte{result}
 				packed, err := PackP2PMessage(nodeChain, "H", respParams)
 				if err != nil {
 					listenerSendError(rw, nodeChain, err, "-->Query Blockhash  Information", log)
-					return
+					break
 				}
 				rw.Write(packed)
 				rw.Flush()
 			} else {
 				err = fault.BlockNotFound
 				listenerSendError(rw, nodeChain, err, "-->Query Blockhash: invalid parameter", log)
+				break
 			}
 		case "R":
 			nType, reqID, reqMaAddrs, timestamp, err := UnPackRegisterData(parameters)
 			if err != nil {
 				listenerSendError(rw, nodeChain, err, "-->RegData", log)
-				return
+				break
 			}
 			if nType != "client" {
 				announce.AddPeer(reqID, reqMaAddrs, timestamp) // id, listeners, timestam
 			}
 			randPeerID, randListeners, randTs, err := announce.GetRandom(reqID)
 			var randData [][]byte
+			var packError error
 			if nil != err || util.IDEqual(reqID, randPeerID) { // No Random Node sendback this Node
-				randData, _ = PackRegisterData(nodeChain, fn, nType, reqID, reqMaAddrs, time.Now())
-				util.LogDebug(log, util.CoReset, fmt.Sprintf("Send back peer as a random node ID:%v addrs:%v", reqID.ShortString(), util.PrintMaAddrs(reqMaAddrs)))
+				randData, packError = PackRegisterData(nodeChain, fn, nType, reqID, reqMaAddrs, time.Now())
 			} else { //Get a Random Node
-				randData, _ = PackRegisterData(nodeChain, fn, nType, randPeerID, randListeners, randTs)
-				util.LogDebug(log, util.CoReset, fmt.Sprintf("Send a random node ID:%v addrs:%v", randPeerID.ShortString(), util.PrintMaAddrs(randListeners)))
+				randData, packError = PackRegisterData(nodeChain, fn, nType, randPeerID, randListeners, randTs)
 			}
-			if 0 == len(randData) { //deal with pack error here not above
-				listenerSendError(rw, nodeChain, fault.PackRandomNodeFail, "-><- Radom node", log)
+			if packError != nil {
+				listenerSendError(rw, nodeChain, packError, "-><- Radom node", log)
+				break
 			}
+
 			p2pMessagePacked, err := proto.Marshal(&P2PMessage{Data: randData})
 			if err != nil {
 				listenerSendError(rw, nodeChain, err, "-><- Radom node", log)
@@ -195,6 +200,7 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 
 		default: // other commands as subscription-type commands // this will move to pubsub
 			listenerSendError(rw, nodeChain, fault.NotP2PCommand, "-> Subscription type command , should send through pubsub", log)
+			break
 			//processSubscription(log, fn, parameters)
 			//result = []byte{'A'}
 		}
