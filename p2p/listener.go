@@ -23,9 +23,6 @@ import (
 )
 
 const maxBytesRecieve = 1024 * 100 //TODO: MaxBlock Size
-const maxBytesBlock = 1024 * 100   //TODO:Future
-const maxBytesRegister = 1024 * 1  //TODO:Future
-const maxBytesHeight = 1024        //TODO:Future
 
 //ListenHandler is a host Listening  handler
 type ListenHandler struct {
@@ -115,30 +112,31 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 			rw.Write(packed)
 			rw.Flush()
 		case "B": // get packed block
-			if 1 != len(parameters) {
-				err = fault.MissingParameters
-				util.LogError(log, util.CoRed, fmt.Sprintf("-->Block length is not equal 1 , length=%d", len(parameters)))
-			} else if 8 == len(parameters[0]) { //it 8 or 6 ??
-				result := storage.Pool.Blocks.Get(parameters[0])
-				if nil == result {
-					err = fault.BlockNotFound
-					listenerSendError(rw, nodeChain, err, "-->Query Block: block not found", log)
+			if 1 == len(parameters) {
+				listenerSendError(rw, nodeChain, fault.MissingParameters, "-->Query Block: invalid parameter", log)
+				if 8 == len(parameters[0]) { //it 8 or 6 ??
+					result := storage.Pool.Blocks.Get(parameters[0])
+					if nil == result {
+						err = fault.BlockNotFound
+						listenerSendError(rw, nodeChain, err, "-->Query Block: block not found", log)
+					}
+					respParams := [][]byte{result}
+					packed, err := PackP2PMessage(nodeChain, "B", respParams)
+					if err != nil {
+						listenerSendError(rw, nodeChain, err, "-->Query Block  Information", log)
+						break
+					}
+					rw.Write(packed)
+					rw.Flush()
 				}
-				respParams := [][]byte{result}
-				packed, err := PackP2PMessage(nodeChain, "B", respParams)
-				if err != nil {
-					listenerSendError(rw, nodeChain, err, "-->Query Block  Information", log)
-					break
-				}
-				rw.Write(packed)
-				rw.Flush()
 			} else {
 				err = fault.BlockNotFound
 				listenerSendError(rw, nodeChain, err, "-->Query Block: invalid parameter", log)
 			}
 		case "H": // get block hash
 			if 1 != len(parameters) {
-				err = fault.MissingParameters
+				listenerSendError(rw, nodeChain, fault.MissingParameters, "-->Query Blockhash  Information", log)
+				return
 			} else if 8 == len(parameters[0]) {
 				number := binary.BigEndian.Uint64(parameters[0])
 				d, e := blockheader.DigestForBlock(number)
@@ -176,13 +174,15 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 			randPeerID, randListeners, randTs, err := announce.GetRandom(reqID)
 			var randData [][]byte
 			if nil != err || util.IDEqual(reqID, randPeerID) { // No Random Node sendback this Node
-				randData, err = PackRegisterData(nodeChain, fn, nType, reqID, reqMaAddrs, time.Now())
+				randData, _ = PackRegisterData(nodeChain, fn, nType, reqID, reqMaAddrs, time.Now())
 				util.LogDebug(log, util.CoReset, fmt.Sprintf("Send back peer as a random node ID:%v addrs:%v", reqID.ShortString(), util.PrintMaAddrs(reqMaAddrs)))
 			} else { //Get a Random Node
-				randData, err = PackRegisterData(nodeChain, fn, nType, randPeerID, randListeners, randTs)
+				randData, _ = PackRegisterData(nodeChain, fn, nType, randPeerID, randListeners, randTs)
 				util.LogDebug(log, util.CoReset, fmt.Sprintf("Send a random node ID:%v addrs:%v", randPeerID.ShortString(), util.PrintMaAddrs(randListeners)))
 			}
-
+			if 0 == len(randData) { //deal with pack error here not above
+				listenerSendError(rw, nodeChain, fault.PackRandomNodeFail, "-><- Radom node", log)
+			}
 			p2pMessagePacked, err := proto.Marshal(&P2PMessage{Data: randData})
 			if err != nil {
 				listenerSendError(rw, nodeChain, err, "-><- Radom node", log)
@@ -190,12 +190,13 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 			}
 			l.node.addRegister(reqID)
 			_, err = rw.Write(p2pMessagePacked)
+			util.LogError(log, util.CoReset, fmt.Sprintf("Register ID:%s Write Error:%v", reqID.ShortString(), err))
 			rw.Flush()
+
 		default: // other commands as subscription-type commands // this will move to pubsub
 			listenerSendError(rw, nodeChain, fault.NotP2PCommand, "-> Subscription type command , should send through pubsub", log)
 			//processSubscription(log, fn, parameters)
 			//result = []byte{'A'}
-			break
 		}
 	}
 }

@@ -15,8 +15,8 @@ import (
 
 func TestMain(m *testing.M) {
 	curPath := os.Getenv("PWD")
-	var logLevel map[string]string
-	logLevel = make(map[string]string, 0)
+
+	logLevel := make(map[string]string)
 	logLevel["DEFAULT"] = "info"
 	var logConfig = logger.Configuration{
 		Directory: curPath,
@@ -38,7 +38,6 @@ func mockConfiguration(nType string, port int) *Configuration {
 		NodeType:           nType,
 		Port:               port,
 		DynamicConnections: true,
-		PreferIPv6:         false,
 		Listen:             []string{"0.0.0.0:2136", "[::]:2136"},
 		Announce:           []string{"118.163.120.180:2136", "[2001:b030:2303:100:699b:a02d:9230:d2cb]:2136"},
 		PrivateKey:         "080112406eb84a3845d33c2a389d7fbea425cbf882047a2ab13084562f06875db47b5fdc2e45a298e6cd0472eeb97cd023c723824e157869d81039794864987c05b212a8",

@@ -17,7 +17,6 @@ import (
 
 const (
 	votingCycleInterval = 30 * time.Second
-	votingQueryTimeout  = 5 * time.Second
 )
 
 //MetricsPeersVoting  is to get all metrics for voting

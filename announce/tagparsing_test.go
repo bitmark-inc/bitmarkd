@@ -171,7 +171,7 @@ func TestValidTag(t *testing.T) {
 		_, err := parseTag(item.txt)
 
 		if item.err != err {
-			t.Fatalf("parseTag[%d]: %q  error: %s  expected: %v", i, item.txt, err, item.err)
+			t.Fatalf("parseTag[%d]: %q  error: %s  expected: %v  id:%d", i, item.txt, err, item.err, item.id)
 		}
 	}
 }

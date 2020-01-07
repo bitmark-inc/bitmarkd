@@ -48,14 +48,6 @@ function read_file(name)
     return r
 end
 
--- ensure the prefer_ipv6 is setup correctly
--- as a proper true or false boolean value
-if prefer_ipv6 == nil then
-    prefer_ipv6 = true
-else
-    prefer_ipv6 = not not prefer_ipv6
-end
-
 
 -- port selections based on chain selected
 -- bitmark:  XXXX
@@ -209,9 +201,6 @@ M.https_rpc = {
 M.peering = {
     -- set to false to prevent additional connections
     dynamic_connections = true,
-
-    -- set to false to only use IPv4 for outgoing connections
-    prefer_ipv6 = prefer_ipv6,
 
     -- for incoming peer connections
     listen = {

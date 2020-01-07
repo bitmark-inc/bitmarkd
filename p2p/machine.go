@@ -32,9 +32,6 @@ const (
 	// do not proceed unless this many clients are connected
 	minimumClients = 5
 
-	// total number of dynamic clients
-	maximumDynamicClients = 25
-
 	// client should exist at least 1 response with in this number
 	activePastSec = 60
 

@@ -208,13 +208,3 @@ func setPeerTimestamp(peerID peerlib.ID, timestamp time.Time) {
 	peer := node.Value().(*peerEntry)
 	peer.timestamp = timestamp
 }
-
-func showIDFromByte(id []byte) {
-	ID, err := peerlib.IDFromBytes(id)
-	if err != nil {
-		globalData.log.Infof("IDFromByte Error:%v", err)
-		return
-	}
-	globalData.log.Infof("id:%x\n%s", id, ID.String())
-
-}

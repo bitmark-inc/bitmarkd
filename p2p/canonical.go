@@ -2,11 +2,7 @@ package p2p
 
 import (
 	"fmt"
-	"net"
-	"strconv"
-	"strings"
 
-	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 )
@@ -42,30 +38,4 @@ loop:
 		maAddrs = append(maAddrs, addr)
 	}
 	return maAddrs
-}
-
-func parseIPPort(hostPort string) (v string, ip string, port uint16, err error) {
-	host, portStr, err := net.SplitHostPort(hostPort)
-	if nil != err {
-		return "", "", 0, fault.InvalidIpAddress
-	}
-
-	IP := net.ParseIP(strings.Trim(host, " "))
-	if nil == IP {
-		return "", "", 0, fault.InvalidIpAddress
-	}
-	if nil != IP.To4() {
-		v = "ipv4"
-	} else {
-		v = "ipv6"
-	}
-
-	numericPort, err := strconv.Atoi(strings.Trim(portStr, " "))
-	if nil != err {
-		return "", "", 0, err
-	}
-	if numericPort < 1 || numericPort > 65535 {
-		return "", "", 0, fault.InvalidPortNumber
-	}
-	return v, IP.String(), uint16(numericPort), nil
 }

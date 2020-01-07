@@ -123,7 +123,6 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 		//TODO:  Check P2P
 		Peering: p2p.Configuration{
 			DynamicConnections: true,
-			PreferIPv6:         true,
 		},
 
 		Payment: payment.Configuration{

@@ -16,10 +16,7 @@ func IDCompare(ida, idb peerlib.ID) int {
 
 // IDEqual if 2 peer id are equal
 func IDEqual(ida, idb peerlib.ID) bool {
-	if ida.String() == idb.String() {
-		return true
-	}
-	return false
+	return ida.String() == idb.String()
 }
 
 // MaAddrToAddrInfo Convert  multiAddr to peer.AddrInfo; Must Include  ID
