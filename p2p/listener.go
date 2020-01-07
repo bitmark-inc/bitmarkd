@@ -180,16 +180,12 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 			var packError error
 			if nil != err || util.IDEqual(reqID, randPeerID) { // No Random Node sendback this Node
 				randData, packError = PackRegisterData(nodeChain, fn, nType, reqID, reqMaAddrs, time.Now())
-				if packError != nil {
-					listenerSendError(rw, nodeChain, packError, "-->Radom node", log)
-					break
-				}
 			} else { //Get a Random Node
 				randData, packError = PackRegisterData(nodeChain, fn, nType, randPeerID, randListeners, randTs)
-				if packError != nil {
-					listenerSendError(rw, nodeChain, packError, "-->Radom node", log)
-					break
-				}
+			}
+			if packError != nil {
+				listenerSendError(rw, nodeChain, packError, "-->Radom node", log)
+				break
 			}
 			p2pMessagePacked, err := proto.Marshal(&P2PMessage{Data: randData})
 			if err != nil {
