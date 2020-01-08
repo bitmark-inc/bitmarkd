@@ -1,3 +1,9 @@
+bitmarkd (0.12.4-beta.5-1ubuntu1) bionic; urgency=medium
+
+  * change get remote block hash error log to warning
+
+ -- Christopher Hall <hsw@bitmark.com>  Wed, 08 Jan 2020 04:08:15 +0000
+
 bitmarkd (0.12.4-beta.4-1ubuntu1) bionic; urgency=medium
 
   * problem with dual stack OS FreeBSD, Linux and RPC.  Was only TCP4
