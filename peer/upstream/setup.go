@@ -141,7 +141,7 @@ loop:
 				localHeight := blockheader.Height()
 				digest, err := u.RemoteDigestOfHeight(localHeight)
 				if nil != err {
-					log.Errorf("getBlockDigest error: %s", err)
+					log.Warnf("remote digest for local height: %d  error: %s", localHeight, err)
 					continue loop
 				}
 				u.Lock()
