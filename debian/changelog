@@ -1,3 +1,10 @@
+bitmarkd (0.12.4-rc.1-1ubuntu1) bionic; urgency=medium
+
+  * memory problems were fixed by litecoin changes in beta.3
+  * change to release candidate for further testing
+
+ -- Christopher Hall <hsw@bitmark.com>  Fri, 10 Jan 2020 01:26:28 +0000
+
 bitmarkd (0.12.4-beta.5-1ubuntu1) bionic; urgency=medium
 
   * change get remote block hash error log to warning
