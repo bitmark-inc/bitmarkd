@@ -107,6 +107,11 @@ loop:
 			}
 			messagebus.Bus.Announce.Send("addrpc", parameters[0], parameters[1], parameters[2])
 		case "peer":
+			if n.dnsPeerOnly {
+				util.LogDebug(log, util.CoReset, "-->> peer is discard : dnsPeerOnly")
+				continue loop
+			}
+
 			if dataLength < 3 {
 				util.LogWarn(log, util.CoLightRed, fmt.Sprintf("-->>peer with too few data: %d items", dataLength))
 				continue loop

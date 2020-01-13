@@ -8,7 +8,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/util"
 
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/multiformats/go-multiaddr"
 )
 
 //DirectConnect connect to the peer with given peer AddrInfo
@@ -54,21 +53,6 @@ func (n *Node) isSameNode(info peer.AddrInfo) bool {
 		// Compare local listener address
 		for _, a := range n.Host.Addrs() {
 			if strings.Contains(cmpr.String(), a.String()) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-//IsPeerExisted peer is existed in the Peerstore
-func (n *Node) IsPeerExisted(newAddr multiaddr.Multiaddr) bool {
-	//TODO: refactor nested loop
-	for _, ID := range n.Host.Peerstore().Peers() {
-		for _, addr := range n.Host.Peerstore().PeerInfo(ID).Addrs {
-			//	Log.Debugf("peers in PeerStore:%s     NewAddress:%s\n", addr.String(), newAddr.String())
-			if addr.Equal(newAddr) {
-				n.Log.Info("Peer is in PeerStore")
 				return true
 			}
 		}

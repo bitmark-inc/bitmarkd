@@ -69,7 +69,6 @@ loop:
 		case <-shutdown:
 			continue loop
 		case <-delay: //update voting metrics
-			//util.LogWarn(log, util.CoCyan, "MetricsPeersVoting  routine interval...")
 			delay = time.After(votingCycleInterval)
 			p.UpdateCandidates()
 			if nil == p.Candidates {

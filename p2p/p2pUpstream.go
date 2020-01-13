@@ -153,9 +153,13 @@ func (n *Node) RequestRegister(id peerlib.ID, stream network.Stream, readwriter 
 	case "R":
 		nType, randID, randAddrs, randTs, err := UnPackRegisterData(parameters)
 		if err != nil {
+			n.unRegister(id)
 			return nil, err
 		}
 		n.addRegister(id)
+		if n.dnsPeerOnly { // Do not add a random node when the only dns peer  is needed
+			return s, nil
+		}
 		if !util.IDEqual(randID, id) {
 			// peer return the info, register send. don't add into peer tree
 			if nType != "client" { // client does not in the peer Tree

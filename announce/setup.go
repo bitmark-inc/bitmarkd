@@ -76,6 +76,8 @@ type announcerData struct {
 
 	// set once during initialise
 	initialised bool
+	// only use dns record as peer nodes
+	dnsPeerOnly bool
 }
 
 // global data
@@ -87,7 +89,7 @@ const timeFormat = "2006-01-02 15:04:05"
 // Initialise - set up the announcement system
 // pass a fully qualified domain for root node list
 // or empty string for no root nodes
-func Initialise(nodesDomain, cacheDirectory string) error {
+func Initialise(nodesDomain, cacheDirectory string, dnsPeerOnly bool) error {
 
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -110,11 +112,13 @@ func Initialise(nodesDomain, cacheDirectory string) error {
 	globalData.peerSet = false
 	globalData.rpcsSet = false
 	globalData.peerFile = path.Join(cacheDirectory, peerFile)
+	globalData.dnsPeerOnly = dnsPeerOnly
 
 	globalData.log.Info("start restoring peer data…")
-	if _, err := restorePeers(globalData.peerFile); err != nil {
-
-		globalData.log.Errorf("fail to restore peer data: %s", err.Error())
+	if !globalData.dnsPeerOnly { //disable restore to avoid restore non-dns node
+		if _, err := restorePeers(globalData.peerFile); err != nil {
+			globalData.log.Errorf("fail to restore peer data: %s", err.Error())
+		}
 	}
 
 	if err := globalData.nodesLookup.initialise(nodesDomain); nil != err {

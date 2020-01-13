@@ -139,17 +139,20 @@ func (ann *announcer) process() {
 	// announce this nodes IP and ports to other peers
 	if globalData.rpcsSet {
 		log.Debugf("send rpc: %x", globalData.fingerprint)
-		messagebus.Bus.P2P.Send("rpc", globalData.fingerprint[:], globalData.rpcs, timestamp)
+		if !globalData.dnsPeerOnly { //Make self a  hiden rpc node to avoid been connected
+			messagebus.Bus.P2P.Send("rpc", globalData.fingerprint[:], globalData.rpcs, timestamp)
+		}
 	}
 	if globalData.peerSet {
 		addrsBinary, errAddr := proto.Marshal(&Addrs{Address: util.GetBytesFromMultiaddr(globalData.listeners)})
 		idBinary, errID := globalData.peerID.MarshalBinary()
 		if nil == errAddr && nil == errID {
 			util.LogInfo(log, util.CoYellow, fmt.Sprintf("-><-send self data to P2P ID:%v address:%v", globalData.peerID.ShortString(), util.PrintMaAddrs(globalData.listeners)))
-			messagebus.Bus.P2P.Send("peer", idBinary, addrsBinary, timestamp)
+			if !globalData.dnsPeerOnly { //Make self a  hiden node to avoid been connected
+				messagebus.Bus.P2P.Send("peer", idBinary, addrsBinary, timestamp)
+			}
 		}
 	}
-
 	expireRPC()
 	expirePeer(log)
 

@@ -85,6 +85,7 @@ type Node struct {
 	metricsVoting MetricsPeersVoting
 	// statemachine
 	concensusMachine Machine
+	dnsPeerOnly      bool
 }
 
 // Connected - representation of a connected Peer (For Http RPC)
@@ -94,13 +95,14 @@ type Connected struct {
 }
 
 // Initialise initialize p2p module
-func Initialise(configuration *Configuration, version string, fastsync bool) error {
+func Initialise(configuration *Configuration, version string, fastsync bool, dnsPeerOnly bool) error {
 	globalData.Lock()
 	defer globalData.Unlock()
 	if globalData.initialised {
 		return fault.AlreadyInitialised
 	}
 	globalData.Log = logger.New("p2p")
+	globalData.dnsPeerOnly = dnsPeerOnly
 	globalData.Log.Info("starting…")
 	globalData.Setup(configuration, version, fastsync)
 	globalData.Log.Info("start background…")
