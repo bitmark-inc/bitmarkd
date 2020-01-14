@@ -132,6 +132,7 @@ M.cache_directory = M.chain .. "-cache"
 -- fast sync mode introduces a new mechanism for initial synchronization
 -- that speeds up the bitmark node to get it ready operating.
 M.fast_sync = true
+M.dns_peers_only = false
 
 -- for JSON clients on TLS connection
 M.client_rpc = {
