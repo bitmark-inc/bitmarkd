@@ -177,7 +177,7 @@ loop:
 			default: //peers to connect
 				if "N1" == item.Command || "N3" == item.Command || "X1" == item.Command || "X2" == item.Command ||
 					"X3" == item.Command || "X4" == item.Command || "X5" == item.Command || "X6" == item.Command ||
-					"X7" == item.Command || "P1" == item.Command || "P2" == item.Command {
+					"X7" == item.Command || "P1" == item.Command || "P2" == item.Command || "ES" == item.Command {
 					peerID, err := peerlib.IDFromBytes(item.Parameters[0])
 					util.LogInfo(n.Log, util.CoYellow, fmt.Sprintf("Recieve Command:%v ID:%v", item.Command, peerID.ShortString()))
 					if err != nil {

@@ -26,7 +26,8 @@ const (
 	//announceInterval    = 11 * time.Minute     // regular polling time
 	announceInterval = 3 * time.Minute
 	//announceExpiry   = 5 * announceInterval // if no responses received within this time, delete the entry
-	announceExpiry = 5 * announceInterval
+	announceExpiry  = 5 * announceInterval
+	MinTreeExpected = 9 //reference : voting minimumClients + 1(self)
 )
 
 type announcer struct {
@@ -157,7 +158,13 @@ func (ann *announcer) process() {
 	expirePeer(log)
 
 	//if globalData.treeChanged {
-	determineConnections(log)
+	count := globalData.peerTree.Count()
+	if count <= MinTreeExpected {
+		exhaustiveConnections(log)
+	} else {
+		determineConnections(log)
+	}
+
 	globalData.treeChanged = false
 	//}
 }
@@ -265,4 +272,29 @@ scan_nodes:
 		}
 
 	}
+}
+
+func exhaustiveConnections(log *logger.L) {
+	if nil == globalData.thisNode {
+		util.LogWarn(log, util.CoRed, fmt.Sprintf("exhaustiveConnections called to early"))
+		return // called to early
+	}
+	// locate this node in the tree
+	count := globalData.peerTree.Count()
+	for i := 0; i < count; i++ {
+		node := globalData.peerTree.Get(i)
+		if nil != node {
+			peer := node.Value().(*peerEntry)
+			if nil != peer && !util.IDEqual(peer.peerID, globalData.peerID) {
+				idBinary, errID := peer.peerID.Marshal()
+				pbAddr := util.GetBytesFromMultiaddr(peer.listeners)
+				pbAddrBinary, errMarshal := proto.Marshal(&Addrs{Address: pbAddr})
+				if nil == errID && nil == errMarshal {
+					messagebus.Bus.P2P.Send("ES", idBinary, pbAddrBinary)
+					util.LogDebug(log, util.CoYellow, fmt.Sprintf("--><-- exhaustiveConnections send to P2P %v : %s  address: %x ", "ES", peer.peerID.ShortString(), printBinaryAddrs(pbAddrBinary)))
+				}
+			}
+		}
+	}
+	// locate this node in the tree
 }
