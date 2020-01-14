@@ -1,3 +1,9 @@
+bitmarkd (0.12.4-1ubuntu1) bionic; urgency=medium
+
+  * release version
+
+ -- Christopher Hall <hsw@bitmark.com>  Tue, 14 Jan 2020 04:53:09 +0000
+
 bitmarkd (0.12.4-rc.1-1ubuntu1) bionic; urgency=medium
 
   * memory problems were fixed by litecoin changes in beta.3
