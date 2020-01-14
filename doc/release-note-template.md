@@ -1,31 +1,26 @@
-How to Upgrade
-==============
+# Release Notes
+
+# How to Upgrade
 
 If you are running an older version, ...
 
-Downgrade warning
-==============
+# Downgrade warning
 
-Notable changes
-===============
+# Notable changes
 
-RPCs
---------
+## RPCs
 
-Configuration options
-------------
+## Configuration options
 
-BIP 1: bidirectional connection
-------------
+## BIP 1: bidirectional connection
 
-Fast synchronization
-------------
+## Fast synchronization
 
-Low-level changes
-=================
 
-Tests
------
+# Low-level changes
 
-Change log
-=================
+
+## Tests
+
+
+# Change log
