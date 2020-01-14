@@ -27,7 +27,7 @@ const (
 	announceInterval = 3 * time.Minute
 	//announceExpiry   = 5 * announceInterval // if no responses received within this time, delete the entry
 	announceExpiry  = 5 * announceInterval
-	MinTreeExpected = 9 //reference : voting minimumClients + 1(self)
+	MinTreeExpected = 5 + 1 //reference : voting minimumClients + 1(self)
 )
 
 type announcer struct {
