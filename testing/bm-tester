@@ -142,9 +142,23 @@ rec:run-recorderd
     fi
     n=$((n + 1))
   done
+  
+  case "$(uname)" in
+    (FreeBSD|DragonFly)
+      top="top:top,-U,${USER},-o,res,-n,20,-i"
+        printf "BSD$top"
+      ;;
+      (Linux)
+      top="top:top,-U,${USER},-o,RES,-n,20,-i"
+        printf "$top"
+      ;;
+    (*)
+      top="top::"
+      ;;
+  esac
 
   # some status tabs and an extra shell
-  command_list="${command_list} info:node-info,-r top:top,-U,${USER},-o,res,-n,20,-i cmd:: shell::"
+  command_list="${command_list} info:node-info,-r ${top} cmd:: shell::"
 
   target=''
   for command in ${command_list}
