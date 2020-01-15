@@ -3,4 +3,9 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package proof
+package proof_test
+
+import "testing"
+
+func TestMinedBlocks(t *testing.T) {
+}
