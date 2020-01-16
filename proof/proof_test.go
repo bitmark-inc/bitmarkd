@@ -18,6 +18,6 @@ func TestMinedBlocks(t *testing.T) {
 	assert.Equal(t, counter.Counter(0), proof.MinedBlocks(), "wrong init value")
 }
 
-func TestFailToValidateBlocks(t *testing.T) {
+func TestFailMinedBlocks(t *testing.T) {
 	assert.Equal(t, counter.Counter(0), proof.FailMinedBlocks(), "wrong init value")
 }
