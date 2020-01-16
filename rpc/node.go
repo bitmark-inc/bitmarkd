@@ -106,7 +106,7 @@ type MinerInfo struct {
 
 // Info - return some information about this node
 // only enough for clients to determine node state
-// for more detaile information use HTTP GET requests
+// for more detail information use HTTP GET requests
 func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 
 	if err := rateLimit(node.limiter); nil != err {
