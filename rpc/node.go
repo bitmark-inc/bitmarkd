@@ -75,6 +75,7 @@ type InfoReply struct {
 	Chain               string    `json:"chain"`
 	Mode                string    `json:"mode"`
 	Block               BlockInfo `json:"block"`
+	Miner               MinerInfo `json:"miner"`
 	RPCs                uint64    `json:"rpcs"`
 	Peers               uint64    `json:"peers"`
 	TransactionCounters Counters  `json:"transactionCounters"`
@@ -89,13 +90,18 @@ type InfoReply struct {
 type BlockInfo struct {
 	Height uint64 `json:"height"`
 	Hash   string `json:"hash"`
-	Mined  uint64 `json:"mined"`
 }
 
 // Counters - transaction counters
 type Counters struct {
 	Pending  int `json:"pending"`
 	Verified int `json:"verified"`
+}
+
+// MinerInfo - miner info, include success / failed mined block count
+type MinerInfo struct {
+	Success uint64 `json:"success"`
+	Failed  uint64 `json:"failed"`
 }
 
 // Info - return some information about this node
@@ -113,7 +119,10 @@ func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 	reply.Block = BlockInfo{
 		Height: blockheader.Height(),
 		Hash:   block.LastBlockHash(),
-		Mined:  uint64(proof.MinedBlocks()),
+	}
+	reply.Miner = MinerInfo{
+		Success: uint64(proof.MinedBlocks()),
+		Failed:  uint64(proof.FailMinedBlocks()),
 	}
 	reply.RPCs = connectionCountRPC.Uint64()
 	reply.Peers = incoming + outgoing
