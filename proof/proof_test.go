@@ -17,3 +17,7 @@ import (
 func TestMinedBlocks(t *testing.T) {
 	assert.Equal(t, counter.Counter(0), proof.MinedBlocks(), "wrong init value")
 }
+
+func TestFailToValidateBlocks(t *testing.T) {
+	assert.Equal(t, counter.Counter(0), proof.FailToValidateBlocks(), "wrong init value")
+}

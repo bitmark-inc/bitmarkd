@@ -23,12 +23,13 @@ const (
 )
 
 type submission struct {
-	log             *logger.L
-	sigSend         *zmq.Socket // signal send
-	sigReceive      *zmq.Socket // signal receive
-	socket4         *zmq.Socket
-	socket6         *zmq.Socket
-	minedBlockCount counter.Counter
+	log              *logger.L
+	sigSend          *zmq.Socket // signal send
+	sigReceive       *zmq.Socket // signal receive
+	socket4          *zmq.Socket
+	socket6          *zmq.Socket
+	minedBlockCount  counter.Counter
+	failedBlockCount counter.Counter
 }
 
 // initialise the submission
@@ -146,6 +147,8 @@ func (sub *submission) process(socket *zmq.Socket) {
 	// increase minedBlockCount
 	if ok {
 		sub.minedBlockCount.Increment()
+	} else {
+		sub.failedBlockCount.Increment()
 	}
 
 	response := struct {
@@ -173,4 +176,8 @@ func (sub *submission) process(socket *zmq.Socket) {
 
 func MinedBlocks() counter.Counter {
 	return globalData.sub.minedBlockCount
+}
+
+func FailToValidateBlocks() counter.Counter {
+	return globalData.sub.failedBlockCount
 }
