@@ -8,6 +8,8 @@ package proof
 import (
 	"encoding/json"
 
+	"github.com/bitmark-inc/bitmarkd/counter"
+
 	zmq "github.com/pebbe/zmq4"
 
 	"github.com/bitmark-inc/bitmarkd/util"
@@ -21,11 +23,12 @@ const (
 )
 
 type submission struct {
-	log        *logger.L
-	sigSend    *zmq.Socket // signal send
-	sigReceive *zmq.Socket // signal receive
-	socket4    *zmq.Socket
-	socket6    *zmq.Socket
+	log             *logger.L
+	sigSend         *zmq.Socket // signal send
+	sigReceive      *zmq.Socket // signal receive
+	socket4         *zmq.Socket
+	socket6         *zmq.Socket
+	minedBlockCount counter.Counter
 }
 
 // initialise the submission
@@ -140,6 +143,11 @@ func (sub *submission) process(socket *zmq.Socket) {
 		log.Infof("maches: %v", ok)
 	}
 
+	// increase minedBlockCount
+	if ok {
+		sub.minedBlockCount.Increment()
+	}
+
 	response := struct {
 		Job string `json:"job"`
 		OK  bool   `json:"ok"`
@@ -161,4 +169,8 @@ func (sub *submission) process(socket *zmq.Socket) {
 	// }
 	_, err = socket.SendBytes(result, 0|zmq.DONTWAIT)
 	logger.PanicIfError("Submission", err)
+}
+
+func MinedBlocks() counter.Counter {
+	return globalData.sub.minedBlockCount
 }
