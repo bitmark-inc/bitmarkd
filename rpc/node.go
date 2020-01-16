@@ -9,6 +9,8 @@ import (
 	"encoding/hex"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/proof"
+
 	"golang.org/x/time/rate"
 
 	"github.com/bitmark-inc/bitmarkd/announce"
@@ -87,6 +89,7 @@ type InfoReply struct {
 type BlockInfo struct {
 	Height uint64 `json:"height"`
 	Hash   string `json:"hash"`
+	Mined  uint64 `json:"mined"`
 }
 
 // Counters - transaction counters
@@ -110,6 +113,7 @@ func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 	reply.Block = BlockInfo{
 		Height: blockheader.Height(),
 		Hash:   block.LastBlockHash(),
+		Mined:  uint64(proof.MinedBlocks()),
 	}
 	reply.RPCs = connectionCountRPC.Uint64()
 	reply.Peers = incoming + outgoing
