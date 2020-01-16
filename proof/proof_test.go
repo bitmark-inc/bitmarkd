@@ -19,5 +19,5 @@ func TestMinedBlocks(t *testing.T) {
 }
 
 func TestFailToValidateBlocks(t *testing.T) {
-	assert.Equal(t, counter.Counter(0), proof.FailToValidateBlocks(), "wrong init value")
+	assert.Equal(t, counter.Counter(0), proof.FailMinedBlocks(), "wrong init value")
 }

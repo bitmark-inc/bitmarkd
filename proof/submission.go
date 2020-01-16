@@ -178,6 +178,6 @@ func MinedBlocks() counter.Counter {
 	return globalData.sub.minedBlockCount
 }
 
-func FailToValidateBlocks() counter.Counter {
+func FailMinedBlocks() counter.Counter {
 	return globalData.sub.failedBlockCount
 }
