@@ -80,7 +80,7 @@ type InfoReply struct {
 	Peers               uint64    `json:"peers"`
 	TransactionCounters Counters  `json:"transactionCounters"`
 	Difficulty          float64   `json:"difficulty"`
-	Hashrate            float64   `json:"hashrate,omitempty"`
+	Hashrate            float64   `json:"hashrate"`
 	Version             string    `json:"version"`
 	Uptime              string    `json:"uptime"`
 	PublicKey           string    `json:"publicKey"`
