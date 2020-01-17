@@ -146,11 +146,9 @@ rec:run-recorderd
   case "$(uname)" in
     (FreeBSD|DragonFly)
       top="top:top,-U,${USER},-o,res,-n,20,-i"
-        printf "BSD$top"
       ;;
       (Linux)
       top="top:top,-U,${USER},-o,RES,-n,20,-i"
-        printf "$top"
       ;;
     (*)
       top="top::"
