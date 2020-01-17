@@ -7,6 +7,7 @@ package blockrecord
 
 import (
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
+	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 )
@@ -33,9 +34,13 @@ func ValidBlockTimeSpacingAtVersion(version uint16, timeSpacing uint64) error {
 	return nil
 }
 
-// ValidIncomingDifficuty - valid incoming difficulty
-func ValidIncomingDifficuty(header *Header) error {
+// ValidIncomingDifficulty - valid incoming difficulty
+func ValidIncomingDifficulty(header *Header, chainName string) error {
 	if !IsDifficultyAppliedVersion(header.Version) {
+		return nil
+	}
+
+	if chainName == chain.Local {
 		return nil
 	}
 

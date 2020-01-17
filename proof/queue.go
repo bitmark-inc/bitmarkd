@@ -119,7 +119,7 @@ search:
 		diff := entry.item.Header.Difficulty
 		log.Debugf("incoming block difficulty: %f", diff.Value())
 
-		if !digest.IsValidByDifficulty(diff) {
+		if !digest.IsValidByDifficulty(diff, mode.ChainName()) {
 			log.Infof("digest %s, difficulty %064x, digest not match difficulty criteria", digest.String(), diff.BigInt())
 			return
 		}
