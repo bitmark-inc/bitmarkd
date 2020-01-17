@@ -92,7 +92,7 @@ func Initialise(configuration *Configuration) error {
 		&globalData.sub,
 	}
 
-	globalData.background = background.Start(processes, globalData.log)
+	globalData.background = background.Start(processes, nil)
 
 	// start internal hasher for local chain
 	if mode.ChainName() == chain.Local {
