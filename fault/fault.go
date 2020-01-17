@@ -182,4 +182,5 @@ var (
 	VotesWithZeroHeight                   = e("votes with zero height")
 	WrongNetworkForPublicKey              = e("wrong network for public key")
 	WrongPassword                         = e("wrong password")
+	WrongEndpointString                   = e("wrong zmq protocol string")
 )

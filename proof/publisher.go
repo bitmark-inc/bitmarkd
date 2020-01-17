@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/chain"
+
 	zmq "github.com/pebbe/zmq4"
 	"golang.org/x/crypto/ed25519"
 
@@ -145,6 +147,14 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 		return fault.InvalidProofSigningKey
 	}
 
+	// when chain is local, use internal hasher
+	if mode.ChainName() == chain.Local {
+		if err := newInternalHasherRequester(pub); err != nil {
+			return err
+		}
+		return nil
+	}
+
 	// read the keys
 	privateKey, err := zmqutil.ReadPrivateKey(configuration.PrivateKey)
 	if nil != err {
@@ -167,6 +177,22 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 	if nil != err {
 		log.Errorf("bind error: %s", err)
 		return err
+	}
+
+	return nil
+}
+
+func newInternalHasherRequester(pub *publisher) error {
+	var err error
+
+	pub.socket4, err = zmq.NewSocket(internalHasherProtocol)
+	if nil != err {
+		return fmt.Errorf("create internal request hasher socket with error: %s", err)
+	}
+
+	err = pub.socket4.Bind(internalHasherRequest)
+	if nil != err {
+		return fmt.Errorf("bind internal hasher request socket with error: %s", err)
 	}
 
 	return nil
