@@ -182,6 +182,7 @@ var (
 	VotesWithZeroHeight                   = e("votes with zero height")
 	WrongNetworkForPublicKey              = e("wrong network for public key")
 	WrongPassword                         = e("wrong password")
+	WrongEndpointString                   = e("wrong zmq protocol string")
 	//P2P package errors
 	PrivateKeyIsNil            = e("private key is nil")
 	GenPublicKeyFromPrivateKey = e("generate public key from private key fail")

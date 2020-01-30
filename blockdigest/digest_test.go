@@ -11,6 +11,8 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/bitmark-inc/bitmarkd/chain"
+
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/stretchr/testify/assert"
@@ -194,11 +196,11 @@ func TestIsValidByDifficultyWhenValid(t *testing.T) {
 	diff := difficulty.New()
 	diff.Set(2)
 
-	actual := digest.IsValidByDifficulty(diff)
+	actual := digest.IsValidByDifficulty(diff, chain.Testing)
 	assert.Equal(t, true, actual, "valid digest by difficulty")
 }
 
-func TestIsValidByDifficultyWhenInValid(t *testing.T) {
+func TestIsValidByDifficultyWhenInvalidOnDifferentChain(t *testing.T) {
 	digest := blockdigest.Digest{
 		0xff, 0xff, 0xff, 0xff,
 		0xff, 0xff, 0xff, 0xff,
@@ -213,8 +215,11 @@ func TestIsValidByDifficultyWhenInValid(t *testing.T) {
 	diff := difficulty.New()
 	diff.Set(2)
 
-	ok := digest.IsValidByDifficulty(diff)
+	ok := digest.IsValidByDifficulty(diff, chain.Testing)
 	assert.Equal(t, false, ok, "invalid digest by difficulty")
+
+	ok = digest.IsValidByDifficulty(diff, chain.Local)
+	assert.Equal(t, true, ok, "invalid digest by difficulty")
 }
 
 func TestIsEmptyWhenEmpty(t *testing.T) {

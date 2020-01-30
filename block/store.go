@@ -103,13 +103,13 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 		globalData.log.Infof("previous difficulty: %f, current difficulty: %f", prevDifficulty, nextDifficulty)
 	}
 
-	if err := blockrecord.ValidIncomingDifficuty(header); err != nil {
+	if err := blockrecord.ValidIncomingDifficulty(header, mode.ChainName()); err != nil {
 		globalData.log.Errorf("incoming block difficulty %f different from local %f", header.Difficulty.Value(), difficulty.Current.Value())
 		return err
 	}
 
 	if !shouldFastSync {
-		if ok := digest.IsValidByDifficulty(header.Difficulty); !ok {
+		if ok := digest.IsValidByDifficulty(header.Difficulty, mode.ChainName()); !ok {
 			globalData.log.Warnf("digest error: %s", fault.InvalidBlockHeaderDifficulty)
 			return fault.InvalidBlockHeaderDifficulty
 		}
