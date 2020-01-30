@@ -21,6 +21,13 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 )
 
+type dnsOnlyType bool
+
+const (
+	DnsOnly  dnsOnlyType = true
+	UsePeers dnsOnlyType = false
+)
+
 // type of listener
 const (
 	TypeRPC  = iota
@@ -76,6 +83,8 @@ type announcerData struct {
 
 	// set once during initialise
 	initialised bool
+	// only use dns record as peer nodes
+	dnsPeerOnly dnsOnlyType
 }
 
 // global data
@@ -87,7 +96,7 @@ const timeFormat = "2006-01-02 15:04:05"
 // Initialise - set up the announcement system
 // pass a fully qualified domain for root node list
 // or empty string for no root nodes
-func Initialise(nodesDomain, cacheDirectory string) error {
+func Initialise(nodesDomain, cacheDirectory string, dnsPeerOnly dnsOnlyType) error {
 
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -111,10 +120,13 @@ func Initialise(nodesDomain, cacheDirectory string) error {
 	globalData.rpcsSet = false
 	globalData.peerFile = path.Join(cacheDirectory, peerFile)
 
-	globalData.log.Info("start restoring peer data…")
-	if _, err := restorePeers(globalData.peerFile); err != nil {
+	globalData.dnsPeerOnly = dnsPeerOnly
 
-		globalData.log.Errorf("fail to restore peer data: %s", err.Error())
+	globalData.log.Info("start restoring peer data…")
+	if globalData.dnsPeerOnly == UsePeers { //disable restore to avoid restore non-dns node
+		if _, err := restorePeers(globalData.peerFile); err != nil {
+			globalData.log.Errorf("fail to restore peer data: %s", err.Error())
+		}
 	}
 
 	if err := globalData.nodesLookup.initialise(nodesDomain); nil != err {

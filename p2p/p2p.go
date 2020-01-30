@@ -40,6 +40,13 @@ var (
 	nodeProtocol = ma.ProtocolWithCode(ma.P_P2P).Name
 )
 
+type dnsOnlyType bool
+
+const (
+	DnsOnly  dnsOnlyType = true
+	UsePeers dnsOnlyType = false
+)
+
 // StaticConnection - hardwired connections
 // this is read from the configuration file
 type StaticConnection struct {
@@ -85,6 +92,7 @@ type Node struct {
 	metricsVoting MetricsPeersVoting
 	// statemachine
 	concensusMachine Machine
+	dnsPeerOnly      dnsOnlyType
 }
 
 // Connected - representation of a connected Peer (For Http RPC)
@@ -94,15 +102,16 @@ type Connected struct {
 }
 
 // Initialise initialize p2p module
-func Initialise(configuration *Configuration, version string, fastsync bool) error {
+func Initialise(configuration *Configuration, version string, fastsync bool, dnsPeerOnly dnsOnlyType) error {
 	globalData.Lock()
 	defer globalData.Unlock()
 	if globalData.initialised {
 		return fault.AlreadyInitialised
 	}
 	globalData.Log = logger.New("p2p")
+
 	globalData.Log.Info("starting…")
-	globalData.Setup(configuration, version, fastsync)
+	globalData.Setup(configuration, version, fastsync, dnsPeerOnly)
 	globalData.Log.Info("start background…")
 
 	processes := background.Processes{
@@ -175,7 +184,7 @@ loop:
 			default: //peers to connect
 				if "N1" == item.Command || "N3" == item.Command || "X1" == item.Command || "X2" == item.Command ||
 					"X3" == item.Command || "X4" == item.Command || "X5" == item.Command || "X6" == item.Command ||
-					"X7" == item.Command || "P1" == item.Command || "P2" == item.Command {
+					"X7" == item.Command || "P1" == item.Command || "P2" == item.Command || "ES" == item.Command {
 					peerID, err := peerlib.IDFromBytes(item.Parameters[0])
 					util.LogInfo(n.Log, util.CoYellow, fmt.Sprintf("Recieve Command:%v ID:%v", item.Command, peerID.ShortString()))
 					if err != nil {

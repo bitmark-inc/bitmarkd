@@ -175,6 +175,8 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 			if nType != "client" {
 				announce.AddPeer(reqID, reqMaAddrs, timestamp) // id, listeners, timestam
 			}
+			l.node.addRegister(reqID)
+
 			randPeerID, randListeners, randTs, err := announce.GetRandom(reqID)
 			var randData [][]byte
 			var packError error
@@ -192,9 +194,12 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 				listenerSendError(rw, nodeChain, err, "-><- Radom node", log)
 				break
 			}
-			l.node.addRegister(reqID)
 			_, err = rw.Write(p2pMessagePacked)
-			util.LogError(log, util.CoReset, fmt.Sprintf("Register ID:%s Write Error:%v", reqID.ShortString(), err))
+			if err != nil {
+				listenerSendError(rw, nodeChain, err, "-><- Radom node", log)
+				break
+			}
+			util.LogDebug(log, util.CoReset, fmt.Sprintf("-->> send a random node ID:%s", reqID.ShortString()))
 			rw.Flush()
 
 		default: // other commands as subscription-type commands // this will move to pubsub

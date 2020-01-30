@@ -19,9 +19,10 @@ import (
 )
 
 //Setup setup a node
-func (n *Node) Setup(configuration *Configuration, version string, fastsync bool) error {
+func (n *Node) Setup(configuration *Configuration, version string, fastsync bool, dnsPeerOnly dnsOnlyType) error {
 	globalData.Version = version
 	globalData.NodeType = configuration.NodeType
+	globalData.dnsPeerOnly = dnsPeerOnly
 	maAddrs := IPPortToMultiAddr(configuration.Listen)
 	n.Registers = make(map[peerlib.ID]RegisterStatus)
 	prvKey, err := util.DecodePrivKeyFromHex(configuration.PrivateKey) //Hex Decoded binaryString

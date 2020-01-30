@@ -77,15 +77,15 @@ type Configuration struct {
 	Fastsync      bool         `gluamapper:"fast_sync" json:"fast_sync"`
 	Database      DatabaseType `gluamapper:"database" json:"database"`
 
-	CacheDirectory string `gluamapper:"cache_directory" json:"cache_directory"`
-
-	ClientRPC  rpc.RPCConfiguration   `gluamapper:"client_rpc" json:"client_rpc"`
-	HttpsRPC   rpc.HTTPSConfiguration `gluamapper:"https_rpc" json:"https_rpc"`
-	Peering    p2p.Configuration      `gluamapper:"peering" json:"peering"`
-	Publishing publish.Configuration  `gluamapper:"publishing" json:"publishing"`
-	Proofing   proof.Configuration    `gluamapper:"proofing" json:"proofing"`
-	Payment    payment.Configuration  `gluamapper:"payment" json:"payment"`
-	Logging    logger.Configuration   `gluamapper:"logging" json:"logging"`
+	CacheDirectory string                 `gluamapper:"cache_directory" json:"cache_directory"`
+	DNSPeerOnly    bool                   `gluamapper:"dns_peers_only" json:"dns_peers_only"`
+	ClientRPC      rpc.RPCConfiguration   `gluamapper:"client_rpc" json:"client_rpc"`
+	HttpsRPC       rpc.HTTPSConfiguration `gluamapper:"https_rpc" json:"https_rpc"`
+	Peering        p2p.Configuration      `gluamapper:"peering" json:"peering"`
+	Publishing     publish.Configuration  `gluamapper:"publishing" json:"publishing"`
+	Proofing       proof.Configuration    `gluamapper:"proofing" json:"proofing"`
+	Payment        payment.Configuration  `gluamapper:"payment" json:"payment"`
+	Logging        logger.Configuration   `gluamapper:"logging" json:"logging"`
 }
 
 // will read decode and verify the configuration
