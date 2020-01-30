@@ -264,7 +264,12 @@ func main() {
 		// trying to fetch the TXT records for validation
 		nodesDomain = masterConfiguration.Nodes // just assume it is a domain name
 	}
-	err = announce.Initialise(nodesDomain, masterConfiguration.CacheDirectory, masterConfiguration.DNSPeerOnly)
+	if masterConfiguration.DNSPeerOnly {
+		err = announce.Initialise(nodesDomain, masterConfiguration.CacheDirectory, announce.DnsOnly)
+	} else {
+		err = announce.Initialise(nodesDomain, masterConfiguration.CacheDirectory, announce.UsePeers)
+	}
+
 	if nil != err {
 		log.Criticalf("announce initialise error: %s", err)
 		exitwithstatus.Message("announce initialise error: %s", err)
@@ -285,7 +290,12 @@ func main() {
 		log.Criticalf("zmq.AuthStart: error: %s", err)
 		exitwithstatus.Message("zmq.AuthStart: error: %s", err)
 	}
-	err = p2p.Initialise(&masterConfiguration.Peering, version, masterConfiguration.Fastsync, masterConfiguration.DNSPeerOnly)
+	if masterConfiguration.DNSPeerOnly {
+		err = p2p.Initialise(&masterConfiguration.Peering, version, masterConfiguration.Fastsync, p2p.DnsOnly)
+	} else {
+		err = p2p.Initialise(&masterConfiguration.Peering, version, masterConfiguration.Fastsync, p2p.UsePeers)
+	}
+
 	if nil != err {
 		log.Criticalf("p2p initialise error: %s", err)
 		exitwithstatus.Message("p2p initialise error: %s", err)

@@ -40,6 +40,13 @@ var (
 	nodeProtocol = ma.ProtocolWithCode(ma.P_P2P).Name
 )
 
+type dnsOnlyType bool
+
+const (
+	DnsOnly  dnsOnlyType = true
+	UsePeers dnsOnlyType = false
+)
+
 // StaticConnection - hardwired connections
 // this is read from the configuration file
 type StaticConnection struct {
@@ -85,7 +92,7 @@ type Node struct {
 	metricsVoting MetricsPeersVoting
 	// statemachine
 	concensusMachine Machine
-	dnsPeerOnly      bool
+	dnsPeerOnly      dnsOnlyType
 }
 
 // Connected - representation of a connected Peer (For Http RPC)
@@ -95,16 +102,16 @@ type Connected struct {
 }
 
 // Initialise initialize p2p module
-func Initialise(configuration *Configuration, version string, fastsync bool, dnsPeerOnly bool) error {
+func Initialise(configuration *Configuration, version string, fastsync bool, dnsPeerOnly dnsOnlyType) error {
 	globalData.Lock()
 	defer globalData.Unlock()
 	if globalData.initialised {
 		return fault.AlreadyInitialised
 	}
 	globalData.Log = logger.New("p2p")
-	globalData.dnsPeerOnly = dnsPeerOnly
+
 	globalData.Log.Info("starting…")
-	globalData.Setup(configuration, version, fastsync)
+	globalData.Setup(configuration, version, fastsync, dnsPeerOnly)
 	globalData.Log.Info("start background…")
 
 	processes := background.Processes{

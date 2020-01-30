@@ -140,7 +140,7 @@ func (ann *announcer) process() {
 	// announce this nodes IP and ports to other peers
 	if globalData.rpcsSet {
 		log.Debugf("send rpc: %x", globalData.fingerprint)
-		if !globalData.dnsPeerOnly { //Make self a  hiden rpc node to avoid been connected
+		if globalData.dnsPeerOnly == UsePeers //Make self a  hiden rpc node to avoid been connected
 			messagebus.Bus.P2P.Send("rpc", globalData.fingerprint[:], globalData.rpcs, timestamp)
 		}
 	}
@@ -149,7 +149,7 @@ func (ann *announcer) process() {
 		idBinary, errID := globalData.peerID.MarshalBinary()
 		if nil == errAddr && nil == errID {
 			util.LogInfo(log, util.CoYellow, fmt.Sprintf("-><-send self data to P2P ID:%v address:%v", globalData.peerID.ShortString(), util.PrintMaAddrs(globalData.listeners)))
-			if !globalData.dnsPeerOnly { //Make self a  hiden node to avoid been connected
+			if globalData.dnsPeerOnly == UsePeers { //Make self a  hiden node to avoid been connected
 				messagebus.Bus.P2P.Send("peer", idBinary, addrsBinary, timestamp)
 			}
 		}

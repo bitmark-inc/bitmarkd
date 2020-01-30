@@ -157,7 +157,7 @@ func (n *Node) RequestRegister(id peerlib.ID, stream network.Stream, readwriter 
 			return nil, err
 		}
 		n.addRegister(id)
-		if n.dnsPeerOnly { // Do not add a random node when the only dns peer  is needed
+		if n.dnsPeerOnly == DnsOnly { // Do not add a random node when the only dns peer  is needed
 			return s, nil
 		}
 		if !util.IDEqual(randID, id) {
