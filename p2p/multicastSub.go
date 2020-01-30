@@ -107,7 +107,7 @@ loop:
 			}
 			messagebus.Bus.Announce.Send("addrpc", parameters[0], parameters[1], parameters[2])
 		case "peer":
-			if n.dnsPeerOnly {
+			if n.dnsPeerOnly == DnsOnly {
 				util.LogDebug(log, util.CoReset, "-->> peer is discard : dnsPeerOnly")
 				continue loop
 			}

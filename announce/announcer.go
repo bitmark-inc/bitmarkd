@@ -140,7 +140,7 @@ func (ann *announcer) process() {
 	// announce this nodes IP and ports to other peers
 	if globalData.rpcsSet {
 		log.Debugf("send rpc: %x", globalData.fingerprint)
-		if globalData.dnsPeerOnly == UsePeers //Make self a  hiden rpc node to avoid been connected
+		if globalData.dnsPeerOnly == UsePeers { //Make self a  hiden rpc node to avoid been connected
 			messagebus.Bus.P2P.Send("rpc", globalData.fingerprint[:], globalData.rpcs, timestamp)
 		}
 	}
