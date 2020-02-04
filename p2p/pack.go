@@ -43,11 +43,15 @@ func UnPackP2PMessage(packed []byte) (chain string, fn string, parameters [][]by
 }
 
 //UnPackRegisterData Unpack register binary  data into object information
-func UnPackRegisterData(parameters [][]byte) (nodeType string, id peerlib.ID, addrs []ma.Multiaddr, ts uint64, err error) {
+func UnPackRegisterData(parameters [][]byte) (peerType nodeType, id peerlib.ID, addrs []ma.Multiaddr, ts uint64, err error) {
 	if len(parameters) < 4 {
-		return nodeType, id, addrs, ts, fault.ParametersLessThanExpect
+		return peerType, id, addrs, ts, fault.ParametersLessThanExpect
 	}
-	nType := string(parameters[0])
+
+	if nodeType(parameters[0]) != ClientNode && nodeType(parameters[0]) != ServerNode {
+		return peerType, id, addrs, ts, fault.InvalidNodeType
+	}
+	//nType := nodeType(parameters[0])
 	id, err = peerlib.IDFromBytes(parameters[1])
 	if err != nil {
 		return "", id, addrs, ts, err
@@ -62,12 +66,12 @@ func UnPackRegisterData(parameters [][]byte) (nodeType string, id peerlib.ID, ad
 	}
 	addrs = util.GetMultiAddrsFromBytes(announce.Address)
 	ts = binary.BigEndian.Uint64(parameters[3])
-	return nType, id, addrs, ts, nil
+	return peerType, id, addrs, ts, nil
 }
 
 //PackRegisterData pack node message into p2pMessage
-func PackRegisterData(chain, fn string, nodeType string, id peerlib.ID, addrs []ma.Multiaddr, ts time.Time) ([][]byte, error) {
-	typePacked := []byte(nodeType)
+func PackRegisterData(chain, fn string, nodeType nodeType, id peerlib.ID, addrs []ma.Multiaddr, ts time.Time) ([][]byte, error) {
+	typePacked := []byte(nodeType.String())
 	idPacked, err := id.Marshal()
 	if err != nil {
 		return nil, err

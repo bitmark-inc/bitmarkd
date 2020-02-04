@@ -8,6 +8,8 @@ package rpc
 import (
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/proof"
+
 	"golang.org/x/time/rate"
 
 	"github.com/bitmark-inc/bitmarkd/announce"
@@ -72,11 +74,12 @@ type InfoReply struct {
 	Chain               string    `json:"chain"`
 	Mode                string    `json:"mode"`
 	Block               BlockInfo `json:"block"`
+	Miner               MinerInfo `json:"miner"`
 	RPCs                uint64    `json:"rpcs"`
 	Peers               uint64    `json:"peers"`
 	TransactionCounters Counters  `json:"transactionCounters"`
 	Difficulty          float64   `json:"difficulty"`
-	Hashrate            float64   `json:"hashrate,omitempty"`
+	Hashrate            float64   `json:"hashrate"`
 	Version             string    `json:"version"`
 	Uptime              string    `json:"uptime"`
 	PublicKey           string    `json:"publicKey"`
@@ -94,9 +97,15 @@ type Counters struct {
 	Verified int `json:"verified"`
 }
 
+// MinerInfo - miner info, include success / failed mined block count
+type MinerInfo struct {
+	Success uint64 `json:"success"`
+	Failed  uint64 `json:"failed"`
+}
+
 // Info - return some information about this node
 // only enough for clients to determine node state
-// for more detaile information use HTTP GET requests
+// for more detail information use HTTP GET requests
 func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 
 	if err := rateLimit(node.limiter); nil != err {
@@ -110,6 +119,10 @@ func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
 	reply.Block = BlockInfo{
 		Height: blockheader.Height(),
 		Hash:   block.LastBlockHash(),
+	}
+	reply.Miner = MinerInfo{
+		Success: uint64(proof.MinedBlocks()),
+		Failed:  uint64(proof.FailMinedBlocks()),
 	}
 	reply.RPCs = connectionCountRPC.Uint64()
 	reply.Peers = connCounts

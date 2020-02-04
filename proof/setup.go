@@ -8,9 +8,17 @@ package proof
 import (
 	"sync"
 
+	"github.com/bitmark-inc/bitmarkd/chain"
+	"github.com/bitmark-inc/bitmarkd/mode"
+
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/logger"
+)
+
+const (
+	internalHasherRequest = "inproc://internal-hasher-request"
+	internalHasherReply   = "inproc://internal-hasher-reply"
 )
 
 // Configuration - server identification in Z85 (ZeroMQ Base-85 Encoding) see: http://rfc.zeromq.org/spec:32
@@ -69,7 +77,7 @@ func Initialise(configuration *Configuration) error {
 		return err
 	}
 
-	// create the job queue
+	// create tae job queue
 	initialiseJobQueue()
 
 	// all data initialised
@@ -84,7 +92,20 @@ func Initialise(configuration *Configuration) error {
 		&globalData.sub,
 	}
 
-	globalData.background = background.Start(processes, globalData.log)
+	globalData.background = background.Start(processes, nil)
+
+	// start internal hasher for local chain
+	if mode.ChainName() == chain.Local {
+		h, err := NewInternalHasherForTest(internalHasherRequest, internalHasherReply)
+		if nil != err {
+			globalData.log.Errorf("create internal hasher with error: %s", err)
+		}
+		err = h.Initialise()
+		if nil != err {
+			globalData.log.Errorf("initialise internal hasher with error: %s", err)
+		}
+		h.Start()
+	}
 
 	return nil
 }

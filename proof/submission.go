@@ -7,6 +7,12 @@ package proof
 
 import (
 	"encoding/json"
+	"fmt"
+
+	"github.com/bitmark-inc/bitmarkd/chain"
+	"github.com/bitmark-inc/bitmarkd/mode"
+
+	"github.com/bitmark-inc/bitmarkd/counter"
 
 	zmq "github.com/pebbe/zmq4"
 
@@ -21,11 +27,13 @@ const (
 )
 
 type submission struct {
-	log        *logger.L
-	sigSend    *zmq.Socket // signal send
-	sigReceive *zmq.Socket // signal receive
-	socket4    *zmq.Socket
-	socket6    *zmq.Socket
+	log              *logger.L
+	sigSend          *zmq.Socket // signal send
+	sigReceive       *zmq.Socket // signal receive
+	socket4          *zmq.Socket
+	socket6          *zmq.Socket
+	minedBlockCount  counter.Counter
+	failedBlockCount counter.Counter
 }
 
 // initialise the submission
@@ -36,6 +44,21 @@ func (sub *submission) initialise(configuration *Configuration) error {
 
 	log.Info("initialising…")
 
+	var err error
+	// signalling channel
+	sub.sigReceive, sub.sigSend, err = zmqutil.NewSignalPair(submissionSignal)
+	if nil != err {
+		return err
+	}
+
+	// when chain is local, use internal hasher
+	if mode.ChainName() == chain.Local {
+		if err := newInternalHasherReceiver(sub); err != nil {
+			return err
+		}
+		return nil
+	}
+
 	// read the keys
 	privateKey, err := zmqutil.ReadPrivateKey(configuration.PrivateKey)
 	if nil != err {
@@ -45,14 +68,9 @@ func (sub *submission) initialise(configuration *Configuration) error {
 	if nil != err {
 		return err
 	}
+
 	log.Tracef("server public:  %x", publicKey)
 	log.Tracef("server private: %x", privateKey)
-
-	// signalling channel
-	sub.sigReceive, sub.sigSend, err = zmqutil.NewSignalPair(submissionSignal)
-	if nil != err {
-		return err
-	}
 
 	// create connections
 	c, _ := util.NewConnections(configuration.Submit)
@@ -62,6 +80,22 @@ func (sub *submission) initialise(configuration *Configuration) error {
 	if nil != err {
 		log.Errorf("bind error: %s", err)
 		return err
+	}
+
+	return nil
+}
+
+func newInternalHasherReceiver(sub *submission) error {
+	var err error
+
+	sub.socket4, err = zmq.NewSocket(internalHasherProtocol)
+	if nil != err {
+		return fmt.Errorf("create internal reply hasher socket with error: %s", err)
+	}
+
+	err = sub.socket4.Connect(internalHasherReply)
+	if nil != err {
+		return fmt.Errorf("connect internal reply hasher socket with error: %s", err)
 	}
 
 	return nil
@@ -140,6 +174,13 @@ func (sub *submission) process(socket *zmq.Socket) {
 		log.Infof("maches: %v", ok)
 	}
 
+	// increase minedBlockCount
+	if ok {
+		sub.minedBlockCount.Increment()
+	} else {
+		sub.failedBlockCount.Increment()
+	}
+
 	response := struct {
 		Job string `json:"job"`
 		OK  bool   `json:"ok"`
@@ -161,4 +202,12 @@ func (sub *submission) process(socket *zmq.Socket) {
 	// }
 	_, err = socket.SendBytes(result, 0|zmq.DONTWAIT)
 	logger.PanicIfError("Submission", err)
+}
+
+func MinedBlocks() counter.Counter {
+	return globalData.sub.minedBlockCount
+}
+
+func FailMinedBlocks() counter.Counter {
+	return globalData.sub.failedBlockCount
 }

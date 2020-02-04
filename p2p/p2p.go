@@ -47,6 +47,20 @@ const (
 	UsePeers dnsOnlyType = false
 )
 
+type nodeType string
+
+const (
+	ServerNode nodeType = "server"
+	ClientNode nodeType = "client"
+)
+
+func (t nodeType) String() string {
+	if t == ClientNode {
+		return string(ClientNode)
+	}
+	return string(ServerNode)
+}
+
 // StaticConnection - hardwired connections
 // this is read from the configuration file
 type StaticConnection struct {
@@ -57,13 +71,12 @@ type StaticConnection struct {
 // Configuration - a block of configuration data
 // this is read from the configuration file
 type Configuration struct {
-	NodeType           string             `gluamapper:"nodetype" json:"nodetype"`
-	Port               int                `gluamapper:"port" json:"port"`
-	DynamicConnections bool               `gluamapper:"dynamic_connections" json:"dynamic_connections"`
-	Listen             []string           `gluamapper:"listen" json:"listen"`
-	Announce           []string           `gluamapper:"announce" json:"announce"`
-	PrivateKey         string             `gluamapper:"private_key" json:"private_key"`
-	Connect            []StaticConnection `gluamapper:"connect" json:"connect,omitempty"`
+	NodeType   string             `gluamapper:"nodetype" json:"nodetype"`
+	Port       int                `gluamapper:"port" json:"port"`
+	Listen     []string           `gluamapper:"listen" json:"listen"`
+	Announce   []string           `gluamapper:"announce" json:"announce"`
+	PrivateKey string             `gluamapper:"private_key" json:"private_key"`
+	Connect    []StaticConnection `gluamapper:"connect" json:"connect,omitempty"`
 }
 
 // NodeType to inidcate a node is a servant or client
@@ -76,7 +89,7 @@ type RegisterStatus struct {
 //Node  A p2p node
 type Node struct {
 	Version      string
-	NodeType     string
+	NodeType     nodeType
 	Host         p2pcore.Host
 	Announce     []ma.Multiaddr
 	sync.RWMutex           // to allow locking
@@ -152,8 +165,8 @@ loop:
 					n.delRegister(displayID)
 					util.LogInfo(log, util.CoWhite, fmt.Sprintf("@D  ID:%v is deleted", displayID.ShortString()))
 				}
-			case "peer", "rpc": // only servant broadcast its peer and rpc
-				if n.NodeType == "client" {
+			case "peer", "rpc": // only server broadcast its peer and rpc
+				if ClientNode == n.NodeType {
 					break
 				}
 				fallthrough
