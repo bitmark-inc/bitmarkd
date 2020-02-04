@@ -183,6 +183,7 @@ then
   rm -fr "${config_dir}/data"
   mkdir -p "${config_dir}/data"
   [ -n "${from}" ] && rsync -aHx "${from}" "${config_dir}/data/"
+  rm -fr "${config_dir}/"*-cache
 fi
 
 # just generate the keys
