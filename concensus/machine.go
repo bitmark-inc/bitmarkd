@@ -1,4 +1,4 @@
-package p2p
+package concensus
 
 import (
 	"fmt"
@@ -7,10 +7,11 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
+	"github.com/bitmark-inc/bitmarkd/concensus/voting"
 	"github.com/bitmark-inc/bitmarkd/counter"
 	"github.com/bitmark-inc/bitmarkd/genesis"
 	"github.com/bitmark-inc/bitmarkd/mode"
-	"github.com/bitmark-inc/bitmarkd/p2p/voting"
+	"github.com/bitmark-inc/bitmarkd/p2p"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 )
@@ -42,9 +43,8 @@ const (
 
 // Machine voting concensus state machine
 type Machine struct {
-	log *logger.L
-	state
-	attachedNode     *Node
+	log              *logger.L
+	attachedNode     *p2p.Node
 	votingMetrics    *MetricsPeersVoting
 	votes            voting.Voting
 	electedWiner     voting.Candidate //voting winner
@@ -54,11 +54,12 @@ type Machine struct {
 	fastsyncEnabled  bool   // fast sync mode enabled?
 	blocksPerCycle   int    // number of blocks to fetch per cycle
 	pivotPoint       uint64 // block number to stop fast syncing
+	state
 }
 
 // NewConcensusMachine get a new StateMachine
-func NewConcensusMachine(node *Node, metric *MetricsPeersVoting, fastsync bool) Machine {
-	machine := Machine{log: logger.New("concensus"), votingMetrics: metric, attachedNode: node}
+func NewConcensusMachine(node *p2p.Node, metric *MetricsPeersVoting, fastsync bool) Machine {
+	machine := Machine{log: globalData.Log, votingMetrics: metric, attachedNode: node}
 	machine.toState(cStateConnecting)
 	machine.votes = voting.NewVoting()
 	machine.fastsyncEnabled = fastsync

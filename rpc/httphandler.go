@@ -29,6 +29,7 @@ import (
 
 	//	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
+	"github.com/bitmark-inc/bitmarkd/concensus"
 )
 
 // defaults
@@ -180,7 +181,7 @@ func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 		Block: blockInfo{
 			LRCount: lrCount{
 				Local:  blockheader.Height(),
-				Remote: p2p.BlockHeight(),
+				Remote: concensus.BlockHeight(),
 			},
 			Hash: block.LastBlockHash(),
 		},

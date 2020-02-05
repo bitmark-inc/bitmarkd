@@ -19,7 +19,7 @@ import (
 )
 
 //Setup setup a node
-func (n *Node) Setup(configuration *Configuration, version string, fastsync bool, dnsPeerOnly dnsOnlyType) error {
+func (n *Node) Setup(configuration *Configuration, version string, dnsPeerOnly dnsOnlyType) error {
 	globalData.Version = version
 	if nodeType(configuration.NodeType) == ClientNode {
 		globalData.NodeType = ClientNode
@@ -46,17 +46,13 @@ func (n *Node) Setup(configuration *Configuration, version string, fastsync bool
 	go n.listen(configuration.Announce)
 	n.MetricsNetwork = NewMetricsNetwork(n.Host, n.Log)
 
-	//Start a block & concensus machine
-	n.metricsVoting = NewMetricsPeersVoting(n)
-	n.concensusMachine = NewConcensusMachine(n, &n.metricsVoting, fastsync)
-
 	//Start Broadcsting
 	ps, err := pubsub.NewGossipSub(context.Background(), n.Host)
 	if err != nil {
 		panic(err)
 	}
 	n.Multicast = ps
-	sub, err := n.Multicast.Subscribe(MulticastingTopic)
+	sub, err := n.Multicast.Subscribe(TopicMulticasting)
 	if err != nil {
 		panic(err)
 	}

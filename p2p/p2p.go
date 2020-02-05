@@ -34,8 +34,10 @@ const (
 )
 
 var (
-	//MulticastingTopic
-	MulticastingTopic = "/multicast/1.0.0"
+	// TopicMulticasting is the topic for multicasting for gossip multicast
+	TopicMulticasting = "/multicast/1.0.0"
+	// TopicP2P is the topic for p2p stream
+	TopicP2P = "p2pstream"
 	//nodeProtocol
 	nodeProtocol = ma.ProtocolWithCode(ma.P_P2P).Name
 )
@@ -79,8 +81,7 @@ type Configuration struct {
 	Connect    []StaticConnection `gluamapper:"connect" json:"connect,omitempty"`
 }
 
-// NodeType to inidcate a node is a servant or client
-
+// RegisterStatus is the struct to reflect the register status of a node
 type RegisterStatus struct {
 	Registered   bool
 	RegisterTime time.Time
@@ -102,10 +103,7 @@ type Node struct {
 	// set once during initialise
 	initialised bool
 	*MetricsNetwork
-	metricsVoting MetricsPeersVoting
-	// statemachine
-	concensusMachine Machine
-	dnsPeerOnly      dnsOnlyType
+	dnsPeerOnly dnsOnlyType
 }
 
 // Connected - representation of a connected Peer (For Http RPC)
@@ -115,7 +113,7 @@ type Connected struct {
 }
 
 // Initialise initialize p2p module
-func Initialise(configuration *Configuration, version string, fastsync bool, dnsPeerOnly dnsOnlyType) error {
+func Initialise(configuration *Configuration, version string, dnsPeerOnly dnsOnlyType) error {
 	globalData.Lock()
 	defer globalData.Unlock()
 	if globalData.initialised {
@@ -124,13 +122,11 @@ func Initialise(configuration *Configuration, version string, fastsync bool, dns
 	globalData.Log = logger.New("p2p")
 
 	globalData.Log.Info("starting…")
-	globalData.Setup(configuration, version, fastsync, dnsPeerOnly)
+	globalData.Setup(configuration, version, dnsPeerOnly)
 	globalData.Log.Info("start background…")
 
 	processes := background.Processes{
 		&globalData,
-		&globalData.concensusMachine,
-		&globalData.metricsVoting,
 	}
 	globalData.background = background.Start(processes, globalData.Log)
 	return nil
@@ -250,19 +246,19 @@ func Finalise() error {
 	return nil
 }
 
+//GlobalP2PNode return p2p node for other packages to use
+func GlobalP2PNode() *Node {
+	return &globalData
+}
+
 //MulticastCommand muticasts packed message with given id  in binary. Use id=nil if there is no peer ID
 func MulticastCommand(packedMessage []byte) error {
-	err := globalData.Multicast.Publish(MulticastingTopic, packedMessage)
+	err := globalData.Multicast.Publish(TopicMulticasting, packedMessage)
 	if err != nil {
 		util.LogWarn(globalData.Log, util.CoLightRed, fmt.Sprintf("MulticastCommand Publish error:%v", err))
 		return err
 	}
 	return nil
-}
-
-// BlockHeight - return global block height
-func BlockHeight() uint64 {
-	return globalData.concensusMachine.electedHeight
 }
 
 //ID return this node host ID
