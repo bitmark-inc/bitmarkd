@@ -171,7 +171,7 @@ tmux list-panes -a -F '#{pane_id} #{pane_title}' | (
     case "${command}" in
       (run-bitmarkd)
         n="${config##*%}"
-        [ X"${peer_delete}" = X"yes" ] && rm -f "${HOME}/.config/bitmarkd${n}"/local-cache/peers.json
+        [ X"${peer_delete}" = X"yes" ] && rm -rf "${HOME}/.config/bitmarkd${n}"/*-cache/
         [ X"${log_delete}" = X"yes" ] && rm -f "${HOME}/.config/bitmarkd${n}/log/"bitmarkd.log*
         printf '%s → bitmarkd: %s\n' "${id}" "${n}"
         tmux send-keys -t "${id}" 'y' 'C-j'

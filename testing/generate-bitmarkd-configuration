@@ -306,12 +306,6 @@ do
       skip_proofing = 0
     }
 
-    # change payment mode
-    /mode[[:space:]]+=[[:space:]]+"p2p",/ {
-      print "    mode = \"" payment_mode "\","
-      drop_this = 1
-    }
-
     # uncomment the right data directory line
     # as all config are in XDG_CONFIG_HOME
     /^(--)?M[.]data_directory/ {
@@ -348,6 +342,8 @@ do
       print "    test = \"" litecoin_test "\","
       print "    live = \"" litecoin_live "\","
       print "}"
+      # change payment mode
+      print "payment_mode = \"" payment_mode "\""
     }
 
     # port_offset for bitmarkds 2..N
