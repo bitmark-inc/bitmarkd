@@ -1,4 +1,4 @@
-package p2p
+package concensus
 
 import (
 	"fmt"
@@ -55,7 +55,7 @@ func (p *P2PCandidatesImpl) ActiveInPastSeconds(sec time.Duration) bool {
 	active := limit.Before(p.Metrics.lastResponseTime)
 	difference := now.Sub(p.Metrics.lastResponseTime).Seconds()
 	if !active {
-		util.LogWarn(globalData.concensusMachine.log, util.CoMagenta, fmt.Sprintf("ActiveInPastSeconds active: %t, last response time %s, difference %f seconds",
+		util.LogWarn(globalData.machine.log, util.CoMagenta, fmt.Sprintf("ActiveInPastSeconds active: %t, last response time %s, difference %f seconds",
 			active,
 			p.Metrics.lastResponseTime.Format("2006-01-02, 15:04:05 -0700"),
 			difference,
