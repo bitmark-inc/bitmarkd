@@ -143,12 +143,12 @@ func GetRandom(peerID peerlib.ID) (peerlib.ID, []ma.Multiaddr, time.Time, error)
 	globalData.Lock()
 	defer globalData.Unlock()
 
-retry_loop:
+retryLoop:
 	for tries := 1; tries <= 5; tries += 1 {
 		max := big.NewInt(int64(globalData.peerTree.Count()))
 		r, err := rand.Int(rand.Reader, max)
 		if nil != err {
-			continue retry_loop
+			continue retryLoop
 		}
 
 		n := int(r.Int64()) // 0 … max-1
@@ -158,11 +158,11 @@ retry_loop:
 			node = globalData.peerTree.First()
 		}
 		if nil == node {
-			break retry_loop
+			break retryLoop
 		}
 		peer := node.Value().(*peerEntry)
 		if util.IDEqual(peer.peerID, globalData.peerID) || util.IDEqual(peer.peerID, peerID) {
-			continue retry_loop
+			continue retryLoop
 		}
 		return peer.peerID, peer.listeners, peer.timestamp, nil
 	}
