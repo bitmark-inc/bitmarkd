@@ -60,7 +60,7 @@ func addRPC(fingerprint fingerprint.Type, rpcs []byte, timestamp uint64, local b
 	// if new item
 	if !ok {
 		ts := resetFutureTimestampToNow(timestamp)
-		if isExpiredAt(ts) {
+		if isExpired(ts) {
 			return false
 		}
 
