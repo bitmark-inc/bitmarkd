@@ -6,10 +6,11 @@
 package announce
 
 import (
-	"encoding/hex"
 	"path"
 	"sync"
 	"time"
+
+	"github.com/bitmark-inc/bitmarkd/announce/fingerprint"
 
 	"github.com/bitmark-inc/bitmarkd/avl"
 	"github.com/bitmark-inc/bitmarkd/background"
@@ -43,7 +44,7 @@ type fingerprintType [32]byte
 // RPC entries
 type rpcEntry struct {
 	address     util.PackedConnection // packed addresses
-	fingerprint fingerprintType       // SHA3-256(certificate)
+	fingerprint fingerprint.Type      // SHA3-256(certificate)
 	timestamp   time.Time             // creation time
 	local       bool                  // true => never expires
 }
@@ -58,7 +59,7 @@ type announcerData struct {
 	// this node's packed annoucements
 	peerID      peerlib.ID
 	listeners   []ma.Multiaddr
-	fingerprint fingerprintType
+	fingerprint fingerprint.Type
 	rpcs        []byte
 	peerSet     bool
 	rpcsSet     bool
@@ -70,8 +71,8 @@ type announcerData struct {
 	peerFile    string
 
 	// database of all RPCs
-	rpcIndex map[fingerprintType]int // index to find rpc entry
-	rpcList  []*rpcEntry             // array of RPCs
+	rpcIndex map[fingerprint.Type]int // index to find rpc entry
+	rpcList  []*rpcEntry              // array of RPCs
 
 	// data for thread
 	ann announcer
@@ -113,7 +114,7 @@ func Initialise(nodesDomain, cacheDirectory string, dnsPeerOnly dnsOnlyType) err
 	globalData.thisNode = nil
 	globalData.treeChanged = false
 
-	globalData.rpcIndex = make(map[fingerprintType]int, 1000)
+	globalData.rpcIndex = make(map[fingerprint.Type]int, 1000)
 	globalData.rpcList = make([]*rpcEntry, 0, 1000)
 
 	globalData.peerSet = false
@@ -177,14 +178,6 @@ func Finalise() error {
 	globalData.log.Flush()
 
 	return nil
-}
-
-// MarshalText - convert fingerprint to little endian hex text
-func (fingerprint fingerprintType) MarshalText() ([]byte, error) {
-	size := hex.EncodedLen(len(fingerprint))
-	buffer := make([]byte, size)
-	hex.Encode(buffer, fingerprint[:])
-	return buffer, nil
 }
 
 func printBinaryAddrs(addrs []byte) string {

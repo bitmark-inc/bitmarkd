@@ -9,12 +9,14 @@ import (
 	"bytes"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/announce/fingerprint"
+
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 )
 
 // SetRPC - set this node's rpc announcement data
-func SetRPC(fingerprint fingerprintType, rpcs []byte) error {
+func SetRPC(fingerprint fingerprint.Type, rpcs []byte) error {
 	globalData.Lock()
 	defer globalData.Unlock()
 
@@ -35,14 +37,14 @@ func SetRPC(fingerprint fingerprintType, rpcs []byte) error {
 // returns:
 //   true  if this was a new/updated entry
 //   false if the update was within the limits (to prevent continuous relaying)
-func AddRPC(fingerprint []byte, rpcs []byte, timestamp uint64) bool {
+func AddRPC(clientFingerprint []byte, rpcs []byte, timestamp uint64) bool {
 
-	var fp fingerprintType
+	var fp fingerprint.Type
 	// discard invalid records
-	if len(fp) != len(fingerprint) || len(rpcs) > 100 {
+	if len(fp) != len(clientFingerprint) || len(rpcs) > 100 {
 		return false
 	}
-	copy(fp[:], fingerprint)
+	copy(fp[:], clientFingerprint)
 
 	globalData.Lock()
 	rc := addRPC(fp, rpcs, timestamp, false)
@@ -51,7 +53,7 @@ func AddRPC(fingerprint []byte, rpcs []byte, timestamp uint64) bool {
 }
 
 // internal add an remote RPC listener, hold lock before calling
-func addRPC(fingerprint fingerprintType, rpcs []byte, timestamp uint64, local bool) bool {
+func addRPC(fingerprint fingerprint.Type, rpcs []byte, timestamp uint64, local bool) bool {
 
 	i, ok := globalData.rpcIndex[fingerprint]
 
@@ -119,7 +121,7 @@ expirations:
 
 // RPCEntry type of returned data
 type RPCEntry struct {
-	Fingerprint fingerprintType    `json:"fingerprint"`
+	Fingerprint fingerprint.Type   `json:"fingerprint"`
 	Connections []*util.Connection `json:"connections"`
 }
 
