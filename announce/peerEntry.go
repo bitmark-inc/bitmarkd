@@ -119,7 +119,7 @@ func resetFutureTimestampToNow(timestamp uint64) time.Time {
 	return ts
 }
 
-// GetNext - fetch the data for the next node in the ring for a given public key
+// GetNext - fetch next node data in the ring by given public key
 func GetNext(peerID peerlib.ID) (peerlib.ID, []ma.Multiaddr, time.Time, error) {
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -138,7 +138,7 @@ func GetNext(peerID peerlib.ID) (peerlib.ID, []ma.Multiaddr, time.Time, error) {
 	return peer.peerID, peer.listeners, peer.timestamp, nil
 }
 
-// GetRandom - fetch the data for a random node in the ring not matching a given public key
+// GetRandom - fetch random node data in the ring not matching given public key
 func GetRandom(peerID peerlib.ID) (peerlib.ID, []ma.Multiaddr, time.Time, error) {
 	globalData.Lock()
 	defer globalData.Unlock()
