@@ -13,7 +13,10 @@ import (
 var globalData Concensus
 
 const (
-	nodeInitial = 5 * time.Second // startup delay before first send
+	votingMetricRunInitial  = 60 * time.Second // should reference announce and p2p initial
+	votingMetricRunInterval = 30 * time.Second
+	machineRunInitial       = 70 * time.Second // should reference announce and p2p initial
+	machineRunInterval      = 15 * time.Second
 )
 
 //Concensus is a wrap struct for concensus  state machine
@@ -33,6 +36,9 @@ func Initialise(node *p2p.Node, fastsync bool) error {
 	defer globalData.Unlock()
 	if globalData.initialised {
 		return fault.AlreadyInitialised
+	}
+	if nil == node {
+		panic("give an empty node")
 	}
 	globalData.Log = logger.New("concensus")
 	globalData.votingMetrics = NewMetricsPeersVoting(node)

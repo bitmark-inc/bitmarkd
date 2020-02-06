@@ -18,9 +18,6 @@ import (
 
 // various timeouts
 const (
-	// pause to limit bandwidth
-	cycleInterval = 15 * time.Second
-
 	// number of cycles to be 1 block out of sync before resync
 	samplelingLimit = 10
 
@@ -70,7 +67,7 @@ func NewConcensusMachine(node *p2p.Node, metric *MetricsPeersVoting, fastsync bo
 func (m *Machine) Run(args interface{}, shutdown <-chan struct{}) {
 	log := m.log
 	log.Info("starting a concensus state machine…")
-	timer := time.After(cycleInterval)
+	timer := time.After(machineRunInitial)
 loop:
 	for {
 		// wait for shutdown
@@ -79,7 +76,7 @@ loop:
 		case <-shutdown:
 			break loop
 		case <-timer: // timer has priority over queue
-			timer = time.After(cycleInterval)
+			timer = time.After(machineRunInterval)
 			m.start()
 		}
 	}
