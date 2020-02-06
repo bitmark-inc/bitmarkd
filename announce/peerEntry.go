@@ -28,16 +28,16 @@ type peerEntry struct {
 	timestamp time.Time // last seen time
 }
 
-// string - conversion fro fmt package
+// string - conversion from fmt package
 func (p peerEntry) String() []string {
-	allAddress := []string{}
+	var allAddress []string
 	for _, listener := range p.listeners {
 		allAddress = append(allAddress, listener.String())
 	}
 	return allAddress
 }
 
-// SetSelf - called by the peering initialisation to set up this
+// setSelf - called by the peering initialisation to set up this
 // node's announcement data
 func setSelf(peerID peerlib.ID, listeners []ma.Multiaddr) error {
 	globalData.Lock()
@@ -73,7 +73,7 @@ func AddPeer(peerID peerlib.ID, listeners []ma.Multiaddr, timestamp uint64) bool
 	return rc
 }
 
-// internal add a peer announcement, hold lock before calling
+// addPeer - internal add a peer announcement, hold lock before calling
 func addPeer(peerID peerlib.ID, listeners []ma.Multiaddr, timestamp uint64) bool {
 	ts := resetFutureTimestampToNow(timestamp)
 	if isPeerExpiredFromTime(ts) {
@@ -141,7 +141,7 @@ func GetNext(peerID peerlib.ID) (peerlib.ID, []ma.Multiaddr, time.Time, error) {
 	return peer.peerID, peer.listeners, peer.timestamp, nil
 }
 
-// GetRandom - fetch the data for a random node in the ring not matching a givpubkeyen public key
+// GetRandom - fetch the data for a random node in the ring not matching a given public key
 func GetRandom(peerID peerlib.ID) (peerlib.ID, []ma.Multiaddr, time.Time, error) {
 	globalData.Lock()
 	defer globalData.Unlock()
