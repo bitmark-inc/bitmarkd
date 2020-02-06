@@ -20,8 +20,7 @@ import (
 )
 
 const (
-	votingCycleInterval = 30 * time.Second
-	waitingRespTime     = 30 * time.Second
+	waitingRespTime = 30 * time.Second
 )
 
 //MetricsPeersVoting  is to get all metrics for voting
@@ -35,7 +34,7 @@ type MetricsPeersVoting struct {
 //NewMetricsPeersVoting return a MetricsPeersVoting for voting
 func NewMetricsPeersVoting(thisNode *p2p.Node) MetricsPeersVoting {
 	var mutex = &sync.Mutex{}
-	metrics := MetricsPeersVoting{mutex: mutex, watchNode: thisNode, Log: logger.New("votingMetrics")}
+	metrics := MetricsPeersVoting{mutex: mutex, watchNode: thisNode, Log: globalData.Log}
 	metrics.UpdateCandidates()
 	return metrics
 }
@@ -66,7 +65,7 @@ func (p *MetricsPeersVoting) UpdateCandidates() {
 func (p *MetricsPeersVoting) UpdateVotingMetrics(id peerlib.ID) error {
 	cctx, cancel := context.WithTimeout(context.Background(), waitingRespTime)
 	defer cancel()
-	s, err := globalData.Node.Host.NewStream(cctx, id, protocol.ID(p2p.TopicP2P))
+	s, err := p.watchNode.Host.NewStream(cctx, id, protocol.ID(p2p.TopicP2P))
 	if err != nil {
 		util.LogWarn(p.Log, util.CoRed, fmt.Sprintf("UpdateVotingMetrics: Create new stream for ID:%v Error:%v", id.ShortString(), err))
 		return err
@@ -92,7 +91,7 @@ func (p *MetricsPeersVoting) UpdateVotingMetrics(id peerlib.ID) error {
 //Run  is a Routine to get peer info
 func (p *MetricsPeersVoting) Run(args interface{}, shutdown <-chan struct{}) {
 	log := p.Log
-	delay := time.After(nodeInitial)
+	delay := time.After(votingMetricRunInitial)
 	//nodeChain:= mode.ChainName()
 	util.LogWarn(log, util.CoReset, "MetricsPeersVoting routine start...")
 loop:
@@ -101,7 +100,7 @@ loop:
 		case <-shutdown:
 			continue loop
 		case <-delay: //update voting metrics
-			delay = time.After(votingCycleInterval)
+			delay = time.After(votingMetricRunInterval)
 			p.UpdateCandidates()
 			if nil == p.Candidates {
 				util.LogInfo(p.Log, util.CoRed, "Candidates: no Candidates")

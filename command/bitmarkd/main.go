@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"time"
 
 	//"runtime/pprof"
 	"syscall"
@@ -303,6 +304,16 @@ func main() {
 	}
 	defer p2p.Finalise()
 
+	for wait := 0; wait < 3; wait++ { // concensus package depended on p2p.Node
+		if nil == p2p.GlobalP2PNode() {
+			log.Warn("p2p node has initialized")
+			wait = 3
+		}
+		time.Sleep(3 * time.Second)
+	}
+	if nil == p2p.GlobalP2PNode() {
+		panic("concensus initialise error: p2p node is empty")
+	}
 	err = concensus.Initialise(p2p.GlobalP2PNode(), masterConfiguration.Fastsync)
 	if nil != err {
 		log.Criticalf("concensus initialise error: %s", err)
