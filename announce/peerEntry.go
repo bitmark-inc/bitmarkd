@@ -7,17 +7,16 @@ package announce
 
 import (
 	"crypto/rand"
-	"fmt"
 	"math/big"
 	"time"
+
+	"github.com/bitmark-inc/bitmarkd/announce/id"
 
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 )
-
-type peerIDkey peerlib.ID
 
 type peerEntry struct {
 	peerID    peerlib.ID
@@ -48,7 +47,7 @@ func setSelf(peerID peerlib.ID, listeners []ma.Multiaddr) error {
 	globalData.peerSet = true
 
 	addPeer(peerID, listeners, uint64(time.Now().Unix()))
-	globalData.thisNode, _ = globalData.peerTree.Search(peerIDkey(peerID))
+	globalData.thisNode, _ = globalData.peerTree.Search(id.ID(peerID))
 	determineConnections(globalData.log)
 
 	return nil
@@ -83,7 +82,7 @@ func addPeer(peerID peerlib.ID, listeners []ma.Multiaddr, timestamp uint64) bool
 		timestamp: ts,
 	}
 	// TODO: Take care of peer update and peer replace base on protocol of multiaddress
-	if node, _ := globalData.peerTree.Search(peerIDkey(peerID)); nil != node {
+	if node, _ := globalData.peerTree.Search(id.ID(peerID)); nil != node {
 		peer := node.Value().(*peerEntry)
 
 		if ts.Sub(peer.timestamp) < announceRebroadcast {
@@ -93,7 +92,7 @@ func addPeer(peerID peerlib.ID, listeners []ma.Multiaddr, timestamp uint64) bool
 	}
 
 	// add or update the timestamp in the tree
-	recordAdded := globalData.peerTree.Insert(peerIDkey(peerID), peer)
+	recordAdded := globalData.peerTree.Insert(id.ID(peerID), peer)
 
 	globalData.log.Infof("Peer Added:  ID: %s,  add:%t  nodes in the peer tree: %d", peerID.String(), recordAdded, globalData.peerTree.Count())
 
@@ -124,7 +123,7 @@ func GetNext(peerID peerlib.ID) (peerlib.ID, []ma.Multiaddr, time.Time, error) {
 	globalData.Lock()
 	defer globalData.Unlock()
 
-	node, _ := globalData.peerTree.Search(peerIDkey(peerID))
+	node, _ := globalData.peerTree.Search(id.ID(peerID))
 	if nil != node {
 		node = node.Next()
 	}
@@ -169,22 +168,12 @@ retryLoop:
 	return peerlib.ID(""), nil, time.Now(), fault.InvalidPublicKey
 }
 
-// Compare - public key comparison for AVL interface
-func (p peerIDkey) Compare(q interface{}) int {
-	return util.IDCompare(peerlib.ID(p), peerlib.ID(q.(peerIDkey)))
-}
-
-// String - public key string convert for AVL interface
-func (p peerIDkey) String() string {
-	return fmt.Sprintf("%x", []byte(p))
-}
-
 // setPeerTimestamp - set the timestamp for the peer with given public key
 func setPeerTimestamp(peerID peerlib.ID, timestamp time.Time) {
 	globalData.Lock()
 	defer globalData.Unlock()
 
-	node, _ := globalData.peerTree.Search(peerIDkey(peerID))
+	node, _ := globalData.peerTree.Search(id.ID(peerID))
 	log := globalData.log
 	if nil == node {
 		log.Errorf("The peer with public key %x is not existing in peer tree", peerID.Pretty())
