@@ -7,15 +7,12 @@ package announce
 
 import (
 	"crypto/rand"
-	"encoding/binary"
 	"fmt"
 	"math/big"
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
-	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 )
@@ -170,17 +167,6 @@ retry_loop:
 		return peer.peerID, peer.listeners, peer.timestamp, nil
 	}
 	return peerlib.ID(""), nil, time.Now(), fault.InvalidPublicKey
-}
-
-// SendRegistration - send a peer registration request to a client channel
-func SendRegistration(client zmqutil.Client, fn string) error {
-	chain := mode.ChainName()
-
-	// get a big endian timestamp
-	timestamp := make([]byte, 8)
-	binary.BigEndian.PutUint64(timestamp, uint64(time.Now().Unix()))
-
-	return client.Send(fn, chain, globalData.peerID, globalData.listeners, timestamp)
 }
 
 // Compare - public key comparison for AVL interface
