@@ -10,29 +10,31 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/bitmark-inc/bitmarkd/announce/receiver"
+
 	"github.com/bitmark-inc/bitmarkd/util"
 
 	proto "github.com/golang/protobuf/proto"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 )
 
-// NewPeerItem is to create a PeerItem from peerEntry
-func NewPeerItem(peer *peerEntry) *PeerItem {
+// NewPeerItem is to create a PeerItem from receiver.Receiver
+func NewPeerItem(peer *receiver.Receiver) *PeerItem {
 	if peer == nil {
 		return nil
 	}
 	var pbAddrs [][]byte
-	for _, listner := range peer.listeners {
+	for _, listner := range peer.Listeners {
 		pbAddrs = append(pbAddrs, listner.Bytes())
 	}
-	peerIDBinary, err := peer.peerID.Marshal()
+	peerIDBinary, err := peer.ID.Marshal()
 	if err != nil {
 		return nil
 	}
 	return &PeerItem{
 		PeerID:    peerIDBinary,
 		Listeners: &Addrs{Address: pbAddrs},
-		Timestamp: uint64(peer.timestamp.Unix()),
+		Timestamp: uint64(peer.Timestamp.Unix()),
 	}
 }
 
@@ -47,7 +49,7 @@ func storePeers(peerFile string) error {
 	node := globalData.peerTree.First()
 
 	for node != lastNode {
-		peer, ok := node.Value().(*peerEntry)
+		peer, ok := node.Value().(*receiver.Receiver)
 		if ok {
 			p := NewPeerItem(peer)
 			peers.Peers = append(peers.Peers, p)
@@ -55,7 +57,7 @@ func storePeers(peerFile string) error {
 		node = node.Next()
 	}
 	// backup the last node
-	peer, ok := lastNode.Value().(*peerEntry)
+	peer, ok := lastNode.Value().(*receiver.Receiver)
 	if ok {
 		p := NewPeerItem(peer)
 		peers.Peers = append(peers.Peers, p)

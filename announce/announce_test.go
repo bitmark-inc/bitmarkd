@@ -54,6 +54,6 @@ func TestReadPeers(t *testing.T) {
 	assert.NoError(t, err, "proto unmarshal error")
 	for _, peer := range peers.Peers {
 		addrList := util.ByteAddrsToString(peer.Listeners.Address)
-		fmt.Printf("peerID:%s, listener:%v timestamp:%d\n", string(peer.PeerID), addrList, peer.Timestamp)
+		fmt.Printf("ID:%s, listener:%v Timestamp:%d\n", string(peer.PeerID), addrList, peer.Timestamp)
 	}
 }

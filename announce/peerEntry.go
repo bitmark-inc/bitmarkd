@@ -10,6 +10,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/announce/receiver"
+
 	"github.com/bitmark-inc/bitmarkd/announce/id"
 
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -17,21 +19,6 @@ import (
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 )
-
-type peerEntry struct {
-	peerID    peerlib.ID
-	listeners []ma.Multiaddr
-	timestamp time.Time // last seen time
-}
-
-// string - conversion from fmt package
-func (p peerEntry) String() []string {
-	var allAddress []string
-	for _, listener := range p.listeners {
-		allAddress = append(allAddress, listener.String())
-	}
-	return allAddress
-}
 
 // setSelf - called by the peering initialisation to set up this
 // node's announcement data
@@ -76,25 +63,25 @@ func addPeer(peerID peerlib.ID, listeners []ma.Multiaddr, timestamp uint64) bool
 		return false
 	}
 
-	peer := &peerEntry{
-		peerID:    peerID,
-		listeners: listeners,
-		timestamp: ts,
+	r := &receiver.Receiver{
+		ID:        peerID,
+		Listeners: listeners,
+		Timestamp: ts,
 	}
-	// TODO: Take care of peer update and peer replace base on protocol of multiaddress
+	// TODO: Take care of r update and r replace base on protocol of multiaddress
 	if node, _ := globalData.peerTree.Search(id.ID(peerID)); nil != node {
-		peer := node.Value().(*peerEntry)
+		peer := node.Value().(*receiver.Receiver)
 
-		if ts.Sub(peer.timestamp) < announceRebroadcast {
+		if ts.Sub(peer.Timestamp) < announceRebroadcast {
 			return false
 		}
 
 	}
 
-	// add or update the timestamp in the tree
-	recordAdded := globalData.peerTree.Insert(id.ID(peerID), peer)
+	// add or update the Timestamp in the tree
+	recordAdded := globalData.peerTree.Insert(id.ID(peerID), r)
 
-	globalData.log.Infof("Peer Added:  ID: %s,  add:%t  nodes in the peer tree: %d", peerID.String(), recordAdded, globalData.peerTree.Count())
+	globalData.log.Infof("Peer Added:  ID: %s,  add:%t  nodes in the r tree: %d", peerID.String(), recordAdded, globalData.peerTree.Count())
 
 	// if adding this nodes data
 	if util.IDEqual(globalData.peerID, peerID) {
@@ -108,7 +95,7 @@ func addPeer(peerID peerlib.ID, listeners []ma.Multiaddr, timestamp uint64) bool
 	return true
 }
 
-// resetFutureTimestampToNow - reset future timestamp to now
+// resetFutureTimestampToNow - reset future Timestamp to now
 func resetFutureTimestampToNow(timestamp uint64) time.Time {
 	ts := time.Unix(int64(timestamp), 0)
 	now := time.Now()
@@ -133,8 +120,8 @@ func GetNext(peerID peerlib.ID) (peerlib.ID, []ma.Multiaddr, time.Time, error) {
 	if nil == node {
 		return peerlib.ID(""), nil, time.Now(), fault.InvalidPublicKey
 	}
-	peer := node.Value().(*peerEntry)
-	return peer.peerID, peer.listeners, peer.timestamp, nil
+	peer := node.Value().(*receiver.Receiver)
+	return peer.ID, peer.Listeners, peer.Timestamp, nil
 }
 
 // GetRandom - fetch random node data in the ring not matching given public key
@@ -159,11 +146,11 @@ retryLoop:
 		if nil == node {
 			break retryLoop
 		}
-		peer := node.Value().(*peerEntry)
-		if util.IDEqual(peer.peerID, globalData.peerID) || util.IDEqual(peer.peerID, peerID) {
+		peer := node.Value().(*receiver.Receiver)
+		if util.IDEqual(peer.ID, globalData.peerID) || util.IDEqual(peer.ID, peerID) {
 			continue retryLoop
 		}
-		return peer.peerID, peer.listeners, peer.timestamp, nil
+		return peer.ID, peer.Listeners, peer.Timestamp, nil
 	}
 	return peerlib.ID(""), nil, time.Now(), fault.InvalidPublicKey
 }
@@ -180,6 +167,6 @@ func setPeerTimestamp(peerID peerlib.ID, timestamp time.Time) {
 		return
 	}
 
-	peer := node.Value().(*peerEntry)
-	peer.timestamp = timestamp
+	peer := node.Value().(*receiver.Receiver)
+	peer.Timestamp = timestamp
 }
