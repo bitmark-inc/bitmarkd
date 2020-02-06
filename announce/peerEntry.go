@@ -54,8 +54,8 @@ func setSelf(peerID peerlib.ID, listeners []ma.Multiaddr) error {
 	return nil
 }
 
-// isPeerExpiredFromTime - is peer expired from time
-func isPeerExpiredFromTime(timestamp time.Time) bool {
+// isExpiredAt - is peer expired from time
+func isExpiredAt(timestamp time.Time) bool {
 	return timestamp.Add(announceExpiry).Before(time.Now())
 }
 
@@ -73,7 +73,7 @@ func AddPeer(peerID peerlib.ID, listeners []ma.Multiaddr, timestamp uint64) bool
 // addPeer - internal add a peer announcement, hold lock before calling
 func addPeer(peerID peerlib.ID, listeners []ma.Multiaddr, timestamp uint64) bool {
 	ts := resetFutureTimestampToNow(timestamp)
-	if isPeerExpiredFromTime(ts) {
+	if isExpiredAt(ts) {
 		return false
 	}
 
