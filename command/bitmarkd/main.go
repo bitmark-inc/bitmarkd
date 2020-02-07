@@ -239,7 +239,6 @@ func main() {
 		log.Criticalf("reservoir reload error: %s", err)
 		exitwithstatus.Message("reservoir reload error: %s", err)
 	}
-
 	// network announcements need to be before peer and rpc initialisation
 	log.Info("initialise announce")
 	nodesDomain := "" // initially none
@@ -292,6 +291,7 @@ func main() {
 		log.Criticalf("zmq.AuthStart: error: %s", err)
 		exitwithstatus.Message("zmq.AuthStart: error: %s", err)
 	}
+
 	if masterConfiguration.DNSPeerOnly {
 		err = p2p.Initialise(&masterConfiguration.Peering, version, p2p.DnsOnly)
 	} else {

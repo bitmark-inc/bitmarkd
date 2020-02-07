@@ -213,7 +213,6 @@ process_rpcs:
 	}
 	for i, listen := range configuration.Listen {
 		log.Infof("starting RPC server: %s", listen)
-
 		l, err := tls.Listen(ipType[i], listen, tlsConfiguration)
 		if err != nil {
 			log.Errorf("rpc server listen error: %s", err)
