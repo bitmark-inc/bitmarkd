@@ -7,47 +7,57 @@ package announce
 
 import (
 	"fmt"
+	"github.com/bitmark-inc/bitmarkd/announce/domain"
 	"net"
-	"strings"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/logger"
-	peerlib "github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/miekg/dns"
 	ma "github.com/multiformats/go-multiaddr"
 )
 
 const (
-	timeInterval = 1 * time.Hour // time interval for re-fetching nodes domain
-	nodeProtocol = "p2p"
+	reFetchingInterval = 1 * time.Hour // re-fetching nodes domain
+	nodeProtocol       = "p2p"
+	loggerCategory     = "nodeslookup"
 )
 
-type nodesLookup struct {
-	logger *logger.L
-
-	nodesDomain string
+type lookup struct {
+	logger     *logger.L
+	domainName string
+	lookuper   domain.Lookuper
 }
 
-func (n *nodesLookup) initialise(nodesDomain string) error {
+func (l *lookup) initialise(nodesDomain string) error {
+	l.logger = logger.New(loggerCategory)
+	l.logger.Info("initialising…")
+	l.domainName = nodesDomain
+	l.lookuper = domain.NewLookuper(nodesDomain)
 
-	n.logger = logger.New("nodeslookup")
-	n.logger.Info("initialising…")
-	n.nodesDomain = nodesDomain
-
-	return lookupNodesDomain(n.nodesDomain, n.logger)
+	txts, err := l.lookuper.Lookup(net.LookupTXT)
+	if nil != err {
+		return err
+	}
+	addTxts(txts, l.logger)
+	return nil
 }
 
-func (n *nodesLookup) Run(args interface{}, shutdown <-chan struct{}) {
-
-	timer := time.After(getIntervalTime(n.nodesDomain, n.logger))
+func (l *lookup) Run(_ interface{}, shutdown <-chan struct{}) {
+	timer := time.After(intervalTime(l.domainName, l.logger))
+	log := l.logger
 
 loop:
 	for {
 		select {
 		case <-timer:
-			timer = time.After(getIntervalTime(n.nodesDomain, n.logger))
-			lookupNodesDomain(n.nodesDomain, n.logger)
+			timer = time.After(intervalTime(l.domainName, l.logger))
+			txts, err := l.lookuper.Lookup(net.LookupTXT)
+			if nil != err {
+				log.Errorf("domain name lookup with error: %s", err)
+				continue
+			}
+			addTxts(txts, l.logger)
 
 		case <-shutdown:
 			break loop
@@ -56,9 +66,8 @@ loop:
 }
 
 // get interval time for lookup node domain txt record
-func getIntervalTime(domain string, log *logger.L) time.Duration {
-
-	t := timeInterval
+func intervalTime(domain string, log *logger.L) time.Duration {
+	t := reFetchingInterval
 	var servers []string // dns name server
 
 	// reading default configuration file
@@ -76,7 +85,7 @@ func getIntervalTime(domain string, log *logger.L) time.Duration {
 	}
 
 	servers = conf.Servers
-	// limit the nameservers to lookup
+	// limit the name servers to lookup
 	// https://www.freebsd.org/cgi/man.cgi?resolv.conf
 	if len(servers) > 3 {
 		servers = servers[:3]
@@ -84,7 +93,6 @@ func getIntervalTime(domain string, log *logger.L) time.Duration {
 
 loop:
 	for _, server := range servers {
-
 		s := net.JoinHostPort(server, conf.Port)
 		c := dns.Client{}
 		msg := dns.Msg{}
@@ -104,12 +112,12 @@ loop:
 		sections := [][]dns.RR{r.Answer, r.Ns, r.Extra}
 
 		for _, section := range sections {
-			ttl := getTTL(section)
+			ttl := ttl(section)
 			if 0 < ttl {
 				log.Infof("got TTL record from server %q value %d", s, ttl)
-				ttlSec := time.Duration(ttl) * time.Second
-				if timeInterval > ttlSec {
-					t = ttlSec
+				ttlSecond := time.Duration(ttl) * time.Second
+				if reFetchingInterval > ttlSecond {
+					t = ttlSecond
 					break loop
 				}
 			}
@@ -122,7 +130,7 @@ done:
 }
 
 // get TTL record from a resource record
-func getTTL(rrs []dns.RR) uint32 {
+func ttl(rrs []dns.RR) uint32 {
 	if 0 == len(rrs) {
 		return 0
 	}
@@ -136,62 +144,34 @@ func getTTL(rrs []dns.RR) uint32 {
 	return 0
 }
 
-// lookup node domain for the peering
-func lookupNodesDomain(domain string, log *logger.L) error {
-
-	if "" == domain {
-		log.Error("invalid node domain")
-		return fault.InvalidNodeDomain
-	}
-
-	texts, err := net.LookupTXT(domain)
-	if nil != err {
-		log.Errorf("lookup TXT record error: %s", err)
-		return err
-	}
-loop:
-	// process DNS entries
-	for i, t := range texts {
-		t = strings.TrimSpace(t)
-		tag, err := parseTag(t)
-		if nil != err {
-			log.Debugf("ignore TXT[%d]: %q  error: %s", i, t, err)
-		} else {
-			log.Infof("process TXT[%d]: %q", i, t)
-			log.Infof("result[%d]: IPv4: %q  IPv6: %q  rpc: %d  connect: %d", i, tag.ipv4, tag.ipv6, tag.rpcPort, tag.connectPort)
-			log.Infof("result[%d]: peer ID: %s", i, tag.peerID)
-			log.Infof("result[%d]: rpc fingerprint: %x", i, tag.certificateFingerprint)
-			if nil == tag.ipv4 && nil == tag.ipv6 {
-				log.Debugf("result[%d]: ignoring invalid record", i)
-				break
+func addTxts(txts []domain.DnsTxt, log *logger.L) {
+	// TODO: move this logic into addPeer
+	for i, txt := range txts {
+		var listeners []ma.Multiaddr
+		if nil != txt.IPv4 {
+			ipv4ma, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%v/%s/%s", txt.IPv4, txt.ConnectPort, nodeProtocol, txt.PeerID))
+			if nil == err {
+				listeners = append(listeners, ipv4ma)
+			} else {
+				log.Warnf("form ipv6 ma error :%v", err)
 			}
-			var listeners []ma.Multiaddr
-			if nil != tag.ipv4 {
-				ipv4ma, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%v/%s/%s", tag.ipv4, tag.connectPort, nodeProtocol, tag.peerID))
-				if nil == err {
-					listeners = append(listeners, ipv4ma)
-				} else {
-					log.Warnf("form ipv6 ma error :%v", err)
-				}
-			}
-			if nil != tag.ipv6 {
-				ipv6ma, err := ma.NewMultiaddr(fmt.Sprintf("/ip6/%s/tcp/%v/%s/%s", tag.ipv6, tag.connectPort, nodeProtocol, tag.peerID))
-				if nil == err {
-					listeners = append(listeners, ipv6ma)
-				} else {
-					log.Warnf("form ipv6 ma error :%v", err)
-				}
-			}
-
-			id, err := peerlib.IDB58Decode(tag.peerID)
-			if err != nil {
-				log.Warnf("ID DecodeBase58 Error :%v ID::%v", err, tag.peerID)
-				continue loop
-			}
-			log.Infof("result[%d]: adding id:%s", i, tag.peerID)
-			addPeer(id, listeners, uint64(time.Now().Unix()))
-			//globalData.peerTree.Print(false)
 		}
+		if nil != txt.IPv6 {
+			ipv6ma, err := ma.NewMultiaddr(fmt.Sprintf("/ip6/%s/tcp/%v/%s/%s", txt.IPv6, txt.ConnectPort, nodeProtocol, txt.PeerID))
+			if nil == err {
+				listeners = append(listeners, ipv6ma)
+			} else {
+				log.Warnf("form ipv6 ma error :%v", err)
+			}
+		}
+
+		id, err := peer.IDB58Decode(txt.PeerID)
+		if err != nil {
+			log.Warnf("ID DecodeBase58 Error :%v ID::%v", err, txt.PeerID)
+			continue
+		}
+		log.Infof("result[%d]: adding id:%s", i, txt.PeerID)
+		addPeer(id, listeners, uint64(time.Now().Unix()))
+		globalData.peerTree.Print(false)
 	}
-	return nil
 }

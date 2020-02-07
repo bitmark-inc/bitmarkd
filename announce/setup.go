@@ -77,7 +77,7 @@ type announcerData struct {
 	// data for thread
 	ann announcer
 
-	nodesLookup nodesLookup
+	nodesLookup lookup
 
 	// for background
 	background *background.T
@@ -148,7 +148,7 @@ func Initialise(nodesDomain, cacheDirectory string, dnsPeerOnly dnsOnlyType) err
 		&globalData.nodesLookup, &globalData.ann,
 	}
 
-	globalData.background = background.Start(processes, globalData.log)
+	globalData.background = background.Start(processes, nil)
 
 	return nil
 }
