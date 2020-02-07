@@ -91,7 +91,7 @@ loop:
 		}
 		util.LogDebug(globalData.log, util.CoReset, fmt.Sprintf("restore peer ID:%s", id.ShortString()))
 		addPeer(id, maAddrs, peer.Timestamp)
-		globalData.peerTree.Print(false)
+		//globalData.peerTree.Print(false)
 	}
 	return peers, nil
 }

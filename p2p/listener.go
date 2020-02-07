@@ -22,7 +22,7 @@ import (
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 )
 
-const maxBytesRecieve = 1024 * 100 //TODO: MaxBlock Size
+const maxBytesRecieve = 1024 * 1000 //MaxBlock Size 1M
 
 //ListenHandler is a host Listening  handler
 type ListenHandler struct {

@@ -221,17 +221,7 @@ M.peering = {
         -- or if PUBLIC_IPV[46] variables are set
         make_announcements(2136),
     },
-
-    public_key = read_file("peer.public"),
-    private_key = read_file("peer.private"),
-
-    -- dedicated static peer connections
-    connect = local_connections or {
-        -- {
-        --     public_key = "***BITMARKD-PEER-PUBLIC-KEY-INCLUDING-PUBLIC:-PREFIX***",
-        --     address = "p.q.r.s:2136"
-        -- },
-    }
+    private_key = read_file("p2ppeer.prv"),
 }
 
 
