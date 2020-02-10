@@ -1,0 +1,72 @@
+// SPDX-License-Identifier: ISC
+// Copyright (c) 2014-2019 Bitmark Inc.
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
+package domain
+
+import (
+	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/logger"
+	"strings"
+)
+
+const (
+	loggerCategory = "domain"
+)
+
+// Lookuper - interface to lookup domain name
+type Lookuper interface {
+	Lookup(func(string) ([]string, error)) ([]DnsTxt, error)
+}
+
+type lookuperData struct {
+	logger *logger.L
+
+	domain string
+}
+
+func NewLookuper(domain string) Lookuper {
+	return &lookuperData{
+		logger: logger.New(loggerCategory),
+		domain: domain,
+	}
+}
+
+// lookup node domain for the peering
+// passing net.LookupTXT(l.domain)
+func (l *lookuperData) Lookup(f func(string) ([]string, error)) ([]DnsTxt, error) {
+	log := l.logger
+	if "" == l.domain {
+		return nil, fault.InvalidNodeDomain
+	}
+
+	texts, err := f(l.domain)
+	if nil != err {
+		return nil, err
+	}
+
+	result := make([]DnsTxt, 0)
+loop:
+	// process DNS entries
+	for i, t := range texts {
+		t = strings.TrimSpace(t)
+		tag, err := parseTxt(t)
+		if nil != err {
+			log.Debugf("ignore TXT[%d]: %q  error: %s", i, t, err)
+			return nil, err
+		} else {
+			log.Infof("process TXT[%d]: %q", i, t)
+			log.Infof("result[%d]: IPv4: %q  IPv6: %q  rpc: %d  connect: %d", i, tag.IPv4, tag.IPv6, tag.RpcPort, tag.ConnectPort)
+			log.Infof("result[%d]: peer ID: %s", i, tag.PeerID)
+			log.Infof("result[%d]: rpc fingerprint: %x", i, tag.CertificateFingerprint)
+			if nil == tag.IPv4 && nil == tag.IPv6 {
+				log.Debugf("result[%d]: ignoring invalid record", i)
+				break loop
+			}
+
+			result = append(result, *tag)
+		}
+	}
+	return result, nil
+}
