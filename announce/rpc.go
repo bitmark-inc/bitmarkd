@@ -28,7 +28,7 @@ func SetRPC(fingerprint fingerprint.Type, rpcs []byte) error {
 	globalData.rpcsSet = true
 
 	// add this nodes data to database
-	addRPC(fingerprint, rpcs, 0, true)
+	addRPC(fingerprint, rpcs, uint64(time.Now().Unix()), true)
 
 	return nil
 }

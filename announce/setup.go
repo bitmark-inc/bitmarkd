@@ -6,6 +6,7 @@
 package announce
 
 import (
+	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"path"
 	"sync"
 	"time"
@@ -162,6 +163,9 @@ func Finalise() error {
 
 	globalData.log.Info("shutting down…")
 	globalData.log.Flush()
+
+	// release message bus
+	messagebus.Bus.Announce.Release()
 
 	// stop background
 	globalData.background.Stop()
