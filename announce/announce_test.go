@@ -34,14 +34,12 @@ func TestMain(m *testing.M) {
 }
 
 func TestStorePeers(t *testing.T) {
-	fmt.Println("TestStorePeers")
-	curPath := os.Getenv("PWD")
-	peerFile := path.Join(curPath, "peers")
-	// domain from bind9
-	err := Initialise("nodes.test.bitmark.com", peerFile, false)
-	assert.NoError(t, err, "routing initialized error")
-	err = storePeers(peerFile)
-	assert.NoError(t, err, "routing backupPeers error")
+	f := func(string) ([]string, error) {
+		return []string{}, nil
+	}
+	err := Initialise("random.test.domain", "", DnsOnly, f)
+
+	assert.Nil(t, err, "wrong error")
 }
 
 func TestReadPeers(t *testing.T) {

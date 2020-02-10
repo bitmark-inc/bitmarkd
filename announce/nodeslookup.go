@@ -7,9 +7,10 @@ package announce
 
 import (
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/announce/domain"
 	"net"
 	"time"
+
+	"github.com/bitmark-inc/bitmarkd/announce/domain"
 
 	"github.com/bitmark-inc/logger"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -29,13 +30,13 @@ type lookup struct {
 	lookuper   domain.Lookuper
 }
 
-func (l *lookup) initialise(nodesDomain string) error {
+func (l *lookup) initialise(nodesDomain string, f func(string) ([]string, error)) error {
 	l.logger = logger.New(loggerCategory)
 	l.logger.Info("initialising…")
 	l.domainName = nodesDomain
 	l.lookuper = domain.NewLookuper(nodesDomain)
 
-	txts, err := l.lookuper.Lookup(net.LookupTXT)
+	txts, err := l.lookuper.Lookup(f)
 	if nil != err {
 		return err
 	}

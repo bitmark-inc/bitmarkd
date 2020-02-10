@@ -97,7 +97,7 @@ const timeFormat = "2006-01-02 15:04:05"
 // Initialise - set up the announcement system
 // pass a fully qualified domain for root node list
 // or empty string for no root nodes
-func Initialise(nodesDomain, cacheDirectory string, dnsPeerOnly dnsOnlyType) error {
+func Initialise(nodesDomain, cacheDirectory string, dnsPeerOnly dnsOnlyType, f func(string) ([]string, error)) error {
 
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -130,7 +130,7 @@ func Initialise(nodesDomain, cacheDirectory string, dnsPeerOnly dnsOnlyType) err
 		}
 	}
 
-	if err := globalData.nodesLookup.initialise(nodesDomain); nil != err {
+	if err := globalData.nodesLookup.initialise(nodesDomain, f); nil != err {
 		return err
 	}
 

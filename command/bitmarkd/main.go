@@ -7,6 +7,7 @@ package main
 
 import (
 	"fmt"
+	net2 "net"
 	"os"
 	"os/signal"
 
@@ -265,9 +266,9 @@ func main() {
 		nodesDomain = masterConfiguration.Nodes // just assume it is a domain name
 	}
 	if masterConfiguration.DNSPeerOnly {
-		err = announce.Initialise(nodesDomain, masterConfiguration.CacheDirectory, announce.DnsOnly)
+		err = announce.Initialise(nodesDomain, masterConfiguration.CacheDirectory, announce.DnsOnly, net2.LookupTXT)
 	} else {
-		err = announce.Initialise(nodesDomain, masterConfiguration.CacheDirectory, announce.UsePeers)
+		err = announce.Initialise(nodesDomain, masterConfiguration.CacheDirectory, announce.UsePeers, net2.LookupTXT)
 	}
 
 	if nil != err {
