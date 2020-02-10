@@ -15,9 +15,7 @@ import (
 )
 
 var supportedTags = map[string]struct{}{
-	"bitmark=v2": {},
-	"bitmark=v3": {},
-	"bitmark=v4": {},
+	"bitmark-p2p=v1": {},
 }
 
 const (
@@ -101,8 +99,6 @@ words:
 		case 'c':
 			t.ConnectPort, err = getPort(parameter)
 			countC += 1
-		case 's': // not actually used but still check
-			_, err = getPort(parameter)
 		case 'r':
 			t.RpcPort, err = getPort(parameter)
 			countR += 1
