@@ -56,31 +56,22 @@ func Backup(backupFile string, tree *avl.Tree) error {
 		return nil
 	}
 
-	peers := List{
+	list := List{
 		Receptors: make([]*ReceptorPB, 0),
 	}
-	lastNode := tree.Last()
+
 	node := tree.First()
-
-	// TODO: refactor
-	for node != lastNode {
-		peer, ok := node.Value().(*Receptor)
-		if ok {
-			p := newReceptor(peer)
-
-			peers.Receptors = append(peers.Receptors, p)
+	if node != nil {
+		for ; node != nil; node = node.Next() {
+			receptor, ok := node.Value().(*Receptor)
+			if ok {
+				r := newReceptor(receptor)
+				list.Receptors = append(list.Receptors, r)
+			}
 		}
-		node = node.Next()
 	}
 
-	// backup the last node
-	peer, ok := lastNode.Value().(*Receptor)
-	if ok {
-		p := newReceptor(peer)
-		peers.Receptors = append(peers.Receptors, p)
-	}
-
-	out, err := proto.Marshal(&peers)
+	out, err := proto.Marshal(&list)
 	if nil != err {
 		return fmt.Errorf("failed to marshal receptor")
 	}

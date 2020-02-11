@@ -59,6 +59,7 @@ func TestBackup(t *testing.T) {
 	addr2, _ := ma.NewMultiaddr("/ip6/5:6:7:8::/tcp/5678")
 	addr3, _ := ma.NewMultiaddr("/ip6/11:12:13:14::/tcp/11223")
 	now := time.Now()
+
 	p1 := &receptor.Receptor{
 		ID:        "p1",
 		Listeners: []ma.Multiaddr{addr1},
@@ -80,6 +81,8 @@ func TestBackup(t *testing.T) {
 	tree.Insert(id.ID("p1"), p1)
 	tree.Insert(id.ID("p2"), p2)
 	tree.Insert(id.ID("p3"), p3)
+
+	fmt.Println("last.next: ", tree.Last().Next())
 
 	err := receptor.Backup(backupFile, tree)
 	assert.Nil(t, err, "wrong store")
