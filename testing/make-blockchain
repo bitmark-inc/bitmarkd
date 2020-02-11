@@ -127,11 +127,21 @@ CLI() {
   done
   user="${1}"; shift
   [ X"${verbose}" = X"yes" ] && printf '\033[1;33mCLI[%s]: \033[1;31m%s\033[0m\n' "${user}" "$*"
-  if ! r=$(bitmark-cli -i "${user}" -p 1234567890 -n local "$@") && [ X"${check}" = X"yes" ]
-  then
-    [ -n "${r}" ] && ERROR 'failed: stdout:\n%s' "${r}"
-    ERROR 'failed: stdout empty'
-  fi
+  while :
+  do
+    if ! r=$(bitmark-cli -i "${user}" -p 1234567890 -n local "$@") && [ X"${check}" = X"yes" ]
+    then
+      if [ X"${r}" = X"not available during synchronise" ]
+      then
+        printf 'retry\n'
+        sleep 10
+        continue
+      fi
+      [ -n "${r}" ] && ERROR 'failed: stdout:\n%s' "${r}"
+      ERROR 'failed: stdout empty'
+    fi
+    break
+  done
 }
 
 PRETTY() {
