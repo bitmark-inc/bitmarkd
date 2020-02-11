@@ -148,8 +148,8 @@ ONCE() {
   filter='
     def rj($f;$w): ("          "+($f|tostring))[-$w:];
     def lj($f;$w): (($f|tostring)+"          ")[:$w];
-    "\u001b[1;32mb: \u001b[1;33m" + (.node.block.count.local|tostring) +
-    "\u001b[0;33m " + (.node.block.hash[56:64]) +
+    "\u001b[1;32mb: \u001b[1;33m" + rj(.node.block.count.local;2) +
+    "\u001b[0;33m " + (.node.block.hash[56:64]+"--------")[:8] +
     "  \u001b[" + (if .node.mode=="Normal" then "1;32" else "0;31" end) + "m" + .node.mode[0:6] +
     "  \u001b[0;36m" + .node.chain +
     "  \u001b[1;34mp: " + rj(.node.transactionCounters.pending;3) +
@@ -162,7 +162,7 @@ ONCE() {
         "................" | split("");
         .[$n]=(if 0==$n then "?" else [$n + 96]|implode end)
       ) | join("")|tostring) + "]" +
-    "  \u001b[0;37mup: " + (.node.uptime|tostring) +
+    "  \u001b[0;37mup: " + (.node.uptime|sub("[.][0-9]*s";"s")) +
     "\u001b[0m"'
 
   n=0
