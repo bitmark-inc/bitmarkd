@@ -2,18 +2,10 @@ package announce
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path"
 	"testing"
 
-	"github.com/bitmark-inc/bitmarkd/announce/peer"
-
-	"github.com/bitmark-inc/bitmarkd/util"
-
 	"github.com/bitmark-inc/logger"
-	proto "github.com/golang/protobuf/proto"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestMain(m *testing.M) {
@@ -33,27 +25,4 @@ func TestMain(m *testing.M) {
 	}
 	globalData.log = logger.New("nodes")
 	os.Exit(m.Run())
-}
-
-func TestStorePeers(t *testing.T) {
-	f := func(string) ([]string, error) {
-		return []string{}, nil
-	}
-	err := Initialise("random.test.domain", "", DnsOnly, f)
-
-	assert.Nil(t, err, "wrong error")
-}
-
-func TestReadPeers(t *testing.T) {
-	curPath := os.Getenv("PWD")
-	peerFile := path.Join(curPath, "peers")
-	var peers peer.PeerList
-	readIN, err := ioutil.ReadFile(peerFile)
-	assert.NoError(t, err, "TestReadPeers:readFile Error")
-	err = proto.Unmarshal(readIN, &peers)
-	assert.NoError(t, err, "proto unmarshal error")
-	for _, p := range peers.Peers {
-		addrList := util.ByteAddrsToString(p.Listeners.Address)
-		fmt.Printf("ID:%s, listener:%v Timestamp:%d\n", string(p.PeerID), addrList, p.Timestamp)
-	}
 }

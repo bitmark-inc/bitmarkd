@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/announce/peer"
+	"github.com/bitmark-inc/bitmarkd/announce/receptor"
 
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 
@@ -41,7 +41,7 @@ const (
 )
 
 // file for storing saves peers
-const peerFile = "peers.json"
+const backupFile = "peers.json"
 
 // RPC entries
 type rpcEntry struct {
@@ -70,7 +70,7 @@ type announcerData struct {
 	peerTree    *avl.Tree
 	thisNode    *avl.Node // this node's position in the tree
 	treeChanged bool      // tree was changed
-	peerFile    string
+	backupFile  string
 
 	// database of all RPCs
 	rpcIndex map[fingerprint.Type]int // index to find rpc entry
@@ -121,15 +121,15 @@ func Initialise(nodesDomain, cacheDirectory string, dnsPeerOnly dnsOnlyType, f f
 
 	globalData.peerSet = false
 	globalData.rpcsSet = false
-	globalData.peerFile = path.Join(cacheDirectory, peerFile)
+	globalData.backupFile = path.Join(cacheDirectory, backupFile)
 
 	globalData.dnsPeerOnly = dnsPeerOnly
 
 	globalData.log.Info("start restoring peer data…")
 	if globalData.dnsPeerOnly == UsePeers { //disable restore to avoid restore non-dns node
-		if peerList, err := peer.Restore(globalData.peerFile); err == nil {
-			for _, item := range peerList.Peers {
-				id, err := peerlib.IDFromBytes(item.PeerID)
+		if list, err := receptor.Restore(globalData.backupFile); err == nil {
+			for _, item := range list.Receptors {
+				id, err := peerlib.IDFromBytes(item.ID)
 				addrs := util.GetMultiAddrsFromBytes(item.Listeners.Address)
 				if err != nil || nil != addrs {
 					continue
@@ -183,7 +183,7 @@ func Finalise() error {
 	messagebus.Bus.Announce.Release()
 
 	globalData.log.Info("start backing up peer data…")
-	if err := peer.Backup(globalData.peerFile, globalData.peerTree); err != nil {
+	if err := receptor.Backup(globalData.backupFile, globalData.peerTree); err != nil {
 		globalData.log.Errorf("fail to backup peer data: %s", err.Error())
 	}
 
@@ -197,7 +197,7 @@ func Finalise() error {
 }
 
 func printBinaryAddrs(addrs []byte) string {
-	maAddrs := peer.Addrs{}
+	maAddrs := receptor.Addrs{}
 	err := proto.Unmarshal(addrs, &maAddrs)
 	if err != nil {
 		return ""
