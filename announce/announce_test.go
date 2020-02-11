@@ -7,6 +7,8 @@ import (
 	"path"
 	"testing"
 
+	"github.com/bitmark-inc/bitmarkd/announce/peer"
+
 	"github.com/bitmark-inc/bitmarkd/util"
 
 	"github.com/bitmark-inc/logger"
@@ -45,13 +47,13 @@ func TestStorePeers(t *testing.T) {
 func TestReadPeers(t *testing.T) {
 	curPath := os.Getenv("PWD")
 	peerFile := path.Join(curPath, "peers")
-	var peers PeerList
+	var peers peer.PeerList
 	readIN, err := ioutil.ReadFile(peerFile)
 	assert.NoError(t, err, "TestReadPeers:readFile Error")
 	err = proto.Unmarshal(readIN, &peers)
 	assert.NoError(t, err, "proto unmarshal error")
-	for _, peer := range peers.Peers {
-		addrList := util.ByteAddrsToString(peer.Listeners.Address)
-		fmt.Printf("ID:%s, listener:%v Timestamp:%d\n", string(peer.PeerID), addrList, peer.Timestamp)
+	for _, p := range peers.Peers {
+		addrList := util.ByteAddrsToString(p.Listeners.Address)
+		fmt.Printf("ID:%s, listener:%v Timestamp:%d\n", string(p.PeerID), addrList, p.Timestamp)
 	}
 }

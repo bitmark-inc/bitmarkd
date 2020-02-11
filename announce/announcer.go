@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/announce/peer"
+
 	"github.com/bitmark-inc/bitmarkd/announce/receiver"
 	"github.com/bitmark-inc/bitmarkd/util"
 
@@ -83,7 +85,7 @@ loop:
 					continue loop
 				}
 				timestamp := binary.BigEndian.Uint64(item.Parameters[2])
-				var listeners Addrs
+				var listeners peer.Addrs
 				err = proto.Unmarshal(item.Parameters[1], &listeners)
 				if err != nil {
 					util.LogError(log, util.CoRed, fmt.Sprintf("addpeer: Unmarshal Address Error:%v", err))
@@ -107,9 +109,9 @@ loop:
 					log.Warn(err.Error())
 					continue loop
 				}
-				var lsners Addrs
-				proto.Unmarshal(item.Parameters[1], &lsners)
-				addrs := util.GetMultiAddrsFromBytes(lsners.Address)
+				var listeners peer.Addrs
+				_ = proto.Unmarshal(item.Parameters[1], &listeners)
+				addrs := util.GetMultiAddrsFromBytes(listeners.Address)
 				if len(addrs) == 0 {
 					log.Warn("No valid listener address")
 					continue loop
@@ -146,7 +148,7 @@ func (ann *announcer) process() {
 		}
 	}
 	if globalData.peerSet {
-		addrsBinary, errAddr := proto.Marshal(&Addrs{Address: util.GetBytesFromMultiaddr(globalData.listeners)})
+		addrsBinary, errAddr := proto.Marshal(&peer.Addrs{Address: util.GetBytesFromMultiaddr(globalData.listeners)})
 		idBinary, errID := globalData.peerID.MarshalBinary()
 		if nil == errAddr && nil == errID {
 			util.LogInfo(log, util.CoYellow, fmt.Sprintf("-><-send self data to P2P ID:%v address:%v", globalData.peerID.ShortString(), util.PrintMaAddrs(globalData.listeners)))
@@ -231,14 +233,14 @@ deduplicate:
 		}
 		node := globalData.peerTree.Get(v)
 		if nil != node {
-			peer := node.Value().(*receiver.Receiver)
-			if nil != peer {
-				idBinary, errID := peer.ID.Marshal()
-				pbAddr := util.GetBytesFromMultiaddr(peer.Listeners)
-				pbAddrBinary, errMarshal := proto.Marshal(&Addrs{Address: pbAddr})
+			p := node.Value().(*receiver.Receiver)
+			if nil != p {
+				idBinary, errID := p.ID.Marshal()
+				pbAddr := util.GetBytesFromMultiaddr(p.Listeners)
+				pbAddrBinary, errMarshal := proto.Marshal(&peer.Addrs{Address: pbAddr})
 				if nil == errID && nil == errMarshal {
 					messagebus.Bus.P2P.Send(names[i], idBinary, pbAddrBinary)
-					util.LogDebug(log, util.CoYellow, fmt.Sprintf("--><-- determine send to P2P %v : %s  address: %x ", names[i], peer.ID.ShortString(), printBinaryAddrs(pbAddrBinary)))
+					util.LogDebug(log, util.CoYellow, fmt.Sprintf("--><-- determine send to P2P %v : %s  address: %x ", names[i], p.ID.ShortString(), printBinaryAddrs(pbAddrBinary)))
 				}
 			}
 
@@ -285,14 +287,14 @@ func exhaustiveConnections(log *logger.L) {
 	for i := 0; i < count; i++ {
 		node := globalData.peerTree.Get(i)
 		if nil != node {
-			peer := node.Value().(*receiver.Receiver)
-			if nil != peer && !util.IDEqual(peer.ID, globalData.peerID) {
-				idBinary, errID := peer.ID.Marshal()
-				pbAddr := util.GetBytesFromMultiaddr(peer.Listeners)
-				pbAddrBinary, errMarshal := proto.Marshal(&Addrs{Address: pbAddr})
+			p := node.Value().(*receiver.Receiver)
+			if nil != p && !util.IDEqual(p.ID, globalData.peerID) {
+				idBinary, errID := p.ID.Marshal()
+				pbAddr := util.GetBytesFromMultiaddr(p.Listeners)
+				pbAddrBinary, errMarshal := proto.Marshal(&peer.Addrs{Address: pbAddr})
 				if nil == errID && nil == errMarshal {
 					messagebus.Bus.P2P.Send("ES", idBinary, pbAddrBinary)
-					util.LogDebug(log, util.CoYellow, fmt.Sprintf("--><-- exhaustiveConnections send to P2P %v : %s  address: %x ", "ES", peer.ID.ShortString(), printBinaryAddrs(pbAddrBinary)))
+					util.LogDebug(log, util.CoYellow, fmt.Sprintf("--><-- exhaustiveConnections send to P2P %v : %s  address: %x ", "ES", p.ID.ShortString(), printBinaryAddrs(pbAddrBinary)))
 				}
 			}
 		}

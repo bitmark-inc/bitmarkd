@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: ISC
-// Copyright (c) 2014-2019 Bitmark Inc.
+// Copyright (c) 2014-2020 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 // the tag to detect applicable TXT records from DNS
@@ -99,9 +99,11 @@ words:
 		case 'c':
 			t.ConnectPort, err = getPort(parameter)
 			countC += 1
+
 		case 'r':
 			t.RpcPort, err = getPort(parameter)
 			countR += 1
+
 		case 'i':
 			if len(parameter) != p2pIdentityLength {
 				err = fault.InvalidIdentityName
@@ -109,6 +111,7 @@ words:
 				t.PeerID = parameter
 			}
 			countI += 1
+
 		case 'f':
 			if len(parameter) != fingerprintLength {
 				err = fault.InvalidFingerprint
@@ -119,6 +122,7 @@ words:
 				}
 			}
 			countF += 1
+
 		default:
 			err = fault.InvalidDnsTxtRecord
 		}

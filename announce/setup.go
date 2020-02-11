@@ -6,10 +6,14 @@
 package announce
 
 import (
-	"github.com/bitmark-inc/bitmarkd/messagebus"
+	"fmt"
 	"path"
 	"sync"
 	"time"
+
+	"github.com/bitmark-inc/bitmarkd/announce/peer"
+
+	"github.com/bitmark-inc/bitmarkd/messagebus"
 
 	"github.com/bitmark-inc/bitmarkd/announce/fingerprint"
 
@@ -38,9 +42,6 @@ const (
 
 // file for storing saves peers
 const peerFile = "peers.json"
-
-// type for SHA3 fingerprints
-type fingerprintType [32]byte
 
 // RPC entries
 type rpcEntry struct {
@@ -126,7 +127,18 @@ func Initialise(nodesDomain, cacheDirectory string, dnsPeerOnly dnsOnlyType, f f
 
 	globalData.log.Info("start restoring peer data…")
 	if globalData.dnsPeerOnly == UsePeers { //disable restore to avoid restore non-dns node
-		if _, err := restorePeers(globalData.peerFile); err != nil {
+		if peerList, err := peer.Restore(globalData.peerFile); err == nil {
+			for _, item := range peerList.Peers {
+				id, err := peerlib.IDFromBytes(item.PeerID)
+				addrs := util.GetMultiAddrsFromBytes(item.Listeners.Address)
+				if err != nil || nil != addrs {
+					continue
+				}
+				util.LogDebug(globalData.log, util.CoReset, fmt.Sprintf("restore peer ID:%s", id.ShortString()))
+				addPeer(id, addrs, item.Timestamp)
+				globalData.peerTree.Print(false)
+			}
+		} else {
 			globalData.log.Errorf("fail to restore peer data: %s", err.Error())
 		}
 	}
@@ -164,14 +176,14 @@ func Finalise() error {
 	globalData.log.Info("shutting down…")
 	globalData.log.Flush()
 
-	// release message bus
-	messagebus.Bus.Announce.Release()
-
 	// stop background
 	globalData.background.Stop()
 
+	// release message bus
+	messagebus.Bus.Announce.Release()
+
 	globalData.log.Info("start backing up peer data…")
-	if err := storePeers(globalData.peerFile); err != nil {
+	if err := peer.Backup(globalData.peerFile, globalData.peerTree); err != nil {
 		globalData.log.Errorf("fail to backup peer data: %s", err.Error())
 	}
 
@@ -185,7 +197,7 @@ func Finalise() error {
 }
 
 func printBinaryAddrs(addrs []byte) string {
-	maAddrs := Addrs{}
+	maAddrs := peer.Addrs{}
 	err := proto.Unmarshal(addrs, &maAddrs)
 	if err != nil {
 		return ""
