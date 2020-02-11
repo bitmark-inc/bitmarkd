@@ -34,24 +34,24 @@ func (r Receptor) String() []string {
 	return allAddress
 }
 
-func newPeerItem(peer *Receptor) *ReceptorPB {
-	if peer == nil {
+func newReceptor(r *Receptor) *ReceptorPB {
+	if r == nil {
 		return nil
 	}
 	var pbAddrs [][]byte
-	for _, listener := range peer.Listeners {
+	for _, listener := range r.Listeners {
 		pbAddrs = append(pbAddrs, listener.Bytes())
 	}
-	peerIDBinary, _ := peer.ID.Marshal()
+	binaryID, _ := r.ID.Marshal()
 	return &ReceptorPB{
-		ID:        peerIDBinary,
+		ID:        binaryID,
 		Listeners: &Addrs{Address: pbAddrs},
-		Timestamp: uint64(peer.Timestamp.Unix()),
+		Timestamp: uint64(r.Timestamp.Unix()),
 	}
 }
 
-// Backup - backup all peers into peer file
-func Backup(peerFile string, tree *avl.Tree) error {
+// Backup - backup all receptors into file
+func Backup(backupFile string, tree *avl.Tree) error {
 	if tree.Count() <= 2 {
 		return nil
 	}
@@ -62,10 +62,11 @@ func Backup(peerFile string, tree *avl.Tree) error {
 	lastNode := tree.Last()
 	node := tree.First()
 
+	// TODO: refactor
 	for node != lastNode {
 		peer, ok := node.Value().(*Receptor)
 		if ok {
-			p := newPeerItem(peer)
+			p := newReceptor(peer)
 
 			peers.Receptors = append(peers.Receptors, p)
 		}
@@ -75,34 +76,34 @@ func Backup(peerFile string, tree *avl.Tree) error {
 	// backup the last node
 	peer, ok := lastNode.Value().(*Receptor)
 	if ok {
-		p := newPeerItem(peer)
+		p := newReceptor(peer)
 		peers.Receptors = append(peers.Receptors, p)
 	}
 
 	out, err := proto.Marshal(&peers)
 	if nil != err {
-		return fmt.Errorf("failed to marshal peer")
+		return fmt.Errorf("failed to marshal receptor")
 	}
 
-	if err := ioutil.WriteFile(peerFile, out, 0600); err != nil {
-		return fmt.Errorf("failed to write peers to a file: %s", err)
+	if err := ioutil.WriteFile(backupFile, out, 0600); err != nil {
+		return fmt.Errorf("failed writing receptors to file: %s", err)
 	}
 	return nil
 }
 
-// Restore - restore peers from peer file
-func Restore(peerFile string) (List, error) {
-	var peers List
-	data, err := ioutil.ReadFile(peerFile)
+// Restore - restore receptors from file
+func Restore(backupFile string) (List, error) {
+	var list List
+	data, err := ioutil.ReadFile(backupFile)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return List{}, nil
 		}
 		return List{}, err
 	}
-	err = proto.Unmarshal(data, &peers)
+	err = proto.Unmarshal(data, &list)
 	if nil != err {
 		return List{}, err
 	}
-	return peers, nil
+	return list, nil
 }
