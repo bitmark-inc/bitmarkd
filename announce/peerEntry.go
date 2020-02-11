@@ -10,7 +10,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/announce/receiver"
+	"github.com/bitmark-inc/bitmarkd/announce/receptor"
 
 	"github.com/bitmark-inc/bitmarkd/announce/id"
 
@@ -63,14 +63,14 @@ func addPeer(peerID peerlib.ID, listeners []ma.Multiaddr, timestamp uint64) bool
 		return false
 	}
 
-	r := &receiver.Receiver{
+	r := &receptor.Receptor{
 		ID:        peerID,
 		Listeners: listeners,
 		Timestamp: ts,
 	}
 	// TODO: Take care of r update and r replace base on protocol of multiaddress
 	if node, _ := globalData.peerTree.Search(id.ID(peerID)); nil != node {
-		peer := node.Value().(*receiver.Receiver)
+		peer := node.Value().(*receptor.Receptor)
 
 		if ts.Sub(peer.Timestamp) < announceRebroadcast {
 			return false
@@ -120,7 +120,7 @@ func GetNext(peerID peerlib.ID) (peerlib.ID, []ma.Multiaddr, time.Time, error) {
 	if nil == node {
 		return peerlib.ID(""), nil, time.Now(), fault.InvalidPublicKey
 	}
-	peer := node.Value().(*receiver.Receiver)
+	peer := node.Value().(*receptor.Receptor)
 	return peer.ID, peer.Listeners, peer.Timestamp, nil
 }
 
@@ -146,7 +146,7 @@ retryLoop:
 		if nil == node {
 			break retryLoop
 		}
-		peer := node.Value().(*receiver.Receiver)
+		peer := node.Value().(*receptor.Receptor)
 		if util.IDEqual(peer.ID, globalData.peerID) || util.IDEqual(peer.ID, peerID) {
 			continue retryLoop
 		}
@@ -167,6 +167,6 @@ func setPeerTimestamp(peerID peerlib.ID, timestamp time.Time) {
 		return
 	}
 
-	peer := node.Value().(*receiver.Receiver)
+	peer := node.Value().(*receptor.Receptor)
 	peer.Timestamp = timestamp
 }

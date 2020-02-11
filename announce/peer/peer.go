@@ -12,13 +12,13 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/avl"
 
-	"github.com/bitmark-inc/bitmarkd/announce/receiver"
+	"github.com/bitmark-inc/bitmarkd/announce/receptor"
 
 	proto "github.com/golang/protobuf/proto"
 )
 
-// NewPeerItem - create a PeerItem from receiver.Receiver
-func NewPeerItem(peer *receiver.Receiver) *PeerItem {
+// NewPeerItem - create a PeerItem from receptor.Receptor
+func NewPeerItem(peer *receptor.Receptor) *PeerItem {
 	if peer == nil {
 		return nil
 	}
@@ -47,7 +47,7 @@ func Backup(peerFile string, tree *avl.Tree) error {
 	node := tree.First()
 
 	for node != lastNode {
-		peer, ok := node.Value().(*receiver.Receiver)
+		peer, ok := node.Value().(*receptor.Receptor)
 		if ok {
 			p := NewPeerItem(peer)
 
@@ -57,7 +57,7 @@ func Backup(peerFile string, tree *avl.Tree) error {
 	}
 
 	// backup the last node
-	peer, ok := lastNode.Value().(*receiver.Receiver)
+	peer, ok := lastNode.Value().(*receptor.Receptor)
 	if ok {
 		p := NewPeerItem(peer)
 		peers.Peers = append(peers.Peers, p)

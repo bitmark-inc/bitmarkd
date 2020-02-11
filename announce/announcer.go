@@ -12,7 +12,7 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/announce/peer"
 
-	"github.com/bitmark-inc/bitmarkd/announce/receiver"
+	"github.com/bitmark-inc/bitmarkd/announce/receptor"
 	"github.com/bitmark-inc/bitmarkd/util"
 
 	"github.com/bitmark-inc/bitmarkd/messagebus"
@@ -49,7 +49,7 @@ func (ann *announcer) initialise() error {
 }
 
 // wait for incoming requests, process them and reply
-func (ann *announcer) Run(args interface{}, shutdown <-chan struct{}) {
+func (ann *announcer) Run(_ interface{}, shutdown <-chan struct{}) {
 
 	log := ann.log
 
@@ -117,7 +117,10 @@ loop:
 					continue loop
 				}
 				log.Infof("-><-  request self announce data add to tree: %v  listener: %s", id, printBinaryAddrs(item.Parameters[1]))
-				setSelf(id, addrs)
+				err = setSelf(id, addrs)
+				if nil != err {
+					log.Errorf("announcer set with error: %s", err)
+				}
 			default:
 			}
 		case <-delay:
@@ -127,7 +130,7 @@ loop:
 	}
 }
 
-// process the annoucement and return response to receiver
+// process the annoucement and return response to receptor
 func (ann *announcer) process() {
 
 	log := ann.log
@@ -233,7 +236,7 @@ deduplicate:
 		}
 		node := globalData.peerTree.Get(v)
 		if nil != node {
-			p := node.Value().(*receiver.Receiver)
+			p := node.Value().(*receptor.Receptor)
 			if nil != p {
 				idBinary, errID := p.ID.Marshal()
 				pbAddr := util.GetBytesFromMultiaddr(p.Listeners)
@@ -254,23 +257,23 @@ func expirePeer(log *logger.L) {
 scan_nodes:
 	for node := nextNode; nil != node; node = nextNode {
 
-		peer := node.Value().(*receiver.Receiver)
+		p := node.Value().(*receptor.Receptor)
 		key := node.Key()
 
 		nextNode = node.Next()
 
 		// skip this node's entry
-		if globalData.peerID.String() == peer.ID.String() {
+		if globalData.peerID.String() == p.ID.String() {
 			continue scan_nodes
 		}
-		if peer.Timestamp.Add(announceExpiry).Before(now) {
+		if p.Timestamp.Add(announceExpiry).Before(now) {
 			globalData.peerTree.Delete(key)
 			globalData.treeChanged = true
-			util.LogDebug(log, util.CoReset, fmt.Sprintf("expirePeer : PeerID: %v! Timestamp: %s", peer.ID.ShortString(), peer.Timestamp.Format(timeFormat)))
-			idBinary, errID := peer.ID.Marshal()
+			util.LogDebug(log, util.CoReset, fmt.Sprintf("expirePeer : PeerID: %v! Timestamp: %s", p.ID.ShortString(), p.Timestamp.Format(timeFormat)))
+			idBinary, errID := p.ID.Marshal()
 			if nil == errID {
 				messagebus.Bus.P2P.Send("@D", idBinary)
-				util.LogInfo(log, util.CoYellow, fmt.Sprintf("--><-- Send @D to P2P  PeerID: %v", peer.ID.ShortString()))
+				util.LogInfo(log, util.CoYellow, fmt.Sprintf("--><-- Send @D to P2P  PeerID: %v", p.ID.ShortString()))
 			}
 		}
 
@@ -287,7 +290,7 @@ func exhaustiveConnections(log *logger.L) {
 	for i := 0; i < count; i++ {
 		node := globalData.peerTree.Get(i)
 		if nil != node {
-			p := node.Value().(*receiver.Receiver)
+			p := node.Value().(*receptor.Receptor)
 			if nil != p && !util.IDEqual(p.ID, globalData.peerID) {
 				idBinary, errID := p.ID.Marshal()
 				pbAddr := util.GetBytesFromMultiaddr(p.Listeners)

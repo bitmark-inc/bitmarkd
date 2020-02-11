@@ -23,7 +23,7 @@ import (
 	p2pPeer "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/bitmark-inc/bitmarkd/announce/receiver"
+	"github.com/bitmark-inc/bitmarkd/announce/receptor"
 
 	ma "github.com/multiformats/go-multiaddr"
 )
@@ -38,7 +38,7 @@ func TestNewPeerItem(t *testing.T) {
 	addr2, _ := ma.NewMultiaddr("/ip6/5555:6666:7777:8888::/tcp/5678")
 	str := "test"
 
-	r := receiver.Receiver{
+	r := receptor.Receptor{
 		ID:        p2pPeer.ID(str),
 		Listeners: []ma.Multiaddr{addr1, addr2},
 		Timestamp: now,
@@ -71,19 +71,19 @@ func TestBackup(t *testing.T) {
 	addr2, _ := ma.NewMultiaddr("/ip6/5:6:7:8::/tcp/5678")
 	addr3, _ := ma.NewMultiaddr("/ip6/11:12:13:14::/tcp/11223")
 	now := time.Now()
-	p1 := &receiver.Receiver{
+	p1 := &receptor.Receptor{
 		ID:        "p1",
 		Listeners: []ma.Multiaddr{addr1},
 		Timestamp: now,
 	}
 
-	p2 := &receiver.Receiver{
+	p2 := &receptor.Receptor{
 		ID:        "p2",
 		Listeners: []ma.Multiaddr{addr2},
 		Timestamp: now,
 	}
 
-	p3 := &receiver.Receiver{
+	p3 := &receptor.Receptor{
 		ID:        "p3",
 		Listeners: []ma.Multiaddr{addr3},
 		Timestamp: now,
@@ -116,13 +116,13 @@ func TestBackupWhenCountLessOrEqualThanTwo(t *testing.T) {
 	addr1, _ := ma.NewMultiaddr("/ip4/1.2.3.4/tcp/1234")
 	addr2, _ := ma.NewMultiaddr("/ip6/5:6:7:8::/tcp/5678")
 	now := time.Now()
-	p1 := &receiver.Receiver{
+	p1 := &receptor.Receptor{
 		ID:        "p1",
 		Listeners: []ma.Multiaddr{addr1},
 		Timestamp: now,
 	}
 
-	p2 := &receiver.Receiver{
+	p2 := &receptor.Receptor{
 		ID:        "p2",
 		Listeners: []ma.Multiaddr{addr2},
 		Timestamp: now,
@@ -150,25 +150,25 @@ func TestRestore(t *testing.T) {
 	addr4, _ := ma.NewMultiaddr("/ip4/9.8.7.6/tcp/9876")
 	now := time.Now()
 
-	p1 := &receiver.Receiver{
+	p1 := &receptor.Receptor{
 		ID:        "p1",
 		Listeners: []ma.Multiaddr{addr1},
 		Timestamp: now,
 	}
 
-	p2 := &receiver.Receiver{
+	p2 := &receptor.Receptor{
 		ID:        "p2",
 		Listeners: []ma.Multiaddr{addr2},
 		Timestamp: now,
 	}
 
-	p3 := &receiver.Receiver{
+	p3 := &receptor.Receptor{
 		ID:        "p3",
 		Listeners: []ma.Multiaddr{addr3},
 		Timestamp: now,
 	}
 
-	p4 := &receiver.Receiver{
+	p4 := &receptor.Receptor{
 		ID:        "p4",
 		Listeners: []ma.Multiaddr{addr4},
 		Timestamp: now,

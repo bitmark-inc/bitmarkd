@@ -3,13 +3,13 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package receiver_test
+package receptor_test
 
 import (
 	"testing"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/announce/receiver"
+	"github.com/bitmark-inc/bitmarkd/announce/receptor"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/stretchr/testify/assert"
@@ -20,7 +20,7 @@ func TestString(t *testing.T) {
 	ma1, _ := ma.NewMultiaddr(str1)
 	str2 := "/ip6/::1/tcp/5678"
 	ma2, _ := ma.NewMultiaddr(str2)
-	r := receiver.Receiver{
+	r := receptor.Receptor{
 		ID:        peerlib.ID("this is a test"),
 		Listeners: []ma.Multiaddr{ma1, ma2},
 		Timestamp: time.Now(),
