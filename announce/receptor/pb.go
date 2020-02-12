@@ -22,10 +22,10 @@ var _ = math.Inf
 const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
 type List struct {
-	Receptors            []*ReceptorPB `protobuf:"bytes,1,rep,name=Receptors,proto3" json:"Receptors,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}      `json:"-"`
-	XXX_unrecognized     []byte        `json:"-"`
-	XXX_sizecache        int32         `json:"-"`
+	Receptors            []*DataPB `protobuf:"bytes,1,rep,name=Receptors,proto3" json:"Receptors,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}  `json:"-"`
+	XXX_unrecognized     []byte    `json:"-"`
+	XXX_sizecache        int32     `json:"-"`
 }
 
 func (m *List) Reset()         { *m = List{} }
@@ -53,14 +53,14 @@ func (m *List) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_PeerList proto.InternalMessageInfo
 
-func (m *List) GetPeers() []*ReceptorPB {
+func (m *List) GetPeers() []*DataPB {
 	if m != nil {
 		return m.Receptors
 	}
 	return nil
 }
 
-type ReceptorPB struct {
+type DataPB struct {
 	ID                   []byte   `protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"`
 	Listeners            *Addrs   `protobuf:"bytes,2,opt,name=Listeners,proto3" json:"Listeners,omitempty"`
 	Timestamp            uint64   `protobuf:"varint,3,opt,name=Timestamp,proto3" json:"Timestamp,omitempty"`
@@ -69,46 +69,46 @@ type ReceptorPB struct {
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *ReceptorPB) Reset()         { *m = ReceptorPB{} }
-func (m *ReceptorPB) String() string { return proto.CompactTextString(m) }
-func (*ReceptorPB) ProtoMessage()    {}
-func (*ReceptorPB) Descriptor() ([]byte, []int) {
+func (m *DataPB) Reset()         { *m = DataPB{} }
+func (m *DataPB) String() string { return proto.CompactTextString(m) }
+func (*DataPB) ProtoMessage()    {}
+func (*DataPB) Descriptor() ([]byte, []int) {
 	return fileDescriptor_37da6c6f39403d68, []int{1}
 }
 
-func (m *ReceptorPB) XXX_Unmarshal(b []byte) error {
+func (m *DataPB) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PeerItem.Unmarshal(m, b)
 }
-func (m *ReceptorPB) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *DataPB) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PeerItem.Marshal(b, m, deterministic)
 }
-func (m *ReceptorPB) XXX_Merge(src proto.Message) {
+func (m *DataPB) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_PeerItem.Merge(m, src)
 }
-func (m *ReceptorPB) XXX_Size() int {
+func (m *DataPB) XXX_Size() int {
 	return xxx_messageInfo_PeerItem.Size(m)
 }
-func (m *ReceptorPB) XXX_DiscardUnknown() {
+func (m *DataPB) XXX_DiscardUnknown() {
 	xxx_messageInfo_PeerItem.DiscardUnknown(m)
 }
 
 var xxx_messageInfo_PeerItem proto.InternalMessageInfo
 
-func (m *ReceptorPB) GetPeerID() []byte {
+func (m *DataPB) GetPeerID() []byte {
 	if m != nil {
 		return m.ID
 	}
 	return nil
 }
 
-func (m *ReceptorPB) GetListeners() *Addrs {
+func (m *DataPB) GetListeners() *Addrs {
 	if m != nil {
 		return m.Listeners
 	}
 	return nil
 }
 
-func (m *ReceptorPB) GetTimestamp() uint64 {
+func (m *DataPB) GetTimestamp() uint64 {
 	if m != nil {
 		return m.Timestamp
 	}
@@ -156,7 +156,7 @@ func (m *Addrs) GetAddress() [][]byte {
 
 func init() {
 	proto.RegisterType((*List)(nil), "bitmark.bitmarkd.announce.List")
-	proto.RegisterType((*ReceptorPB)(nil), "bitmark.bitmarkd.announce.ReceptorPB")
+	proto.RegisterType((*DataPB)(nil), "bitmark.bitmarkd.announce.DataPB")
 	proto.RegisterType((*Addrs)(nil), "bitmark.bitmarkd.announce.Addrs")
 }
 

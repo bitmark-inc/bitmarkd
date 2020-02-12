@@ -31,7 +31,7 @@ func TestString(t *testing.T) {
 	ma1, _ := ma.NewMultiaddr(str1)
 	str2 := "/ip6/::1/tcp/5678"
 	ma2, _ := ma.NewMultiaddr(str2)
-	r := receptor.Receptor{
+	r := receptor.Data{
 		ID:        peerlib.ID("this is a test"),
 		Listeners: []ma.Multiaddr{ma1, ma2},
 		Timestamp: time.Now(),
@@ -60,19 +60,19 @@ func TestBackup(t *testing.T) {
 	addr3, _ := ma.NewMultiaddr("/ip6/11:12:13:14::/tcp/11223")
 	now := time.Now()
 
-	p1 := &receptor.Receptor{
+	p1 := &receptor.Data{
 		ID:        "p1",
 		Listeners: []ma.Multiaddr{addr1},
 		Timestamp: now,
 	}
 
-	p2 := &receptor.Receptor{
+	p2 := &receptor.Data{
 		ID:        "p2",
 		Listeners: []ma.Multiaddr{addr2},
 		Timestamp: now,
 	}
 
-	p3 := &receptor.Receptor{
+	p3 := &receptor.Data{
 		ID:        "p3",
 		Listeners: []ma.Multiaddr{addr3},
 		Timestamp: now,
@@ -107,13 +107,13 @@ func TestBackupWhenCountLessOrEqualThanTwo(t *testing.T) {
 	addr1, _ := ma.NewMultiaddr("/ip4/1.2.3.4/tcp/1234")
 	addr2, _ := ma.NewMultiaddr("/ip6/5:6:7:8::/tcp/5678")
 	now := time.Now()
-	p1 := &receptor.Receptor{
+	p1 := &receptor.Data{
 		ID:        "p1",
 		Listeners: []ma.Multiaddr{addr1},
 		Timestamp: now,
 	}
 
-	p2 := &receptor.Receptor{
+	p2 := &receptor.Data{
 		ID:        "p2",
 		Listeners: []ma.Multiaddr{addr2},
 		Timestamp: now,
@@ -141,25 +141,25 @@ func TestRestore(t *testing.T) {
 	addr4, _ := ma.NewMultiaddr("/ip4/9.8.7.6/tcp/9876")
 	now := time.Now()
 
-	p1 := &receptor.Receptor{
+	p1 := &receptor.Data{
 		ID:        "p1",
 		Listeners: []ma.Multiaddr{addr1},
 		Timestamp: now,
 	}
 
-	p2 := &receptor.Receptor{
+	p2 := &receptor.Data{
 		ID:        "p2",
 		Listeners: []ma.Multiaddr{addr2},
 		Timestamp: now,
 	}
 
-	p3 := &receptor.Receptor{
+	p3 := &receptor.Data{
 		ID:        "p3",
 		Listeners: []ma.Multiaddr{addr3},
 		Timestamp: now,
 	}
 
-	p4 := &receptor.Receptor{
+	p4 := &receptor.Data{
 		ID:        "p4",
 		Listeners: []ma.Multiaddr{addr4},
 		Timestamp: now,

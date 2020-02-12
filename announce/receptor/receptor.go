@@ -18,23 +18,23 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 )
 
-type Receptor struct {
+type Data struct {
 	ID        peerlib.ID
 	Listeners []ma.Multiaddr
 	Timestamp time.Time // last seen time
 }
 
 // string - conversion from fmt package
-func (r Receptor) String() []string {
+func (d Data) String() []string {
 	allAddress := make([]string, 0)
-	for _, listener := range r.Listeners {
+	for _, listener := range d.Listeners {
 		fmt.Println("str: ", listener.String())
 		allAddress = append(allAddress, listener.String())
 	}
 	return allAddress
 }
 
-func newReceptor(r *Receptor) *ReceptorPB {
+func pb(r *Data) *DataPB {
 	if r == nil {
 		return nil
 	}
@@ -43,29 +43,29 @@ func newReceptor(r *Receptor) *ReceptorPB {
 		pbAddrs = append(pbAddrs, listener.Bytes())
 	}
 	binaryID, _ := r.ID.Marshal()
-	return &ReceptorPB{
+	return &DataPB{
 		ID:        binaryID,
 		Listeners: &Addrs{Address: pbAddrs},
 		Timestamp: uint64(r.Timestamp.Unix()),
 	}
 }
 
-// Backup - backup all receptors into file
+// Backup - backup all receptor data into file
 func Backup(backupFile string, tree *avl.Tree) error {
 	if tree.Count() <= 2 {
 		return nil
 	}
 
 	list := List{
-		Receptors: make([]*ReceptorPB, 0),
+		Receptors: make([]*DataPB, 0),
 	}
 
 	node := tree.First()
 	if node != nil {
 		for ; node != nil; node = node.Next() {
-			receptor, ok := node.Value().(*Receptor)
+			data, ok := node.Value().(*Data)
 			if ok {
-				r := newReceptor(receptor)
+				r := pb(data)
 				list.Receptors = append(list.Receptors, r)
 			}
 		}

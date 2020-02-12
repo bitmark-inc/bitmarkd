@@ -231,7 +231,7 @@ deduplicate:
 		}
 		node := globalData.tree.Get(v)
 		if nil != node {
-			p := node.Value().(*receptor.Receptor)
+			p := node.Value().(*receptor.Data)
 			if nil != p {
 				idBinary, errID := p.ID.Marshal()
 				pbAddr := util.GetBytesFromMultiaddr(p.Listeners)
@@ -252,7 +252,7 @@ func expirePeer(log *logger.L) {
 loop:
 	for node := nextNode; nil != node; node = nextNode {
 
-		p := node.Value().(*receptor.Receptor)
+		p := node.Value().(*receptor.Data)
 		key := node.Key()
 
 		nextNode = node.Next()
@@ -285,7 +285,7 @@ func exhaustiveConnections(log *logger.L) {
 	for i := 0; i < count; i++ {
 		node := globalData.tree.Get(i)
 		if nil != node {
-			p := node.Value().(*receptor.Receptor)
+			p := node.Value().(*receptor.Data)
 			if nil != p && !util.IDEqual(p.ID, globalData.peerID) {
 				idBinary, errID := p.ID.Marshal()
 				pbAddr := util.GetBytesFromMultiaddr(p.Listeners)

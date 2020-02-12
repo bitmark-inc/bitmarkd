@@ -60,14 +60,14 @@ func addPeer(peerID peerlib.ID, listeners []ma.Multiaddr, timestamp uint64) bool
 		return false
 	}
 
-	r := &receptor.Receptor{
+	r := &receptor.Data{
 		ID:        peerID,
 		Listeners: listeners,
 		Timestamp: ts,
 	}
 	// TODO: Take care of r update and r replace base on protocol of multiaddress
 	if node, _ := globalData.tree.Search(id.ID(peerID)); nil != node {
-		peer := node.Value().(*receptor.Receptor)
+		peer := node.Value().(*receptor.Data)
 
 		if ts.Sub(peer.Timestamp) < announceRebroadcast {
 			return false
@@ -107,7 +107,7 @@ func GetNext(peerID peerlib.ID) (peerlib.ID, []ma.Multiaddr, time.Time, error) {
 	if nil == node {
 		return peerlib.ID(""), nil, time.Now(), fault.InvalidPublicKey
 	}
-	peer := node.Value().(*receptor.Receptor)
+	peer := node.Value().(*receptor.Data)
 	return peer.ID, peer.Listeners, peer.Timestamp, nil
 }
 
@@ -133,7 +133,7 @@ retryLoop:
 		if nil == node {
 			break retryLoop
 		}
-		peer := node.Value().(*receptor.Receptor)
+		peer := node.Value().(*receptor.Data)
 		if util.IDEqual(peer.ID, globalData.peerID) || util.IDEqual(peer.ID, peerID) {
 			continue retryLoop
 		}
@@ -154,6 +154,6 @@ func setPeerTimestamp(peerID peerlib.ID, timestamp time.Time) {
 		return
 	}
 
-	peer := node.Value().(*receptor.Receptor)
+	peer := node.Value().(*receptor.Data)
 	peer.Timestamp = timestamp
 }
