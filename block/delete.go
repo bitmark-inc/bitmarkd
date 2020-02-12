@@ -398,6 +398,9 @@ outer_loop:
 
 		// commit db transactions
 		trx.Commit()
+
+		// ensure this block's hash is completely erased
+		blockheader.ClearCache()
 	}
 	return nil
 }
