@@ -18,6 +18,11 @@ import (
 	"github.com/bitmark-inc/bitmarkd/util"
 )
 
+const (
+	singleAddrsCountLimit = 100
+	totalAddrsCountLimit  = 1000
+)
+
 type RPC interface {
 	Add([]byte, []byte, uint64) bool
 	Expire()
@@ -47,16 +52,15 @@ type rpc struct {
 	fingerprint fingerprint.Type
 
 	// database of all RPCs
-	// TODO: rename
-	rpcIndex map[fingerprint.Type]int // index to find rpc node
-	nodes    []*node                  // array of RPCs
+	index map[fingerprint.Type]int // index to find rpc node
+	nodes []*node                  // array of RPCs
 }
 
 // New - return RPC interface
 func New() RPC {
 	return &rpc{
-		rpcIndex: make(map[fingerprint.Type]int, 1000),
-		nodes:    make([]*node, 0, 1000),
+		index: make(map[fingerprint.Type]int, totalAddrsCountLimit),
+		nodes: make([]*node, 0, totalAddrsCountLimit),
 	}
 }
 
@@ -93,8 +97,7 @@ func (r *rpc) Set(fingerprint fingerprint.Type, rpcs []byte) error {
 func (r *rpc) Add(clientFingerprint []byte, rpcs []byte, timestamp uint64) bool {
 	var fp fingerprint.Type
 	// discard invalid records
-	// TODO: 100 should be constant
-	if len(fp) != len(clientFingerprint) || len(rpcs) > 100 {
+	if len(fp) != len(clientFingerprint) || len(rpcs) > singleAddrsCountLimit {
 		return false
 	}
 	copy(fp[:], clientFingerprint)
@@ -108,7 +111,7 @@ func (r *rpc) Add(clientFingerprint []byte, rpcs []byte, timestamp uint64) bool 
 // internal add an remote RPC listener, hold lock before calling
 func (r *rpc) add(fingerprint fingerprint.Type, rpcs []byte, timestamp uint64, local bool) bool {
 
-	i, ok := r.rpcIndex[fingerprint]
+	i, ok := r.index[fingerprint]
 
 	// if new item
 	if !ok {
@@ -127,7 +130,7 @@ func (r *rpc) add(fingerprint fingerprint.Type, rpcs []byte, timestamp uint64, l
 		}
 		n := len(r.nodes)
 		r.nodes = append(r.nodes, e)
-		r.rpcIndex[fingerprint] = n
+		r.index[fingerprint] = n
 		return true
 	}
 
@@ -161,12 +164,12 @@ loop:
 
 		// TODO: fix this
 		if time.Since(e.timestamp) > 15*time.Minute {
-			delete(r.rpcIndex, e.fingerprint)
+			delete(r.index, e.fingerprint)
 			n -= 1
 			if i != n {
 				e := r.nodes[n]
 				r.nodes[i] = e
-				r.rpcIndex[e.fingerprint] = i
+				r.index[e.fingerprint] = i
 			}
 			r.nodes[n] = nil
 		}

@@ -6,148 +6,41 @@
 package announce
 
 import (
-	"crypto/rand"
-	"math/big"
 	"time"
-
-	"github.com/bitmark-inc/bitmarkd/announce/helper"
 
 	"github.com/bitmark-inc/bitmarkd/announce/receptor"
 
 	"github.com/bitmark-inc/bitmarkd/announce/id"
 
-	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/util"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 )
-
-// setSelf - called by the peering initialisation to set up this
-// node's announcement data
-func setSelf(peerID peerlib.ID, listeners []ma.Multiaddr) error {
-	globalData.Lock()
-	defer globalData.Unlock()
-
-	if globalData.peerSet {
-		return fault.AlreadyInitialised
-	}
-	globalData.peerID = peerID
-	globalData.listeners = listeners
-	globalData.peerSet = true
-
-	addPeer(peerID, listeners, uint64(time.Now().Unix()))
-	globalData.thisNode, _ = globalData.tree.Search(id.ID(peerID))
-	determineConnections(globalData.log)
-
-	return nil
-}
 
 // AddPeer - add a peer announcement to the in-memory tree
 // returns:
 //   true  if this was a new/updated entry
 //   false if the update was within the limits (to prevent continuous relaying)
 func AddPeer(peerID peerlib.ID, listeners []ma.Multiaddr, timestamp uint64) bool {
-	globalData.Lock()
-	rc := addPeer(peerID, listeners, timestamp)
-	globalData.Unlock()
-	return rc
-}
-
-// addPeer - internal add a peer announcement, hold lock before calling
-func addPeer(peerID peerlib.ID, listeners []ma.Multiaddr, timestamp uint64) bool {
-	ts := helper.ResetFutureTimeToNow(timestamp)
-	if helper.IsExpiredAfterDuration(ts, announceExpiry) {
-		return false
-	}
-
-	r := &receptor.Data{
-		ID:        peerID,
-		Listeners: listeners,
-		Timestamp: ts,
-	}
-	// TODO: Take care of r update and r replace base on protocol of multiaddress
-	if node, _ := globalData.tree.Search(id.ID(peerID)); nil != node {
-		peer := node.Value().(*receptor.Data)
-
-		if ts.Sub(peer.Timestamp) < announceRebroadcast {
-			return false
-		}
-
-	}
-
-	// add or update the Timestamp in the tree
-	recordAdded := globalData.tree.Insert(id.ID(peerID), r)
-
-	globalData.log.Infof("Peer Added:  ID: %s,  add:%t  nodes in the r tree: %d", peerID.String(), recordAdded, globalData.tree.Count())
-
-	// if adding this nodes data
-	if util.IDEqual(globalData.peerID, peerID) {
-		return false
-	}
-
-	if recordAdded {
-		globalData.treeChanged = true
-	}
-
-	return true
+	return globalData.receptors.Add(peerID, listeners, timestamp)
 }
 
 // GetNext - fetch next node data in the ring by given public key
 func GetNext(peerID peerlib.ID) (peerlib.ID, []ma.Multiaddr, time.Time, error) {
-	globalData.Lock()
-	defer globalData.Unlock()
-
-	node, _ := globalData.tree.Search(id.ID(peerID))
-	if nil != node {
-		node = node.Next()
-	}
-	if nil == node {
-		node = globalData.tree.First()
-	}
-	if nil == node {
-		return peerlib.ID(""), nil, time.Now(), fault.InvalidPublicKey
-	}
-	peer := node.Value().(*receptor.Data)
-	return peer.ID, peer.Listeners, peer.Timestamp, nil
+	return globalData.receptors.Next(peerID)
 }
 
 // GetRandom - fetch random node data in the ring not matching given public key
 func GetRandom(peerID peerlib.ID) (peerlib.ID, []ma.Multiaddr, time.Time, error) {
-	globalData.Lock()
-	defer globalData.Unlock()
-
-retryLoop:
-	for tries := 1; tries <= 5; tries += 1 {
-		max := big.NewInt(int64(globalData.tree.Count()))
-		r, err := rand.Int(rand.Reader, max)
-		if nil != err {
-			continue retryLoop
-		}
-
-		n := int(r.Int64()) // 0 … max-1
-
-		node := globalData.tree.Get(n)
-		if nil == node {
-			node = globalData.tree.First()
-		}
-		if nil == node {
-			break retryLoop
-		}
-		peer := node.Value().(*receptor.Data)
-		if util.IDEqual(peer.ID, globalData.peerID) || util.IDEqual(peer.ID, peerID) {
-			continue retryLoop
-		}
-		return peer.ID, peer.Listeners, peer.Timestamp, nil
-	}
-	return peerlib.ID(""), nil, time.Now(), fault.InvalidPublicKey
+	return globalData.receptors.Random(peerID)
 }
 
 // setPeerTimestamp - set the timestamp for the peer with given public key
+// TODO: move into receptor
 func setPeerTimestamp(peerID peerlib.ID, timestamp time.Time) {
 	globalData.Lock()
 	defer globalData.Unlock()
 
-	node, _ := globalData.tree.Search(id.ID(peerID))
+	node, _ := globalData.receptors.Tree().Search(id.ID(peerID))
 	log := globalData.log
 	if nil == node {
 		log.Errorf("The peer with public key %x is not existing in peer tree", peerID.Pretty())

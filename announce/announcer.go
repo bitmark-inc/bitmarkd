@@ -92,8 +92,8 @@ loop:
 					util.LogError(log, util.CoRed, "No valid listener address: addrs is empty")
 					continue loop
 				}
-				addPeer(id, addrs, timestamp)
-				util.LogDebug(log, util.CoYellow, fmt.Sprintf("-><- addpeer : %s  listener: %s  Timestamp: %d", id.String(), printBinaryAddrs(item.Parameters[1]), timestamp))
+				globalData.receptors.Add(id, addrs, timestamp)
+				util.LogDebug(log, util.CoYellow, fmt.Sprintf("-><- addpeer : %s  listener: %s  Timestamp: %d", id.String(), receptor.AddrToString(item.Parameters[1]), timestamp))
 				//globalData.tree.Print(false)
 			case "addrpc":
 				timestamp := binary.BigEndian.Uint64(item.Parameters[2])
@@ -112,8 +112,8 @@ loop:
 					log.Warn("No valid listener address")
 					continue loop
 				}
-				log.Infof("-><-  request self announce data add to tree: %v  listener: %s", id, printBinaryAddrs(item.Parameters[1]))
-				err = setSelf(id, addrs)
+				log.Infof("-><-  request self announce data add to tree: %v  listener: %s", id, receptor.AddrToString(item.Parameters[1]))
+				err = globalData.receptors.SetSelf(id, addrs)
 				if nil != err {
 					log.Errorf("announcer set with error: %s", err)
 				}
@@ -145,13 +145,12 @@ func (ann *announcer) process() {
 			messagebus.Bus.P2P.Send("rpc", globalData.fingerprint[:], globalData.rpcs.Self(), timestamp)
 		}
 	}
-	if globalData.peerSet {
-		addrsBinary, errAddr := proto.Marshal(&receptor.Addrs{Address: util.GetBytesFromMultiaddr(globalData.listeners)})
-		idBinary, errID := globalData.peerID.MarshalBinary()
-		if nil == errAddr && nil == errID {
-			util.LogInfo(log, util.CoYellow, fmt.Sprintf("-><-send self data to P2P ID:%v address:%v", globalData.peerID.ShortString(), util.PrintMaAddrs(globalData.listeners)))
+	if globalData.receptors.IsSet() {
+		addrsBinary, errAddr := proto.Marshal(&receptor.Addrs{Address: util.GetBytesFromMultiaddr(globalData.receptors.SelfAddress())})
+		if nil == errAddr {
+			util.LogInfo(log, util.CoYellow, fmt.Sprintf("-><-send self data to P2P ID:%v address:%v", globalData.receptors.ShortID(), util.PrintMaAddrs(globalData.receptors.SelfAddress())))
 			if globalData.dnsPeerOnly == UsePeers { //Make self a  hiden node to avoid been connected
-				messagebus.Bus.P2P.Send("peer", idBinary, addrsBinary, timestamp)
+				messagebus.Bus.P2P.Send("peer", globalData.receptors.BinaryID(), addrsBinary, timestamp)
 			}
 		}
 	}
@@ -159,26 +158,27 @@ func (ann *announcer) process() {
 	expirePeer(log)
 
 	//if globalData.treeChanged {
-	count := globalData.tree.Count()
+	count := globalData.receptors.Tree().Count()
 	if count <= MinTreeExpected {
 		exhaustiveConnections(log)
 	} else {
 		determineConnections(log)
 	}
 
-	globalData.treeChanged = false
+	globalData.receptors.Change(false)
 	//}
 }
 
 func determineConnections(log *logger.L) {
-	if nil == globalData.thisNode {
+	if nil == globalData.receptors.Self() {
 		util.LogWarn(log, util.CoRed, fmt.Sprintf("determineConnections called to early"))
 		return // called to early
 	}
 
 	// locate this node in the tree
-	_, index := globalData.tree.Search(globalData.thisNode.Key())
-	count := globalData.tree.Count()
+	tree := globalData.receptors.Tree()
+	_, index := tree.Search(globalData.receptors.Self().Key())
+	count := tree.Count()
 
 	// various increment values
 	e := count / 8
@@ -229,7 +229,7 @@ deduplicate:
 		if v >= count {
 			v -= count
 		}
-		node := globalData.tree.Get(v)
+		node := tree.Get(v)
 		if nil != node {
 			p := node.Value().(*receptor.Data)
 			if nil != p {
@@ -238,7 +238,7 @@ deduplicate:
 				pbAddrBinary, errMarshal := proto.Marshal(&receptor.Addrs{Address: pbAddr})
 				if nil == errID && nil == errMarshal {
 					messagebus.Bus.P2P.Send(names[i], idBinary, pbAddrBinary)
-					util.LogDebug(log, util.CoYellow, fmt.Sprintf("--><-- determine send to P2P %v : %s  address: %x ", names[i], p.ID.ShortString(), printBinaryAddrs(pbAddrBinary)))
+					util.LogDebug(log, util.CoYellow, fmt.Sprintf("--><-- determine send to P2P %v : %s  address: %x ", names[i], p.ID.ShortString(), receptor.AddrToString(pbAddrBinary)))
 				}
 			}
 
@@ -248,7 +248,8 @@ deduplicate:
 
 func expirePeer(log *logger.L) {
 	now := time.Now()
-	nextNode := globalData.tree.First()
+	tree := globalData.receptors.Tree()
+	nextNode := tree.First()
 loop:
 	for node := nextNode; nil != node; node = nextNode {
 
@@ -258,12 +259,12 @@ loop:
 		nextNode = node.Next()
 
 		// skip this node's entry
-		if globalData.peerID.String() == p.ID.String() {
+		if globalData.receptors.ID().String() == p.ID.String() {
 			continue loop
 		}
 		if p.Timestamp.Add(announceExpiry).Before(now) {
-			globalData.tree.Delete(key)
-			globalData.treeChanged = true
+			tree.Delete(key)
+			globalData.receptors.Change(true)
 			util.LogDebug(log, util.CoReset, fmt.Sprintf("expirePeer : ID: %v! Timestamp: %s", p.ID.ShortString(), p.Timestamp.Format(timeFormat)))
 			idBinary, errID := p.ID.Marshal()
 			if nil == errID {
@@ -276,23 +277,24 @@ loop:
 }
 
 func exhaustiveConnections(log *logger.L) {
-	if nil == globalData.thisNode {
+	tree := globalData.receptors.Tree()
+	if nil == globalData.receptors.Self() {
 		util.LogWarn(log, util.CoRed, fmt.Sprintf("exhaustiveConnections called to early"))
 		return // called to early
 	}
 	// locate this node in the tree
-	count := globalData.tree.Count()
+	count := tree.Count()
 	for i := 0; i < count; i++ {
-		node := globalData.tree.Get(i)
+		node := tree.Get(i)
 		if nil != node {
 			p := node.Value().(*receptor.Data)
-			if nil != p && !util.IDEqual(p.ID, globalData.peerID) {
+			if nil != p && !util.IDEqual(p.ID, globalData.receptors.ID()) {
 				idBinary, errID := p.ID.Marshal()
 				pbAddr := util.GetBytesFromMultiaddr(p.Listeners)
 				pbAddrBinary, errMarshal := proto.Marshal(&receptor.Addrs{Address: pbAddr})
 				if nil == errID && nil == errMarshal {
 					messagebus.Bus.P2P.Send("ES", idBinary, pbAddrBinary)
-					util.LogDebug(log, util.CoYellow, fmt.Sprintf("--><-- exhaustiveConnections send to P2P %v : %s  address: %x ", "ES", p.ID.ShortString(), printBinaryAddrs(pbAddrBinary)))
+					util.LogDebug(log, util.CoYellow, fmt.Sprintf("--><-- exhaustiveConnections send to P2P %v : %s  address: %x ", "ES", p.ID.ShortString(), receptor.AddrToString(pbAddrBinary)))
 				}
 			}
 		}

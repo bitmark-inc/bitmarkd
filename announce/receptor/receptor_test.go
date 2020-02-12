@@ -6,182 +6,303 @@
 package receptor_test
 
 import (
-	fmt "fmt"
-	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/announce/id"
-	"github.com/bitmark-inc/bitmarkd/avl"
 	"github.com/gogo/protobuf/proto"
 
-	"github.com/bitmark-inc/bitmarkd/announce/receptor"
-	peerlib "github.com/libp2p/go-libp2p-core/peer"
-	ma "github.com/multiformats/go-multiaddr"
+	"github.com/bitmark-inc/bitmarkd/util"
+
+	"github.com/bitmark-inc/bitmarkd/announce/id"
+
+	"github.com/bitmark-inc/logger"
+
+	"github.com/bitmark-inc/bitmarkd/fault"
+
 	"github.com/stretchr/testify/assert"
+
+	ma "github.com/multiformats/go-multiaddr"
+
+	"github.com/bitmark-inc/bitmarkd/announce/receptor"
+	peer "github.com/libp2p/go-libp2p-core/peer"
 )
 
 const (
-	backupFile = "peers"
+	testingDirName = "testing"
+	logCategory    = "announce"
 )
 
-func TestString(t *testing.T) {
-	str1 := "/ip4/1.2.3.4/tcp/1234"
-	ma1, _ := ma.NewMultiaddr(str1)
-	str2 := "/ip6/::1/tcp/5678"
-	ma2, _ := ma.NewMultiaddr(str2)
-	r := receptor.Data{
-		ID:        peerlib.ID("this is a test"),
-		Listeners: []ma.Multiaddr{ma1, ma2},
-		Timestamp: time.Now(),
+func setupTestLogger() {
+	removeFiles()
+	_ = os.Mkdir(testingDirName, 0700)
+
+	logging := logger.Configuration{
+		Directory: testingDirName,
+		File:      "testing.log",
+		Size:      1048576,
+		Count:     10,
+		Console:   false,
+		Levels: map[string]string{
+			logger.DefaultTag: "critical",
+		},
 	}
 
-	actual := r.String()
-
-	assert.Equal(t, 2, len(actual), "wrong count")
-	assert.Equal(t, str1, actual[0], "wrong first addr")
-	assert.Equal(t, str2, actual[1], "wrong second addr")
+	// start logging
+	_ = logger.Initialise(logging)
 }
 
-func removeBackupFile() {
-	if _, err := os.Stat(backupFile); !os.IsNotExist(err) {
-		_ = os.Remove(backupFile)
-	}
+func teardownTestLogger() {
+	removeFiles()
 }
 
-func TestBackup(t *testing.T) {
-	removeBackupFile()
-	defer removeBackupFile()
-
-	tree := avl.New()
-	addr1, _ := ma.NewMultiaddr("/ip4/1.2.3.4/tcp/1234")
-	addr2, _ := ma.NewMultiaddr("/ip6/5:6:7:8::/tcp/5678")
-	addr3, _ := ma.NewMultiaddr("/ip6/11:12:13:14::/tcp/11223")
-	now := time.Now()
-
-	p1 := &receptor.Data{
-		ID:        "p1",
-		Listeners: []ma.Multiaddr{addr1},
-		Timestamp: now,
-	}
-
-	p2 := &receptor.Data{
-		ID:        "p2",
-		Listeners: []ma.Multiaddr{addr2},
-		Timestamp: now,
-	}
-
-	p3 := &receptor.Data{
-		ID:        "p3",
-		Listeners: []ma.Multiaddr{addr3},
-		Timestamp: now,
-	}
-
-	tree.Insert(id.ID("p1"), p1)
-	tree.Insert(id.ID("p2"), p2)
-	tree.Insert(id.ID("p3"), p3)
-
-	fmt.Println("last.next: ", tree.Last().Next())
-
-	err := receptor.Backup(backupFile, tree)
-	assert.Nil(t, err, "wrong store")
-
-	data, err := ioutil.ReadFile(backupFile)
-	assert.Nil(t, err, "peer file read error")
-
-	var peers receptor.List
-	err = proto.Unmarshal(data, &peers)
-	assert.Nil(t, err, "wrong unmarshal pb")
-	assert.Equal(t, 3, len(peers.Receptors), "wrong peer count")
-	assert.Equal(t, "p1", string(peers.Receptors[0].ID), "wrong first peer")
-	assert.Equal(t, "p2", string(peers.Receptors[1].ID), "wrong second peer")
-	assert.Equal(t, "p3", string(peers.Receptors[2].ID), "wrong third peer")
+func removeFiles() {
+	_ = os.RemoveAll(testingDirName)
 }
 
-func TestBackupWhenCountLessOrEqualThanTwo(t *testing.T) {
-	removeBackupFile()
-	defer removeBackupFile()
+func TestAdd(t *testing.T) {
+	setupTestLogger()
+	defer teardownTestLogger()
 
-	tree := avl.New()
+	r := receptor.New(logger.New(logCategory))
 	addr1, _ := ma.NewMultiaddr("/ip4/1.2.3.4/tcp/1234")
 	addr2, _ := ma.NewMultiaddr("/ip6/5:6:7:8::/tcp/5678")
 	now := time.Now()
-	p1 := &receptor.Data{
-		ID:        "p1",
-		Listeners: []ma.Multiaddr{addr1},
-		Timestamp: now,
-	}
+	myID := peer.ID("test")
 
-	p2 := &receptor.Data{
-		ID:        "p2",
-		Listeners: []ma.Multiaddr{addr2},
-		Timestamp: now,
-	}
+	added := r.Add(myID, []ma.Multiaddr{addr1, addr2}, uint64(now.Unix()))
+	assert.True(t, added, "not add")
 
-	tree.Insert(id.ID("p1"), p1)
-	tree.Insert(id.ID("p2"), p2)
-
-	fmt.Println("count: ", tree.Count())
-
-	err := receptor.Backup(backupFile, tree)
-	assert.Nil(t, err, "wrong store")
-	_, err = os.Stat(backupFile)
-	assert.NotNil(t, err, "peer file should not be stored")
+	pid, addr, ts, err := r.Next(myID)
+	assert.Nil(t, err, "wrong next")
+	assert.Equal(t, myID, pid, "wrong myID")
+	assert.Equal(t, 2, len(addr), "wrong addr count")
+	assert.Equal(t, time.Unix(now.Unix(), 0), ts, "wrong time")
 }
 
-func TestRestore(t *testing.T) {
-	removeBackupFile()
-	defer removeBackupFile()
+func TestAddWhenExpired(t *testing.T) {
+	setupTestLogger()
+	defer teardownTestLogger()
 
-	tree := avl.New()
+	r := receptor.New(logger.New(logCategory))
 	addr1, _ := ma.NewMultiaddr("/ip4/1.2.3.4/tcp/1234")
 	addr2, _ := ma.NewMultiaddr("/ip6/5:6:7:8::/tcp/5678")
-	addr3, _ := ma.NewMultiaddr("/ip6/11:12:13:14::/tcp/11223")
-	addr4, _ := ma.NewMultiaddr("/ip4/9.8.7.6/tcp/9876")
+	expired := time.Now().Add(-20 * time.Minute)
+	myID := peer.ID("test")
+
+	added := r.Add(myID, []ma.Multiaddr{addr1, addr2}, uint64(expired.Unix()))
+	assert.False(t, added, "not add")
+}
+
+func TestAddWhenAddSameItemTooFast(t *testing.T) {
+	setupTestLogger()
+	defer teardownTestLogger()
+
+	r := receptor.New(logger.New(logCategory))
+	addr1, _ := ma.NewMultiaddr("/ip4/1.2.3.4/tcp/1234")
+	addr2, _ := ma.NewMultiaddr("/ip6/5:6:7:8::/tcp/5678")
 	now := time.Now()
+	myID := peer.ID("test")
 
-	p1 := &receptor.Data{
-		ID:        "p1",
-		Listeners: []ma.Multiaddr{addr1},
-		Timestamp: now,
-	}
+	added := r.Add(myID, []ma.Multiaddr{addr1, addr2}, uint64(now.Unix()))
+	assert.True(t, added, "not add")
 
-	p2 := &receptor.Data{
-		ID:        "p2",
-		Listeners: []ma.Multiaddr{addr2},
-		Timestamp: now,
-	}
-
-	p3 := &receptor.Data{
-		ID:        "p3",
-		Listeners: []ma.Multiaddr{addr3},
-		Timestamp: now,
-	}
-
-	p4 := &receptor.Data{
-		ID:        "p4",
-		Listeners: []ma.Multiaddr{addr4},
-		Timestamp: now,
-	}
-
-	tree.Insert(id.ID("p1"), p1)
-	tree.Insert(id.ID("p2"), p2)
-	tree.Insert(id.ID("p3"), p3)
-	tree.Insert(id.ID("p4"), p4)
-
-	_ = receptor.Backup(backupFile, tree)
-
-	peers, err := receptor.Restore(backupFile)
-	assert.Nil(t, err, "wrong restore")
-	assert.Equal(t, 4, len(peers.Receptors), "wrong peer count")
-	assert.Equal(t, "p1", string(peers.Receptors[0].ID), "wrong first peer")
-	assert.Equal(t, "p2", string(peers.Receptors[1].ID), "wrong second peer")
-	assert.Equal(t, "p3", string(peers.Receptors[2].ID), "wrong third peer")
-	assert.Equal(t, "p4", string(peers.Receptors[3].ID), "wrong forth peer")
+	added = r.Add(myID, []ma.Multiaddr{addr1, addr2}, uint64(now.Unix()))
+	assert.False(t, added, "not add")
 }
 
-func TestRestoreWhenFileNotExist(t *testing.T) {
-	_, err := receptor.Restore("not_exist_file")
-	assert.Nil(t, err, "wrong file not exist error")
+func TestChanged(t *testing.T) {
+	setupTestLogger()
+	defer teardownTestLogger()
+
+	r := receptor.New(logger.New(logCategory))
+	assert.False(t, r.Changed(), "not changed")
+
+	addr, _ := ma.NewMultiaddr("/ip4/1.2.3.4/tcp/1234")
+
+	added := r.Add(peer.ID("test"), []ma.Multiaddr{addr}, uint64(time.Now().Unix()))
+	assert.True(t, added, "not add")
+	assert.True(t, r.Changed(), "not changed")
 }
+
+func TestNext(t *testing.T) {
+	setupTestLogger()
+	defer teardownTestLogger()
+
+	r := receptor.New(logger.New(logCategory))
+	addr1, _ := ma.NewMultiaddr("/ip4/1.2.3.4/tcp/1234")
+	now := time.Now()
+	id1 := peer.ID("test1")
+	_ = r.Add(id1, []ma.Multiaddr{addr1}, uint64(now.Unix()))
+
+	addr2, _ := ma.NewMultiaddr("/ip6/5:6:7:8::/tcp/5678")
+	id2 := peer.ID("test2")
+	_ = r.Add(id2, []ma.Multiaddr{addr2}, uint64(now.Unix()))
+
+	pid, addr, ts, err := r.Next(id1)
+	assert.Nil(t, err, "wrong next")
+	assert.Equal(t, id2, pid, "wrong id")
+	assert.Equal(t, 1, len(addr), "wrong addr count")
+	assert.Equal(t, time.Unix(now.Unix(), 0), ts, "wrong time")
+}
+
+func TestRandom(t *testing.T) {
+	setupTestLogger()
+	defer teardownTestLogger()
+
+	r := receptor.New(logger.New(logCategory))
+	addr1, _ := ma.NewMultiaddr("/ip4/1.2.3.4/tcp/1234")
+	now := time.Now()
+	id1 := peer.ID("test1")
+	_ = r.Add(id1, []ma.Multiaddr{addr1}, uint64(now.Unix()))
+
+	addr2, _ := ma.NewMultiaddr("/ip6/5:6:7:8::/tcp/5678")
+	id2 := peer.ID("test2")
+	_ = r.Add(id2, []ma.Multiaddr{addr2}, uint64(now.Unix()))
+
+	pid, addr, ts, err := r.Random(id1)
+	assert.Nil(t, err, "wrong random")
+	assert.Equal(t, id2, pid, "wrong id")
+	assert.Equal(t, 1, len(addr), "wrong addr count")
+	assert.Equal(t, time.Unix(now.Unix(), 0), ts, "wrong time")
+}
+
+func TestRandomWhenNotAbleToFindDifferent(t *testing.T) {
+	setupTestLogger()
+	defer teardownTestLogger()
+
+	r := receptor.New(logger.New(logCategory))
+	addr1, _ := ma.NewMultiaddr("/ip4/1.2.3.4/tcp/1234")
+	now := time.Now()
+	id1 := peer.ID("test1")
+	_ = r.Add(id1, []ma.Multiaddr{addr1}, uint64(now.Unix()))
+
+	pid, addr, _, err := r.Random(id1)
+	assert.Equal(t, fault.InvalidPublicKey, err, "wrong random")
+	assert.Equal(t, peer.ID(""), pid, "wrong id")
+	assert.Equal(t, 0, len(addr), "wrong addr count")
+}
+
+func TestSetSelf(t *testing.T) {
+	setupTestLogger()
+	defer teardownTestLogger()
+
+	r := receptor.New(logger.New(logCategory))
+	assert.False(t, r.IsSet(), "wrong set")
+
+	myID := peer.ID("test")
+	addr, _ := ma.NewMultiaddr("/ip4/1.2.3.4/tcp/1234")
+
+	err := r.SetSelf(myID, []ma.Multiaddr{addr})
+	assert.Nil(t, err, "wrong SetSelf")
+	assert.True(t, r.IsSet(), "wrong set")
+
+	pid, addrs, _, err := r.Next(myID)
+	assert.Nil(t, err, "wrong next")
+	assert.Equal(t, myID, pid, "wrong pid")
+	assert.Equal(t, 1, len(addrs), "wrong addrs")
+}
+
+func TestTree(t *testing.T) {
+	setupTestLogger()
+	defer teardownTestLogger()
+
+	r := receptor.New(logger.New(logCategory))
+	tree := r.Tree()
+	assert.Equal(t, 0, tree.Count(), "wrong tree node count")
+
+	addr, _ := ma.NewMultiaddr("/ip4/1.2.3.4/tcp/1234")
+	now := time.Now()
+	myID := peer.ID("test")
+
+	_ = r.Add(myID, []ma.Multiaddr{addr}, uint64(now.Unix()))
+	tree = r.Tree()
+	assert.Equal(t, 1, tree.Count(), "wrong tree node count")
+}
+
+func TestID(t *testing.T) {
+	setupTestLogger()
+	defer teardownTestLogger()
+
+	r := receptor.New(logger.New(logCategory))
+	pid := peer.ID("test")
+	addr, _ := ma.NewMultiaddr("/ip4/1.2.3.4/tcp/1234")
+	_ = r.SetSelf(pid, []ma.Multiaddr{addr})
+
+	assert.Equal(t, pid, r.ID(), "wrong ID")
+}
+
+func TestSelf(t *testing.T) {
+	setupTestLogger()
+	defer teardownTestLogger()
+
+	r := receptor.New(logger.New(logCategory))
+	pid := peer.ID("test")
+	addr, _ := ma.NewMultiaddr("/ip4/1.2.3.4/tcp/1234")
+	_ = r.SetSelf(pid, []ma.Multiaddr{addr})
+
+	s := r.Self()
+	assert.Equal(t, 0, s.Key().Compare(id.ID(pid)), "wrong self")
+}
+
+func TestChange(t *testing.T) {
+	setupTestLogger()
+	defer teardownTestLogger()
+
+	r := receptor.New(logger.New(logCategory))
+	assert.False(t, r.Changed(), "wrong change")
+
+	r.Change(true)
+	assert.True(t, r.Changed(), "wrong change")
+}
+
+func TestSelfAddress(t *testing.T) {
+	setupTestLogger()
+	defer teardownTestLogger()
+
+	r := receptor.New(logger.New(logCategory))
+	pid := peer.ID("test")
+	addr, _ := ma.NewMultiaddr("/ip4/1.2.3.4/tcp/1234")
+	_ = r.SetSelf(pid, []ma.Multiaddr{addr})
+
+	addrs := r.SelfAddress()
+	assert.Equal(t, 1, len(addrs), "wrong address count")
+	assert.True(t, addrs[0].Equal(addr), "wrong address")
+}
+
+func TestAddrToString(t *testing.T) {
+	raw := "/ip4/1.2.3.4/tcp/1234"
+	addr, _ := ma.NewMultiaddr(raw)
+	binAddr := util.GetBytesFromMultiaddr([]ma.Multiaddr{addr})
+	pbAddr, _ := proto.Marshal(&receptor.Addrs{Address: binAddr})
+	str := receptor.AddrToString(pbAddr)
+	assert.Equal(t, raw, strings.Trim(str, "\n"), "wrong to string")
+}
+
+func TestBinaryID(t *testing.T) {
+	setupTestLogger()
+	defer teardownTestLogger()
+
+	r := receptor.New(logger.New(logCategory))
+	myID := peer.ID("test")
+	addr, _ := ma.NewMultiaddr("/ip4/1.2.3.4/tcp/1234")
+	_ = r.SetSelf(myID, []ma.Multiaddr{addr})
+
+	binID, _ := myID.MarshalBinary()
+	assert.Equal(t, binID, r.BinaryID(), "wrong binary ID")
+}
+
+func TestShortID(t *testing.T) {
+	setupTestLogger()
+	defer teardownTestLogger()
+
+	r := receptor.New(logger.New(logCategory))
+	myID := peer.ID("test")
+	addr, _ := ma.NewMultiaddr("/ip4/1.2.3.4/tcp/1234")
+	_ = r.SetSelf(myID, []ma.Multiaddr{addr})
+
+	assert.Equal(t, myID.ShortString(), r.ShortID(), "wrong short ID")
+}
+
+// TODO: test BalanceTree

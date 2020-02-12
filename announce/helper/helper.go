@@ -5,7 +5,9 @@
 
 package helper
 
-import "time"
+import (
+	"time"
+)
 
 // ResetFutureTimeToNow - reset future time to now
 func ResetFutureTimeToNow(timestamp uint64) time.Time {

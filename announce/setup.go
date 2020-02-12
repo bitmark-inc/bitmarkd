@@ -18,14 +18,11 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/announce/fingerprint"
 
-	"github.com/bitmark-inc/bitmarkd/avl"
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
-	proto "github.com/golang/protobuf/proto"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
-	ma "github.com/multiformats/go-multiaddr"
 )
 
 type dnsOnlyType bool
@@ -52,16 +49,12 @@ type announcerData struct {
 	log *logger.L
 
 	// this node's packed annoucements
-	peerID      peerlib.ID
-	listeners   []ma.Multiaddr
 	fingerprint fingerprint.Type
-	peerSet     bool
 
 	// tree of nodes available
-	tree        *avl.Tree
-	thisNode    *avl.Node // this node's position in the tree
-	treeChanged bool      // tree was changed
-	backupFile  string
+	receptors receptor.Receptor
+
+	backupFile string
 
 	// database of all RPCs
 	rpcs rpc.RPC
@@ -102,13 +95,14 @@ func Initialise(nodesDomain, cacheDirectory string, dnsPeerOnly dnsOnlyType, f f
 	globalData.log = logger.New("announce")
 	globalData.log.Info("starting…")
 
-	globalData.tree = avl.New()
-	globalData.thisNode = nil
-	globalData.treeChanged = false
+	//globalData.tree = avl.New()
+	//globalData.thisNode = nil
+	//globalData.treeChanged = false
 
+	globalData.receptors = receptor.New(globalData.log)
 	globalData.rpcs = rpc.New()
 
-	globalData.peerSet = false
+	//globalData.peerSet = false
 	globalData.backupFile = path.Join(cacheDirectory, backupFile)
 
 	globalData.dnsPeerOnly = dnsPeerOnly
@@ -123,8 +117,9 @@ func Initialise(nodesDomain, cacheDirectory string, dnsPeerOnly dnsOnlyType, f f
 					continue
 				}
 				util.LogDebug(globalData.log, util.CoReset, fmt.Sprintf("restore peer ID:%s", id.ShortString()))
-				addPeer(id, addrs, item.Timestamp)
-				globalData.tree.Print(false)
+
+				globalData.receptors.Add(id, addrs, item.Timestamp)
+				globalData.receptors.Tree().Print(false)
 			}
 		} else {
 			globalData.log.Errorf("fail to restore peer data: %s", err.Error())
@@ -171,7 +166,7 @@ func Finalise() error {
 	messagebus.Bus.Announce.Release()
 
 	globalData.log.Info("start backing up peer data…")
-	if err := receptor.Backup(globalData.backupFile, globalData.tree); err != nil {
+	if err := receptor.Backup(globalData.backupFile, globalData.receptors.Tree()); err != nil {
 		globalData.log.Errorf("fail to backup peer data: %s", err.Error())
 	}
 
@@ -182,14 +177,4 @@ func Finalise() error {
 	globalData.log.Flush()
 
 	return nil
-}
-
-func printBinaryAddrs(addrs []byte) string {
-	maAddrs := receptor.Addrs{}
-	err := proto.Unmarshal(addrs, &maAddrs)
-	if err != nil {
-		return ""
-	}
-	printAddrs := util.PrintMaAddrs(util.GetMultiAddrsFromBytes(maAddrs.Address))
-	return printAddrs
 }
