@@ -64,7 +64,7 @@ loop:
 			util.LogInfo(log, util.CoReset, fmt.Sprintf("received control: %s  parameters: %x", item.Command, item.Parameters))
 			switch item.Command {
 			case "reconnect":
-				determineConnections(log)
+				globalData.receptors.BalanceTree()
 			case "updatetime":
 				id, err := peerlib.IDFromBytes(item.Parameters[0])
 				if err != nil {
@@ -162,88 +162,11 @@ func (ann *announcer) process() {
 	if count <= MinTreeExpected {
 		exhaustiveConnections(log)
 	} else {
-		determineConnections(log)
+		globalData.receptors.BalanceTree()
 	}
 
 	globalData.receptors.Change(false)
 	//}
-}
-
-func determineConnections(log *logger.L) {
-	if nil == globalData.receptors.Self() {
-		util.LogWarn(log, util.CoRed, fmt.Sprintf("determineConnections called to early"))
-		return // called to early
-	}
-
-	// locate this node in the tree
-	tree := globalData.receptors.Tree()
-	_, index := tree.Search(globalData.receptors.Self().Key())
-	count := tree.Count()
-
-	// various increment values
-	e := count / 8
-	q := count / 4
-	h := count / 2
-
-	jump := 3      // to deal with N3/P3 and too few nodes
-	if count < 4 { // if insufficient
-		jump = 1 // just duplicate N1/P1
-	}
-
-	names := [11]string{
-		"N1",
-		"N3",
-		"X1",
-		"X2",
-		"X3",
-		"X4",
-		"X5",
-		"X6",
-		"X7",
-		"P1",
-		"P3",
-	}
-
-	// compute all possible offsets
-	// if count is too small then there will be duplicate offsets
-	var n [11]int
-	n[0] = index + 1             // N1 (+1)
-	n[1] = index + jump          // N3 (+3)
-	n[2] = e + index             // X⅛
-	n[3] = q + index             // X¼
-	n[4] = q + e + index         // X⅜
-	n[5] = h + index             // X½
-	n[6] = h + e + index         // X⅝
-	n[7] = h + q + index         // X¾
-	n[8] = h + q + e + index     // X⅞
-	n[9] = index + count - 1     // P1 (-1)
-	n[10] = index + count - jump // P3 (-3)
-
-	u := -1
-deduplicate:
-	for i, v := range n {
-		if v == index || v == u {
-			continue deduplicate
-		}
-		u = v
-		if v >= count {
-			v -= count
-		}
-		node := tree.Get(v)
-		if nil != node {
-			p := node.Value().(*receptor.Data)
-			if nil != p {
-				idBinary, errID := p.ID.Marshal()
-				pbAddr := util.GetBytesFromMultiaddr(p.Listeners)
-				pbAddrBinary, errMarshal := proto.Marshal(&receptor.Addrs{Address: pbAddr})
-				if nil == errID && nil == errMarshal {
-					messagebus.Bus.P2P.Send(names[i], idBinary, pbAddrBinary)
-					util.LogDebug(log, util.CoYellow, fmt.Sprintf("--><-- determine send to P2P %v : %s  address: %x ", names[i], p.ID.ShortString(), receptor.AddrToString(pbAddrBinary)))
-				}
-			}
-
-		}
-	}
 }
 
 func expirePeer(log *logger.L) {

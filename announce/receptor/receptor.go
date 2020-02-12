@@ -43,6 +43,7 @@ type Receptor interface {
 	BinaryID() []byte
 	ShortID() string
 	UpdateTime(p2pPeer.ID, time.Time)
+	BalanceTree()
 }
 
 type receptor struct {
