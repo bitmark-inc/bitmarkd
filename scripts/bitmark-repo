@@ -37,6 +37,7 @@ USAGE()
   echo '       --url=URL-PREFIX   -p URL-PREFIX set URL prefix ['"${url}"']'
   echo '       --user=NAME        -u NAME       set blockchain user'
   echo '       --network=NET      -n NET        set blockchain network [bitmark|testing|local]: ['"${network}"']'
+  echo '       --connection=N     -C N          set cli connection number [0..]: ['"${connection}"']'
   echo '       --file=FILE        -f FILE       set alternative logfile ['"${logfile}"']'
   echo '       --list             -l            list properties for user'
   echo '       --status=FILE      -s FILE       check status from a specific logfile'
@@ -73,11 +74,11 @@ CLI() {
       esac
   done
   user="${1}"; shift
-  [ X"${verbose}" = X"yes" ] && printf '\033[1;33mCLI[%s]: \033[1;31m%s\033[0m\n' "${network}/${user}" "$*"
+  [ X"${verbose}" = X"yes" ] && printf '\033[1;33mCLI[%s/%s@%d]: \033[1;31m%s\033[0m\n' "${network}" "${user}" "${connection}" "$*"
 
   while :
   do
-    r=$(bitmark-cli -i "${user}" -p "${password}" -n "${network}" "$@" 2>&1)
+    r=$(bitmark-cli -i "${user}" -p "${password}" -n "${network}" -c "${connection}" "$@" 2>&1)
     if [ $? -ne 0 ]
     then
       case "${r#terminated with error: }" in
@@ -272,6 +273,7 @@ debug=no
 url=
 remote=origin
 network=testing
+connection=0
 user=
 logfile="bmr-${network}-$(date '+%Y%m%d_%H%M%S').log"
 list=no
@@ -313,7 +315,7 @@ case "$(uname)" in
 esac
 [ -x "${getopt}" ] || ERROR 'getopt: "%s" is not executable or not installed' "${getopt}"
 
-args=$(${getopt} -o hvp:n:u:f:lcs:D --long=help,verbose,url:,network:,user:,file:,list,continue,status:,debug -- "$@") || exit 1
+args=$(${getopt} -o hvp:n:C:u:f:lcs:D --long=help,verbose,url:,network:,connection:,user:,file:,list,continue,status:,debug -- "$@") || exit 1
 
 # replace the arguments with the parsed values
 eval set -- "${args}"
@@ -347,6 +349,14 @@ do
           USAGE 'invalid network: "%s" use: [bitmark|testing|local]' "${2}"
           ;;
       esac
+      shift
+      ;;
+
+    (-C|--connection)
+      [ -z "${2}" ] && ERROR 'connection cannot be blank'
+      connection="$(printf '%s' "${2}" | tr -d -C '0-9')"
+      [ X"${connection}" != X"${2}" ] && ERROR 'connection: '%s' is not a number' "${2}"
+      [ "${connection}" -lt 0 ] && ERROR 'connection: '%s' cannot be negative' "${2}"
       shift
       ;;
 
