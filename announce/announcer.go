@@ -71,7 +71,7 @@ loop:
 					log.Warn(err.Error())
 					continue loop
 				}
-				setPeerTimestamp(id, time.Now())
+				globalData.receptors.UpdateTime(id, time.Now())
 				log.Infof("-><- updatetime id:%s", string(item.Parameters[0]))
 			case "addpeer":
 				//TODO: Make sure the timestamp is from external message or local timestamp

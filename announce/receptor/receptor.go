@@ -42,6 +42,7 @@ type Receptor interface {
 	ID() p2pPeer.ID
 	BinaryID() []byte
 	ShortID() string
+	UpdateTime(p2pPeer.ID, time.Time)
 }
 
 type receptor struct {
@@ -60,6 +61,21 @@ func New(log *logger.L) Receptor {
 		tree: avl.New(),
 		log:  log,
 	}
+}
+
+// UpdateTime - update time by id
+func (r *receptor) UpdateTime(pID p2pPeer.ID, timestamp time.Time) {
+	r.Lock()
+	defer r.Unlock()
+
+	node, _ := r.tree.Search(id.ID(pID))
+	if nil == node {
+		r.log.Errorf("Public key %x is not existing in tree", pID.Pretty())
+		return
+	}
+
+	data := node.Value().(*Data)
+	data.Timestamp = timestamp
 }
 
 func (r receptor) ShortID() string {

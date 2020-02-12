@@ -305,4 +305,22 @@ func TestShortID(t *testing.T) {
 	assert.Equal(t, myID.ShortString(), r.ShortID(), "wrong short ID")
 }
 
+func TestUpdateTime(t *testing.T) {
+	setupTestLogger()
+	defer teardownTestLogger()
+
+	r := receptor.New(logger.New(logCategory))
+	myID := peer.ID("test")
+	addr, _ := ma.NewMultiaddr("/ip4/1.2.3.4/tcp/1234")
+	_ = r.SetSelf(myID, []ma.Multiaddr{addr})
+
+	future := time.Now().Add(5 * time.Minute)
+	r.UpdateTime(myID, future)
+	pid, addrs, timestamp, err := r.Next(myID)
+	assert.Nil(t, err, "wrong next")
+	assert.Equal(t, myID, pid, "wrong id")
+	assert.Equal(t, 1, len(addrs), "wrong addrs count")
+	assert.Equal(t, future, timestamp, "wrong updated time")
+}
+
 // TODO: test BalanceTree
