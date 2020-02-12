@@ -9,7 +9,8 @@ import (
 	"fmt"
 	"path"
 	"sync"
-	"time"
+
+	"github.com/bitmark-inc/bitmarkd/announce/rpc"
 
 	"github.com/bitmark-inc/bitmarkd/announce/receptor"
 
@@ -43,14 +44,6 @@ const (
 // file for storing saves peers
 const backupFile = "peers.json"
 
-// RPC entries
-type rpcEntry struct {
-	address     util.PackedConnection // packed addresses
-	fingerprint fingerprint.Type      // SHA3-256(certificate)
-	timestamp   time.Time             // creation time
-	local       bool                  // true => never expires
-}
-
 // globals for background process
 type announcerData struct {
 	sync.RWMutex // to allow locking
@@ -62,9 +55,7 @@ type announcerData struct {
 	peerID      peerlib.ID
 	listeners   []ma.Multiaddr
 	fingerprint fingerprint.Type
-	rpcs        []byte
 	peerSet     bool
-	rpcsSet     bool
 
 	// tree of nodes available
 	tree        *avl.Tree
@@ -73,8 +64,7 @@ type announcerData struct {
 	backupFile  string
 
 	// database of all RPCs
-	rpcIndex map[fingerprint.Type]int // index to find rpc entry
-	rpcList  []*rpcEntry              // array of RPCs
+	rpcs rpc.RPC
 
 	// data for thread
 	ann announcer
@@ -116,11 +106,9 @@ func Initialise(nodesDomain, cacheDirectory string, dnsPeerOnly dnsOnlyType, f f
 	globalData.thisNode = nil
 	globalData.treeChanged = false
 
-	globalData.rpcIndex = make(map[fingerprint.Type]int, 1000)
-	globalData.rpcList = make([]*rpcEntry, 0, 1000)
+	globalData.rpcs = rpc.New()
 
 	globalData.peerSet = false
-	globalData.rpcsSet = false
 	globalData.backupFile = path.Join(cacheDirectory, backupFile)
 
 	globalData.dnsPeerOnly = dnsPeerOnly

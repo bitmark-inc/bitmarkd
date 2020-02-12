@@ -15,7 +15,7 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/logger"
-	proto "github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 )
 
@@ -37,7 +37,6 @@ type announcer struct {
 
 // initialise the announcer
 func (ann *announcer) initialise() error {
-
 	log := logger.New("announcer")
 	ann.log = log
 
@@ -48,7 +47,6 @@ func (ann *announcer) initialise() error {
 
 // wait for incoming requests, process them and reply
 func (ann *announcer) Run(_ interface{}, shutdown <-chan struct{}) {
-
 	log := ann.log
 
 	log.Info("starting…")
@@ -100,7 +98,7 @@ loop:
 			case "addrpc":
 				timestamp := binary.BigEndian.Uint64(item.Parameters[2])
 				log.Infof("received rpc: fingerprint: %x  rpc: %x  Timestamp: %d", item.Parameters[0], item.Parameters[1], timestamp)
-				AddRPC(item.Parameters[0], item.Parameters[1], timestamp)
+				addRPC(item.Parameters[0], item.Parameters[1], timestamp)
 			case "self":
 				id, err := peerlib.IDFromBytes(item.Parameters[0])
 				if err != nil {
@@ -128,9 +126,8 @@ loop:
 	}
 }
 
-// process the annoucement and return response to receptor
+// process the announcement and return response to receptor
 func (ann *announcer) process() {
-
 	log := ann.log
 
 	util.LogInfo(log, util.CoReset, "process starting…")
@@ -142,10 +139,10 @@ func (ann *announcer) process() {
 	binary.BigEndian.PutUint64(timestamp, uint64(time.Now().Unix()))
 
 	// announce this nodes IP and ports to other peers
-	if globalData.rpcsSet {
+	if globalData.rpcs.IsSet() {
 		log.Debugf("send rpc: %x", globalData.fingerprint)
 		if globalData.dnsPeerOnly == UsePeers { //Make self a  hiden rpc node to avoid been connected
-			messagebus.Bus.P2P.Send("rpc", globalData.fingerprint[:], globalData.rpcs, timestamp)
+			messagebus.Bus.P2P.Send("rpc", globalData.fingerprint[:], globalData.rpcs.Self(), timestamp)
 		}
 	}
 	if globalData.peerSet {
@@ -158,7 +155,7 @@ func (ann *announcer) process() {
 			}
 		}
 	}
-	expireRPC()
+	globalData.rpcs.Expire()
 	expirePeer(log)
 
 	//if globalData.treeChanged {
@@ -252,7 +249,7 @@ deduplicate:
 func expirePeer(log *logger.L) {
 	now := time.Now()
 	nextNode := globalData.tree.First()
-scan_nodes:
+loop:
 	for node := nextNode; nil != node; node = nextNode {
 
 		p := node.Value().(*receptor.Receptor)
@@ -262,7 +259,7 @@ scan_nodes:
 
 		// skip this node's entry
 		if globalData.peerID.String() == p.ID.String() {
-			continue scan_nodes
+			continue loop
 		}
 		if p.Timestamp.Add(announceExpiry).Before(now) {
 			globalData.tree.Delete(key)

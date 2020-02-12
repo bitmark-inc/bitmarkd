@@ -10,6 +10,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/announce/helper"
+
 	"github.com/bitmark-inc/bitmarkd/announce/receptor"
 
 	"github.com/bitmark-inc/bitmarkd/announce/id"
@@ -40,11 +42,6 @@ func setSelf(peerID peerlib.ID, listeners []ma.Multiaddr) error {
 	return nil
 }
 
-// isExpiredFrom - is peer expired from time
-func isExpiredFrom(timestamp time.Time) bool {
-	return timestamp.Add(announceExpiry).Before(time.Now())
-}
-
 // AddPeer - add a peer announcement to the in-memory tree
 // returns:
 //   true  if this was a new/updated entry
@@ -58,8 +55,8 @@ func AddPeer(peerID peerlib.ID, listeners []ma.Multiaddr, timestamp uint64) bool
 
 // addPeer - internal add a peer announcement, hold lock before calling
 func addPeer(peerID peerlib.ID, listeners []ma.Multiaddr, timestamp uint64) bool {
-	ts := resetFutureTimestampToNow(timestamp)
-	if isExpiredFrom(ts) {
+	ts := helper.ResetFutureTimeToNow(timestamp)
+	if helper.IsExpiredAfterDuration(ts, announceExpiry) {
 		return false
 	}
 
@@ -93,16 +90,6 @@ func addPeer(peerID peerlib.ID, listeners []ma.Multiaddr, timestamp uint64) bool
 	}
 
 	return true
-}
-
-// resetFutureTimestampToNow - reset future Timestamp to now
-func resetFutureTimestampToNow(timestamp uint64) time.Time {
-	ts := time.Unix(int64(timestamp), 0)
-	now := time.Now()
-	if now.Before(ts) {
-		return now
-	}
-	return ts
 }
 
 // GetNext - fetch next node data in the ring by given public key
