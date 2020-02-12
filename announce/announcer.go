@@ -96,7 +96,7 @@ loop:
 				}
 				addPeer(id, addrs, timestamp)
 				util.LogDebug(log, util.CoYellow, fmt.Sprintf("-><- addpeer : %s  listener: %s  Timestamp: %d", id.String(), printBinaryAddrs(item.Parameters[1]), timestamp))
-				//globalData.peerTree.Print(false)
+				//globalData.tree.Print(false)
 			case "addrpc":
 				timestamp := binary.BigEndian.Uint64(item.Parameters[2])
 				log.Infof("received rpc: fingerprint: %x  rpc: %x  Timestamp: %d", item.Parameters[0], item.Parameters[1], timestamp)
@@ -162,7 +162,7 @@ func (ann *announcer) process() {
 	expirePeer(log)
 
 	//if globalData.treeChanged {
-	count := globalData.peerTree.Count()
+	count := globalData.tree.Count()
 	if count <= MinTreeExpected {
 		exhaustiveConnections(log)
 	} else {
@@ -180,8 +180,8 @@ func determineConnections(log *logger.L) {
 	}
 
 	// locate this node in the tree
-	_, index := globalData.peerTree.Search(globalData.thisNode.Key())
-	count := globalData.peerTree.Count()
+	_, index := globalData.tree.Search(globalData.thisNode.Key())
+	count := globalData.tree.Count()
 
 	// various increment values
 	e := count / 8
@@ -232,7 +232,7 @@ deduplicate:
 		if v >= count {
 			v -= count
 		}
-		node := globalData.peerTree.Get(v)
+		node := globalData.tree.Get(v)
 		if nil != node {
 			p := node.Value().(*receptor.Receptor)
 			if nil != p {
@@ -251,7 +251,7 @@ deduplicate:
 
 func expirePeer(log *logger.L) {
 	now := time.Now()
-	nextNode := globalData.peerTree.First()
+	nextNode := globalData.tree.First()
 scan_nodes:
 	for node := nextNode; nil != node; node = nextNode {
 
@@ -265,7 +265,7 @@ scan_nodes:
 			continue scan_nodes
 		}
 		if p.Timestamp.Add(announceExpiry).Before(now) {
-			globalData.peerTree.Delete(key)
+			globalData.tree.Delete(key)
 			globalData.treeChanged = true
 			util.LogDebug(log, util.CoReset, fmt.Sprintf("expirePeer : ID: %v! Timestamp: %s", p.ID.ShortString(), p.Timestamp.Format(timeFormat)))
 			idBinary, errID := p.ID.Marshal()
@@ -284,9 +284,9 @@ func exhaustiveConnections(log *logger.L) {
 		return // called to early
 	}
 	// locate this node in the tree
-	count := globalData.peerTree.Count()
+	count := globalData.tree.Count()
 	for i := 0; i < count; i++ {
-		node := globalData.peerTree.Get(i)
+		node := globalData.tree.Get(i)
 		if nil != node {
 			p := node.Value().(*receptor.Receptor)
 			if nil != p && !util.IDEqual(p.ID, globalData.peerID) {

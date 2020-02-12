@@ -173,6 +173,6 @@ func addTxts(txts []domain.DnsTxt, log *logger.L) {
 		}
 		log.Infof("result[%d]: adding id:%s", i, txt.PeerID)
 		addPeer(id, listeners, uint64(time.Now().Unix()))
-		globalData.peerTree.Print(false)
+		globalData.tree.Print(false)
 	}
 }

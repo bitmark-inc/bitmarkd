@@ -34,7 +34,7 @@ func setSelf(peerID peerlib.ID, listeners []ma.Multiaddr) error {
 	globalData.peerSet = true
 
 	addPeer(peerID, listeners, uint64(time.Now().Unix()))
-	globalData.thisNode, _ = globalData.peerTree.Search(id.ID(peerID))
+	globalData.thisNode, _ = globalData.tree.Search(id.ID(peerID))
 	determineConnections(globalData.log)
 
 	return nil
@@ -69,7 +69,7 @@ func addPeer(peerID peerlib.ID, listeners []ma.Multiaddr, timestamp uint64) bool
 		Timestamp: ts,
 	}
 	// TODO: Take care of r update and r replace base on protocol of multiaddress
-	if node, _ := globalData.peerTree.Search(id.ID(peerID)); nil != node {
+	if node, _ := globalData.tree.Search(id.ID(peerID)); nil != node {
 		peer := node.Value().(*receptor.Receptor)
 
 		if ts.Sub(peer.Timestamp) < announceRebroadcast {
@@ -79,9 +79,9 @@ func addPeer(peerID peerlib.ID, listeners []ma.Multiaddr, timestamp uint64) bool
 	}
 
 	// add or update the Timestamp in the tree
-	recordAdded := globalData.peerTree.Insert(id.ID(peerID), r)
+	recordAdded := globalData.tree.Insert(id.ID(peerID), r)
 
-	globalData.log.Infof("Peer Added:  ID: %s,  add:%t  nodes in the r tree: %d", peerID.String(), recordAdded, globalData.peerTree.Count())
+	globalData.log.Infof("Peer Added:  ID: %s,  add:%t  nodes in the r tree: %d", peerID.String(), recordAdded, globalData.tree.Count())
 
 	// if adding this nodes data
 	if util.IDEqual(globalData.peerID, peerID) {
@@ -110,12 +110,12 @@ func GetNext(peerID peerlib.ID) (peerlib.ID, []ma.Multiaddr, time.Time, error) {
 	globalData.Lock()
 	defer globalData.Unlock()
 
-	node, _ := globalData.peerTree.Search(id.ID(peerID))
+	node, _ := globalData.tree.Search(id.ID(peerID))
 	if nil != node {
 		node = node.Next()
 	}
 	if nil == node {
-		node = globalData.peerTree.First()
+		node = globalData.tree.First()
 	}
 	if nil == node {
 		return peerlib.ID(""), nil, time.Now(), fault.InvalidPublicKey
@@ -131,7 +131,7 @@ func GetRandom(peerID peerlib.ID) (peerlib.ID, []ma.Multiaddr, time.Time, error)
 
 retryLoop:
 	for tries := 1; tries <= 5; tries += 1 {
-		max := big.NewInt(int64(globalData.peerTree.Count()))
+		max := big.NewInt(int64(globalData.tree.Count()))
 		r, err := rand.Int(rand.Reader, max)
 		if nil != err {
 			continue retryLoop
@@ -139,9 +139,9 @@ retryLoop:
 
 		n := int(r.Int64()) // 0 … max-1
 
-		node := globalData.peerTree.Get(n)
+		node := globalData.tree.Get(n)
 		if nil == node {
-			node = globalData.peerTree.First()
+			node = globalData.tree.First()
 		}
 		if nil == node {
 			break retryLoop
@@ -160,7 +160,7 @@ func setPeerTimestamp(peerID peerlib.ID, timestamp time.Time) {
 	globalData.Lock()
 	defer globalData.Unlock()
 
-	node, _ := globalData.peerTree.Search(id.ID(peerID))
+	node, _ := globalData.tree.Search(id.ID(peerID))
 	log := globalData.log
 	if nil == node {
 		log.Errorf("The peer with public key %x is not existing in peer tree", peerID.Pretty())

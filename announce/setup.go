@@ -67,7 +67,7 @@ type announcerData struct {
 	rpcsSet     bool
 
 	// tree of nodes available
-	peerTree    *avl.Tree
+	tree        *avl.Tree
 	thisNode    *avl.Node // this node's position in the tree
 	treeChanged bool      // tree was changed
 	backupFile  string
@@ -112,7 +112,7 @@ func Initialise(nodesDomain, cacheDirectory string, dnsPeerOnly dnsOnlyType, f f
 	globalData.log = logger.New("announce")
 	globalData.log.Info("starting…")
 
-	globalData.peerTree = avl.New()
+	globalData.tree = avl.New()
 	globalData.thisNode = nil
 	globalData.treeChanged = false
 
@@ -136,7 +136,7 @@ func Initialise(nodesDomain, cacheDirectory string, dnsPeerOnly dnsOnlyType, f f
 				}
 				util.LogDebug(globalData.log, util.CoReset, fmt.Sprintf("restore peer ID:%s", id.ShortString()))
 				addPeer(id, addrs, item.Timestamp)
-				globalData.peerTree.Print(false)
+				globalData.tree.Print(false)
 			}
 		} else {
 			globalData.log.Errorf("fail to restore peer data: %s", err.Error())
@@ -183,7 +183,7 @@ func Finalise() error {
 	messagebus.Bus.Announce.Release()
 
 	globalData.log.Info("start backing up peer data…")
-	if err := receptor.Backup(globalData.backupFile, globalData.peerTree); err != nil {
+	if err := receptor.Backup(globalData.backupFile, globalData.tree); err != nil {
 		globalData.log.Errorf("fail to backup peer data: %s", err.Error())
 	}
 
