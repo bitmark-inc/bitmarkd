@@ -155,7 +155,7 @@ func (ann *announcer) process() {
 		}
 	}
 	globalData.rpcs.Expire()
-	expirePeer(log)
+	globalData.receptors.Expire()
 
 	//if globalData.treeChanged {
 	count := globalData.receptors.Tree().Count()
@@ -167,36 +167,6 @@ func (ann *announcer) process() {
 
 	globalData.receptors.Change(false)
 	//}
-}
-
-func expirePeer(log *logger.L) {
-	now := time.Now()
-	tree := globalData.receptors.Tree()
-	nextNode := tree.First()
-loop:
-	for node := nextNode; nil != node; node = nextNode {
-
-		p := node.Value().(*receptor.Data)
-		key := node.Key()
-
-		nextNode = node.Next()
-
-		// skip this node's entry
-		if globalData.receptors.ID().String() == p.ID.String() {
-			continue loop
-		}
-		if p.Timestamp.Add(announceExpiry).Before(now) {
-			tree.Delete(key)
-			globalData.receptors.Change(true)
-			util.LogDebug(log, util.CoReset, fmt.Sprintf("expirePeer : ID: %v! Timestamp: %s", p.ID.ShortString(), p.Timestamp.Format(timeFormat)))
-			idBinary, errID := p.ID.Marshal()
-			if nil == errID {
-				messagebus.Bus.P2P.Send("@D", idBinary)
-				util.LogInfo(log, util.CoYellow, fmt.Sprintf("--><-- Send @D to P2P  ID: %v", p.ID.ShortString()))
-			}
-		}
-
-	}
 }
 
 func exhaustiveConnections(log *logger.L) {

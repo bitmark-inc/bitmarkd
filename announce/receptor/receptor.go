@@ -28,6 +28,8 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 )
 
+const timeFormat = "2006-01-02 15:04:05"
+
 type Receptor interface {
 	Add(p2pPeer.ID, []ma.Multiaddr, uint64) bool
 	Changed() bool
@@ -44,6 +46,7 @@ type Receptor interface {
 	ShortID() string
 	UpdateTime(p2pPeer.ID, time.Time)
 	BalanceTree()
+	Expire()
 }
 
 type receptor struct {
@@ -220,6 +223,35 @@ loop:
 		return peer.ID, peer.Listeners, peer.Timestamp, nil
 	}
 	return p2pPeer.ID(""), nil, time.Now(), fault.InvalidPublicKey
+}
+
+func (r *receptor) Expire() {
+	now := time.Now()
+	nextNode := r.tree.First()
+loop:
+	for node := nextNode; nil != node; node = nextNode {
+
+		p := node.Value().(*Data)
+		key := node.Key()
+
+		nextNode = node.Next()
+
+		// skip this node's entry
+		if r.ID().String() == p.ID.String() {
+			continue loop
+		}
+		// TODO: use constant
+		if p.Timestamp.Add(15 * time.Minute).Before(now) {
+			r.tree.Delete(key)
+			r.Change(true)
+			util.LogDebug(r.log, util.CoReset, fmt.Sprintf("expirePeer : ID: %v! Timestamp: %s", p.ID.ShortString(), p.Timestamp.Format(timeFormat)))
+			idBinary, errID := p.ID.Marshal()
+			if nil == errID {
+				messagebus.Bus.P2P.Send("@D", idBinary)
+				util.LogInfo(r.log, util.CoYellow, fmt.Sprintf("--><-- Send @D to P2P  ID: %v", p.ID.ShortString()))
+			}
+		}
+	}
 }
 
 func (r *receptor) BalanceTree() {

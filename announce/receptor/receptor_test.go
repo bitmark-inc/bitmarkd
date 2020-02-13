@@ -323,4 +323,32 @@ func TestUpdateTime(t *testing.T) {
 	assert.Equal(t, future, timestamp, "wrong updated time")
 }
 
+func TestExpire(t *testing.T) {
+	setupTestLogger()
+	defer teardownTestLogger()
+
+	r := receptor.New(logger.New(logCategory))
+	addr1, _ := ma.NewMultiaddr("/ip4/1.2.3.4/tcp/1234")
+	addr2, _ := ma.NewMultiaddr("/ip6/5:6:7:8::/tcp/5678")
+	now := time.Now()
+	expired := now.Add(-899 * time.Second) // expire 15 minutes = 900 seconds
+	myID1 := peer.ID("test1")
+	myID2 := peer.ID("test2")
+
+	_ = r.Add(myID1, []ma.Multiaddr{addr1}, uint64(now.Unix()))
+	_ = r.Add(myID2, []ma.Multiaddr{addr2}, uint64(expired.Unix()))
+
+	tree := r.Tree()
+	assert.Equal(t, 2, tree.Count(), "wrong tree count")
+
+	time.Sleep(time.Second)
+	r.Expire()
+	assert.Equal(t, 1, tree.Count(), "wrong expire")
+	pid, addrs, _, err := r.Next(myID1)
+	assert.Nil(t, err, "wrong next")
+	assert.Equal(t, myID1, pid, "wrong id")
+	assert.Equal(t, 1, len(addrs), "wrong addrs count")
+	assert.True(t, addrs[0].Equal(addr1), "wrong address")
+}
+
 // TODO: test BalanceTree
