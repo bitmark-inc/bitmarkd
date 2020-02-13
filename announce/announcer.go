@@ -10,13 +10,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/announce/observer"
+
 	"github.com/bitmark-inc/bitmarkd/announce/receptor"
 	"github.com/bitmark-inc/bitmarkd/util"
 
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/logger"
 	"github.com/golang/protobuf/proto"
-	peerlib "github.com/libp2p/go-libp2p-core/peer"
 )
 
 const (
@@ -52,6 +53,13 @@ func (ann *announcer) Run(_ interface{}, shutdown <-chan struct{}) {
 	log.Info("starting…")
 
 	queue := messagebus.Bus.Announce.Chan()
+	observers := []observer.Observer{
+		observer.NewReconnect(globalData.receptors),
+		observer.NewUpdatetime(globalData.receptors, globalData.log),
+		observer.NewAddpeer(globalData.receptors, globalData.log),
+		observer.NewAddrpc(globalData.rpcs, globalData.log),
+		observer.NewSelf(globalData.receptors, globalData.log),
+	}
 
 	delay := time.After(announceInitial)
 loop:
@@ -62,63 +70,11 @@ loop:
 			break loop
 		case item := <-queue:
 			util.LogInfo(log, util.CoReset, fmt.Sprintf("received control: %s  parameters: %x", item.Command, item.Parameters))
-			switch item.Command {
-			case "reconnect":
-				globalData.receptors.BalanceTree()
-			case "updatetime":
-				id, err := peerlib.IDFromBytes(item.Parameters[0])
-				if err != nil {
-					log.Warn(err.Error())
-					continue loop
-				}
-				globalData.receptors.UpdateTime(id, time.Now())
-				log.Infof("-><- updatetime id:%s", string(item.Parameters[0]))
-			case "addpeer":
-				//TODO: Make sure the timestamp is from external message or local timestamp
-				id, err := peerlib.IDFromBytes(item.Parameters[0])
-				if err != nil {
-					log.Warn(err.Error())
-					continue loop
-				}
-				timestamp := binary.BigEndian.Uint64(item.Parameters[2])
-				var listeners receptor.Addrs
-				err = proto.Unmarshal(item.Parameters[1], &listeners)
-				if err != nil {
-					util.LogError(log, util.CoRed, fmt.Sprintf("addpeer: Unmarshal Address Error:%v", err))
-					continue loop
-				}
-				addrs := util.GetMultiAddrsFromBytes(listeners.Address)
-				if len(addrs) == 0 {
-					util.LogError(log, util.CoRed, "No valid listener address: addrs is empty")
-					continue loop
-				}
-				globalData.receptors.Add(id, addrs, timestamp)
-				util.LogDebug(log, util.CoYellow, fmt.Sprintf("-><- addpeer : %s  listener: %s  Timestamp: %d", id.String(), receptor.AddrToString(item.Parameters[1]), timestamp))
-				//globalData.tree.Print(false)
-			case "addrpc":
-				timestamp := binary.BigEndian.Uint64(item.Parameters[2])
-				log.Infof("received rpc: fingerprint: %x  rpc: %x  Timestamp: %d", item.Parameters[0], item.Parameters[1], timestamp)
-				addRPC(item.Parameters[0], item.Parameters[1], timestamp)
-			case "self":
-				id, err := peerlib.IDFromBytes(item.Parameters[0])
-				if err != nil {
-					log.Warn(err.Error())
-					continue loop
-				}
-				var listeners receptor.Addrs
-				_ = proto.Unmarshal(item.Parameters[1], &listeners)
-				addrs := util.GetMultiAddrsFromBytes(listeners.Address)
-				if len(addrs) == 0 {
-					log.Warn("No valid listener address")
-					continue loop
-				}
-				log.Infof("-><-  request self announce data add to tree: %v  listener: %s", id, receptor.AddrToString(item.Parameters[1]))
-				err = globalData.receptors.SetSelf(id, addrs)
-				if nil != err {
-					log.Errorf("announcer set with error: %s", err)
-				}
-			default:
+
+			for _, o := range observers {
+				o.Update(item.Command, item.Parameters)
 			}
+
 		case <-delay:
 			delay = time.After(announceInterval)
 			ann.process()
