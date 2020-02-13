@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/announce/parameter"
+
 	"github.com/bitmark-inc/bitmarkd/announce/observer"
 
 	"github.com/bitmark-inc/bitmarkd/announce/receptor"
@@ -18,18 +20,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/logger"
 	"github.com/golang/protobuf/proto"
-)
-
-const (
-	//announceInitial     = 2 * time.Minute // startup delay before first send
-	announceInitial = 1 * time.Minute // startup delay before first send
-	//announceRebroadcast = 7 * time.Minute // to prevent too frequent rebroadcasts
-	announceRebroadcast = 30 * time.Second // to prevent too frequent rebroadcasts //TODO: We may not need it anymore
-	//announceInterval    = 11 * time.Minute     // regular polling time
-	announceInterval = 3 * time.Minute
-	//announceExpiry   = 5 * announceInterval // if no responses received within this time, delete the entry
-	announceExpiry  = 5 * announceInterval
-	MinTreeExpected = 5 + 1 //reference : voting minimumClients + 1(self)
 )
 
 type announcer struct {
@@ -62,7 +52,7 @@ func (ann *announcer) Run(arg interface{}, shutdown <-chan struct{}) {
 		observer.NewSelf(globalData.receptors, globalData.log),
 	}
 
-	delay := time.After(announceInitial)
+	delay := time.After(parameter.InitialiseInterval)
 loop:
 	for {
 		log.Debug("waiting…")
@@ -77,7 +67,7 @@ loop:
 			}
 
 		case <-delay:
-			delay = time.After(announceInterval)
+			delay = time.After(parameter.InitialiseInterval)
 			ann.process()
 		}
 	}
@@ -116,7 +106,7 @@ func (ann *announcer) process() {
 
 	//if globalData.treeChanged {
 	count := globalData.receptors.Tree().Count()
-	if count <= MinTreeExpected {
+	if count <= parameter.MinTreeExpected {
 		exhaustiveConnections(log)
 	} else {
 		globalData.receptors.BalanceTree()

@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/announce/parameter"
+
 	"github.com/bitmark-inc/bitmarkd/announce/helper"
 
 	"github.com/bitmark-inc/bitmarkd/announce/fingerprint"
@@ -116,8 +118,7 @@ func (r *rpc) add(fingerprint fingerprint.Type, rpcs []byte, timestamp uint64, l
 	// if new item
 	if !ok {
 		ts := helper.ResetFutureTimeToNow(timestamp)
-		// TODO: setup this by other way, previous in announcer package
-		if helper.IsExpiredAfterDuration(ts, 15*time.Minute) {
+		if helper.IsExpiredAfterDuration(ts, parameter.ExpiryInterval) {
 			return false
 		}
 
@@ -141,8 +142,7 @@ func (r *rpc) add(fingerprint fingerprint.Type, rpcs []byte, timestamp uint64, l
 	}
 
 	// check for too frequent update
-	// TODO: is this necessary? previous was 7 minute
-	rc := time.Since(e.timestamp) > 30*time.Second
+	rc := time.Since(e.timestamp) > parameter.RebroadcastInterval
 
 	e.timestamp = time.Now()
 
@@ -162,8 +162,7 @@ loop:
 			continue loop
 		}
 
-		// TODO: fix this
-		if time.Since(e.timestamp) > 15*time.Minute {
+		if time.Since(e.timestamp) > parameter.ExpiryInterval {
 			delete(r.index, e.fingerprint)
 			n -= 1
 			if i != n {

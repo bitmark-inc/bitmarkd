@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/announce/parameter"
+
 	"github.com/bitmark-inc/logger"
 	"github.com/gogo/protobuf/proto"
 
@@ -131,8 +133,7 @@ func (r *receptor) Add(peerID p2pPeer.ID, listeners []ma.Multiaddr, timestamp ui
 	defer r.Unlock()
 
 	ts := helper.ResetFutureTimeToNow(timestamp)
-	// TODO: use const for expire time
-	if helper.IsExpiredAfterDuration(ts, 15*time.Minute) {
+	if helper.IsExpiredAfterDuration(ts, parameter.ExpiryInterval) {
 		return false
 	}
 
@@ -141,12 +142,11 @@ func (r *receptor) Add(peerID p2pPeer.ID, listeners []ma.Multiaddr, timestamp ui
 		Listeners: listeners,
 		Timestamp: ts,
 	}
-	// TODO: Take care of r update and r replace base on protocol of multi-address
+	// TODO: Take care of update and replace base on protocol of multi-address
 	if node, _ := r.tree.Search(id.ID(peerID)); nil != node {
 		peer := node.Value().(*Data)
 
-		// TODO: announceRebroadcast
-		if ts.Sub(peer.Timestamp) < 30*time.Second {
+		if ts.Sub(peer.Timestamp) < parameter.RebroadcastInterval {
 			return false
 		}
 
@@ -240,8 +240,7 @@ loop:
 		if r.ID().String() == p.ID.String() {
 			continue loop
 		}
-		// TODO: use constant
-		if p.Timestamp.Add(15 * time.Minute).Before(now) {
+		if p.Timestamp.Add(parameter.ExpiryInterval).Before(now) {
 			r.tree.Delete(key)
 			r.Change(true)
 			util.LogDebug(r.log, util.CoReset, fmt.Sprintf("expirePeer : ID: %v! Timestamp: %s", p.ID.ShortString(), p.Timestamp.Format(timeFormat)))
