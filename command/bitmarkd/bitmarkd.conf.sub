@@ -200,9 +200,8 @@ M.https_rpc = {
 
 -- peer-to-peer connections
 M.peering = {
-    -- set to false to prevent additional connections
-    dynamic_connections = true,
-
+    -- set node types (server|client)    
+    nodetype = "server",
     -- for incoming peer connections
     listen = {
         add_port("*", 2136),

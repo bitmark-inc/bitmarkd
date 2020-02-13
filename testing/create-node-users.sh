@@ -13,6 +13,9 @@ ERROR() {
 
 # main program
 
+first_node=1
+last_node=12
+
 password=1234567890
 [ -n "${1}" ] && password="${1}"
 
@@ -25,7 +28,7 @@ bitmark-cli --network=local --identity=first --password="${password}" setup --co
 bitmark-cli --network=local --identity=second --password="${password}" add --description='second user' --new
 
 # create users for all bitmarkds
-for i in 1 2 3 4 5 6 7 8 9
+for i in $(seq "${first_node}" "${last_node}")
 do
   id="node-${i}"
   seed="${xdg_home}/bitmarkd${i}/proof.test"

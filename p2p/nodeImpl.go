@@ -21,7 +21,12 @@ import (
 //Setup setup a node
 func (n *Node) Setup(configuration *Configuration, version string, fastsync bool, dnsPeerOnly dnsOnlyType) error {
 	globalData.Version = version
-	globalData.NodeType = configuration.NodeType
+	if nodeType(configuration.NodeType) == ClientNode {
+		globalData.NodeType = ClientNode
+	} else {
+		globalData.NodeType = ServerNode
+	}
+
 	globalData.dnsPeerOnly = dnsPeerOnly
 	maAddrs := IPPortToMultiAddr(configuration.Listen)
 	n.Registers = make(map[peerlib.ID]RegisterStatus)
@@ -32,9 +37,9 @@ func (n *Node) Setup(configuration *Configuration, version string, fastsync bool
 	}
 
 	n.PrivateKey = prvKey
-	n.NewHost(configuration.NodeType, maAddrs, n.PrivateKey)
+	n.NewHost(globalData.NodeType, maAddrs, n.PrivateKey)
 
-	if n.NodeType != "Client" {
+	if n.NodeType != ClientNode {
 		n.setAnnounce(configuration.Announce)
 	}
 
@@ -62,9 +67,9 @@ func (n *Node) Setup(configuration *Configuration, version string, fastsync bool
 }
 
 // NewHost create a NewHost according to nodetype
-func (n *Node) NewHost(nodetype string, listenAddrs []ma.Multiaddr, prvKey crypto.PrivKey) error {
+func (n *Node) NewHost(nodetype nodeType, listenAddrs []ma.Multiaddr, prvKey crypto.PrivKey) error {
 	options := []libp2p.Option{libp2p.Identity(prvKey), libp2p.Security(tls.ID, tls.New)}
-	if "client" != nodetype {
+	if ClientNode != nodetype {
 		options = append(options, libp2p.ListenAddrs(listenAddrs...))
 	}
 	newHost, err := libp2p.New(context.Background(), options...)

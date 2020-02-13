@@ -120,10 +120,6 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 		HttpsRPC: rpc.HTTPSConfiguration{
 			MaximumConnections: defaultRPCClients,
 		},
-		//TODO:  Check P2P
-		Peering: p2p.Configuration{
-			DynamicConnections: true,
-		},
 
 		Payment: payment.Configuration{
 			P2PCache: payment.P2PCache{

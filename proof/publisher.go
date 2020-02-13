@@ -14,14 +14,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/chain"
-
 	zmq "github.com/pebbe/zmq4"
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
+	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/currency/bitcoin"
 	"github.com/bitmark-inc/bitmarkd/currency/litecoin"
@@ -349,6 +348,4 @@ func (pub *publisher) process() {
 		_, err = pub.socket6.SendBytes(data, 0|zmq.DONTWAIT)
 		logger.PanicIfError("publisher 6", err)
 	}
-
-	time.Sleep(10 * time.Second)
 }

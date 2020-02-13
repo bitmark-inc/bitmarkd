@@ -198,6 +198,6 @@ var (
 	NoAnnounceAddress          = e("no announce address")
 	AddInfoNil                 = e("AddrInfo is nil")
 	NoAddress                  = e("No address")
-	PackRandomNodeFail         = e("pack random node fail")
-	PackDataError              = e("pack data error")
+	PackRandomNode             = e("pack random node fail")
+	InvalidNodeType            = e("invalid NodeType")
 )
