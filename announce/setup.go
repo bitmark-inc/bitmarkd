@@ -144,7 +144,7 @@ func Initialise(nodesDomain, cacheDirectory string, dnsPeerOnly dnsOnlyType, f f
 		&globalData.nodesLookup, &globalData.ann,
 	}
 
-	globalData.background = background.Start(processes, nil)
+	globalData.background = background.Start(processes, messagebus.Bus.Announce.Chan())
 
 	return nil
 }

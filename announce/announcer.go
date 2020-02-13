@@ -47,12 +47,13 @@ func (ann *announcer) initialise() error {
 }
 
 // wait for incoming requests, process them and reply
-func (ann *announcer) Run(_ interface{}, shutdown <-chan struct{}) {
+func (ann *announcer) Run(arg interface{}, shutdown <-chan struct{}) {
 	log := ann.log
 
 	log.Info("starting…")
 
-	queue := messagebus.Bus.Announce.Chan()
+	queue := arg.(<-chan messagebus.Message)
+
 	observers := []observer.Observer{
 		observer.NewReconnect(globalData.receptors),
 		observer.NewUpdatetime(globalData.receptors, globalData.log),
