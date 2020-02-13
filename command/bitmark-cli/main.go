@@ -393,8 +393,18 @@ func main() {
 			Action: runTransactionStatus,
 		},
 		{
-			Name:   "list",
-			Usage:  "list bitmark-cli identities",
+			Name:  "list",
+			Usage: "list bitmark-cli identities",
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  "connections, c",
+					Usage: "list connections instead",
+				},
+				cli.BoolFlag{
+					Name:  "json, j",
+					Usage: "output as JSON",
+				},
+			},
 			Action: runList,
 		},
 		{

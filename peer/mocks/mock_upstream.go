@@ -11,12 +11,14 @@
 package mocks
 
 import (
+	reflect "reflect"
+	time "time"
+
+	gomock "github.com/golang/mock/gomock"
+
 	blockdigest "github.com/bitmark-inc/bitmarkd/blockdigest"
 	util "github.com/bitmark-inc/bitmarkd/util"
 	zmqutil "github.com/bitmark-inc/bitmarkd/zmqutil"
-	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
-	time "time"
 )
 
 // MockUpstream is a mock of Upstream interface
