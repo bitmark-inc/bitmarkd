@@ -11,7 +11,6 @@ import (
 	"math/big"
 
 	"github.com/bitmark-inc/bitmarkd/chain"
-
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/go-argon2"
@@ -65,7 +64,7 @@ func (digest Digest) Cmp(difficulty *big.Int) int {
 
 //IsEmpty - is digest empty
 func (digest Digest) IsEmpty() bool {
-	return digest == (Digest{})
+	return digest == Digest{}
 }
 
 // IsValidByDifficulty - is digest valid by difficulty

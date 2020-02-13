@@ -9,13 +9,11 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/bitmark-inc/bitmarkd/chain"
-	"github.com/bitmark-inc/bitmarkd/mode"
-
-	"github.com/bitmark-inc/bitmarkd/counter"
-
 	zmq "github.com/pebbe/zmq4"
 
+	"github.com/bitmark-inc/bitmarkd/chain"
+	"github.com/bitmark-inc/bitmarkd/counter"
+	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"

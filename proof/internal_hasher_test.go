@@ -5,15 +5,12 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/bitmark-inc/bitmarkd/difficulty"
-	"github.com/bitmark-inc/bitmarkd/merkle"
-
-	"github.com/bitmark-inc/bitmarkd/blockrecord"
-
 	zmq "github.com/pebbe/zmq4"
-
 	"github.com/stretchr/testify/assert"
 
+	"github.com/bitmark-inc/bitmarkd/blockrecord"
+	"github.com/bitmark-inc/bitmarkd/difficulty"
+	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/proof"
 )
 

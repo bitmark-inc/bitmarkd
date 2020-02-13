@@ -11,11 +11,13 @@
 package mocks
 
 import (
-	util "github.com/bitmark-inc/bitmarkd/util"
-	zmqutil "github.com/bitmark-inc/bitmarkd/zmqutil"
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	zmq4 "github.com/pebbe/zmq4"
-	reflect "reflect"
+
+	util "github.com/bitmark-inc/bitmarkd/util"
+	zmqutil "github.com/bitmark-inc/bitmarkd/zmqutil"
 )
 
 // MockClient is a mock of Client interface
