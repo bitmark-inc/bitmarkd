@@ -11,7 +11,11 @@
 user_1=first
 user_2=second
 next_user=3
-for i in 1 2 3 4 5 6 7 8 9
+
+# generate uses for all nodes that can mine blocks
+first_node=1
+last_node=12
+for i in $(seq "${first_node}" "${last_node}")
 do
   eval "user_${next_user}=\"node-${i}\""
   next_user=$((next_user + 1))

@@ -8,11 +8,10 @@ package proof
 import (
 	"sync"
 
-	"github.com/bitmark-inc/bitmarkd/chain"
-	"github.com/bitmark-inc/bitmarkd/mode"
-
 	"github.com/bitmark-inc/bitmarkd/background"
+	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/logger"
 )
 
@@ -98,11 +97,11 @@ func Initialise(configuration *Configuration) error {
 	if mode.ChainName() == chain.Local {
 		h, err := NewInternalHasherForTest(internalHasherRequest, internalHasherReply)
 		if nil != err {
-			globalData.log.Errorf("create internal hasher with error: %s", err)
+			return err
 		}
 		err = h.Initialise()
 		if nil != err {
-			globalData.log.Errorf("initialise internal hasher with error: %s", err)
+			return err
 		}
 		h.Start()
 	}
