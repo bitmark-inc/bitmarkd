@@ -95,14 +95,9 @@ func Initialise(nodesDomain, cacheDirectory string, dnsPeerOnly dnsOnlyType, f f
 	globalData.log = logger.New("announce")
 	globalData.log.Info("starting…")
 
-	//globalData.tree = avl.New()
-	//globalData.thisNode = nil
-	//globalData.treeChanged = false
-
 	globalData.receptors = receptor.New(globalData.log)
 	globalData.rpcs = rpc.New()
 
-	//globalData.peerSet = false
 	globalData.backupFile = path.Join(cacheDirectory, backupFile)
 
 	globalData.dnsPeerOnly = dnsPeerOnly
