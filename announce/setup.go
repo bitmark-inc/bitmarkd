@@ -10,6 +10,8 @@ import (
 	"path"
 	"sync"
 
+	"github.com/bitmark-inc/bitmarkd/announce/broadcast"
+
 	"github.com/bitmark-inc/bitmarkd/announce/rpc"
 
 	"github.com/bitmark-inc/bitmarkd/announce/receptor"
@@ -23,13 +25,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
-)
-
-type dnsOnlyType bool
-
-const (
-	DnsOnly  dnsOnlyType = true
-	UsePeers dnsOnlyType = false
 )
 
 // type of listener
@@ -59,8 +54,7 @@ type announcerData struct {
 	// database of all RPCs
 	rpcs rpc.RPC
 
-	// data for thread
-	ann announcer
+	brdc background.Process
 
 	nodesLookup lookup
 
@@ -69,8 +63,9 @@ type announcerData struct {
 
 	// set once during initialise
 	initialised bool
+
 	// only use dns record as peer nodes
-	dnsPeerOnly dnsOnlyType
+	dnsType broadcast.DNSType
 }
 
 // global data
@@ -82,7 +77,7 @@ const timeFormat = "2006-01-02 15:04:05"
 // Initialise - set up the announcement system
 // pass a fully qualified domain for root node list
 // or empty string for no root nodes
-func Initialise(nodesDomain, cacheDirectory string, dnsPeerOnly dnsOnlyType, f func(string) ([]string, error)) error {
+func Initialise(nodesDomain, cacheDirectory string, dnsType broadcast.DNSType, f func(string) ([]string, error)) error {
 
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -100,10 +95,10 @@ func Initialise(nodesDomain, cacheDirectory string, dnsPeerOnly dnsOnlyType, f f
 
 	globalData.backupFile = path.Join(cacheDirectory, backupFile)
 
-	globalData.dnsPeerOnly = dnsPeerOnly
+	globalData.dnsType = dnsType
 
 	globalData.log.Info("start restoring peer data…")
-	if globalData.dnsPeerOnly == UsePeers { //disable restore to avoid restore non-dns node
+	if globalData.dnsType == broadcast.UsePeers { //disable restore to avoid restore non-dns node
 		if list, err := receptor.Restore(globalData.backupFile); err == nil {
 			for _, item := range list.Receptors {
 				id, err := peerlib.IDFromBytes(item.ID)
@@ -125,9 +120,13 @@ func Initialise(nodesDomain, cacheDirectory string, dnsPeerOnly dnsOnlyType, f f
 		return err
 	}
 
-	if err := globalData.ann.initialise(); nil != err {
-		return err
-	}
+	globalData.brdc = broadcast.NewBroadcast(
+		logger.New("broadcast"),
+		globalData.receptors,
+		globalData.rpcs,
+		globalData.fingerprint,
+		globalData.dnsType,
+	)
 
 	// all data initialised
 	globalData.initialised = true
@@ -136,7 +135,7 @@ func Initialise(nodesDomain, cacheDirectory string, dnsPeerOnly dnsOnlyType, f f
 	globalData.log.Info("start background…")
 
 	processes := background.Processes{
-		&globalData.nodesLookup, &globalData.ann,
+		&globalData.nodesLookup, globalData.brdc,
 	}
 
 	globalData.background = background.Start(processes, messagebus.Bus.Announce.Chan())

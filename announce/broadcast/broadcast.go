@@ -3,16 +3,23 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package announce
+package broadcast
 
 import (
 	"encoding/binary"
 	"fmt"
+	"sync"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/announce/parameter"
-
 	"github.com/bitmark-inc/bitmarkd/announce/observer"
+
+	"github.com/bitmark-inc/bitmarkd/background"
+
+	"github.com/bitmark-inc/bitmarkd/announce/fingerprint"
+
+	"github.com/bitmark-inc/bitmarkd/announce/rpc"
+
+	"github.com/bitmark-inc/bitmarkd/announce/parameter"
 
 	"github.com/bitmark-inc/bitmarkd/announce/receptor"
 	"github.com/bitmark-inc/bitmarkd/util"
@@ -22,34 +29,47 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-type announcer struct {
-	log *logger.L
+type DNSType bool
+
+const (
+	DnsOnly  DNSType = true
+	UsePeers DNSType = false
+)
+
+type broadcast struct {
+	sync.RWMutex
+	log           *logger.L
+	receptors     receptor.Receptor
+	rpcs          rpc.RPC
+	myFingerprint fingerprint.Type
+	dnsType       DNSType
 }
 
-// initialise the announcer
-func (ann *announcer) initialise() error {
-	log := logger.New("announcer")
-	ann.log = log
-
+func NewBroadcast(log *logger.L, receptors receptor.Receptor, rpcs rpc.RPC, myFingerprint fingerprint.Type, dnsType DNSType) background.Process {
 	log.Info("initialising…")
-
-	return nil
+	return &broadcast{
+		log:           log,
+		receptors:     receptors,
+		rpcs:          rpcs,
+		myFingerprint: myFingerprint,
+		dnsType:       dnsType,
+	}
 }
 
 // wait for incoming requests, process them and reply
-func (ann *announcer) Run(arg interface{}, shutdown <-chan struct{}) {
-	log := ann.log
+func (b *broadcast) Run(arg interface{}, shutdown <-chan struct{}) {
+	log := b.log
 
 	log.Info("starting…")
 
-	queue := arg.(<-chan messagebus.Message)
+	queue := arg.(chan messagebus.Message)
 
 	observers := []observer.Observer{
-		observer.NewReconnect(globalData.receptors),
-		observer.NewUpdatetime(globalData.receptors, globalData.log),
-		observer.NewAddpeer(globalData.receptors, globalData.log),
-		observer.NewAddrpc(globalData.rpcs, globalData.log),
-		observer.NewSelf(globalData.receptors, globalData.log),
+		observer.NewReconnect(b.receptors),
+		observer.NewUpdatetime(b.receptors, b.log),
+		observer.NewAddpeer(b.receptors, b.log),
+		observer.NewAddrpc(b.rpcs, b.log),
+		observer.NewSelf(b.receptors, b.log),
 	}
 
 	delay := time.After(parameter.InitialiseInterval)
@@ -68,57 +88,57 @@ loop:
 
 		case <-delay:
 			delay = time.After(parameter.InitialiseInterval)
-			ann.process()
+			b.process()
 		}
 	}
 }
 
 // process the announcement and return response to receptor
-func (ann *announcer) process() {
-	log := ann.log
+func (b *broadcast) process() {
+	log := b.log
 
 	util.LogInfo(log, util.CoReset, "process starting…")
-	globalData.Lock()
-	defer globalData.Unlock()
+	b.Lock()
+	defer b.Unlock()
 
 	// get a big endian Timestamp
 	timestamp := make([]byte, 8)
 	binary.BigEndian.PutUint64(timestamp, uint64(time.Now().Unix()))
 
 	// announce this nodes IP and ports to other peers
-	if globalData.rpcs.IsSet() {
-		log.Debugf("send rpc: %x", globalData.fingerprint)
-		if globalData.dnsPeerOnly == UsePeers { //Make self a  hiden rpc node to avoid been connected
-			messagebus.Bus.P2P.Send("rpc", globalData.fingerprint[:], globalData.rpcs.Self(), timestamp)
+	if b.rpcs.IsSet() {
+		log.Debugf("send rpc: %x", b.myFingerprint)
+		if b.dnsType == UsePeers { //Make self a  hiden rpc node to avoid been connected
+			messagebus.Bus.P2P.Send("rpc", b.myFingerprint[:], b.rpcs.Self(), timestamp)
 		}
 	}
-	if globalData.receptors.IsSet() {
-		addrsBinary, errAddr := proto.Marshal(&receptor.Addrs{Address: util.GetBytesFromMultiaddr(globalData.receptors.SelfAddress())})
+	if b.receptors.IsSet() {
+		addrsBinary, errAddr := proto.Marshal(&receptor.Addrs{Address: util.GetBytesFromMultiaddr(b.receptors.SelfAddress())})
 		if nil == errAddr {
-			util.LogInfo(log, util.CoYellow, fmt.Sprintf("-><-send self data to P2P ID:%v address:%v", globalData.receptors.ShortID(), util.PrintMaAddrs(globalData.receptors.SelfAddress())))
-			if globalData.dnsPeerOnly == UsePeers { //Make self a  hiden node to avoid been connected
-				messagebus.Bus.P2P.Send("peer", globalData.receptors.BinaryID(), addrsBinary, timestamp)
+			util.LogInfo(log, util.CoYellow, fmt.Sprintf("-><-send self data to P2P ID:%v address:%v", b.receptors.ShortID(), util.PrintMaAddrs(b.receptors.SelfAddress())))
+			if b.dnsType == UsePeers { //Make self a  hiden node to avoid been connected
+				messagebus.Bus.P2P.Send("peer", b.receptors.BinaryID(), addrsBinary, timestamp)
 			}
 		}
 	}
-	globalData.rpcs.Expire()
-	globalData.receptors.Expire()
+	b.rpcs.Expire()
+	b.receptors.Expire()
 
 	//if globalData.treeChanged {
-	count := globalData.receptors.Tree().Count()
+	count := b.receptors.Tree().Count()
 	if count <= parameter.MinTreeExpected {
-		exhaustiveConnections(log)
+		exhaustiveConnections(log, b.receptors)
 	} else {
-		globalData.receptors.BalanceTree()
+		b.receptors.BalanceTree()
 	}
 
-	globalData.receptors.Change(false)
+	b.receptors.Change(false)
 	//}
 }
 
-func exhaustiveConnections(log *logger.L) {
-	tree := globalData.receptors.Tree()
-	if nil == globalData.receptors.Self() {
+func exhaustiveConnections(log *logger.L, receptors receptor.Receptor) {
+	tree := receptors.Tree()
+	if nil == receptors.Self() {
 		util.LogWarn(log, util.CoRed, fmt.Sprintf("exhaustiveConnections called to early"))
 		return // called to early
 	}
@@ -128,7 +148,7 @@ func exhaustiveConnections(log *logger.L) {
 		node := tree.Get(i)
 		if nil != node {
 			p := node.Value().(*receptor.Data)
-			if nil != p && !util.IDEqual(p.ID, globalData.receptors.ID()) {
+			if nil != p && !util.IDEqual(p.ID, receptors.ID()) {
 				idBinary, errID := p.ID.Marshal()
 				pbAddr := util.GetBytesFromMultiaddr(p.Listeners)
 				pbAddrBinary, errMarshal := proto.Marshal(&receptor.Addrs{Address: pbAddr})
