@@ -12,6 +12,14 @@ user_1=first
 user_2=second
 next_user=3
 
+# all local CLI/Wallet entries use these passwords
+# as this is only a local loopback test and only uses regression net coins
+cli_password='1234567890'
+wallet_password='1234567890'
+
+# assume only one connection
+cli_connections=1
+
 # generate uses for all nodes that can mine blocks
 first_node=1
 last_node=12
@@ -106,9 +114,11 @@ SET_CURRENCY() {
 r=''
 
 CLI() {
-  local user verbose check
+  local user verbose check connection
   verbose=no
   check=yes
+  connection=0
+
   while :
   do
     case "${1}" in
@@ -126,21 +136,39 @@ CLI() {
       esac
   done
   user="${1}"; shift
-  [ X"${verbose}" = X"yes" ] && printf '\033[1;33mCLI[%s]: \033[1;31m%s\033[0m\n' "${user}" "$*"
+
   while :
   do
-    if ! r=$(bitmark-cli -i "${user}" -p 1234567890 -n local "$@") && [ X"${check}" = X"yes" ]
+    if [ ${cli_connections} -gt 1 ]
     then
-      if [ X"${r}" = X"not available during synchronise" ]
-      then
-        printf 'retry\n'
-        sleep 10
-        continue
-      fi
-      [ -n "${r}" ] && ERROR 'failed: stdout:\n%s' "${r}"
-      ERROR 'failed: stdout empty'
+      connection=$(jot -r 1 0 "$((cli_connections - 1))")
     fi
-    break
+
+    [ X"${verbose}" = X"yes" ] && printf '\033[1;33mCLI[%s@%d]: \033[1;31m%s\033[0m\n' "${user}" "${connection}" "$*"
+    while :
+    do
+      if ! r=$(bitmark-cli -i "${user}" -p "${cli_password}" -c "${connection}" -n local "$@" 2>&1) && [ X"${check}" = X"yes" ]
+      then
+        case "${r#terminated with error: }" in
+          ('not available during synchronise')
+            sleep 30
+            ;;
+          ('connection is shut down'|'EOF'|'read tcp '*|'dial '*)
+            sleep 60
+            ;;
+          (*)
+            [ -z "${r}" ] && r='unknown error: stdout empty'
+            [ X"${verbose}" = X"yes" ] && printf '\033[1;33mCLI[%s@%d]: error: \033[1;31m%s\033[0m\n' "${user}" "${connection}" "${r}"
+            # make JSON: {"error": "string"}
+            r=$(jq --null-input --arg error "${r}" '{error:$error}')
+            sleep 60
+            break # retry command on new connection
+            ;;
+        esac
+        continue # retry the same connection
+      fi
+      break 2 # suceess - exit both loops
+    done
   done
 }
 
@@ -156,6 +184,14 @@ PRETTY() {
 READY() {
   local s mode blocks_q
   s=0
+
+  # find number of available bitmark connections
+  CLI "${user_1}" list -c -j 2> /dev/null
+  cli_connections=$(GET '.|length')
+  [ -z "${cli_connections}" ] && ERROR 'bitmark-cli does not have any connections configured'
+  [ "${cli_connections}" -eq 0 ] && ERROR 'bitmark-cli does not have any connections configured'
+  printf 'using %d bitmark connections\n' "${cli_connections}"
+
   printf 'waiting for sync -'
   while :
   do
@@ -191,15 +227,20 @@ WAIT() {
   local txid n status
   txid="${1}"; shift
 
-  n=-1
   printf '\033[1;36mwaiting for: \033[1;35m%s\033[0m -' "${txid}"
-  while :
+
+  # require several separate nodes to confirm
+  for retry in $(seq 1 3)
   do
-    CLI "${user_1}" status -t "${txid}"
-    status=$(GET .status)
-    [ X"${status}" = X"Confirmed" ] && break
-    [ X"${status}" = X"Verified" ] && n=1
-    SPINNER "${n}"
+    n=-1
+    while :
+    do
+      CLI "${user_1}" status -t "${txid}"
+      status=$(GET .status)
+      [ X"${status}" = X"Confirmed" ] && break
+      [ X"${status}" = X"Verified" ] && n=1
+      SPINNER "${n}"
+    done
   done
   printf '\b\033[1;32mOK\033[0m\n\n'
 }
@@ -269,7 +310,7 @@ PAY() {
   if [ X"${status}" = X"Pending" ]
   then
     # shellcheck disable=SC2086
-    eval env WALLET_PASSWORD='1234567890' ${pay} | jq .
+    eval env WALLET_PASSWORD="${wallet_password}" ${pay} | jq .
     printf '\n'
     eval GEN_${currency}
   fi
@@ -363,26 +404,31 @@ OWNER_OF_BLOCK() {
 
   block_owner=''
 
-  i=1
-  while :
+  # may ned some retries in case of forks
+  for retry in $(seq 1 5)
   do
-    eval "user=\"\${user_${i}}\""
-    [ -z "${user}" ] && break
-    next='0'
+    i=1
     while :
     do
-      CLI "${user_1}" owned -c 100 -s "${next}" -o "${user}"
-      SET next '.next'
-      [ X"${next}" = X"0" ] && break
-      txid=$(PRETTY --join-output --arg name "${user}" --arg block_number "${block_number}" "${q}")
-      if [ -n "${txid}" ]
-      then
-        block_owner="${user}"
-        block_txid="${txid}"
-        break
-      fi
+      eval "user=\"\${user_${i}}\""
+      [ -z "${user}" ] && break
+      next='0'
+      while :
+      do
+        CLI "${user_1}" owned -c 100 -s "${next}" -o "${user}"
+        SET next '.next'
+        [ X"${next}" = X"0" ] && break
+        txid=$(PRETTY --join-output --arg name "${user}" --arg block_number "${block_number}" "${q}")
+        if [ -n "${txid}" ]
+        then
+          block_owner="${user}"
+          block_txid="${txid}"
+          break
+        fi
+      done
+      i=$(( i + 1 ))
     done
-    i=$(( i + 1 ))
+    [ -n "${block_owner}" ] && sleep 10 && break
   done
   [ -z "${block_owner}" ] && ERROR 'cannot find owner of block: %d' "${block_number}"
   [ -z "${block_txid}" ] && ERROR 'cannot tx id of block: %d' "${block_number}"
