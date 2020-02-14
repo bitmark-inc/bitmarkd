@@ -10,6 +10,8 @@ import (
 	"path"
 	"sync"
 
+	"github.com/bitmark-inc/bitmarkd/announce/domain"
+
 	"github.com/bitmark-inc/bitmarkd/announce/broadcast"
 
 	"github.com/bitmark-inc/bitmarkd/announce/rpc"
@@ -56,7 +58,7 @@ type announcerData struct {
 
 	brdc background.Process
 
-	nodesLookup lookup
+	domain domain.Domain
 
 	// for background
 	background *background.T
@@ -78,6 +80,7 @@ const timeFormat = "2006-01-02 15:04:05"
 // pass a fully qualified domain for root node list
 // or empty string for no root nodes
 func Initialise(nodesDomain, cacheDirectory string, dnsType broadcast.DNSType, f func(string) ([]string, error)) error {
+	var err error
 
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -116,7 +119,12 @@ func Initialise(nodesDomain, cacheDirectory string, dnsType broadcast.DNSType, f
 		}
 	}
 
-	if err := globalData.nodesLookup.initialise(nodesDomain, f); nil != err {
+	globalData.domain, err = domain.NewDomain(
+		nodesDomain,
+		globalData.receptors,
+		f,
+	)
+	if nil != err {
 		return err
 	}
 
@@ -135,7 +143,7 @@ func Initialise(nodesDomain, cacheDirectory string, dnsType broadcast.DNSType, f
 	globalData.log.Info("start background…")
 
 	processes := background.Processes{
-		&globalData.nodesLookup, globalData.brdc,
+		globalData.domain, globalData.brdc,
 	}
 
 	globalData.background = background.Start(processes, messagebus.Bus.Announce.Chan())

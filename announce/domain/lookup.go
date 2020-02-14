@@ -12,10 +12,6 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-const (
-	loggerCategory = "domain"
-)
-
 // Lookuper - interface to lookup domain name
 type Lookuper interface {
 	Lookup(func(string) ([]string, error)) ([]DnsTxt, error)

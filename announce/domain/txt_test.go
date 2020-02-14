@@ -6,44 +6,13 @@
 package domain_test
 
 import (
+	"testing"
+
 	"github.com/bitmark-inc/bitmarkd/announce/domain"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/logger"
 	"github.com/stretchr/testify/assert"
-	"os"
-	"testing"
 )
 
-const (
-	testingDirName = "testing"
-)
-
-func setupTestLogger() {
-	removeFiles()
-	_ = os.Mkdir(testingDirName, 0700)
-
-	logging := logger.Configuration{
-		Directory: testingDirName,
-		File:      "testing.log",
-		Size:      1048576,
-		Count:     10,
-		Console:   false,
-		Levels: map[string]string{
-			logger.DefaultTag: "critical",
-		},
-	}
-
-	// start logging
-	_ = logger.Initialise(logging)
-}
-
-func teardownTestLogger() {
-	removeFiles()
-}
-
-func removeFiles() {
-	_ = os.RemoveAll(testingDirName)
-}
 func TestValidTag(t *testing.T) {
 	setupTestLogger()
 	defer teardownTestLogger()

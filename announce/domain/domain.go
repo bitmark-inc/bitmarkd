@@ -3,62 +3,74 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package announce
+package domain
 
 import (
 	"fmt"
 	"net"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/announce/receptor"
+
 	"github.com/bitmark-inc/bitmarkd/announce/parameter"
-
-	"github.com/bitmark-inc/bitmarkd/announce/domain"
-
-	"github.com/bitmark-inc/logger"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/miekg/dns"
 	ma "github.com/multiformats/go-multiaddr"
+
+	"github.com/bitmark-inc/bitmarkd/background"
+	"github.com/bitmark-inc/logger"
 )
 
 const (
-	loggerCategory = "nodeslookup"
+	loggerCategory = "domain"
+	configFile     = "/etc/resolv.conf"
 )
 
-type lookup struct {
-	logger     *logger.L
-	domainName string
-	lookuper   domain.Lookuper
+type Domain interface {
+	background.Process
 }
 
-func (l *lookup) initialise(nodesDomain string, f func(string) ([]string, error)) error {
-	l.logger = logger.New(loggerCategory)
-	l.logger.Info("initialising…")
-	l.domainName = nodesDomain
-	l.lookuper = domain.NewLookuper(nodesDomain)
+type domain struct {
+	logger    *logger.L
+	name      string
+	lookuper  Lookuper
+	receptors receptor.Receptor
+}
 
-	txts, err := l.lookuper.Lookup(f)
-	if nil != err {
-		return err
+func NewDomain(nodesDomain string, receptors receptor.Receptor, f func(string) ([]string, error)) (Domain, error) {
+	d := &domain{
+		logger:    logger.New(loggerCategory),
+		name:      nodesDomain,
+		lookuper:  NewLookuper(nodesDomain),
+		receptors: receptors,
 	}
-	addTxts(txts, l.logger)
-	return nil
+
+	d.logger.Info("initialising…")
+
+	txts, err := d.lookuper.Lookup(f)
+	if nil != err {
+		return nil, err
+	}
+
+	addTxts(txts, d.logger, d.receptors)
+	return d, nil
 }
 
-func (l *lookup) Run(_ interface{}, shutdown <-chan struct{}) {
-	timer := time.After(intervalTime(l.domainName, l.logger))
-	log := l.logger
+func (d domain) Run(_ interface{}, shutdown <-chan struct{}) {
+	timer := time.After(intervalTime(d.name, d.logger))
+	log := d.logger
 
 loop:
 	for {
 		select {
 		case <-timer:
-			timer = time.After(intervalTime(l.domainName, l.logger))
-			txts, err := l.lookuper.Lookup(net.LookupTXT)
+			timer = time.After(intervalTime(d.name, d.logger))
+			txts, err := d.lookuper.Lookup(net.LookupTXT)
 			if nil != err {
 				log.Errorf("domain name lookup with error: %s", err)
 				continue
 			}
-			addTxts(txts, l.logger)
+			addTxts(txts, d.logger, d.receptors)
 
 		case <-shutdown:
 			break loop
@@ -72,7 +84,6 @@ func intervalTime(domain string, log *logger.L) time.Duration {
 	var servers []string // dns name server
 
 	// reading default configuration file
-	const configFile = "/etc/resolv.conf"
 	conf, err := dns.ClientConfigFromFile(configFile)
 
 	if nil != err {
@@ -145,7 +156,7 @@ func ttl(rrs []dns.RR) uint32 {
 	return 0
 }
 
-func addTxts(txts []domain.DnsTxt, log *logger.L) {
+func addTxts(txts []DnsTxt, log *logger.L, receptors receptor.Receptor) {
 	// TODO: move this logic into addPeer
 	for i, txt := range txts {
 		var listeners []ma.Multiaddr
@@ -172,7 +183,7 @@ func addTxts(txts []domain.DnsTxt, log *logger.L) {
 			continue
 		}
 		log.Infof("result[%d]: adding id:%s", i, txt.PeerID)
-		globalData.receptors.Add(id, listeners, uint64(time.Now().Unix()))
-		globalData.receptors.Tree().Print(false)
+		receptors.Add(id, listeners, uint64(time.Now().Unix()))
+		receptors.Tree().Print(false)
 	}
 }
