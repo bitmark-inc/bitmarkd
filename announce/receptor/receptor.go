@@ -142,7 +142,7 @@ func (r *receptor) Add(peerID p2pPeer.ID, listeners []ma.Multiaddr, timestamp ui
 		Listeners: listeners,
 		Timestamp: ts,
 	}
-	// TODO: Take care of update and replace base on protocol of multi-address
+	// TODO: Take care of update and replace base on multi-address protocol
 	if node, _ := r.tree.Search(id.ID(peerID)); nil != node {
 		peer := node.Value().(*Data)
 
@@ -155,7 +155,7 @@ func (r *receptor) Add(peerID p2pPeer.ID, listeners []ma.Multiaddr, timestamp ui
 	// add or update the Timestamp in the tree
 	recordAdded := r.tree.Insert(id.ID(peerID), d)
 
-	//globalData.log.Infof("Peer Added:  ID: %s,  add:%t  nodes in the r tree: %d", selfID.String(), recordAdded, globalData.tree.Count())
+	r.log.Infof("Peer Added:  ID: %s,  add:%t  nodes in the r tree: %d", r.selfID.String(), recordAdded, r.tree.Count())
 
 	// if adding this nodes data
 	if util.IDEqual(r.selfID, peerID) {
