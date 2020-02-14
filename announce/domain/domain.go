@@ -184,6 +184,5 @@ func addTxts(txts []DnsTxt, log *logger.L, receptors receptor.Receptor) {
 		}
 		log.Infof("result[%d]: adding id:%s", i, txt.PeerID)
 		receptors.Add(id, listeners, uint64(time.Now().Unix()))
-		receptors.Tree().Print(false)
 	}
 }

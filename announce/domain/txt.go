@@ -8,10 +8,11 @@ package domain
 
 import (
 	"encoding/hex"
-	"github.com/bitmark-inc/bitmarkd/fault"
 	"net"
 	"strconv"
 	"strings"
+
+	"github.com/bitmark-inc/bitmarkd/fault"
 )
 
 var supportedTags = map[string]struct{}{
@@ -50,7 +51,6 @@ func parseTxt(s string) (*DnsTxt, error) {
 
 words:
 	for i, w := range strings.Split(strings.TrimSpace(s), " ") {
-
 		if 0 == i {
 			if _, ok := supportedTags[w]; ok {
 				continue words

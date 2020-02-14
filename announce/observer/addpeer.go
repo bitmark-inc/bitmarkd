@@ -55,7 +55,6 @@ func (a addpeer) Update(str string, args [][]byte) {
 		timestamp := binary.BigEndian.Uint64(args[2])
 		a.receptors.Add(id, addrs, timestamp)
 		util.LogDebug(a.log, util.CoYellow, fmt.Sprintf("-><- addpeer : %s  listener: %s  Timestamp: %d", id.String(), receptor.AddrToString(args[1]), timestamp))
-		a.receptors.Tree().Print(false)
 	}
 }
 

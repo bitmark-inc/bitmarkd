@@ -109,7 +109,6 @@ func Initialise(nodesDomain, cacheDirectory string, dnsType broadcast.DNSType, f
 				util.LogDebug(globalData.log, util.CoReset, fmt.Sprintf("restore peer ID:%s", id.ShortString()))
 
 				globalData.receptors.Add(id, addrs, item.Timestamp)
-				globalData.receptors.Tree().Print(false)
 			}
 		} else {
 			globalData.log.Errorf("fail to restore peer data: %s", err.Error())
