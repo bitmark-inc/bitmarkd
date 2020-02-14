@@ -129,7 +129,7 @@ func (b *broadcast) process() {
 	if count <= parameter.MinTreeExpected {
 		exhaustiveConnections(log, b.receptors)
 	} else {
-		b.receptors.BalanceTree()
+		b.receptors.ReBalance()
 	}
 
 	b.receptors.Change(false)

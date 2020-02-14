@@ -351,4 +351,4 @@ func TestExpire(t *testing.T) {
 	assert.True(t, addrs[0].Equal(addr1), "wrong address")
 }
 
-// TODO: test BalanceTree
+// TODO: test ReBalance

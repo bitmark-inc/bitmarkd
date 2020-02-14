@@ -5,12 +5,13 @@
 package mocks
 
 import (
+	reflect "reflect"
+	time "time"
+
 	avl "github.com/bitmark-inc/bitmarkd/avl"
 	gomock "github.com/golang/mock/gomock"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	go_multiaddr "github.com/multiformats/go-multiaddr"
-	reflect "reflect"
-	time "time"
 )
 
 // MockReceptor is a mock of Receptor interface
@@ -234,16 +235,16 @@ func (mr *MockReceptorMockRecorder) UpdateTime(arg0, arg1 interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTime", reflect.TypeOf((*MockReceptor)(nil).UpdateTime), arg0, arg1)
 }
 
-// BalanceTree mocks base method
-func (m *MockReceptor) BalanceTree() {
+// ReBalance mocks base method
+func (m *MockReceptor) ReBalance() {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "BalanceTree")
+	m.ctrl.Call(m, "ReBalance")
 }
 
-// BalanceTree indicates an expected call of BalanceTree
+// ReBalance indicates an expected call of ReBalance
 func (mr *MockReceptorMockRecorder) BalanceTree() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BalanceTree", reflect.TypeOf((*MockReceptor)(nil).BalanceTree))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReBalance", reflect.TypeOf((*MockReceptor)(nil).ReBalance))
 }
 
 // Expire mocks base method

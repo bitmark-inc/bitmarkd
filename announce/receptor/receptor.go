@@ -47,7 +47,7 @@ type Receptor interface {
 	BinaryID() []byte
 	ShortID() string
 	UpdateTime(p2pPeer.ID, time.Time)
-	BalanceTree()
+	ReBalance()
 	Expire()
 }
 
@@ -123,7 +123,7 @@ func (r *receptor) SetSelf(peerID p2pPeer.ID, addrs []ma.Multiaddr) error {
 
 	r.Add(peerID, addrs, uint64(time.Now().Unix()))
 	r.self, _ = r.tree.Search(id.ID(peerID))
-	r.BalanceTree()
+	r.ReBalance()
 
 	return nil
 }
@@ -253,9 +253,9 @@ loop:
 	}
 }
 
-func (r *receptor) BalanceTree() {
+func (r *receptor) ReBalance() {
 	if nil == r.self {
-		util.LogWarn(r.log, util.CoRed, fmt.Sprintf("BalanceTree called to early"))
+		util.LogWarn(r.log, util.CoRed, fmt.Sprintf("ReBalance called to early"))
 		return // called to early
 	}
 

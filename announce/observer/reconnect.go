@@ -17,7 +17,7 @@ type reconnect struct {
 
 func (r reconnect) Update(str string, _ [][]byte) {
 	if str == reconnectEvent {
-		r.receptors.BalanceTree()
+		r.receptors.ReBalance()
 	}
 }
 
