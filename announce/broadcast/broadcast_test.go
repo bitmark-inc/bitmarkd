@@ -71,16 +71,14 @@ func TestRunWhenSendingShutdown(t *testing.T) {
 	)
 
 	ch := make(chan messagebus.Message)
-	var ch1 <-chan messagebus.Message
-	ch1 = ch
 	shutdown := make(chan struct{})
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	go func(b background.Process, wg *sync.WaitGroup, sh <-chan struct{}) {
-		b.Run(ch1, sh)
+	go func(ch <-chan messagebus.Message, b background.Process, wg *sync.WaitGroup, sh <-chan struct{}) {
+		b.Run(ch, sh)
 		wg.Done()
-	}(b, &wg, shutdown)
+	}(ch, b, &wg, shutdown)
 
 	shutdown <- struct{}{}
 	wg.Wait()

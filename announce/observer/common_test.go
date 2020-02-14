@@ -46,6 +46,7 @@ func removeFiles() {
 
 func TestMain(m *testing.M) {
 	setupTestLogger()
-	m.Run()
+	rc := m.Run()
 	teardownTestLogger()
+	os.Exit(rc)
 }

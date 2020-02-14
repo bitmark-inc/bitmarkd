@@ -19,8 +19,7 @@ import (
 )
 
 const (
-	dir      = "testing"
-	category = "testing"
+	dir = "testing"
 )
 
 func setupTestLogger() {

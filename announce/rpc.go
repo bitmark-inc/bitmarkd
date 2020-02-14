@@ -15,14 +15,6 @@ func SetRPC(fingerprint fingerprint.Type, rpcs []byte) error {
 	return globalData.rpcs.Set(fingerprint, rpcs)
 }
 
-// addRPC - add an remote RPC listener
-// returns:
-//   true  if this was a new/updated entry
-//   false if the update was within the limits (to prevent continuous relaying)
-func addRPC(clientFingerprint []byte, rpcs []byte, timestamp uint64) bool {
-	return globalData.rpcs.Add(clientFingerprint, rpcs, timestamp)
-}
-
 // FetchRPCs - fetch some records
 func FetchRPCs(start uint64, count int) ([]rpc.Entry, uint64, error) {
 	return globalData.rpcs.Fetch(start, count)
