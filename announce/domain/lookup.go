@@ -6,9 +6,10 @@
 package domain
 
 import (
+	"strings"
+
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/logger"
-	"strings"
 )
 
 const (
@@ -20,14 +21,13 @@ type Lookuper interface {
 	Lookup(func(string) ([]string, error)) ([]DnsTxt, error)
 }
 
-type lookuperData struct {
+type lookuper struct {
 	logger *logger.L
-
 	domain string
 }
 
 func NewLookuper(domain string) Lookuper {
-	return &lookuperData{
+	return &lookuper{
 		logger: logger.New(loggerCategory),
 		domain: domain,
 	}
@@ -35,7 +35,7 @@ func NewLookuper(domain string) Lookuper {
 
 // lookup node domain for the peering
 // passing net.LookupTXT(l.domain)
-func (l *lookuperData) Lookup(f func(string) ([]string, error)) ([]DnsTxt, error) {
+func (l *lookuper) Lookup(f func(string) ([]string, error)) ([]DnsTxt, error) {
 	log := l.logger
 	if "" == l.domain {
 		return nil, fault.InvalidNodeDomain
