@@ -193,16 +193,15 @@ process_rpcs:
 		if '[' == listen[0] {
 			listen = strings.Split(listen[1:], "]:")[0]
 			ipType[i] = "tcp6"
+			// override for OS with dual stack
+			switch runtime.GOOS {
+			case "freebsd", "linux":
+				ipType[i] = "tcp"
+			default:
+			}
 		} else {
 			listen = strings.Split(listen, ":")[0]
 			ipType[i] = "tcp4"
-		}
-		// override for OS with dual stack
-		switch runtime.GOOS {
-		case "freebsd", "linux":
-			ipType[i] = "tcp"
-
-		default:
 		}
 		ip := net.ParseIP(listen)
 		if nil == ip {

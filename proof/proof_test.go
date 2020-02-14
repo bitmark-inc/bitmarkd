@@ -8,10 +8,10 @@ package proof_test
 import (
 	"testing"
 
-	"github.com/bitmark-inc/bitmarkd/counter"
-
-	"github.com/bitmark-inc/bitmarkd/proof"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/bitmark-inc/bitmarkd/counter"
+	"github.com/bitmark-inc/bitmarkd/proof"
 )
 
 func TestMinedBlocks(t *testing.T) {

@@ -11,9 +11,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/bitmark-inc/bitmarkd/transactionrecord"
-
 	"github.com/bitmark-inc/bitmarkd/storage"
+	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 
 const (

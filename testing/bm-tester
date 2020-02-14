@@ -9,6 +9,11 @@
 first=1
 last=12
 
+# to enble the recorderd set to yes
+#
+# normally the "local" chain is used for testing and this uses an
+# internal hasher
+enable_recorderd=no
 
 # the tmux session name
 session=LOCAL
@@ -28,11 +33,14 @@ tmux
 pgrep
 killall
 run-bitmarkd
-run-recorderd
 run-bitcoin
 run-litecoin
 '
 
+# add optional programs
+[ X"${enable_recorderd}" = X"yes" ] && list="${list} run-recorderd"
+
+# check for required programs
 for c in ${list}
 do
   x="$(command -v "${c}" 2> /dev/null)" || ERROR 'missing program: %s' "${c}"
@@ -129,8 +137,9 @@ NEW_TEST_SESSION() {
   # if two progs then split window vertically
   command_list='
 coin:run-bitcoin,--server:run-litecoin,--server
-rec:run-recorderd
 '
+[ X"${enable_recorderd}" = X"yes" ] && command_list="${command_list} rec:run-recorderd"
+
   n="${first}"
   while [ "${n}" -le "${last}" ]
   do
@@ -142,12 +151,12 @@ rec:run-recorderd
     fi
     n=$((n + 1))
   done
-  
+
   case "$(uname)" in
     (FreeBSD|DragonFly)
       top="top:top,-U,${USER},-o,res,-n,20,-i"
       ;;
-      (Linux)
+    (Linux)
       top="top:top,-U,${USER},-o,RES,-n,20,-i"
       ;;
     (*)
