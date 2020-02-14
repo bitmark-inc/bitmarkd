@@ -13,6 +13,7 @@ import (
 
 const (
 	testingDirName = "testing"
+	logCategory    = "testing"
 )
 
 func setupTestLogger() {

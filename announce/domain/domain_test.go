@@ -9,6 +9,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/bitmark-inc/logger"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/bitmark-inc/bitmarkd/announce/mocks"
@@ -28,7 +30,7 @@ func TestNewDomain(t *testing.T) {
 	r := mocks.NewMockReceptor(ctl)
 	f := func(s string) ([]string, error) { return []string{}, nil }
 
-	_, err := domain.NewDomain("domain.not.exist", r, f)
+	_, err := domain.NewDomain(logger.New(logCategory), "domain.not.exist", r, f)
 	assert.Nil(t, err, "wrong NewDomain")
 }
 
@@ -42,7 +44,7 @@ func TestRunWhenShutdown(t *testing.T) {
 	r := mocks.NewMockReceptor(ctl)
 	f := func(s string) ([]string, error) { return []string{}, nil }
 
-	b, _ := domain.NewDomain("domain.not.exist", r, f)
+	b, _ := domain.NewDomain(logger.New(logCategory), "domain.not.exist", r, f)
 
 	shutdown := make(chan struct{})
 	wg := new(sync.WaitGroup)

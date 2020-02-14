@@ -22,8 +22,7 @@ import (
 )
 
 const (
-	loggerCategory = "announce"
-	configFile     = "/etc/resolv.conf"
+	configFile = "/etc/resolv.conf"
 )
 
 type Domain interface {
@@ -37,11 +36,11 @@ type domain struct {
 	receptors receptor.Receptor
 }
 
-func NewDomain(nodesDomain string, receptors receptor.Receptor, f func(string) ([]string, error)) (Domain, error) {
+func NewDomain(log *logger.L, nodesDomain string, receptors receptor.Receptor, f func(string) ([]string, error)) (Domain, error) {
 	d := &domain{
-		logger:    logger.New(loggerCategory),
+		logger:    log,
 		name:      nodesDomain,
-		lookuper:  NewLookuper(nodesDomain),
+		lookuper:  NewLookuper(nodesDomain, log),
 		receptors: receptors,
 	}
 

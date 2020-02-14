@@ -8,6 +8,8 @@ package domain_test
 import (
 	"testing"
 
+	"github.com/bitmark-inc/logger"
+
 	"github.com/bitmark-inc/bitmarkd/announce/domain"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/stretchr/testify/assert"
@@ -177,7 +179,7 @@ func TestValidTag(t *testing.T) {
 	}
 
 	for _, item := range testData {
-		l := domain.NewLookuper(item.txt)
+		l := domain.NewLookuper(item.txt, logger.New(logCategory))
 		f := func(s string) ([]string, error) {
 			return []string{item.txt}, nil
 		}

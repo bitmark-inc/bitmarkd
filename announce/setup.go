@@ -116,6 +116,7 @@ func Initialise(nodesDomain, cacheDirectory string, dnsType broadcast.DNSType, f
 	}
 
 	globalData.domain, err = domain.NewDomain(
+		globalData.log,
 		nodesDomain,
 		globalData.receptors,
 		f,

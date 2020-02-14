@@ -22,9 +22,9 @@ type lookuper struct {
 	domain string
 }
 
-func NewLookuper(domain string) Lookuper {
+func NewLookuper(domain string, log *logger.L) Lookuper {
 	return &lookuper{
-		logger: logger.New(loggerCategory),
+		logger: log,
 		domain: domain,
 	}
 }
