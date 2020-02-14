@@ -24,13 +24,13 @@ const (
 // a block of configuration data
 // this is read from the configuration file
 type Configuration struct {
-	Publish           []string          `gluamapper:"publish" json:"publish"`
-	Submit            []string          `gluamapper:"submit" json:"submit"`
-	PrivateKey        string            `gluamapper:"private_key" json:"private_key"`
-	PublicKey         string            `gluamapper:"public_key" json:"public_key"`
-	SigningKey        string            `gluamapper:"signing_key" json:"signing_key"`
-	PaymentAddr       map[string]string `gluamapper:"payment_address" json:"payment_address"`
-	IntenalHashEnable bool              `gluamapper:"local_use_internal_hash" json:"local_use_internal_hash"`
+	Publish            []string          `gluamapper:"publish" json:"publish"`
+	Submit             []string          `gluamapper:"submit" json:"submit"`
+	PrivateKey         string            `gluamapper:"private_key" json:"private_key"`
+	PublicKey          string            `gluamapper:"public_key" json:"public_key"`
+	SigningKey         string            `gluamapper:"signing_key" json:"signing_key"`
+	PaymentAddr        map[string]string `gluamapper:"payment_address" json:"payment_address"`
+	InternalHashEnable bool              `gluamapper:"local_use_internal_hash" json:"local_use_internal_hash"`
 }
 
 // globals for background process
@@ -95,7 +95,7 @@ func Initialise(configuration *Configuration) error {
 	globalData.background = background.Start(processes, nil)
 
 	// start internal hasher for local chain
-	if mode.ChainName() == chain.Local && configuration.IntenalHashEnable {
+	if mode.ChainName() == chain.Local && configuration.InternalHashEnable {
 		h, err := NewInternalHasherForTest(internalHasherRequest, internalHasherReply)
 		if nil != err {
 			return err
