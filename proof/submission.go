@@ -25,18 +25,19 @@ const (
 )
 
 type submission struct {
-	log              *logger.L
-	sigSend          *zmq.Socket // signal send
-	sigReceive       *zmq.Socket // signal receive
-	socket4          *zmq.Socket
-	socket6          *zmq.Socket
-	minedBlockCount  counter.Counter
-	failedBlockCount counter.Counter
+	log               *logger.L
+	sigSend           *zmq.Socket // signal send
+	sigReceive        *zmq.Socket // signal receive
+	socket4           *zmq.Socket
+	socket6           *zmq.Socket
+	minedBlockCount   counter.Counter
+	failedBlockCount  counter.Counter
+	intenalHashEnable bool
 }
 
 // initialise the submission
 func (sub *submission) initialise(configuration *Configuration) error {
-
+	sub.intenalHashEnable = configuration.IntenalHashEnable
 	log := logger.New("submission")
 	sub.log = log
 
@@ -50,7 +51,7 @@ func (sub *submission) initialise(configuration *Configuration) error {
 	}
 
 	// when chain is local, use internal hasher
-	if mode.ChainName() == chain.Local {
+	if mode.ChainName() == chain.Local && sub.intenalHashEnable {
 		if err := newInternalHasherReceiver(sub); err != nil {
 			return err
 		}
