@@ -73,9 +73,6 @@ type announcerData struct {
 // global data
 var globalData announcerData
 
-// format for timestamps
-const timeFormat = "2006-01-02 15:04:05"
-
 // Initialise - set up the announcement system
 // pass a fully qualified domain for root node list
 // or empty string for no root nodes
