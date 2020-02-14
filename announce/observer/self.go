@@ -28,6 +28,7 @@ func (s self) Update(str string, args [][]byte) {
 		id, err := p2pPeer.IDFromBytes(args[0])
 		if err != nil {
 			log.Warn(err.Error())
+			return
 		}
 
 		var listeners receptor.Addrs
@@ -35,6 +36,7 @@ func (s self) Update(str string, args [][]byte) {
 		addrs := util.GetMultiAddrsFromBytes(listeners.Address)
 		if len(addrs) == 0 {
 			log.Warn("No valid listener address")
+			return
 		}
 		log.Infof("-><-  request self announce data add to tree: %v  listener: %s", id, receptor.AddrToString(args[1]))
 

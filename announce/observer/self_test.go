@@ -10,6 +10,8 @@ import (
 	"crypto/rand"
 	"testing"
 
+	p2pPeer "github.com/libp2p/go-libp2p-core/peer"
+
 	"github.com/bitmark-inc/bitmarkd/announce/mocks"
 	"github.com/bitmark-inc/bitmarkd/announce/observer"
 	"github.com/bitmark-inc/bitmarkd/announce/receptor"
@@ -48,4 +50,15 @@ func TestSelfUpdateWhenEventNotMatch(t *testing.T) {
 
 	r := observer.NewSelf(m, logger.New(category))
 	r.Update("not_self", [][]byte{})
+}
+
+func TestSelfUpdateWhenIDInvalid(t *testing.T) {
+	ctl := gomock.NewController(t)
+	m := mocks.NewMockReceptor(ctl)
+	defer ctl.Finish()
+	pID := p2pPeer.ID("test")
+	bID, _ := pID.Marshal()
+
+	r := observer.NewSelf(m, logger.New(category))
+	r.Update("self", [][]byte{bID, []byte{}})
 }
