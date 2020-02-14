@@ -6,6 +6,7 @@
 package domain_test
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/bitmark-inc/logger"
@@ -22,7 +23,7 @@ func setupTestLogger() {
 
 	logging := logger.Configuration{
 		Directory: testingDirName,
-		File:      "testing.log",
+		File:      fmt.Sprintf("%s.log", logCategory),
 		Size:      1048576,
 		Count:     10,
 		Console:   false,

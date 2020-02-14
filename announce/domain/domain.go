@@ -44,7 +44,7 @@ func NewDomain(log *logger.L, nodesDomain string, receptors receptor.Receptor, f
 		receptors: receptors,
 	}
 
-	d.logger.Info("initialising…")
+	d.logger.Info("initialising domain…")
 
 	txts, err := d.lookuper.Lookup(f)
 	if nil != err {

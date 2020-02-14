@@ -6,6 +6,7 @@
 package broadcast_test
 
 import (
+	"fmt"
 	"os"
 	"sync"
 	"testing"
@@ -26,8 +27,8 @@ import (
 )
 
 const (
-	dir      = "testing"
-	category = "testing"
+	dir         = "testing"
+	logCategory = "testing"
 )
 
 func setupTestLogger() {
@@ -36,7 +37,7 @@ func setupTestLogger() {
 
 	logging := logger.Configuration{
 		Directory: dir,
-		File:      "testing.log",
+		File:      fmt.Sprintf("%s.log", logCategory),
 		Size:      1048576,
 		Count:     10,
 		Console:   false,
@@ -50,18 +51,22 @@ func setupTestLogger() {
 }
 
 func teardownTestLogger() {
+	logger.Finalise()
 	removeFiles()
 }
 
 func removeFiles() {
-	_ = os.RemoveAll(dir)
+	err := os.RemoveAll(dir)
+	if nil != err {
+		fmt.Println("remove dir with error: ", err)
+	}
 }
 
 func TestRunWhenSendingShutdown(t *testing.T) {
 	setupTestLogger()
 	defer teardownTestLogger()
 
-	log := logger.New(category)
+	log := logger.New(logCategory)
 	b := broadcast.New(
 		log,
 		receptor.New(log),
@@ -72,13 +77,13 @@ func TestRunWhenSendingShutdown(t *testing.T) {
 
 	ch := make(chan messagebus.Message)
 	shutdown := make(chan struct{})
-	wg := sync.WaitGroup{}
+	wg := new(sync.WaitGroup)
 	wg.Add(1)
 
 	go func(ch <-chan messagebus.Message, b background.Process, wg *sync.WaitGroup, sh <-chan struct{}) {
 		b.Run(ch, sh)
 		wg.Done()
-	}(ch, b, &wg, shutdown)
+	}(ch, b, wg, shutdown)
 
 	shutdown <- struct{}{}
 	wg.Wait()

@@ -30,7 +30,6 @@ func NewLookuper(domain string, log *logger.L) Lookuper {
 }
 
 // lookup node domain for the peering
-// passing net.LookupTXT(l.domain)
 func (l *lookuper) Lookup(f func(string) ([]string, error)) ([]DnsTxt, error) {
 	log := l.logger
 	if "" == l.domain {

@@ -6,7 +6,6 @@
 package receptor_test
 
 import (
-	fmt "fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -82,8 +81,6 @@ func TestBackup(t *testing.T) {
 	tree.Insert(id.ID("p2"), p2)
 	tree.Insert(id.ID("p3"), p3)
 
-	fmt.Println("last.next: ", tree.Last().Next())
-
 	err := receptor.Backup(backupFile, tree)
 	assert.Nil(t, err, "wrong store")
 
@@ -121,8 +118,6 @@ func TestBackupWhenCountLessOrEqualThanTwo(t *testing.T) {
 
 	tree.Insert(id.ID("p1"), p1)
 	tree.Insert(id.ID("p2"), p2)
-
-	fmt.Println("count: ", tree.Count())
 
 	err := receptor.Backup(backupFile, tree)
 	assert.Nil(t, err, "wrong store")

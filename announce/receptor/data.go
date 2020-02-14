@@ -27,7 +27,6 @@ type Data struct {
 func (d Data) String() []string {
 	allAddress := make([]string, 0)
 	for _, listener := range d.Listeners {
-		fmt.Println("str: ", listener.String())
 		allAddress = append(allAddress, listener.String())
 	}
 	return allAddress

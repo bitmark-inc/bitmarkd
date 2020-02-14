@@ -28,7 +28,7 @@ func setupTestLogger() {
 
 	logging := logger.Configuration{
 		Directory: dir,
-		File:      "testing.log",
+		File:      "announce.log",
 		Size:      1048576,
 		Count:     10,
 		Console:   false,

@@ -46,7 +46,6 @@ type broadcast struct {
 }
 
 func New(log *logger.L, receptors receptor.Receptor, rpcs rpc.RPC, myFingerprint fingerprint.Type, dnsType DNSType) background.Process {
-	log.Info("initialising…")
 	return &broadcast{
 		log:           log,
 		receptors:     receptors,
@@ -59,8 +58,7 @@ func New(log *logger.L, receptors receptor.Receptor, rpcs rpc.RPC, myFingerprint
 // wait for incoming requests, process them and reply
 func (b *broadcast) Run(arg interface{}, shutdown <-chan struct{}) {
 	log := b.log
-
-	log.Info("starting…")
+	log.Info("starting periodically broadcasting…")
 
 	queue := arg.(<-chan messagebus.Message)
 
@@ -108,10 +106,12 @@ func (b *broadcast) process() {
 	// announce this nodes IP and ports to other peers
 	if b.rpcs.IsSet() {
 		log.Debugf("send rpc: %x", b.myFingerprint)
-		if b.dnsType == UsePeers { //Make self a  hiden rpc node to avoid been connected
+		if b.dnsType == UsePeers {
+			//Make self a hidden rpc node to avoid being connected
 			messagebus.Bus.P2P.Send("rpc", b.myFingerprint[:], b.rpcs.Self(), timestamp)
 		}
 	}
+
 	if b.receptors.IsSet() {
 		addrsBinary, errAddr := proto.Marshal(&receptor.Addrs{Address: util.GetBytesFromMultiaddr(b.receptors.SelfAddress())})
 		if nil == errAddr {
