@@ -11,11 +11,11 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/bitmark-inc/bitmarkd/chain"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
+	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestScanFmt(t *testing.T) {

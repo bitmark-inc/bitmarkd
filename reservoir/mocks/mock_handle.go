@@ -5,9 +5,11 @@
 package mocks
 
 import (
-	storage "github.com/bitmark-inc/bitmarkd/storage"
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
+
+	storage "github.com/bitmark-inc/bitmarkd/storage"
 )
 
 // MockHandle is a mock of Handle interface

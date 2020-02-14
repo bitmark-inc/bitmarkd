@@ -48,17 +48,18 @@ const (
 )
 
 type publisher struct {
-	log            *logger.L
-	socket4        *zmq.Socket
-	socket6        *zmq.Socket
-	paymentAddress map[currency.Currency]string
-	owner          *account.Account
-	privateKey     []byte
+	log                *logger.L
+	socket4            *zmq.Socket
+	socket6            *zmq.Socket
+	paymentAddress     map[currency.Currency]string
+	owner              *account.Account
+	privateKey         []byte
+	internalHashEnable bool
 }
 
 // initialise the publisher
 func (pub *publisher) initialise(configuration *Configuration) error {
-
+	pub.internalHashEnable = configuration.InternalHashEnable
 	log := logger.New("publisher")
 	pub.log = log
 
@@ -147,7 +148,7 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 	}
 
 	// when chain is local, use internal hasher
-	if mode.ChainName() == chain.Local {
+	if mode.ChainName() == chain.Local && pub.internalHashEnable {
 		if err := newInternalHasherRequester(pub); err != nil {
 			return err
 		}

@@ -4,10 +4,10 @@ import (
 	"encoding/binary"
 	"encoding/json"
 
+	zmq "github.com/pebbe/zmq4"
+
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/fault"
-
-	zmq "github.com/pebbe/zmq4"
 )
 
 const (
@@ -60,10 +60,11 @@ func (h *internalHasher) Initialise() error {
 
 func (h *internalHasher) Start() {
 	go func() {
+	loop:
 		for i := 1; ; i++ {
 			msg, err := h.requestSocket.Recv(0)
 			if nil != err {
-				continue
+				continue loop
 			}
 
 			var request hashingRequest
@@ -85,7 +86,7 @@ func (h *internalHasher) Start() {
 
 			_, err = h.replySocket.SendBytes(replyData, 0)
 			if nil != err {
-				continue
+				continue loop
 			}
 		}
 	}()
