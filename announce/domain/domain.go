@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	loggerCategory = "domain"
+	loggerCategory = "announce"
 	configFile     = "/etc/resolv.conf"
 )
 
@@ -159,6 +159,7 @@ func ttl(rrs []dns.RR) uint32 {
 func addTxts(txts []DnsTxt, log *logger.L, receptors receptor.Receptor) {
 	// TODO: move this logic into addPeer
 	for i, txt := range txts {
+		log.Debugf("txt: %v", txt)
 		var listeners []ma.Multiaddr
 		if nil != txt.IPv4 {
 			ipv4ma, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%v/%s/%s", txt.IPv4, txt.ConnectPort, parameter.Protocol, txt.PeerID))

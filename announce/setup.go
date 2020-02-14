@@ -125,7 +125,7 @@ func Initialise(nodesDomain, cacheDirectory string, dnsType broadcast.DNSType, f
 	}
 
 	globalData.brdc = broadcast.NewBroadcast(
-		logger.New("broadcast"),
+		globalData.log,
 		globalData.receptors,
 		globalData.rpcs,
 		globalData.fingerprint,
