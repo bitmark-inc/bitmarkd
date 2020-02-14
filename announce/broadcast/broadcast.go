@@ -45,7 +45,7 @@ type broadcast struct {
 	dnsType       DNSType
 }
 
-func NewBroadcast(log *logger.L, receptors receptor.Receptor, rpcs rpc.RPC, myFingerprint fingerprint.Type, dnsType DNSType) background.Process {
+func New(log *logger.L, receptors receptor.Receptor, rpcs rpc.RPC, myFingerprint fingerprint.Type, dnsType DNSType) background.Process {
 	log.Info("initialising…")
 	return &broadcast{
 		log:           log,

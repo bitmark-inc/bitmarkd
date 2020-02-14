@@ -62,7 +62,7 @@ func TestRunWhenSendingShutdown(t *testing.T) {
 	defer teardownTestLogger()
 
 	log := logger.New(category)
-	b := broadcast.NewBroadcast(
+	b := broadcast.New(
 		log,
 		receptor.New(log),
 		rpc.New(),
