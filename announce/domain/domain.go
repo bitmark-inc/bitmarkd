@@ -156,7 +156,6 @@ func ttl(rrs []dns.RR) uint32 {
 }
 
 func addTxts(txts []DnsTxt, log *logger.L, receptors receptor.Receptor) {
-	// TODO: move this logic into addPeer
 	for i, txt := range txts {
 		log.Debugf("txt: %v", txt)
 		var listeners []ma.Multiaddr
