@@ -26,7 +26,7 @@ func (s self) Update(str string, args [][]byte) {
 	if str == selfEvent {
 		id, err := p2pPeer.IDFromBytes(args[0])
 		if err != nil {
-			self.log.Warn(err.Error())
+			s.log.Warn(err.Error())
 			return
 		}
 
@@ -34,14 +34,14 @@ func (s self) Update(str string, args [][]byte) {
 		_ = proto.Unmarshal(args[1], &listeners)
 		addrs := util.GetMultiAddrsFromBytes(listeners.Address)
 		if len(addrs) == 0 {
-			self.log.Warn("No valid listener address")
+			s.log.Warn("No valid listener address")
 			return
 		}
-		self.log.Infof("-><-  request self announce data add to tree: %v  listener: %s", id, receptor.AddrToString(args[1]))
+		s.log.Infof("-><-  request self announce data add to tree: %v  listener: %s", id, receptor.AddrToString(args[1]))
 
 		err = s.receptors.SetSelf(id, addrs)
 		if nil != err {
-			self.log.Errorf("announcer set with error: %s", err)
+			s.log.Errorf("announcer set with error: %s", err)
 		}
 	}
 }

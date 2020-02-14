@@ -14,8 +14,6 @@ import (
 
 	p2pPeer "github.com/libp2p/go-libp2p-core/peer"
 
-	"github.com/bitmark-inc/bitmarkd/avl"
-
 	"github.com/libp2p/go-libp2p"
 
 	"github.com/bitmark-inc/bitmarkd/announce/receptor"
@@ -49,7 +47,6 @@ func TestAddpeerUpdate(t *testing.T) {
 	binary.BigEndian.PutUint64(ts, now)
 
 	m.EXPECT().Add(pID, []ma.Multiaddr{addr}, now).Return(true).Times(1)
-	m.EXPECT().Tree().Return(avl.New()).Times(1)
 
 	r := observer.NewAddpeer(m, logger.New(category))
 	r.Update("addpeer", [][]byte{bID, bAddr, ts})
