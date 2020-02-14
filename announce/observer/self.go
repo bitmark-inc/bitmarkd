@@ -11,7 +11,6 @@ import (
 	"github.com/bitmark-inc/logger"
 	"github.com/gogo/protobuf/proto"
 	p2pPeer "github.com/libp2p/go-libp2p-core/peer"
-	"github.com/prometheus/common/log"
 )
 
 const (
@@ -27,7 +26,7 @@ func (s self) Update(str string, args [][]byte) {
 	if str == selfEvent {
 		id, err := p2pPeer.IDFromBytes(args[0])
 		if err != nil {
-			log.Warn(err.Error())
+			self.log.Warn(err.Error())
 			return
 		}
 
@@ -35,14 +34,14 @@ func (s self) Update(str string, args [][]byte) {
 		_ = proto.Unmarshal(args[1], &listeners)
 		addrs := util.GetMultiAddrsFromBytes(listeners.Address)
 		if len(addrs) == 0 {
-			log.Warn("No valid listener address")
+			self.log.Warn("No valid listener address")
 			return
 		}
-		log.Infof("-><-  request self announce data add to tree: %v  listener: %s", id, receptor.AddrToString(args[1]))
+		self.log.Infof("-><-  request self announce data add to tree: %v  listener: %s", id, receptor.AddrToString(args[1]))
 
 		err = s.receptors.SetSelf(id, addrs)
 		if nil != err {
-			log.Errorf("announcer set with error: %s", err)
+			self.log.Errorf("announcer set with error: %s", err)
 		}
 	}
 }

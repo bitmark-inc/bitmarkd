@@ -15,7 +15,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/announce/receptor"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/gogo/protobuf/proto"
-	"github.com/prometheus/common/log"
 )
 
 const (
@@ -31,7 +30,7 @@ func (a addpeer) Update(str string, args [][]byte) {
 	if str == addpeerEvent {
 		id, err := p2pPeer.IDFromBytes(args[0])
 		if err != nil {
-			log.Warn(err.Error())
+			a.log.Warn(err.Error())
 			return
 		}
 
