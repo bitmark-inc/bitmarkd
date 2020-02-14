@@ -21,7 +21,6 @@ import (
 )
 
 const (
-	nodeProtocol   = "p2p"
 	loggerCategory = "nodeslookup"
 )
 
@@ -151,7 +150,7 @@ func addTxts(txts []domain.DnsTxt, log *logger.L) {
 	for i, txt := range txts {
 		var listeners []ma.Multiaddr
 		if nil != txt.IPv4 {
-			ipv4ma, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%v/%s/%s", txt.IPv4, txt.ConnectPort, nodeProtocol, txt.PeerID))
+			ipv4ma, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%v/%s/%s", txt.IPv4, txt.ConnectPort, parameter.Protocol, txt.PeerID))
 			if nil == err {
 				listeners = append(listeners, ipv4ma)
 			} else {
@@ -159,7 +158,7 @@ func addTxts(txts []domain.DnsTxt, log *logger.L) {
 			}
 		}
 		if nil != txt.IPv6 {
-			ipv6ma, err := ma.NewMultiaddr(fmt.Sprintf("/ip6/%s/tcp/%v/%s/%s", txt.IPv6, txt.ConnectPort, nodeProtocol, txt.PeerID))
+			ipv6ma, err := ma.NewMultiaddr(fmt.Sprintf("/ip6/%s/tcp/%v/%s/%s", txt.IPv6, txt.ConnectPort, parameter.Protocol, txt.PeerID))
 			if nil == err {
 				listeners = append(listeners, ipv6ma)
 			} else {
