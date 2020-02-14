@@ -10,6 +10,8 @@ import (
 	"net"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/announce/parameter"
+
 	"github.com/bitmark-inc/bitmarkd/announce/domain"
 
 	"github.com/bitmark-inc/logger"
@@ -19,9 +21,8 @@ import (
 )
 
 const (
-	reFetchingInterval = 1 * time.Hour // re-fetching nodes domain
-	nodeProtocol       = "p2p"
-	loggerCategory     = "nodeslookup"
+	nodeProtocol   = "p2p"
+	loggerCategory = "nodeslookup"
 )
 
 type lookup struct {
@@ -68,7 +69,7 @@ loop:
 
 // get interval time for lookup node domain txt record
 func intervalTime(domain string, log *logger.L) time.Duration {
-	t := reFetchingInterval
+	t := parameter.ReFetchingInterval
 	var servers []string // dns name server
 
 	// reading default configuration file
@@ -117,7 +118,7 @@ loop:
 			if 0 < ttl {
 				log.Infof("got TTL record from server %q value %d", s, ttl)
 				ttlSecond := time.Duration(ttl) * time.Second
-				if reFetchingInterval > ttlSecond {
+				if parameter.ReFetchingInterval > ttlSecond {
 					t = ttlSecond
 					break loop
 				}

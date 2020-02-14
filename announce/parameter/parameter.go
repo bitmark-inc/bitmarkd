@@ -16,4 +16,6 @@ const (
 	PollingInterval = 3 * time.Minute
 	ExpiryInterval  = 5 * PollingInterval // if no responses received within this time, delete the entry
 	MinTreeExpected = 5 + 1               // voting.minimumClients + 1(self)
+
+	ReFetchingInterval = 1 * time.Hour // re-fetching nodes domain
 )
