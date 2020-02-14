@@ -62,7 +62,7 @@ func (b *broadcast) Run(arg interface{}, shutdown <-chan struct{}) {
 
 	log.Info("starting…")
 
-	queue := arg.(chan messagebus.Message)
+	queue := arg.(<-chan messagebus.Message)
 
 	observers := []observer.Observer{
 		observer.NewReconnect(b.receptors),
