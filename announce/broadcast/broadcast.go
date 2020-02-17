@@ -85,7 +85,7 @@ loop:
 			}
 
 		case <-delay:
-			delay = time.After(parameter.InitialiseInterval)
+			delay = time.After(parameter.PollingInterval)
 			b.process()
 		}
 	}
