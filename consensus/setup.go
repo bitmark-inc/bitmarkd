@@ -37,8 +37,9 @@ func Initialise(node *p2p.Node, fastsync bool) error {
 	if globalData.initialised {
 		return fault.AlreadyInitialised
 	}
-	if nil == node {
-		panic("give an empty node")
+
+	if nil == node || nil == node.Host {
+		panic("give an empty node or a empty host")
 	}
 	globalData.Log = logger.New("consensus")
 	globalData.votingMetrics = NewMetricsPeersVoting(node)

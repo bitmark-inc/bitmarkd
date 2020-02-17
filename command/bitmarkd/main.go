@@ -313,10 +313,6 @@ func main() {
 		time.Sleep(2 * time.Second)
 	}
 
-	if nil == p2p.P2PNode() {
-		panic("consensus initialise error: p2p node is empty")
-	}
-
 	err = consensus.Initialise(p2p.P2PNode(), masterConfiguration.Fastsync)
 	if nil != err {
 		log.Criticalf("consensus initialise error: %s", err)
