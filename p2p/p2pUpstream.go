@@ -24,7 +24,7 @@ const (
 	readDefaultTimeout = 5 * time.Second
 )
 
-//DetermineStreamRWerHelper is a function to
+// DetermineStreamRWerHelper is a function to
 //  detemine stream and readwriter to u se in request.
 //streamCreated tells if newStream is created in the function.
 //If it does , return stream may need to be reset in defer

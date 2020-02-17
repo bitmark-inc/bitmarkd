@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"errors"
 	"fmt"
 	"runtime"
 	"sync"
@@ -9,6 +10,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
+	"github.com/prometheus/common/log"
 
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -87,6 +89,15 @@ type RegisterStatus struct {
 	RegisterTime time.Time
 }
 
+//PeerNode define a general peer node behavior
+type PeerNode interface {
+	GetVersion() string
+	GetAllPeers() []*Connected
+	listen(announceAddrs []string)
+	Run()
+	Finalise()
+}
+
 //Node  A p2p node
 type Node struct {
 	Version      string
@@ -129,7 +140,17 @@ func Initialise(configuration *Configuration, version string, dnsPeerOnly dnsOnl
 		&globalData,
 	}
 	globalData.background = background.Start(processes, globalData.Log)
-	return nil
+
+	for wait := 0; wait < 3; wait++ { // consensus package depended on p2p.Node
+		if nil != globalData.Host {
+			log.Debug("p2p host  has initialized")
+			wait = 3
+			return nil
+		}
+		log.Debug("wait for host to initialize")
+		time.Sleep(2 * time.Second)
+	}
+	return errors.New("host does not initialize")
 }
 
 // Run  wait for incoming requests, process them and reply

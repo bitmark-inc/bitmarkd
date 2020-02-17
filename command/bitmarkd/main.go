@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"time"
 
 	//"runtime/pprof"
 	"syscall"
@@ -303,15 +302,6 @@ func main() {
 		exitwithstatus.Message("p2p initialise error: %s", err)
 	}
 	defer p2p.Finalise()
-
-	for wait := 0; wait < 3; wait++ { // consensus package depended on p2p.Node
-		if nil != p2p.P2PNode().Host {
-			log.Warn("p2p host  has initialized")
-			wait = 3
-		}
-		log.Debug("wait for host to initialize")
-		time.Sleep(2 * time.Second)
-	}
 
 	err = consensus.Initialise(p2p.P2PNode(), masterConfiguration.Fastsync)
 	if nil != err {

@@ -70,7 +70,7 @@ func (p *MetricsPeersVoting) UpdateVotingMetrics(id peerlib.ID) error {
 		util.LogWarn(p.Log, util.CoRed, fmt.Sprintf("UpdateVotingMetrics: Create new stream for ID:%v Error:%v", id.ShortString(), err))
 		return err
 	}
-	defer s.Reset()
+	defer s.Close()
 	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
 	_, err = p.watchNode.RequestRegister(id, s, rw)
 	if err != nil {
