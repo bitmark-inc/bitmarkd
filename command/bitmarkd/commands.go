@@ -8,7 +8,6 @@ package main
 import (
 	"bytes"
 	"crypto/tls"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -18,7 +17,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 
 	"github.com/bitmark-inc/bitmarkd/account"
@@ -403,14 +401,9 @@ func dnsTXT(options *Configuration) {
 
 	peering := options.Peering
 
-	privateKeyBytes, err := hex.DecodeString(peering.PrivateKey)
+	privateKey, err := util.DecodePrivKeyFromHex(peering.PrivateKey)
 	if err != nil {
 		exitwithstatus.Message("error: cannot decode private key: %q  error: %s", peering.PrivateKey, err)
-	}
-
-	privateKey, err := crypto.UnmarshalPrivateKey(privateKeyBytes)
-	if err != nil {
-		exitwithstatus.Message("error: cannot generate private key: %q  error: %s", peering.PrivateKey, err)
 	}
 
 	peerID, err := peer.IDFromPrivateKey(privateKey)
