@@ -20,7 +20,7 @@ func TestReconnectUpdate(t *testing.T) {
 	m := mocks.NewMockReceptor(ctl)
 	defer ctl.Finish()
 
-	m.EXPECT().BalanceTree().Return().Times(1)
+	m.EXPECT().ReBalance().Return().Times(1)
 
 	r := observer.NewReconnect(m)
 	r.Update("self", [][]byte{})
@@ -31,7 +31,7 @@ func TestReconnectUpdateWhenEventNotMatch(t *testing.T) {
 	m := mocks.NewMockReceptor(ctl)
 	defer ctl.Finish()
 
-	m.EXPECT().BalanceTree().Return().Times(0)
+	m.EXPECT().ReBalance().Return().Times(0)
 
 	r := observer.NewReconnect(m)
 	r.Update("not_reconnect", [][]byte{})
