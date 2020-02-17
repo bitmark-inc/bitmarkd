@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/bitmark-inc/bitmarkd/announce/domain"
+	"github.com/bitmark-inc/bitmarkd/announce/parameter"
 
 	"github.com/bitmark-inc/bitmarkd/announce/broadcast"
 
@@ -126,11 +127,12 @@ func Initialise(nodesDomain, cacheDirectory string, dnsType broadcast.DNSType, f
 	}
 
 	globalData.brdc = broadcast.New(
-		globalData.log,
-		globalData.receptors,
+		globalData.log, globalData.receptors,
 		globalData.rpcs,
 		globalData.fingerprint,
 		globalData.dnsType,
+		parameter.InitialiseInterval,
+		parameter.PollingInterval,
 	)
 
 	// all data initialised

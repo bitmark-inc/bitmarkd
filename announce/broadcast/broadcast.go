@@ -38,20 +38,24 @@ const (
 
 type broadcast struct {
 	sync.RWMutex
-	log           *logger.L
-	receptors     receptor.Receptor
-	rpcs          rpc.RPC
-	myFingerprint fingerprint.Type
-	dnsType       DNSType
+	log                *logger.L
+	receptors          receptor.Receptor
+	rpcs               rpc.RPC
+	myFingerprint      fingerprint.Type
+	dnsType            DNSType
+	initialiseInterval time.Duration
+	pollingInterval    time.Duration
 }
 
-func New(log *logger.L, receptors receptor.Receptor, rpcs rpc.RPC, myFingerprint fingerprint.Type, dnsType DNSType) background.Process {
+func New(log *logger.L, receptors receptor.Receptor, rpcs rpc.RPC, myFingerprint fingerprint.Type, dnsType DNSType, initialiseInterval time.Duration, pollingInterval time.Duration) background.Process {
 	return &broadcast{
-		log:           log,
-		receptors:     receptors,
-		rpcs:          rpcs,
-		myFingerprint: myFingerprint,
-		dnsType:       dnsType,
+		log:                log,
+		receptors:          receptors,
+		rpcs:               rpcs,
+		myFingerprint:      myFingerprint,
+		dnsType:            dnsType,
+		initialiseInterval: initialiseInterval,
+		pollingInterval:    pollingInterval,
 	}
 }
 
@@ -70,7 +74,7 @@ func (b *broadcast) Run(arg interface{}, shutdown <-chan struct{}) {
 		observer.NewSelf(b.receptors, b.log),
 	}
 
-	delay := time.After(parameter.InitialiseInterval)
+	delay := time.After(b.initialiseInterval)
 loop:
 	for {
 		log.Debug("waiting…")
@@ -85,7 +89,7 @@ loop:
 			}
 
 		case <-delay:
-			delay = time.After(parameter.PollingInterval)
+			delay = time.After(b.pollingInterval)
 			b.process()
 		}
 	}
