@@ -246,8 +246,8 @@ func Finalise() error {
 	return nil
 }
 
-//GlobalP2PNode return p2p node for other packages to use
-func GlobalP2PNode() *Node {
+//P2PNode return p2p node for other packages to use
+func P2PNode() *Node {
 	return &globalData
 }
 

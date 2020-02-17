@@ -305,16 +305,19 @@ func main() {
 	defer p2p.Finalise()
 
 	for wait := 0; wait < 3; wait++ { // consensus package depended on p2p.Node
-		if nil == p2p.GlobalP2PNode() {
-			log.Warn("p2p node has initialized")
+		if nil != p2p.P2PNode().Host {
+			log.Warn("p2p host  has initialized")
 			wait = 3
 		}
-		time.Sleep(3 * time.Second)
+		log.Debug("wait for host to initialize")
+		time.Sleep(2 * time.Second)
 	}
-	if nil == p2p.GlobalP2PNode() {
+
+	if nil == p2p.P2PNode() {
 		panic("consensus initialise error: p2p node is empty")
 	}
-	err = consensus.Initialise(p2p.GlobalP2PNode(), masterConfiguration.Fastsync)
+
+	err = consensus.Initialise(p2p.P2PNode(), masterConfiguration.Fastsync)
 	if nil != err {
 		log.Criticalf("consensus initialise error: %s", err)
 		exitwithstatus.Message("consensus initialise error: %s", err)
