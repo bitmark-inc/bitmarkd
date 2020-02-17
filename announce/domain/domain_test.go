@@ -6,6 +6,7 @@
 package domain_test
 
 import (
+	"fmt"
 	"sync"
 	"testing"
 
@@ -32,6 +33,22 @@ func TestNewDomain(t *testing.T) {
 
 	_, err := domain.NewDomain(logger.New(logCategory), "domain.not.exist", r, f)
 	assert.Nil(t, err, "wrong NewDomain")
+}
+
+func TestNewDomainWhenLookupError(t *testing.T) {
+	setupTestLogger()
+	defer teardownTestLogger()
+
+	ctl := gomock.NewController(t)
+	defer ctl.Finish()
+
+	r := mocks.NewMockReceptor(ctl)
+	f := func(s string) ([]string, error) {
+		return []string{}, fmt.Errorf("error")
+	}
+
+	_, err := domain.NewDomain(logger.New(logCategory), "domain.not.exist", r, f)
+	assert.Equal(t, fmt.Errorf("error"), err, "wrong NewDomain")
 }
 
 func TestRunWhenShutdown(t *testing.T) {
