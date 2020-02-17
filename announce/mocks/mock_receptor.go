@@ -5,13 +5,12 @@
 package mocks
 
 import (
-	reflect "reflect"
-	time "time"
-
 	avl "github.com/bitmark-inc/bitmarkd/avl"
 	gomock "github.com/golang/mock/gomock"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	go_multiaddr "github.com/multiformats/go-multiaddr"
+	reflect "reflect"
+	time "time"
 )
 
 // MockReceptor is a mock of Receptor interface
@@ -242,7 +241,7 @@ func (m *MockReceptor) ReBalance() {
 }
 
 // ReBalance indicates an expected call of ReBalance
-func (mr *MockReceptorMockRecorder) BalanceTree() *gomock.Call {
+func (mr *MockReceptorMockRecorder) ReBalance() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReBalance", reflect.TypeOf((*MockReceptor)(nil).ReBalance))
 }
