@@ -16,9 +16,7 @@ import (
 
 // the tag to detect applicable TXT records from DNS
 var supportedTags = map[string]struct{}{
-	"bitmark=v2": {},
-	"bitmark=v3": {},
-	"bitmark=v4": {},
+	"bitmark-p2p=v1": {},
 }
 
 const (
@@ -102,11 +100,11 @@ words:
 		case 'c':
 			t.connectPort, err = getPort(parameter)
 			countC += 1
-		case 's': // not actually used but still check
-			_, err = getPort(parameter)
+
 		case 'r':
 			t.rpcPort, err = getPort(parameter)
 			countR += 1
+
 		case 'i':
 			if len(parameter) != p2pIdentityLength {
 				err = fault.InvalidIdentityName
@@ -114,6 +112,7 @@ words:
 				t.peerID = parameter
 			}
 			countI += 1
+
 		case 'f':
 			if len(parameter) != fingerprintLength {
 				err = fault.InvalidFingerprint
@@ -124,6 +123,7 @@ words:
 				}
 			}
 			countF += 1
+
 		default:
 			err = fault.InvalidDnsTxtRecord
 		}

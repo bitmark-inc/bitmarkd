@@ -379,7 +379,7 @@ func processDataCommand(log *logger.L, arguments []string, options *Configuratio
 // print out the DNS TXT record
 func dnsTXT(options *Configuration) {
 	//   <TAG> a=<IPv4;IPv6> c=<PEER-PORT> r=<RPC-PORT> f=<SHA3-256(cert)> p=<PUBLIC-KEY>
-	const txtRecord = `TXT "bitmark=v3 a=%s c=%d r=%d f=%x i=%s"` + "\n"
+	const txtRecord = `TXT "bitmark-p2p=v1 a=%s c=%d r=%d f=%x i=%s"` + "\n"
 
 	rpc := options.ClientRPC
 
