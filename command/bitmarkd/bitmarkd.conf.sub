@@ -258,8 +258,10 @@ M.publishing = {
 
 -- configuration of recorderd connections
 M.proofing = {
+
     -- local chain (regression) use internal hash instead of recorderd
-    local_use_internal_hash = false
+    local_use_internal_hash = false,
+
     public_key = read_file("proof.public"),
     private_key = read_file("proof.private"),
     signing_key = read_file(M.chain == "bitmark" and "proof.live" or "proof.test"),
