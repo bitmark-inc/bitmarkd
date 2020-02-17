@@ -8,6 +8,7 @@ package util
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"strings"
 
 	crypto "github.com/libp2p/go-libp2p-core/crypto"
 )
@@ -26,6 +27,7 @@ func MakeEd25519PeerKey() (string, error) {
 
 // DecodePrivKeyFromHex decode a hex string to a private key object
 func DecodePrivKeyFromHex(privKey string) (crypto.PrivKey, error) {
+	privKey = strings.TrimSpace(privKey)
 	keyBytes, err := hex.DecodeString(privKey)
 	if err != nil {
 		return nil, err

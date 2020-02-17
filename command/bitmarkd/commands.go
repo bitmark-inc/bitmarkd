@@ -18,6 +18,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/peer"
+
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
@@ -26,8 +29,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/bitmark-inc/logger"
-	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 const (
@@ -81,7 +82,7 @@ func processSetupCommand(program string, arguments []string) bool {
 			exitwithstatus.Exit(1)
 		}
 
-		if err := ioutil.WriteFile(peerPrivateKeyPath, []byte(key), 0600); err != nil {
+		if err := ioutil.WriteFile(peerPrivateKeyPath, []byte(key+"\n"), 0600); err != nil {
 			os.Remove(peerPrivateKeyPath)
 			fmt.Printf("generate private key: %q error: %s\n", peerPrivateKeyFilename, err.Error())
 			exitwithstatus.Exit(1)
