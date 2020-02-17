@@ -140,6 +140,7 @@ func (b *broadcast) process() {
 	//}
 }
 
+// exhaustiveConnections - broadcast all known node
 func exhaustiveConnections(log *logger.L, receptors receptor.Receptor) {
 	tree := receptors.Tree()
 	if nil == receptors.Self() {
@@ -156,7 +157,9 @@ func exhaustiveConnections(log *logger.L, receptors receptor.Receptor) {
 				idBinary, errID := p.ID.Marshal()
 				pbAddr := util.GetBytesFromMultiaddr(p.Listeners)
 				pbAddrBinary, errMarshal := proto.Marshal(&receptor.Addrs{Address: pbAddr})
+
 				if nil == errID && nil == errMarshal {
+					// ES - exhaustive means all known nodes
 					messagebus.Bus.P2P.Send("ES", idBinary, pbAddrBinary)
 					util.LogDebug(log, util.CoYellow, fmt.Sprintf("--><-- exhaustiveConnections send to P2P %v : %s  address: %x ", "ES", p.ID.ShortString(), receptor.AddrToString(pbAddrBinary)))
 				}
