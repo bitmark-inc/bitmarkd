@@ -1,4 +1,4 @@
-package concensus
+package consensus
 
 import (
 	"sync"
@@ -10,7 +10,7 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-var globalData Concensus
+var globalData Consensus
 
 const (
 	votingMetricRunInitial  = 60 * time.Second // should reference announce and p2p initial
@@ -19,8 +19,8 @@ const (
 	machineRunInterval      = 15 * time.Second
 )
 
-//Concensus is a wrap struct for concensus  state machine
-type Concensus struct {
+//Consensus is a wrap struct for consensus  state machine
+type Consensus struct {
 	sync.RWMutex            // to allow locking
 	Log           *logger.L // logger
 	Node          *p2p.Node
@@ -30,7 +30,7 @@ type Concensus struct {
 	background    *background.T
 }
 
-// Initialise concensus package
+// Initialise consensus package
 func Initialise(node *p2p.Node, fastsync bool) error {
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -40,10 +40,10 @@ func Initialise(node *p2p.Node, fastsync bool) error {
 	if nil == node {
 		panic("give an empty node")
 	}
-	globalData.Log = logger.New("concensus")
+	globalData.Log = logger.New("consensus")
 	globalData.votingMetrics = NewMetricsPeersVoting(node)
 	globalData.Log.Info("starting…")
-	globalData.machine = NewConcensusMachine(node, &globalData.votingMetrics, fastsync)
+	globalData.machine = NewConsensusMachine(node, &globalData.votingMetrics, fastsync)
 	globalData.Log.Info("start background…")
 
 	processes := background.Processes{

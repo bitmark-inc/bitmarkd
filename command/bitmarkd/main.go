@@ -20,13 +20,13 @@ import (
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/chain"
-	"github.com/bitmark-inc/bitmarkd/concensus"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/p2p"
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/publish"
 
+	"github.com/bitmark-inc/bitmarkd/consensus"
 	"github.com/bitmark-inc/bitmarkd/proof"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/rpc"
@@ -304,7 +304,7 @@ func main() {
 	}
 	defer p2p.Finalise()
 
-	for wait := 0; wait < 3; wait++ { // concensus package depended on p2p.Node
+	for wait := 0; wait < 3; wait++ { // consensus package depended on p2p.Node
 		if nil == p2p.GlobalP2PNode() {
 			log.Warn("p2p node has initialized")
 			wait = 3
@@ -312,14 +312,14 @@ func main() {
 		time.Sleep(3 * time.Second)
 	}
 	if nil == p2p.GlobalP2PNode() {
-		panic("concensus initialise error: p2p node is empty")
+		panic("consensus initialise error: p2p node is empty")
 	}
-	err = concensus.Initialise(p2p.GlobalP2PNode(), masterConfiguration.Fastsync)
+	err = consensus.Initialise(p2p.GlobalP2PNode(), masterConfiguration.Fastsync)
 	if nil != err {
-		log.Criticalf("concensus initialise error: %s", err)
-		exitwithstatus.Message("concensus initialise error: %s", err)
+		log.Criticalf("consensus initialise error: %s", err)
+		exitwithstatus.Message("consensus initialise error: %s", err)
 	}
-	defer concensus.Finalise()
+	defer consensus.Finalise()
 
 	err = rpc.Initialise(&masterConfiguration.ClientRPC, &masterConfiguration.HttpsRPC, version)
 	if nil != err {

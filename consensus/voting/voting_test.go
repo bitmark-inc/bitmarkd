@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
-	"github.com/bitmark-inc/bitmarkd/concensus/mocks"
+	"github.com/bitmark-inc/bitmarkd/consensus/mocks"
 	"github.com/bitmark-inc/logger"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"

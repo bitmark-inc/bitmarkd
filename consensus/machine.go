@@ -1,4 +1,4 @@
-package concensus
+package consensus
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
-	"github.com/bitmark-inc/bitmarkd/concensus/voting"
+	"github.com/bitmark-inc/bitmarkd/consensus/voting"
 	"github.com/bitmark-inc/bitmarkd/counter"
 	"github.com/bitmark-inc/bitmarkd/genesis"
 	"github.com/bitmark-inc/bitmarkd/mode"
@@ -38,7 +38,7 @@ const (
 	fastSyncSkipPerBlocks       = 100
 )
 
-// Machine voting concensus state machine
+// Machine voting consensus state machine
 type Machine struct {
 	log              *logger.L
 	attachedNode     *p2p.Node
@@ -54,8 +54,8 @@ type Machine struct {
 	state
 }
 
-// NewConcensusMachine get a new StateMachine
-func NewConcensusMachine(node *p2p.Node, metric *MetricsPeersVoting, fastsync bool) Machine {
+// NewconsensusMachine get a new StateMachine
+func NewConsensusMachine(node *p2p.Node, metric *MetricsPeersVoting, fastsync bool) Machine {
 	machine := Machine{log: globalData.Log, votingMetrics: metric, attachedNode: node}
 	machine.toState(cStateConnecting)
 	machine.votes = voting.NewVoting()
@@ -63,10 +63,10 @@ func NewConcensusMachine(node *p2p.Node, metric *MetricsPeersVoting, fastsync bo
 	return machine
 }
 
-//Run Run A ConcensusMachine
+//Run Run A ConsensusMachine
 func (m *Machine) Run(args interface{}, shutdown <-chan struct{}) {
 	log := m.log
-	log.Info("starting a concensus state machine…")
+	log.Info("starting a consensus state machine…")
 	timer := time.After(machineRunInitial)
 loop:
 	for {

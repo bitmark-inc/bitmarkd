@@ -1,4 +1,4 @@
-package concensus
+package consensus
 
 // BlockHeight - return global block height
 func BlockHeight() uint64 {
