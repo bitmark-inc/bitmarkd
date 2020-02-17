@@ -273,6 +273,9 @@ func (r *receptor) ReBalance() {
 		jump = 1 // just duplicate N1/P1
 	}
 
+	// X1 - X7: each node is 12.5% ahead of current node on the tree
+	// N1: next node
+	// P1: previous node
 	names := [11]string{
 		"N1",
 		"N3",
