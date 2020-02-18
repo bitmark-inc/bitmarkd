@@ -61,3 +61,21 @@ func TestPrivateKeyDecodeEncodeWithInvalidHex(t *testing.T) {
 		t.Errorf("decode returned: %02x", k)
 	}
 }
+
+func TestNoDuplicates(t *testing.T) {
+
+	previous := make(map[string]struct{})
+
+	for i := 0; i < 10; i += 1 {
+		pk, err := MakeEd25519PeerKey()
+		if nil != err {
+			t.Fatalf("encode key error: %s", err)
+		}
+		t.Logf("generated: %s", pk)
+		_, ok := previous[pk]
+		if ok {
+			t.Fatalf("duplicate key generated: %s", pk)
+		}
+		previous[pk] = struct{}{}
+	}
+}
