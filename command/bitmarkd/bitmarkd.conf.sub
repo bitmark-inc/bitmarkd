@@ -60,7 +60,7 @@ end
 -- port selections based on chain selected
 -- bitmark:  XXXX
 -- testing: 1XXXX
--- local:   2XXXX 
+-- local:   2XXXX
 -- use "*" for listen all on both ipv4 and ipv6
 function add_port(ip, port)
     local port_base = 20000
@@ -73,7 +73,7 @@ function add_port(ip, port)
     end
     local suffix = ":" .. (port_base + port_offset + port)
     -- check for dual stack OS (via global os_name)
-    -- and listen on either "[::]" or "0.0.0.0" 
+    -- and listen on either "[::]" or "0.0.0.0"
     if ip == "*" then
         if os_name == "freebsd" or  os_name == "linux" then
             return "[::]" .. suffix
@@ -262,8 +262,10 @@ M.publishing = {
 
 -- configuration of recorderd connections
 M.proofing = {
+
     -- local chain (regression) use internal hash instead of recorderd
-    local_use_internal_hash = false
+    local_use_internal_hash = false,
+
     public_key = read_file("proof.public"),
     private_key = read_file("proof.private"),
     signing_key = read_file(M.chain == "bitmark" and "proof.live" or "proof.test"),
