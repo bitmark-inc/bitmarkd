@@ -28,6 +28,7 @@ import (
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 
 	//	"github.com/bitmark-inc/bitmarkd/zmqutil"
+	"github.com/bitmark-inc/bitmarkd/consensus"
 	"github.com/bitmark-inc/logger"
 )
 
@@ -180,7 +181,7 @@ func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 		Block: blockInfo{
 			LRCount: lrCount{
 				Local:  blockheader.Height(),
-				Remote: p2p.BlockHeight(),
+				Remote: consensus.BlockHeight(),
 			},
 			Hash: block.LastBlockHash(),
 		},

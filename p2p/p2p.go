@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"errors"
 	"fmt"
 	"runtime"
 	"sync"
@@ -9,6 +10,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
+	"github.com/prometheus/common/log"
 
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -34,8 +36,10 @@ const (
 )
 
 var (
-	//MulticastingTopic
-	MulticastingTopic = "/multicast/1.0.0"
+	// TopicMulticasting is the topic for multicasting for gossip multicast
+	TopicMulticasting = "/multicast/1.0.0"
+	// TopicP2P is the topic for p2p stream
+	TopicP2P = "p2pstream"
 	//nodeProtocol
 	nodeProtocol = ma.ProtocolWithCode(ma.P_P2P).Name
 )
@@ -79,11 +83,19 @@ type Configuration struct {
 	Connect    []StaticConnection `gluamapper:"connect" json:"connect,omitempty"`
 }
 
-// NodeType to inidcate a node is a servant or client
-
+// RegisterStatus is the struct to reflect the register status of a node
 type RegisterStatus struct {
 	Registered   bool
 	RegisterTime time.Time
+}
+
+//PeerNode define a general peer node behavior
+type PeerNode interface {
+	GetVersion() string
+	GetAllPeers() []*Connected
+	listen(announceAddrs []string)
+	Run()
+	Finalise()
 }
 
 //Node  A p2p node
@@ -102,10 +114,7 @@ type Node struct {
 	// set once during initialise
 	initialised bool
 	*MetricsNetwork
-	metricsVoting MetricsPeersVoting
-	// statemachine
-	concensusMachine Machine
-	dnsPeerOnly      dnsOnlyType
+	dnsPeerOnly dnsOnlyType
 }
 
 // Connected - representation of a connected Peer (For Http RPC)
@@ -115,7 +124,7 @@ type Connected struct {
 }
 
 // Initialise initialize p2p module
-func Initialise(configuration *Configuration, version string, fastsync bool, dnsPeerOnly dnsOnlyType) error {
+func Initialise(configuration *Configuration, version string, dnsPeerOnly dnsOnlyType) error {
 	globalData.Lock()
 	defer globalData.Unlock()
 	if globalData.initialised {
@@ -124,16 +133,24 @@ func Initialise(configuration *Configuration, version string, fastsync bool, dns
 	globalData.Log = logger.New("p2p")
 
 	globalData.Log.Info("starting…")
-	globalData.Setup(configuration, version, fastsync, dnsPeerOnly)
+	globalData.Setup(configuration, version, dnsPeerOnly)
 	globalData.Log.Info("start background…")
 
 	processes := background.Processes{
 		&globalData,
-		&globalData.concensusMachine,
-		&globalData.metricsVoting,
 	}
 	globalData.background = background.Start(processes, globalData.Log)
-	return nil
+
+	for wait := 0; wait < 3; wait++ { // consensus package depended on p2p.Node
+		if nil != globalData.Host {
+			log.Debug("p2p host  has initialized")
+			wait = 3
+			return nil
+		}
+		log.Debug("wait for host to initialize")
+		time.Sleep(2 * time.Second)
+	}
+	return errors.New("host does not initialize")
 }
 
 // Run  wait for incoming requests, process them and reply
@@ -250,19 +267,19 @@ func Finalise() error {
 	return nil
 }
 
+//P2PNode return p2p node for other packages to use
+func P2PNode() *Node {
+	return &globalData
+}
+
 //MulticastCommand muticasts packed message with given id  in binary. Use id=nil if there is no peer ID
 func MulticastCommand(packedMessage []byte) error {
-	err := globalData.Multicast.Publish(MulticastingTopic, packedMessage)
+	err := globalData.Multicast.Publish(TopicMulticasting, packedMessage)
 	if err != nil {
 		util.LogWarn(globalData.Log, util.CoLightRed, fmt.Sprintf("MulticastCommand Publish error:%v", err))
 		return err
 	}
 	return nil
-}
-
-// BlockHeight - return global block height
-func BlockHeight() uint64 {
-	return globalData.concensusMachine.electedHeight
 }
 
 //ID return this node host ID

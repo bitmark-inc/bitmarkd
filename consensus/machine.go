@@ -1,4 +1,4 @@
-package p2p
+package consensus
 
 import (
 	"fmt"
@@ -7,19 +7,17 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
+	"github.com/bitmark-inc/bitmarkd/consensus/voting"
 	"github.com/bitmark-inc/bitmarkd/counter"
 	"github.com/bitmark-inc/bitmarkd/genesis"
 	"github.com/bitmark-inc/bitmarkd/mode"
-	"github.com/bitmark-inc/bitmarkd/p2p/voting"
+	"github.com/bitmark-inc/bitmarkd/p2p"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 )
 
 // various timeouts
 const (
-	// pause to limit bandwidth
-	cycleInterval = 15 * time.Second
-
 	// number of cycles to be 1 block out of sync before resync
 	samplelingLimit = 10
 
@@ -40,11 +38,10 @@ const (
 	fastSyncSkipPerBlocks       = 100
 )
 
-// Machine voting concensus state machine
+// Machine voting consensus state machine
 type Machine struct {
-	log *logger.L
-	state
-	attachedNode     *Node
+	log              *logger.L
+	attachedNode     *p2p.Node
 	votingMetrics    *MetricsPeersVoting
 	votes            voting.Voting
 	electedWiner     voting.Candidate //voting winner
@@ -54,22 +51,23 @@ type Machine struct {
 	fastsyncEnabled  bool   // fast sync mode enabled?
 	blocksPerCycle   int    // number of blocks to fetch per cycle
 	pivotPoint       uint64 // block number to stop fast syncing
+	state
 }
 
-// NewConcensusMachine get a new StateMachine
-func NewConcensusMachine(node *Node, metric *MetricsPeersVoting, fastsync bool) Machine {
-	machine := Machine{log: logger.New("concensus"), votingMetrics: metric, attachedNode: node}
+// NewconsensusMachine get a new StateMachine
+func NewConsensusMachine(node *p2p.Node, metric *MetricsPeersVoting, fastsync bool) Machine {
+	machine := Machine{log: globalData.Log, votingMetrics: metric, attachedNode: node}
 	machine.toState(cStateConnecting)
 	machine.votes = voting.NewVoting()
 	machine.fastsyncEnabled = fastsync
 	return machine
 }
 
-//Run Run A ConcensusMachine
+//Run Run A ConsensusMachine
 func (m *Machine) Run(args interface{}, shutdown <-chan struct{}) {
 	log := m.log
-	log.Info("starting a concensus state machine…")
-	timer := time.After(cycleInterval)
+	log.Info("starting a consensus state machine…")
+	timer := time.After(machineRunInitial)
 loop:
 	for {
 		// wait for shutdown
@@ -78,7 +76,7 @@ loop:
 		case <-shutdown:
 			break loop
 		case <-timer: // timer has priority over queue
-			timer = time.After(cycleInterval)
+			timer = time.After(machineRunInterval)
 			m.start()
 		}
 	}

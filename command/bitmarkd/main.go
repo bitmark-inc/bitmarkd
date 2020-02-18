@@ -25,6 +25,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/publish"
 
+	"github.com/bitmark-inc/bitmarkd/consensus"
 	"github.com/bitmark-inc/bitmarkd/proof"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/rpc"
@@ -237,7 +238,6 @@ func main() {
 		log.Criticalf("reservoir reload error: %s", err)
 		exitwithstatus.Message("reservoir reload error: %s", err)
 	}
-
 	// network announcements need to be before peer and rpc initialisation
 	log.Info("initialise announce")
 	nodesDomain := "" // initially none
@@ -290,10 +290,11 @@ func main() {
 		log.Criticalf("zmq.AuthStart: error: %s", err)
 		exitwithstatus.Message("zmq.AuthStart: error: %s", err)
 	}
+
 	if masterConfiguration.DNSPeerOnly {
-		err = p2p.Initialise(&masterConfiguration.Peering, version, masterConfiguration.Fastsync, p2p.DnsOnly)
+		err = p2p.Initialise(&masterConfiguration.Peering, version, p2p.DnsOnly)
 	} else {
-		err = p2p.Initialise(&masterConfiguration.Peering, version, masterConfiguration.Fastsync, p2p.UsePeers)
+		err = p2p.Initialise(&masterConfiguration.Peering, version, p2p.UsePeers)
 	}
 
 	if nil != err {
@@ -301,6 +302,14 @@ func main() {
 		exitwithstatus.Message("p2p initialise error: %s", err)
 	}
 	defer p2p.Finalise()
+
+	err = consensus.Initialise(p2p.P2PNode(), masterConfiguration.Fastsync)
+	if nil != err {
+		log.Criticalf("consensus initialise error: %s", err)
+		exitwithstatus.Message("consensus initialise error: %s", err)
+	}
+	defer consensus.Finalise()
+
 	err = rpc.Initialise(&masterConfiguration.ClientRPC, &masterConfiguration.HttpsRPC, version)
 	if nil != err {
 		log.Criticalf("rpc initialise error: %s", err)
