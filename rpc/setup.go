@@ -202,13 +202,14 @@ process_rpcs:
 			listen = strings.Split(listen, ":")[0]
 			ipType[i] = "tcp4"
 		}
-		ip := net.ParseIP(listen)
-		if nil == ip {
+
+		if ip := net.ParseIP(listen); nil == ip {
 			err := fault.InvalidIpAddress
 			log.Errorf("rpc server listen error: %s", err)
 			return err
 		}
 	}
+
 	for i, listen := range configuration.Listen {
 		log.Infof("starting RPC server: %s", listen)
 		l, err := tls.Listen(ipType[i], listen, tlsConfiguration)
