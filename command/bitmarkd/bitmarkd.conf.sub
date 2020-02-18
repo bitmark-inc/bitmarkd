@@ -72,11 +72,12 @@ function add_port(ip, port)
         port_base = 10000
     end
     local suffix = ":" .. (port_base + port_offset + port)
-    -- check for dual stack OS (via global os_name)
-    -- and listen on either "[::]" or "0.0.0.0"
+    -- check OS via global os_name to deal with single/dual stack
+    -- dual stack allow single listen on "*"
+    -- non-dual stack two separate IPv6 ("[::]") and IPv4 ("0.0.0.0") entries
     if ip == "*" then
         if os_name == "freebsd" or  os_name == "linux" then
-            return "[::]" .. suffix
+            return "*" .. suffix
         end
         -- OS has separate IPv4 and IPv6 so need both
         return "[::]" .. suffix, "0.0.0.0" .. suffix

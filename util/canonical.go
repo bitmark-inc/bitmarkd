@@ -27,7 +27,12 @@ func NewConnection(hostPort string) (*Connection, error) {
 		return nil, err
 	}
 
-	IP := net.ParseIP(strings.Trim(host, " "))
+	host = strings.TrimSpace(host)
+
+	IP := net.ParseIP(host)
+	if "*" == host && nil == IP {
+		IP = net.ParseIP("::")
+	}
 	if nil == IP {
 		ips, err := net.LookupIP(host)
 		if nil != err {
