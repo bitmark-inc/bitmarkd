@@ -133,35 +133,3 @@ loop:
 
 	return nil
 }
-
-// // Asset identifier
-// // -----------
-
-// type AssetIdentifiersArguments struct {
-// 	Ids []transaction.AssetId `json:"ids"`
-// }
-
-// type AssetIdentifiersReply struct {
-// 	Assets []transaction.Decoded `json:"assets"`
-// }
-
-// func (assets *Assets) Identifier(arguments *AssetIdentifieresArguments, reply *AssetIdentifieresReply) error {
-
-// 	// restrict arguments size to reasonable value
-// 	size := len(arguments.Ids)
-// 	if size > MaximumGetSize {
-// 		size = MaximumGetSize
-// 	}
-
-// 	txIds := make([]transaction.Link, size)
-// 	for i, assetId := range arguments.Ids[:size] {
-// 		_, txId, found := assetId.Read()
-// 		if found {
-// 			txIds[i] = txId
-// 		}
-// 	}
-
-// 	reply.Assets = transaction.Decode(txIds)
-
-// 	return nil
-// }
