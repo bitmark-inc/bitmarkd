@@ -23,8 +23,10 @@ func (n *Node) Setup(configuration *Configuration, version string, dnsPeerOnly d
 	globalData.Version = version
 	if nodeType(configuration.NodeType) == ClientNode {
 		globalData.NodeType = ClientNode
+		n.Log.Info("The NodeType is ClientNode")
 	} else {
 		globalData.NodeType = ServerNode
+		n.Log.Info("The NodeType is ServerNode")
 	}
 
 	globalData.dnsPeerOnly = dnsPeerOnly
