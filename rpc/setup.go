@@ -253,7 +253,7 @@ func initialiseHTTPS(configuration *HTTPSConfiguration, version string) error {
 		set := make([]*net.IPNet, len(addresses))
 		local[path] = set
 		for i, ip := range addresses {
-			_, cidr, err := net.ParseCIDR(strings.Trim(ip, " "))
+			_, cidr, err := net.ParseCIDR(strings.TrimSpace(ip))
 			if nil != err {
 				return err
 			}

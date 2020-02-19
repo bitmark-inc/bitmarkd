@@ -44,7 +44,7 @@ func NewConnection(hostPort string) (*Connection, error) {
 		IP = ips[0]
 	}
 
-	numericPort, err := strconv.Atoi(strings.Trim(port, " "))
+	numericPort, err := strconv.Atoi(strings.TrimSpace(port))
 	if nil != err {
 		return nil, err
 	}
