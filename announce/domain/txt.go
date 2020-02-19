@@ -38,8 +38,23 @@ type DnsTxt struct {
 //   <TAG> a=<IPv4;IPv6> c=<PORT> r=<PORT> f=<SHA3-256(cert)> i=<PEER-ID>
 //
 // other invalid combinations or extraneous items are ignored
+func ParseTxt(s string) (*DnsTxt, error) {
 
-func parseTxt(s string) (*DnsTxt, error) {
+	tagCount := 0
+	words := make([]string, 0, 20)
+
+	// only want one supported tag otherwise ignore the record
+	for _, w := range strings.Split(strings.TrimSpace(s), " ") {
+		if _, ok := supportedTags[w]; ok {
+			tagCount += 1
+		} else {
+			words = append(words, w)
+		}
+	}
+
+	if 1 != tagCount || len(words) < 1 {
+		return nil, fault.InvalidDnsTxtRecord
+	}
 
 	t := &DnsTxt{}
 
@@ -50,13 +65,7 @@ func parseTxt(s string) (*DnsTxt, error) {
 	countR := 0
 
 words:
-	for i, w := range strings.Split(strings.TrimSpace(s), " ") {
-		if 0 == i {
-			if _, ok := supportedTags[w]; ok {
-				continue words
-			}
-			return nil, fault.InvalidDnsTxtRecord
-		}
+	for _, w := range words {
 
 		// ignore empty
 		if "" == w {
@@ -70,6 +79,7 @@ words:
 
 		// w[0]=tag character; w[1]= char('='); w[2:]=parameter
 		parameter := w[2:]
+
 		err := error(nil)
 		switch w[0] {
 		case 'a':
@@ -124,7 +134,7 @@ words:
 			countF += 1
 
 		default:
-			err = fault.InvalidDnsTxtRecord
+			// ignore any unknown items
 		}
 		if nil != err {
 			return nil, err

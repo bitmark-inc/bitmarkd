@@ -6,14 +6,11 @@
 package domain_test
 
 import (
-	"fmt"
 	"testing"
-
-	"github.com/bitmark-inc/logger"
 
 	"github.com/bitmark-inc/bitmarkd/announce/domain"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/stretchr/testify/assert"
+	"github.com/bitmark-inc/logger"
 )
 
 func TestValidTag(t *testing.T) {
@@ -154,7 +151,7 @@ func TestValidTag(t *testing.T) {
 			err: fault.InvalidIdentityName,
 		},
 
-		// invalid tags
+		// ignored items
 		{
 			id:  25,
 			txt: "bitmark=v0 a=118.163.120.178;2001:b030:2314:0200:4649:583d:0001:0120 r=33566 f=48137A7A76934CAFE7635C9AC05339C20F4C00A724D7FA1DC0DC3875476ED004 s=32135 c=32136 i=202c1pec485c21d0d18e9dfd096bd760a558d5ee1139f8e4b2e15863433e7d51",
@@ -168,17 +165,30 @@ func TestValidTag(t *testing.T) {
 		{
 			id:  27,
 			txt: "",
-			err: fault.InvalidNodeDomain,
+			err: fault.InvalidDnsTxtRecord,
 		},
 	}
 
 	for _, item := range testData {
+		_, err := domain.ParseTxt(item.txt)
+
+		if nil == item.err && nil != err {
+			t.Errorf("id[%d] error: \"%s\"  expected success", item.id, err)
+		} else if item.err != err {
+			t.Errorf("id[%d] error: \"%s\"  expected: \"%s\"", item.id, err, item.err)
+		}
+
 		l := domain.NewLookuper(item.txt, logger.New(logCategory))
 		f := func(s string) ([]string, error) {
 			return []string{item.txt}, nil
 		}
-		_, err := l.Lookup(f)
-		str := fmt.Sprintf("wrong error of case id %d", item.id)
-		assert.Equal(t, item.err, err, str)
+
+		r, err := l.Lookup(f)
+		if nil == item.err && 1 != len(r) {
+			t.Errorf("id[%d] expected 1 record but got: %d", item.id, len(r))
+		} else if nil != item.err && 0 != len(r) {
+			t.Errorf("id[%d] expected zero records bu got: %d", item.id, len(r))
+		}
+
 	}
 }

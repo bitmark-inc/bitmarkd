@@ -32,6 +32,7 @@ func NewLookuper(domain string, log *logger.L) Lookuper {
 // lookup node domain for the peering
 func (l *lookuper) Lookup(f func(string) ([]string, error)) ([]DnsTxt, error) {
 	log := l.logger
+	log.Debugf("lookup: %s", l.domain)
 	if "" == l.domain {
 		return nil, fault.InvalidNodeDomain
 	}
@@ -46,18 +47,18 @@ loop:
 	// process DNS entries
 	for i, t := range texts {
 		t = strings.TrimSpace(t)
-		tag, err := parseTxt(t)
+		tag, err := ParseTxt(t)
 		if nil != err {
 			log.Debugf("ignore TXT[%d]: %q  error: %s", i, t, err)
-			return nil, err
-		} else {
+			continue loop
+		} else if nil != tag { // only process non-empty records
 			log.Infof("process TXT[%d]: %q", i, t)
 			log.Infof("result[%d]: IPv4: %q  IPv6: %q  rpc: %d  connect: %d", i, tag.IPv4, tag.IPv6, tag.RpcPort, tag.ConnectPort)
 			log.Infof("result[%d]: peer ID: %s", i, tag.PeerID)
 			log.Infof("result[%d]: rpc fingerprint: %x", i, tag.CertificateFingerprint)
 			if nil == tag.IPv4 && nil == tag.IPv6 {
 				log.Debugf("result[%d]: ignoring invalid record", i)
-				break loop
+				continue loop
 			}
 
 			result = append(result, *tag)
