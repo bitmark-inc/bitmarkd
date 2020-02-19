@@ -16,7 +16,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
-	"github.com/prometheus/common/log"
 )
 
 const (
@@ -370,7 +369,7 @@ func (n *Node) PushMessageBus(item BusMessage, id peerlib.ID, stream network.Str
 	}
 	_, err = rw.Write(packedP2PMsg)
 	if err != nil {
-		log.Error(err.Error())
+		n.Log.Error(err.Error())
 		return err
 	}
 	rw.Flush()

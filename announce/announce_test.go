@@ -1,59 +1,80 @@
-package announce
+// SPDX-License-Identifier: ISC
+// Copyright (c) 2014-2020 Bitmark Inc.
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
+package announce_test
 
 import (
-	"fmt"
-	"io/ioutil"
 	"os"
-	"path"
 	"testing"
 
-	"github.com/bitmark-inc/bitmarkd/util"
+	"github.com/bitmark-inc/bitmarkd/fault"
+
+	"github.com/bitmark-inc/bitmarkd/announce"
+	"github.com/bitmark-inc/bitmarkd/announce/broadcast"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/bitmark-inc/logger"
-	proto "github.com/golang/protobuf/proto"
-	"github.com/stretchr/testify/assert"
 )
 
-func TestMain(m *testing.M) {
-	curPath := os.Getenv("PWD")
-	logLevel := make(map[string]string)
-	logLevel["DEFAULT"] = "info"
-	var logConfig = logger.Configuration{
-		Directory: curPath,
-		File:      "routing_test.log",
+const (
+	dir = "testing"
+)
+
+func setupTestLogger() {
+	removeFiles()
+	_ = os.Mkdir(dir, 0700)
+
+	logging := logger.Configuration{
+		Directory: dir,
+		File:      "announce.log",
 		Size:      1048576,
-		Count:     20,
-		Console:   true,
-		Levels:    logLevel,
+		Count:     10,
+		Console:   false,
+		Levels: map[string]string{
+			logger.DefaultTag: "critical",
+		},
 	}
-	if err := logger.Initialise(logConfig); err != nil {
-		panic(fmt.Sprintf("logger initialization failed: %s", err))
-	}
-	globalData.log = logger.New("nodes")
-	os.Exit(m.Run())
+
+	// start logging
+	_ = logger.Initialise(logging)
 }
 
-func TestStorePeers(t *testing.T) {
-	fmt.Println("TestStorePeers")
-	curPath := os.Getenv("PWD")
-	peerFile := path.Join(curPath, "peers")
-	// domain from bind9
-	err := Initialise("nodes.test.bitmark.com", peerFile, false)
-	assert.NoError(t, err, "routing initialized error")
-	err = storePeers(peerFile)
-	assert.NoError(t, err, "routing backupPeers error")
+func teardownTestLogger() {
+	removeFiles()
 }
 
-func TestReadPeers(t *testing.T) {
-	curPath := os.Getenv("PWD")
-	peerFile := path.Join(curPath, "peers")
-	var peers PeerList
-	readIN, err := ioutil.ReadFile(peerFile)
-	assert.NoError(t, err, "TestReadPeers:readFile Error")
-	err = proto.Unmarshal(readIN, &peers)
-	assert.NoError(t, err, "proto unmarshal error")
-	for _, peer := range peers.Peers {
-		addrList := util.ByteAddrsToString(peer.Listeners.Address)
-		fmt.Printf("peerID:%s, listener:%v timestamp:%d\n", string(peer.PeerID), addrList, peer.Timestamp)
-	}
+func removeFiles() {
+	_ = os.RemoveAll(dir)
+}
+
+func TestInitialise(t *testing.T) {
+	setupTestLogger()
+	defer teardownTestLogger()
+
+	f := func(_ string) ([]string, error) { return []string{}, nil }
+
+	err := announce.Initialise("domain.not.exist", "cache", broadcast.UsePeers, f)
+	assert.Nil(t, err, "wrong Initialise")
+}
+
+func TestInitialiseWhenSecondTime(t *testing.T) {
+	setupTestLogger()
+	defer teardownTestLogger()
+
+	f := func(_ string) ([]string, error) { return []string{}, nil }
+
+	_ = announce.Initialise("domain.not.exist", "cache", broadcast.UsePeers, f)
+
+	err := announce.Initialise("domain.not.exist", "cache", broadcast.UsePeers, f)
+	assert.Equal(t, fault.AlreadyInitialised, err, "wrong second Initialise")
+}
+
+func TestFinalise(t *testing.T) {
+	setupTestLogger()
+	defer teardownTestLogger()
+
+	err := announce.Finalise()
+	assert.Nil(t, err, "wrong Finalise")
 }
