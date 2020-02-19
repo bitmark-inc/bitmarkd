@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: ISC
-// Copyright (c) 2014-2019 Bitmark Inc.
+// Copyright (c) 2014-2020 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -27,7 +27,12 @@ func NewConnection(hostPort string) (*Connection, error) {
 		return nil, err
 	}
 
-	IP := net.ParseIP(strings.Trim(host, " "))
+	host = strings.TrimSpace(host)
+
+	IP := net.ParseIP(host)
+	if "*" == host && nil == IP {
+		IP = net.ParseIP("::")
+	}
 	if nil == IP {
 		ips, err := net.LookupIP(host)
 		if nil != err {

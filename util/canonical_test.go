@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: ISC
-// Copyright (c) 2014-2019 Bitmark Inc.
+// Copyright (c) 2014-2020 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -29,6 +29,7 @@ func TestCanonical(t *testing.T) {
 		{"0.0.0.0:1234", "0.0.0.0:1234"},
 		{"[::1]:1234", "[::1]:1234"},
 		{"[::]:1234", "[::]:1234"},
+		{"*:1234", "[::]:1234"},
 		{"[0:0::0:0]:1234", "[::]:1234"},
 		{"[0:0:0:0::1]:1234", "[::1]:1234"},
 		{"[2404:6800:4008:c07::66]:443", "[2404:6800:4008:c07::66]:443"},
@@ -85,7 +86,8 @@ func TestCanonicalIP(t *testing.T) {
 		{"[as34::]:1234", "no such host"},
 		{"[1ffff::]:1234", "no such host"},
 		{"[2404:6800:4008:0c07:0000:0000:0000:0066:1234]:443", "no such host"},
-		{"*:1234", "no such host"},
+		{"!:1234", "no such host"},
+		{"#:1234", "no such host"},
 		{"127.0.0.1", "missing port in address"},
 		{"[2001:0db8:85a3:08d3:1319:8a2e:0370:7344]", "missing port in address"},
 	}

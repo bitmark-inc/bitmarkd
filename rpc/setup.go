@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: ISC
-// Copyright (c) 2014-2019 Bitmark Inc.
+// Copyright (c) 2014-2020 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -10,7 +10,6 @@ import (
 	"net"
 	"net/http"
 	"net/rpc"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -190,15 +189,14 @@ process_rpcs:
 	// validate all listen addresses
 	ipType := make([]string, len(configuration.Listen))
 	for i, listen := range configuration.Listen {
-		if '[' == listen[0] {
+		if '*' == listen[0] {
+			// change "*:PORT" to "[::]:PORT"
+			// on the assumption that this will listen on tcp4 and tcp6
+			listen = "[::]" + strings.Split(listen, ":")[1]
+			ipType[i] = "tcp"
+		} else if '[' == listen[0] {
 			listen = strings.Split(listen[1:], "]:")[0]
 			ipType[i] = "tcp6"
-			// override for OS with dual stack
-			switch runtime.GOOS {
-			case "freebsd", "linux":
-				ipType[i] = "tcp"
-			default:
-			}
 		} else {
 			listen = strings.Split(listen, ":")[0]
 			ipType[i] = "tcp4"

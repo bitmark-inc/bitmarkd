@@ -1,0 +1,44 @@
+#!/bin/sh
+# ensure all go files have a license header
+
+year=$(date '+%Y')
+license_regex='SPDX-License-Identifier:'
+
+find . -type f -name '*.go' -print | (
+  while read filename
+  do
+    egrep -q -m 1 "${license_regex}" "${filename}"
+    rc_license="${?}"
+
+    egrep -q -m 1 'Copyright[[:space:]][(]c[)].*Bitmark[[:space:]]Inc[.]' "${filename}"
+    rc_copyright="${?}"
+
+    ok=''
+    [ "${rc_license}" -ne 0 ] && ok='!L'
+    [ "${rc_copyright}" -ne 0 ] && ok="${ok}"'!C'
+    [ -z "${ok}" ] && ok=OK
+
+    printf 'file: %-4s %s\n' "${ok}" "${filename}"
+    [ X"${ok}" = X"OK" ] && continue
+
+    backup="${filename}.bk"
+    rm -f "${backup}"
+    mv "${filename}" "${backup}"
+
+    if [ "${rc_license}" -ne 0 ] || [ "${rc_copyright}" -ne 0 ]
+    then
+      printf '// SPDX-License-Identifier: ISC\n' >> "${filename}"
+    fi
+
+    if [ "${rc_copyright}" -ne 0 ]
+    then
+      printf '// Copyright (c) 2014-%d Bitmark Inc.\n' "${year}" >> "${filename}"
+      printf '// Use of this source code is governed by an ISC\n' >> "${filename}"
+      printf '// license that can be found in the LICENSE file.\n' >> "${filename}"
+      printf '\n' >> "${filename}"
+    fi
+
+    egrep -v "${license_regex}" "${backup}" >> "${filename}"
+
+  done
+)
