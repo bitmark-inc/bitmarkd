@@ -7,20 +7,20 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/messagebus"
-	"github.com/bitmark-inc/bitmarkd/mode"
-	"github.com/bitmark-inc/bitmarkd/util"
-	"github.com/prometheus/common/log"
-
-	"github.com/bitmark-inc/bitmarkd/background"
-	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/logger"
 	proto "github.com/golang/protobuf/proto"
 	p2pcore "github.com/libp2p/go-libp2p-core"
 	crypto "github.com/libp2p/go-libp2p-core/crypto"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	ma "github.com/multiformats/go-multiaddr"
+	"github.com/prometheus/common/log"
+
+	"github.com/bitmark-inc/bitmarkd/background"
+	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/messagebus"
+	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/util"
+	"github.com/bitmark-inc/logger"
 )
 
 // global data
@@ -133,7 +133,10 @@ func Initialise(configuration *Configuration, version string, dnsPeerOnly dnsOnl
 	globalData.Log = logger.New("p2p")
 
 	globalData.Log.Info("starting…")
-	globalData.Setup(configuration, version, dnsPeerOnly)
+	err := globalData.Setup(configuration, version, dnsPeerOnly)
+	if nil != err {
+		return err
+	}
 	globalData.Log.Info("start background…")
 
 	processes := background.Processes{
@@ -167,6 +170,8 @@ loop:
 		case <-shutdown:
 			break loop
 		case item := <-queue:
+
+		command_switch:
 			switch item.Command {
 			case "@D":
 				if len(item.Parameters) != 1 {
@@ -184,7 +189,7 @@ loop:
 				}
 			case "peer", "rpc": // only server broadcast its peer and rpc
 				if ClientNode == n.NodeType {
-					break
+					break command_switch
 				}
 				fallthrough
 			case "block", "proof", "transfer", "issues", "assets":

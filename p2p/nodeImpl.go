@@ -5,18 +5,17 @@ import (
 	"fmt"
 	"time"
 
-	peerlib "github.com/libp2p/go-libp2p-core/peer"
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
-
-	"github.com/bitmark-inc/bitmarkd/messagebus"
-	"github.com/bitmark-inc/bitmarkd/util"
-	"github.com/bitmark-inc/logger"
 	proto "github.com/golang/protobuf/proto"
-
 	libp2p "github.com/libp2p/go-libp2p"
 	crypto "github.com/libp2p/go-libp2p-core/crypto"
+	peerlib "github.com/libp2p/go-libp2p-core/peer"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	tls "github.com/libp2p/go-libp2p-tls"
 	ma "github.com/multiformats/go-multiaddr"
+
+	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/messagebus"
+	"github.com/bitmark-inc/bitmarkd/util"
 )
 
 //Setup setup a node
@@ -33,14 +32,13 @@ func (n *Node) Setup(configuration *Configuration, version string, dnsPeerOnly d
 	globalData.dnsPeerOnly = dnsPeerOnly
 	listenIPPorts := makeDualStackAddrs(configuration.Listen)
 	if len(listenIPPorts) == 0 {
-		logger.Panic("no listen address")
+		return fault.AddressIsNil
 	}
 	maAddrs := IPPortToMultiAddr(listenIPPorts)
 	n.Registers = make(map[peerlib.ID]RegisterStatus)
 	prvKey, err := util.DecodePrivKeyFromHex(configuration.PrivateKey) //Hex Decoded binaryString
 	if err != nil {
-		n.Log.Error(err.Error())
-		panic(err)
+		return err
 	}
 
 	n.PrivateKey = prvKey
@@ -56,12 +54,12 @@ func (n *Node) Setup(configuration *Configuration, version string, dnsPeerOnly d
 	//Start Broadcsting
 	ps, err := pubsub.NewGossipSub(context.Background(), n.Host)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	n.Multicast = ps
 	sub, err := n.Multicast.Subscribe(TopicMulticasting)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	go n.SubHandler(context.Background(), sub)
 
@@ -77,7 +75,7 @@ func (n *Node) NewHost(nodetype nodeType, listenAddrs []ma.Multiaddr, prvKey cry
 	}
 	newHost, err := libp2p.New(context.Background(), options...)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	n.Host = newHost
 	for _, a := range newHost.Addrs() {
