@@ -5,14 +5,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/counter"
-	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/util"
-	"github.com/bitmark-inc/logger"
 	p2pcore "github.com/libp2p/go-libp2p-core"
 	p2pnet "github.com/libp2p/go-libp2p-core/network"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
+
+	"github.com/bitmark-inc/bitmarkd/counter"
+	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/util"
+	"github.com/bitmark-inc/logger"
 )
 
 // MetricsNetwork contain P2P network metrics
@@ -81,7 +82,7 @@ func (m *MetricsNetwork) ConnectStatus(id peerlib.ID) (bool, error) {
 	if ok {
 		return val, nil
 	}
-	return false, fault.NoPeerID
+	return false, fault.NoPeerId
 }
 
 //GetConnCount return current connection counts

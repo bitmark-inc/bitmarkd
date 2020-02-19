@@ -8,6 +8,12 @@ import (
 	"io"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
+	p2phelp "github.com/libp2p/go-libp2p-core/helpers"
+	mux "github.com/libp2p/go-libp2p-core/mux"
+	"github.com/libp2p/go-libp2p-core/network"
+	peerlib "github.com/libp2p/go-libp2p-core/peer"
+
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -15,11 +21,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
-	"github.com/gogo/protobuf/proto"
-	p2phelp "github.com/libp2p/go-libp2p-core/helpers"
-	mux "github.com/libp2p/go-libp2p-core/mux"
-	"github.com/libp2p/go-libp2p-core/network"
-	peerlib "github.com/libp2p/go-libp2p-core/peer"
 )
 
 const maxBytesRecieve = 1024 * 1000 //MaxBlock Size 1M
@@ -203,7 +204,7 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 			rw.Flush()
 
 		default: // other commands as subscription-type commands // this will move to pubsub
-			listenerSendError(rw, nodeChain, fault.NotP2PCommand, "-> Subscription type command , should send through pubsub", log)
+			listenerSendError(rw, nodeChain, fault.NotP2pCommand, "-> Subscription type command , should send through pubsub", log)
 			//processSubscription(log, fn, parameters)
 			//result = []byte{'A'}
 		}

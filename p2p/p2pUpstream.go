@@ -8,14 +8,15 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
+	"github.com/libp2p/go-libp2p-core/network"
+	peerlib "github.com/libp2p/go-libp2p-core/peer"
+
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
-	"github.com/gogo/protobuf/proto"
-	"github.com/libp2p/go-libp2p-core/network"
-	peerlib "github.com/libp2p/go-libp2p-core/peer"
 )
 
 const (
@@ -78,7 +79,7 @@ func (n *Node) RequestRegister(id peerlib.ID, stream network.Stream, readwriter 
 	s, rw, created := n.DetermineStreamRWerHelper(id, stream, readwriter)
 	if nil == s || nil == rw {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf(" RequestRegister: ID:%v No Useful Stream and ReadWriter", id.ShortString()))
-		return nil, fault.StreamReadWriter
+		return nil, fault.BadStreamReadwriter
 	}
 	if created && s != nil {
 		defer s.Reset()
@@ -149,7 +150,7 @@ func (n *Node) QueryBlockHeight(id peerlib.ID, stream network.Stream, readwriter
 	s, rw, created := n.DetermineStreamRWerHelper(id, stream, readwriter)
 	if nil == s || nil == rw {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf(" Register:No Useful Stream and ReadWrite ID:%v", id.ShortString()))
-		return 0, fault.StreamReadWriter
+		return 0, fault.BadStreamReadwriter
 	}
 	if created && s != nil {
 		defer s.Reset()
@@ -216,7 +217,7 @@ func (n *Node) RemoteDigestOfHeight(id peerlib.ID, blockNumber uint64, stream ne
 	s, rw, created := n.DetermineStreamRWerHelper(id, stream, readwriter)
 	if nil == s || nil == rw {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("Register:No Useful Stream and ReadWrite ID:%v", id.ShortString()))
-		return blockdigest.Digest{}, fault.StreamReadWriter
+		return blockdigest.Digest{}, fault.BadStreamReadwriter
 	}
 	if created && s != nil {
 		defer s.Reset()
@@ -289,7 +290,7 @@ func (n *Node) GetBlockData(id peerlib.ID, blockNumber uint64, stream network.St
 	s, rw, created := n.DetermineStreamRWerHelper(id, stream, readwriter)
 	if nil == s || nil == rw {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("Register:No Useful Stream and ReadWrite ID:%v", id.ShortString()))
-		return nil, fault.StreamReadWriter
+		return nil, fault.BadStreamReadwriter
 	}
 	if created && s != nil {
 		defer s.Reset()
@@ -352,7 +353,7 @@ func (n *Node) PushMessageBus(item BusMessage, id peerlib.ID, stream network.Str
 	s, rw, created := n.DetermineStreamRWerHelper(id, stream, readwriter)
 	if nil == s || nil == rw {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("Register:No Useful Stream and ReadWrite ID:%v", id.ShortString()))
-		return fault.StreamReadWriter
+		return fault.BadStreamReadwriter
 	}
 	if created && s != nil {
 		defer s.Reset()

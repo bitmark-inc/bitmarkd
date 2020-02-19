@@ -7,16 +7,15 @@ import (
 	"sync"
 	"time"
 
+	peerlib "github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p-core/protocol"
+
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/p2p"
-
 	"github.com/bitmark-inc/bitmarkd/blockheader"
-
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
-	peerlib "github.com/libp2p/go-libp2p-core/peer"
-	"github.com/libp2p/go-libp2p-core/protocol"
 )
 
 const (
@@ -140,7 +139,7 @@ func (p *MetricsPeersVoting) GetMetrics(id peerlib.ID) (name string, remoteHeigh
 			return candidate.Metrics.name, candidate.Metrics.remoteHeight, candidate.Metrics.localHeight, candidate.Metrics.remoteDigestOfLocalHeight, candidate.Metrics.lastResponseTime, nil
 		}
 	}
-	return "", 0, 0, blockdigest.Digest{}, time.Time{}, fault.NoPeerID
+	return "", 0, 0, blockdigest.Digest{}, time.Time{}, fault.NoPeerId
 }
 
 func (p *MetricsPeersVoting) allCandidates(

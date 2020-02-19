@@ -147,7 +147,6 @@ func Initialise(configuration *Configuration, version string, dnsPeerOnly dnsOnl
 	for wait := 0; wait < 3; wait++ { // consensus package depended on p2p.Node
 		if nil != globalData.Host {
 			log.Debug("p2p host  has initialized")
-			wait = 3
 			return nil
 		}
 		log.Debug("wait for host to initialize")

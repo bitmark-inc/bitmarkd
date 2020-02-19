@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/bitmark-inc/bitmarkd/fault"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
+
+	"github.com/bitmark-inc/bitmarkd/fault"
 )
 
 // IDCompare The result will be 0 if a==b, -1 if a < b, and +1 if a > b.
@@ -26,7 +27,7 @@ func MaAddrToAddrInfo(maAddr ma.Multiaddr) (*peerlib.AddrInfo, error) {
 		return nil, err
 	}
 	if nil == info {
-		return nil, fault.AddInfoNil
+		return nil, fault.AddrinfoIsNil
 	}
 	return info, nil
 }
@@ -41,7 +42,7 @@ func MaAddrsToAddrInfos(maAddrs []ma.Multiaddr) ([]peerlib.AddrInfo, error) {
 		return nil, err
 	}
 	if nil == infos {
-		return nil, fault.AddInfoNil
+		return nil, fault.AddrinfoIsNil
 	}
 	return infos, nil
 }

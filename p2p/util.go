@@ -50,5 +50,4 @@ func makeDualStackAddrs(ipPorts []string) (iPPorts []string) {
 		iPPorts = append(iPPorts, key)
 	}
 	return
-
 }
