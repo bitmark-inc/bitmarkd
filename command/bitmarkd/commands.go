@@ -451,12 +451,12 @@ func splitConnection(hostPort string) (bool, string, int, error) {
 		return false, "", 0, fault.InvalidIpAddress
 	}
 
-	IP := net.ParseIP(strings.Trim(host, " "))
+	IP := net.ParseIP(strings.TrimSpace(host))
 	if nil == IP {
 		return false, "", 0, fault.InvalidIpAddress
 	}
 
-	numericPort, err := strconv.Atoi(strings.Trim(port, " "))
+	numericPort, err := strconv.Atoi(strings.TrimSpace(port))
 	if nil != err {
 		return false, "", 0, err
 	}
