@@ -44,7 +44,7 @@ func TestAssetsGet(t *testing.T) {
 	acc := &account.Account{
 		AccountInterface: &account.ED25519Account{
 			Test:      true,
-			PublicKey: publicKey,
+			PublicKey: issuerPublicKey,
 		},
 	}
 	ad := transactionrecord.AssetData{
@@ -54,7 +54,7 @@ func TestAssetsGet(t *testing.T) {
 		Registrant:  acc,
 	}
 	packed, _ := ad.Pack(acc)
-	signature := ed25519.Sign(privateKey, packed)
+	signature := ed25519.Sign(issuerPrivateKey, packed)
 	ad.Signature = signature
 	packed, _ = ad.Pack(acc)
 
@@ -121,7 +121,7 @@ func TestAssetsGetWhenNilAsset(t *testing.T) {
 	acc := &account.Account{
 		AccountInterface: &account.ED25519Account{
 			Test:      true,
-			PublicKey: publicKey,
+			PublicKey: issuerPublicKey,
 		},
 	}
 	ad := transactionrecord.AssetData{
@@ -131,7 +131,7 @@ func TestAssetsGetWhenNilAsset(t *testing.T) {
 		Registrant:  acc,
 	}
 	packed, _ := ad.Pack(acc)
-	signature := ed25519.Sign(privateKey, packed)
+	signature := ed25519.Sign(issuerPrivateKey, packed)
 	ad.Signature = signature
 	packed, _ = ad.Pack(acc)
 
@@ -168,7 +168,7 @@ func TestAssetsGetWhwnUnpackError(t *testing.T) {
 	acc := &account.Account{
 		AccountInterface: &account.ED25519Account{
 			Test:      true,
-			PublicKey: publicKey,
+			PublicKey: issuerPublicKey,
 		},
 	}
 	ad := transactionrecord.AssetData{
@@ -178,7 +178,7 @@ func TestAssetsGetWhwnUnpackError(t *testing.T) {
 		Registrant:  acc,
 	}
 	packed, _ := ad.Pack(acc)
-	signature := ed25519.Sign(privateKey, packed)
+	signature := ed25519.Sign(issuerPrivateKey, packed)
 	ad.Signature = signature
 	packed, _ = ad.Pack(acc)
 
