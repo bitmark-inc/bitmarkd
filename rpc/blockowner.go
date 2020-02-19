@@ -99,8 +99,10 @@ func (bitmark *BlockOwner) Transfer(transfer *transactionrecord.BlockOwnerTransf
 		return fault.WrongNetworkForPublicKey
 	}
 
+	r := reservoir.Get()
+
 	// save transfer/check for duplicate
-	stored, duplicate, err := reservoir.StoreTransfer(transfer, storage.Pool.Transactions, storage.Pool.OwnerTxIndex, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
+	stored, duplicate, err := r.StoreTransfer(transfer)
 	if nil != err {
 		return err
 	}

@@ -22,8 +22,11 @@ import (
 
 // Bitmark - type for the RPC
 type Bitmark struct {
-	log     *logger.L
-	limiter *rate.Limiter
+	Log            *logger.L
+	Limiter        *rate.Limiter
+	IsNormalMode   func(mode.Mode) bool
+	IsTestingChain func() bool
+	Rsvr           reservoir.Reservoir
 }
 
 // BitmarkTransferReply - result from transfer RPC
@@ -36,12 +39,11 @@ type BitmarkTransferReply struct {
 
 // Transfer - transfer a bitmark
 func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransferCountersigned, reply *BitmarkTransferReply) error {
-
-	if err := rateLimit(bitmark.limiter); nil != err {
+	if err := rateLimit(bitmark.Limiter); nil != err {
 		return err
 	}
 
-	log := bitmark.log
+	log := bitmark.Log
 	transfer := transactionrecord.BitmarkTransfer(arguments)
 
 	log.Infof("Bitmark.Transfer: %+v", transfer)
@@ -50,11 +52,11 @@ func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransferCou
 		return fault.InvalidItem
 	}
 
-	if !mode.Is(mode.Normal) {
+	if !bitmark.IsNormalMode(mode.Normal) {
 		return fault.NotAvailableDuringSynchronise
 	}
 
-	if arguments.Owner.IsTesting() != mode.IsTesting() {
+	if arguments.Owner.IsTesting() != bitmark.IsTestingChain() {
 		return fault.WrongNetworkForPublicKey
 	}
 
@@ -69,7 +71,8 @@ func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransferCou
 	}
 
 	// save transfer/check for duplicate
-	stored, duplicate, err := reservoir.StoreTransfer(transfer, storage.Pool.Transactions, storage.Pool.OwnerTxIndex, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
+	stored, duplicate, err := bitmark.Rsvr.StoreTransfer(transfer)
+
 	if nil != err {
 		return err
 	}
@@ -130,11 +133,11 @@ type ProvenanceReply struct {
 // Provenance - list the provenance from s transaction id
 func (bitmark *Bitmark) Provenance(arguments *ProvenanceArguments, reply *ProvenanceReply) error {
 
-	if err := rateLimitN(bitmark.limiter, arguments.Count, maximumProvenanceCount); nil != err {
+	if err := rateLimitN(bitmark.Limiter, arguments.Count, maximumProvenanceCount); nil != err {
 		return err
 	}
 
-	log := bitmark.log
+	log := bitmark.Log
 
 	log.Infof("Bitmark.Provenance: %+v", arguments)
 
