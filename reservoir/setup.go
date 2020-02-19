@@ -122,13 +122,33 @@ type globalDataType struct {
 
 	// set once during initialise
 	initialised bool
+
+	handles Handles
 }
 
 // globals as a struct to allow lock
 var globalData globalDataType
 
+func (g globalDataType) StoreTransfer(transfer transactionrecord.BitmarkTransfer) (*TransferInfo, bool, error) {
+	return storeTransfer(
+		transfer,
+		g.handles.Transaction,
+		g.handles.OwnerTx,
+		g.handles.OwnerData,
+		g.handles.BlockOwnerPayment,
+	)
+}
+
+type Reservoir interface {
+	StoreTransfer(transactionrecord.BitmarkTransfer) (*TransferInfo, bool, error)
+}
+
+func Get() Reservoir {
+	return &globalData
+}
+
 // Initialise - create the cache
-func Initialise(cacheDirectory string) error {
+func Initialise(cacheDirectory string, handles Handles) error {
 	globalData.Lock()
 	defer globalData.Unlock()
 
@@ -170,6 +190,8 @@ func Initialise(cacheDirectory string) error {
 
 	// start background processes
 	globalData.log.Info("start background…")
+
+	globalData.handles = handles
 
 	processes := background.Processes{
 		&rebroadcaster{},

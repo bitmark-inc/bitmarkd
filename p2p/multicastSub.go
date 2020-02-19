@@ -221,7 +221,6 @@ func processIssues(packed []byte) error {
 
 // unpack transfer and process it
 func processTransfer(packed []byte) error {
-
 	if 0 == len(packed) {
 		return fault.MissingParameters
 	}
@@ -237,9 +236,11 @@ func processTransfer(packed []byte) error {
 
 	duplicate := false
 
+	r := reservoir.Get()
+
 	transfer, ok := transaction.(transactionrecord.BitmarkTransfer)
 	if ok {
-		_, duplicate, err = reservoir.StoreTransfer(transfer, storage.Pool.Transactions, storage.Pool.OwnerTxIndex, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
+		_, duplicate, err = r.StoreTransfer(transfer)
 	} else {
 		switch tx := transaction.(type) {
 

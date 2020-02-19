@@ -383,7 +383,7 @@ func TestLoadFromFileWhenAssetIssuance(t *testing.T) {
 	data, _ := currencyMap.Pack(true)
 	mockHandles.blockOwnerPayment.EXPECT().Get(gomock.Any()).Return(data).Times(1)
 
-	_ = reservoir.Initialise(dataDirectory)
+	_ = reservoir.Initialise(dataDirectory, reservoirHandles)
 
 	err := reservoir.LoadFromFile(reservoirHandles)
 	assert.Equal(t, nil, err, "wrong error")
@@ -431,7 +431,7 @@ func TestLoadFromFileWhenAssetData(t *testing.T) {
 
 	mockHandles.asset.EXPECT().Has(gomock.Any()).Return(false).Times(1)
 
-	_ = reservoir.Initialise(dataFile)
+	_ = reservoir.Initialise(dataFile, reservoirHandles)
 
 	err := reservoir.LoadFromFile(reservoirHandles)
 	assert.Equal(t, nil, err, "wrong error")
@@ -492,7 +492,7 @@ func TestLoadFromFileWhenTransferUnratified(t *testing.T) {
 
 	mockHandles.ownerData.EXPECT().Get(gomock.Any()).Return(packedOwnerData).Times(1)
 
-	_ = reservoir.Initialise(dataFile)
+	_ = reservoir.Initialise(dataFile, reservoirHandles)
 
 	err = reservoir.LoadFromFile(reservoirHandles)
 	assert.Equal(t, nil, err, "wrong error")
@@ -556,7 +556,7 @@ func TestLoadFromFileWhenShare(t *testing.T) {
 
 	mockHandles.ownerData.EXPECT().Get(gomock.Any()).Return(packedOwnerData).Times(2)
 
-	_ = reservoir.Initialise(dataFile)
+	_ = reservoir.Initialise(dataFile, reservoirHandles)
 
 	err = reservoir.LoadFromFile(reservoirHandles)
 	assert.Equal(t, nil, err, "wrong error")
@@ -609,7 +609,7 @@ func TestLoadFromFileWhenGrant(t *testing.T) {
 	mockHandles.shareQuantity.EXPECT().GetN(gomock.Any()).Return(uint64(shareQuantity), true).Times(1)
 	mockHandles.share.EXPECT().GetNB(gomock.Any()).Return(uint64(shareQuantity), []byte{}).Times(1)
 
-	_ = reservoir.Initialise(dataFile)
+	_ = reservoir.Initialise(dataFile, reservoirHandles)
 
 	err := reservoir.LoadFromFile(reservoirHandles)
 	assert.Equal(t, nil, err, "wrong error")
@@ -663,7 +663,7 @@ func TestLoadFromFileWhenSwap(t *testing.T) {
 	mockHandles.share.EXPECT().GetNB(gomock.Any()).Return(uint64(shareQuantity), []byte("ok")).Times(1)
 	mockHandles.ownerData.EXPECT().Get(gomock.Any()).Return(packedOwnerData).Times(1)
 
-	_ = reservoir.Initialise(dataFile)
+	_ = reservoir.Initialise(dataFile, reservoirHandles)
 
 	err := reservoir.LoadFromFile(reservoirHandles)
 	assert.Equal(t, nil, err, "wrong error")

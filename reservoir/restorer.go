@@ -137,7 +137,7 @@ func (t *transferRestoreData) String() string {
 }
 
 func (t *transferRestoreData) Restore() error {
-	_, _, err := StoreTransfer(t.unpacked, t.transaction, t.ownerTx, t.ownerData, t.blockOwnerPayment)
+	_, _, err := storeTransfer(t.unpacked, t.transaction, t.ownerTx, t.ownerData, t.blockOwnerPayment)
 	if nil != err {
 		return fmt.Errorf("fail to restore transfer: %s", err)
 	}
