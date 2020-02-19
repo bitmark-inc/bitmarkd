@@ -7,6 +7,8 @@ package rpc
 
 import (
 	"crypto/tls"
+	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/storage"
 	"net"
 	"net/http"
 	"net/rpc"
@@ -296,8 +298,11 @@ func createRPCServer(log *logger.L, version string) *rpc.Server {
 	start := time.Now().UTC()
 
 	assets := &Assets{
-		log:     log,
-		limiter: rate.NewLimiter(rateLimitAssets, rateBurstAssets),
+		Log:            log,
+		Limiter:        rate.NewLimiter(rateLimitAssets, rateBurstAssets),
+		Pool:           storage.Pool.Assets,
+		IsNormalMode:   mode.Is,
+		IsTestingChain: mode.IsTesting,
 	}
 
 	bitmark := &Bitmark{

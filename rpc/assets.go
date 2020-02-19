@@ -18,8 +18,11 @@ import (
 
 // Assets - type for the RPC
 type Assets struct {
-	log     *logger.L
-	limiter *rate.Limiter
+	Log            *logger.L
+	Limiter        *rate.Limiter
+	Pool           storage.Handle
+	IsNormalMode   func(mode.Mode) bool
+	IsTestingChain func() bool
 }
 
 const (
@@ -38,7 +41,7 @@ type AssetsRegisterReply struct {
 }
 
 // internal function to register some assets
-func assetRegister(assets []*transactionrecord.AssetData) ([]AssetStatus, []byte, error) {
+func assetRegister(assets []*transactionrecord.AssetData, pool storage.Handle) ([]AssetStatus, []byte, error) {
 
 	assetStatus := make([]AssetStatus, len(assets))
 
@@ -46,7 +49,7 @@ func assetRegister(assets []*transactionrecord.AssetData) ([]AssetStatus, []byte
 	packed := []byte{}
 	for i, argument := range assets {
 
-		assetId, packedAsset, err := asset.Cache(argument, storage.Pool.Assets)
+		assetId, packedAsset, err := asset.Cache(argument, pool)
 		if nil != err {
 			return nil, nil, err
 		}
@@ -85,14 +88,14 @@ type AssetRecord struct {
 // Get - RPC to fetch asset data
 func (assets *Assets) Get(arguments *AssetGetArguments, reply *AssetGetReply) error {
 
-	log := assets.log
+	log := assets.Log
 	count := len(arguments.Fingerprints)
 
-	if err := rateLimitN(assets.limiter, count, maximumAssets); nil != err {
+	if err := rateLimitN(assets.Limiter, count, maximumAssets); nil != err {
 		return err
 	}
 
-	if !mode.Is(mode.Normal) {
+	if !assets.IsNormalMode(mode.Normal) {
 		return fault.NotAvailableDuringSynchronise
 	}
 
@@ -105,7 +108,7 @@ loop:
 		assetId := transactionrecord.NewAssetIdentifier([]byte(fingerprint))
 
 		confirmed := true
-		_, packedAsset := storage.Pool.Assets.GetNB(assetId[:])
+		_, packedAsset := assets.Pool.GetNB(assetId[:])
 		if nil == packedAsset {
 
 			confirmed = false
@@ -115,7 +118,7 @@ loop:
 			}
 		}
 
-		assetTx, _, err := transactionrecord.Packed(packedAsset).Unpack(mode.IsTesting())
+		assetTx, _, err := transactionrecord.Packed(packedAsset).Unpack(assets.IsTestingChain())
 		if nil != err {
 			continue loop
 		}

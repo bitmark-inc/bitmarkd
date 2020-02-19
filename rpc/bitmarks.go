@@ -7,7 +7,6 @@ package rpc
 
 import (
 	"encoding/hex"
-
 	"golang.org/x/time/rate"
 
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -77,7 +76,7 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 
 	log.Infof("Bitmarks.Create: %+v", arguments)
 
-	assetStatus, packedAssets, err := assetRegister(arguments.Assets)
+	assetStatus, packedAssets, err := assetRegister(arguments.Assets, storage.Pool.Assets)
 	if nil != err {
 		return err
 	}
