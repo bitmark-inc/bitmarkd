@@ -192,7 +192,7 @@ process_rpcs:
 		if '*' == listen[0] {
 			// change "*:PORT" to "[::]:PORT"
 			// on the assumption that this will listen on tcp4 and tcp6
-			listen = "[::]" + strings.Split(listen, ":")[1]
+			listen = "[::]" + ":" + strings.Split(listen, ":")[1]
 			ipType[i] = "tcp"
 		} else if '[' == listen[0] {
 			listen = strings.Split(listen[1:], "]:")[0]
