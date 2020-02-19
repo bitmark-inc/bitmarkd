@@ -10,6 +10,7 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/util"
+	"github.com/bitmark-inc/logger"
 	proto "github.com/golang/protobuf/proto"
 
 	libp2p "github.com/libp2p/go-libp2p"
@@ -30,7 +31,11 @@ func (n *Node) Setup(configuration *Configuration, version string, dnsPeerOnly d
 	}
 
 	globalData.dnsPeerOnly = dnsPeerOnly
-	maAddrs := IPPortToMultiAddr(configuration.Listen)
+	listenIPPorts := makeDualStackAddrs(configuration.Listen)
+	if len(listenIPPorts) == 0 {
+		logger.Panic("no listen address")
+	}
+	maAddrs := IPPortToMultiAddr(listenIPPorts)
 	n.Registers = make(map[peerlib.ID]RegisterStatus)
 	prvKey, err := util.DecodePrivKeyFromHex(configuration.PrivateKey) //Hex Decoded binaryString
 	if err != nil {

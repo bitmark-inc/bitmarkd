@@ -28,6 +28,7 @@ func IPPortToMultiAddr(addrsStr []string) []ma.Multiaddr {
 loop:
 	for _, IPPort := range addrsStr {
 		ver, ip, port, err := ParseHostPort(IPPort)
+
 		if err != nil {
 			continue loop
 		}
