@@ -192,7 +192,8 @@ process_rpcs:
 		if '*' == listen[0] {
 			// change "*:PORT" to "[::]:PORT"
 			// on the assumption that this will listen on tcp4 and tcp6
-			listen = "[::]" + ":" + strings.Split(listen, ":")[1]
+			configuration.Listen[i] = "[::]" + ":" + strings.Split(listen, ":")[1]
+			listen = "::"
 			ipType[i] = "tcp"
 		} else if '[' == listen[0] {
 			listen = strings.Split(listen[1:], "]:")[0]
@@ -278,7 +279,11 @@ func initialiseHTTPS(configuration *HTTPSConfiguration, version string) error {
 
 	for _, listen := range configuration.Listen {
 		log.Infof("starting server: %s on: %q", name, listen)
-
+		if '*' == listen[0] {
+			// change "*:PORT" to "[::]:PORT"
+			// on the assumption that this will listen on tcp4 and tcp6
+			listen = "[::]" + ":" + strings.Split(listen, ":")[1]
+		}
 		go ListenAndServeTLSKeyPair(listen, mux, tlsConfiguration)
 	}
 
