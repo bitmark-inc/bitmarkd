@@ -6,26 +6,28 @@
 package announce
 
 import (
-	"encoding/hex"
+	"fmt"
 	"path"
 	"sync"
-	"time"
 
-	"github.com/bitmark-inc/bitmarkd/avl"
+	"github.com/bitmark-inc/bitmarkd/announce/domain"
+	"github.com/bitmark-inc/bitmarkd/announce/parameter"
+
+	"github.com/bitmark-inc/bitmarkd/announce/broadcast"
+
+	"github.com/bitmark-inc/bitmarkd/announce/rpc"
+
+	"github.com/bitmark-inc/bitmarkd/announce/receptor"
+
+	"github.com/bitmark-inc/bitmarkd/messagebus"
+
+	"github.com/bitmark-inc/bitmarkd/announce/fingerprint"
+
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
-	proto "github.com/golang/protobuf/proto"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
-	ma "github.com/multiformats/go-multiaddr"
-)
-
-type dnsOnlyType bool
-
-const (
-	DnsOnly  dnsOnlyType = true
-	UsePeers dnsOnlyType = false
 )
 
 // type of listener
@@ -35,18 +37,7 @@ const (
 )
 
 // file for storing saves peers
-const peerFile = "peers.json"
-
-// type for SHA3 fingerprints
-type fingerprintType [32]byte
-
-// RPC entries
-type rpcEntry struct {
-	address     util.PackedConnection // packed addresses
-	fingerprint fingerprintType       // SHA3-256(certificate)
-	timestamp   time.Time             // creation time
-	local       bool                  // true => never expires
-}
+const backupFile = "peers.json"
 
 // globals for background process
 type announcerData struct {
@@ -56,47 +47,38 @@ type announcerData struct {
 	log *logger.L
 
 	// this node's packed annoucements
-	peerID      peerlib.ID
-	listeners   []ma.Multiaddr
-	fingerprint fingerprintType
-	rpcs        []byte
-	peerSet     bool
-	rpcsSet     bool
+	fingerprint fingerprint.Type
 
 	// tree of nodes available
-	peerTree    *avl.Tree
-	thisNode    *avl.Node // this node's position in the tree
-	treeChanged bool      // tree was changed
-	peerFile    string
+	receptors receptor.Receptor
+
+	backupFile string
 
 	// database of all RPCs
-	rpcIndex map[fingerprintType]int // index to find rpc entry
-	rpcList  []*rpcEntry             // array of RPCs
+	rpcs rpc.RPC
 
-	// data for thread
-	ann announcer
+	brdc background.Process
 
-	nodesLookup nodesLookup
+	domain domain.Domain
 
 	// for background
 	background *background.T
 
 	// set once during initialise
 	initialised bool
+
 	// only use dns record as peer nodes
-	dnsPeerOnly dnsOnlyType
+	dnsType broadcast.DNSType
 }
 
 // global data
 var globalData announcerData
 
-// format for timestamps
-const timeFormat = "2006-01-02 15:04:05"
-
 // Initialise - set up the announcement system
 // pass a fully qualified domain for root node list
 // or empty string for no root nodes
-func Initialise(nodesDomain, cacheDirectory string, dnsPeerOnly dnsOnlyType) error {
+func Initialise(nodesDomain, cacheDirectory string, dnsType broadcast.DNSType, f func(string) ([]string, error)) error {
+	var err error
 
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -109,33 +91,49 @@ func Initialise(nodesDomain, cacheDirectory string, dnsPeerOnly dnsOnlyType) err
 	globalData.log = logger.New("announce")
 	globalData.log.Info("starting…")
 
-	globalData.peerTree = avl.New()
-	globalData.thisNode = nil
-	globalData.treeChanged = false
+	globalData.receptors = receptor.New(globalData.log)
+	globalData.rpcs = rpc.New()
 
-	globalData.rpcIndex = make(map[fingerprintType]int, 1000)
-	globalData.rpcList = make([]*rpcEntry, 0, 1000)
+	globalData.backupFile = path.Join(cacheDirectory, backupFile)
 
-	globalData.peerSet = false
-	globalData.rpcsSet = false
-	globalData.peerFile = path.Join(cacheDirectory, peerFile)
-
-	globalData.dnsPeerOnly = dnsPeerOnly
+	globalData.dnsType = dnsType
 
 	globalData.log.Info("start restoring peer data…")
-	if globalData.dnsPeerOnly == UsePeers { //disable restore to avoid restore non-dns node
-		if _, err := restorePeers(globalData.peerFile); err != nil {
+	if globalData.dnsType == broadcast.UsePeers { //disable restore to avoid restore non-dns node
+		if list, err := receptor.Restore(globalData.backupFile); err == nil {
+			for _, item := range list.Receptors {
+				id, err := peerlib.IDFromBytes(item.ID)
+				addrs := util.GetMultiAddrsFromBytes(item.Listeners.Address)
+				if err != nil || nil != addrs {
+					continue
+				}
+				util.LogDebug(globalData.log, util.CoReset, fmt.Sprintf("restore peer ID:%s", id.ShortString()))
+
+				globalData.receptors.Add(id, addrs, item.Timestamp)
+			}
+		} else {
 			globalData.log.Errorf("fail to restore peer data: %s", err.Error())
 		}
 	}
 
-	if err := globalData.nodesLookup.initialise(nodesDomain); nil != err {
+	globalData.domain, err = domain.NewDomain(
+		globalData.log,
+		nodesDomain,
+		globalData.receptors,
+		f,
+	)
+	if nil != err {
 		return err
 	}
 
-	if err := globalData.ann.initialise(); nil != err {
-		return err
-	}
+	globalData.brdc = broadcast.New(
+		globalData.log, globalData.receptors,
+		globalData.rpcs,
+		globalData.fingerprint,
+		globalData.dnsType,
+		parameter.InitialiseInterval,
+		parameter.PollingInterval,
+	)
 
 	// all data initialised
 	globalData.initialised = true
@@ -144,10 +142,10 @@ func Initialise(nodesDomain, cacheDirectory string, dnsPeerOnly dnsOnlyType) err
 	globalData.log.Info("start background…")
 
 	processes := background.Processes{
-		&globalData.nodesLookup, &globalData.ann,
+		globalData.domain, globalData.brdc,
 	}
 
-	globalData.background = background.Start(processes, globalData.log)
+	globalData.background = background.Start(processes, messagebus.Bus.Announce.Chan())
 
 	return nil
 }
@@ -165,8 +163,11 @@ func Finalise() error {
 	// stop background
 	globalData.background.Stop()
 
+	// release message bus
+	messagebus.Bus.Announce.Release()
+
 	globalData.log.Info("start backing up peer data…")
-	if err := storePeers(globalData.peerFile); err != nil {
+	if err := receptor.Backup(globalData.backupFile, globalData.receptors.Tree()); err != nil {
 		globalData.log.Errorf("fail to backup peer data: %s", err.Error())
 	}
 
@@ -177,22 +178,4 @@ func Finalise() error {
 	globalData.log.Flush()
 
 	return nil
-}
-
-// MarshalText - convert fingerprint to little endian hex text
-func (fingerprint fingerprintType) MarshalText() ([]byte, error) {
-	size := hex.EncodedLen(len(fingerprint))
-	buffer := make([]byte, size)
-	hex.Encode(buffer, fingerprint[:])
-	return buffer, nil
-}
-
-func printBinaryAddrs(addrs []byte) string {
-	maAddrs := Addrs{}
-	err := proto.Unmarshal(addrs, &maAddrs)
-	if err != nil {
-		return ""
-	}
-	printAddrs := util.PrintMaAddrs(util.GetMultiAddrsFromBytes(maAddrs.Address))
-	return printAddrs
 }

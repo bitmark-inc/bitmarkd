@@ -11,6 +11,7 @@ import (
 	"golang.org/x/time/rate"
 
 	"github.com/bitmark-inc/bitmarkd/announce"
+	announceRPC "github.com/bitmark-inc/bitmarkd/announce/rpc"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
@@ -42,7 +43,7 @@ type NodeArguments struct {
 
 // NodeReply - result from RPC
 type NodeReply struct {
-	Nodes     []announce.RPCEntry `json:"nodes"`
+	Nodes     []announceRPC.Entry `json:"nodes"`
 	NextStart uint64              `json:"nextStart,string"`
 }
 
@@ -105,7 +106,7 @@ type MinerInfo struct {
 // Info - return some information about this node
 // only enough for clients to determine node state
 // for more detail information use HTTP GET requests
-func (node *Node) Info(arguments *InfoArguments, reply *InfoReply) error {
+func (node *Node) Info(_ *InfoArguments, reply *InfoReply) error {
 
 	if err := rateLimit(node.limiter); nil != err {
 		return err

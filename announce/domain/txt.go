@@ -2,8 +2,9 @@
 // Copyright (c) 2014-2020 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+// the tag to detect applicable TXT records from DNS
 
-package announce
+package domain
 
 import (
 	"encoding/hex"
@@ -14,7 +15,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 )
 
-// the tag to detect applicable TXT records from DNS
 var supportedTags = map[string]struct{}{
 	"bitmark-p2p=v1": {},
 }
@@ -24,13 +24,13 @@ const (
 	p2pIdentityLength = 52     // from host.ID().Pretty()
 )
 
-type tagline struct {
-	ipv4                   net.IP
-	ipv6                   net.IP
-	rpcPort                uint16
-	connectPort            uint16
-	certificateFingerprint []byte
-	peerID                 string
+type DnsTxt struct {
+	IPv4                   net.IP
+	IPv6                   net.IP
+	RpcPort                uint16
+	ConnectPort            uint16
+	CertificateFingerprint []byte
+	PeerID                 string
 }
 
 // decode DNS TXT records of these forms
@@ -39,9 +39,9 @@ type tagline struct {
 //
 // other invalid combinations or extraneous items are ignored
 
-func parseTag(s string) (*tagline, error) {
+func parseTxt(s string) (*DnsTxt, error) {
 
-	t := &tagline{}
+	t := &DnsTxt{}
 
 	countA := 0
 	countC := 0
@@ -51,7 +51,6 @@ func parseTag(s string) (*tagline, error) {
 
 words:
 	for i, w := range strings.Split(strings.TrimSpace(s), " ") {
-
 		if 0 == i {
 			if _, ok := supportedTags[w]; ok {
 				continue words
@@ -89,27 +88,27 @@ words:
 				} else {
 					err = nil
 					if nil != IP.To4() {
-						t.ipv4 = IP
+						t.IPv4 = IP
 					} else {
-						t.ipv6 = IP
+						t.IPv6 = IP
 					}
 				}
 			}
 			countA += 1
 
 		case 'c':
-			t.connectPort, err = getPort(parameter)
+			t.ConnectPort, err = getPort(parameter)
 			countC += 1
 
 		case 'r':
-			t.rpcPort, err = getPort(parameter)
+			t.RpcPort, err = getPort(parameter)
 			countR += 1
 
 		case 'i':
 			if len(parameter) != p2pIdentityLength {
 				err = fault.InvalidIdentityName
 			} else {
-				t.peerID = parameter
+				t.PeerID = parameter
 			}
 			countI += 1
 
@@ -117,7 +116,7 @@ words:
 			if len(parameter) != fingerprintLength {
 				err = fault.InvalidFingerprint
 			} else {
-				t.certificateFingerprint, err = hex.DecodeString(parameter)
+				t.CertificateFingerprint, err = hex.DecodeString(parameter)
 				if nil != err {
 					err = fault.InvalidFingerprint
 				}
