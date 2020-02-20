@@ -149,7 +149,46 @@ recorderd --config-file="${HOME}/.config/recorderd/recorderd.conf" start
 ~~~~~
 
 
+## Setup and run bitmark-cli (command line program to send transactions)
+
+Initialise the bitmark-cli for live and test networks creating a new
+account on each network.  This setup is presuming that live or test
+bitmarkd will be running on the same machine so thatthe loopback
+address can be used.
+
+~~~~~
+mkdir -p ~/.config/bitmark-cli
+bitmark-cli -n bitmark -i mylive setup -c 127.0.0.1:2130  -d 'my first live account' -n
+bitmark-cli -n testing -i mytest setup -c 127.0.0.1:12130  -d 'my first testing account' -n
+~~~~~
+
+To see the cli sub-commands: or details on a specific command e.g., "setup"
+
+~~~~~
+bitmark-cli help
+bitmark-cli help setup
+~~~~~
+
+Note: If you wish to add more connections or change the default
+connection created above then it is necessary to edit the JSON
+configuration files to modify the connections list.
+
+
 # Prebuilt Binary
+
+* FreeBSD
+
+**Install bitmarkd bitmark-cli and recorderd**
+~~~~~
+pkg install bitmark
+~~~~~
+
+**Alternatively select one or more individual packages**
+~~~~~
+pkg install bitmark-daemon
+pkg install bitmark-recorder
+pkg install bitmark-cli
+~~~~~
 
 * Flatpak
 
