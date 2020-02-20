@@ -24,8 +24,12 @@ import (
 
 // Bitmarks - type for the RPC
 type Bitmarks struct {
-	log     *logger.L
-	limiter *rate.Limiter
+	Log                   *logger.L
+	Limiter               *rate.Limiter
+	IsNormalMode          func(mode.Mode) bool
+	Rsvr                  reservoir.Reservoir
+	PoolAssets            storage.Handle
+	PoolBlockOwnerPayment storage.Handle
 }
 
 // IssueStatus - results from an issue
@@ -52,7 +56,7 @@ type CreateReply struct {
 // Create - create assets and issues
 func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply) error {
 
-	log := bitmarks.log
+	log := bitmarks.Log
 	assetCount := len(arguments.Assets)
 	issueCount := len(arguments.Issues)
 
@@ -66,17 +70,17 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 	if count > reservoir.MaximumIssues {
 		count = reservoir.MaximumIssues
 	}
-	if err := rateLimitN(bitmarks.limiter, count, reservoir.MaximumIssues); nil != err {
+	if err := rateLimitN(bitmarks.Limiter, count, reservoir.MaximumIssues); nil != err {
 		return err
 	}
 
-	if !mode.Is(mode.Normal) {
+	if !bitmarks.IsNormalMode(mode.Normal) {
 		return fault.NotAvailableDuringSynchronise
 	}
 
 	log.Infof("Bitmarks.Create: %+v", arguments)
 
-	assetStatus, packedAssets, err := assetRegister(arguments.Assets, storage.Pool.Assets)
+	assetStatus, packedAssets, err := assetRegister(arguments.Assets, bitmarks.PoolAssets)
 	if nil != err {
 		return err
 	}
@@ -88,9 +92,8 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 	packedIssues := []byte{}
 	var stored *reservoir.IssueInfo
 	duplicate := false
-	r := reservoir.Get()
 	if issueCount > 0 {
-		stored, duplicate, err = r.StoreIssues(arguments.Issues)
+		stored, duplicate, err = bitmarks.Rsvr.StoreIssues(arguments.Issues)
 		if nil != err {
 			return err
 		}
@@ -158,11 +161,11 @@ type ProofReply struct {
 // Proof - supply proof that client-side hashing to confirm free issue was done
 func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) error {
 
-	if err := rateLimit(bitmarks.limiter); nil != err {
+	if err := rateLimit(bitmarks.Limiter); nil != err {
 		return err
 	}
 
-	log := bitmarks.log
+	log := bitmarks.Log
 
 	if !mode.Is(mode.Normal) {
 		return fault.NotAvailableDuringSynchronise

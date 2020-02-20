@@ -317,8 +317,12 @@ func createRPCServer(log *logger.L, version string) *rpc.Server {
 	}
 
 	bitmarks := &Bitmarks{
-		log:     log,
-		limiter: rate.NewLimiter(rateLimitBitmarks, rateBurstBitmarks),
+		Log:                   log,
+		Limiter:               rate.NewLimiter(rateLimitBitmarks, rateBurstBitmarks),
+		IsNormalMode:          mode.Is,
+		Rsvr:                  reservoir.Get(),
+		PoolAssets:            storage.Pool.Assets,
+		PoolBlockOwnerPayment: storage.Pool.BlockOwnerPayment,
 	}
 
 	owner := &Owner{
