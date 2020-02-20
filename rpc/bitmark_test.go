@@ -65,7 +65,15 @@ func TestBitmarkTransfer(t *testing.T) {
 		TxId:      merkle.Digest{1, 2},
 		IssueTxId: merkle.Digest{1, 2},
 		Packed:    nil,
-		Payments:  nil,
+		Payments: []transactionrecord.PaymentAlternative{
+			[]*transactionrecord.Payment{
+				&transactionrecord.Payment{
+					Currency: currency.Litecoin,
+					Address:  litecoinAddress,
+					Amount:   100,
+				},
+			},
+		},
 	}
 
 	r := mocks.NewMockReservoir(ctl)
@@ -83,7 +91,8 @@ func TestBitmarkTransfer(t *testing.T) {
 	assert.Nil(t, err, "wrong transfer")
 	assert.Equal(t, info.Id, reply.PayId, "wrong payID")
 	assert.Equal(t, info.TxId, reply.TxId, "wrong txID")
-	assert.Equal(t, 0, len(reply.Payments), "wrong payment count")
+	assert.Equal(t, 1, len(reply.Payments), "wrong payment count")
+	assert.Equal(t, litecoinAddress, reply.Payments[currency.Litecoin.String()][0].Address, "wrong litecoin payment address")
 
 	received := <-bus
 	assert.Equal(t, "transfer", received.Command, "wrong message")
