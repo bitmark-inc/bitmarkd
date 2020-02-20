@@ -23,7 +23,7 @@ override_dh_auto_install:
 	do \
 	  app_base=$$(basename "$${app}") ; \
 	  conf="${SRC_DIR}/$${app}/$${app_base}.conf.sample" ; \
-	  [ -f "$${conf}" ] && cp -p "$${conf}" "$${etc_dir}/$${app_base}.conf" || true ; \
+	  [ -f "$${conf}" ] && cp -p "$${conf}" "$${etc_dir}/$${app_base}.conf.sample" || true ; \
 	  subconf="${SRC_DIR}/$${app}/$${app_base}.conf.sub" ; \
 	  echo "$${subconf}"; \
 	  [ -f "$${subconf}" ] && cp -p "$${subconf}" "$${etc_dir}/$${app_base}.conf.sub" || true ; \

@@ -1,2 +1,2 @@
-etc/recorderd.conf etc
 bin/recorderd usr/sbin
+etc/recorderd.conf.sample etc

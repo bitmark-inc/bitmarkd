@@ -4,6 +4,8 @@
 [ -f /var/lib/bitmarkd/rpc.crt ] && rm -r /var/lib/bitmarkd/rpc.*
 [ -f /var/lib/bitmarkd/proof.public ] && rm -r /var/lib/bitmarkd/proof.*
 
+cp /etc/bitmarkd.conf.sample /etc/bitmarkd.conf
+
 /usr/sbin/bitmarkd --config-file /etc/bitmarkd.conf gen-peer-identity /var/lib/bitmarkd/
 /usr/sbin/bitmarkd --config-file /etc/bitmarkd.conf gen-rpc-cert /var/lib/bitmarkd/
 /usr/sbin/bitmarkd --config-file /etc/bitmarkd.conf gen-proof-identity /var/lib/bitmarkd/

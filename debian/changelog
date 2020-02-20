@@ -1,3 +1,9 @@
+bitmarkd (0.12.4-1ubuntu2) bionic; urgency=medium
+
+  * rename the conf file to conf.sample in debian package
+
+ -- Jim Yeh <jim@bitmark.com>  Thu, 20 Feb 2020 16:56:44 +0000
+
 bitmarkd (0.12.4-1ubuntu1) bionic; urgency=medium
 
   * release version
