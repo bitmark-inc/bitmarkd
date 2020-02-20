@@ -12,8 +12,10 @@ import (
 )
 
 const (
-	testingDirName = "testing"
-	logCategory    = "testing"
+	testingDirName  = "testing"
+	logCategory     = "testing"
+	bitcoinAddress  = "2N7uK4otZGYDUDNEQ3Yr6hPPrs49BHQA32L"
+	litecoinAddress = "mwLH3WTj4zxMSM3Tzq3w9rfgJicawtKp1R"
 )
 
 var (

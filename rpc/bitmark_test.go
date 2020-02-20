@@ -212,7 +212,7 @@ func TestBitmarkProvenanceWhenOldBaseData(t *testing.T) {
 
 	tr1 := transactionrecord.OldBaseData{
 		Currency:       currency.Litecoin,
-		PaymentAddress: "mwLH3WTj4zxMSM3Tzq3w9rfgJicawtKp1R",
+		PaymentAddress: litecoinAddress,
 		Owner:          &acc,
 		Nonce:          1,
 		Signature:      nil,
@@ -230,6 +230,73 @@ func TestBitmarkProvenanceWhenOldBaseData(t *testing.T) {
 	assert.Equal(t, 1, len(reply.Data), "wrong reply count")
 	assert.Equal(t, "BaseData", reply.Data[0].Record, "wrong record name")
 	assert.True(t, reply.Data[0].IsOwner, "wrong is owner")
+	assert.Equal(t, txID, reply.Data[0].TxId, "wrong tx ID")
+	assert.Equal(t, &tr1, reply.Data[0].Data, "wrong data")
+}
+
+func TestBitmarkProvenanceWhenBlockFoundation(t *testing.T) {
+	setupTestLogger()
+	defer teardownTestLogger()
+
+	mode.Initialise(chain.Testing)
+	defer mode.Finalise()
+
+	ctl := gomock.NewController(t)
+	defer ctl.Finish()
+
+	r := mocks.NewMockReservoir(ctl)
+	poolT := mocks.NewMockHandle(ctl)
+	poolA := mocks.NewMockHandle(ctl)
+	poolO := mocks.NewMockHandle(ctl)
+
+	b := rpc.Bitmark{
+		Log:              logger.New(logCategory),
+		Limiter:          rate.NewLimiter(100, 100),
+		IsNormalMode:     func(_ mode.Mode) bool { return true },
+		IsTestingChain:   func() bool { return true },
+		Rsvr:             r,
+		PoolTransactions: poolT,
+		PoolAssets:       poolA,
+		PoolOwnerTxIndex: poolO,
+	}
+
+	txID := merkle.Digest{1, 2, 3, 4}
+
+	arg := rpc.ProvenanceArguments{
+		TxId:  txID,
+		Count: 2,
+	}
+
+	acc := account.Account{
+		AccountInterface: &account.ED25519Account{
+			Test:      true,
+			PublicKey: issuerPublicKey,
+		},
+	}
+
+	tr1 := transactionrecord.BlockFoundation{
+		Version: uint64(1),
+		Payments: map[currency.Currency]string{
+			currency.Bitcoin:  bitcoinAddress,
+			currency.Litecoin: litecoinAddress,
+		},
+		Owner:     &acc,
+		Nonce:     1,
+		Signature: nil,
+	}
+	packed1, _ := tr1.Pack(&acc)
+	tr1.Signature = ed25519.Sign(issuerPrivateKey, packed1)
+	packed1, _ = tr1.Pack(&acc)
+
+	poolT.EXPECT().GetNB(txID[:]).Return(uint64(1), packed1).Times(1)
+	poolO.EXPECT().Has(gomock.Any()).Return(false).Times(1)
+
+	var reply rpc.ProvenanceReply
+	err := b.Provenance(&arg, &reply)
+	assert.Nil(t, err, "wrong Provenance")
+	assert.Equal(t, 1, len(reply.Data), "wrong reply count")
+	assert.Equal(t, "BlockFoundation", reply.Data[0].Record, "wrong record name")
+	assert.False(t, reply.Data[0].IsOwner, "wrong is owner")
 	assert.Equal(t, txID, reply.Data[0].TxId, "wrong tx ID")
 	assert.Equal(t, &tr1, reply.Data[0].Data, "wrong data")
 }
