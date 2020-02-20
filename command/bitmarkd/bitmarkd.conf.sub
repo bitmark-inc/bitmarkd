@@ -224,7 +224,7 @@ M.peering = {
         -- or if PUBLIC_IPV[46] variables are set
         make_announcements(2136),
     },
-    private_key = read_file("peer.prv"),
+    private_key = read_file("peer.secret"),
 }
 
 -- automatically set node type (server|client)

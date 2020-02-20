@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	peerPrivateKeyFilename = "peer.private"
+	peerPrivateKeyFilename = "peer.secret"
 
 	publishingPublicKeyFilename  = "publishing.public"
 	publishingPrivateKeyFilename = "publishing.private"
