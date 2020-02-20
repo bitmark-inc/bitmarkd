@@ -6,8 +6,10 @@
 package rpc_test
 
 import (
+	"crypto/ed25519"
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/chain"
+	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/mode"
@@ -85,4 +87,149 @@ func TestBitmarkTransfer(t *testing.T) {
 
 	received := <-bus
 	assert.Equal(t, "transfer", received.Command, "wrong message")
+}
+
+func TestBitmarkProvenanceWhenBitmarkIssuance(t *testing.T) {
+	setupTestLogger()
+	defer teardownTestLogger()
+
+	mode.Initialise(chain.Testing)
+	defer mode.Finalise()
+
+	ctl := gomock.NewController(t)
+	defer ctl.Finish()
+
+	r := mocks.NewMockReservoir(ctl)
+	poolT := mocks.NewMockHandle(ctl)
+	poolA := mocks.NewMockHandle(ctl)
+	poolO := mocks.NewMockHandle(ctl)
+
+	b := rpc.Bitmark{
+		Log:              logger.New(logCategory),
+		Limiter:          rate.NewLimiter(100, 100),
+		IsNormalMode:     func(_ mode.Mode) bool { return true },
+		IsTestingChain:   func() bool { return true },
+		Rsvr:             r,
+		PoolTransactions: poolT,
+		PoolAssets:       poolA,
+		PoolOwnerTxIndex: poolO,
+	}
+
+	txID := merkle.Digest{1, 2, 3, 4}
+
+	arg := rpc.ProvenanceArguments{
+		TxId:  txID,
+		Count: 2,
+	}
+
+	acc := account.Account{
+		AccountInterface: &account.ED25519Account{
+			Test:      true,
+			PublicKey: issuerPublicKey,
+		},
+	}
+
+	tr1 := transactionrecord.BitmarkIssue{
+		AssetId:   transactionrecord.AssetIdentifier{},
+		Owner:     &acc,
+		Nonce:     1,
+		Signature: nil,
+	}
+	packed1, _ := tr1.Pack(&acc)
+	tr1.Signature = ed25519.Sign(issuerPrivateKey, packed1)
+	packed1, _ = tr1.Pack(&acc)
+
+	ass := transactionrecord.AssetData{
+		Name:        "test",
+		Fingerprint: "fin",
+		Metadata:    "owner\x00me",
+		Registrant:  &acc,
+		Signature:   nil,
+	}
+	packed2, _ := ass.Pack(&acc)
+	ass.Signature = ed25519.Sign(issuerPrivateKey, packed2)
+	packed2, _ = ass.Pack(&acc)
+
+	poolT.EXPECT().GetNB(txID[:]).Return(uint64(1), packed1).Times(1)
+	poolO.EXPECT().Has(gomock.Any()).Return(true).Times(1)
+	poolA.EXPECT().GetNB(gomock.Any()).Return(uint64(1), packed2).Times(1)
+
+	var reply rpc.ProvenanceReply
+	err := b.Provenance(&arg, &reply)
+	assert.Nil(t, err, "wrong Provenance")
+	assert.Equal(t, 2, len(reply.Data), "wrong reply count")
+	assert.Equal(t, "BitmarkIssue", reply.Data[0].Record, "wrong record name")
+	assert.True(t, reply.Data[0].IsOwner, "wrong is owner")
+	assert.Equal(t, txID, reply.Data[0].TxId, "wrong tx ID")
+
+	assert.Equal(t, "AssetData", reply.Data[1].Record, "wrong record name")
+	d := reply.Data[1].Data.(*transactionrecord.AssetData)
+	assert.Equal(t, ass.Name, d.Name, "wrong asset name")
+	assert.Equal(t, ass.Fingerprint, d.Fingerprint, "wrong asset fingerprint")
+	assert.Equal(t, ass.Metadata, d.Metadata, "wrong meta data")
+	assert.Equal(t, &acc, d.Registrant, "wrong registrant")
+}
+
+func TestBitmarkProvenanceWhenOldBaseData(t *testing.T) {
+	setupTestLogger()
+	defer teardownTestLogger()
+
+	mode.Initialise(chain.Testing)
+	defer mode.Finalise()
+
+	ctl := gomock.NewController(t)
+	defer ctl.Finish()
+
+	r := mocks.NewMockReservoir(ctl)
+	poolT := mocks.NewMockHandle(ctl)
+	poolA := mocks.NewMockHandle(ctl)
+	poolO := mocks.NewMockHandle(ctl)
+
+	b := rpc.Bitmark{
+		Log:              logger.New(logCategory),
+		Limiter:          rate.NewLimiter(100, 100),
+		IsNormalMode:     func(_ mode.Mode) bool { return true },
+		IsTestingChain:   func() bool { return true },
+		Rsvr:             r,
+		PoolTransactions: poolT,
+		PoolAssets:       poolA,
+		PoolOwnerTxIndex: poolO,
+	}
+
+	txID := merkle.Digest{1, 2, 3, 4}
+
+	arg := rpc.ProvenanceArguments{
+		TxId:  txID,
+		Count: 2,
+	}
+
+	acc := account.Account{
+		AccountInterface: &account.ED25519Account{
+			Test:      true,
+			PublicKey: issuerPublicKey,
+		},
+	}
+
+	tr1 := transactionrecord.OldBaseData{
+		Currency:       currency.Litecoin,
+		PaymentAddress: "mwLH3WTj4zxMSM3Tzq3w9rfgJicawtKp1R",
+		Owner:          &acc,
+		Nonce:          1,
+		Signature:      nil,
+	}
+	packed1, _ := tr1.Pack(&acc)
+	tr1.Signature = ed25519.Sign(issuerPrivateKey, packed1)
+	packed1, _ = tr1.Pack(&acc)
+
+	poolT.EXPECT().GetNB(txID[:]).Return(uint64(1), packed1).Times(1)
+	poolO.EXPECT().Has(gomock.Any()).Return(true).Times(1)
+
+	var reply rpc.ProvenanceReply
+	err := b.Provenance(&arg, &reply)
+	assert.Nil(t, err, "wrong Provenance")
+	assert.Equal(t, 1, len(reply.Data), "wrong reply count")
+	assert.Equal(t, "BaseData", reply.Data[0].Record, "wrong record name")
+	assert.True(t, reply.Data[0].IsOwner, "wrong is owner")
+	assert.Equal(t, txID, reply.Data[0].TxId, "wrong tx ID")
+	assert.Equal(t, &tr1, reply.Data[0].Data, "wrong data")
 }
