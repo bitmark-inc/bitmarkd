@@ -309,15 +309,11 @@ func OwnerOf(trx storage.Transaction, txId merkle.Digest) (uint64, *account.Acco
 }
 
 // CurrentlyOwns - check owner currently owns this transaction id
-func CurrentlyOwns(
-	trx storage.Transaction,
-	owner *account.Account,
-	txId merkle.Digest,
-) bool {
+func CurrentlyOwns(trx storage.Transaction, owner *account.Account, txId merkle.Digest, pool storage.Handle) bool {
 	dKey := append(owner.Bytes(), txId[:]...)
 
 	if nil == trx {
-		return storage.Pool.OwnerTxIndex.Has(dKey)
+		return pool.Has(dKey)
 	}
-	return trx.Has(storage.Pool.OwnerTxIndex, dKey)
+	return trx.Has(pool, dKey)
 }

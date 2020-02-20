@@ -22,11 +22,14 @@ import (
 
 // Bitmark - type for the RPC
 type Bitmark struct {
-	Log            *logger.L
-	Limiter        *rate.Limiter
-	IsNormalMode   func(mode.Mode) bool
-	IsTestingChain func() bool
-	Rsvr           reservoir.Reservoir
+	Log              *logger.L
+	Limiter          *rate.Limiter
+	IsNormalMode     func(mode.Mode) bool
+	IsTestingChain   func() bool
+	Rsvr             reservoir.Reservoir
+	PoolTransactions storage.Handle
+	PoolAssets       storage.Handle
+	PoolOwnerTxIndex storage.Handle
 }
 
 // BitmarkTransferReply - result from transfer RPC
@@ -149,7 +152,7 @@ func (bitmark *Bitmark) Provenance(arguments *ProvenanceArguments, reply *Proven
 loop:
 	for i := 0; i < count; i += 1 {
 
-		inBlock, packed := storage.Pool.Transactions.GetNB(id[:])
+		inBlock, packed := bitmark.PoolTransactions.GetNB(id[:])
 		if nil == packed {
 			break loop
 		}
@@ -173,7 +176,7 @@ loop:
 
 		case *transactionrecord.OldBaseData:
 			if 0 == i {
-				h.IsOwner = ownership.CurrentlyOwns(nil, tx.Owner, id)
+				h.IsOwner = ownership.CurrentlyOwns(nil, tx.Owner, id, bitmark.PoolOwnerTxIndex)
 			}
 
 			provenance = append(provenance, h)
@@ -181,7 +184,7 @@ loop:
 
 		case *transactionrecord.BlockFoundation:
 			if 0 == i {
-				h.IsOwner = ownership.CurrentlyOwns(nil, tx.Owner, id)
+				h.IsOwner = ownership.CurrentlyOwns(nil, tx.Owner, id, bitmark.PoolOwnerTxIndex)
 			}
 
 			provenance = append(provenance, h)
@@ -189,11 +192,11 @@ loop:
 
 		case *transactionrecord.BitmarkIssue:
 			if 0 == i {
-				h.IsOwner = ownership.CurrentlyOwns(nil, tx.Owner, id)
+				h.IsOwner = ownership.CurrentlyOwns(nil, tx.Owner, id, bitmark.PoolOwnerTxIndex)
 			}
 			provenance = append(provenance, h)
 
-			inBlock, packedAsset := storage.Pool.Assets.GetNB(tx.AssetId[:])
+			inBlock, packedAsset := bitmark.PoolAssets.GetNB(tx.AssetId[:])
 			if nil == packedAsset {
 				break loop
 			}
@@ -218,7 +221,7 @@ loop:
 			tr := tx.(transactionrecord.BitmarkTransfer)
 
 			if 0 == i {
-				h.IsOwner = ownership.CurrentlyOwns(nil, tr.GetOwner(), id)
+				h.IsOwner = ownership.CurrentlyOwns(nil, tr.GetOwner(), id, bitmark.PoolOwnerTxIndex)
 			}
 
 			provenance = append(provenance, h)
