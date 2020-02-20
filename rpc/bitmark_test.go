@@ -300,3 +300,67 @@ func TestBitmarkProvenanceWhenBlockFoundation(t *testing.T) {
 	assert.Equal(t, txID, reply.Data[0].TxId, "wrong tx ID")
 	assert.Equal(t, &tr1, reply.Data[0].Data, "wrong data")
 }
+
+func TestBitmarkProvenanceWhenTransferUnratified(t *testing.T) {
+	setupTestLogger()
+	defer teardownTestLogger()
+
+	mode.Initialise(chain.Testing)
+	defer mode.Finalise()
+
+	ctl := gomock.NewController(t)
+	defer ctl.Finish()
+
+	r := mocks.NewMockReservoir(ctl)
+	poolT := mocks.NewMockHandle(ctl)
+	poolA := mocks.NewMockHandle(ctl)
+	poolO := mocks.NewMockHandle(ctl)
+
+	b := rpc.Bitmark{
+		Log:              logger.New(logCategory),
+		Limiter:          rate.NewLimiter(100, 100),
+		IsNormalMode:     func(_ mode.Mode) bool { return true },
+		IsTestingChain:   func() bool { return true },
+		Rsvr:             r,
+		PoolTransactions: poolT,
+		PoolAssets:       poolA,
+		PoolOwnerTxIndex: poolO,
+	}
+
+	txID := merkle.Digest{1, 2, 3, 4}
+
+	arg := rpc.ProvenanceArguments{
+		TxId:  txID,
+		Count: 2,
+	}
+
+	acc := account.Account{
+		AccountInterface: &account.ED25519Account{
+			Test:      true,
+			PublicKey: issuerPublicKey,
+		},
+	}
+
+	tr1 := transactionrecord.BitmarkTransferUnratified{
+		Link:      merkle.Digest{},
+		Escrow:    nil,
+		Owner:     &acc,
+		Signature: nil,
+	}
+	packed1, _ := tr1.Pack(&acc)
+	tr1.Signature = ed25519.Sign(issuerPrivateKey, packed1)
+	packed1, _ = tr1.Pack(&acc)
+
+	poolT.EXPECT().GetNB(txID[:]).Return(uint64(1), packed1).Times(1)
+	poolT.EXPECT().GetNB(merkle.Digest{}.Bytes()).Return(uint64(0), nil).Times(1)
+	poolO.EXPECT().Has(gomock.Any()).Return(true).Times(1)
+
+	var reply rpc.ProvenanceReply
+	err := b.Provenance(&arg, &reply)
+	assert.Nil(t, err, "wrong Provenance")
+	assert.Equal(t, 1, len(reply.Data), "wrong reply count")
+	assert.Equal(t, "BitmarkTransferUnratified", reply.Data[0].Record, "wrong record name")
+	assert.True(t, reply.Data[0].IsOwner, "wrong is owner")
+	assert.Equal(t, txID, reply.Data[0].TxId, "wrong tx ID")
+	assert.Equal(t, &tr1, reply.Data[0].Data, "wrong data")
+}
