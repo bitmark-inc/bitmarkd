@@ -139,8 +139,17 @@ func (g globalDataType) StoreTransfer(transfer transactionrecord.BitmarkTransfer
 	)
 }
 
+func (g globalDataType) StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, error) {
+	return storeIssues(
+		issues,
+		g.handles.Assets,
+		g.handles.BlockOwnerPayment,
+	)
+}
+
 type Reservoir interface {
 	StoreTransfer(transactionrecord.BitmarkTransfer) (*TransferInfo, bool, error)
+	StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, error)
 }
 
 func Get() Reservoir {

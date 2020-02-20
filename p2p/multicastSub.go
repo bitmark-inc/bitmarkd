@@ -207,7 +207,9 @@ func processIssues(packed []byte) error {
 		return fault.MissingParameters
 	}
 
-	_, duplicate, err := reservoir.StoreIssues(issues, storage.Pool.Assets, storage.Pool.BlockOwnerPayment)
+	r := reservoir.Get()
+
+	_, duplicate, err := r.StoreIssues(issues)
 	if nil != err {
 		return err
 	}

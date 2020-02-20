@@ -88,8 +88,9 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 	packedIssues := []byte{}
 	var stored *reservoir.IssueInfo
 	duplicate := false
+	r := reservoir.Get()
 	if issueCount > 0 {
-		stored, duplicate, err = reservoir.StoreIssues(arguments.Issues, storage.Pool.Assets, storage.Pool.BlockOwnerPayment)
+		stored, duplicate, err = r.StoreIssues(arguments.Issues)
 		if nil != err {
 			return err
 		}

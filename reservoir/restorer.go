@@ -116,7 +116,7 @@ func (i *issueRestoreData) Restore() error {
 		i.packed = i.packed[n:]
 	}
 
-	_, _, err := StoreIssues(issues, i.assetHandle, i.blockOwnerPaymentHandle)
+	_, _, err := storeIssues(issues, i.assetHandle, i.blockOwnerPaymentHandle)
 	if nil != err {
 		return fmt.Errorf("store issue with error: %s", err)
 	}

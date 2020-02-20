@@ -36,14 +36,14 @@ type IssueInfo struct {
 	Payments   []transactionrecord.PaymentAlternative
 }
 
-// StoreIssues - store packed record(s) in the pending table
+// storeIssues - store packed record(s) in the pending table
 //
 // return payment id and a duplicate flag
 //
 // for duplicate to be true all transactions must all match exactly to a
 // previous set - this is to allow for multiple submission from client
 // without receiving a duplicate transaction error
-func StoreIssues(issues []*transactionrecord.BitmarkIssue, assetHandle storage.Handle, blockOwnerPaymentHandle storage.Handle) (*IssueInfo, bool, error) {
+func storeIssues(issues []*transactionrecord.BitmarkIssue, assetHandle storage.Handle, blockOwnerPaymentHandle storage.Handle) (*IssueInfo, bool, error) {
 	if nil == assetHandle || nil == blockOwnerPaymentHandle {
 		return nil, false, fault.NilPointer
 	}

@@ -49,3 +49,19 @@ func (mr *MockReservoirMockRecorder) StoreTransfer(arg0 interface{}) *gomock.Cal
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoreTransfer", reflect.TypeOf((*MockReservoir)(nil).StoreTransfer), arg0)
 }
+
+// StoreIssues mocks base method
+func (m *MockReservoir) StoreIssues(issues []*transactionrecord.BitmarkIssue) (*reservoir.IssueInfo, bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StoreIssues", issues)
+	ret0, _ := ret[0].(*reservoir.IssueInfo)
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// StoreIssues indicates an expected call of StoreIssues
+func (mr *MockReservoirMockRecorder) StoreIssues(issues interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoreIssues", reflect.TypeOf((*MockReservoir)(nil).StoreIssues), issues)
+}
