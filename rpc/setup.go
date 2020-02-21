@@ -7,14 +7,17 @@ package rpc
 
 import (
 	"crypto/tls"
-	"github.com/bitmark-inc/bitmarkd/mode"
-	"github.com/bitmark-inc/bitmarkd/storage"
 	"net"
 	"net/http"
 	"net/rpc"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/bitmark-inc/bitmarkd/blockrecord"
+
+	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/storage"
 
 	"golang.org/x/crypto/sha3"
 	"golang.org/x/time/rate"
@@ -344,8 +347,13 @@ func createRPCServer(log *logger.L, version string) *rpc.Server {
 	}
 
 	blockOwner := &BlockOwner{
-		log:     log,
-		limiter: rate.NewLimiter(rateLimitBlockOwner, rateBurstBlockOwner),
+		Log:            log,
+		Limiter:        rate.NewLimiter(rateLimitBlockOwner, rateBurstBlockOwner),
+		Pool:           storage.Pool.Blocks,
+		Br:             blockrecord.Get(),
+		IsNormalMode:   mode.Is,
+		IsTestingChain: mode.IsTesting,
+		Rsvr:           reservoir.Get(),
 	}
 
 	share := &Share{

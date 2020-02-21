@@ -27,8 +27,13 @@ import (
 
 // BlockOwner - the type of the RPC
 type BlockOwner struct {
-	log     *logger.L
-	limiter *rate.Limiter
+	Log            *logger.L
+	Limiter        *rate.Limiter
+	Pool           storage.Handle
+	Br             blockrecord.Record
+	IsNormalMode   func(mode.Mode) bool
+	IsTestingChain func() bool
+	Rsvr           reservoir.Reservoir
 }
 
 // TxIdForBlockArguments - get the id for a given block number
@@ -44,23 +49,22 @@ type TxIdForBlockReply struct {
 // TxIdForBlock - RPC to get transaction id for block ownership record
 func (bitmark *BlockOwner) TxIdForBlock(info *TxIdForBlockArguments, reply *TxIdForBlockReply) error {
 
-	if err := rateLimit(bitmark.limiter); nil != err {
+	if err := rateLimit(bitmark.Limiter); nil != err {
 		return err
 	}
 
-	log := bitmark.log
+	log := bitmark.Log
 
 	log.Infof("BlockOwner.TxIdForBlock: %+v", info)
 
 	blockNumberKey := make([]byte, 8)
 	binary.BigEndian.PutUint64(blockNumberKey, info.BlockNumber)
-	packedBlock := storage.Pool.Blocks.Get(blockNumberKey)
+	packedBlock := bitmark.Pool.Get(blockNumberKey)
 	if nil == packedBlock {
 		return fault.BlockNotFound
 	}
 
-	br := blockrecord.Get()
-	header, digest, _, err := br.ExtractHeader(packedBlock, 0, false)
+	header, digest, _, err := bitmark.Br.ExtractHeader(packedBlock, 0, false)
 	if nil != err {
 		return err
 	}
@@ -84,26 +88,24 @@ type BlockOwnerTransferReply struct {
 // payment addresses
 func (bitmark *BlockOwner) Transfer(transfer *transactionrecord.BlockOwnerTransfer, reply *BlockOwnerTransferReply) error {
 
-	if err := rateLimit(bitmark.limiter); nil != err {
+	if err := rateLimit(bitmark.Limiter); nil != err {
 		return err
 	}
 
-	log := bitmark.log
+	log := bitmark.Log
 
 	log.Infof("BlockOwner.Transfer: %+v", transfer)
 
-	if !mode.Is(mode.Normal) {
+	if !bitmark.IsNormalMode(mode.Normal) {
 		return fault.NotAvailableDuringSynchronise
 	}
 
-	if transfer.Owner.IsTesting() != mode.IsTesting() {
+	if transfer.Owner.IsTesting() != bitmark.IsTestingChain() {
 		return fault.WrongNetworkForPublicKey
 	}
 
-	r := reservoir.Get()
-
 	// save transfer/check for duplicate
-	stored, duplicate, err := r.StoreTransfer(transfer)
+	stored, duplicate, err := bitmark.Rsvr.StoreTransfer(transfer)
 	if nil != err {
 		return err
 	}
