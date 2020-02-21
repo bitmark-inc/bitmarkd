@@ -209,7 +209,7 @@ func main() {
 	defer blockheader.Finalise()
 
 	log.Info("initialise blockrecord")
-	blockrecord.Initialise()
+	blockrecord.Initialise(storage.Pool.BlockHeaderHash)
 	defer blockrecord.Finalise()
 
 	// block data storage - depends on storage and mode
