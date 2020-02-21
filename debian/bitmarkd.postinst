@@ -24,7 +24,7 @@ case "$1" in
               --gecos "Bitmark Daemon" \
               --ingroup bitmarkd bitmarkd
 
-    conf="/etc/bitmarkd.conf"
+    conf="/etc/bitmarkd.conf.sample"
     chown root:bitmarkd "${conf}"
     chmod 640 "${conf}"
 
