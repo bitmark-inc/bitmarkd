@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	pay "github.com/bitmark-inc/bitmarkd/pay"
 	reservoir "github.com/bitmark-inc/bitmarkd/reservoir"
 	transactionrecord "github.com/bitmark-inc/bitmarkd/transactionrecord"
 	gomock "github.com/golang/mock/gomock"
@@ -64,4 +65,18 @@ func (m *MockReservoir) StoreIssues(issues []*transactionrecord.BitmarkIssue) (*
 func (mr *MockReservoirMockRecorder) StoreIssues(issues interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoreIssues", reflect.TypeOf((*MockReservoir)(nil).StoreIssues), issues)
+}
+
+// TryProof mocks base method
+func (m *MockReservoir) TryProof(arg0 pay.PayId, arg1 []byte) reservoir.TrackingStatus {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TryProof", arg0, arg1)
+	ret0, _ := ret[0].(reservoir.TrackingStatus)
+	return ret0
+}
+
+// TryProof indicates an expected call of TryProof
+func (mr *MockReservoirMockRecorder) TryProof(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryProof", reflect.TypeOf((*MockReservoir)(nil).TryProof), arg0, arg1)
 }

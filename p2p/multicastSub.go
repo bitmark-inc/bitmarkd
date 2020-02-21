@@ -270,7 +270,6 @@ func processTransfer(packed []byte) error {
 
 // process proof block
 func processProof(packed []byte) error {
-
 	if 0 == len(packed) {
 		return fault.MissingParameters
 	}
@@ -285,7 +284,8 @@ func processProof(packed []byte) error {
 	}
 	copy(payId[:], packed[:len(payId)])
 	nonce := packed[len(payId):]
-	status := reservoir.TryProof(payId, nonce)
+	r := reservoir.Get()
+	status := r.TryProof(payId, nonce)
 	if reservoir.TrackingAccepted != status {
 		// pay id already processed or was invalid
 		return fault.PayIdAlreadyUsed

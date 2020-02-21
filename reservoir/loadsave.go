@@ -118,7 +118,7 @@ restore_loop:
 			}
 			copy(payId[:], packed[:pn])
 			nonce := packed[pn:]
-			TryProof(payId, nonce)
+			tryProof(payId, nonce)
 
 		default:
 			// in case any unsupported tag exist

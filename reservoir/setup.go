@@ -147,9 +147,14 @@ func (g globalDataType) StoreIssues(issues []*transactionrecord.BitmarkIssue) (*
 	)
 }
 
+func (g globalDataType) TryProof(payID pay.PayId, clientNonce []byte) TrackingStatus {
+	return tryProof(payID, clientNonce)
+}
+
 type Reservoir interface {
 	StoreTransfer(transactionrecord.BitmarkTransfer) (*TransferInfo, bool, error)
 	StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, error)
+	TryProof(pay.PayId, []byte) TrackingStatus
 }
 
 func Get() Reservoir {

@@ -7,6 +7,7 @@ package rpc
 
 import (
 	"encoding/hex"
+
 	"golang.org/x/time/rate"
 
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -127,9 +128,9 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 		if nil != stored.Payments {
 			result.Payments = make(map[string]transactionrecord.PaymentAlternative)
 
-			for _, payment := range stored.Payments {
-				c := payment[0].Currency.String()
-				result.Payments[c] = payment
+			for _, p := range stored.Payments {
+				c := p[0].Currency.String()
+				result.Payments[c] = p
 			}
 		}
 
@@ -200,7 +201,8 @@ func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) er
 	messagebus.Bus.P2P.Send("proof", packed)
 
 	// check if proof matches
-	reply.Status = reservoir.TryProof(arguments.PayId, nonce)
+	r := reservoir.Get()
+	reply.Status = r.TryProof(arguments.PayId, nonce)
 
 	return nil
 }
