@@ -182,7 +182,8 @@ process_rpcs:
 		}
 		rpcs = append(rpcs, c.Pack()...)
 	}
-	err = announce.SetRPC(fingerprint, rpcs)
+	a := announce.Get()
+	err = a.Set(fingerprint, rpcs)
 	if nil != err {
 		log.Criticalf("announce.SetRPC error: %s", err)
 		return err

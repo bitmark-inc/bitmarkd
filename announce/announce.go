@@ -10,12 +10,14 @@ import (
 	"github.com/bitmark-inc/bitmarkd/announce/rpc"
 )
 
-// SetRPC - set this node's rpc announcement data
-func SetRPC(fingerprint fingerprint.Type, rpcs []byte) error {
-	return globalData.rpcs.Set(fingerprint, rpcs)
+type Announce interface {
+	// Set - set this node's rpc announcement data
+	Set(fingerprint.Type, []byte) error
+
+	// Fetch- fetch some records
+	Fetch(uint64, int) ([]rpc.Entry, uint64, error)
 }
 
-// FetchRPCs - fetch some records
-func FetchRPCs(start uint64, count int) ([]rpc.Entry, uint64, error) {
-	return globalData.rpcs.Fetch(start, count)
+func Get() Announce {
+	return globalData.rpcs
 }

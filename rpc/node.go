@@ -54,7 +54,8 @@ func (node *Node) List(arguments *NodeArguments, reply *NodeReply) error {
 		return err
 	}
 
-	nodes, nextStart, err := announce.FetchRPCs(arguments.Start, arguments.Count)
+	a := announce.Get()
+	nodes, nextStart, err := a.Fetch(arguments.Start, arguments.Count)
 	if nil != err {
 		return err
 	}
