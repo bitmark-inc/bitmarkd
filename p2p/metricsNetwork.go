@@ -93,6 +93,11 @@ func (m *MetricsNetwork) GetConnCount() counter.Counter {
 
 //GetNetworkMetricConnCount return current connection counts
 func GetNetworkMetricConnCount() counter.Counter {
+	// in case not initialised
+	if globalData.MetricsNetwork == nil {
+		return counter.Counter(0)
+	}
+
 	util.LogInfo(globalData.Log, util.CoWhite, fmt.Sprintf("@@GetConnCount:%d", globalData.MetricsNetwork.connCount))
 	return globalData.MetricsNetwork.connCount
 }

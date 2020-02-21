@@ -340,6 +340,7 @@ func createRPCServer(log *logger.L, version string) *rpc.Server {
 		Start:    start,
 		Version:  version,
 		Announce: announce.Get(),
+		Pool:     storage.Pool.Blocks,
 	}
 
 	transaction := &Transaction{

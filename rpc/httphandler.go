@@ -24,6 +24,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/p2p"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
+	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/util"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 
@@ -183,7 +184,7 @@ func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 				Local:  blockheader.Height(),
 				Remote: consensus.BlockHeight(),
 			},
-			Hash: block.LastBlockHash(),
+			Hash: block.LastBlockHash(storage.Pool.Blocks),
 		},
 		RPCs: connectionCountHTTPS.Uint64(),
 		// Miners : mine.ConnectionCount(),

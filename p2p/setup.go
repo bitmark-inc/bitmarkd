@@ -288,6 +288,10 @@ func MulticastCommand(packedMessage []byte) error {
 
 //ID return this node host ID
 func ID() peerlib.ID {
+	if globalData.Host == nil {
+		return peerlib.ID("")
+	}
+
 	return globalData.Host.ID()
 }
 

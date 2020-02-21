@@ -9,6 +9,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/storage"
+
+	"github.com/bitmark-inc/bitmarkd/chain"
+	"github.com/bitmark-inc/bitmarkd/mode"
+
 	"github.com/bitmark-inc/bitmarkd/announce/fingerprint"
 	announceRPC "github.com/bitmark-inc/bitmarkd/announce/rpc"
 	"github.com/bitmark-inc/bitmarkd/util"
@@ -63,4 +68,43 @@ func TestNode_List(t *testing.T) {
 	assert.Equal(t, 1, len(reply.Nodes), "wrong node count")
 	assert.Equal(t, entry, reply.Nodes[0], "wrong node info")
 	assert.Equal(t, uint64(10), reply.NextStart, "wrong next start")
+}
+
+func TestNodeInfo(t *testing.T) {
+	setupTestLogger()
+	defer teardownTestLogger()
+
+	ctl := gomock.NewController(t)
+	defer ctl.Finish()
+
+	mode.Initialise(chain.Testing)
+	defer mode.Finalise()
+
+	a := mocks.NewMockAnnounce(ctl)
+	b := mocks.NewMockHandle(ctl)
+
+	now := time.Now()
+	n := rpc.Node{
+		Log:      logger.New(logCategory),
+		Limiter:  rate.NewLimiter(100, 100),
+		Start:    now,
+		Version:  "100",
+		Announce: a,
+		Pool:     b,
+	}
+
+	b.EXPECT().LastElement().Return(storage.Element{}, false).Times(1)
+
+	var reply rpc.InfoReply
+	err := n.Info(&rpc.InfoArguments{}, &reply)
+	assert.Nil(t, err, "wrong Info")
+	assert.Equal(t, chain.Testing, reply.Chain, "wrong chain")
+	assert.Equal(t, mode.Resynchronise.String(), reply.Mode, "wrong mode")
+	assert.Equal(t, uint64(0), reply.Block.Height, "wrong block height")
+	assert.Equal(t, "", reply.Block.Hash, "wrong block hash")
+	assert.Equal(t, uint64(0), reply.Miner.Success, "wrong success mined")
+	assert.Equal(t, uint64(0), reply.Miner.Failed, "wrong failed mined")
+	assert.Equal(t, uint64(0), reply.RPCs, "wrong connection count")
+	assert.Equal(t, n.Version, reply.Version, "wrong version")
+	assert.Equal(t, "", reply.PublicKey, "wrong empty public key")
 }

@@ -8,6 +8,8 @@ package rpc
 import (
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/storage"
+
 	"golang.org/x/time/rate"
 
 	"github.com/bitmark-inc/bitmarkd/announce"
@@ -29,6 +31,7 @@ type Node struct {
 	Start    time.Time
 	Version  string
 	Announce announce.Announce
+	Pool     storage.Handle
 }
 
 // limit for count
@@ -119,7 +122,7 @@ func (node *Node) Info(_ *InfoArguments, reply *InfoReply) error {
 	reply.Mode = mode.String()
 	reply.Block = BlockInfo{
 		Height: blockheader.Height(),
-		Hash:   block.LastBlockHash(),
+		Hash:   block.LastBlockHash(node.Pool),
 	}
 	reply.Miner = MinerInfo{
 		Success: uint64(proof.MinedBlocks()),
