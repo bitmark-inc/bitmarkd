@@ -95,7 +95,7 @@ func Initialise(rpcConfiguration *RPCConfiguration, httpsConfiguration *HTTPSCon
 	globalData.Lock()
 	defer globalData.Unlock()
 
-	// no need to start if already started
+	// no need to Start if already started
 	if globalData.initialised {
 		return fault.AlreadyInitialised
 	}
@@ -335,10 +335,11 @@ func createRPCServer(log *logger.L, version string) *rpc.Server {
 	}
 
 	node := &Node{
-		log:     log,
-		limiter: rate.NewLimiter(rateLimitNode, rateBurstNode),
-		start:   start,
-		version: version,
+		Log:      log,
+		Limiter:  rate.NewLimiter(rateLimitNode, rateBurstNode),
+		Start:    start,
+		Version:  version,
+		Announce: announce.Get(),
 	}
 
 	transaction := &Transaction{
@@ -419,7 +420,7 @@ func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
 	return tc, nil
 }
 
-// ListenAndServeTLSKeyPair - start a HTTPS server using in-memory TLS KeyPair
+// ListenAndServeTLSKeyPair - Start a HTTPS server using in-memory TLS KeyPair
 func ListenAndServeTLSKeyPair(addr string, handler http.Handler, cfg *tls.Config) error {
 	s := &http.Server{
 		Addr:           addr,

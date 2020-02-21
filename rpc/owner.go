@@ -37,13 +37,13 @@ const (
 // OwnerBitmarksArguments - arguments for RPC
 type OwnerBitmarksArguments struct {
 	Owner *account.Account `json:"owner"`        // base58
-	Start uint64           `json:"start,string"` // first record number
+	Start uint64           `json:"Start,string"` // first record number
 	Count int              `json:"count"`        // number of records
 }
 
 // OwnerBitmarksReply - result of owner RPC
 type OwnerBitmarksReply struct {
-	Next uint64                    `json:"next,string"` // start value for the next call
+	Next uint64                    `json:"next,string"` // Start value for the next call
 	Data []ownership.Ownership     `json:"data"`        // list of bitmarks either issue or transfer
 	Tx   map[string]BitmarksRecord `json:"tx"`          // table of tx records
 }

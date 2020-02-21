@@ -24,10 +24,11 @@ import (
 
 // Node - type for RPC calls
 type Node struct {
-	log     *logger.L
-	limiter *rate.Limiter
-	start   time.Time
-	version string
+	Log      *logger.L
+	Limiter  *rate.Limiter
+	Start    time.Time
+	Version  string
+	Announce announce.Announce
 }
 
 // limit for count
@@ -37,7 +38,7 @@ const maximumNodeList = 100
 
 // NodeArguments - arguments for RPC
 type NodeArguments struct {
-	Start uint64 `json:"start,string"`
+	Start uint64 `json:"Start,string"`
 	Count int    `json:"count"`
 }
 
@@ -50,12 +51,11 @@ type NodeReply struct {
 // List - list all node offering RPC functionality
 func (node *Node) List(arguments *NodeArguments, reply *NodeReply) error {
 
-	if err := rateLimitN(node.limiter, arguments.Count, maximumNodeList); nil != err {
+	if err := rateLimitN(node.Limiter, arguments.Count, maximumNodeList); nil != err {
 		return err
 	}
 
-	a := announce.Get()
-	nodes, nextStart, err := a.Fetch(arguments.Start, arguments.Count)
+	nodes, nextStart, err := node.Announce.Fetch(arguments.Start, arguments.Count)
 	if nil != err {
 		return err
 	}
@@ -81,7 +81,7 @@ type InfoReply struct {
 	TransactionCounters Counters  `json:"transactionCounters"`
 	Difficulty          float64   `json:"difficulty"`
 	Hashrate            float64   `json:"hashrate"`
-	Version             string    `json:"version"`
+	Version             string    `json:"Version"`
 	Uptime              string    `json:"uptime"`
 	PublicKey           string    `json:"publicKey"`
 }
@@ -109,7 +109,7 @@ type MinerInfo struct {
 // for more detail information use HTTP GET requests
 func (node *Node) Info(_ *InfoArguments, reply *InfoReply) error {
 
-	if err := rateLimit(node.limiter); nil != err {
+	if err := rateLimit(node.Limiter); nil != err {
 		return err
 	}
 
@@ -130,8 +130,8 @@ func (node *Node) Info(_ *InfoArguments, reply *InfoReply) error {
 	reply.TransactionCounters.Pending, reply.TransactionCounters.Verified = reservoir.ReadCounters()
 	reply.Difficulty = difficulty.Current.Value()
 	reply.Hashrate = difficulty.Hashrate()
-	reply.Version = node.version
-	reply.Uptime = time.Since(node.start).String()
+	reply.Version = node.Version
+	reply.Uptime = time.Since(node.Start).String()
 	//TODO: make it ID not public key, this is base58Encoded
 	reply.PublicKey = p2p.ID().Pretty()
 	return nil

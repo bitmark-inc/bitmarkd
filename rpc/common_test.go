@@ -7,8 +7,9 @@ package rpc_test
 
 import (
 	"fmt"
-	"github.com/bitmark-inc/logger"
 	"os"
+
+	"github.com/bitmark-inc/logger"
 )
 
 const (
@@ -68,7 +69,7 @@ func setupTestLogger() {
 		},
 	}
 
-	// start logging
+	// Start logging
 	_ = logger.Initialise(logging)
 }
 

@@ -170,7 +170,7 @@ func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 		TransactionCounters Counters   `json:"transactionCounters"`
 		Difficulty          float64    `json:"difficulty"`
 		Hashrate            float64    `json:"hashrate,omitempty"`
-		Version             string     `json:"version"`
+		Version             string     `json:"Version"`
 		Uptime              string     `json:"uptime"`
 		PeerID              peerlib.ID `json:"peerid"`
 	}
@@ -225,7 +225,7 @@ func (s *httpHandler) connections(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var info reply
-	//TODO: Make libp2p version
+	//TODO: Make libp2p Version
 	info.ConnectedTo = p2p.GetAllPeers()
 	sendReply(w, info)
 }
@@ -285,7 +285,7 @@ item_loop:
 			sendInternalServerError(w)
 			return
 		}
-		// p2p version
+		// p2p Version
 		if util.IDCompare(id, startID) <= 0 {
 			break item_loop
 		}
