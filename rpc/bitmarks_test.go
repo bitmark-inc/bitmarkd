@@ -2,6 +2,10 @@ package rpc_test
 
 import (
 	"crypto/ed25519"
+	"testing"
+
+	"github.com/bitmark-inc/bitmarkd/blockrecord"
+
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/currency"
@@ -18,7 +22,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/time/rate"
-	"testing"
 )
 
 func TestBitmarksCreate(t *testing.T) {
@@ -121,4 +124,48 @@ func TestBitmarksCreate(t *testing.T) {
 
 	msg := <-bus
 	assert.Equal(t, "issues", msg.Command, "wrong command")
+}
+
+func TestBitmarksProof(t *testing.T) {
+	setupTestLogger()
+	defer teardownTestLogger()
+
+	mode.Initialise(chain.Testing)
+	defer mode.Finalise()
+
+	bus := messagebus.Bus.P2P.Chan()
+	defer messagebus.Bus.P2P.Release()
+
+	ctl := gomock.NewController(t)
+	defer ctl.Finish()
+
+	poolA := mocks.NewMockHandle(ctl)
+	poolB := mocks.NewMockHandle(ctl)
+	r := mocks.NewMockReservoir(ctl)
+
+	b := rpc.Bitmarks{
+		Log:                   logger.New(logCategory),
+		Limiter:               rate.NewLimiter(100, 100),
+		IsNormalMode:          func(_ mode.Mode) bool { return true },
+		Rsvr:                  r,
+		PoolAssets:            poolA,
+		PoolBlockOwnerPayment: poolB,
+	}
+
+	nonce := blockrecord.NonceType(0x1234567890abcdef)
+	nonceBytes, _ := nonce.MarshalText()
+
+	arg := rpc.ProofArguments{
+		PayId: pay.PayId{},
+		Nonce: string(nonceBytes),
+	}
+
+	r.EXPECT().TryProof(gomock.Any(), gomock.Any()).Return(reservoir.TrackingAccepted).Times(1)
+
+	var reply rpc.ProofReply
+	err := b.Proof(&arg, &reply)
+	assert.Nil(t, err, "wrong Create")
+
+	msg := <-bus
+	assert.Equal(t, "proof", msg.Command, "wrong command")
 }

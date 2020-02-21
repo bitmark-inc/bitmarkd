@@ -161,14 +161,13 @@ type ProofReply struct {
 
 // Proof - supply proof that client-side hashing to confirm free issue was done
 func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) error {
-
 	if err := rateLimit(bitmarks.Limiter); nil != err {
 		return err
 	}
 
 	log := bitmarks.Log
 
-	if !mode.Is(mode.Normal) {
+	if !bitmarks.IsNormalMode(mode.Normal) {
 		return fault.NotAvailableDuringSynchronise
 	}
 
@@ -201,8 +200,7 @@ func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) er
 	messagebus.Bus.P2P.Send("proof", packed)
 
 	// check if proof matches
-	r := reservoir.Get()
-	reply.Status = r.TryProof(arguments.PayId, nonce)
+	reply.Status = bitmarks.Rsvr.TryProof(arguments.PayId, nonce)
 
 	return nil
 }
