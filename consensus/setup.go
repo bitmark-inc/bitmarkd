@@ -16,7 +16,6 @@ const (
 	votingMetricRunInitial  = 60 * time.Second // should reference announce and p2p initial
 	votingMetricRunInterval = 30 * time.Second
 	machineRunInitial       = 70 * time.Second // should reference announce and p2p initial
-	machineRunInterval      = 15 * time.Second
 )
 
 //Consensus is a wrap struct for consensus  state machine
