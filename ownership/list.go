@@ -16,8 +16,8 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-// Ownership - type to represent an ownership record
-type Ownership struct {
+// Record - type to represent an ownership record
+type Record struct {
 	N           uint64                             `json:"n,string"`
 	TxId        merkle.Digest                      `json:"txId"`
 	IssueTxId   merkle.Digest                      `json:"issue"`
@@ -26,8 +26,8 @@ type Ownership struct {
 	BlockNumber *uint64                            `json:"blockNumber,omitempty"`
 }
 
-// ListBitmarksFor - fetch a list of bitmarks for an owner
-func ListBitmarksFor(owner *account.Account, start uint64, count int) ([]Ownership, error) {
+// listBitmarksFor - fetch a list of bitmarks for an owner
+func listBitmarksFor(owner *account.Account, start uint64, count int) ([]Record, error) {
 
 	startBytes := make([]byte, uint64ByteSize)
 	binary.BigEndian.PutUint64(startBytes, start)
@@ -43,7 +43,7 @@ func ListBitmarksFor(owner *account.Account, start uint64, count int) ([]Ownersh
 		return nil, err
 	}
 
-	records := make([]Ownership, 0, len(items))
+	records := make([]Record, 0, len(items))
 
 loop:
 	for _, item := range items {
@@ -57,7 +57,7 @@ loop:
 			break loop
 		}
 
-		record := Ownership{
+		record := Record{
 			N: binary.BigEndian.Uint64(item.Key[split:]),
 		}
 

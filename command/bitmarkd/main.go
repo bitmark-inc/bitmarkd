@@ -11,6 +11,8 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/bitmark-inc/bitmarkd/ownership"
+
 	"github.com/bitmark-inc/bitmarkd/announce/broadcast"
 
 	//"runtime/pprof"
@@ -236,6 +238,8 @@ func main() {
 			exitwithstatus.Message("initialise difficulty error: %s", err)
 		}
 	}
+
+	ownership.Initialise(storage.Pool.OwnerList, storage.Pool.OwnerData)
 
 	err = reservoir.LoadFromFile(handles)
 	if nil != err && !os.IsNotExist(err) {

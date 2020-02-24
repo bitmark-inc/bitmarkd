@@ -44,7 +44,7 @@ type OwnerBitmarksArguments struct {
 // OwnerBitmarksReply - result of owner RPC
 type OwnerBitmarksReply struct {
 	Next uint64                    `json:"next,string"` // Start value for the next call
-	Data []ownership.Ownership     `json:"data"`        // list of bitmarks either issue or transfer
+	Data []ownership.Record        `json:"data"`        // list of bitmarks either issue or transfer
 	Tx   map[string]BitmarksRecord `json:"tx"`          // table of tx records
 }
 
@@ -72,7 +72,8 @@ func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitm
 	log := owner.log
 	log.Infof("Owner.Bitmarks: %+v", arguments)
 
-	ownershipData, err := ownership.ListBitmarksFor(arguments.Owner, arguments.Start, arguments.Count)
+	o := ownership.Get()
+	ownershipData, err := o.ListBitmarksFor(arguments.Owner, arguments.Start, arguments.Count)
 	if nil != err {
 		return err
 	}

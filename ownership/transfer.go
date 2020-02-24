@@ -85,7 +85,7 @@ func transfer(
 			logger.Criticalf("ownership.Transfer: new     owner: %x  %v", newOwner.Bytes(), newOwner)
 		}
 
-		// ow, err := ListBitmarksFor(currentOwner, 0, 999)
+		// ow, err := listBitmarksFor(currentOwner, 0, 999)
 		// if nil != err {
 		// 	logger.Criticalf("lbf: error: %s", err)
 		// } else {
