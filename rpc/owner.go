@@ -23,8 +23,11 @@ import (
 
 // Owner - type for the RPC
 type Owner struct {
-	log     *logger.L
-	limiter *rate.Limiter
+	Log              *logger.L
+	Limiter          *rate.Limiter
+	PoolTransactions storage.Handle
+	PoolAssets       storage.Handle
+	Ownership        ownership.Ownership
 }
 
 // Owner bitmarks
@@ -65,15 +68,14 @@ type BlockAsset struct {
 // Bitmarks - list bitmarks belonging to an account
 func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitmarksReply) error {
 
-	if err := rateLimitN(owner.limiter, arguments.Count, maximumBitmarksCount); nil != err {
+	if err := rateLimitN(owner.Limiter, arguments.Count, maximumBitmarksCount); nil != err {
 		return err
 	}
 
-	log := owner.log
+	log := owner.Log
 	log.Infof("Owner.Bitmarks: %+v", arguments)
 
-	o := ownership.Get()
-	ownershipData, err := o.ListBitmarksFor(arguments.Owner, arguments.Start, arguments.Count)
+	ownershipData, err := owner.Ownership.ListBitmarksFor(arguments.Owner, arguments.Start, arguments.Count)
 	if nil != err {
 		return err
 	}
@@ -122,7 +124,7 @@ func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitm
 
 		log.Debugf("txId: %v", txId)
 
-		inBlock, transaction := storage.Pool.Transactions.GetNB(txId[:])
+		inBlock, transaction := owner.PoolTransactions.GetNB(txId[:])
 		if nil == transaction {
 			return fault.LinkToInvalidOrUnconfirmedTransaction
 		}
@@ -167,7 +169,7 @@ asset_loop:
 			continue asset_loop
 		}
 
-		inBlock, transaction := storage.Pool.Assets.GetNB(assetId[:])
+		inBlock, transaction := owner.PoolAssets.GetNB(assetId[:])
 		if nil == transaction {
 			return fault.AssetNotFound
 		}

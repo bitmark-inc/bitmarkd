@@ -14,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/ownership"
+
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 
 	"github.com/bitmark-inc/bitmarkd/mode"
@@ -330,8 +332,11 @@ func createRPCServer(log *logger.L, version string) *rpc.Server {
 	}
 
 	owner := &Owner{
-		log:     log,
-		limiter: rate.NewLimiter(rateLimitOwner, rateBurstOwner),
+		Log:              log,
+		Limiter:          rate.NewLimiter(rateLimitOwner, rateBurstOwner),
+		PoolTransactions: storage.Pool.Transactions,
+		PoolAssets:       storage.Pool.Assets,
+		Ownership:        ownership.Get(),
 	}
 
 	node := &Node{
