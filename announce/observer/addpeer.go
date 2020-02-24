@@ -9,12 +9,12 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/bitmark-inc/logger"
+	"github.com/gogo/protobuf/proto"
 	p2pPeer "github.com/libp2p/go-libp2p-core/peer"
 
 	"github.com/bitmark-inc/bitmarkd/announce/receptor"
 	"github.com/bitmark-inc/bitmarkd/util"
-	"github.com/gogo/protobuf/proto"
+	"github.com/bitmark-inc/logger"
 )
 
 const (

@@ -106,7 +106,7 @@ type Node struct {
 	Announce     []ma.Multiaddr
 	sync.RWMutex           // to allow locking
 	Log          *logger.L // logger
-	Registers    map[peerlib.ID]RegisterStatus
+	Registers    PeerRegisteration
 	Multicast    *pubsub.PubSub
 	PrivateKey   crypto.PrivKey
 	// for background
@@ -183,7 +183,7 @@ loop:
 					if nil != err {
 						util.LogInfo(log, util.CoGreen, fmt.Sprintf("@D parse id Error %v", err))
 					}
-					n.delRegister(displayID)
+					n.Registers.delRegister(displayID)
 					util.LogInfo(log, util.CoWhite, fmt.Sprintf("@D  ID:%v is deleted", displayID.ShortString()))
 				}
 			case "peer", "rpc": // only server broadcast its peer and rpc
@@ -248,7 +248,7 @@ loop:
 		case <-delay:
 			delay = time.After(nodeInterval) // periodical process
 			util.LogDebug(n.Log, util.CoMagenta, fmt.Sprintf("@@NumOfGoRoutine:%d", runtime.NumGoroutine()))
-			go n.updateRegistersExpiry()
+			go n.Registers.updateRegistersExpiry()
 		}
 	}
 }
@@ -294,9 +294,9 @@ func ID() peerlib.ID {
 // GetAllPeers - obtain a list of all connector clients
 func GetAllPeers() []*Connected {
 	var peers []*Connected
-	for key, status := range globalData.Registers {
-		if status.Registered && globalData.MetricsNetwork.IsConnected(key) {
-			addrInfo := globalData.Host.Peerstore().PeerInfo(key)
+	for _, id := range globalData.Registers.RegisteredPeers() {
+		if globalData.MetricsNetwork.IsConnected(id) {
+			addrInfo := globalData.Host.Peerstore().PeerInfo(id)
 			addrs := []string{}
 			for _, addr := range addrInfo.Addrs {
 				addrs = append(addrs, addr.String())

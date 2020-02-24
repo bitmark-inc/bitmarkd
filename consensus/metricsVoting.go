@@ -10,10 +10,10 @@ import (
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
 
+	"github.com/bitmark-inc/bitmarkd/blockdigest"
+	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/p2p"
-	"github.com/bitmark-inc/bitmarkd/blockheader"
-	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 )
@@ -42,15 +42,13 @@ func NewMetricsPeersVoting(thisNode *p2p.Node) MetricsPeersVoting {
 func (p *MetricsPeersVoting) UpdateCandidates() {
 	var Candidates []*P2PCandidatesImpl
 	p.mutex.Lock()
-	for peerID, status := range p.watchNode.Registers {
+	for _, peerID := range p.watchNode.Registers.RegisteredPeers() {
 		if !util.IDEqual(p.watchNode.Host.ID(), peerID) {
-			if status.Registered { // register and not self
-				peerInfo := p.watchNode.Host.Peerstore().PeerInfo(peerID)
-				if len(peerInfo.Addrs) > 0 {
-					Candidates = append(Candidates, &P2PCandidatesImpl{ID: peerID, Addr: peerInfo.Addrs[0]})
-				} else {
-					Candidates = append(Candidates, &P2PCandidatesImpl{ID: peerID})
-				}
+			peerInfo := p.watchNode.Host.Peerstore().PeerInfo(peerID)
+			if len(peerInfo.Addrs) > 0 {
+				Candidates = append(Candidates, &P2PCandidatesImpl{ID: peerID, Addr: peerInfo.Addrs[0]})
+			} else {
+				Candidates = append(Candidates, &P2PCandidatesImpl{ID: peerID})
 			}
 		}
 
@@ -73,14 +71,17 @@ func (p *MetricsPeersVoting) UpdateVotingMetrics(id peerlib.ID) error {
 	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
 	_, err = p.watchNode.RequestRegister(id, s, rw)
 	if err != nil {
+		util.LogError(p.Log, util.CoRed, fmt.Sprintf("UpdateMetrics  RequestRegister Error:%v", err))
 		return err
 	}
 	height, err := p.watchNode.QueryBlockHeight(id, s, rw)
 	if err != nil {
+		util.LogError(p.Log, util.CoRed, fmt.Sprintf("UpdateMetrics  QueryBlockHeight Error:%v", err))
 		return err
 	}
 	digest, err := p.watchNode.RemoteDigestOfHeight(id, height, s, rw)
 	if err != nil {
+		util.LogError(p.Log, util.CoRed, fmt.Sprintf("UpdateMetrics  RemoteDigestOfHeight Error:%v", err))
 		return err
 	}
 	p.SetMetrics(id, height, digest)
@@ -126,7 +127,7 @@ func (p *MetricsPeersVoting) SetMetrics(id peerlib.ID, height uint64, digest blo
 			p.mutex.Lock()
 			candidate.UpdateMetrics(id.String(), height, localheight, digest, respTime)
 			p.mutex.Unlock()
-			util.LogInfo(p.Log, util.CoReset, fmt.Sprintf("SetMetrics:ID:%s, remoteHeight:%d, localHeight:%d, digest:%s, responseTime:%v", id.ShortString(), height, localheight, digest, respTime))
+			//util.LogInfo(p.Log, util.CoCyan, fmt.Sprintf("SetMetrics:ID:%s, remoteHeight:%d, localHeight:%d, digest:%s, responseTime:%v", id.ShortString(), height, localheight, digest, respTime))
 			break
 		}
 	}

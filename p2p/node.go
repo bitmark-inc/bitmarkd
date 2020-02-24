@@ -3,12 +3,10 @@ package p2p
 import (
 	"context"
 	"fmt"
-	"time"
 
 	proto "github.com/golang/protobuf/proto"
 	libp2p "github.com/libp2p/go-libp2p"
 	crypto "github.com/libp2p/go-libp2p-core/crypto"
-	peerlib "github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	tls "github.com/libp2p/go-libp2p-tls"
 	ma "github.com/multiformats/go-multiaddr"
@@ -33,7 +31,7 @@ func (n *Node) Setup(configuration *Configuration, version string, dnsPeerOnly d
 		return fault.NoListenAddrs
 	}
 	maAddrs := util.IPPortToMultiAddr(listenIPPorts)
-	n.Registers = make(map[peerlib.ID]RegisterStatus)
+	n.Registers = NewRegistration(registerExpireTime)
 	prvKey, err := util.DecodePrivKeyFromHex(configuration.PrivateKey) //Hex Decoded binaryString
 	if err != nil {
 		return err
@@ -110,22 +108,6 @@ func (n *Node) listen(announceAddrs []string) {
 	shandler := NewListenHandler(n.Host.ID(), n, n.Log)
 	n.Host.SetStreamHandler("p2pstream", shandler.handleStream)
 	n.Log.Infof("A servant is listen to %s", util.PrintMaAddrs(maAddrs))
-	// Hang forever
-	//<-make(chan struct{})
-}
-
-func (n *Node) addRegister(id peerlib.ID) {
-	n.Lock()
-	status, ok := n.Registers[id]
-	if ok {
-		status.Registered = true
-		status.RegisterTime = time.Now()
-		n.Unlock()
-		return
-	}
-	n.Registers[id] = RegisterStatus{Registered: true, RegisterTime: time.Now()}
-	util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("addRegister ID:%s Registered:%v time:%v", id.ShortString(), n.Registers[id].Registered, n.Registers[id].RegisterTime.String()))
-	n.Unlock()
 }
 
 func (n *Node) announceFullAddr(ipportAnnounce []ma.Multiaddr) []ma.Multiaddr {
@@ -140,59 +122,4 @@ func (n *Node) announceFullAddr(ipportAnnounce []ma.Multiaddr) []ma.Multiaddr {
 		maAddrs = append(maAddrs, maAddr)
 	}
 	return maAddrs
-}
-
-//unRegister unRegister change a peers's  Registered status  to false,  but it doe not not delete the register in the Registers
-func (n *Node) unRegister(id peerlib.ID) {
-	n.Lock()
-	status, ok := n.Registers[id]
-	if ok { // keep RegisterTime for last record purpose
-		status.Registered = false
-		n.Unlock()
-	}
-	util.LogInfo(n.Log, util.CoGreen, fmt.Sprintf("unRegister ID:%s Registered:%v time:%v", id.ShortString(), n.Registers[id].Registered, n.Registers[id].RegisterTime.String()))
-}
-
-//delRegister delete a Registerer  in the Registers map
-func (n *Node) delRegister(id peerlib.ID) {
-	n.Lock()
-	_, ok := n.Registers[id]
-	if ok { // keep RegisterTime for last record purpose
-		delete(n.Registers, id)
-		n.Unlock()
-	}
-}
-
-//IsRegister if given id has a registered stream
-func (n *Node) IsRegister(id peerlib.ID) (registered bool) {
-	n.Lock()
-	if status, ok := n.Registers[id]; ok && status.Registered {
-		registered = true
-	}
-	n.Unlock()
-	return
-}
-
-//IsExpire is the register expire
-func (n *Node) IsExpire(id peerlib.ID) bool {
-	if status, ok := n.Registers[id]; ok && status.Registered {
-		expire := status.RegisterTime.Add(registerExpireTime)
-		passInterval := time.Since(expire)
-		if passInterval > 0 { // expire
-			return true
-		}
-	}
-	return false
-}
-
-//updateRegistersExpiry mark Registered false when time is expired
-func (n *Node) updateRegistersExpiry() {
-	for id, status := range n.Registers {
-		if n.IsExpire(id) { //Keep time for record of last registered time
-			n.Lock()
-			status.Registered = false
-			n.Unlock()
-			util.LogDebug(n.Log, util.CoWhite, fmt.Sprintf("IsExpire ID:%v is expire", id.ShortString()))
-		}
-	}
 }

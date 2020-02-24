@@ -15,6 +15,7 @@ require (
 	github.com/libp2p/go-libp2p v0.4.0
 	github.com/libp2p/go-libp2p-connmgr v0.1.1 // indirect
 	github.com/libp2p/go-libp2p-core v0.2.3
+	github.com/libp2p/go-libp2p-crypto v0.1.0
 	github.com/libp2p/go-libp2p-pubsub v0.1.1
 	github.com/libp2p/go-libp2p-tls v0.1.1
 	github.com/miekg/dns v1.1.16

@@ -176,7 +176,7 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 			if nType != "client" {
 				announce.AddPeer(reqID, reqMaAddrs, timestamp) // id, listeners, timestam
 			}
-			l.node.addRegister(reqID)
+			l.node.Registers.addRegister(reqID)
 
 			randPeerID, randListeners, randTs, err := announce.GetRandom(reqID)
 			var randData [][]byte

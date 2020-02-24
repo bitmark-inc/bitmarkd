@@ -11,22 +11,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/announce/observer"
-
-	"github.com/bitmark-inc/bitmarkd/background"
+	"github.com/golang/protobuf/proto"
 
 	"github.com/bitmark-inc/bitmarkd/announce/fingerprint"
-
-	"github.com/bitmark-inc/bitmarkd/announce/rpc"
-
+	"github.com/bitmark-inc/bitmarkd/announce/observer"
 	"github.com/bitmark-inc/bitmarkd/announce/parameter"
-
 	"github.com/bitmark-inc/bitmarkd/announce/receptor"
-	"github.com/bitmark-inc/bitmarkd/util"
-
+	"github.com/bitmark-inc/bitmarkd/announce/rpc"
+	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
+	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
-	"github.com/golang/protobuf/proto"
 )
 
 type DNSType bool

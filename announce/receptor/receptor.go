@@ -12,22 +12,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/announce/parameter"
-
-	"github.com/bitmark-inc/logger"
 	"github.com/gogo/protobuf/proto"
-
-	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/messagebus"
+	p2pPeer "github.com/libp2p/go-libp2p-core/peer"
+	ma "github.com/multiformats/go-multiaddr"
 
 	"github.com/bitmark-inc/bitmarkd/announce/helper"
 	"github.com/bitmark-inc/bitmarkd/announce/id"
-	"github.com/bitmark-inc/bitmarkd/util"
-
+	"github.com/bitmark-inc/bitmarkd/announce/parameter"
 	"github.com/bitmark-inc/bitmarkd/avl"
-
-	p2pPeer "github.com/libp2p/go-libp2p-core/peer"
-	ma "github.com/multiformats/go-multiaddr"
+	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/messagebus"
+	"github.com/bitmark-inc/bitmarkd/util"
+	"github.com/bitmark-inc/logger"
 )
 
 const timeFormat = "2006-01-02 15:04:05"

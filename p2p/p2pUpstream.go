@@ -120,16 +120,16 @@ func (n *Node) RequestRegister(id peerlib.ID, stream network.Stream, readwriter 
 	switch fn {
 	case "E": //Register error
 		errMessage := UnpackListenError(parameters)
-		n.unRegister(id)
+		n.Registers.unRegister(id)
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf(" RequestRegister: Receive  E errorMessage:%v", errMessage))
 		return nil, err
 	case "R":
 		nType, randID, randAddrs, randTs, err := UnPackRegisterData(parameters)
 		if err != nil {
-			n.unRegister(id)
+			n.Registers.unRegister(id)
 			return nil, err
 		}
-		n.addRegister(id)
+		n.Registers.addRegister(id)
 		if n.dnsPeerOnly == DnsOnly { // Do not add a random node when the only dns peer  is needed
 			return s, nil
 		}
@@ -155,7 +155,7 @@ func (n *Node) QueryBlockHeight(id peerlib.ID, stream network.Stream, readwriter
 	if created && s != nil {
 		defer s.Reset()
 	}
-	if !n.IsRegister(id) { // stream has registered {
+	if !n.Registers.IsRegistered(id) { // stream has registered {
 		_, regErr := n.RequestRegister(id, stream, readwriter)
 		if regErr != nil {
 			return 0, regErr
@@ -223,7 +223,7 @@ func (n *Node) RemoteDigestOfHeight(id peerlib.ID, blockNumber uint64, stream ne
 		defer s.Reset()
 	}
 	nodeChain := mode.ChainName()
-	if !n.IsRegister(id) { // stream has registered {
+	if !n.Registers.IsRegistered(id) { // stream has registered {
 		_, regErr := n.RequestRegister(id, stream, readwriter)
 		if regErr != nil {
 			return blockdigest.Digest{}, regErr
@@ -295,7 +295,7 @@ func (n *Node) GetBlockData(id peerlib.ID, blockNumber uint64, stream network.St
 	if created && s != nil {
 		defer s.Reset()
 	}
-	if !n.IsRegister(id) { // stream has registered {
+	if !n.Registers.IsRegistered(id) { // stream has registered {
 		_, regErr := n.RequestRegister(id, stream, readwriter)
 		if regErr != nil {
 			return nil, regErr
@@ -358,7 +358,7 @@ func (n *Node) PushMessageBus(item BusMessage, id peerlib.ID, stream network.Str
 	if created && s != nil {
 		defer s.Reset()
 	}
-	if !n.IsRegister(id) { // stream has registered {
+	if !n.Registers.IsRegistered(id) { // stream has registered {
 		_, regErr := n.RequestRegister(id, stream, readwriter)
 		if regErr != nil {
 			return regErr
