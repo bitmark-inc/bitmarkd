@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"strconv"
 	"testing"
@@ -10,7 +11,6 @@ import (
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 )
@@ -34,8 +34,8 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 func TestIDMarshalUnmarshal(t *testing.T) {
-	conf := mockConfiguration("server", 12136)
-	fmt.Println(conf.PrivateKey)
+	conf, err := mockConfiguration("server", 12136)
+	assert.NoError(t, err, "generate mock data error")
 	prvKey, err := util.DecodePrivKeyFromHex(conf.PrivateKey)
 	assert.NoError(t, err, "Decode Hex Key Error")
 	id, err := peerlib.IDFromPrivateKey(prvKey)
@@ -47,28 +47,78 @@ func TestIDMarshalUnmarshal(t *testing.T) {
 	assert.Equal(t, id.String(), id2.String(), fmt.Sprintf("Convert ID fail! id:%v", id2.ShortString()))
 
 }
+
 func TestNewP2P(t *testing.T) {
-	err := Initialise(mockConfiguration("server", 22136), "v1.0.0", false)
+	config, err := mockConfiguration("server", 22136)
+	assert.NoError(t, err, "mockdata generate error")
+	err = Initialise(config, "v1.0.0", false)
 	assert.NoError(t, err, "P2P  initialized error")
-	time.Sleep(1 * time.Second)
-	defer announce.Finalise()
+	Finalise()
 }
 
-func TestUpstream *testing.T) {
-	err := Initialise(mockConfiguration("server", 22136), "v1.0.0", false) // initial node1
-	assert.NoError(t, err, "P2P  initialized error")
-	time.Sleep(3* time.Second)
-	defer announce.Finalise()
+func TestListen(t *testing.T) {
+	config, err := mockConfiguration("server", 22136)
+	assert.NoError(t, err, "mockdata generate error")
+	n1 := Node{}
+	n1.Log = logger.New("p2p")
+	n1.Setup(config, "p2p-v1", false)
+	conn, err := net.Dial("tcp", "127.0.0.1:"+strconv.Itoa(config.Port))
+	assert.NoError(t, err, fmt.Sprintf("listen error : %v", err))
+	conn.Close()
+	n1.Host.Close()
 }
 
-func mockConfiguration(nType string, port int) *Configuration {
+func TestDirectConnectAndStatus(t *testing.T) {
+	config, err := mockConfiguration("server", 22136)
+	assert.NoError(t, err, "mockdata generate error")
+	n1 := Node{}
+	n1.Log = logger.New("p2p")
+	n1.Setup(config, "p2p-v1", false)
+	n2 := Node{}
+	n2.Log = logger.New("p2p-b2")
+	n2.Setup(config, "p2p-v1", false)
+
+	// test connect status
+	status := n1.IsConnected(n2.Host.ID())
+	assert.Equal(t, false, status, "status should be false")
+
+	n1Info, err := peerlib.AddrInfoFromP2pAddr(n1.Announce[0])
+	n1Info.ID = n1.Host.ID()
+	assert.NoError(t, err, "conver announce address to AddrInfo error")
+	time.Sleep(200 * time.Microsecond)
+	err = n2.DirectConnect(*n1Info)
+	assert.NoError(t, err, "direcr connect error")
+	time.Sleep(100 * time.Microsecond)
+	status = n1.IsConnected(n2.Host.ID())
+	assert.Equal(t, true, status, "status should be true")
+	n2.Host.Close()
+	n1.Host.Close()
+}
+
+func TestIsTheSameNode(t *testing.T) {
+	config, err := mockConfiguration("server", 22136)
+	assert.NoError(t, err, "mockdata generate error")
+	n1 := Node{}
+	n1.Log = logger.New("p2p")
+	n1.Setup(config, "p2p-v1", false)
+	n1Info, err := peerlib.AddrInfoFromP2pAddr(n1.Announce[0])
+	same := n1.isSameNode(*n1Info)
+	assert.Equal(t, true, same, "should be the same node but not")
+}
+
+func mockConfiguration(nType string, port int) (*Configuration, error) {
 	portString := strconv.Itoa(port)
+	hexKey, err := util.MakeEd25519PeerKey()
+	if err != nil {
+		return nil, err
+	}
+
 	return &Configuration{
 		NodeType:   nType,
 		Port:       port,
 		Listen:     []string{"0.0.0.0:" + portString, "[::]:" + portString},
-		Announce:   []string{"118.163.120.180" + portString, "[2001:b030:2303:100:699b:a02d:9230:d2cb]" + portString},
-		PrivateKey: "080112406eb84a3845d33c2a389d7fbea425cbf882047a2ab13084562f06875db47b5fdc2e45a298e6cd0472eeb97cd023c723824e157869d81039794864987c05b212a8",
+		Announce:   []string{"127.0.0.1:" + portString, "[::1]:" + portString},
+		PrivateKey: hexKey,
 		Connect:    []StaticConnection{},
-	}
+	}, nil
 }
