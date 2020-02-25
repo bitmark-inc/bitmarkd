@@ -157,7 +157,7 @@ func (g *grantRestoreData) String() string {
 }
 
 func (g *grantRestoreData) Restore() error {
-	_, _, err := StoreGrant(g.unpacked, g.shareQuantity, g.share, g.ownerData, g.blockOwnerPayment)
+	_, _, err := storeGrant(g.unpacked, g.shareQuantity, g.share, g.ownerData, g.blockOwnerPayment, storage.Pool.Transactions)
 
 	if nil != err {
 		return fmt.Errorf("fail to restore grant: %s", err)

@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/account"
+
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/currency"
@@ -83,6 +85,17 @@ type spendKey struct {
 	share merkle.Digest
 }
 
+// Handles - storage handles used when restore from cache file
+type Handles struct {
+	Assets            storage.Handle
+	BlockOwnerPayment storage.Handle
+	Transactions      storage.Handle
+	OwnerTx           storage.Handle
+	OwnerData         storage.Handle
+	Share             storage.Handle
+	ShareQuantity     storage.Handle
+}
+
 type globalDataType struct {
 	sync.RWMutex
 
@@ -152,7 +165,22 @@ func (g globalDataType) TryProof(payID pay.PayId, clientNonce []byte) TrackingSt
 }
 
 func (g globalDataType) TransactionStatus(txID merkle.Digest) TransactionState {
-	return transactionStatus(txID, g.handles.Transactions)
+	return transactionStatus(txID)
+}
+
+func (g globalDataType) ShareBalance(owner *account.Account, startSharedID merkle.Digest, count int) ([]BalanceInfo, error) {
+	return ShareBalance(owner, startSharedID, count)
+}
+
+func (g globalDataType) StoreGrant(grant *transactionrecord.ShareGrant) (*GrantInfo, bool, error) {
+	return storeGrant(
+		grant,
+		g.handles.ShareQuantity,
+		g.handles.Share,
+		g.handles.OwnerData,
+		g.handles.BlockOwnerPayment,
+		g.handles.Transactions,
+	)
 }
 
 type Reservoir interface {
@@ -160,6 +188,8 @@ type Reservoir interface {
 	StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, error)
 	TryProof(pay.PayId, []byte) TrackingStatus
 	TransactionStatus(merkle.Digest) TransactionState
+	ShareBalance(*account.Account, merkle.Digest, int) ([]BalanceInfo, error)
+	StoreGrant(*transactionrecord.ShareGrant) (*GrantInfo, bool, error)
 }
 
 func Get() Reservoir {
@@ -284,7 +314,7 @@ func (state TransactionState) String() string {
 }
 
 // transactionStatus - get status of a transaction
-func transactionStatus(txId merkle.Digest, pool storage.Handle) TransactionState {
+func transactionStatus(txId merkle.Digest) TransactionState {
 	globalData.RLock()
 	defer globalData.RUnlock()
 
@@ -298,7 +328,7 @@ func transactionStatus(txId merkle.Digest, pool storage.Handle) TransactionState
 		return StateVerified
 	}
 
-	if pool.Has(txId[:]) {
+	if globalData.handles.Transactions.Has(txId[:]) {
 		return StateConfirmed
 	}
 

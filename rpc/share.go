@@ -188,7 +188,8 @@ func (share *Share) Grant(arguments *transactionrecord.ShareGrant, reply *ShareG
 	}
 
 	// save transfer/check for duplicate
-	stored, duplicate, err := reservoir.StoreGrant(arguments, storage.Pool.ShareQuantity, storage.Pool.Shares, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
+	r := reservoir.Get()
+	stored, duplicate, err := r.StoreGrant(arguments)
 	if nil != err {
 		return err
 	}

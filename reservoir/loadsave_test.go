@@ -295,28 +295,20 @@ func teardownDataFile() {
 	_ = os.RemoveAll(dataDirectory)
 }
 
-func setupMocks(t *testing.T) ([]*gomock.Controller, handles, reservoir.Handles) {
-	var ctls []*gomock.Controller
-	ctl1 := gomock.NewController(t)
-	ctl2 := gomock.NewController(t)
-	ctl3 := gomock.NewController(t)
-	ctl4 := gomock.NewController(t)
-	ctl5 := gomock.NewController(t)
-	ctl6 := gomock.NewController(t)
-	ctl7 := gomock.NewController(t)
+func setupMocks(t *testing.T) (*gomock.Controller, handles, reservoir.Handles) {
+	ctl := gomock.NewController(t)
 
-	ctls = append(ctls, ctl1, ctl2, ctl3, ctl4, ctl5, ctl6, ctl7)
 	h := handles{
-		asset:             mocks.NewMockHandle(ctl1),
-		blockOwnerPayment: mocks.NewMockHandle(ctl2),
-		transaction:       mocks.NewMockHandle(ctl3),
-		ownerTx:           mocks.NewMockHandle(ctl4),
-		ownerData:         mocks.NewMockHandle(ctl5),
-		share:             mocks.NewMockHandle(ctl6),
-		shareQuantity:     mocks.NewMockHandle(ctl7),
+		asset:             mocks.NewMockHandle(ctl),
+		blockOwnerPayment: mocks.NewMockHandle(ctl),
+		transaction:       mocks.NewMockHandle(ctl),
+		ownerTx:           mocks.NewMockHandle(ctl),
+		ownerData:         mocks.NewMockHandle(ctl),
+		share:             mocks.NewMockHandle(ctl),
+		shareQuantity:     mocks.NewMockHandle(ctl),
 	}
 
-	return ctls, h, reservoir.Handles{
+	return ctl, h, reservoir.Handles{
 		Assets:            h.asset,
 		BlockOwnerPayment: h.blockOwnerPayment,
 		Transactions:      h.transaction,
@@ -324,12 +316,6 @@ func setupMocks(t *testing.T) ([]*gomock.Controller, handles, reservoir.Handles)
 		OwnerData:         h.ownerData,
 		Share:             h.share,
 		ShareQuantity:     h.shareQuantity,
-	}
-}
-
-func finaliseMockController(ctls []*gomock.Controller) {
-	for _, c := range ctls {
-		c.Finish()
 	}
 }
 
@@ -374,14 +360,14 @@ func TestLoadFromFileWhenAssetIssuance(t *testing.T) {
 	initPackages()
 	defer asset.Finalise()
 
-	ctls, mockHandles, reservoirHandles := setupMocks(t)
-	defer finaliseMockController(ctls)
+	ctl, _, reservoirHandles := setupMocks(t)
+	defer ctl.Finish()
 
-	mockHandles.asset.EXPECT().Has(gomock.Any()).Return(true).Times(1)
-	mockHandles.asset.EXPECT().GetNB(gomock.Any()).Return(uint64(2), []byte("exist")).Times(1)
+	reservoirHandles.Assets.(*mocks.MockHandle).EXPECT().Has(gomock.Any()).Return(true).Times(1)
+	reservoirHandles.Assets.(*mocks.MockHandle).EXPECT().GetNB(gomock.Any()).Return(uint64(2), []byte("exist")).Times(1)
 
 	data, _ := currencyMap.Pack(true)
-	mockHandles.blockOwnerPayment.EXPECT().Get(gomock.Any()).Return(data).Times(1)
+	reservoirHandles.BlockOwnerPayment.(*mocks.MockHandle).EXPECT().Get(gomock.Any()).Return(data).Times(1)
 
 	_ = reservoir.Initialise(dataDirectory, reservoirHandles)
 
@@ -427,8 +413,8 @@ func TestLoadFromFileWhenAssetData(t *testing.T) {
 	initPackages()
 	defer asset.Finalise()
 
-	ctls, mockHandles, reservoirHandles := setupMocks(t)
-	defer finaliseMockController(ctls)
+	ctl, mockHandles, reservoirHandles := setupMocks(t)
+	defer ctl.Finish()
 
 	mockHandles.asset.EXPECT().Has(gomock.Any()).Return(false).Times(1)
 
@@ -475,8 +461,8 @@ func TestLoadFromFileWhenTransferUnratified(t *testing.T) {
 	initPackages()
 	defer asset.Finalise()
 
-	ctls, mockHandles, reservoirHandles := setupMocks(t)
-	defer finaliseMockController(ctls)
+	ctl, mockHandles, reservoirHandles := setupMocks(t)
+	defer ctl.Finish()
 
 	data, _ := currencyMap.Pack(true)
 	mockHandles.blockOwnerPayment.EXPECT().Get(gomock.Any()).Return(data).AnyTimes()
@@ -486,14 +472,12 @@ func TestLoadFromFileWhenTransferUnratified(t *testing.T) {
 		fmt.Printf("asset pack err: %s\n", err)
 	}
 
-	mockHandles.transaction.EXPECT().GetNB(gomock.Any()).Return(uint64(2), packed).Times(1)
-	mockHandles.transaction.EXPECT().Has(gomock.Any()).Return(false).Times(1)
+	reservoirHandles.Transactions.(*mocks.MockHandle).EXPECT().GetNB(gomock.Any()).Return(uint64(2), packed).Times(1)
+	reservoirHandles.Transactions.(*mocks.MockHandle).EXPECT().Has(gomock.Any()).Return(false).Times(1)
+	reservoirHandles.OwnerTx.(*mocks.MockHandle).EXPECT().Get(gomock.Any()).Return([]byte("1")).Times(1)
+	reservoirHandles.OwnerData.(*mocks.MockHandle).EXPECT().Get(gomock.Any()).Return(packedOwnerData).Times(1)
 
-	mockHandles.ownerTx.EXPECT().Get(gomock.Any()).Return([]byte("1")).Times(1)
-
-	mockHandles.ownerData.EXPECT().Get(gomock.Any()).Return(packedOwnerData).Times(1)
-
-	_ = reservoir.Initialise(dataFile, reservoirHandles)
+	_ = reservoir.Initialise(dataDirectory, reservoirHandles)
 
 	err = reservoir.LoadFromFile(reservoirHandles)
 	assert.Equal(t, nil, err, "wrong error")
@@ -540,8 +524,8 @@ func TestLoadFromFileWhenShare(t *testing.T) {
 	initPackages()
 	defer asset.Finalise()
 
-	ctls, mockHandles, reservoirHandles := setupMocks(t)
-	defer finaliseMockController(ctls)
+	ctl, mockHandles, reservoirHandles := setupMocks(t)
+	defer ctl.Finish()
 
 	data, _ := currencyMap.Pack(true)
 	mockHandles.blockOwnerPayment.EXPECT().Get(gomock.Any()).Return(data).AnyTimes()
@@ -558,7 +542,7 @@ func TestLoadFromFileWhenShare(t *testing.T) {
 
 	mockHandles.ownerData.EXPECT().Get(gomock.Any()).Return(packedOwnerData).Times(2)
 
-	_ = reservoir.Initialise(dataFile, reservoirHandles)
+	_ = reservoir.Initialise(dataDirectory, reservoirHandles)
 
 	err = reservoir.LoadFromFile(reservoirHandles)
 	assert.Equal(t, nil, err, "wrong error")
@@ -602,8 +586,8 @@ func TestLoadFromFileWhenGrant(t *testing.T) {
 	initPackages()
 	defer asset.Finalise()
 
-	ctls, mockHandles, reservoirHandles := setupMocks(t)
-	defer finaliseMockController(ctls)
+	ctl, mockHandles, reservoirHandles := setupMocks(t)
+	defer ctl.Finish()
 
 	data, _ := currencyMap.Pack(true)
 	mockHandles.blockOwnerPayment.EXPECT().Get(gomock.Any()).Return(data).AnyTimes()
@@ -612,7 +596,7 @@ func TestLoadFromFileWhenGrant(t *testing.T) {
 	mockHandles.shareQuantity.EXPECT().GetN(gomock.Any()).Return(uint64(shareQuantity), true).Times(1)
 	mockHandles.share.EXPECT().GetNB(gomock.Any()).Return(uint64(shareQuantity), []byte{}).Times(1)
 
-	_ = reservoir.Initialise(dataFile, reservoirHandles)
+	_ = reservoir.Initialise(dataDirectory, reservoirHandles)
 
 	err := reservoir.LoadFromFile(reservoirHandles)
 	assert.Equal(t, nil, err, "wrong error")
@@ -656,9 +640,8 @@ func TestLoadFromFileWhenSwap(t *testing.T) {
 	initPackages()
 	defer asset.Finalise()
 
-	ctls, mockHandles, reservoirHandles := setupMocks(t)
-
-	defer finaliseMockController(ctls)
+	ctl, mockHandles, reservoirHandles := setupMocks(t)
+	defer ctl.Finish()
 
 	data, _ := currencyMap.Pack(true)
 	mockHandles.blockOwnerPayment.EXPECT().Get(gomock.Any()).Return(data).AnyTimes()
@@ -667,7 +650,7 @@ func TestLoadFromFileWhenSwap(t *testing.T) {
 	mockHandles.share.EXPECT().GetNB(gomock.Any()).Return(uint64(shareQuantity), []byte("ok")).Times(1)
 	mockHandles.ownerData.EXPECT().Get(gomock.Any()).Return(packedOwnerData).Times(1)
 
-	_ = reservoir.Initialise(dataFile, reservoirHandles)
+	_ = reservoir.Initialise(dataDirectory, reservoirHandles)
 
 	err := reservoir.LoadFromFile(reservoirHandles)
 	assert.Equal(t, nil, err, "wrong error")

@@ -11,7 +11,6 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/merkle"
-	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/logger"
 )
 
@@ -29,7 +28,7 @@ func ShareBalance(owner *account.Account, startShareId merkle.Digest, count int)
 	ownerBytes := owner.Bytes()
 	prefix := append(ownerBytes, startShareId[:]...)
 
-	cursor := storage.Pool.ShareQuantity.NewFetchCursor().Seek(prefix)
+	cursor := globalData.handles.ShareQuantity.NewFetchCursor().Seek(prefix)
 
 	items, err := cursor.Fetch(count)
 	if nil != err {

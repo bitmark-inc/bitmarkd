@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	account "github.com/bitmark-inc/bitmarkd/account"
 	merkle "github.com/bitmark-inc/bitmarkd/merkle"
 	pay "github.com/bitmark-inc/bitmarkd/pay"
 	reservoir "github.com/bitmark-inc/bitmarkd/reservoir"
@@ -94,4 +95,35 @@ func (m *MockReservoir) TransactionStatus(arg0 merkle.Digest) reservoir.Transact
 func (mr *MockReservoirMockRecorder) TransactionStatus(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TransactionStatus", reflect.TypeOf((*MockReservoir)(nil).TransactionStatus), arg0)
+}
+
+// ShareBalance mocks base method
+func (m *MockReservoir) ShareBalance(arg0 *account.Account, arg1 merkle.Digest, arg2 int) ([]reservoir.BalanceInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ShareBalance", arg0, arg1, arg2)
+	ret0, _ := ret[0].([]reservoir.BalanceInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ShareBalance indicates an expected call of ShareBalance
+func (mr *MockReservoirMockRecorder) ShareBalance(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShareBalance", reflect.TypeOf((*MockReservoir)(nil).ShareBalance), arg0, arg1, arg2)
+}
+
+// StoreGrant mocks base method
+func (m *MockReservoir) StoreGrant(arg0 *transactionrecord.ShareGrant) (*reservoir.GrantInfo, bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StoreGrant", arg0)
+	ret0, _ := ret[0].(*reservoir.GrantInfo)
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// StoreGrant indicates an expected call of StoreGrant
+func (mr *MockReservoirMockRecorder) StoreGrant(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoreGrant", reflect.TypeOf((*MockReservoir)(nil).StoreGrant), arg0)
 }
