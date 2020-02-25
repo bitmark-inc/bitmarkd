@@ -17,9 +17,10 @@ import (
 
 // Transaction - an RPC entry for transaction related functions
 type Transaction struct {
-	log     *logger.L
-	limiter *rate.Limiter
-	start   time.Time
+	Log     *logger.L
+	Limiter *rate.Limiter
+	Start   time.Time
+	Rsvr    reservoir.Reservoir
 }
 
 // TransactionArguments - arguments for status RPC request
@@ -35,11 +36,10 @@ type TransactionStatusReply struct {
 // Status - query transaction status
 func (t *Transaction) Status(arguments *TransactionArguments, reply *TransactionStatusReply) error {
 
-	if err := rateLimit(t.limiter); nil != err {
+	if err := rateLimit(t.Limiter); nil != err {
 		return err
 	}
 
-	r := reservoir.Get()
-	reply.Status = r.TransactionStatus(arguments.TxId).String()
+	reply.Status = t.Rsvr.TransactionStatus(arguments.TxId).String()
 	return nil
 }

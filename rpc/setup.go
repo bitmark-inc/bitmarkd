@@ -349,9 +349,10 @@ func createRPCServer(log *logger.L, version string) *rpc.Server {
 	}
 
 	transaction := &Transaction{
-		log:     log,
-		limiter: rate.NewLimiter(rateLimitTransaction, rateBurstTransaction),
-		start:   start,
+		Log:     log,
+		Limiter: rate.NewLimiter(rateLimitTransaction, rateBurstTransaction),
+		Start:   start,
+		Rsvr:    reservoir.Get(),
 	}
 
 	blockOwner := &BlockOwner{

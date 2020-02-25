@@ -67,7 +67,7 @@ func TestNode_List(t *testing.T) {
 	assert.Nil(t, err, "wrong List")
 	assert.Equal(t, 1, len(reply.Nodes), "wrong node count")
 	assert.Equal(t, entry, reply.Nodes[0], "wrong node info")
-	assert.Equal(t, uint64(10), reply.NextStart, "wrong next start")
+	assert.Equal(t, uint64(10), reply.NextStart, "wrong next Start")
 }
 
 func TestNodeInfo(t *testing.T) {
