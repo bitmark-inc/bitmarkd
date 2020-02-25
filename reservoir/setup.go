@@ -169,7 +169,7 @@ func (g globalDataType) TransactionStatus(txID merkle.Digest) TransactionState {
 }
 
 func (g globalDataType) ShareBalance(owner *account.Account, startSharedID merkle.Digest, count int) ([]BalanceInfo, error) {
-	return ShareBalance(owner, startSharedID, count)
+	return shareBalance(owner, startSharedID, count, g.handles.ShareQuantity)
 }
 
 func (g globalDataType) StoreGrant(grant *transactionrecord.ShareGrant) (*GrantInfo, bool, error) {

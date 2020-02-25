@@ -135,7 +135,8 @@ func (share *Share) Balance(arguments *ShareBalanceArguments, reply *ShareBalanc
 		return fault.WrongNetworkForPublicKey
 	}
 
-	result, err := reservoir.ShareBalance(arguments.Owner, arguments.ShareId, arguments.Count)
+	r := reservoir.Get()
+	result, err := r.ShareBalance(arguments.Owner, arguments.ShareId, arguments.Count)
 	if nil != err {
 		return err
 	}
