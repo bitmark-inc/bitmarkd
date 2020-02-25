@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	merkle "github.com/bitmark-inc/bitmarkd/merkle"
 	pay "github.com/bitmark-inc/bitmarkd/pay"
 	reservoir "github.com/bitmark-inc/bitmarkd/reservoir"
 	transactionrecord "github.com/bitmark-inc/bitmarkd/transactionrecord"
@@ -79,4 +80,18 @@ func (m *MockReservoir) TryProof(arg0 pay.PayId, arg1 []byte) reservoir.Tracking
 func (mr *MockReservoirMockRecorder) TryProof(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryProof", reflect.TypeOf((*MockReservoir)(nil).TryProof), arg0, arg1)
+}
+
+// TransactionStatus mocks base method
+func (m *MockReservoir) TransactionStatus(arg0 merkle.Digest) reservoir.TransactionState {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TransactionStatus", arg0)
+	ret0, _ := ret[0].(reservoir.TransactionState)
+	return ret0
+}
+
+// TransactionStatus indicates an expected call of TransactionStatus
+func (mr *MockReservoirMockRecorder) TransactionStatus(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TransactionStatus", reflect.TypeOf((*MockReservoir)(nil).TransactionStatus), arg0)
 }
