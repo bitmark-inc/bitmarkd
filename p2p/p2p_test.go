@@ -3,6 +3,7 @@ package p2p
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -32,13 +33,6 @@ func TestMain(m *testing.M) {
 	globalData.Log = logger.New("nodes")
 	os.Exit(m.Run())
 }
-
-func TestNewP2P(t *testing.T) {
-	err := Initialise(mockConfiguration("server", 12136), "v1.0.0", false)
-	assert.NoError(t, err, "P2P  initialized error")
-	time.Sleep(5 * time.Second)
-	defer announce.Finalise()
-}
 func TestIDMarshalUnmarshal(t *testing.T) {
 	conf := mockConfiguration("server", 12136)
 	fmt.Println(conf.PrivateKey)
@@ -51,14 +45,22 @@ func TestIDMarshalUnmarshal(t *testing.T) {
 	id2, err := peerlib.IDFromBytes(mID)
 	assert.NoError(t, err, "not a valid id bytes")
 	assert.Equal(t, id.String(), id2.String(), fmt.Sprintf("Convert ID fail! id:%v", id2.ShortString()))
+
+}
+func TestNewP2P(t *testing.T) {
+	err := Initialise(mockConfiguration("server", 22136), "v1.0.0", false)
+	assert.NoError(t, err, "P2P  initialized error")
+	time.Sleep(2 * time.Second)
+	defer announce.Finalise()
 }
 
 func mockConfiguration(nType string, port int) *Configuration {
+	portString := strconv.Itoa(port)
 	return &Configuration{
 		NodeType:   nType,
 		Port:       port,
-		Listen:     []string{"0.0.0.0:2136", "[::]:2136"},
-		Announce:   []string{"118.163.120.180:2136", "[2001:b030:2303:100:699b:a02d:9230:d2cb]:2136"},
+		Listen:     []string{"0.0.0.0:" + portString, "[::]:" + portString},
+		Announce:   []string{"118.163.120.180" + portString, "[2001:b030:2303:100:699b:a02d:9230:d2cb]" + portString},
 		PrivateKey: "080112406eb84a3845d33c2a389d7fbea425cbf882047a2ab13084562f06875db47b5fdc2e45a298e6cd0472eeb97cd023c723824e157869d81039794864987c05b212a8",
 		Connect:    []StaticConnection{},
 	}
