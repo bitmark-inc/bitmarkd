@@ -6,7 +6,6 @@ import (
 	"os"
 	"strconv"
 	"testing"
-	"time"
 
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/stretchr/testify/assert"
@@ -65,33 +64,6 @@ func TestListen(t *testing.T) {
 	conn, err := net.Dial("tcp", "127.0.0.1:"+strconv.Itoa(config.Port))
 	assert.NoError(t, err, fmt.Sprintf("listen error : %v", err))
 	conn.Close()
-	n1.Host.Close()
-}
-
-func TestDirectConnectAndStatus(t *testing.T) {
-	config, err := mockConfiguration("server", 22136)
-	assert.NoError(t, err, "mockdata generate error")
-	n1 := Node{}
-	n1.Log = logger.New("p2p")
-	n1.Setup(config, "p2p-v1", false)
-	n2 := Node{}
-	n2.Log = logger.New("p2p-b2")
-	n2.Setup(config, "p2p-v1", false)
-
-	// test connect status
-	status := n1.IsConnected(n2.Host.ID())
-	assert.Equal(t, false, status, "status should be false")
-
-	n1Info, err := peerlib.AddrInfoFromP2pAddr(n1.Announce[0])
-	n1Info.ID = n1.Host.ID()
-	assert.NoError(t, err, "conver announce address to AddrInfo error")
-	time.Sleep(200 * time.Microsecond)
-	err = n2.DirectConnect(*n1Info)
-	assert.NoError(t, err, "direcr connect error")
-	time.Sleep(100 * time.Microsecond)
-	status = n1.IsConnected(n2.Host.ID())
-	assert.Equal(t, true, status, "status should be true")
-	n2.Host.Close()
 	n1.Host.Close()
 }
 
