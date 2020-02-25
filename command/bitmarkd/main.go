@@ -188,7 +188,7 @@ func main() {
 	handles := reservoir.Handles{
 		Assets:            storage.Pool.Assets,
 		BlockOwnerPayment: storage.Pool.BlockOwnerPayment,
-		Transaction:       storage.Pool.Transactions,
+		Transactions:      storage.Pool.Transactions,
 		OwnerTx:           storage.Pool.OwnerTxIndex,
 		OwnerData:         storage.Pool.OwnerData,
 		Share:             storage.Pool.ShareQuantity,

@@ -319,7 +319,7 @@ func setupMocks(t *testing.T) ([]*gomock.Controller, handles, reservoir.Handles)
 	return ctls, h, reservoir.Handles{
 		Assets:            h.asset,
 		BlockOwnerPayment: h.blockOwnerPayment,
-		Transaction:       h.transaction,
+		Transactions:      h.transaction,
 		OwnerTx:           h.ownerTx,
 		OwnerData:         h.ownerData,
 		Share:             h.share,
@@ -388,7 +388,8 @@ func TestLoadFromFileWhenAssetIssuance(t *testing.T) {
 	err := reservoir.LoadFromFile(reservoirHandles)
 	assert.Equal(t, nil, err, "wrong error")
 
-	state := reservoir.TransactionStatus(assetTxID)
+	r := reservoir.Get()
+	state := r.TransactionStatus(assetTxID)
 	assert.Equal(t, reservoir.StatePending, state, "wrong asset issuance state")
 }
 
@@ -497,7 +498,8 @@ func TestLoadFromFileWhenTransferUnratified(t *testing.T) {
 	err = reservoir.LoadFromFile(reservoirHandles)
 	assert.Equal(t, nil, err, "wrong error")
 
-	result := reservoir.TransactionStatus(txUnratifiedID)
+	r := reservoir.Get()
+	result := r.TransactionStatus(txUnratifiedID)
 	assert.Equal(t, reservoir.StatePending, result, "wrong transfer unratified state")
 }
 
@@ -561,7 +563,8 @@ func TestLoadFromFileWhenShare(t *testing.T) {
 	err = reservoir.LoadFromFile(reservoirHandles)
 	assert.Equal(t, nil, err, "wrong error")
 
-	result := reservoir.TransactionStatus(txShareID)
+	r := reservoir.Get()
+	result := r.TransactionStatus(txShareID)
 	assert.Equal(t, reservoir.StatePending, result, "wrong share state")
 }
 
@@ -614,7 +617,8 @@ func TestLoadFromFileWhenGrant(t *testing.T) {
 	err := reservoir.LoadFromFile(reservoirHandles)
 	assert.Equal(t, nil, err, "wrong error")
 
-	result := reservoir.TransactionStatus(grantID)
+	r := reservoir.Get()
+	result := r.TransactionStatus(grantID)
 	assert.Equal(t, reservoir.StatePending, result, "wrong share state")
 }
 
@@ -668,6 +672,7 @@ func TestLoadFromFileWhenSwap(t *testing.T) {
 	err := reservoir.LoadFromFile(reservoirHandles)
 	assert.Equal(t, nil, err, "wrong error")
 
-	result := reservoir.TransactionStatus(swapID)
+	r := reservoir.Get()
+	result := r.TransactionStatus(swapID)
 	assert.Equal(t, reservoir.StatePending, result, "wrong swap state")
 }

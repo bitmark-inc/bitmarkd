@@ -41,7 +41,7 @@ func NewTransactionRestorer(unpacked interface{}, packed interface{}, handles Ha
 
 		return &transferRestoreData{
 			unpacked:          unpacked.(transactionrecord.BitmarkTransfer),
-			transaction:       handles.Transaction,
+			transaction:       handles.Transactions,
 			ownerTx:           handles.OwnerTx,
 			ownerData:         handles.OwnerData,
 			blockOwnerPayment: handles.BlockOwnerPayment,

@@ -132,7 +132,7 @@ var globalData globalDataType
 func (g globalDataType) StoreTransfer(transfer transactionrecord.BitmarkTransfer) (*TransferInfo, bool, error) {
 	return storeTransfer(
 		transfer,
-		g.handles.Transaction,
+		g.handles.Transactions,
 		g.handles.OwnerTx,
 		g.handles.OwnerData,
 		g.handles.BlockOwnerPayment,
@@ -151,10 +151,15 @@ func (g globalDataType) TryProof(payID pay.PayId, clientNonce []byte) TrackingSt
 	return tryProof(payID, clientNonce)
 }
 
+func (g globalDataType) TransactionStatus(txID merkle.Digest) TransactionState {
+	return transactionStatus(txID, g.handles.Transactions)
+}
+
 type Reservoir interface {
 	StoreTransfer(transactionrecord.BitmarkTransfer) (*TransferInfo, bool, error)
 	StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, error)
 	TryProof(pay.PayId, []byte) TrackingStatus
+	TransactionStatus(merkle.Digest) TransactionState
 }
 
 func Get() Reservoir {
@@ -278,8 +283,8 @@ func (state TransactionState) String() string {
 	}
 }
 
-// TransactionStatus - get status of a transaction
-func TransactionStatus(txId merkle.Digest) TransactionState {
+// transactionStatus - get status of a transaction
+func transactionStatus(txId merkle.Digest, pool storage.Handle) TransactionState {
 	globalData.RLock()
 	defer globalData.RUnlock()
 
@@ -293,7 +298,7 @@ func TransactionStatus(txId merkle.Digest) TransactionState {
 		return StateVerified
 	}
 
-	if storage.Pool.Transactions.Has(txId[:]) {
+	if pool.Has(txId[:]) {
 		return StateConfirmed
 	}
 

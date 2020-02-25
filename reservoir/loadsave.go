@@ -38,7 +38,7 @@ var bofData = []byte("bitmark-cache v1.0")
 type Handles struct {
 	Assets            storage.Handle
 	BlockOwnerPayment storage.Handle
-	Transaction       storage.Handle
+	Transactions      storage.Handle
 	OwnerTx           storage.Handle
 	OwnerData         storage.Handle
 	Share             storage.Handle
