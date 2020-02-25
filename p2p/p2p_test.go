@@ -50,7 +50,14 @@ func TestIDMarshalUnmarshal(t *testing.T) {
 func TestNewP2P(t *testing.T) {
 	err := Initialise(mockConfiguration("server", 22136), "v1.0.0", false)
 	assert.NoError(t, err, "P2P  initialized error")
-	time.Sleep(2 * time.Second)
+	time.Sleep(1 * time.Second)
+	defer announce.Finalise()
+}
+
+func TestUpstream *testing.T) {
+	err := Initialise(mockConfiguration("server", 22136), "v1.0.0", false) // initial node1
+	assert.NoError(t, err, "P2P  initialized error")
+	time.Sleep(3* time.Second)
 	defer announce.Finalise()
 }
 

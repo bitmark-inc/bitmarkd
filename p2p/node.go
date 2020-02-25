@@ -7,6 +7,7 @@ import (
 	proto "github.com/golang/protobuf/proto"
 	libp2p "github.com/libp2p/go-libp2p"
 	crypto "github.com/libp2p/go-libp2p-core/crypto"
+	protocol "github.com/libp2p/go-libp2p-protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	tls "github.com/libp2p/go-libp2p-tls"
 	ma "github.com/multiformats/go-multiaddr"
@@ -19,13 +20,13 @@ import (
 
 //Setup setup a node
 func (n *Node) Setup(configuration *Configuration, version string, dnsPeerOnly dnsOnlyType) error {
-	globalData.Version = version
+	n.Version = version
 	if nodeType(configuration.NodeType) == ClientNode {
 		n.NodeType = ClientNode
 	} else {
 		n.NodeType = ServerNode
 	}
-	globalData.dnsPeerOnly = dnsPeerOnly
+	n.dnsPeerOnly = dnsPeerOnly
 	listenIPPorts := util.DualStackAddrToIPV4IPV6(configuration.Listen)
 	if len(listenIPPorts) == 0 {
 		return fault.NoListenAddrs
@@ -37,7 +38,7 @@ func (n *Node) Setup(configuration *Configuration, version string, dnsPeerOnly d
 		return err
 	}
 	n.PrivateKey = prvKey
-	n.NewHost(globalData.NodeType, maAddrs, n.PrivateKey)
+	n.NewHost(n.NodeType, maAddrs, n.PrivateKey)
 	err = n.setAnnounce(configuration.Announce)
 	if err != nil {
 		if fault.NoAnnounceAddrs == err {
@@ -47,7 +48,7 @@ func (n *Node) Setup(configuration *Configuration, version string, dnsPeerOnly d
 			logger.Panic(err.Error())
 		}
 	}
-	go n.listen(configuration.Announce)
+	n.listen(configuration.Announce)
 	n.MetricsNetwork = NewMetricsNetwork(n.Host, n.Log)
 
 	//Start Broadcsting
@@ -62,7 +63,7 @@ func (n *Node) Setup(configuration *Configuration, version string, dnsPeerOnly d
 	}
 	go n.SubHandler(context.Background(), sub)
 
-	globalData.initialised = true
+	n.initialised = true
 	return nil
 }
 
@@ -106,7 +107,7 @@ func (n *Node) setAnnounce(announceAddrs []string) error {
 func (n *Node) listen(announceAddrs []string) {
 	maAddrs := util.IPPortToMultiAddr(announceAddrs)
 	shandler := NewListenHandler(n.Host.ID(), n, n.Log)
-	n.Host.SetStreamHandler("p2pstream", shandler.handleStream)
+	n.Host.SetStreamHandler(protocol.ID(TopicP2P), shandler.handleStream)
 	n.Log.Infof("A servant is listen to %s", util.PrintMaAddrs(maAddrs))
 }
 

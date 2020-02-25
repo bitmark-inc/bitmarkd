@@ -10,6 +10,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/network"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
+	protocol "github.com/libp2p/go-libp2p-protocol"
 
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
@@ -31,7 +32,7 @@ func (n *Node) DetermineStreamRWerHelper(id peerlib.ID, s network.Stream, rw *bu
 	cctx, cancel := context.WithTimeout(context.Background(), waitingRespTime)
 	defer cancel()
 	if nil == s {
-		newStream, newErr := n.Host.NewStream(cctx, id, "p2pstream")
+		newStream, newErr := n.Host.NewStream(cctx, id, protocol.ID(TopicP2P))
 		if newErr != nil {
 			util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("fail to create a new stream: Error %v", newErr))
 			return nil, nil, false
@@ -409,7 +410,7 @@ func (n *Node) QueryPeerInfo(id peerlib.ID, stream *network.Stream) error {
 	cctx, cancel := context.WithTimeout(context.Background(), waitingRespTime)
 	defer cancel()
 	if nil == stream {
-		createStream, newErr := n.Host.NewStream(cctx, id, "p2pstream")
+		createStream, newErr := n.Host.NewStream(cctx, id, protocol.ID(TopicP2P))
 		if newErr != nil {
 			return newErr
 		}

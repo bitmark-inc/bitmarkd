@@ -40,12 +40,12 @@ func (m *MetricsNetwork) monitor(host p2pcore.Host, log *logger.L) {
 		},
 		ConnectedF: func(net p2pnet.Network, conn p2pnet.Conn) {
 			m.connCount.Increment()
-			globalData.setConnectStatus(conn.RemotePeer(), true)
+			m.setConnectStatus(conn.RemotePeer(), true)
 			util.LogInfo(log, util.CoReset, fmt.Sprintf("@@: Conn: ID:%v Addr %v CONNECTED at %v ConnCount:%d\n", conn.RemotePeer().ShortString(), conn.RemoteMultiaddr().String(), time.Now(), m.connCount))
 		},
 		DisconnectedF: func(net p2pnet.Network, conn p2pnet.Conn) {
 			m.connCount.Decrement()
-			globalData.setConnectStatus(conn.RemotePeer(), false)
+			m.setConnectStatus(conn.RemotePeer(), false)
 			util.LogInfo(log, util.CoReset, fmt.Sprintf("@@: Conn: ID:%v Addr %v DISCONNECTED at %v ConnCount:%d\n", conn.RemotePeer().ShortString(), conn.RemoteMultiaddr().String(), time.Now(), m.connCount))
 		},
 		OpenedStreamF: func(net p2pnet.Network, stream p2pnet.Stream) {
