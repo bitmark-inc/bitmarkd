@@ -366,8 +366,10 @@ func createRPCServer(log *logger.L, version string) *rpc.Server {
 	}
 
 	share := &Share{
-		log:     log,
-		limiter: rate.NewLimiter(rateLimitShare, rateBurstShare),
+		Log:          log,
+		Limiter:      rate.NewLimiter(rateLimitShare, rateBurstShare),
+		IsNormalMode: mode.Is,
+		Rsvr:         reservoir.Get(),
 	}
 
 	server := rpc.NewServer()

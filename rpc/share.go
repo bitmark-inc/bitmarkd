@@ -24,8 +24,10 @@ import (
 
 // Share - type for RPC
 type Share struct {
-	log     *logger.L
-	limiter *rate.Limiter
+	Log          *logger.L
+	Limiter      *rate.Limiter
+	IsNormalMode func(mode.Mode) bool
+	Rsvr         reservoir.Reservoir
 }
 
 // Create a share with initial balance
@@ -42,22 +44,20 @@ type ShareCreateReply struct {
 // Create - create fractional bitmark
 func (share *Share) Create(bmfr *transactionrecord.BitmarkShare, reply *ShareCreateReply) error {
 
-	if err := rateLimit(share.limiter); nil != err {
+	if err := rateLimit(share.Limiter); nil != err {
 		return err
 	}
 
-	log := share.log
+	log := share.Log
 
 	log.Infof("Share.Create: %+v", bmfr)
 
-	if !mode.Is(mode.Normal) {
+	if !share.IsNormalMode(mode.Normal) {
 		return fault.NotAvailableDuringSynchronise
 	}
 
-	r := reservoir.Get()
-
 	// save transfer/check for duplicate
-	stored, duplicate, err := r.StoreTransfer(bmfr)
+	stored, duplicate, err := share.Rsvr.StoreTransfer(bmfr)
 	if nil != err {
 		return err
 	}
@@ -106,11 +106,11 @@ type ShareBalanceReply struct {
 // Balance - list balances for an account
 func (share *Share) Balance(arguments *ShareBalanceArguments, reply *ShareBalanceReply) error {
 
-	if err := rateLimit(share.limiter); nil != err {
+	if err := rateLimit(share.Limiter); nil != err {
 		return err
 	}
 
-	log := share.log
+	log := share.Log
 
 	log.Infof("Share.Balance: %+v", arguments)
 
@@ -126,7 +126,7 @@ func (share *Share) Balance(arguments *ShareBalanceArguments, reply *ShareBalanc
 		count = maximumBitmarksCount
 	}
 
-	if !mode.Is(mode.Normal) {
+	if !share.IsNormalMode(mode.Normal) {
 		return fault.NotAvailableDuringSynchronise
 	}
 
@@ -134,8 +134,7 @@ func (share *Share) Balance(arguments *ShareBalanceArguments, reply *ShareBalanc
 		return fault.WrongNetworkForPublicKey
 	}
 
-	r := reservoir.Get()
-	result, err := r.ShareBalance(arguments.Owner, arguments.ShareId, arguments.Count)
+	result, err := share.Rsvr.ShareBalance(arguments.Owner, arguments.ShareId, arguments.Count)
 	if nil != err {
 		return err
 	}
@@ -159,11 +158,11 @@ type ShareGrantReply struct {
 // Grant - grant a number of shares to another account
 func (share *Share) Grant(arguments *transactionrecord.ShareGrant, reply *ShareGrantReply) error {
 
-	if err := rateLimit(share.limiter); nil != err {
+	if err := rateLimit(share.Limiter); nil != err {
 		return err
 	}
 
-	log := share.log
+	log := share.Log
 
 	log.Infof("Share.Grant: %+v", arguments)
 
@@ -175,7 +174,7 @@ func (share *Share) Grant(arguments *transactionrecord.ShareGrant, reply *ShareG
 		return fault.ShareQuantityTooSmall
 	}
 
-	if !mode.Is(mode.Normal) {
+	if !share.IsNormalMode(mode.Normal) {
 		return fault.NotAvailableDuringSynchronise
 	}
 
@@ -188,8 +187,7 @@ func (share *Share) Grant(arguments *transactionrecord.ShareGrant, reply *ShareG
 	}
 
 	// save transfer/check for duplicate
-	r := reservoir.Get()
-	stored, duplicate, err := r.StoreGrant(arguments)
+	stored, duplicate, err := share.Rsvr.StoreGrant(arguments)
 	if nil != err {
 		return err
 	}
@@ -233,11 +231,11 @@ type ShareSwapReply struct {
 // Swap - atomically swap shares between accounts
 func (share *Share) Swap(arguments *transactionrecord.ShareSwap, reply *ShareSwapReply) error {
 
-	if err := rateLimit(share.limiter); nil != err {
+	if err := rateLimit(share.Limiter); nil != err {
 		return err
 	}
 
-	log := share.log
+	log := share.Log
 
 	log.Infof("Share.Swap: %+v", arguments)
 
@@ -249,7 +247,7 @@ func (share *Share) Swap(arguments *transactionrecord.ShareSwap, reply *ShareSwa
 		return fault.ShareQuantityTooSmall
 	}
 
-	if !mode.Is(mode.Normal) {
+	if !share.IsNormalMode(mode.Normal) {
 		return fault.NotAvailableDuringSynchronise
 	}
 
@@ -262,8 +260,7 @@ func (share *Share) Swap(arguments *transactionrecord.ShareSwap, reply *ShareSwa
 	}
 
 	// save transfer/check for duplicate
-	r := reservoir.Get()
-	stored, duplicate, err := r.StoreSwap(arguments)
+	stored, duplicate, err := share.Rsvr.StoreSwap(arguments)
 	if nil != err {
 		return err
 	}
