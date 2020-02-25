@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 
@@ -85,15 +84,15 @@ func (n *Node) RequestRegister(id peerlib.ID, stream network.Stream, readwriter 
 		defer s.Reset()
 	}
 	nodeChain := mode.ChainName()
-	p2pData, packError := PackRegisterData(nodeChain, "R", n.NodeType, n.Host.ID(), n.Announce, time.Now())
+	regParam, packError := PackRegisterParameter(n.NodeType, n.Host.ID(), n.Announce, time.Now())
 	if packError != nil {
 		return nil, packError
 	}
-
-	p2pMsgPacked, err := proto.Marshal(&P2PMessage{Data: p2pData})
+	p2pMsgPacked, err := PackP2PMessage(nodeChain, "R", regParam)
 	if err != nil {
 		return nil, err
 	}
+
 	_, err = rw.Write(p2pMsgPacked)
 	if err != nil {
 		n.Log.Error(err.Error())
@@ -124,7 +123,7 @@ func (n *Node) RequestRegister(id peerlib.ID, stream network.Stream, readwriter 
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf(" RequestRegister: Receive  E errorMessage:%v", errMessage))
 		return nil, err
 	case "R":
-		nType, randID, randAddrs, randTs, err := UnPackRegisterData(parameters)
+		nType, randID, randAddrs, randTs, err := UnPackRegisterParameter(parameters)
 		if err != nil {
 			n.Registers.unRegister(id)
 			return nil, err
@@ -229,12 +228,12 @@ func (n *Node) RemoteDigestOfHeight(id peerlib.ID, blockNumber uint64, stream ne
 			return blockdigest.Digest{}, regErr
 		}
 	}
-	packedData, packError := PackQueryDigestData(nodeChain, blockNumber)
+	packedParam, packError := PackQueryDigestParameter(blockNumber)
 	if packError != nil {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf(" RemoteDigestOfHeight: Read Error:%v ID:%v stream:%v readriter:%v", packError, id.ShortString(), s, rw))
 		return blockdigest.Digest{}, packError
 	}
-	p2pMsgPacked, err := proto.Marshal(&P2PMessage{Data: packedData})
+	p2pMsgPacked, err := PackP2PMessage(nodeChain, "H", packedParam)
 	if nil != err {
 		return blockdigest.Digest{}, err
 	}
@@ -302,12 +301,12 @@ func (n *Node) GetBlockData(id peerlib.ID, blockNumber uint64, stream network.St
 		}
 	}
 	nodeChain := mode.ChainName()
-	packedData, packError := PackQueryBlockData(nodeChain, blockNumber)
+	packedParam, packError := PackQueryBlockParameter(blockNumber)
 	if packError != nil {
-		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("GetBlockData: PackQueryBlockData  Error:%v ID:%v", packError, id.ShortString()))
+		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("GetBlockData: PackQueryBlockParameters  Error:%v ID:%v", packError, id.ShortString()))
 		return nil, packError
 	}
-	p2pMsgPacked, err := proto.Marshal(&P2PMessage{Data: packedData})
+	p2pMsgPacked, err := PackP2PMessage(nodeChain, "B", packedParam)
 	if nil != err {
 		util.LogWarn(n.Log, util.CoRed, fmt.Sprintf("GetBlockData: Marshal  Error:%v ID:%v", err, id.ShortString()))
 		return nil, err

@@ -168,7 +168,7 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 				break
 			}
 		case "R":
-			nType, reqID, reqMaAddrs, timestamp, err := UnPackRegisterData(parameters)
+			nType, reqID, reqMaAddrs, timestamp, err := UnPackRegisterParameter(parameters)
 			if err != nil {
 				listenerSendError(rw, nodeChain, err, "-->RegData", log)
 				break
@@ -177,27 +177,26 @@ func (l *ListenHandler) handleStream(stream network.Stream) {
 				announce.AddPeer(reqID, reqMaAddrs, timestamp) // id, listeners, timestam
 			}
 			l.node.Registers.addRegister(reqID)
-
 			randPeerID, randListeners, randTs, err := announce.GetRandom(reqID)
-			var randData [][]byte
-			var packError error
+			var randParam [][]byte
+			var packError error                                // avoid shadow
 			if nil != err || util.IDEqual(reqID, randPeerID) { // No Random Node sendback this Node
-				randData, packError = PackRegisterData(nodeChain, fn, nType, reqID, reqMaAddrs, time.Now())
+				randParam, packError = PackRegisterParameter(nType, reqID, reqMaAddrs, time.Now())
 			} else { //Get a Random Node
-				randData, packError = PackRegisterData(nodeChain, fn, nType, randPeerID, randListeners, randTs)
+				randParam, packError = PackRegisterParameter(nType, randPeerID, randListeners, randTs)
 			}
 			if packError != nil {
-				listenerSendError(rw, nodeChain, packError, "-->Radom node", log)
+				listenerSendError(rw, nodeChain, packError, "-->>Radom node", log)
 				break
 			}
-			p2pMessagePacked, err := proto.Marshal(&P2PMessage{Data: randData})
+			p2pMessagePacked, err := PackP2PMessage(nodeChain, "R", randParam)
 			if err != nil {
-				listenerSendError(rw, nodeChain, err, "-><- Radom node", log)
+				listenerSendError(rw, nodeChain, err, "->>Radom node", log)
 				break
 			}
 			_, err = rw.Write(p2pMessagePacked)
 			if err != nil {
-				listenerSendError(rw, nodeChain, err, "-><- Radom node", log)
+				listenerSendError(rw, nodeChain, err, "->>Radom node", log)
 				break
 			}
 			util.LogDebug(log, util.CoReset, fmt.Sprintf("-->> send a random node ID:%s", reqID.ShortString()))

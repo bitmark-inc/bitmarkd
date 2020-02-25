@@ -6,14 +6,15 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/gogo/protobuf/proto"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
+
+	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/util"
 )
 
-//PackP2PMessage pack  chain fn and parameters into []byte
+// PackP2PMessage pack  chain fn and parameters into []byte
 func PackP2PMessage(chain, fn string, parameters [][]byte) (packedP2PMessage []byte, err error) {
 	data := [][]byte{[]byte(chain), []byte(fn)}
 	if len(parameters) != 0 {
@@ -23,7 +24,7 @@ func PackP2PMessage(chain, fn string, parameters [][]byte) (packedP2PMessage []b
 	return packedP2PMessage, err
 }
 
-//UnPackP2PMessage unpack p2pMessage to chain fn and parameters
+// UnPackP2PMessage unpack p2pMessage to chain fn and parameters
 func UnPackP2PMessage(packed []byte) (chain string, fn string, parameters [][]byte, err error) {
 	unpacked := P2PMessage{}
 	proto.Unmarshal(packed, &unpacked)
@@ -42,8 +43,8 @@ func UnPackP2PMessage(packed []byte) (chain string, fn string, parameters [][]by
 	return chain, fn, parameters, nil
 }
 
-//UnPackRegisterData Unpack register binary  data into object information
-func UnPackRegisterData(parameters [][]byte) (peerType nodeType, id peerlib.ID, addrs []ma.Multiaddr, ts uint64, err error) {
+// UnPackRegisterParameter Unpack register binary  data into object information
+func UnPackRegisterParameter(parameters [][]byte) (peerType nodeType, id peerlib.ID, addrs []ma.Multiaddr, ts uint64, err error) {
 	if len(parameters) < 4 {
 		return peerType, id, addrs, ts, fault.ParametersLessThanExpect
 	}
@@ -69,8 +70,8 @@ func UnPackRegisterData(parameters [][]byte) (peerType nodeType, id peerlib.ID, 
 	return peerType, id, addrs, ts, nil
 }
 
-//PackRegisterData pack node message into p2pMessage
-func PackRegisterData(chain, fn string, nodeType nodeType, id peerlib.ID, addrs []ma.Multiaddr, ts time.Time) ([][]byte, error) {
+// PackRegisterParameter pack node message into p2pMessage
+func PackRegisterParameter(nodeType nodeType, id peerlib.ID, addrs []ma.Multiaddr, ts time.Time) ([][]byte, error) {
 	typePacked := []byte(nodeType.String())
 	idPacked, err := id.Marshal()
 	if err != nil {
@@ -82,33 +83,27 @@ func PackRegisterData(chain, fn string, nodeType nodeType, id peerlib.ID, addrs 
 	}
 	tsPacked := make([]byte, 8)
 	binary.BigEndian.PutUint64(tsPacked, uint64(ts.Unix()))
-	packedData := [][]byte{[]byte(chain), []byte(fn), typePacked, idPacked, addrsPackaed, tsPacked}
+	packedData := [][]byte{typePacked, idPacked, addrsPackaed, tsPacked}
 	return packedData, nil
 }
 
-//UnpackListenError unpacked ErrorMessage
+// UnpackListenError unpacked ErrorMessage
 func UnpackListenError(parameters [][]byte) error {
 	return errors.New(string(parameters[0]))
 }
 
-//PackQueryDigestData pack node message into p2pMessage
-func PackQueryDigestData(chain string, blockheight uint64) ([][]byte, error) {
-	if len(chain) == 0 {
-		return nil, fault.EmptyChain
-	}
+// PackQueryDigestParameter pack node message into p2pMessage
+func PackQueryDigestParameter(blockheight uint64) ([][]byte, error) {
 	heightPacked := make([]byte, 8)
 	binary.BigEndian.PutUint64(heightPacked, blockheight)
-	packedData := [][]byte{[]byte(chain), []byte("H"), heightPacked}
+	packedData := [][]byte{[]byte(heightPacked)}
 	return packedData, nil
 }
 
-//PackQueryBlockData pack node message into p2pMessage
-func PackQueryBlockData(chain string, blockheight uint64) ([][]byte, error) {
-	if len(chain) == 0 {
-		return nil, fault.EmptyChain
-	}
+// PackQueryBlockParameter pack node message into p2pMessage
+func PackQueryBlockParameter(blockheight uint64) ([][]byte, error) {
 	heightPacked := make([]byte, 8)
 	binary.BigEndian.PutUint64(heightPacked, blockheight)
-	packedData := [][]byte{[]byte(chain), []byte("B"), heightPacked}
+	packedData := [][]byte{heightPacked}
 	return packedData, nil
 }
