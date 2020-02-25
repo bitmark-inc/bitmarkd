@@ -46,6 +46,7 @@ USAGE()
   echo '       --payment=PRD         -p PRD        set payment mode [p2p|rest|discovery]: ['"${payment_mode}"']'
   echo '       --recorderd-public    -r            allow external recorderd connections for local chain'
   echo '       --console             -k            log to console'
+  echo '       --internal-hash       -i            internal hash for local'
   echo '       --more                -m            more logging output'
   echo '       --update              -u            overwrite an existing configuration, does not change exiting keys'
   echo '       --debug               -D            debuging messages'
@@ -68,6 +69,7 @@ recorderd_public=0
 log_size=1048576
 log_count=100
 log_console=false
+internal_hash=false
 log_default=error
 debug=no
 update=no
@@ -96,7 +98,7 @@ case "$(uname)" in
 esac
 [ -x "${getopt}" ] || ERROR 'getopt: "%s" is not executable or not installed' "${getopt}"
 
-args=$(${getopt} -o hvc:n:C:p:rkmuD --long=help,verbose,chain:,nodes:,connect:,payment:,recorderd-public,console,more,update,debug -- "$@") || exit 1
+args=$(${getopt} -o hvc:n:C:p:rikmuD --long=help,verbose,chain:,nodes:,connect:,payment:,recorderd-public,internal-hash,console,more,update,debug -- "$@") || exit 1
 
 # replace the arguments with the parsed values
 eval set -- "${args}"
@@ -170,6 +172,10 @@ do
 
     (-r|--recorderd-public)
       recorderd_public=1
+      ;;
+
+    (-i|--internal-hash)
+      internal_hash=true
       ;;
 
     (-k|--console)
@@ -286,6 +292,7 @@ do
       log_size = '"${log_size}"'
       log_count = '"${log_count}"'
       log_console = "'"${log_console}"'"
+      internal_hash = "'"${internal_hash}"'"
       # add quotes and trailing ',' to simplify comparisons
       log_default = "\"'"${log_default}"'\","
       drop_this = 0
@@ -353,6 +360,12 @@ do
         print "    " $0
         drop_this = 1
       }
+    }
+
+    # enable internal hashing
+    /^[[:space:]]*local_use_internal_hash/ {
+        print "    local_use_internal_hash = " internal_hash ","
+        drop_this = 1
     }
 
     # block all lines to replace
