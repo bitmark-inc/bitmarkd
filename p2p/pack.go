@@ -3,7 +3,6 @@ package p2p
 import (
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -17,7 +16,7 @@ import (
 // PackP2PMessage pack  chain fn and parameters into []byte
 func PackP2PMessage(chain, fn string, parameters [][]byte) (packedP2PMessage []byte, err error) {
 	data := [][]byte{[]byte(chain), []byte(fn)}
-	if len(parameters) != 0 {
+	if nil != parameters && len(parameters) != 0 {
 		data = append(data, parameters...)
 	}
 	packedP2PMessage, err = proto.Marshal(&P2PMessage{Data: data})
@@ -33,12 +32,11 @@ func UnPackP2PMessage(packed []byte) (chain string, fn string, parameters [][]by
 	}
 	chain = string(unpacked.Data[0])
 	fn = string(unpacked.Data[1])
-	if fn == "B" {
-		fmt.Println("\x1b[33m UnPackP2PMessage unpacked BLOCK data length=\x1b[0m", len(unpacked.Data))
-	}
 
 	if len(unpacked.Data) > 2 {
 		parameters = unpacked.Data[2:]
+	} else {
+		parameters = [][]byte{}
 	}
 	return chain, fn, parameters, nil
 }
@@ -76,6 +74,9 @@ func PackRegisterParameter(nodeType nodeType, id peerlib.ID, addrs []ma.Multiadd
 	idPacked, err := id.Marshal()
 	if err != nil {
 		return nil, err
+	}
+	if nil == addrs {
+		return nil, fault.MultiaddrIsNil
 	}
 	addrsPackaed, err := proto.Marshal(&Addrs{Address: util.GetBytesFromMultiaddr(addrs)})
 	if err != nil {

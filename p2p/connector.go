@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/bitmark-inc/bitmarkd/util"
-
 	"github.com/libp2p/go-libp2p-core/peer"
+
+	"github.com/bitmark-inc/bitmarkd/util"
 )
 
 //DirectConnect connect to the peer with given peer AddrInfo
