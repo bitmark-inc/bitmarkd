@@ -250,7 +250,7 @@ func processTransfer(packed []byte) error {
 			_, duplicate, err = r.StoreGrant(tx)
 
 		case *transactionrecord.ShareSwap:
-			_, duplicate, err = reservoir.StoreSwap(tx, storage.Pool.ShareQuantity, storage.Pool.Shares, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
+			_, duplicate, err = r.StoreSwap(tx)
 
 		default:
 			return fault.TransactionIsNotATransfer

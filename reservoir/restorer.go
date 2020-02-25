@@ -178,7 +178,7 @@ func (s *swapRestoreData) String() string {
 }
 
 func (s *swapRestoreData) Restore() error {
-	_, _, err := StoreSwap(s.unpacked, s.shareQuantity, s.share, s.ownerData, s.blockOwnerPayment)
+	_, _, err := storeSwap(s.unpacked, s.shareQuantity, s.share, s.ownerData, s.blockOwnerPayment)
 	if nil != err {
 		return fmt.Errorf("create swap restorer with error: %s", err)
 	}

@@ -183,6 +183,16 @@ func (g globalDataType) StoreGrant(grant *transactionrecord.ShareGrant) (*GrantI
 	)
 }
 
+func (g globalDataType) StoreSwap(swap *transactionrecord.ShareSwap) (*SwapInfo, bool, error) {
+	return storeSwap(
+		swap,
+		g.handles.ShareQuantity,
+		g.handles.Share,
+		g.handles.OwnerData,
+		g.handles.BlockOwnerPayment,
+	)
+}
+
 type Reservoir interface {
 	StoreTransfer(transactionrecord.BitmarkTransfer) (*TransferInfo, bool, error)
 	StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, error)
@@ -190,6 +200,7 @@ type Reservoir interface {
 	TransactionStatus(merkle.Digest) TransactionState
 	ShareBalance(*account.Account, merkle.Digest, int) ([]BalanceInfo, error)
 	StoreGrant(*transactionrecord.ShareGrant) (*GrantInfo, bool, error)
+	StoreSwap(swap *transactionrecord.ShareSwap) (*SwapInfo, bool, error)
 }
 
 func Get() Reservoir {

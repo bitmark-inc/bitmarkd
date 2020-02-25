@@ -5,13 +5,14 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	account "github.com/bitmark-inc/bitmarkd/account"
 	merkle "github.com/bitmark-inc/bitmarkd/merkle"
 	pay "github.com/bitmark-inc/bitmarkd/pay"
 	reservoir "github.com/bitmark-inc/bitmarkd/reservoir"
 	transactionrecord "github.com/bitmark-inc/bitmarkd/transactionrecord"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
 // MockReservoir is a mock of Reservoir interface
@@ -126,4 +127,20 @@ func (m *MockReservoir) StoreGrant(arg0 *transactionrecord.ShareGrant) (*reservo
 func (mr *MockReservoirMockRecorder) StoreGrant(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoreGrant", reflect.TypeOf((*MockReservoir)(nil).StoreGrant), arg0)
+}
+
+// storeSwap mocks base method
+func (m *MockReservoir) StoreSwap(swap *transactionrecord.ShareSwap) (*reservoir.SwapInfo, bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "storeSwap", swap)
+	ret0, _ := ret[0].(*reservoir.SwapInfo)
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// storeSwap indicates an expected call of storeSwap
+func (mr *MockReservoirMockRecorder) StoreSwap(swap interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "storeSwap", reflect.TypeOf((*MockReservoir)(nil).StoreSwap), swap)
 }

@@ -15,7 +15,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
-	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
 )
@@ -263,7 +262,8 @@ func (share *Share) Swap(arguments *transactionrecord.ShareSwap, reply *ShareSwa
 	}
 
 	// save transfer/check for duplicate
-	stored, duplicate, err := reservoir.StoreSwap(arguments, storage.Pool.ShareQuantity, storage.Pool.Shares, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
+	r := reservoir.Get()
+	stored, duplicate, err := r.StoreSwap(arguments)
 	if nil != err {
 		return err
 	}
