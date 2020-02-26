@@ -184,8 +184,8 @@ CONFIGURE() {
     OPT "$@"
     OPT --update
     [ X"${recorderd_public}" = X"yes" ] && OPT --recorderd-public
-    [ X"${console}" = X"yes" ] && OPT --console
     [ X"${internal_hash}" = X"yes" ] && OPT --internal-hash
+    [ X"${console}" = X"yes" ] && OPT --console
     while [ "${more}" -gt 0 ]
     do
       OPT --more

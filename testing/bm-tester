@@ -58,8 +58,8 @@ STOP_ALL_BITMARKD() {
   do
     pids=$(pgrep bitmarkd)
     [ -z "${pids}" ] && break
-    sleep 1
     printf '.'
+    sleep 1
   done
   printf 'done\n'
 }

@@ -45,8 +45,8 @@ USAGE()
   echo '       --connect=K:H:P       -C K:H:P      connect to specific bitmarkd public_key:host:port'
   echo '       --payment=PRD         -p PRD        set payment mode [p2p|rest|discovery]: ['"${payment_mode}"']'
   echo '       --recorderd-public    -r            allow external recorderd connections for local chain'
-  echo '       --console             -k            log to console'
   echo '       --internal-hash       -i            internal hash for local'
+  echo '       --console             -k            log to console'
   echo '       --more                -m            more logging output'
   echo '       --update              -u            overwrite an existing configuration, does not change exiting keys'
   echo '       --debug               -D            debuging messages'
@@ -66,10 +66,10 @@ nodes=none
 bitmarkd_connect=
 payment_mode=discovery
 recorderd_public=0
+internal_hash=false
 log_size=1048576
 log_count=100
 log_console=false
-internal_hash=false
 log_default=error
 debug=no
 update=no
