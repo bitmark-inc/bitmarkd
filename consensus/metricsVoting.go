@@ -24,7 +24,7 @@ const (
 
 //MetricsPeersVoting  is to get all metrics for voting
 type MetricsPeersVoting struct {
-	mutex      *sync.Mutex
+	sync.Mutex
 	watchNode  *p2p.Node
 	Candidates []*P2PCandidatesImpl
 	Log        *logger.L
@@ -32,8 +32,7 @@ type MetricsPeersVoting struct {
 
 //NewMetricsPeersVoting return a MetricsPeersVoting for voting
 func NewMetricsPeersVoting(thisNode *p2p.Node) MetricsPeersVoting {
-	var mutex = &sync.Mutex{}
-	metrics := MetricsPeersVoting{mutex: mutex, watchNode: thisNode, Log: globalData.Log}
+	metrics := MetricsPeersVoting{watchNode: thisNode, Log: globalData.Log}
 	metrics.UpdateCandidates()
 	return metrics
 }
@@ -41,7 +40,7 @@ func NewMetricsPeersVoting(thisNode *p2p.Node) MetricsPeersVoting {
 //UpdateCandidates update Candidate by registered peer
 func (p *MetricsPeersVoting) UpdateCandidates() {
 	var Candidates []*P2PCandidatesImpl
-	p.mutex.Lock()
+	p.Lock()
 	for _, peerID := range p.watchNode.Registers.RegisteredPeers() {
 		if !util.IDEqual(p.watchNode.Host.ID(), peerID) {
 			peerInfo := p.watchNode.Host.Peerstore().PeerInfo(peerID)
@@ -54,7 +53,7 @@ func (p *MetricsPeersVoting) UpdateCandidates() {
 
 	}
 	p.Candidates = Candidates
-	p.mutex.Unlock()
+	p.Unlock()
 	util.LogInfo(p.Log, util.CoWhite, fmt.Sprintf("@@UpdateCandidates:%d Candidates!", len(Candidates)))
 }
 
@@ -124,9 +123,9 @@ func (p *MetricsPeersVoting) SetMetrics(id peerlib.ID, height uint64, digest blo
 		if util.IDEqual(candidate.ID, id) {
 			localheight := blockheader.Height()
 			respTime := time.Now()
-			p.mutex.Lock()
+			p.Lock()
 			candidate.UpdateMetrics(id.String(), height, localheight, digest, respTime)
-			p.mutex.Unlock()
+			p.Unlock()
 			//util.LogInfo(p.Log, util.CoCyan, fmt.Sprintf("SetMetrics:ID:%s, remoteHeight:%d, localHeight:%d, digest:%s, responseTime:%v", id.ShortString(), height, localheight, digest, respTime))
 			break
 		}
