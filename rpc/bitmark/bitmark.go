@@ -3,9 +3,10 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package rpc
+package bitmark
 
 import (
+	"github.com/bitmark-inc/bitmarkd/rpc/ratelimit"
 	"golang.org/x/time/rate"
 
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -18,6 +19,11 @@ import (
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
+)
+
+const (
+	rateLimitBitmark = 200
+	rateBurstBitmark = 100
 )
 
 // Bitmark - type for the RPC
@@ -40,9 +46,22 @@ type BitmarkTransferReply struct {
 	Payments  map[string]transactionrecord.PaymentAlternative `json:"payments"`
 }
 
+func New(log *logger.L, pools reservoir.Handles, isNormalMode func(mode.Mode) bool, isTestingChain func() bool, rsvr reservoir.Reservoir) *Bitmark {
+	return &Bitmark{
+		Log:              log,
+		Limiter:          rate.NewLimiter(rateLimitBitmark, rateBurstBitmark),
+		IsNormalMode:     isNormalMode,
+		IsTestingChain:   isTestingChain,
+		Rsvr:             rsvr,
+		PoolTransactions: pools.Transactions,
+		PoolAssets:       pools.Assets,
+		PoolOwnerTxIndex: pools.OwnerTx,
+	}
+}
+
 // Transfer - transfer a bitmark
 func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransferCountersigned, reply *BitmarkTransferReply) error {
-	if err := rateLimit(bitmark.Limiter); nil != err {
+	if err := ratelimit.Limit(bitmark.Limiter); nil != err {
 		return err
 	}
 
@@ -136,7 +155,7 @@ type ProvenanceReply struct {
 // Provenance - list the provenance from s transaction id
 func (bitmark *Bitmark) Provenance(arguments *ProvenanceArguments, reply *ProvenanceReply) error {
 
-	if err := rateLimitN(bitmark.Limiter, arguments.Count, maximumProvenanceCount); nil != err {
+	if err := ratelimit.LimitN(bitmark.Limiter, arguments.Count, maximumProvenanceCount); nil != err {
 		return err
 	}
 

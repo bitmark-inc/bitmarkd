@@ -3,9 +3,11 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package rpc
+package assets
 
 import (
+	"github.com/bitmark-inc/bitmarkd/reservoir"
+	"github.com/bitmark-inc/bitmarkd/rpc/ratelimit"
 	"golang.org/x/time/rate"
 
 	"github.com/bitmark-inc/bitmarkd/asset"
@@ -26,7 +28,9 @@ type Assets struct {
 }
 
 const (
-	maximumAssets = 100
+	maximumAssets   = 100
+	rateLimitAssets = 200
+	rateBurstAssets = 100
 )
 
 // AssetStatus - arguments for RPC request
@@ -40,8 +44,18 @@ type AssetsRegisterReply struct {
 	Assets []AssetStatus `json:"assets"`
 }
 
+func New(log *logger.L, pools reservoir.Handles, isNormalMode func(mode.Mode) bool, isTestingChain func() bool) *Assets {
+	return &Assets{
+		Log:            log,
+		Limiter:        rate.NewLimiter(rateLimitAssets, rateBurstAssets),
+		Pool:           pools.Assets,
+		IsNormalMode:   isNormalMode,
+		IsTestingChain: isTestingChain,
+	}
+}
+
 // internal function to register some assets
-func assetRegister(assets []*transactionrecord.AssetData, pool storage.Handle) ([]AssetStatus, []byte, error) {
+func Register(assets []*transactionrecord.AssetData, pool storage.Handle) ([]AssetStatus, []byte, error) {
 
 	assetStatus := make([]AssetStatus, len(assets))
 
@@ -90,7 +104,7 @@ func (assets *Assets) Get(arguments *AssetGetArguments, reply *AssetGetReply) er
 	log := assets.Log
 	count := len(arguments.Fingerprints)
 
-	if err := rateLimitN(assets.Limiter, count, maximumAssets); nil != err {
+	if err := ratelimit.LimitN(assets.Limiter, count, maximumAssets); nil != err {
 		return err
 	}
 

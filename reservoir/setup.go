@@ -89,6 +89,7 @@ type spendKey struct {
 type Handles struct {
 	Assets            storage.Handle
 	BlockOwnerPayment storage.Handle
+	Blocks            storage.Handle
 	Transactions      storage.Handle
 	OwnerTx           storage.Handle
 	OwnerData         storage.Handle

@@ -8,6 +8,8 @@ package rpccalls
 import (
 	"encoding/hex"
 
+	"github.com/bitmark-inc/bitmarkd/rpc/share"
+
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/bitmark-inc/bitmarkd/account"
@@ -15,7 +17,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/pay"
-	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 
@@ -88,7 +89,7 @@ func (client *Client) CountersignGrant(grant *transactionrecord.ShareGrant) (*Gr
 
 	client.printJson("Grant Request", grant)
 
-	var reply rpc.ShareGrantReply
+	var reply share.ShareGrantReply
 	err := client.client.Call("Share.Grant", grant, &reply)
 	if nil != err {
 		return nil, err
@@ -118,7 +119,7 @@ func (client *Client) CountersignGrant(grant *transactionrecord.ShareGrant) (*Gr
 	return &response, nil
 }
 
-func makeGrantOneSignature(testnet bool, shareId merkle.Digest, quantity uint64, owner *configuration.Private, recipient *account.Account, beforeBlock uint64) ([]byte, *transactionrecord.ShareGrant, error) {
+func makeGrantOneSignature(_ bool, shareId merkle.Digest, quantity uint64, owner *configuration.Private, recipient *account.Account, beforeBlock uint64) ([]byte, *transactionrecord.ShareGrant, error) {
 
 	ownerAccount := owner.PrivateKey.Account()
 

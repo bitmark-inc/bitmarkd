@@ -1,8 +1,12 @@
-package rpc_test
+package bitmarks_test
 
 import (
 	"crypto/ed25519"
 	"testing"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/bitmarks"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
 
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 
@@ -15,18 +19,16 @@ import (
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
-	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/rpc/mocks"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/time/rate"
 )
 
 func TestBitmarksCreate(t *testing.T) {
-	setupTestLogger()
-	defer teardownTestLogger()
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
 
 	mode.Initialise(chain.Testing)
 	defer mode.Finalise()
@@ -41,19 +43,20 @@ func TestBitmarksCreate(t *testing.T) {
 	poolB := mocks.NewMockHandle(ctl)
 	r := mocks.NewMockReservoir(ctl)
 
-	b := rpc.Bitmarks{
-		Log:                   logger.New(logCategory),
-		Limiter:               rate.NewLimiter(100, 100),
-		IsNormalMode:          func(_ mode.Mode) bool { return true },
-		Rsvr:                  r,
-		PoolAssets:            poolA,
-		PoolBlockOwnerPayment: poolB,
-	}
+	b := bitmarks.New(
+		logger.New(fixtures.LogCategory),
+		reservoir.Handles{
+			Assets:            poolA,
+			BlockOwnerPayment: poolB,
+		},
+		func(_ mode.Mode) bool { return true },
+		r,
+	)
 
 	acc := account.Account{
 		AccountInterface: &account.ED25519Account{
 			Test:      true,
-			PublicKey: issuerPublicKey,
+			PublicKey: fixtures.IssuerPublicKey,
 		},
 	}
 
@@ -65,7 +68,7 @@ func TestBitmarksCreate(t *testing.T) {
 		Signature:   nil,
 	}
 	packed, _ := ad.Pack(&acc)
-	ad.Signature = ed25519.Sign(issuerPrivateKey, packed)
+	ad.Signature = ed25519.Sign(fixtures.IssuerPrivateKey, packed)
 	packed, _ = ad.Pack(&acc)
 	aid := ad.AssetId()
 
@@ -76,10 +79,10 @@ func TestBitmarksCreate(t *testing.T) {
 		Signature: nil,
 	}
 	packed2, _ := is.Pack(&acc)
-	is.Signature = ed25519.Sign(issuerPrivateKey, packed2)
+	is.Signature = ed25519.Sign(fixtures.IssuerPrivateKey, packed2)
 	packed2, _ = is.Pack(&acc)
 
-	arg := rpc.CreateArguments{
+	arg := bitmarks.CreateArguments{
 		Assets: []*transactionrecord.AssetData{
 			&ad,
 		},
@@ -89,16 +92,16 @@ func TestBitmarksCreate(t *testing.T) {
 	}
 
 	info := reservoir.IssueInfo{
-		TxIds:      []merkle.Digest{merkle.Digest{1, 2, 3, 4}},
+		TxIds:      []merkle.Digest{{1, 2, 3, 4}},
 		Packed:     []byte{1, 2, 3, 4},
 		Id:         pay.PayId{1, 2, 3, 4},
 		Nonce:      reservoir.PayNonce{4, 3, 2, 1},
 		Difficulty: difficulty.New(),
 		Payments: []transactionrecord.PaymentAlternative{
 			[]*transactionrecord.Payment{
-				&transactionrecord.Payment{
+				{
 					Currency: currency.Litecoin,
-					Address:  litecoinAddress,
+					Address:  fixtures.LitecoinAddress,
 					Amount:   100,
 				},
 			},
@@ -108,7 +111,7 @@ func TestBitmarksCreate(t *testing.T) {
 	poolA.EXPECT().Has(aid[:]).Return(true).Times(1)
 	r.EXPECT().StoreIssues(gomock.Any()).Return(&info, false, nil).Times(1)
 
-	var reply rpc.CreateReply
+	var reply bitmarks.CreateReply
 	err := b.Create(&arg, &reply)
 	assert.Nil(t, err, "wrong Create")
 
@@ -127,8 +130,8 @@ func TestBitmarksCreate(t *testing.T) {
 }
 
 func TestBitmarksProof(t *testing.T) {
-	setupTestLogger()
-	defer teardownTestLogger()
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
 
 	mode.Initialise(chain.Testing)
 	defer mode.Finalise()
@@ -143,26 +146,27 @@ func TestBitmarksProof(t *testing.T) {
 	poolB := mocks.NewMockHandle(ctl)
 	r := mocks.NewMockReservoir(ctl)
 
-	b := rpc.Bitmarks{
-		Log:                   logger.New(logCategory),
-		Limiter:               rate.NewLimiter(100, 100),
-		IsNormalMode:          func(_ mode.Mode) bool { return true },
-		Rsvr:                  r,
-		PoolAssets:            poolA,
-		PoolBlockOwnerPayment: poolB,
-	}
+	b := bitmarks.New(
+		logger.New(fixtures.LogCategory),
+		reservoir.Handles{
+			Assets:            poolA,
+			BlockOwnerPayment: poolB,
+		},
+		func(_ mode.Mode) bool { return true },
+		r,
+	)
 
 	nonce := blockrecord.NonceType(0x1234567890abcdef)
 	nonceBytes, _ := nonce.MarshalText()
 
-	arg := rpc.ProofArguments{
+	arg := bitmarks.ProofArguments{
 		PayId: pay.PayId{},
 		Nonce: string(nonceBytes),
 	}
 
 	r.EXPECT().TryProof(gomock.Any(), gomock.Any()).Return(reservoir.TrackingAccepted).Times(1)
 
-	var reply rpc.ProofReply
+	var reply bitmarks.ProofReply
 	err := b.Proof(&arg, &reply)
 	assert.Nil(t, err, "wrong Create")
 

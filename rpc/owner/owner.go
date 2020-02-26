@@ -3,9 +3,11 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package rpc
+package owner
 
 import (
+	"github.com/bitmark-inc/bitmarkd/reservoir"
+	"github.com/bitmark-inc/bitmarkd/rpc/ratelimit"
 	"golang.org/x/time/rate"
 
 	"github.com/bitmark-inc/bitmarkd/account"
@@ -34,7 +36,9 @@ type Owner struct {
 // --------------
 
 const (
-	maximumBitmarksCount = 100
+	MaximumBitmarksCount = 100
+	rateLimitOwner       = 200
+	rateBurstOwner       = 100
 )
 
 // OwnerBitmarksArguments - arguments for RPC
@@ -65,10 +69,20 @@ type BlockAsset struct {
 	Number uint64 `json:"number"`
 }
 
+func New(log *logger.L, pools reservoir.Handles, os ownership.Ownership) Owner {
+	return Owner{
+		Log:              log,
+		Limiter:          rate.NewLimiter(rateLimitOwner, rateBurstOwner),
+		PoolTransactions: pools.Transactions,
+		PoolAssets:       pools.Assets,
+		Ownership:        os,
+	}
+}
+
 // Bitmarks - list bitmarks belonging to an account
 func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitmarksReply) error {
 
-	if err := rateLimitN(owner.Limiter, arguments.Count, maximumBitmarksCount); nil != err {
+	if err := ratelimit.LimitN(owner.Limiter, arguments.Count, MaximumBitmarksCount); nil != err {
 		return err
 	}
 

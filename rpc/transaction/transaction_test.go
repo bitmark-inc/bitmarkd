@@ -3,11 +3,14 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package rpc_test
+package transaction_test
 
 import (
 	"testing"
 	"time"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
+	"github.com/bitmark-inc/bitmarkd/rpc/transaction"
 
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 
@@ -20,14 +23,11 @@ import (
 	"github.com/bitmark-inc/bitmarkd/merkle"
 
 	"github.com/bitmark-inc/logger"
-	"golang.org/x/time/rate"
-
-	"github.com/bitmark-inc/bitmarkd/rpc"
 )
 
 func TestTransaction_Status(t *testing.T) {
-	setupTestLogger()
-	defer teardownTestLogger()
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
 
 	ctl := gomock.NewController(t)
 	defer ctl.Finish()
@@ -36,18 +36,13 @@ func TestTransaction_Status(t *testing.T) {
 
 	now := time.Now()
 
-	tr := rpc.Transaction{
-		Log:     logger.New(logCategory),
-		Limiter: rate.NewLimiter(100, 100),
-		Start:   now,
-		Rsvr:    r,
-	}
+	tr := transaction.New(logger.New(fixtures.LogCategory), now, r)
 
-	arg := rpc.TransactionArguments{TxId: merkle.Digest{1, 2, 3, 4}}
+	arg := transaction.TransactionArguments{TxId: merkle.Digest{1, 2, 3, 4}}
 
 	r.EXPECT().TransactionStatus(arg.TxId).Return(reservoir.StateConfirmed).Times(1)
 
-	var reply rpc.TransactionStatusReply
+	var reply transaction.TransactionStatusReply
 	err := tr.Status(&arg, &reply)
 	assert.Nil(t, err, "wrong Status")
 	assert.Equal(t, reservoir.StateConfirmed.String(), reply.Status, "")

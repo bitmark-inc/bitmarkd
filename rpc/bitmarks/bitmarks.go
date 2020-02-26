@@ -3,10 +3,14 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package rpc
+package bitmarks
 
 import (
 	"encoding/hex"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/ratelimit"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/assets"
 
 	"golang.org/x/time/rate"
 
@@ -21,6 +25,11 @@ import (
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
+)
+
+const (
+	rateLimitBitmarks = 200
+	rateBurstBitmarks = reservoir.MaximumIssues
 )
 
 // Bitmarks - type for the RPC
@@ -44,9 +53,20 @@ type CreateArguments struct {
 	Issues []*transactionrecord.BitmarkIssue `json:"issues"`
 }
 
+func New(log *logger.L, pools reservoir.Handles, isNormalMode func(mode.Mode) bool, rsvr reservoir.Reservoir) *Bitmarks {
+	return &Bitmarks{
+		Log:                   log,
+		Limiter:               rate.NewLimiter(rateLimitBitmarks, rateBurstBitmarks),
+		IsNormalMode:          isNormalMode,
+		Rsvr:                  rsvr,
+		PoolAssets:            pools.Assets,
+		PoolBlockOwnerPayment: pools.BlockOwnerPayment,
+	}
+}
+
 // CreateReply - results from create RPC
 type CreateReply struct {
-	Assets     []AssetStatus                                   `json:"assets"`
+	Assets     []assets.AssetStatus                            `json:"assets"`
 	Issues     []IssueStatus                                   `json:"issues"`
 	PayId      pay.PayId                                       `json:"payId"`
 	PayNonce   reservoir.PayNonce                              `json:"payNonce"`
@@ -71,7 +91,7 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 	if count > reservoir.MaximumIssues {
 		count = reservoir.MaximumIssues
 	}
-	if err := rateLimitN(bitmarks.Limiter, count, reservoir.MaximumIssues); nil != err {
+	if err := ratelimit.LimitN(bitmarks.Limiter, count, reservoir.MaximumIssues); nil != err {
 		return err
 	}
 
@@ -81,7 +101,7 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 
 	log.Infof("Bitmarks.Create: %+v", arguments)
 
-	assetStatus, packedAssets, err := assetRegister(arguments.Assets, bitmarks.PoolAssets)
+	assetStatus, packedAssets, err := assets.Register(arguments.Assets, bitmarks.PoolAssets)
 	if nil != err {
 		return err
 	}
@@ -161,7 +181,7 @@ type ProofReply struct {
 
 // Proof - supply proof that client-side hashing to confirm free issue was done
 func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) error {
-	if err := rateLimit(bitmarks.Limiter); nil != err {
+	if err := ratelimit.Limit(bitmarks.Limiter); nil != err {
 		return err
 	}
 

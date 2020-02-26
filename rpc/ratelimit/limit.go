@@ -3,7 +3,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package rpc
+package ratelimit
 
 import (
 	"time"
@@ -14,7 +14,7 @@ import (
 )
 
 // limiting for a single request
-func rateLimit(limiter *rate.Limiter) error {
+func Limit(limiter *rate.Limiter) error {
 	r := limiter.Reserve()
 	if !r.OK() {
 		return fault.RateLimiting
@@ -24,7 +24,7 @@ func rateLimit(limiter *rate.Limiter) error {
 }
 
 // limiting for a multiple request
-func rateLimitN(limiter *rate.Limiter, count int, maximumCount int) error {
+func LimitN(limiter *rate.Limiter, count int, maximumCount int) error {
 
 	// invalid count gets limited as a single request
 	if count <= 0 || count > maximumCount {

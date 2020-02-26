@@ -3,11 +3,13 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package rpc_test
+package share_test
 
 import (
 	"crypto/ed25519"
 	"testing"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
 
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 
@@ -29,31 +31,29 @@ import (
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/bitmark-inc/bitmarkd/rpc"
+	"github.com/bitmark-inc/bitmarkd/rpc/share"
 	"github.com/bitmark-inc/logger"
-	"golang.org/x/time/rate"
 )
 
 func TestShareCreate(t *testing.T) {
-	setupTestLogger()
-	defer teardownTestLogger()
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
 
 	ctl := gomock.NewController(t)
 	defer ctl.Finish()
 
 	r := mocks.NewMockReservoir(ctl)
 
-	s := rpc.Share{
-		Log:          logger.New(logCategory),
-		Limiter:      rate.NewLimiter(100, 100),
-		IsNormalMode: func(_ mode.Mode) bool { return true },
-		Rsvr:         r,
-	}
+	s := share.New(
+		logger.New(fixtures.LogCategory),
+		func(_ mode.Mode) bool { return true },
+		r,
+	)
 
 	acc := account.Account{
 		AccountInterface: &account.ED25519Account{
 			Test:      true,
-			PublicKey: issuerPublicKey,
+			PublicKey: fixtures.IssuerPublicKey,
 		},
 	}
 
@@ -64,7 +64,7 @@ func TestShareCreate(t *testing.T) {
 	}
 
 	packed, _ := arg.Pack(&acc)
-	arg.Signature = ed25519.Sign(issuerPrivateKey, packed)
+	arg.Signature = ed25519.Sign(fixtures.IssuerPrivateKey, packed)
 
 	info := reservoir.TransferInfo{
 		Id:        pay.PayId{1, 2, 3, 4},
@@ -75,7 +75,7 @@ func TestShareCreate(t *testing.T) {
 			[]*transactionrecord.Payment{
 				{
 					Currency: currency.Litecoin,
-					Address:  litecoinAddress,
+					Address:  fixtures.LitecoinAddress,
 					Amount:   100,
 				},
 			},
@@ -84,7 +84,7 @@ func TestShareCreate(t *testing.T) {
 
 	r.EXPECT().StoreTransfer(&arg).Return(&info, false, nil).Times(1)
 
-	var reply rpc.ShareCreateReply
+	var reply share.ShareCreateReply
 	err := s.Create(&arg, &reply)
 	assert.Nil(t, err, "wrong Create")
 	assert.Equal(t, info.TxId, reply.TxId, "wrong tx ID")
@@ -94,8 +94,8 @@ func TestShareCreate(t *testing.T) {
 }
 
 func TestShareBalance(t *testing.T) {
-	setupTestLogger()
-	defer teardownTestLogger()
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
 
 	mode.Initialise(chain.Testing)
 	defer mode.Finalise()
@@ -105,21 +105,20 @@ func TestShareBalance(t *testing.T) {
 
 	r := mocks.NewMockReservoir(ctl)
 
-	s := rpc.Share{
-		Log:          logger.New(logCategory),
-		Limiter:      rate.NewLimiter(100, 100),
-		IsNormalMode: func(_ mode.Mode) bool { return true },
-		Rsvr:         r,
-	}
+	s := share.New(
+		logger.New(fixtures.LogCategory),
+		func(_ mode.Mode) bool { return true },
+		r,
+	)
 
 	acc := account.Account{
 		AccountInterface: &account.ED25519Account{
 			Test:      true,
-			PublicKey: issuerPrivateKey,
+			PublicKey: fixtures.IssuerPrivateKey,
 		},
 	}
 
-	arg := rpc.ShareBalanceArguments{
+	arg := share.ShareBalanceArguments{
 		Owner:   &acc,
 		ShareId: merkle.Digest{5, 3, 1},
 		Count:   1000,
@@ -134,7 +133,7 @@ func TestShareBalance(t *testing.T) {
 
 	r.EXPECT().ShareBalance(arg.Owner, arg.ShareId, arg.Count).Return([]reservoir.BalanceInfo{info}, nil).Times(1)
 
-	var reply rpc.ShareBalanceReply
+	var reply share.ShareBalanceReply
 	err := s.Balance(&arg, &reply)
 	assert.Nil(t, err, "wrong Balance")
 	assert.Equal(t, 1, len(reply.Balances), "wrong balance count")
@@ -142,8 +141,8 @@ func TestShareBalance(t *testing.T) {
 }
 
 func TestShareGrant(t *testing.T) {
-	setupTestLogger()
-	defer teardownTestLogger()
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
 
 	mode.Initialise(chain.Testing)
 	defer mode.Finalise()
@@ -153,24 +152,23 @@ func TestShareGrant(t *testing.T) {
 
 	r := mocks.NewMockReservoir(ctl)
 
-	s := rpc.Share{
-		Log:          logger.New(logCategory),
-		Limiter:      rate.NewLimiter(100, 100),
-		IsNormalMode: func(_ mode.Mode) bool { return true },
-		Rsvr:         r,
-	}
+	s := share.New(
+		logger.New(fixtures.LogCategory),
+		func(_ mode.Mode) bool { return true },
+		r,
+	)
 
 	acc1 := account.Account{
 		AccountInterface: &account.ED25519Account{
 			Test:      true,
-			PublicKey: issuerPublicKey,
+			PublicKey: fixtures.IssuerPublicKey,
 		},
 	}
 
 	acc2 := account.Account{
 		AccountInterface: &account.ED25519Account{
 			Test:      true,
-			PublicKey: receiverPublicKey,
+			PublicKey: fixtures.ReceiverPublicKey,
 		},
 	}
 
@@ -184,9 +182,9 @@ func TestShareGrant(t *testing.T) {
 		Countersignature: nil,
 	}
 	packed, _ := arg.Pack(&acc1)
-	arg.Signature = ed25519.Sign(issuerPrivateKey, packed)
+	arg.Signature = ed25519.Sign(fixtures.IssuerPrivateKey, packed)
 	packed, _ = arg.Pack(&acc2)
-	arg.Countersignature = ed25519.Sign(receiverPrivateKey, packed)
+	arg.Countersignature = ed25519.Sign(fixtures.ReceiverPrivateKey, packed)
 
 	info := reservoir.GrantInfo{
 		Remaining: 1234,
@@ -197,7 +195,7 @@ func TestShareGrant(t *testing.T) {
 			[]*transactionrecord.Payment{
 				{
 					Currency: currency.Litecoin,
-					Address:  litecoinAddress,
+					Address:  fixtures.LitecoinAddress,
 					Amount:   299,
 				},
 			},
@@ -206,7 +204,7 @@ func TestShareGrant(t *testing.T) {
 
 	r.EXPECT().StoreGrant(&arg).Return(&info, false, nil).Times(1)
 
-	var reply rpc.ShareGrantReply
+	var reply share.ShareGrantReply
 	err := s.Grant(&arg, &reply)
 	assert.Nil(t, err, "wrong Grant")
 	assert.Equal(t, info.TxId, reply.TxId, "wrong tx ID")
@@ -216,8 +214,8 @@ func TestShareGrant(t *testing.T) {
 }
 
 func TestShareSwap(t *testing.T) {
-	setupTestLogger()
-	defer teardownTestLogger()
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
 
 	mode.Initialise(chain.Testing)
 	defer mode.Finalise()
@@ -230,24 +228,23 @@ func TestShareSwap(t *testing.T) {
 
 	r := mocks.NewMockReservoir(ctl)
 
-	s := rpc.Share{
-		Log:          logger.New(logCategory),
-		Limiter:      rate.NewLimiter(100, 100),
-		IsNormalMode: func(_ mode.Mode) bool { return true },
-		Rsvr:         r,
-	}
+	s := share.New(
+		logger.New(fixtures.LogCategory),
+		func(_ mode.Mode) bool { return true },
+		r,
+	)
 
 	acc1 := account.Account{
 		AccountInterface: &account.ED25519Account{
 			Test:      true,
-			PublicKey: issuerPublicKey,
+			PublicKey: fixtures.IssuerPublicKey,
 		},
 	}
 
 	acc2 := account.Account{
 		AccountInterface: &account.ED25519Account{
 			Test:      true,
-			PublicKey: receiverPublicKey,
+			PublicKey: fixtures.ReceiverPublicKey,
 		},
 	}
 
@@ -263,9 +260,9 @@ func TestShareSwap(t *testing.T) {
 		Countersignature: nil,
 	}
 	packed, _ := arg.Pack(&acc1)
-	arg.Signature = ed25519.Sign(issuerPrivateKey, packed)
+	arg.Signature = ed25519.Sign(fixtures.IssuerPrivateKey, packed)
 	packed, _ = arg.Pack(&acc2)
-	arg.Countersignature = ed25519.Sign(receiverPrivateKey, packed)
+	arg.Countersignature = ed25519.Sign(fixtures.ReceiverPrivateKey, packed)
 
 	info := reservoir.SwapInfo{
 		RemainingOne: 20,
@@ -277,7 +274,7 @@ func TestShareSwap(t *testing.T) {
 			[]*transactionrecord.Payment{
 				{
 					Currency: currency.Litecoin,
-					Address:  litecoinAddress,
+					Address:  fixtures.LitecoinAddress,
 					Amount:   299,
 				},
 			},
@@ -286,7 +283,7 @@ func TestShareSwap(t *testing.T) {
 
 	r.EXPECT().StoreSwap(&arg).Return(&info, false, nil).Times(1)
 
-	var reply rpc.ShareSwapReply
+	var reply share.ShareSwapReply
 	err := s.Swap(&arg, &reply)
 	assert.Nil(t, err, "wrong Swap")
 	assert.Equal(t, info.Id, reply.PayId, "wrong pay ID")

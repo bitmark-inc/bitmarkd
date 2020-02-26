@@ -8,11 +8,14 @@ package rpccalls
 import (
 	"fmt"
 
+	"github.com/bitmark-inc/bitmarkd/rpc/assets"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/bitmarks"
+
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 
@@ -36,13 +39,13 @@ func (client *Client) MakeAsset(assetConfig *AssetData) (*AssetResult, error) {
 
 	result := &AssetResult{}
 
-	getArgs := rpc.AssetGetArguments{
+	getArgs := assets.AssetGetArguments{
 		Fingerprints: []string{assetConfig.Fingerprint},
 	}
 
 	client.printJson("Asset Get Request", getArgs)
 
-	var getReply rpc.AssetGetReply
+	var getReply assets.AssetGetReply
 	if err := client.client.Call("Assets.Get", &getArgs, &getReply); nil != err {
 		return nil, err
 	}
@@ -112,12 +115,12 @@ func (client *Client) MakeAsset(assetConfig *AssetData) (*AssetResult, error) {
 
 	client.printJson("Asset Request", r)
 
-	args := rpc.CreateArguments{
+	args := bitmarks.CreateArguments{
 		Assets: []*transactionrecord.AssetData{&r},
 		Issues: nil,
 	}
 
-	var reply rpc.CreateReply
+	var reply bitmarks.CreateReply
 	if err := client.client.Call("Bitmarks.Create", &args, &reply); nil != err {
 		return nil, err
 	}

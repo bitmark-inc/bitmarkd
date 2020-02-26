@@ -3,11 +3,20 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package rpc_test
+package owner_test
 
 import (
 	"crypto/ed25519"
 	"testing"
+
+	"github.com/bitmark-inc/bitmarkd/reservoir"
+
+	"github.com/bitmark-inc/bitmarkd/chain"
+	"github.com/bitmark-inc/bitmarkd/mode"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/owner"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
 
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 
@@ -22,14 +31,14 @@ import (
 	"github.com/golang/mock/gomock"
 
 	"github.com/bitmark-inc/logger"
-	"golang.org/x/time/rate"
-
-	"github.com/bitmark-inc/bitmarkd/rpc"
 )
 
 func TestOwnerBitmarks(t *testing.T) {
-	setupTestLogger()
-	defer teardownTestLogger()
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
+
+	mode.Initialise(chain.Testing)
+	defer mode.Finalise()
 
 	ctl := gomock.NewController(t)
 	defer ctl.Finish()
@@ -38,22 +47,23 @@ func TestOwnerBitmarks(t *testing.T) {
 	a := mocks.NewMockHandle(ctl)
 	os := mocks.NewMockOwnership(ctl)
 
-	o := rpc.Owner{
-		Log:              logger.New(logCategory),
-		Limiter:          rate.NewLimiter(100, 100),
-		PoolTransactions: tr,
-		PoolAssets:       a,
-		Ownership:        os,
-	}
+	o := owner.New(
+		logger.New(fixtures.LogCategory),
+		reservoir.Handles{
+			Assets:       a,
+			Transactions: tr,
+		},
+		os,
+	)
 
 	acc := account.Account{
 		AccountInterface: &account.ED25519Account{
 			Test:      true,
-			PublicKey: issuerPublicKey,
+			PublicKey: fixtures.IssuerPublicKey,
 		},
 	}
 
-	arg := rpc.OwnerBitmarksArguments{
+	arg := owner.OwnerBitmarksArguments{
 		Owner: &acc,
 		Start: 5,
 		Count: 10,
@@ -79,14 +89,14 @@ func TestOwnerBitmarks(t *testing.T) {
 		Signature:   nil,
 	}
 	packed, _ := ad.Pack(&acc)
-	ad.Signature = ed25519.Sign(issuerPrivateKey, packed)
+	ad.Signature = ed25519.Sign(fixtures.IssuerPrivateKey, packed)
 	packed, _ = ad.Pack(&acc)
 
 	os.EXPECT().ListBitmarksFor(arg.Owner, arg.Start, arg.Count).Return([]ownership.Record{r}, nil).Times(1)
 	tr.EXPECT().GetNB(r.TxId[:]).Return(uint64(1), packed).Times(1)
 	a.EXPECT().GetNB(r.AssetId[:]).Return(uint64(1), packed).Times(1)
 
-	var reply rpc.OwnerBitmarksReply
+	var reply owner.OwnerBitmarksReply
 	err := o.Bitmarks(&arg, &reply)
 	assert.Nil(t, err, "wrong Bitmarks")
 	assert.Equal(t, r.N+1, reply.Next, "wrong next")

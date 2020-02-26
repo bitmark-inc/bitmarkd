@@ -3,11 +3,17 @@
 // Copyright (c) 2014-2020 Bitmark Inc.
 // license that can be found in the LICENSE file.
 
-package rpc_test
+package node_test
 
 import (
 	"testing"
 	"time"
+
+	"github.com/bitmark-inc/bitmarkd/reservoir"
+
+	"github.com/bitmark-inc/bitmarkd/counter"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
 
 	"github.com/bitmark-inc/bitmarkd/storage"
 
@@ -15,7 +21,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/mode"
 
 	"github.com/bitmark-inc/bitmarkd/announce/fingerprint"
-	announceRPC "github.com/bitmark-inc/bitmarkd/announce/rpc"
+	"github.com/bitmark-inc/bitmarkd/announce/rpc"
 	"github.com/bitmark-inc/bitmarkd/util"
 
 	"github.com/bitmark-inc/bitmarkd/rpc/mocks"
@@ -24,15 +30,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/bitmark-inc/bitmarkd/rpc/node"
 	"github.com/bitmark-inc/logger"
-	"golang.org/x/time/rate"
-
-	"github.com/bitmark-inc/bitmarkd/rpc"
 )
 
 func TestNode_List(t *testing.T) {
-	setupTestLogger()
-	defer teardownTestLogger()
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
 
 	ctl := gomock.NewController(t)
 	defer ctl.Finish()
@@ -40,29 +44,31 @@ func TestNode_List(t *testing.T) {
 	a := mocks.NewMockAnnounce(ctl)
 
 	now := time.Now()
-	n := rpc.Node{
-		Log:      logger.New(logCategory),
-		Limiter:  rate.NewLimiter(100, 100),
-		Start:    now,
-		Version:  "1",
-		Announce: a,
-	}
+	ctr := counter.Counter(3)
+	n := node.New(
+		logger.New(fixtures.LogCategory),
+		reservoir.Handles{},
+		now,
+		"1",
+		&ctr,
+		a,
+	)
 
-	arg := rpc.NodeArguments{
+	arg := node.NodeArguments{
 		Start: 100,
 		Count: 5,
 	}
 
 	c1, _ := util.NewConnection("1.2.3.4:1234")
 
-	entry := announceRPC.Entry{
+	entry := rpc.Entry{
 		Fingerprint: fingerprint.Type{1, 2, 3, 4},
 		Connections: []*util.Connection{c1},
 	}
 
-	a.EXPECT().Fetch(arg.Start, arg.Count).Return([]announceRPC.Entry{entry}, uint64(10), nil).Times(1)
+	a.EXPECT().Fetch(arg.Start, arg.Count).Return([]rpc.Entry{entry}, uint64(10), nil).Times(1)
 
-	var reply rpc.NodeReply
+	var reply node.NodeReply
 	err := n.List(&arg, &reply)
 	assert.Nil(t, err, "wrong List")
 	assert.Equal(t, 1, len(reply.Nodes), "wrong node count")
@@ -71,8 +77,8 @@ func TestNode_List(t *testing.T) {
 }
 
 func TestNodeInfo(t *testing.T) {
-	setupTestLogger()
-	defer teardownTestLogger()
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
 
 	ctl := gomock.NewController(t)
 	defer ctl.Finish()
@@ -84,19 +90,23 @@ func TestNodeInfo(t *testing.T) {
 	b := mocks.NewMockHandle(ctl)
 
 	now := time.Now()
-	n := rpc.Node{
-		Log:      logger.New(logCategory),
-		Limiter:  rate.NewLimiter(100, 100),
-		Start:    now,
-		Version:  "100",
-		Announce: a,
-		Pool:     b,
-	}
+	c := counter.Counter(5)
+
+	n := node.New(
+		logger.New(fixtures.LogCategory),
+		reservoir.Handles{
+			Blocks: b,
+		},
+		now,
+		"100",
+		&c,
+		a,
+	)
 
 	b.EXPECT().LastElement().Return(storage.Element{}, false).Times(1)
 
-	var reply rpc.InfoReply
-	err := n.Info(&rpc.InfoArguments{}, &reply)
+	var reply node.InfoReply
+	err := n.Info(&node.InfoArguments{}, &reply)
 	assert.Nil(t, err, "wrong Info")
 	assert.Equal(t, chain.Testing, reply.Chain, "wrong chain")
 	assert.Equal(t, mode.Resynchronise.String(), reply.Mode, "wrong mode")
@@ -104,7 +114,7 @@ func TestNodeInfo(t *testing.T) {
 	assert.Equal(t, "", reply.Block.Hash, "wrong block hash")
 	assert.Equal(t, uint64(0), reply.Miner.Success, "wrong success mined")
 	assert.Equal(t, uint64(0), reply.Miner.Failed, "wrong failed mined")
-	assert.Equal(t, uint64(0), reply.RPCs, "wrong connection count")
+	assert.Equal(t, c.Uint64(), reply.RPCs, "wrong connection count")
 	assert.Equal(t, n.Version, reply.Version, "wrong version")
 	assert.Equal(t, "", reply.PublicKey, "wrong empty public key")
 }

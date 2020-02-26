@@ -14,15 +14,29 @@ import (
 	"sync"
 	"time"
 
+	blockrecord2 "github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/ownership"
 
-	"github.com/bitmark-inc/bitmarkd/blockrecord"
-
 	"github.com/bitmark-inc/bitmarkd/mode"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/node"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/transaction"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/share"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/blockowner"
+	"github.com/bitmark-inc/bitmarkd/rpc/owner"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/bitmarks"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/assets"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/bitmark"
+
 	"github.com/bitmark-inc/bitmarkd/storage"
 
 	"golang.org/x/crypto/sha3"
-	"golang.org/x/time/rate"
 
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -49,34 +63,6 @@ type HTTPSConfiguration struct {
 	PrivateKey         string              `gluamapper:"private_key" json:"private_key"`
 	Allow              map[string][]string `gluamapper:"allow" json:"allow"`
 }
-
-// rate limiting (requests per second)
-// burst limit   (total items in one request)
-const (
-	rateLimitAssets = 200
-	rateBurstAssets = 100
-
-	rateLimitBitmark = 200
-	rateBurstBitmark = 100
-
-	rateLimitBitmarks = 200
-	rateBurstBitmarks = reservoir.MaximumIssues
-
-	rateLimitOwner = 200
-	rateBurstOwner = 100
-
-	rateLimitNode = 200
-	rateBurstNode = 100
-
-	rateLimitTransaction = 200
-	rateBurstTransaction = 100
-
-	rateLimitBlockOwner = 200
-	rateBurstBlockOwner = 100
-
-	rateLimitShare = 200
-	rateBurstShare = 100
-)
 
 // globals
 type rpcData struct {
@@ -299,86 +285,36 @@ func initialiseHTTPS(configuration *HTTPSConfiguration, version string) error {
 func createRPCServer(log *logger.L, version string) *rpc.Server {
 
 	start := time.Now().UTC()
-
-	assets := &Assets{
-		Log:            log,
-		Limiter:        rate.NewLimiter(rateLimitAssets, rateBurstAssets),
-		Pool:           storage.Pool.Assets,
-		IsNormalMode:   mode.Is,
-		IsTestingChain: mode.IsTesting,
+	pools := reservoir.Handles{
+		Assets:            storage.Pool.Assets,
+		BlockOwnerPayment: storage.Pool.BlockOwnerPayment,
+		Blocks:            storage.Pool.Blocks,
+		Transactions:      storage.Pool.Transactions,
+		OwnerTx:           storage.Pool.OwnerTxIndex,
+		OwnerData:         storage.Pool.OwnerData,
+		Share:             storage.Pool.Shares,
+		ShareQuantity:     storage.Pool.ShareQuantity,
 	}
 
-	bitmark := &Bitmark{
-		Log:              log,
-		Limiter:          rate.NewLimiter(rateLimitBitmark, rateBurstBitmark),
-		IsNormalMode:     mode.Is,
-		IsTestingChain:   mode.IsTesting,
-		Rsvr:             reservoir.Get(),
-		PoolTransactions: storage.Pool.Transactions,
-		PoolAssets:       storage.Pool.Assets,
-		PoolOwnerTxIndex: storage.Pool.OwnerTxIndex,
-	}
-
-	bitmarks := &Bitmarks{
-		Log:                   log,
-		Limiter:               rate.NewLimiter(rateLimitBitmarks, rateBurstBitmarks),
-		IsNormalMode:          mode.Is,
-		Rsvr:                  reservoir.Get(),
-		PoolAssets:            storage.Pool.Assets,
-		PoolBlockOwnerPayment: storage.Pool.BlockOwnerPayment,
-	}
-
-	owner := &Owner{
-		Log:              log,
-		Limiter:          rate.NewLimiter(rateLimitOwner, rateBurstOwner),
-		PoolTransactions: storage.Pool.Transactions,
-		PoolAssets:       storage.Pool.Assets,
-		Ownership:        ownership.Get(),
-	}
-
-	node := &Node{
-		Log:      log,
-		Limiter:  rate.NewLimiter(rateLimitNode, rateBurstNode),
-		Start:    start,
-		Version:  version,
-		Announce: announce.Get(),
-		Pool:     storage.Pool.Blocks,
-	}
-
-	transaction := &Transaction{
-		Log:     log,
-		Limiter: rate.NewLimiter(rateLimitTransaction, rateBurstTransaction),
-		Start:   start,
-		Rsvr:    reservoir.Get(),
-	}
-
-	blockOwner := &BlockOwner{
-		Log:            log,
-		Limiter:        rate.NewLimiter(rateLimitBlockOwner, rateBurstBlockOwner),
-		Pool:           storage.Pool.Blocks,
-		Br:             blockrecord.Get(),
-		IsNormalMode:   mode.Is,
-		IsTestingChain: mode.IsTesting,
-		Rsvr:           reservoir.Get(),
-	}
-
-	share := &Share{
-		Log:          log,
-		Limiter:      rate.NewLimiter(rateLimitShare, rateBurstShare),
-		IsNormalMode: mode.Is,
-		Rsvr:         reservoir.Get(),
-	}
+	ass := assets.New(log, pools, mode.Is, mode.IsTesting)
+	bm := bitmark.New(log, pools, mode.Is, mode.IsTesting, reservoir.Get())
+	bms := bitmarks.New(log, pools, mode.Is, reservoir.Get())
+	own := owner.New(log, pools, ownership.Get())
+	bo := blockowner.New(log, pools, mode.Is, mode.IsTesting, reservoir.Get(), blockrecord2.Get())
+	sh := share.New(log, mode.Is, reservoir.Get())
+	tr := transaction.New(log, start, reservoir.Get())
+	no := node.New(log, pools, start, version, &connectionCountRPC, announce.Get())
 
 	server := rpc.NewServer()
 
-	server.Register(assets)
-	server.Register(bitmark)
-	server.Register(bitmarks)
-	server.Register(owner)
-	server.Register(node)
-	server.Register(transaction)
-	server.Register(blockOwner)
-	server.Register(share)
+	server.Register(ass)
+	server.Register(bm)
+	server.Register(bms)
+	server.Register(own)
+	server.Register(no)
+	server.Register(tr)
+	server.Register(bo)
+	server.Register(sh)
 
 	return server
 }

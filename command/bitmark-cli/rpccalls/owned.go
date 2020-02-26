@@ -7,7 +7,7 @@ package rpccalls
 
 import (
 	"github.com/bitmark-inc/bitmarkd/account"
-	"github.com/bitmark-inc/bitmarkd/rpc"
+	"github.com/bitmark-inc/bitmarkd/rpc/owner"
 )
 
 // OwnedData - data for an ownership request
@@ -18,9 +18,9 @@ type OwnedData struct {
 }
 
 // GetOwned - obtain list of owned bitmarks
-func (client *Client) GetOwned(ownedConfig *OwnedData) (*rpc.OwnerBitmarksReply, error) {
+func (client *Client) GetOwned(ownedConfig *OwnedData) (*owner.OwnerBitmarksReply, error) {
 
-	ownedArgs := rpc.OwnerBitmarksArguments{
+	ownedArgs := owner.OwnerBitmarksArguments{
 		Owner: ownedConfig.Owner,
 		Start: ownedConfig.Start,
 		Count: ownedConfig.Count,
@@ -28,7 +28,7 @@ func (client *Client) GetOwned(ownedConfig *OwnedData) (*rpc.OwnerBitmarksReply,
 
 	client.printJson("Owned Request", ownedArgs)
 
-	reply := &rpc.OwnerBitmarksReply{}
+	reply := &owner.OwnerBitmarksReply{}
 	err := client.client.Call("Owner.Bitmarks", ownedArgs, reply)
 	if nil != err {
 		return nil, err

@@ -12,6 +12,8 @@ import (
 	"io"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/rpc/bitmarks"
+
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/sha3"
 
@@ -20,7 +22,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
-	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 
@@ -71,12 +72,12 @@ func (client *Client) Issue(issueConfig *IssueData) (*IssueReply, error) {
 
 	client.printJson("Issue Request", issues)
 
-	issuesArgs := rpc.CreateArguments{
+	issuesArgs := bitmarks.CreateArguments{
 		Assets: nil,
 		Issues: issues,
 	}
 
-	var issuesReply rpc.CreateReply
+	var issuesReply bitmarks.CreateReply
 	if err := client.client.Call("Bitmarks.Create", issuesArgs, &issuesReply); err != nil {
 		return nil, err
 	}
@@ -112,14 +113,14 @@ func (client *Client) Issue(issueConfig *IssueData) (*IssueReply, error) {
 
 		// run proofer to generate local nonce
 		localNonce := makeProof(issuesReply.PayId, issuesReply.PayNonce, issuesReply.Difficulty, client.verbose, client.handle)
-		proofArgs := rpc.ProofArguments{
+		proofArgs := bitmarks.ProofArguments{
 			PayId: issuesReply.PayId,
 			Nonce: localNonce,
 		}
 
 		client.printJson("Proof Request", proofArgs)
 
-		var proofReply rpc.ProofReply
+		var proofReply bitmarks.ProofReply
 		if err := client.client.Call("Bitmarks.Proof", &proofArgs, &proofReply); err != nil {
 			return nil, err
 		}
@@ -144,7 +145,7 @@ func makeIssue(testnet bool, issueConfig *IssueData, nonce uint64) (*transaction
 	return issue, err
 }
 
-func internalMakeIssue(testnet bool, issueConfig *IssueData, nonce uint64, generateDigest bool) (*merkle.Digest, *transactionrecord.BitmarkIssue, error) {
+func internalMakeIssue(_ bool, issueConfig *IssueData, nonce uint64, generateDigest bool) (*merkle.Digest, *transactionrecord.BitmarkIssue, error) {
 
 	issuerAccount := issueConfig.Issuer.PrivateKey.Account()
 

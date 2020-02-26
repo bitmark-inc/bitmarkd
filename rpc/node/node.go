@@ -3,17 +3,21 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package rpc
+package node
 
 import (
 	"time"
+
+	"github.com/bitmark-inc/bitmarkd/counter"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/ratelimit"
 
 	"github.com/bitmark-inc/bitmarkd/storage"
 
 	"golang.org/x/time/rate"
 
 	"github.com/bitmark-inc/bitmarkd/announce"
-	announceRPC "github.com/bitmark-inc/bitmarkd/announce/rpc"
+	"github.com/bitmark-inc/bitmarkd/announce/rpc"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
@@ -24,6 +28,11 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
+const (
+	rateLimitNode = 200
+	rateBurstNode = 100
+)
+
 // Node - type for RPC calls
 type Node struct {
 	Log      *logger.L
@@ -32,6 +41,7 @@ type Node struct {
 	Version  string
 	Announce announce.Announce
 	Pool     storage.Handle
+	counter  *counter.Counter
 }
 
 // limit for count
@@ -47,14 +57,26 @@ type NodeArguments struct {
 
 // NodeReply - result from RPC
 type NodeReply struct {
-	Nodes     []announceRPC.Entry `json:"nodes"`
-	NextStart uint64              `json:"nextStart,string"`
+	Nodes     []rpc.Entry `json:"nodes"`
+	NextStart uint64      `json:"nextStart,string"`
+}
+
+func New(log *logger.L, pools reservoir.Handles, start time.Time, version string, counter *counter.Counter, ann announce.Announce) Node {
+	return Node{
+		Log:      log,
+		Limiter:  rate.NewLimiter(rateLimitNode, rateBurstNode),
+		Start:    start,
+		Version:  version,
+		Announce: ann,
+		Pool:     pools.Blocks,
+		counter:  counter,
+	}
 }
 
 // List - list all node offering RPC functionality
 func (node *Node) List(arguments *NodeArguments, reply *NodeReply) error {
 
-	if err := rateLimitN(node.Limiter, arguments.Count, maximumNodeList); nil != err {
+	if err := ratelimit.LimitN(node.Limiter, arguments.Count, maximumNodeList); nil != err {
 		return err
 	}
 
@@ -112,7 +134,7 @@ type MinerInfo struct {
 // for more detail information use HTTP GET requests
 func (node *Node) Info(_ *InfoArguments, reply *InfoReply) error {
 
-	if err := rateLimit(node.Limiter); nil != err {
+	if err := ratelimit.Limit(node.Limiter); nil != err {
 		return err
 	}
 
@@ -128,7 +150,7 @@ func (node *Node) Info(_ *InfoArguments, reply *InfoReply) error {
 		Success: uint64(proof.MinedBlocks()),
 		Failed:  uint64(proof.FailMinedBlocks()),
 	}
-	reply.RPCs = connectionCountRPC.Uint64()
+	reply.RPCs = node.counter.Uint64()
 	reply.Peers = connCounts
 	reply.TransactionCounters.Pending, reply.TransactionCounters.Verified = reservoir.ReadCounters()
 	reply.Difficulty = difficulty.Current.Value()

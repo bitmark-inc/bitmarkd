@@ -3,10 +3,12 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package rpc
+package blockowner
 
 import (
 	"encoding/binary"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/ratelimit"
 
 	"golang.org/x/time/rate"
 
@@ -24,6 +26,11 @@ import (
 
 // Block Owner
 // -----------
+
+const (
+	rateLimitBlockOwner = 200
+	rateBurstBlockOwner = 100
+)
 
 // BlockOwner - the type of the RPC
 type BlockOwner struct {
@@ -46,10 +53,22 @@ type TxIdForBlockReply struct {
 	TxId merkle.Digest `json:"txId"`
 }
 
+func New(log *logger.L, pools reservoir.Handles, isNormalMode func(mode.Mode) bool, isTestingChain func() bool, rsvr reservoir.Reservoir, br blockrecord.Record) BlockOwner {
+	return BlockOwner{
+		Log:            log,
+		Limiter:        rate.NewLimiter(rateLimitBlockOwner, rateBurstBlockOwner),
+		Pool:           pools.Blocks,
+		Br:             br,
+		IsNormalMode:   isNormalMode,
+		IsTestingChain: isTestingChain,
+		Rsvr:           rsvr,
+	}
+}
+
 // TxIdForBlock - RPC to get transaction id for block ownership record
 func (bitmark *BlockOwner) TxIdForBlock(info *TxIdForBlockArguments, reply *TxIdForBlockReply) error {
 
-	if err := rateLimit(bitmark.Limiter); nil != err {
+	if err := ratelimit.Limit(bitmark.Limiter); nil != err {
 		return err
 	}
 
@@ -88,7 +107,7 @@ type BlockOwnerTransferReply struct {
 // payment addresses
 func (bitmark *BlockOwner) Transfer(transfer *transactionrecord.BlockOwnerTransfer, reply *BlockOwnerTransferReply) error {
 
-	if err := rateLimit(bitmark.Limiter); nil != err {
+	if err := ratelimit.Limit(bitmark.Limiter); nil != err {
 		return err
 	}
 

@@ -3,10 +3,14 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package rpc_test
+package bitmark_test
 
 import (
 	"crypto/ed25519"
+	"testing"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
+
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/currency"
@@ -15,19 +19,17 @@ import (
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
-	"github.com/bitmark-inc/bitmarkd/rpc"
+	"github.com/bitmark-inc/bitmarkd/rpc/bitmark"
 	"github.com/bitmark-inc/bitmarkd/rpc/mocks"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/time/rate"
-	"testing"
 )
 
 func TestBitmarkTransfer(t *testing.T) {
-	setupTestLogger()
-	defer teardownTestLogger()
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
 
 	mode.Initialise(chain.Testing)
 	defer mode.Finalise()
@@ -41,7 +43,7 @@ func TestBitmarkTransfer(t *testing.T) {
 	owner := account.Account{
 		AccountInterface: &account.ED25519Account{
 			Test:      true,
-			PublicKey: issuerPublicKey,
+			PublicKey: fixtures.IssuerPublicKey,
 		},
 	}
 
@@ -67,9 +69,9 @@ func TestBitmarkTransfer(t *testing.T) {
 		Packed:    nil,
 		Payments: []transactionrecord.PaymentAlternative{
 			[]*transactionrecord.Payment{
-				&transactionrecord.Payment{
+				{
 					Currency: currency.Litecoin,
-					Address:  litecoinAddress,
+					Address:  fixtures.LitecoinAddress,
 					Amount:   100,
 				},
 			},
@@ -79,28 +81,29 @@ func TestBitmarkTransfer(t *testing.T) {
 	r := mocks.NewMockReservoir(ctl)
 	r.EXPECT().StoreTransfer(&unratitifed).Return(&info, false, nil).Times(1)
 
-	b := rpc.Bitmark{
-		Log:            logger.New(logCategory),
-		Limiter:        rate.NewLimiter(100, 100),
-		IsNormalMode:   func(_ mode.Mode) bool { return true },
-		IsTestingChain: func() bool { return true },
-		Rsvr:           r,
-	}
-	var reply rpc.BitmarkTransferReply
+	b := bitmark.New(
+		logger.New(fixtures.LogCategory),
+		reservoir.Handles{},
+		func(_ mode.Mode) bool { return true },
+		func() bool { return true },
+		r,
+	)
+
+	var reply bitmark.BitmarkTransferReply
 	err := b.Transfer(&transfer, &reply)
 	assert.Nil(t, err, "wrong transfer")
 	assert.Equal(t, info.Id, reply.PayId, "wrong payID")
 	assert.Equal(t, info.TxId, reply.TxId, "wrong txID")
 	assert.Equal(t, 1, len(reply.Payments), "wrong payment count")
-	assert.Equal(t, litecoinAddress, reply.Payments[currency.Litecoin.String()][0].Address, "wrong litecoin payment address")
+	assert.Equal(t, fixtures.LitecoinAddress, reply.Payments[currency.Litecoin.String()][0].Address, "wrong litecoin payment address")
 
 	received := <-bus
 	assert.Equal(t, "transfer", received.Command, "wrong message")
 }
 
 func TestBitmarkProvenanceWhenBitmarkIssuance(t *testing.T) {
-	setupTestLogger()
-	defer teardownTestLogger()
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
 
 	mode.Initialise(chain.Testing)
 	defer mode.Finalise()
@@ -113,20 +116,21 @@ func TestBitmarkProvenanceWhenBitmarkIssuance(t *testing.T) {
 	poolA := mocks.NewMockHandle(ctl)
 	poolO := mocks.NewMockHandle(ctl)
 
-	b := rpc.Bitmark{
-		Log:              logger.New(logCategory),
-		Limiter:          rate.NewLimiter(100, 100),
-		IsNormalMode:     func(_ mode.Mode) bool { return true },
-		IsTestingChain:   func() bool { return true },
-		Rsvr:             r,
-		PoolTransactions: poolT,
-		PoolAssets:       poolA,
-		PoolOwnerTxIndex: poolO,
-	}
+	b := bitmark.New(
+		logger.New(fixtures.LogCategory),
+		reservoir.Handles{
+			Assets:       poolA,
+			Transactions: poolT,
+			OwnerTx:      poolO,
+		},
+		func(_ mode.Mode) bool { return true },
+		func() bool { return true },
+		r,
+	)
 
 	txID := merkle.Digest{1, 2, 3, 4}
 
-	arg := rpc.ProvenanceArguments{
+	arg := bitmark.ProvenanceArguments{
 		TxId:  txID,
 		Count: 2,
 	}
@@ -134,7 +138,7 @@ func TestBitmarkProvenanceWhenBitmarkIssuance(t *testing.T) {
 	acc := account.Account{
 		AccountInterface: &account.ED25519Account{
 			Test:      true,
-			PublicKey: issuerPublicKey,
+			PublicKey: fixtures.IssuerPublicKey,
 		},
 	}
 
@@ -145,7 +149,7 @@ func TestBitmarkProvenanceWhenBitmarkIssuance(t *testing.T) {
 		Signature: nil,
 	}
 	packed1, _ := tr1.Pack(&acc)
-	tr1.Signature = ed25519.Sign(issuerPrivateKey, packed1)
+	tr1.Signature = ed25519.Sign(fixtures.IssuerPrivateKey, packed1)
 	packed1, _ = tr1.Pack(&acc)
 
 	ass := transactionrecord.AssetData{
@@ -156,14 +160,14 @@ func TestBitmarkProvenanceWhenBitmarkIssuance(t *testing.T) {
 		Signature:   nil,
 	}
 	packed2, _ := ass.Pack(&acc)
-	ass.Signature = ed25519.Sign(issuerPrivateKey, packed2)
+	ass.Signature = ed25519.Sign(fixtures.IssuerPrivateKey, packed2)
 	packed2, _ = ass.Pack(&acc)
 
 	poolT.EXPECT().GetNB(txID[:]).Return(uint64(1), packed1).Times(1)
 	poolO.EXPECT().Has(gomock.Any()).Return(true).Times(1)
 	poolA.EXPECT().GetNB(gomock.Any()).Return(uint64(1), packed2).Times(1)
 
-	var reply rpc.ProvenanceReply
+	var reply bitmark.ProvenanceReply
 	err := b.Provenance(&arg, &reply)
 	assert.Nil(t, err, "wrong Provenance")
 	assert.Equal(t, 2, len(reply.Data), "wrong reply count")
@@ -180,8 +184,8 @@ func TestBitmarkProvenanceWhenBitmarkIssuance(t *testing.T) {
 }
 
 func TestBitmarkProvenanceWhenOldBaseData(t *testing.T) {
-	setupTestLogger()
-	defer teardownTestLogger()
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
 
 	mode.Initialise(chain.Testing)
 	defer mode.Finalise()
@@ -194,20 +198,21 @@ func TestBitmarkProvenanceWhenOldBaseData(t *testing.T) {
 	poolA := mocks.NewMockHandle(ctl)
 	poolO := mocks.NewMockHandle(ctl)
 
-	b := rpc.Bitmark{
-		Log:              logger.New(logCategory),
-		Limiter:          rate.NewLimiter(100, 100),
-		IsNormalMode:     func(_ mode.Mode) bool { return true },
-		IsTestingChain:   func() bool { return true },
-		Rsvr:             r,
-		PoolTransactions: poolT,
-		PoolAssets:       poolA,
-		PoolOwnerTxIndex: poolO,
-	}
+	b := bitmark.New(
+		logger.New(fixtures.LogCategory),
+		reservoir.Handles{
+			Assets:       poolA,
+			Transactions: poolT,
+			OwnerTx:      poolO,
+		},
+		func(_ mode.Mode) bool { return true },
+		func() bool { return true },
+		r,
+	)
 
 	txID := merkle.Digest{1, 2, 3, 4}
 
-	arg := rpc.ProvenanceArguments{
+	arg := bitmark.ProvenanceArguments{
 		TxId:  txID,
 		Count: 2,
 	}
@@ -215,25 +220,25 @@ func TestBitmarkProvenanceWhenOldBaseData(t *testing.T) {
 	acc := account.Account{
 		AccountInterface: &account.ED25519Account{
 			Test:      true,
-			PublicKey: issuerPublicKey,
+			PublicKey: fixtures.IssuerPublicKey,
 		},
 	}
 
 	tr1 := transactionrecord.OldBaseData{
 		Currency:       currency.Litecoin,
-		PaymentAddress: litecoinAddress,
+		PaymentAddress: fixtures.LitecoinAddress,
 		Owner:          &acc,
 		Nonce:          1,
 		Signature:      nil,
 	}
 	packed1, _ := tr1.Pack(&acc)
-	tr1.Signature = ed25519.Sign(issuerPrivateKey, packed1)
+	tr1.Signature = ed25519.Sign(fixtures.IssuerPrivateKey, packed1)
 	packed1, _ = tr1.Pack(&acc)
 
 	poolT.EXPECT().GetNB(txID[:]).Return(uint64(1), packed1).Times(1)
 	poolO.EXPECT().Has(gomock.Any()).Return(true).Times(1)
 
-	var reply rpc.ProvenanceReply
+	var reply bitmark.ProvenanceReply
 	err := b.Provenance(&arg, &reply)
 	assert.Nil(t, err, "wrong Provenance")
 	assert.Equal(t, 1, len(reply.Data), "wrong reply count")
@@ -244,8 +249,8 @@ func TestBitmarkProvenanceWhenOldBaseData(t *testing.T) {
 }
 
 func TestBitmarkProvenanceWhenBlockFoundation(t *testing.T) {
-	setupTestLogger()
-	defer teardownTestLogger()
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
 
 	mode.Initialise(chain.Testing)
 	defer mode.Finalise()
@@ -258,20 +263,21 @@ func TestBitmarkProvenanceWhenBlockFoundation(t *testing.T) {
 	poolA := mocks.NewMockHandle(ctl)
 	poolO := mocks.NewMockHandle(ctl)
 
-	b := rpc.Bitmark{
-		Log:              logger.New(logCategory),
-		Limiter:          rate.NewLimiter(100, 100),
-		IsNormalMode:     func(_ mode.Mode) bool { return true },
-		IsTestingChain:   func() bool { return true },
-		Rsvr:             r,
-		PoolTransactions: poolT,
-		PoolAssets:       poolA,
-		PoolOwnerTxIndex: poolO,
-	}
+	b := bitmark.New(
+		logger.New(fixtures.LogCategory),
+		reservoir.Handles{
+			Assets:       poolA,
+			Transactions: poolT,
+			OwnerTx:      poolO,
+		},
+		func(_ mode.Mode) bool { return true },
+		func() bool { return true },
+		r,
+	)
 
 	txID := merkle.Digest{1, 2, 3, 4}
 
-	arg := rpc.ProvenanceArguments{
+	arg := bitmark.ProvenanceArguments{
 		TxId:  txID,
 		Count: 2,
 	}
@@ -279,28 +285,28 @@ func TestBitmarkProvenanceWhenBlockFoundation(t *testing.T) {
 	acc := account.Account{
 		AccountInterface: &account.ED25519Account{
 			Test:      true,
-			PublicKey: issuerPublicKey,
+			PublicKey: fixtures.IssuerPublicKey,
 		},
 	}
 
 	tr1 := transactionrecord.BlockFoundation{
 		Version: uint64(1),
 		Payments: map[currency.Currency]string{
-			currency.Bitcoin:  bitcoinAddress,
-			currency.Litecoin: litecoinAddress,
+			currency.Bitcoin:  fixtures.BitcoinAddress,
+			currency.Litecoin: fixtures.LitecoinAddress,
 		},
 		Owner:     &acc,
 		Nonce:     1,
 		Signature: nil,
 	}
 	packed1, _ := tr1.Pack(&acc)
-	tr1.Signature = ed25519.Sign(issuerPrivateKey, packed1)
+	tr1.Signature = ed25519.Sign(fixtures.IssuerPrivateKey, packed1)
 	packed1, _ = tr1.Pack(&acc)
 
 	poolT.EXPECT().GetNB(txID[:]).Return(uint64(1), packed1).Times(1)
 	poolO.EXPECT().Has(gomock.Any()).Return(false).Times(1)
 
-	var reply rpc.ProvenanceReply
+	var reply bitmark.ProvenanceReply
 	err := b.Provenance(&arg, &reply)
 	assert.Nil(t, err, "wrong Provenance")
 	assert.Equal(t, 1, len(reply.Data), "wrong reply count")
@@ -311,8 +317,8 @@ func TestBitmarkProvenanceWhenBlockFoundation(t *testing.T) {
 }
 
 func TestBitmarkProvenanceWhenTransferUnratified(t *testing.T) {
-	setupTestLogger()
-	defer teardownTestLogger()
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
 
 	mode.Initialise(chain.Testing)
 	defer mode.Finalise()
@@ -325,20 +331,21 @@ func TestBitmarkProvenanceWhenTransferUnratified(t *testing.T) {
 	poolA := mocks.NewMockHandle(ctl)
 	poolO := mocks.NewMockHandle(ctl)
 
-	b := rpc.Bitmark{
-		Log:              logger.New(logCategory),
-		Limiter:          rate.NewLimiter(100, 100),
-		IsNormalMode:     func(_ mode.Mode) bool { return true },
-		IsTestingChain:   func() bool { return true },
-		Rsvr:             r,
-		PoolTransactions: poolT,
-		PoolAssets:       poolA,
-		PoolOwnerTxIndex: poolO,
-	}
+	b := bitmark.New(
+		logger.New(fixtures.LogCategory),
+		reservoir.Handles{
+			Assets:       poolA,
+			Transactions: poolT,
+			OwnerTx:      poolO,
+		},
+		func(_ mode.Mode) bool { return true },
+		func() bool { return true },
+		r,
+	)
 
 	txID := merkle.Digest{1, 2, 3, 4}
 
-	arg := rpc.ProvenanceArguments{
+	arg := bitmark.ProvenanceArguments{
 		TxId:  txID,
 		Count: 2,
 	}
@@ -346,7 +353,7 @@ func TestBitmarkProvenanceWhenTransferUnratified(t *testing.T) {
 	acc := account.Account{
 		AccountInterface: &account.ED25519Account{
 			Test:      true,
-			PublicKey: issuerPublicKey,
+			PublicKey: fixtures.IssuerPublicKey,
 		},
 	}
 
@@ -357,14 +364,14 @@ func TestBitmarkProvenanceWhenTransferUnratified(t *testing.T) {
 		Signature: nil,
 	}
 	packed1, _ := tr1.Pack(&acc)
-	tr1.Signature = ed25519.Sign(issuerPrivateKey, packed1)
+	tr1.Signature = ed25519.Sign(fixtures.IssuerPrivateKey, packed1)
 	packed1, _ = tr1.Pack(&acc)
 
 	poolT.EXPECT().GetNB(txID[:]).Return(uint64(1), packed1).Times(1)
 	poolT.EXPECT().GetNB(merkle.Digest{}.Bytes()).Return(uint64(0), nil).Times(1)
 	poolO.EXPECT().Has(gomock.Any()).Return(true).Times(1)
 
-	var reply rpc.ProvenanceReply
+	var reply bitmark.ProvenanceReply
 	err := b.Provenance(&arg, &reply)
 	assert.Nil(t, err, "wrong Provenance")
 	assert.Equal(t, 1, len(reply.Data), "wrong reply count")
@@ -375,8 +382,8 @@ func TestBitmarkProvenanceWhenTransferUnratified(t *testing.T) {
 }
 
 func TestBitmarkProvenanceWhenBitmarkShare(t *testing.T) {
-	setupTestLogger()
-	defer teardownTestLogger()
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
 
 	mode.Initialise(chain.Testing)
 	defer mode.Finalise()
@@ -389,20 +396,21 @@ func TestBitmarkProvenanceWhenBitmarkShare(t *testing.T) {
 	poolA := mocks.NewMockHandle(ctl)
 	poolO := mocks.NewMockHandle(ctl)
 
-	b := rpc.Bitmark{
-		Log:              logger.New(logCategory),
-		Limiter:          rate.NewLimiter(100, 100),
-		IsNormalMode:     func(_ mode.Mode) bool { return true },
-		IsTestingChain:   func() bool { return true },
-		Rsvr:             r,
-		PoolTransactions: poolT,
-		PoolAssets:       poolA,
-		PoolOwnerTxIndex: poolO,
-	}
+	b := bitmark.New(
+		logger.New(fixtures.LogCategory),
+		reservoir.Handles{
+			Assets:       poolA,
+			Transactions: poolT,
+			OwnerTx:      poolO,
+		},
+		func(_ mode.Mode) bool { return true },
+		func() bool { return true },
+		r,
+	)
 
 	txID := merkle.Digest{1, 2, 3, 4}
 
-	arg := rpc.ProvenanceArguments{
+	arg := bitmark.ProvenanceArguments{
 		TxId:  txID,
 		Count: 2,
 	}
@@ -410,7 +418,7 @@ func TestBitmarkProvenanceWhenBitmarkShare(t *testing.T) {
 	acc := account.Account{
 		AccountInterface: &account.ED25519Account{
 			Test:      true,
-			PublicKey: issuerPublicKey,
+			PublicKey: fixtures.IssuerPublicKey,
 		},
 	}
 
@@ -420,13 +428,13 @@ func TestBitmarkProvenanceWhenBitmarkShare(t *testing.T) {
 		Signature: nil,
 	}
 	packed1, _ := tr1.Pack(&acc)
-	tr1.Signature = ed25519.Sign(issuerPrivateKey, packed1)
+	tr1.Signature = ed25519.Sign(fixtures.IssuerPrivateKey, packed1)
 	packed1, _ = tr1.Pack(&acc)
 
 	poolT.EXPECT().GetNB(txID[:]).Return(uint64(1), packed1).Times(1)
 	poolT.EXPECT().GetNB(txID[:]).Return(uint64(0), nil).Times(1)
 
-	var reply rpc.ProvenanceReply
+	var reply bitmark.ProvenanceReply
 	err := b.Provenance(&arg, &reply)
 	assert.Nil(t, err, "wrong Provenance")
 	assert.Equal(t, 1, len(reply.Data), "wrong reply count")

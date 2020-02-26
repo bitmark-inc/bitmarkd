@@ -8,6 +8,8 @@ package rpccalls
 import (
 	"encoding/hex"
 
+	"github.com/bitmark-inc/bitmarkd/rpc/share"
+
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/bitmark-inc/bitmarkd/account"
@@ -15,7 +17,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/pay"
-	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 
@@ -96,7 +97,7 @@ func (client *Client) CountersignSwap(swap *transactionrecord.ShareSwap) (*SwapR
 
 	client.printJson("Swap Request", swap)
 
-	var reply rpc.ShareSwapReply
+	var reply share.ShareSwapReply
 	err := client.client.Call("Share.Swap", swap, &reply)
 	if nil != err {
 		return nil, err
@@ -126,7 +127,7 @@ func (client *Client) CountersignSwap(swap *transactionrecord.ShareSwap) (*SwapR
 	return &response, nil
 }
 
-func makeSwapOneSignature(testnet bool, shareIdOne merkle.Digest, quantityOne uint64, ownerOne *configuration.Private, shareIdTwo merkle.Digest, quantityTwo uint64, ownerTwo *account.Account, beforeBlock uint64) ([]byte, *transactionrecord.ShareSwap, error) {
+func makeSwapOneSignature(_ bool, shareIdOne merkle.Digest, quantityOne uint64, ownerOne *configuration.Private, shareIdTwo merkle.Digest, quantityTwo uint64, ownerTwo *account.Account, beforeBlock uint64) ([]byte, *transactionrecord.ShareSwap, error) {
 
 	ownerOneAccount := ownerOne.PrivateKey.Account()
 

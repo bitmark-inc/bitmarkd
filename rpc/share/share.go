@@ -3,9 +3,11 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package rpc
+package share
 
 import (
+	"github.com/bitmark-inc/bitmarkd/rpc/owner"
+	"github.com/bitmark-inc/bitmarkd/rpc/ratelimit"
 	"golang.org/x/time/rate"
 
 	"github.com/bitmark-inc/bitmarkd/account"
@@ -22,12 +24,26 @@ import (
 // Share
 // --------
 
+const (
+	rateLimitShare = 200
+	rateBurstShare = 100
+)
+
 // Share - type for RPC
 type Share struct {
 	Log          *logger.L
 	Limiter      *rate.Limiter
 	IsNormalMode func(mode.Mode) bool
 	Rsvr         reservoir.Reservoir
+}
+
+func New(log *logger.L, isNormalMode func(mode.Mode) bool, rsvr reservoir.Reservoir) Share {
+	return Share{
+		Log:          log,
+		Limiter:      rate.NewLimiter(rateLimitShare, rateBurstShare),
+		IsNormalMode: isNormalMode,
+		Rsvr:         rsvr,
+	}
 }
 
 // Create a share with initial balance
@@ -44,7 +60,7 @@ type ShareCreateReply struct {
 // Create - create fractional bitmark
 func (share *Share) Create(bmfr *transactionrecord.BitmarkShare, reply *ShareCreateReply) error {
 
-	if err := rateLimit(share.Limiter); nil != err {
+	if err := ratelimit.Limit(share.Limiter); nil != err {
 		return err
 	}
 
@@ -106,7 +122,7 @@ type ShareBalanceReply struct {
 // Balance - list balances for an account
 func (share *Share) Balance(arguments *ShareBalanceArguments, reply *ShareBalanceReply) error {
 
-	if err := rateLimit(share.Limiter); nil != err {
+	if err := ratelimit.Limit(share.Limiter); nil != err {
 		return err
 	}
 
@@ -122,8 +138,8 @@ func (share *Share) Balance(arguments *ShareBalanceArguments, reply *ShareBalanc
 	if count <= 0 {
 		return fault.InvalidCount
 	}
-	if count > maximumBitmarksCount {
-		count = maximumBitmarksCount
+	if count > owner.MaximumBitmarksCount {
+		count = owner.MaximumBitmarksCount
 	}
 
 	if !share.IsNormalMode(mode.Normal) {
@@ -158,7 +174,7 @@ type ShareGrantReply struct {
 // Grant - grant a number of shares to another account
 func (share *Share) Grant(arguments *transactionrecord.ShareGrant, reply *ShareGrantReply) error {
 
-	if err := rateLimit(share.Limiter); nil != err {
+	if err := ratelimit.Limit(share.Limiter); nil != err {
 		return err
 	}
 
@@ -231,7 +247,7 @@ type ShareSwapReply struct {
 // Swap - atomically swap shares between accounts
 func (share *Share) Swap(arguments *transactionrecord.ShareSwap, reply *ShareSwapReply) error {
 
-	if err := rateLimit(share.Limiter); nil != err {
+	if err := ratelimit.Limit(share.Limiter); nil != err {
 		return err
 	}
 

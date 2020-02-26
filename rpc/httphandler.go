@@ -16,6 +16,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/rpc/node"
+
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
@@ -70,7 +72,7 @@ type httpHandler struct {
 var connectionCountHTTPS counter.Counter
 
 // this matches anything not matched and returns error
-func (s *httpHandler) root(w http.ResponseWriter, r *http.Request) {
+func (s *httpHandler) root(w http.ResponseWriter, _ *http.Request) {
 	sendNotFound(w)
 }
 
@@ -163,17 +165,17 @@ func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type theReply struct {
-		Chain               string     `json:"chain"`
-		Mode                string     `json:"mode"`
-		Block               blockInfo  `json:"block"`
-		RPCs                uint64     `json:"rpcs"`
-		Peers               uint64     `json:"peers"`
-		TransactionCounters Counters   `json:"transactionCounters"`
-		Difficulty          float64    `json:"difficulty"`
-		Hashrate            float64    `json:"hashrate,omitempty"`
-		Version             string     `json:"Version"`
-		Uptime              string     `json:"uptime"`
-		PeerID              peerlib.ID `json:"peerid"`
+		Chain               string        `json:"chain"`
+		Mode                string        `json:"mode"`
+		Block               blockInfo     `json:"block"`
+		RPCs                uint64        `json:"rpcs"`
+		Peers               uint64        `json:"peers"`
+		TransactionCounters node.Counters `json:"transactionCounters"`
+		Difficulty          float64       `json:"difficulty"`
+		Hashrate            float64       `json:"hashrate,omitempty"`
+		Version             string        `json:"Version"`
+		Uptime              string        `json:"uptime"`
+		PeerID              peerlib.ID    `json:"peerid"`
 	}
 
 	reply := theReply{

@@ -3,11 +3,15 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package rpc_test
+package blockowner_test
 
 import (
 	"encoding/binary"
 	"testing"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/blockowner"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
 
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/currency"
@@ -26,14 +30,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/logger"
-	"golang.org/x/time/rate"
 )
 
 func TestBlockOwnerTxIdForBlock(t *testing.T) {
-	setupTestLogger()
-	defer teardownTestLogger()
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
 
 	ctl := gomock.NewController(t)
 	defer ctl.Finish()
@@ -41,18 +43,22 @@ func TestBlockOwnerTxIdForBlock(t *testing.T) {
 	p := mocks.NewMockHandle(ctl)
 	br := mocks.NewMockRecord(ctl)
 
-	b := rpc.BlockOwner{
-		Log:     logger.New(logCategory),
-		Limiter: rate.NewLimiter(100, 100),
-		Pool:    p,
-		Br:      br,
-	}
+	b := blockowner.New(
+		logger.New(fixtures.LogCategory),
+		reservoir.Handles{
+			Blocks: p,
+		},
+		mode.Is,
+		mode.IsTesting,
+		nil,
+		br,
+	)
 
 	blockNumber := uint64(100)
 	key := make([]byte, 8)
 	binary.BigEndian.PutUint64(key, blockNumber)
 
-	arg := rpc.TxIdForBlockArguments{
+	arg := blockowner.TxIdForBlockArguments{
 		BlockNumber: blockNumber,
 	}
 
@@ -72,15 +78,15 @@ func TestBlockOwnerTxIdForBlock(t *testing.T) {
 	p.EXPECT().Get(key).Return([]byte{}).Times(1)
 	br.EXPECT().ExtractHeader([]byte{}, uint64(0), false).Return(&h, d, []byte{}, nil).Times(1)
 
-	var reply rpc.TxIdForBlockReply
+	var reply blockowner.TxIdForBlockReply
 	err := b.TxIdForBlock(&arg, &reply)
 	assert.Nil(t, err, "wrong TxIdForBlock")
 	assert.Equal(t, blockrecord.FoundationTxId(3, blockdigest.Digest{}), reply.TxId, "wrong tx ID")
 }
 
 func TestBlockOwnerTransfer(t *testing.T) {
-	setupTestLogger()
-	defer teardownTestLogger()
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
 
 	ctl := gomock.NewController(t)
 	defer ctl.Finish()
@@ -92,20 +98,21 @@ func TestBlockOwnerTransfer(t *testing.T) {
 	br := mocks.NewMockRecord(ctl)
 	r := mocks.NewMockReservoir(ctl)
 
-	b := rpc.BlockOwner{
-		Log:            logger.New(logCategory),
-		Limiter:        rate.NewLimiter(100, 100),
-		Pool:           p,
-		Br:             br,
-		IsNormalMode:   func(_ mode.Mode) bool { return true },
-		IsTestingChain: func() bool { return true },
-		Rsvr:           r,
-	}
+	b := blockowner.New(
+		logger.New(fixtures.LogCategory),
+		reservoir.Handles{
+			Blocks: p,
+		},
+		func(_ mode.Mode) bool { return true },
+		func() bool { return true },
+		r,
+		br,
+	)
 
 	acc := account.Account{
 		AccountInterface: &account.ED25519Account{
 			Test:      true,
-			PublicKey: issuerPublicKey,
+			PublicKey: fixtures.IssuerPublicKey,
 		},
 	}
 
@@ -128,7 +135,7 @@ func TestBlockOwnerTransfer(t *testing.T) {
 			{
 				&transactionrecord.Payment{
 					Currency: currency.Litecoin,
-					Address:  litecoinAddress,
+					Address:  fixtures.LitecoinAddress,
 					Amount:   100,
 				},
 			},
@@ -137,7 +144,7 @@ func TestBlockOwnerTransfer(t *testing.T) {
 
 	r.EXPECT().StoreTransfer(&arg).Return(&info, false, nil).Times(1)
 
-	var reply rpc.BlockOwnerTransferReply
+	var reply blockowner.BlockOwnerTransferReply
 	err := b.Transfer(&arg, &reply)
 	assert.Nil(t, err, "wrong Transfer")
 	assert.Equal(t, info.TxId, reply.TxId, "wrong tx ID")

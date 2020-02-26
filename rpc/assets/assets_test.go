@@ -3,48 +3,58 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package rpc_test
+package assets_test
 
 import (
 	"crypto/ed25519"
+	"testing"
+
+	"github.com/bitmark-inc/bitmarkd/chain"
+
+	"github.com/bitmark-inc/bitmarkd/reservoir"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/assets"
+
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
-	"github.com/bitmark-inc/bitmarkd/rpc"
+	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
 	"github.com/bitmark-inc/bitmarkd/rpc/mocks"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/time/rate"
-	"testing"
 )
 
 func TestAssetsGet(t *testing.T) {
-	setupTestLogger()
-	defer teardownTestLogger()
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
+
+	mode.Initialise(chain.Testing)
+	defer mode.Finalise()
 
 	ctl := gomock.NewController(t)
 	defer ctl.Finish()
 
 	p := mocks.NewMockHandle(ctl)
 
-	a := rpc.Assets{
-		Log:            logger.New(logCategory),
-		Limiter:        rate.NewLimiter(200, 100),
-		Pool:           p,
-		IsNormalMode:   func(_ mode.Mode) bool { return true },
-		IsTestingChain: func() bool { return true },
-	}
+	a := assets.New(
+		logger.New(fixtures.LogCategory),
+		reservoir.Handles{
+			Assets: p,
+		},
+		func(_ mode.Mode) bool { return true },
+		mode.IsTesting,
+	)
 
-	arg := rpc.AssetGetArguments{Fingerprints: []string{"fin1", "fin2"}}
-	var reply rpc.AssetGetReply
+	arg := assets.AssetGetArguments{Fingerprints: []string{"fin1", "fin2"}}
+	var reply assets.AssetGetReply
 	bin1 := transactionrecord.NewAssetIdentifier([]byte("fin1"))
 	bin2 := transactionrecord.NewAssetIdentifier([]byte("fin2"))
 	acc := &account.Account{
 		AccountInterface: &account.ED25519Account{
 			Test:      true,
-			PublicKey: issuerPublicKey,
+			PublicKey: fixtures.IssuerPublicKey,
 		},
 	}
 	ad := transactionrecord.AssetData{
@@ -54,7 +64,7 @@ func TestAssetsGet(t *testing.T) {
 		Registrant:  acc,
 	}
 	packed, _ := ad.Pack(acc)
-	signature := ed25519.Sign(issuerPrivateKey, packed)
+	signature := ed25519.Sign(fixtures.IssuerPrivateKey, packed)
 	ad.Signature = signature
 	packed, _ = ad.Pack(acc)
 
@@ -75,53 +85,58 @@ func TestAssetsGet(t *testing.T) {
 }
 
 func TestAssetsGetWhenNotInNormal(t *testing.T) {
-	setupTestLogger()
-	defer teardownTestLogger()
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
+
+	mode.Initialise(chain.Testing)
+	defer mode.Finalise()
 
 	ctl := gomock.NewController(t)
 	defer ctl.Finish()
 
 	p := mocks.NewMockHandle(ctl)
 
-	a := rpc.Assets{
-		Log:            logger.New(logCategory),
-		Limiter:        rate.NewLimiter(200, 100),
-		Pool:           p,
-		IsNormalMode:   func(_ mode.Mode) bool { return false },
-		IsTestingChain: func() bool { return true },
-	}
+	a := assets.New(
+		logger.New(fixtures.LogCategory),
+		reservoir.Handles{
+			Assets: p,
+		},
+		func(_ mode.Mode) bool { return false },
+		mode.IsTesting,
+	)
 
-	var reply rpc.AssetGetReply
-	arg := rpc.AssetGetArguments{Fingerprints: []string{"fin1", "fin2"}}
+	var reply assets.AssetGetReply
+	arg := assets.AssetGetArguments{Fingerprints: []string{"fin1", "fin2"}}
 
 	err := a.Get(&arg, &reply)
 	assert.Equal(t, fault.NotAvailableDuringSynchronise, err, "wrong error")
 }
 
 func TestAssetsGetWhenNilAsset(t *testing.T) {
-	setupTestLogger()
-	defer teardownTestLogger()
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
 
 	ctl := gomock.NewController(t)
 	defer ctl.Finish()
 
 	p := mocks.NewMockHandle(ctl)
 
-	a := rpc.Assets{
-		Log:            logger.New(logCategory),
-		Limiter:        rate.NewLimiter(200, 100),
-		Pool:           p,
-		IsNormalMode:   func(_ mode.Mode) bool { return true },
-		IsTestingChain: func() bool { return true },
-	}
+	a := assets.New(
+		logger.New(fixtures.LogCategory),
+		reservoir.Handles{
+			Assets: p,
+		},
+		func(_ mode.Mode) bool { return true },
+		mode.IsTesting,
+	)
 
-	arg := rpc.AssetGetArguments{Fingerprints: []string{"fin1"}}
-	var reply rpc.AssetGetReply
+	arg := assets.AssetGetArguments{Fingerprints: []string{"fin1"}}
+	var reply assets.AssetGetReply
 	bin1 := transactionrecord.NewAssetIdentifier([]byte("fin1"))
 	acc := &account.Account{
 		AccountInterface: &account.ED25519Account{
 			Test:      true,
-			PublicKey: issuerPublicKey,
+			PublicKey: fixtures.IssuerPublicKey,
 		},
 	}
 	ad := transactionrecord.AssetData{
@@ -131,7 +146,7 @@ func TestAssetsGetWhenNilAsset(t *testing.T) {
 		Registrant:  acc,
 	}
 	packed, _ := ad.Pack(acc)
-	signature := ed25519.Sign(issuerPrivateKey, packed)
+	signature := ed25519.Sign(fixtures.IssuerPrivateKey, packed)
 	ad.Signature = signature
 	packed, _ = ad.Pack(acc)
 
@@ -144,31 +159,32 @@ func TestAssetsGetWhenNilAsset(t *testing.T) {
 	assert.False(t, reply.Assets[0].Confirmed, "wrong confirmed")
 }
 
-func TestAssetsGetWhwnUnpackError(t *testing.T) {
-	setupTestLogger()
-	defer teardownTestLogger()
+func TestAssetsGetWhenUnpackError(t *testing.T) {
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
 
 	ctl := gomock.NewController(t)
 	defer ctl.Finish()
 
 	p := mocks.NewMockHandle(ctl)
 
-	a := rpc.Assets{
-		Log:            logger.New(logCategory),
-		Limiter:        rate.NewLimiter(200, 100),
-		Pool:           p,
-		IsNormalMode:   func(_ mode.Mode) bool { return true },
-		IsTestingChain: func() bool { return true },
-	}
+	a := assets.New(
+		logger.New(fixtures.LogCategory),
+		reservoir.Handles{
+			Assets: p,
+		},
+		func(_ mode.Mode) bool { return true },
+		mode.IsTesting,
+	)
 
-	arg := rpc.AssetGetArguments{Fingerprints: []string{"fin1", "fin2"}}
-	var reply rpc.AssetGetReply
+	arg := assets.AssetGetArguments{Fingerprints: []string{"fin1", "fin2"}}
+	var reply assets.AssetGetReply
 	bin1 := transactionrecord.NewAssetIdentifier([]byte("fin1"))
 	bin2 := transactionrecord.NewAssetIdentifier([]byte("fin2"))
 	acc := &account.Account{
 		AccountInterface: &account.ED25519Account{
 			Test:      true,
-			PublicKey: issuerPublicKey,
+			PublicKey: fixtures.IssuerPublicKey,
 		},
 	}
 	ad := transactionrecord.AssetData{
@@ -178,7 +194,7 @@ func TestAssetsGetWhwnUnpackError(t *testing.T) {
 		Registrant:  acc,
 	}
 	packed, _ := ad.Pack(acc)
-	signature := ed25519.Sign(issuerPrivateKey, packed)
+	signature := ed25519.Sign(fixtures.IssuerPrivateKey, packed)
 	ad.Signature = signature
 	packed, _ = ad.Pack(acc)
 
