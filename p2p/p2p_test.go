@@ -74,6 +74,7 @@ func TestIsTheSameNode(t *testing.T) {
 	n1.Log = logger.New("p2p")
 	n1.Setup(config, "p2p-v1", false)
 	n1Info, err := peerlib.AddrInfoFromP2pAddr(n1.Announce[0])
+	assert.NoError(t, err, fmt.Sprintf("convert AddrInfo fail address:%v", n1.Announce[0]))
 	same := n1.isSameNode(*n1Info)
 	assert.Equal(t, true, same, "should be the same node but not")
 }

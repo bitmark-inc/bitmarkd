@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
+	crypto "github.com/libp2p/go-libp2p-core/crypto"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
-	crypto "github.com/libp2p/go-libp2p-crypto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -101,6 +101,9 @@ func newMockRegistrationData() (*BasicPeerRegistration, []peerlib.ID, error) {
 			return nil, nil, err
 		}
 		libp2pID, err := peerlib.IDFromPrivateKey(privKey)
+		if err != nil {
+			return nil, nil, err
+		}
 		registration.(*BasicPeerRegistration).peers[libp2pID] = &RegistrationStatus{Registered: false}
 		ids = append(ids, libp2pID)
 	}

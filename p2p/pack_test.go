@@ -42,13 +42,13 @@ func TestPackUnPackP2PMessage(t *testing.T) {
 	// Test set 2
 	packed, err = PackP2PMessage(d2.chain, d2.fn, d2.params)
 	assert.NoError(t, err, "PackP2PMessage error")
-	unpackChain, unpackFn, unpackParam, err = UnPackP2PMessage(packed)
+	_, _, unpackParam, err = UnPackP2PMessage(packed)
 	assert.NoError(t, err, "UnPackP2PMessage error")
 	assert.Equal(t, [][]byte{}, unpackParam, "UnPackP2PMessage params error")
 	// Test set 3
 	packed, err = PackP2PMessage(d3.chain, d3.fn, d3.params)
 	assert.NoError(t, err, "PackP2PMessage error")
-	unpackChain, unpackFn, unpackParam, err = UnPackP2PMessage(packed)
+	_, _, unpackParam, err = UnPackP2PMessage(packed)
 	assert.NoError(t, err, "UnPackP2PMessage error")
 	assert.Equal(t, [][]byte{}, unpackParam, "UnPackP2PMessage params error")
 }

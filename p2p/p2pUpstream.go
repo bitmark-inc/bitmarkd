@@ -10,7 +10,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/network"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
-	protocol "github.com/libp2p/go-libp2p-protocol"
+	protocol "github.com/libp2p/go-libp2p-core/protocol"
 
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
