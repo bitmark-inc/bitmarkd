@@ -45,7 +45,7 @@ func NewRegistration(expireTime time.Duration) PeerRegisteration {
 func (r *BasicPeerRegistration) RegisteredPeers() []peerlib.ID {
 	peers := []peerlib.ID{}
 	for id, status := range r.peers {
-		if true == status.Registered {
+		if status.Registered {
 			peers = append(peers, id)
 		}
 	}
