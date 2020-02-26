@@ -59,7 +59,7 @@ STOP_ALL_BITMARKD() {
     pids=$(pgrep bitmarkd)
     [ -z "${pids}" ] && break
     printf '.'
-    sleep 2
+    sleep 1
   done
   printf 'done\n'
 }
@@ -151,14 +151,13 @@ coin:run-bitcoin,--server:run-litecoin,--server
     fi
     n=$((n + 1))
   done
+
   case "$(uname)" in
     (FreeBSD|DragonFly)
       top="top:top,-U,${USER},-o,res,-n,20,-i"
-        printf "BSD$top"
       ;;
     (Linux)
       top="top:top,-U,${USER},-o,RES,-n,20,-i"
-        printf "$top"
       ;;
     (*)
       top="top::"
@@ -167,7 +166,7 @@ coin:run-bitcoin,--server:run-litecoin,--server
 
   # some status tabs and an extra shell
   command_list="${command_list} info:node-info,-r ${top} cmd:: shell::"
-  
+
   target=''
   for command in ${command_list}
   do

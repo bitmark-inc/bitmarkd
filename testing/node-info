@@ -130,18 +130,18 @@ ONCE() {
 
     if [ -z "${r}" ] || [ "${rc}" -ne 0 ]
     then
-      printf 'timeout: rc: %s  r: "%s"\n' "${rc}" "${r}"
+      #printf 'timeout: rc: %s  r: "%s"\n' "${rc}" "${r}"
       eval info_${n}='{}'
       continue
     fi
 
     r=$(printf '%s' "${r}" | jq --slurp '{node:.[0],conn:.[1].connectedTo}' 2> /dev/null)
-   
+
     eval info_${n}="'${r}'"
     keys="${keys}\"$(printf '%s' "${r}" | jq --raw-output .node.peerid 2> /dev/null)\":${n},"
 
   done
-  keys="${keys}\"\":9999}" 
+  keys="${keys}\"\":9999}"
   printf '\n'
 
   # shellcheck disable=SC2016

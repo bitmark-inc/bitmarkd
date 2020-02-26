@@ -53,7 +53,7 @@ from=
 generate=no
 config="${xdg_home}/bitmarkd/bitmarkd.conf"
 generate_items='gen-peer-identity gen-rpc-cert gen-proof-identity'
-sleep= 2
+sleep=
 
 getopt=
 case "$(uname)" in
@@ -107,7 +107,6 @@ do
           ;;
         (*)
           config="$2"
-          echo "config-file="${config}
           ;;
       esac
       shift
