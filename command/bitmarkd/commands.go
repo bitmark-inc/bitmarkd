@@ -63,14 +63,9 @@ func processSetupCommand(program string, arguments []string) bool {
 		publishingPublicKeyPath := getFilenameWithDirectory(arguments, publishingPublicKeyFilename)
 		publishingPrivateKeyPath := getFilenameWithDirectory(arguments, publishingPrivateKeyFilename)
 
-		err := zmqutil.MakeKeyPair(publishingPublicKeyPath, publishingPrivateKeyPath)
-		if nil != err {
-			fmt.Printf("generate private key: %q and public key: %q error: %s\n", publishingPrivateKeyFilename, publishingPublicKeyFilename, err)
-			exitwithstatus.Exit(1)
-		}
-
+		// the peer secret file
 		if util.EnsureFileExists(peerPrivateKeyPath) {
-			fmt.Printf("generate private key: %q error: %s\n", peerPrivateKeyFilename, fault.CertificateFileAlreadyExists)
+			fmt.Printf("generate private key: %q error: %s\n", peerPrivateKeyFilename, fault.KeyFileAlreadyExists)
 			exitwithstatus.Exit(1)
 		}
 
@@ -80,9 +75,17 @@ func processSetupCommand(program string, arguments []string) bool {
 			exitwithstatus.Exit(1)
 		}
 
-		if err := ioutil.WriteFile(peerPrivateKeyPath, []byte(key+"\n"), 0600); err != nil {
+		err = ioutil.WriteFile(peerPrivateKeyPath, []byte(key+"\n"), 0600)
+		if nil != err {
 			os.Remove(peerPrivateKeyPath)
 			fmt.Printf("generate private key: %q error: %s\n", peerPrivateKeyFilename, err.Error())
+			exitwithstatus.Exit(1)
+		}
+
+		// the publishing key-pair files
+		err = zmqutil.MakeKeyPair(publishingPublicKeyPath, publishingPrivateKeyPath)
+		if nil != err {
+			fmt.Printf("generate private key: %q and public key: %q error: %s\n", publishingPrivateKeyFilename, publishingPublicKeyFilename, err)
 			exitwithstatus.Exit(1)
 		}
 
