@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
+	crypto "github.com/libp2p/go-libp2p-core/crypto"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
-	crypto "github.com/libp2p/go-libp2p-crypto"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/stretchr/testify/assert"
 )
