@@ -184,9 +184,10 @@ func TestValidTag(t *testing.T) {
 		}
 
 		r, err := l.Lookup(f)
-		if nil == item.err && 1 != len(r) {
+
+		if err == item.err && 1 != len(r) {
 			t.Errorf("id[%d] expected 1 record but got: %d", item.id, len(r))
-		} else if nil != item.err && 0 != len(r) {
+		} else if err != item.err && 0 != len(r) {
 			t.Errorf("id[%d] expected zero records bu got: %d", item.id, len(r))
 		}
 
