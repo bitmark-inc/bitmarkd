@@ -5,41 +5,21 @@ import (
 	"fmt"
 	"math"
 	mathrand "math/rand"
-	"os"
 	"strconv"
 	"testing"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/blockdigest"
-	"github.com/bitmark-inc/bitmarkd/merkle"
 	crypto "github.com/libp2p/go-libp2p-core/crypto"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
-
-	"github.com/bitmark-inc/logger"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/bitmark-inc/bitmarkd/blockdigest"
+	"github.com/bitmark-inc/bitmarkd/merkle"
 )
 
-func TestMain(m *testing.M) {
-	curPath := os.Getenv("PWD")
-	var logConfig = logger.Configuration{
-		Directory: curPath,
-		File:      "consensus.log",
-		Size:      1048576,
-		Count:     20,
-		Console:   true,
-		Levels: map[string]string{
-			logger.DefaultTag: "trace",
-		},
-	}
-	if err := logger.Initialise(logConfig); err != nil {
-		panic(fmt.Sprintf("logger initialization failed: %s", err))
-	}
-	globalData.machine.log = logger.New("consensus")
-	os.Exit(m.Run())
-}
 func TestCachedRemoteHeight(t *testing.T) {
-	candidates,  err := mockCadidates(30)
+	candidates, err := mockCadidates(30)
 	assert.NoError(t, err, "gen mockdata error")
 	for _, candidate := range candidates {
 		target := candidate.Metrics.remoteHeight
@@ -48,7 +28,7 @@ func TestCachedRemoteHeight(t *testing.T) {
 	}
 }
 func TestCachedRemoteDigestOfLocalHeight(t *testing.T) {
-	candidates,  err := mockCadidates(30)
+	candidates, err := mockCadidates(30)
 	assert.NoError(t, err, "gen mockdata error")
 	for _, candidate := range candidates {
 		target := candidate.Metrics.remoteDigestOfLocalHeight
@@ -58,36 +38,41 @@ func TestCachedRemoteDigestOfLocalHeight(t *testing.T) {
 }
 
 func TestRemoteAddr(t *testing.T) {
-	candidates,  err := mockCadidates(30)
+	candidates, err := mockCadidates(30)
 	assert.NoError(t, err, "gen mockdata error")
 	for _, candidate := range candidates {
 		target := candidate.Addr.String()
 		actual := candidate.RemoteAddr()
-		assert.EqualValues(t, target, actual, fmt.Sprintf("RemoteAddr target:%s, actual:%s", target, actual))	
+		assert.EqualValues(t, target, actual, fmt.Sprintf("RemoteAddr target:%s, actual:%s", target, actual))
+		candidate.Addr = nil
+		target = ""
+		actual = candidate.RemoteAddr()
+		assert.EqualValues(t, target, actual, fmt.Sprintf("RemoteAddr target: empty string, actual:%s", actual))
+
 	}
 }
 func TestName(t *testing.T) {
-	candidates,  err := mockCadidates(30)
+	candidates, err := mockCadidates(30)
 	assert.NoError(t, err, "gen mockdata error")
 	for _, candidate := range candidates {
 		target := candidate.ID.Pretty()
 		actual := candidate.Name()
-		assert.EqualValues(t, target, actual, fmt.Sprintf("RemoteAddr target:%s, actual:%s", target, actual))	
+		assert.EqualValues(t, target, actual, fmt.Sprintf("RemoteAddr target:%s, actual:%s", target, actual))
 	}
 }
 func TestActiveInThePast(t *testing.T) {
-	candidates,  err := mockCadidates(1)
+	candidates, err := mockCadidates(1)
 	assert.NoError(t, err, "gen mockdata error")
-	time.Sleep(2*time.Second)
-	active := candidates[0].ActiveInThePast(1*time.Second)
-	assert.Equal(t, false, active,"should pass active second but not")
+	time.Sleep(2 * time.Second)
+	active := candidates[0].ActiveInThePast(1 * time.Second)
+	assert.Equal(t, false, active, "should pass active second but not")
 }
 func TestSetMetrics(t *testing.T) {
-	candidates,  err := mockCadidates(30)
+	candidates, err := mockCadidates(30)
 	assert.NoError(t, err, "gen mockdata error")
 	i := 0
-	for _, c:= range candidates {
-		idx := math.Mod( float64(i), 31)
+	for _, c := range candidates {
+		idx := math.Mod(float64(i), 31)
 		newName := c.Name()
 		newRemoteHeight := c.Metrics.remoteHeight + uint64(i)
 		newLocalHeight := c.Metrics.localHeight + uint64(i)
@@ -95,13 +80,13 @@ func TestSetMetrics(t *testing.T) {
 		newDigest := blockdigest.Digest(c.Metrics.remoteDigestOfLocalHeight)
 		newTime := time.Now()
 
-		c.UpdateMetrics(newName , newRemoteHeight, newLocalHeight, newDigest, newTime)
-		assert.Equal(t, newName , c.Name(), fmt.Sprintf("Name target:%s, actual:%s", newName, c.Name()))
-		assert.Equal(t, newRemoteHeight ,c.CachedRemoteHeight(), fmt.Sprintf("CachedRemoteHeight target: %d, actual:%d", newRemoteHeight, c.CachedRemoteHeight()))
+		c.UpdateMetrics(newName, newRemoteHeight, newLocalHeight, newDigest, newTime)
+		assert.Equal(t, newName, c.Name(), fmt.Sprintf("Name target:%s, actual:%s", newName, c.Name()))
+		assert.Equal(t, newRemoteHeight, c.CachedRemoteHeight(), fmt.Sprintf("CachedRemoteHeight target: %d, actual:%d", newRemoteHeight, c.CachedRemoteHeight()))
 		assert.Equal(t, newLocalHeight, c.Metrics.localHeight, fmt.Sprintf("localHeight target:%d, actual:%d", newLocalHeight, c.Metrics.localHeight))
 		assert.Equal(t, newDigest, c.CachedRemoteDigestOfLocalHeight(), fmt.Sprintf("localHeight target:%d, actual:%d", newDigest, c.CachedRemoteDigestOfLocalHeight()))
 		assert.Equal(t, newTime, c.Metrics.lastResponseTime, fmt.Sprintf("localHeight target:%d, actual:%d", newTime.Unix(), c.Metrics.lastResponseTime.Unix()))
-		i ++
+		i++
 	}
 }
 
