@@ -120,7 +120,6 @@ func mockCadidates(n int) ([]P2PCandidatesImpl, error) {
 			Addr:    addr,
 		}
 		candidates = append(candidates, candidate)
-		return candidates, nil
 	}
 
 	return candidates, nil
