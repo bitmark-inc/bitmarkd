@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: ISC
-// Copyright (c) 2014-2020 Bitmark Inc.
+// Copyright (c) 2014-2020 Bitmark Inc.e
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -13,24 +13,19 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/crypto/sha3"
+	"github.com/bitmark-inc/bitmarkd/rpc/listeners"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/certificate"
 
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/rpc/server"
-	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 )
 
-// RPCConfiguration - configuration file data for RPC setup
-type RPCConfiguration struct {
-	MaximumConnections uint64   `gluamapper:"maximum_connections" json:"maximum_connections"`
-	Bandwidth          float64  `gluamapper:"bandwidth" json:"bandwidth"`
-	Listen             []string `gluamapper:"listen" json:"listen"`
-	Certificate        string   `gluamapper:"certificate" json:"certificate"`
-	PrivateKey         string   `gluamapper:"private_key" json:"private_key"`
-	Announce           []string `gluamapper:"announce" json:"announce"`
-}
+const (
+	tlsName = "client_rpc"
+)
 
 // HTTPSConfiguration - configuration file data for HTTPS setup
 type HTTPSConfiguration struct {
@@ -55,7 +50,7 @@ type rpcData struct {
 var globalData rpcData
 
 // Initialise - setup peer background processes
-func Initialise(rpcConfiguration *RPCConfiguration, httpsConfiguration *HTTPSConfiguration, version string) error {
+func Initialise(rpcConfiguration *listeners.RPCConfiguration, httpsConfiguration *HTTPSConfiguration, version string) error {
 
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -69,11 +64,26 @@ func Initialise(rpcConfiguration *RPCConfiguration, httpsConfiguration *HTTPSCon
 	globalData.log = log
 	log.Info("starting…")
 
+	tlsConfig, certificateFingerprint, err := certificate.Get(globalData.log, tlsName, rpcConfiguration.Certificate, rpcConfiguration.PrivateKey)
+
 	// servers
-	err := initialiseRPC(rpcConfiguration, version)
+	rpcListener, err := listeners.NewRPCListener(
+		rpcConfiguration,
+		log,
+		&connectionCountRPC,
+		server.Create(log, version, &connectionCountRPC),
+		announce.Get(),
+		tlsConfig,
+		certificateFingerprint,
+	)
 	if nil != err {
 		return err
 	}
+	err = rpcListener.Serve()
+	if nil != err {
+		return err
+	}
+
 	err = initialiseHTTPS(httpsConfiguration, version)
 	if nil != err {
 		return err
@@ -104,94 +114,6 @@ func Finalise() error {
 	return nil
 }
 
-func initialiseRPC(configuration *RPCConfiguration, version string) error {
-	name := "client_rpc"
-	log := globalData.log
-
-	if configuration.MaximumConnections < 1 {
-		log.Errorf("invalid %s maximum connection limit: %d", name, configuration.MaximumConnections)
-		return fault.MissingParameters
-	}
-	if configuration.Bandwidth <= 1000000 { // fail if < 1Mbps
-		log.Errorf("invalid %s bandwidth: %d bps < 1Mbps", name, configuration.Bandwidth)
-		return fault.MissingParameters
-	}
-
-	if 0 == len(configuration.Listen) {
-		log.Errorf("missing %s listen", name)
-		return fault.MissingParameters
-	}
-
-	// load certificate
-	tlsConfiguration, fingerprint, err := getCertificate(log, name, configuration.Certificate, configuration.PrivateKey)
-	if nil != err {
-		return err
-	}
-
-	log.Infof("%s: SHA3-256 fingerprint: %x", name, fingerprint)
-
-	// setup announce
-	rpcs := make([]byte, 0, 100) // ***** FIX THIS: need a better default size
-process_rpcs:
-	for _, address := range configuration.Announce {
-		if "" == address {
-			continue process_rpcs
-		}
-		c, err := util.NewConnection(address)
-		if nil != err {
-			log.Errorf("invalid %s listen announce: %q  error: %s", name, address, err)
-			return err
-		}
-		rpcs = append(rpcs, c.Pack()...)
-	}
-	a := announce.Get()
-	err = a.Set(fingerprint, rpcs)
-	if nil != err {
-		log.Criticalf("announce.SetRPC error: %s", err)
-		return err
-	}
-
-	// server structure for RPC function invocation
-	s := server.Create(log, version, &connectionCountRPC)
-
-	// validate all listen addresses
-	ipType := make([]string, len(configuration.Listen))
-	for i, listen := range configuration.Listen {
-		if '*' == listen[0] {
-			// change "*:PORT" to "[::]:PORT"
-			// on the assumption that this will listen on tcp4 and tcp6
-			configuration.Listen[i] = "[::]" + ":" + strings.Split(listen, ":")[1]
-			listen = "::"
-			ipType[i] = "tcp"
-		} else if '[' == listen[0] {
-			listen = strings.Split(listen[1:], "]:")[0]
-			ipType[i] = "tcp6"
-		} else {
-			listen = strings.Split(listen, ":")[0]
-			ipType[i] = "tcp4"
-		}
-
-		if ip := net.ParseIP(listen); nil == ip {
-			err := fault.InvalidIpAddress
-			log.Errorf("rpc server listen error: %s", err)
-			return err
-		}
-	}
-
-	for i, listen := range configuration.Listen {
-		log.Infof("starting RPC server: %s", listen)
-		l, err := tls.Listen(ipType[i], listen, tlsConfiguration)
-		if err != nil {
-			log.Errorf("rpc server listen error: %s", err)
-			return err
-		}
-
-		go listenAndServeRPC(l, s, configuration.MaximumConnections, log)
-	}
-
-	return nil
-}
-
 // Start server with Test instance as a service
 func initialiseHTTPS(configuration *HTTPSConfiguration, version string) error {
 
@@ -208,7 +130,7 @@ func initialiseHTTPS(configuration *HTTPSConfiguration, version string) error {
 		return fault.MissingParameters
 	}
 
-	tlsConfiguration, fingerprint, err := getCertificate(globalData.log, name, configuration.Certificate, configuration.PrivateKey)
+	tlsConfiguration, fingerprint, err := certificate.Get(globalData.log, name, configuration.Certificate, configuration.PrivateKey)
 	if nil != err {
 		return err
 	}
@@ -257,35 +179,6 @@ func initialiseHTTPS(configuration *HTTPSConfiguration, version string) error {
 	}
 
 	return nil
-}
-
-// Verify that a set of listener parameters are valid
-// and return the certificate
-func getCertificate(log *logger.L, name, certificate, key string) (*tls.Config, [32]byte, error) {
-	var fingerprint [32]byte
-
-	keyPair, err := tls.X509KeyPair([]byte(certificate), []byte(key))
-	if err != nil {
-		log.Errorf("%s failed to load keypair: %v", name, err)
-		return nil, fingerprint, err
-	}
-
-	tlsConfiguration := &tls.Config{
-		Certificates: []tls.Certificate{
-			keyPair,
-		},
-	}
-
-	fingerprint = CertificateFingerprint(keyPair.Certificate[0])
-
-	return tlsConfiguration, fingerprint, nil
-}
-
-// CertificateFingerprint - compute the fingerprint of a certificate
-//
-// FreeBSD: openssl x509 -outform DER -in bitmarkd-local-rpc.crt | sha3sum -a 256
-func CertificateFingerprint(certificate []byte) [32]byte {
-	return sha3.Sum256(certificate)
 }
 
 type tcpKeepAliveListener struct {

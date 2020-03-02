@@ -7,7 +7,9 @@ package fixtures
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path"
 
 	"github.com/bitmark-inc/logger"
 )
@@ -17,6 +19,8 @@ const (
 	LogCategory     = "testing"
 	BitcoinAddress  = "2N7uK4otZGYDUDNEQ3Yr6hPPrs49BHQA32L"
 	LitecoinAddress = "mwLH3WTj4zxMSM3Tzq3w9rfgJicawtKp1R"
+	certificateFile = "test.crt"
+	certificateKey  = "test.key"
 )
 
 var (
@@ -82,4 +86,22 @@ func TeardownTestLogger() {
 
 func removeFiles() {
 	_ = os.RemoveAll(TestingDirName)
+}
+
+func Certificate(dirPath string) string {
+	data, err := ioutil.ReadFile(path.Join(dirPath, certificateFile))
+	if nil != err {
+		fmt.Printf("read certificate file with error: %s\n", err)
+	}
+
+	return string(data)
+}
+
+func Key(dirPath string) string {
+	data, err := ioutil.ReadFile(path.Join(dirPath, certificateKey))
+	if nil != err {
+		fmt.Printf("read certificate file with error: %s\n", err)
+	}
+
+	return string(data)
 }
