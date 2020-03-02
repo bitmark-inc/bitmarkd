@@ -9,38 +9,15 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
-	"net/rpc"
 	"strings"
 	"sync"
 	"time"
-
-	blockrecord2 "github.com/bitmark-inc/bitmarkd/blockrecord"
-	"github.com/bitmark-inc/bitmarkd/ownership"
-
-	"github.com/bitmark-inc/bitmarkd/mode"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/node"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/transaction"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/share"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/blockowner"
-	"github.com/bitmark-inc/bitmarkd/rpc/owner"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/bitmarks"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/assets"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/bitmark"
-
-	"github.com/bitmark-inc/bitmarkd/storage"
 
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/reservoir"
+	"github.com/bitmark-inc/bitmarkd/rpc/server"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 )
@@ -175,7 +152,7 @@ process_rpcs:
 	}
 
 	// server structure for RPC function invocation
-	server := createRPCServer(log, version)
+	s := server.Create(log, version, &connectionCountRPC)
 
 	// validate all listen addresses
 	ipType := make([]string, len(configuration.Listen))
@@ -209,7 +186,7 @@ process_rpcs:
 			return err
 		}
 
-		go listenAndServeRPC(l, server, configuration.MaximumConnections, log)
+		go listenAndServeRPC(l, s, configuration.MaximumConnections, log)
 	}
 
 	return nil
@@ -252,10 +229,10 @@ func initialiseHTTPS(configuration *HTTPSConfiguration, version string) error {
 		}
 	}
 
-	server := createRPCServer(log, version)
+	s := server.Create(log, version, &connectionCountRPC)
 	handler := &httpHandler{
 		log:                log,
-		server:             server,
+		server:             s,
 		version:            version,
 		start:              time.Now(),
 		allow:              local,
@@ -280,43 +257,6 @@ func initialiseHTTPS(configuration *HTTPSConfiguration, version string) error {
 	}
 
 	return nil
-}
-
-func createRPCServer(log *logger.L, version string) *rpc.Server {
-
-	start := time.Now().UTC()
-	pools := reservoir.Handles{
-		Assets:            storage.Pool.Assets,
-		BlockOwnerPayment: storage.Pool.BlockOwnerPayment,
-		Blocks:            storage.Pool.Blocks,
-		Transactions:      storage.Pool.Transactions,
-		OwnerTx:           storage.Pool.OwnerTxIndex,
-		OwnerData:         storage.Pool.OwnerData,
-		Share:             storage.Pool.Shares,
-		ShareQuantity:     storage.Pool.ShareQuantity,
-	}
-
-	ass := assets.New(log, pools, mode.Is, mode.IsTesting)
-	bm := bitmark.New(log, pools, mode.Is, mode.IsTesting, reservoir.Get())
-	bms := bitmarks.New(log, pools, mode.Is, reservoir.Get())
-	own := owner.New(log, pools, ownership.Get())
-	bo := blockowner.New(log, pools, mode.Is, mode.IsTesting, reservoir.Get(), blockrecord2.Get())
-	sh := share.New(log, mode.Is, reservoir.Get())
-	tr := transaction.New(log, start, reservoir.Get())
-	no := node.New(log, pools, start, version, &connectionCountRPC, announce.Get())
-
-	server := rpc.NewServer()
-
-	server.Register(ass)
-	server.Register(bm)
-	server.Register(bms)
-	server.Register(own)
-	server.Register(no)
-	server.Register(tr)
-	server.Register(bo)
-	server.Register(sh)
-
-	return server
 }
 
 // Verify that a set of listener parameters are valid
