@@ -18,7 +18,7 @@ func TestMain(m *testing.M) {
 		File:      "consensus.log",
 		Size:      1048576,
 		Count:     20,
-		Console:   true,
+		Console:   false,
 		Levels: map[string]string{
 			logger.DefaultTag: "trace",
 		},

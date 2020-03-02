@@ -21,7 +21,7 @@ func TestMain(m *testing.M) {
 		File:      "p2p_test.log",
 		Size:      1048576,
 		Count:     20,
-		Console:   true,
+		Console:   false,
 		Levels: map[string]string{
 			logger.DefaultTag: "trace",
 		},
