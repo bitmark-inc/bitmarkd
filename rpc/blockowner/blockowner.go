@@ -53,8 +53,8 @@ type TxIdForBlockReply struct {
 	TxId merkle.Digest `json:"txId"`
 }
 
-func New(log *logger.L, pools reservoir.Handles, isNormalMode func(mode.Mode) bool, isTestingChain func() bool, rsvr reservoir.Reservoir, br blockrecord.Record) BlockOwner {
-	return BlockOwner{
+func New(log *logger.L, pools reservoir.Handles, isNormalMode func(mode.Mode) bool, isTestingChain func() bool, rsvr reservoir.Reservoir, br blockrecord.Record) *BlockOwner {
+	return &BlockOwner{
 		Log:            log,
 		Limiter:        rate.NewLimiter(rateLimitBlockOwner, rateBurstBlockOwner),
 		Pool:           pools.Blocks,
@@ -75,6 +75,10 @@ func (bitmark *BlockOwner) TxIdForBlock(info *TxIdForBlockArguments, reply *TxId
 	log := bitmark.Log
 
 	log.Infof("BlockOwner.TxIdForBlock: %+v", info)
+
+	if bitmark.Pool == nil {
+		return fault.DatabaseIsNotSet
+	}
 
 	blockNumberKey := make([]byte, 8)
 	binary.BigEndian.PutUint64(blockNumberKey, info.BlockNumber)

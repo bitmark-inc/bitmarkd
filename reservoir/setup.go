@@ -205,7 +205,10 @@ type Reservoir interface {
 }
 
 func Get() Reservoir {
-	return &globalData
+	if globalData.enabled {
+		return &globalData
+	}
+	return nil
 }
 
 // Initialise - create the cache

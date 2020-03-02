@@ -8,6 +8,8 @@ package node
 import (
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/fault"
+
 	"github.com/bitmark-inc/bitmarkd/counter"
 
 	"github.com/bitmark-inc/bitmarkd/rpc/ratelimit"
@@ -61,8 +63,8 @@ type NodeReply struct {
 	NextStart uint64      `json:"nextStart,string"`
 }
 
-func New(log *logger.L, pools reservoir.Handles, start time.Time, version string, counter *counter.Counter, ann announce.Announce) Node {
-	return Node{
+func New(log *logger.L, pools reservoir.Handles, start time.Time, version string, counter *counter.Counter, ann announce.Announce) *Node {
+	return &Node{
 		Log:      log,
 		Limiter:  rate.NewLimiter(rateLimitNode, rateBurstNode),
 		Start:    start,
@@ -136,6 +138,10 @@ func (node *Node) Info(_ *InfoArguments, reply *InfoReply) error {
 
 	if err := ratelimit.Limit(node.Limiter); nil != err {
 		return err
+	}
+
+	if node.Pool == nil {
+		return fault.DatabaseIsNotSet
 	}
 
 	connCounts := uint64(p2p.GetNetworkMetricConnCount())

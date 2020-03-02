@@ -8,6 +8,8 @@ package transaction
 import (
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/fault"
+
 	"github.com/bitmark-inc/bitmarkd/rpc/ratelimit"
 
 	"golang.org/x/time/rate"
@@ -40,8 +42,8 @@ type TransactionStatusReply struct {
 	Status string `json:"status"`
 }
 
-func New(log *logger.L, start time.Time, rsvr reservoir.Reservoir) Transaction {
-	return Transaction{
+func New(log *logger.L, start time.Time, rsvr reservoir.Reservoir) *Transaction {
+	return &Transaction{
 		Log:     log,
 		Limiter: rate.NewLimiter(rateLimitTransaction, rateBurstTransaction),
 		Start:   start,
@@ -54,6 +56,10 @@ func (t *Transaction) Status(arguments *TransactionArguments, reply *Transaction
 
 	if err := ratelimit.Limit(t.Limiter); nil != err {
 		return err
+	}
+
+	if t.Rsvr == nil {
+		return fault.MissingReservoir
 	}
 
 	reply.Status = t.Rsvr.TransactionStatus(arguments.TxId).String()

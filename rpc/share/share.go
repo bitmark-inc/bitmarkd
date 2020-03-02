@@ -37,8 +37,8 @@ type Share struct {
 	Rsvr         reservoir.Reservoir
 }
 
-func New(log *logger.L, isNormalMode func(mode.Mode) bool, rsvr reservoir.Reservoir) Share {
-	return Share{
+func New(log *logger.L, isNormalMode func(mode.Mode) bool, rsvr reservoir.Reservoir) *Share {
+	return &Share{
 		Log:          log,
 		Limiter:      rate.NewLimiter(rateLimitShare, rateBurstShare),
 		IsNormalMode: isNormalMode,

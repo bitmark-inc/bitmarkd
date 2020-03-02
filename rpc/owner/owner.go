@@ -69,8 +69,8 @@ type BlockAsset struct {
 	Number uint64 `json:"number"`
 }
 
-func New(log *logger.L, pools reservoir.Handles, os ownership.Ownership) Owner {
-	return Owner{
+func New(log *logger.L, pools reservoir.Handles, os ownership.Ownership) *Owner {
+	return &Owner{
 		Log:              log,
 		Limiter:          rate.NewLimiter(rateLimitOwner, rateBurstOwner),
 		PoolTransactions: pools.Transactions,
