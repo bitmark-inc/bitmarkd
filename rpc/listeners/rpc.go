@@ -21,10 +21,9 @@ import (
 )
 
 const (
-	logName            = "client_rpc"
-	connectionLimit    = 100
-	minConnectionCount = 1
-	minBandwidth       = 1000000 // 1Mbps
+	logName         = "client_rpc"
+	connectionLimit = 100
+	minBandwidth    = 1000000 // 1Mbps
 )
 
 type rpcListener struct {
@@ -48,16 +47,16 @@ func (r rpcListener) Serve() error {
 			return err
 		}
 
-		go doServe(r.listener, r.server, r.maxConnections, r.log, r.count)
+		go doServeRPC(r.listener, r.server, r.maxConnections, r.log, r.count)
 	}
 	return nil
 }
 
-func doServe(listen net.Listener, server *rpc.Server, maximumConnections uint64, log *logger.L, count *counter.Counter) {
+func doServeRPC(listen net.Listener, server *rpc.Server, maximumConnections uint64, log *logger.L, count *counter.Counter) {
 	for {
 		conn, err := listen.Accept()
 		if err != nil {
-			log.Errorf("rpc.Server terminated: accept error:", err)
+			log.Errorf("rpc.server terminated: accept error:", err)
 			break
 		}
 		if count.Increment() <= maximumConnections {
@@ -86,7 +85,7 @@ type RPCConfiguration struct {
 	Announce           []string `gluamapper:"announce" json:"announce"`
 }
 
-func NewRPCListener(
+func NewRPC(
 	configuration *RPCConfiguration,
 	log *logger.L,
 	count *counter.Counter,

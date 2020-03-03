@@ -45,7 +45,6 @@ func TestRpcListenerServe(t *testing.T) {
 	defer fixtures.TeardownTestLogger()
 
 	port := rand.Intn(30000) + 30000
-	fmt.Println("port: ", port)
 	listen := fmt.Sprintf("127.0.0.1:%d", port)
 	con := listeners.RPCConfiguration{
 		MaximumConnections: 5,
@@ -81,7 +80,7 @@ func TestRpcListenerServe(t *testing.T) {
 		fmt.Printf("get certificate with error: %s\n", err)
 	}
 
-	l, err := listeners.NewRPCListener(
+	l, err := listeners.NewRPC(
 		&con,
 		logger.New(fixtures.LogCategory),
 		&count,
@@ -90,7 +89,7 @@ func TestRpcListenerServe(t *testing.T) {
 		tlsCertificate,
 		fin,
 	)
-	assert.Nil(t, err, "wrong NewRPCListener")
+	assert.Nil(t, err, "wrong NewRPC")
 
 	err = l.Serve()
 	assert.Nil(t, err, "wrong Serve")
