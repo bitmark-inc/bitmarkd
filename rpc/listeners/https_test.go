@@ -8,6 +8,11 @@ package listeners_test
 import (
 	"crypto/tls"
 	"fmt"
+	"github.com/bitmark-inc/bitmarkd/rpc/certificate"
+	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
+	"github.com/bitmark-inc/bitmarkd/rpc/listeners"
+	"github.com/bitmark-inc/logger"
+	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"math/rand"
 	"net"
@@ -16,14 +21,7 @@ import (
 	"path"
 	"path/filepath"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/certificate"
-	"github.com/bitmark-inc/logger"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
-	"github.com/bitmark-inc/bitmarkd/rpc/listeners"
+	"time"
 )
 
 type testHandler struct{}
@@ -52,7 +50,18 @@ func (h testHandler) SetAllow(_ map[string][]*net.IPNet) {
 	return
 }
 
-func setup() (int, listeners.Listener) {
+var client *http.Client
+
+func init() {
+	customTransport := http.DefaultTransport.(*http.Transport).Clone()
+	customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // ignore certificate verification
+
+	client = &http.Client{
+		Transport: customTransport,
+	}
+}
+
+func setup(t *testing.T) (int, listeners.Listener) {
 	allow := "127.0.0.1/32"
 	port := rand.Intn(30000) + 30000
 
@@ -74,19 +83,30 @@ func setup() (int, listeners.Listener) {
 	wd, _ := os.Getwd()
 	fixturePath := path.Join(filepath.Dir(wd), "fixtures")
 
-	tlsConf, _, _ := certificate.Get(
+	tlsConf, _, err := certificate.Get(
 		logger.New(fixtures.LogCategory),
 		"test",
 		fixtures.Certificate(fixturePath),
 		fixtures.Key(fixturePath),
 	)
+	if nil != err {
+		t.Error("get certificate with error: ", err)
+		t.FailNow()
+	}
 
-	h, _ := listeners.NewHTTPS(
+	h, err := listeners.NewHTTPS(
 		&conf,
 		logger.New(fixtures.LogCategory),
 		tlsConf,
 		testHandler{},
 	)
+	if nil != err {
+		t.Error("NewHTTPS with error: ", err)
+		t.FailNow()
+	}
+
+	customTransport := http.DefaultTransport.(*http.Transport).Clone()
+	customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
 	return port, h
 }
@@ -95,21 +115,20 @@ func TestHttpsListenerServeRPC(t *testing.T) {
 	fixtures.SetupTestLogger()
 	defer fixtures.TeardownTestLogger()
 
-	port, h := setup()
+	port, h := setup(t)
 
 	err := h.Serve()
 	assert.Nil(t, err, "wrong Serve")
 
-	client := &http.Client{Transport: &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
-	}}
+	customTransport := http.DefaultTransport.(*http.Transport).Clone()
+	customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
+	time.Sleep(time.Millisecond) // make sure server is ready
 	url := fmt.Sprintf("https://127.0.0.1:%d/bitmarkd/", port)
 	resp, err := client.Get(url + "rpc")
 	if nil != err {
-		fmt.Println("client Get with error: ", err)
+		t.Error("client get with error: ", err)
+		t.FailNow()
 	}
 	defer resp.Body.Close()
 
@@ -121,21 +140,17 @@ func TestHttpsListenerServeDetails(t *testing.T) {
 	fixtures.SetupTestLogger()
 	defer fixtures.TeardownTestLogger()
 
-	port, h := setup()
+	port, h := setup(t)
 
 	err := h.Serve()
 	assert.Nil(t, err, "wrong Serve")
 
-	client := &http.Client{Transport: &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
-	}}
-
+	time.Sleep(time.Millisecond)
 	url := fmt.Sprintf("https://127.0.0.1:%d/bitmarkd/", port)
 	resp, err := client.Get(url + "details")
 	if nil != err {
-		fmt.Println("client Get with error: ", err)
+		t.Error("client get with error: ", err)
+		t.FailNow()
 	}
 	defer resp.Body.Close()
 
@@ -147,21 +162,17 @@ func TestHttpsListenerServePeers(t *testing.T) {
 	fixtures.SetupTestLogger()
 	defer fixtures.TeardownTestLogger()
 
-	port, h := setup()
+	port, h := setup(t)
 
 	err := h.Serve()
 	assert.Nil(t, err, "wrong Serve")
 
-	client := &http.Client{Transport: &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
-	}}
-
+	time.Sleep(time.Millisecond)
 	url := fmt.Sprintf("https://127.0.0.1:%d/bitmarkd/", port)
 	resp, err := client.Get(url + "peers")
 	if nil != err {
-		fmt.Println("client Get with error: ", err)
+		t.Error("client get with error: ", err)
+		t.FailNow()
 	}
 	defer resp.Body.Close()
 
@@ -173,21 +184,17 @@ func TestHttpsListenerServeConnections(t *testing.T) {
 	fixtures.SetupTestLogger()
 	defer fixtures.TeardownTestLogger()
 
-	port, h := setup()
+	port, h := setup(t)
 
 	err := h.Serve()
 	assert.Nil(t, err, "wrong Serve")
 
-	client := &http.Client{Transport: &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
-	}}
-
+	time.Sleep(time.Millisecond)
 	url := fmt.Sprintf("https://127.0.0.1:%d/bitmarkd/", port)
 	resp, err := client.Get(url + "connections")
 	if nil != err {
-		fmt.Println("client Get with error: ", err)
+		t.Error("client get with error: ", err)
+		t.FailNow()
 	}
 	defer resp.Body.Close()
 
@@ -199,21 +206,17 @@ func TestHttpsListenerServeRoot(t *testing.T) {
 	fixtures.SetupTestLogger()
 	defer fixtures.TeardownTestLogger()
 
-	port, h := setup()
+	port, h := setup(t)
 
 	err := h.Serve()
 	assert.Nil(t, err, "wrong Serve")
 
-	client := &http.Client{Transport: &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
-	}}
-
+	time.Sleep(time.Millisecond)
 	url := fmt.Sprintf("https://127.0.0.1:%d/bitmarkd/", port)
 	resp, err := client.Get(url)
 	if nil != err {
-		fmt.Println("client Get with error: ", err)
+		t.Error("client get with error: ", err)
+		t.FailNow()
 	}
 	defer resp.Body.Close()
 
