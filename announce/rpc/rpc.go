@@ -66,11 +66,11 @@ func New() RPC {
 	}
 }
 
-func (r rpc) IsSet() bool {
+func (r *rpc) IsSet() bool {
 	return r.set
 }
 
-func (r rpc) Self() []byte {
+func (r *rpc) Self() []byte {
 	return r.self
 }
 
@@ -177,7 +177,7 @@ loop:
 }
 
 // Fetch - fetch some records
-func (r rpc) Fetch(start uint64, count int) ([]Entry, uint64, error) {
+func (r *rpc) Fetch(start uint64, count int) ([]Entry, uint64, error) {
 	if count <= 0 {
 		return nil, 0, fault.InvalidCount
 	}

@@ -80,32 +80,32 @@ func (r *receptor) UpdateTime(pID p2pPeer.ID, timestamp time.Time) {
 	data.Timestamp = timestamp
 }
 
-func (r receptor) ShortID() string {
+func (r *receptor) ShortID() string {
 	return r.selfID.ShortString()
 }
 
-func (r receptor) BinaryID() []byte {
+func (r *receptor) BinaryID() []byte {
 	myID, _ := r.selfID.MarshalBinary()
 	return myID
 }
 
-func (r receptor) SelfAddress() []ma.Multiaddr {
+func (r *receptor) SelfAddress() []ma.Multiaddr {
 	return r.listeners
 }
 
-func (r receptor) ID() p2pPeer.ID {
+func (r *receptor) ID() p2pPeer.ID {
 	return r.selfID
 }
 
-func (r receptor) IsSet() bool {
+func (r *receptor) IsSet() bool {
 	return r.set
 }
 
-func (r receptor) Tree() *avl.Tree {
+func (r *receptor) Tree() *avl.Tree {
 	return r.tree
 }
 
-func (r receptor) Self() *avl.Node {
+func (r *receptor) Self() *avl.Node {
 	return r.self
 }
 
@@ -165,7 +165,7 @@ func (r *receptor) Add(peerID p2pPeer.ID, listeners []ma.Multiaddr, timestamp ui
 	return true
 }
 
-func (r receptor) Changed() bool {
+func (r *receptor) Changed() bool {
 	return r.changed
 }
 
