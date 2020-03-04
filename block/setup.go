@@ -393,6 +393,10 @@ func Finalise() error {
 func LastBlockHash(pool storage.Handle) string {
 	log := globalData.log
 
+	if pool == nil {
+		return ""
+	}
+
 	if last, ok := pool.LastElement(); ok {
 		br := blockrecord.Get()
 		_, digest, _, err := br.ExtractHeader(last.Value, 0, false)

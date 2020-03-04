@@ -7,6 +7,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -122,11 +123,13 @@ func (h *handler) RPC(w http.ResponseWriter, r *http.Request) {
 	defer connectionCountHTTPS.Decrement()
 
 	serverCodec := jsonrpc.NewServerCodec(&InternalConnection{in: r.Body, out: w})
+
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(http.StatusOK)
 	err := server.ServeRequest(serverCodec)
 	if nil != err {
+		fmt.Println("err: ", err)
 		sendInternalServerError(w)
 		return
 	}
