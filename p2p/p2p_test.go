@@ -35,10 +35,10 @@ func TestMain(m *testing.M) {
 func TestIDMarshalUnmarshal(t *testing.T) {
 	conf, err := mockConfiguration("server", 12136)
 	assert.NoError(t, err, "generate mock data error")
-	prvKey, err := util.DecodePrivKeyFromHex(conf.PrivateKey)
+	secretKey, err := util.DecodePrivKeyFromHex(conf.SecretKey)
 	assert.NoError(t, err, "Decode Hex Key Error")
-	id, err := peerlib.IDFromPrivateKey(prvKey)
-	assert.NoError(t, err, "IDFromPrivateKey Error")
+	id, err := peerlib.IDFromPrivateKey(secretKey)
+	assert.NoError(t, err, "IDFromSecretKey Error")
 	mID, err := id.Marshal()
 	assert.NoError(t, err, "ID Marshal Error:")
 	id2, err := peerlib.IDFromBytes(mID)
@@ -87,11 +87,11 @@ func mockConfiguration(nType string, port int) (*Configuration, error) {
 	}
 
 	return &Configuration{
-		NodeType:   nType,
-		Port:       port,
-		Listen:     []string{"0.0.0.0:" + portString, "[::]:" + portString},
-		Announce:   []string{"127.0.0.1:" + portString, "[::1]:" + portString},
-		PrivateKey: hexKey,
-		Connect:    []StaticConnection{},
+		NodeType:  nType,
+		Port:      port,
+		Listen:    []string{"0.0.0.0:" + portString, "[::]:" + portString},
+		Announce:  []string{"127.0.0.1:" + portString, "[::1]:" + portString},
+		SecretKey: hexKey,
+		Connect:   []StaticConnection{},
 	}, nil
 }

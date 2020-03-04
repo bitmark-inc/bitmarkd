@@ -75,12 +75,12 @@ type StaticConnection struct {
 // Configuration - a block of configuration data
 // this is read from the configuration file
 type Configuration struct {
-	NodeType   string             `gluamapper:"nodetype" json:"nodetype"`
-	Port       int                `gluamapper:"port" json:"port"`
-	Listen     []string           `gluamapper:"listen" json:"listen"`
-	Announce   []string           `gluamapper:"announce" json:"announce"`
-	PrivateKey string             `gluamapper:"private_key" json:"private_key"`
-	Connect    []StaticConnection `gluamapper:"connect" json:"connect,omitempty"`
+	NodeType  string             `gluamapper:"nodetype" json:"nodetype"`
+	Port      int                `gluamapper:"port" json:"port"`
+	Listen    []string           `gluamapper:"listen" json:"listen"`
+	Announce  []string           `gluamapper:"announce" json:"announce"`
+	SecretKey string             `gluamapper:"secret_key" json:"secret_key"`
+	Connect   []StaticConnection `gluamapper:"connect" json:"connect,omitempty"`
 }
 
 // RegisterStatus is the struct to reflect the register status of a node

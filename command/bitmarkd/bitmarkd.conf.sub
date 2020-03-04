@@ -199,12 +199,12 @@ M.https_rpc = {
     private_key = read_file("rpc.key")
 }
 
-
 -- peer-to-peer connections
 M.peering = {
 
     -- set node type (server|client)
     -- this will be set to "server" if announcing any public IPs
+    -- (see code below)
     nodetype = "client",
 
     -- for incoming peer connections
@@ -224,7 +224,7 @@ M.peering = {
         -- or if PUBLIC_IPV[46] variables are set
         make_announcements(2136),
     },
-    private_key = read_file("peer.secret"),
+    secret_key = read_file("peer.secret"),
 }
 
 -- automatically set node type (server|client)

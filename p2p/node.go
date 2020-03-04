@@ -33,7 +33,7 @@ func (n *Node) Setup(configuration *Configuration, version string, dnsPeerOnly d
 	}
 	maAddrs := util.IPPortToMultiAddr(listenIPPorts)
 	n.Registers = NewRegistration(registerExpireTime)
-	prvKey, err := util.DecodePrivKeyFromHex(configuration.PrivateKey) //Hex Decoded binaryString
+	prvKey, err := util.DecodePrivKeyFromHex(configuration.SecretKey) //Hex Decoded binaryString
 	if err != nil {
 		return err
 	}

@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	peerPrivateKeyFilename = "peer.secret"
+	peerSecretKeyFilename = "peer.secret"
 
 	publishingPublicKeyFilename  = "publishing.public"
 	publishingPrivateKeyFilename = "publishing.private"
@@ -59,26 +59,26 @@ func processSetupCommand(program string, arguments []string) bool {
 
 	switch command {
 	case "gen-peer-identity", "peer":
-		peerPrivateKeyPath := getFilenameWithDirectory(arguments, peerPrivateKeyFilename)
+		peerSecretKeyPath := getFilenameWithDirectory(arguments, peerSecretKeyFilename)
 		publishingPublicKeyPath := getFilenameWithDirectory(arguments, publishingPublicKeyFilename)
 		publishingPrivateKeyPath := getFilenameWithDirectory(arguments, publishingPrivateKeyFilename)
 
 		// the peer secret file
-		if util.EnsureFileExists(peerPrivateKeyPath) {
-			fmt.Printf("generate private key: %q error: %s\n", peerPrivateKeyFilename, fault.KeyFileAlreadyExists)
+		if util.EnsureFileExists(peerSecretKeyPath) {
+			fmt.Printf("generate private key: %q error: %s\n", peerSecretKeyFilename, fault.KeyFileAlreadyExists)
 			exitwithstatus.Exit(1)
 		}
 
 		key, err := util.MakeEd25519PeerKey()
 		if err != nil {
-			fmt.Printf("generate private key: %q error: %s\n", peerPrivateKeyFilename, err.Error())
+			fmt.Printf("generate private key: %q error: %s\n", peerSecretKeyFilename, err.Error())
 			exitwithstatus.Exit(1)
 		}
 
-		err = ioutil.WriteFile(peerPrivateKeyPath, []byte(key+"\n"), 0600)
+		err = ioutil.WriteFile(peerSecretKeyPath, []byte(key+"\n"), 0600)
 		if nil != err {
-			os.Remove(peerPrivateKeyPath)
-			fmt.Printf("generate private key: %q error: %s\n", peerPrivateKeyFilename, err.Error())
+			os.Remove(peerSecretKeyPath)
+			fmt.Printf("generate private key: %q error: %s\n", peerSecretKeyFilename, err.Error())
 			exitwithstatus.Exit(1)
 		}
 
@@ -89,7 +89,7 @@ func processSetupCommand(program string, arguments []string) bool {
 			exitwithstatus.Exit(1)
 		}
 
-		fmt.Printf("generated peer private key: %q\n", peerPrivateKeyFilename)
+		fmt.Printf("generated peer private key: %q\n", peerSecretKeyFilename)
 		fmt.Printf("generated publishing private key: %q and publishing public key: %q\n", publishingPrivateKeyPath, publishingPublicKeyPath)
 
 	case "gen-rpc-cert", "rpc":
@@ -174,7 +174,7 @@ func processSetupCommand(program string, arguments []string) bool {
 		fmt.Printf("  help                       (h)      - display this message\n\n")
 		fmt.Printf("  version                    (v)      - display version sting\n\n")
 
-		fmt.Printf("  gen-peer-identity [DIR]    (peer)   - create peer private key in: %q,\n", "DIR/"+peerPrivateKeyFilename)
+		fmt.Printf("  gen-peer-identity [DIR]    (peer)   - create peer private key in: %q,\n", "DIR/"+peerSecretKeyFilename)
 		fmt.Printf("                                        publishing private key in: %q\n", "DIR/"+publishingPrivateKeyFilename)
 		fmt.Printf("                                        and publishing public key in: %q\n", "DIR/"+publishingPublicKeyFilename)
 		fmt.Printf("\n")
@@ -404,9 +404,9 @@ func dnsTXT(options *Configuration) {
 
 	peering := options.Peering
 
-	privateKey, err := util.DecodePrivKeyFromHex(peering.PrivateKey)
+	privateKey, err := util.DecodePrivKeyFromHex(peering.SecretKey)
 	if err != nil {
-		exitwithstatus.Message("error: cannot decode private key: %q  error: %s", peering.PrivateKey, err)
+		exitwithstatus.Message("error: cannot decode private key: %q  error: %s", peering.SecretKey, err)
 	}
 
 	peerID, err := peer.IDFromPrivateKey(privateKey)
