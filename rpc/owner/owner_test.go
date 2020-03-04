@@ -63,7 +63,7 @@ func TestOwnerBitmarks(t *testing.T) {
 		},
 	}
 
-	arg := owner.OwnerBitmarksArguments{
+	arg := owner.BitmarksArguments{
 		Owner: &acc,
 		Start: 5,
 		Count: 10,
@@ -96,7 +96,7 @@ func TestOwnerBitmarks(t *testing.T) {
 	tr.EXPECT().GetNB(r.TxId[:]).Return(uint64(1), packed).Times(1)
 	a.EXPECT().GetNB(r.AssetId[:]).Return(uint64(1), packed).Times(1)
 
-	var reply owner.OwnerBitmarksReply
+	var reply owner.BitmarksReply
 	err := o.Bitmarks(&arg, &reply)
 	assert.Nil(t, err, "wrong Bitmarks")
 	assert.Equal(t, r.N+1, reply.Next, "wrong next")

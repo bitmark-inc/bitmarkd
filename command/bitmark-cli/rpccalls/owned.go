@@ -18,9 +18,9 @@ type OwnedData struct {
 }
 
 // GetOwned - obtain list of owned bitmarks
-func (client *Client) GetOwned(ownedConfig *OwnedData) (*owner.OwnerBitmarksReply, error) {
+func (client *Client) GetOwned(ownedConfig *OwnedData) (*owner.BitmarksReply, error) {
 
-	ownedArgs := owner.OwnerBitmarksArguments{
+	ownedArgs := owner.BitmarksArguments{
 		Owner: ownedConfig.Owner,
 		Start: ownedConfig.Start,
 		Count: ownedConfig.Count,
@@ -28,7 +28,7 @@ func (client *Client) GetOwned(ownedConfig *OwnedData) (*owner.OwnerBitmarksRepl
 
 	client.printJson("Owned Request", ownedArgs)
 
-	reply := &owner.OwnerBitmarksReply{}
+	reply := &owner.BitmarksReply{}
 	err := client.client.Call("Owner.Bitmarks", ownedArgs, reply)
 	if nil != err {
 		return nil, err

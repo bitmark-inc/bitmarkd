@@ -84,7 +84,7 @@ func TestShareCreate(t *testing.T) {
 
 	r.EXPECT().StoreTransfer(&arg).Return(&info, false, nil).Times(1)
 
-	var reply share.ShareCreateReply
+	var reply share.CreateReply
 	err := s.Create(&arg, &reply)
 	assert.Nil(t, err, "wrong Create")
 	assert.Equal(t, info.TxId, reply.TxId, "wrong tx ID")
@@ -118,7 +118,7 @@ func TestShareBalance(t *testing.T) {
 		},
 	}
 
-	arg := share.ShareBalanceArguments{
+	arg := share.BalanceArguments{
 		Owner:   &acc,
 		ShareId: merkle.Digest{5, 3, 1},
 		Count:   1000,
@@ -133,7 +133,7 @@ func TestShareBalance(t *testing.T) {
 
 	r.EXPECT().ShareBalance(arg.Owner, arg.ShareId, arg.Count).Return([]reservoir.BalanceInfo{info}, nil).Times(1)
 
-	var reply share.ShareBalanceReply
+	var reply share.BalanceReply
 	err := s.Balance(&arg, &reply)
 	assert.Nil(t, err, "wrong Balance")
 	assert.Equal(t, 1, len(reply.Balances), "wrong balance count")
@@ -204,7 +204,7 @@ func TestShareGrant(t *testing.T) {
 
 	r.EXPECT().StoreGrant(&arg).Return(&info, false, nil).Times(1)
 
-	var reply share.ShareGrantReply
+	var reply share.GrantReply
 	err := s.Grant(&arg, &reply)
 	assert.Nil(t, err, "wrong Grant")
 	assert.Equal(t, info.TxId, reply.TxId, "wrong tx ID")
@@ -283,7 +283,7 @@ func TestShareSwap(t *testing.T) {
 
 	r.EXPECT().StoreSwap(&arg).Return(&info, false, nil).Times(1)
 
-	var reply share.ShareSwapReply
+	var reply share.SwapReply
 	err := s.Swap(&arg, &reply)
 	assert.Nil(t, err, "wrong Swap")
 	assert.Equal(t, info.Id, reply.PayId, "wrong pay ID")

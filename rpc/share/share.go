@@ -49,8 +49,8 @@ func New(log *logger.L, isNormalMode func(mode.Mode) bool, rsvr reservoir.Reserv
 // Create a share with initial balance
 // -----------------------------------
 
-// ShareCreateReply - results from creating a share
-type ShareCreateReply struct {
+// CreateReply - results from creating a share
+type CreateReply struct {
 	TxId     merkle.Digest                                   `json:"txId"`
 	ShareId  merkle.Digest                                   `json:"shareId"`
 	PayId    pay.PayId                                       `json:"payId"`
@@ -58,7 +58,7 @@ type ShareCreateReply struct {
 }
 
 // Create - create fractional bitmark
-func (share *Share) Create(bmfr *transactionrecord.BitmarkShare, reply *ShareCreateReply) error {
+func (share *Share) Create(bmfr *transactionrecord.BitmarkShare, reply *CreateReply) error {
 
 	if err := ratelimit.Limit(share.Limiter); nil != err {
 		return err
@@ -107,20 +107,20 @@ func (share *Share) Create(bmfr *transactionrecord.BitmarkShare, reply *ShareCre
 // Get share balance
 // --------------------
 
-// ShareBalanceArguments - arguments for RPC
-type ShareBalanceArguments struct {
+// BalanceArguments - arguments for RPC
+type BalanceArguments struct {
 	Owner   *account.Account `json:"owner"` // base58
 	ShareId merkle.Digest    `json:"shareId"`
 	Count   int              `json:"count"` // number of records
 }
 
-// ShareBalanceReply - balances of shares belonging to an account
-type ShareBalanceReply struct {
+// BalanceReply - balances of shares belonging to an account
+type BalanceReply struct {
 	Balances []reservoir.BalanceInfo `json:"balances"`
 }
 
 // Balance - list balances for an account
-func (share *Share) Balance(arguments *ShareBalanceArguments, reply *ShareBalanceReply) error {
+func (share *Share) Balance(arguments *BalanceArguments, reply *BalanceReply) error {
 
 	if err := ratelimit.Limit(share.Limiter); nil != err {
 		return err
@@ -163,8 +163,8 @@ func (share *Share) Balance(arguments *ShareBalanceArguments, reply *ShareBalanc
 // Grant some shares
 // -----------------
 
-// ShareGrantReply - result of granting some shares to another account
-type ShareGrantReply struct {
+// GrantReply - result of granting some shares to another account
+type GrantReply struct {
 	Remaining uint64                                          `json:"remaining"`
 	TxId      merkle.Digest                                   `json:"txId"`
 	PayId     pay.PayId                                       `json:"payId"`
@@ -172,7 +172,7 @@ type ShareGrantReply struct {
 }
 
 // Grant - grant a number of shares to another account
-func (share *Share) Grant(arguments *transactionrecord.ShareGrant, reply *ShareGrantReply) error {
+func (share *Share) Grant(arguments *transactionrecord.ShareGrant, reply *GrantReply) error {
 
 	if err := ratelimit.Limit(share.Limiter); nil != err {
 		return err
@@ -235,8 +235,8 @@ func (share *Share) Grant(arguments *transactionrecord.ShareGrant, reply *ShareG
 // Swap some shares
 // -------------------
 
-// ShareSwapReply - result of a share swap
-type ShareSwapReply struct {
+// SwapReply - result of a share swap
+type SwapReply struct {
 	RemainingOne uint64                                          `json:"remainingOne"`
 	RemainingTwo uint64                                          `json:"remainingTwo"`
 	TxId         merkle.Digest                                   `json:"txId"`
@@ -245,7 +245,7 @@ type ShareSwapReply struct {
 }
 
 // Swap - atomically swap shares between accounts
-func (share *Share) Swap(arguments *transactionrecord.ShareSwap, reply *ShareSwapReply) error {
+func (share *Share) Swap(arguments *transactionrecord.ShareSwap, reply *SwapReply) error {
 
 	if err := ratelimit.Limit(share.Limiter); nil != err {
 		return err

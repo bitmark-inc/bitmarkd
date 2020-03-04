@@ -75,10 +75,10 @@ func TestAssetsGet(t *testing.T) {
 	client := rpc.NewClient(conn)
 	defer client.Close()
 
-	arg := assets.AssetGetArguments{
+	arg := assets.GetArguments{
 		Fingerprints: []string{"test"},
 	}
-	var reply assets.AssetGetReply
+	var reply assets.GetReply
 	err := client.Call("Assets.Get", &arg, &reply)
 	assert.NotNil(t, err, "wrong Assets.Get")
 	assert.Equal(t, fault.NotAvailableDuringSynchronise.Error(), err.Error(), "wrong reply")
@@ -98,7 +98,7 @@ func TestBitmarkTransfer(t *testing.T) {
 		Signature:        nil,
 		Countersignature: nil,
 	}
-	var reply bitmark.BitmarkTransferReply
+	var reply bitmark.TransferReply
 	err := client.Call("Bitmark.Transfer", &arg, &reply)
 	assert.NotNil(t, err, "wrong Bitmark.Transfer")
 	assert.Equal(t, fault.InvalidItem.Error(), err.Error(), "wrong reply")
@@ -162,12 +162,12 @@ func TestOwnerBitmarks(t *testing.T) {
 	client := rpc.NewClient(conn)
 	defer client.Close()
 
-	arg := owner.OwnerBitmarksArguments{
+	arg := owner.BitmarksArguments{
 		Owner: nil,
 		Start: 0,
 		Count: 0,
 	}
-	var reply owner.OwnerBitmarksReply
+	var reply owner.BitmarksReply
 	err := client.Call("Owner.Bitmarks", &arg, &reply)
 	assert.NotNil(t, err, "wrong Owner.Bitmarks")
 	assert.Equal(t, fault.InvalidCount.Error(), err.Error(), "wrong reply")
@@ -180,11 +180,11 @@ func TestNodeList(t *testing.T) {
 	client := rpc.NewClient(conn)
 	defer client.Close()
 
-	arg := node.NodeArguments{
+	arg := node.Arguments{
 		Start: 0,
 		Count: 0,
 	}
-	var reply node.NodeReply
+	var reply node.Reply
 	err := client.Call("Node.List", &arg, &reply)
 	assert.NotNil(t, err, "Node.List")
 	assert.Equal(t, fault.InvalidCount.Error(), err.Error(), "wrong reply")
@@ -211,10 +211,10 @@ func TestTransactionStatus(t *testing.T) {
 	client := rpc.NewClient(conn)
 	defer client.Close()
 
-	arg := transaction.TransactionArguments{
+	arg := transaction.Arguments{
 		TxId: merkle.Digest{},
 	}
-	var reply transaction.TransactionStatusReply
+	var reply transaction.StatusReply
 	err := client.Call("Transaction.Status", &arg, &reply)
 	assert.NotNil(t, err, "Transaction.Status")
 	assert.Equal(t, fault.MissingReservoir.Error(), err.Error(), "wrong reply")
@@ -227,12 +227,12 @@ func TestBlockOwnerTxIdForBlock(t *testing.T) {
 	client := rpc.NewClient(conn)
 	defer client.Close()
 
-	arg := blockowner.TxIdForBlockArguments{
+	arg := blockowner.TxIDForBlockArguments{
 		BlockNumber: 0,
 	}
-	var reply blockowner.TxIdForBlockReply
-	err := client.Call("BlockOwner.TxIdForBlock", &arg, &reply)
-	assert.NotNil(t, err, "wrong BlockOwner.TxIdForBlock")
+	var reply blockowner.TxIDForBlockReply
+	err := client.Call("BlockOwner.TxIDForBlock", &arg, &reply)
+	assert.NotNil(t, err, "wrong BlockOwner.TxIDForBlock")
 	assert.Equal(t, fault.DatabaseIsNotSet.Error(), err.Error(), "wrong reply")
 }
 
@@ -252,7 +252,7 @@ func TestBlockOwnerTransfer(t *testing.T) {
 		Signature:        nil,
 		Countersignature: nil,
 	}
-	var reply blockowner.BlockOwnerTransferReply
+	var reply blockowner.TransferReply
 	err := client.Call("BlockOwner.Transfer", &arg, &reply)
 	assert.NotNil(t, err, "wrong BlockOwner.Transfer")
 	assert.Equal(t, fault.NotAvailableDuringSynchronise.Error(), err.Error(), "wrong reply")
@@ -270,7 +270,7 @@ func TestShareCreate(t *testing.T) {
 		Quantity:  0,
 		Signature: nil,
 	}
-	var reply share.ShareCreateReply
+	var reply share.CreateReply
 	err := client.Call("Share.Create", &arg, &reply)
 	assert.NotNil(t, err, "wrong Share.Create")
 	assert.Equal(t, fault.NotAvailableDuringSynchronise.Error(), err.Error(), "wrong reply")
@@ -283,12 +283,12 @@ func TestShareBalance(t *testing.T) {
 	client := rpc.NewClient(conn)
 	defer client.Close()
 
-	arg := share.ShareBalanceArguments{
+	arg := share.BalanceArguments{
 		Owner:   nil,
 		ShareId: merkle.Digest{},
 		Count:   0,
 	}
-	var reply share.ShareBalanceReply
+	var reply share.BalanceReply
 	err := client.Call("Share.Balance", &arg, &reply)
 	assert.NotNil(t, err, "Share.Balance")
 	assert.Equal(t, fault.InvalidItem.Error(), err.Error(), "wrong reply")
@@ -310,7 +310,7 @@ func TestShareGrant(t *testing.T) {
 		Signature:        nil,
 		Countersignature: nil,
 	}
-	var reply share.ShareGrantReply
+	var reply share.GrantReply
 	err := client.Call("Share.Grant", &arg, &reply)
 	assert.NotNil(t, err, "Share.Grant")
 	assert.Equal(t, fault.InvalidItem.Error(), err.Error(), "wrong reply")

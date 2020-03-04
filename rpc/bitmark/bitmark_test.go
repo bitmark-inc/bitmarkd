@@ -89,7 +89,7 @@ func TestBitmarkTransfer(t *testing.T) {
 		r,
 	)
 
-	var reply bitmark.BitmarkTransferReply
+	var reply bitmark.TransferReply
 	err := b.Transfer(&transfer, &reply)
 	assert.Nil(t, err, "wrong transfer")
 	assert.Equal(t, info.Id, reply.PayId, "wrong payID")

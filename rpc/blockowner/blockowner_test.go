@@ -58,7 +58,7 @@ func TestBlockOwnerTxIdForBlock(t *testing.T) {
 	key := make([]byte, 8)
 	binary.BigEndian.PutUint64(key, blockNumber)
 
-	arg := blockowner.TxIdForBlockArguments{
+	arg := blockowner.TxIDForBlockArguments{
 		BlockNumber: blockNumber,
 	}
 
@@ -78,9 +78,9 @@ func TestBlockOwnerTxIdForBlock(t *testing.T) {
 	p.EXPECT().Get(key).Return([]byte{}).Times(1)
 	br.EXPECT().ExtractHeader([]byte{}, uint64(0), false).Return(&h, d, []byte{}, nil).Times(1)
 
-	var reply blockowner.TxIdForBlockReply
-	err := b.TxIdForBlock(&arg, &reply)
-	assert.Nil(t, err, "wrong TxIdForBlock")
+	var reply blockowner.TxIDForBlockReply
+	err := b.TxIDForBlock(&arg, &reply)
+	assert.Nil(t, err, "wrong TxIDForBlock")
 	assert.Equal(t, blockrecord.FoundationTxId(3, blockdigest.Digest{}), reply.TxId, "wrong tx ID")
 }
 
@@ -144,7 +144,7 @@ func TestBlockOwnerTransfer(t *testing.T) {
 
 	r.EXPECT().StoreTransfer(&arg).Return(&info, false, nil).Times(1)
 
-	var reply blockowner.BlockOwnerTransferReply
+	var reply blockowner.TransferReply
 	err := b.Transfer(&arg, &reply)
 	assert.Nil(t, err, "wrong Transfer")
 	assert.Equal(t, info.TxId, reply.TxId, "wrong tx ID")

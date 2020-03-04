@@ -47,8 +47,8 @@ func TestAssetsGet(t *testing.T) {
 		mode.IsTesting,
 	)
 
-	arg := assets.AssetGetArguments{Fingerprints: []string{"fin1", "fin2"}}
-	var reply assets.AssetGetReply
+	arg := assets.GetArguments{Fingerprints: []string{"fin1", "fin2"}}
+	var reply assets.GetReply
 	bin1 := transactionrecord.NewAssetIdentifier([]byte("fin1"))
 	bin2 := transactionrecord.NewAssetIdentifier([]byte("fin2"))
 	acc := &account.Account{
@@ -105,8 +105,8 @@ func TestAssetsGetWhenNotInNormal(t *testing.T) {
 		mode.IsTesting,
 	)
 
-	var reply assets.AssetGetReply
-	arg := assets.AssetGetArguments{Fingerprints: []string{"fin1", "fin2"}}
+	var reply assets.GetReply
+	arg := assets.GetArguments{Fingerprints: []string{"fin1", "fin2"}}
 
 	err := a.Get(&arg, &reply)
 	assert.Equal(t, fault.NotAvailableDuringSynchronise, err, "wrong error")
@@ -130,8 +130,8 @@ func TestAssetsGetWhenNilAsset(t *testing.T) {
 		mode.IsTesting,
 	)
 
-	arg := assets.AssetGetArguments{Fingerprints: []string{"fin1"}}
-	var reply assets.AssetGetReply
+	arg := assets.GetArguments{Fingerprints: []string{"fin1"}}
+	var reply assets.GetReply
 	bin1 := transactionrecord.NewAssetIdentifier([]byte("fin1"))
 	acc := &account.Account{
 		AccountInterface: &account.ED25519Account{
@@ -177,8 +177,8 @@ func TestAssetsGetWhenUnpackError(t *testing.T) {
 		mode.IsTesting,
 	)
 
-	arg := assets.AssetGetArguments{Fingerprints: []string{"fin1", "fin2"}}
-	var reply assets.AssetGetReply
+	arg := assets.GetArguments{Fingerprints: []string{"fin1", "fin2"}}
+	var reply assets.GetReply
 	bin1 := transactionrecord.NewAssetIdentifier([]byte("fin1"))
 	bin2 := transactionrecord.NewAssetIdentifier([]byte("fin2"))
 	acc := &account.Account{

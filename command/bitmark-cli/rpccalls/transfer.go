@@ -67,7 +67,7 @@ func (client *Client) Transfer(transferConfig *TransferData) (*TransferReply, er
 
 	client.printJson("Transfer Request", transfer)
 
-	var reply bitmark.BitmarkTransferReply
+	var reply bitmark.TransferReply
 	err = client.client.Call("Bitmark.Transfer", transfer, &reply)
 	if err != nil {
 		return nil, err
@@ -130,7 +130,7 @@ func (client *Client) CountersignTransfer(transfer *transactionrecord.BitmarkTra
 
 	client.printJson("Transfer Request", transfer)
 
-	var reply bitmark.BitmarkTransferReply
+	var reply bitmark.TransferReply
 	err := client.client.Call("Bitmark.Transfer", transfer, &reply)
 	if nil != err {
 		return nil, err

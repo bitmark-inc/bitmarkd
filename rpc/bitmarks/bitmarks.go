@@ -66,7 +66,7 @@ func New(log *logger.L, pools reservoir.Handles, isNormalMode func(mode.Mode) bo
 
 // CreateReply - results from create RPC
 type CreateReply struct {
-	Assets     []assets.AssetStatus                            `json:"assets"`
+	Assets     []assets.Status                                 `json:"assets"`
 	Issues     []IssueStatus                                   `json:"issues"`
 	PayId      pay.PayId                                       `json:"payId"`
 	PayNonce   reservoir.PayNonce                              `json:"payNonce"`

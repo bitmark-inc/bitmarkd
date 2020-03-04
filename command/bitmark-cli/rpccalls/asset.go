@@ -39,13 +39,13 @@ func (client *Client) MakeAsset(assetConfig *AssetData) (*AssetResult, error) {
 
 	result := &AssetResult{}
 
-	getArgs := assets.AssetGetArguments{
+	getArgs := assets.GetArguments{
 		Fingerprints: []string{assetConfig.Fingerprint},
 	}
 
 	client.printJson("Asset Get Request", getArgs)
 
-	var getReply assets.AssetGetReply
+	var getReply assets.GetReply
 	if err := client.client.Call("Assets.Get", &getArgs, &getReply); nil != err {
 		return nil, err
 	}

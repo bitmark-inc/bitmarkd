@@ -16,7 +16,7 @@ type TransactionStatusData struct {
 }
 
 // GetTransactionStatus - perform a status request
-func (client *Client) GetTransactionStatus(statusConfig *TransactionStatusData) (*transaction.TransactionStatusReply, error) {
+func (client *Client) GetTransactionStatus(statusConfig *TransactionStatusData) (*transaction.StatusReply, error) {
 
 	var txId merkle.Digest
 	err := txId.UnmarshalText([]byte(statusConfig.TxId))
@@ -24,13 +24,13 @@ func (client *Client) GetTransactionStatus(statusConfig *TransactionStatusData) 
 		return nil, err
 	}
 
-	statusArgs := transaction.TransactionArguments{
+	statusArgs := transaction.Arguments{
 		TxId: txId,
 	}
 
 	client.printJson("Status Request", statusArgs)
 
-	var reply transaction.TransactionStatusReply
+	var reply transaction.StatusReply
 	err = client.client.Call("Transaction.Status", statusArgs, &reply)
 	if err != nil {
 		return nil, err

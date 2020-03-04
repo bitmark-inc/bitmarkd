@@ -54,7 +54,7 @@ func TestNode_List(t *testing.T) {
 		a,
 	)
 
-	arg := node.NodeArguments{
+	arg := node.Arguments{
 		Start: 100,
 		Count: 5,
 	}
@@ -68,7 +68,7 @@ func TestNode_List(t *testing.T) {
 
 	a.EXPECT().Fetch(arg.Start, arg.Count).Return([]rpc.Entry{entry}, uint64(10), nil).Times(1)
 
-	var reply node.NodeReply
+	var reply node.Reply
 	err := n.List(&arg, &reply)
 	assert.Nil(t, err, "wrong List")
 	assert.Equal(t, 1, len(reply.Nodes), "wrong node count")

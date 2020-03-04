@@ -73,7 +73,7 @@ func (client *Client) SingleSignedBlockTransfer(blockTransferConfig *BlockTransf
 // CountersignBlockTransfer - perform a transfer
 func (client *Client) CountersignBlockTransfer(blockTransfer *transactionrecord.BlockOwnerTransfer) (*BlockTransferReply, error) {
 
-	var reply blockowner.BlockOwnerTransferReply
+	var reply blockowner.TransferReply
 	err := client.client.Call("BlockOwner.Transfer", blockTransfer, &reply)
 	if nil != err {
 		return nil, err

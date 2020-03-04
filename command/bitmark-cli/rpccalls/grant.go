@@ -89,7 +89,7 @@ func (client *Client) CountersignGrant(grant *transactionrecord.ShareGrant) (*Gr
 
 	client.printJson("Grant Request", grant)
 
-	var reply share.ShareGrantReply
+	var reply share.GrantReply
 	err := client.client.Call("Share.Grant", grant, &reply)
 	if nil != err {
 		return nil, err

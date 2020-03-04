@@ -33,15 +33,15 @@ const (
 	rateBurstAssets = 100
 )
 
-// AssetStatus - arguments for RPC request
-type AssetStatus struct {
+// Status - arguments for RPC request
+type Status struct {
 	AssetId   *transactionrecord.AssetIdentifier `json:"id"`
 	Duplicate bool                               `json:"duplicate"`
 }
 
-// AssetsRegisterReply - results from RPC request
-type AssetsRegisterReply struct {
-	Assets []AssetStatus `json:"assets"`
+// RegisterReply - results from RPC request
+type RegisterReply struct {
+	Assets []Status `json:"assets"`
 }
 
 func New(log *logger.L, pools reservoir.Handles, isNormalMode func(mode.Mode) bool, isTestingChain func() bool) *Assets {
@@ -55,9 +55,8 @@ func New(log *logger.L, pools reservoir.Handles, isNormalMode func(mode.Mode) bo
 }
 
 // internal function to register some assets
-func Register(assets []*transactionrecord.AssetData, pool storage.Handle) ([]AssetStatus, []byte, error) {
-
-	assetStatus := make([]AssetStatus, len(assets))
+func Register(assets []*transactionrecord.AssetData, pool storage.Handle) ([]Status, []byte, error) {
+	assetStatus := make([]Status, len(assets))
 
 	// pack each transaction
 	packed := []byte{}
@@ -80,18 +79,18 @@ func Register(assets []*transactionrecord.AssetData, pool storage.Handle) ([]Ass
 
 // ---
 
-// AssetGetArguments - arguments for RPC request
-type AssetGetArguments struct {
+// GetArguments - arguments for RPC request
+type GetArguments struct {
 	Fingerprints []string `json:"fingerprints"`
 }
 
-// AssetGetReply - results from get RPC request
-type AssetGetReply struct {
-	Assets []AssetRecord `json:"assets"`
+// GetReply - results from get RPC request
+type GetReply struct {
+	Assets []Record `json:"assets"`
 }
 
-// AssetRecord - structure of asset records in the response
-type AssetRecord struct {
+// Record - structure of asset records in the response
+type Record struct {
 	Record    string      `json:"record"`
 	Confirmed bool        `json:"confirmed"`
 	AssetId   interface{} `json:"id,omitempty"`
@@ -99,7 +98,7 @@ type AssetRecord struct {
 }
 
 // Get - RPC to fetch asset data
-func (assets *Assets) Get(arguments *AssetGetArguments, reply *AssetGetReply) error {
+func (assets *Assets) Get(arguments *GetArguments, reply *GetReply) error {
 
 	log := assets.Log
 	count := len(arguments.Fingerprints)
@@ -114,7 +113,7 @@ func (assets *Assets) Get(arguments *AssetGetArguments, reply *AssetGetReply) er
 
 	log.Infof("Assets.Get: %+v", arguments)
 
-	a := make([]AssetRecord, count)
+	a := make([]Record, count)
 loop:
 	for i, fingerprint := range arguments.Fingerprints {
 
@@ -137,7 +136,7 @@ loop:
 		}
 
 		record, _ := transactionrecord.RecordName(assetTx)
-		a[i] = AssetRecord{
+		a[i] = Record{
 			Record:    record,
 			Confirmed: confirmed,
 			AssetId:   assetId,

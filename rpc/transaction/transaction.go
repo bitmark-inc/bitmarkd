@@ -32,13 +32,13 @@ type Transaction struct {
 	Rsvr    reservoir.Reservoir
 }
 
-// TransactionArguments - arguments for status RPC request
-type TransactionArguments struct {
+// Arguments - arguments for status RPC request
+type Arguments struct {
 	TxId merkle.Digest `json:"txId"`
 }
 
-// TransactionStatusReply - results from status RPC
-type TransactionStatusReply struct {
+// StatusReply - results from status RPC
+type StatusReply struct {
 	Status string `json:"status"`
 }
 
@@ -52,7 +52,7 @@ func New(log *logger.L, start time.Time, rsvr reservoir.Reservoir) *Transaction 
 }
 
 // Status - query transaction status
-func (t *Transaction) Status(arguments *TransactionArguments, reply *TransactionStatusReply) error {
+func (t *Transaction) Status(arguments *Arguments, reply *StatusReply) error {
 
 	if err := ratelimit.Limit(t.Limiter); nil != err {
 		return err

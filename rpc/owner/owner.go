@@ -41,15 +41,15 @@ const (
 	rateBurstOwner       = 100
 )
 
-// OwnerBitmarksArguments - arguments for RPC
-type OwnerBitmarksArguments struct {
+// BitmarksArguments - arguments for RPC
+type BitmarksArguments struct {
 	Owner *account.Account `json:"owner"`        // base58
 	Start uint64           `json:"Start,string"` // first record number
 	Count int              `json:"count"`        // number of records
 }
 
-// OwnerBitmarksReply - result of owner RPC
-type OwnerBitmarksReply struct {
+// BitmarksReply - result of owner RPC
+type BitmarksReply struct {
 	Next uint64                    `json:"next,string"` // Start value for the next call
 	Data []ownership.Record        `json:"data"`        // list of bitmarks either issue or transfer
 	Tx   map[string]BitmarksRecord `json:"tx"`          // table of tx records
@@ -80,7 +80,7 @@ func New(log *logger.L, pools reservoir.Handles, os ownership.Ownership) *Owner 
 }
 
 // Bitmarks - list bitmarks belonging to an account
-func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitmarksReply) error {
+func (owner *Owner) Bitmarks(arguments *BitmarksArguments, reply *BitmarksReply) error {
 
 	if err := ratelimit.LimitN(owner.Limiter, arguments.Count, MaximumBitmarksCount); nil != err {
 		return err
@@ -166,9 +166,8 @@ func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitm
 		}
 	}
 
-asset_loop:
+assetsLoop:
 	for assetId := range assetIds {
-
 		log.Debugf("asset id: %v", assetId)
 
 		var nnn transactionrecord.AssetIdentifier
@@ -180,7 +179,7 @@ asset_loop:
 					Number: 0,
 				},
 			}
-			continue asset_loop
+			continue assetsLoop
 		}
 
 		inBlock, transaction := owner.PoolAssets.GetNB(assetId[:])

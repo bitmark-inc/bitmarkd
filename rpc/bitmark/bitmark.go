@@ -38,8 +38,8 @@ type Bitmark struct {
 	PoolOwnerTxIndex storage.Handle
 }
 
-// BitmarkTransferReply - result from transfer RPC
-type BitmarkTransferReply struct {
+// TransferReply - result from transfer RPC
+type TransferReply struct {
 	TxId      merkle.Digest                                   `json:"txId"`
 	BitmarkId merkle.Digest                                   `json:"bitmarkId"`
 	PayId     pay.PayId                                       `json:"payId"`
@@ -60,7 +60,7 @@ func New(log *logger.L, pools reservoir.Handles, isNormalMode func(mode.Mode) bo
 }
 
 // Transfer - transfer a bitmark
-func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransferCountersigned, reply *BitmarkTransferReply) error {
+func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransferCountersigned, reply *TransferReply) error {
 	if err := ratelimit.Limit(bitmark.Limiter); nil != err {
 		return err
 	}

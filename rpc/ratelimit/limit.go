@@ -25,7 +25,6 @@ func Limit(limiter *rate.Limiter) error {
 
 // limiting for a multiple request
 func LimitN(limiter *rate.Limiter, count int, maximumCount int) error {
-
 	// invalid count gets limited as a single request
 	if count <= 0 || count > maximumCount {
 

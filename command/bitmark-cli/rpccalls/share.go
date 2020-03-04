@@ -52,7 +52,7 @@ func (client *Client) Share(shareConfig *ShareData) (*ShareReply, error) {
 
 	client.printJson("Share Request", sh)
 
-	var reply share.ShareCreateReply
+	var reply share.CreateReply
 	err = client.client.Call("Share.Create", sh, &reply)
 	if err != nil {
 		return nil, err

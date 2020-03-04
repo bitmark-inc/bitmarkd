@@ -97,7 +97,7 @@ func (client *Client) CountersignSwap(swap *transactionrecord.ShareSwap) (*SwapR
 
 	client.printJson("Swap Request", swap)
 
-	var reply share.ShareSwapReply
+	var reply share.SwapReply
 	err := client.client.Call("Share.Swap", swap, &reply)
 	if nil != err {
 		return nil, err

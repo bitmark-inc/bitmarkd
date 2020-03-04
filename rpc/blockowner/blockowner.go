@@ -43,13 +43,13 @@ type BlockOwner struct {
 	Rsvr           reservoir.Reservoir
 }
 
-// TxIdForBlockArguments - get the id for a given block number
-type TxIdForBlockArguments struct {
+// TxIDForBlockArguments - get the id for a given block number
+type TxIDForBlockArguments struct {
 	BlockNumber uint64 `json:"blockNumber"`
 }
 
-// TxIdForBlockReply - results for block id
-type TxIdForBlockReply struct {
+// TxIDForBlockReply - results for block id
+type TxIDForBlockReply struct {
 	TxId merkle.Digest `json:"txId"`
 }
 
@@ -65,8 +65,8 @@ func New(log *logger.L, pools reservoir.Handles, isNormalMode func(mode.Mode) bo
 	}
 }
 
-// TxIdForBlock - RPC to get transaction id for block ownership record
-func (bitmark *BlockOwner) TxIdForBlock(info *TxIdForBlockArguments, reply *TxIdForBlockReply) error {
+// TxIDForBlock - RPC to get transaction id for block ownership record
+func (bitmark *BlockOwner) TxIDForBlock(info *TxIDForBlockArguments, reply *TxIDForBlockReply) error {
 
 	if err := ratelimit.Limit(bitmark.Limiter); nil != err {
 		return err
@@ -74,7 +74,7 @@ func (bitmark *BlockOwner) TxIdForBlock(info *TxIdForBlockArguments, reply *TxId
 
 	log := bitmark.Log
 
-	log.Infof("BlockOwner.TxIdForBlock: %+v", info)
+	log.Infof("BlockOwner.TxIDForBlock: %+v", info)
 
 	if bitmark.Pool == nil {
 		return fault.DatabaseIsNotSet
@@ -100,8 +100,8 @@ func (bitmark *BlockOwner) TxIdForBlock(info *TxIdForBlockArguments, reply *TxId
 // Block owner transfer
 // --------------------
 
-// BlockOwnerTransferReply - results of transferring block ownership
-type BlockOwnerTransferReply struct {
+// TransferReply - results of transferring block ownership
+type TransferReply struct {
 	TxId     merkle.Digest                                   `json:"txId"`
 	PayId    pay.PayId                                       `json:"payId"`
 	Payments map[string]transactionrecord.PaymentAlternative `json:"payments"`
@@ -109,7 +109,7 @@ type BlockOwnerTransferReply struct {
 
 // Transfer - transfer the ownership of a block to new account and/or
 // payment addresses
-func (bitmark *BlockOwner) Transfer(transfer *transactionrecord.BlockOwnerTransfer, reply *BlockOwnerTransferReply) error {
+func (bitmark *BlockOwner) Transfer(transfer *transactionrecord.BlockOwnerTransfer, reply *TransferReply) error {
 
 	if err := ratelimit.Limit(bitmark.Limiter); nil != err {
 		return err

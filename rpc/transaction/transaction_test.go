@@ -38,11 +38,11 @@ func TestTransaction_Status(t *testing.T) {
 
 	tr := transaction.New(logger.New(fixtures.LogCategory), now, r)
 
-	arg := transaction.TransactionArguments{TxId: merkle.Digest{1, 2, 3, 4}}
+	arg := transaction.Arguments{TxId: merkle.Digest{1, 2, 3, 4}}
 
 	r.EXPECT().TransactionStatus(arg.TxId).Return(reservoir.StateConfirmed).Times(1)
 
-	var reply transaction.TransactionStatusReply
+	var reply transaction.StatusReply
 	err := tr.Status(&arg, &reply)
 	assert.Nil(t, err, "wrong Status")
 	assert.Equal(t, reservoir.StateConfirmed.String(), reply.Status, "")

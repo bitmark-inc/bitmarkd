@@ -51,14 +51,14 @@ const maximumNodeList = 100
 
 // ---
 
-// NodeArguments - arguments for RPC
-type NodeArguments struct {
+// Arguments - arguments for RPC
+type Arguments struct {
 	Start uint64 `json:"Start,string"`
 	Count int    `json:"count"`
 }
 
-// NodeReply - result from RPC
-type NodeReply struct {
+// Reply - result from RPC
+type Reply struct {
 	Nodes     []rpc.Entry `json:"nodes"`
 	NextStart uint64      `json:"nextStart,string"`
 }
@@ -76,7 +76,7 @@ func New(log *logger.L, pools reservoir.Handles, start time.Time, version string
 }
 
 // List - list all node offering RPC functionality
-func (node *Node) List(arguments *NodeArguments, reply *NodeReply) error {
+func (node *Node) List(arguments *Arguments, reply *Reply) error {
 
 	if err := ratelimit.LimitN(node.Limiter, arguments.Count, maximumNodeList); nil != err {
 		return err
