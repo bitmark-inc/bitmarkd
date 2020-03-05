@@ -7,7 +7,6 @@ package certificate
 
 import (
 	"crypto/tls"
-	"fmt"
 
 	"golang.org/x/crypto/sha3"
 
@@ -22,7 +21,6 @@ func Get(log *logger.L, name, certificate, key string) (*tls.Config, [32]byte, e
 	keyPair, err := tls.X509KeyPair([]byte(certificate), []byte(key))
 	if err != nil {
 		log.Errorf("%s failed to load keypair: %v", name, err)
-		fmt.Println("failed to load")
 		return nil, fin, err
 	}
 

@@ -91,7 +91,7 @@ func removeFiles() {
 func Certificate(dirPath string) string {
 	data, err := ioutil.ReadFile(path.Join(dirPath, certificateFile))
 	if nil != err {
-		fmt.Printf("read certificate file with error: %s\n", err)
+		fmt.Println("read certificate file with error: ", err)
 	}
 
 	return string(data)
@@ -100,7 +100,7 @@ func Certificate(dirPath string) string {
 func Key(dirPath string) string {
 	data, err := ioutil.ReadFile(path.Join(dirPath, certificateKey))
 	if nil != err {
-		fmt.Printf("read certificate file with error: %s\n", err)
+		fmt.Println("read certificate file with error: ", err)
 	}
 
 	return string(data)

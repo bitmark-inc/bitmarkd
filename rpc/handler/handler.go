@@ -7,7 +7,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -129,7 +128,6 @@ func (h *handler) RPC(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	err := server.ServeRequest(serverCodec)
 	if nil != err {
-		fmt.Println("err: ", err)
 		sendInternalServerError(w)
 		return
 	}

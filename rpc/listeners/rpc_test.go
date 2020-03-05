@@ -61,7 +61,8 @@ func TestRpcListenerServe(t *testing.T) {
 	s := rpc.NewServer()
 	err := s.Register(Add{})
 	if nil != err {
-		fmt.Println("register with error: ", err)
+		t.Error("register with error: ", err)
+		t.FailNow()
 	}
 
 	ctl := gomock.NewController(t)
@@ -102,7 +103,8 @@ func TestRpcListenerServe(t *testing.T) {
 
 	c, err := tls.Dial("tcp", fmt.Sprintf(":%d", port), &tlsConfig)
 	if nil != err {
-		fmt.Println("dial with error: ", err)
+		t.Error("dial with error: ", err)
+		t.FailNow()
 	}
 
 	arg := AddArg{

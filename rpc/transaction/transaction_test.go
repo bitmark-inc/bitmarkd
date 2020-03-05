@@ -25,7 +25,7 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-func TestTransaction_Status(t *testing.T) {
+func TestTransactionStatus(t *testing.T) {
 	fixtures.SetupTestLogger()
 	defer fixtures.TeardownTestLogger()
 

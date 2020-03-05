@@ -25,9 +25,14 @@ import (
 	"github.com/bitmark-inc/bitmarkd/rpc/handler"
 )
 
+const (
+	notAllowed      = "method not allowed"
+	tooManyRequests = "Too Many Requests"
+)
+
 type eResp struct {
-	Code  int
-	Error string
+	Code  int    `json:"code"`
+	Error string `json:"error"`
 }
 
 type jResp struct {
@@ -119,6 +124,84 @@ func TestRPC(t *testing.T) {
 	assert.Nil(t, j.Error, "wrong error")
 }
 
+func TestRPCWhenWrongHTTPMethod(t *testing.T) {
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
+
+	s := rpc.NewServer()
+	a := Add{}
+	_ = s.Register(a)
+
+	h := handler.New(
+		logger.New(fixtures.LogCategory),
+		s,
+		time.Now(),
+		"1.0",
+		uint64(5),
+	)
+
+	req := httptest.NewRequest("GET", "http://not.exist", nil)
+	w := httptest.NewRecorder()
+	h.RPC(w, req)
+
+	resp := w.Result()
+	var j eResp
+	_ = json.NewDecoder(resp.Body).Decode(&j)
+	assert.Equal(t, notAllowed, j.Error, "wrong method")
+}
+
+func TestRPCWhenTooManyConnections(t *testing.T) {
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
+
+	s := rpc.NewServer()
+	a := Add{}
+	_ = s.Register(a)
+
+	h := handler.New(
+		logger.New(fixtures.LogCategory),
+		s,
+		time.Now(),
+		"1.0",
+		uint64(0),
+	)
+
+	req := httptest.NewRequest("POST", "http://not.exist", nil)
+	w := httptest.NewRecorder()
+	h.RPC(w, req)
+
+	resp := w.Result()
+	var j eResp
+	_ = json.NewDecoder(resp.Body).Decode(&j)
+	assert.Equal(t, tooManyRequests, j.Error, "wrong method")
+}
+
+func TestRPCWhenServeError(t *testing.T) {
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
+
+	s := rpc.NewServer()
+
+	h := handler.New(
+		logger.New(fixtures.LogCategory),
+		s,
+		time.Now(),
+		"1.0",
+		uint64(5),
+	)
+
+	arg := jReq{}
+	data, _ := json.Marshal(arg)
+
+	req := httptest.NewRequest("POST", "http://not.exist", bytes.NewReader(data))
+	w := httptest.NewRecorder()
+	h.RPC(w, req)
+
+	resp := w.Result()
+	b, _ := ioutil.ReadAll(resp.Body)
+	assert.Contains(t, string(b), "internal server error", "wrong response")
+}
+
 func TestPeers(t *testing.T) {
 	fixtures.SetupTestLogger()
 	defer fixtures.TeardownTestLogger()
@@ -152,6 +235,84 @@ func TestPeers(t *testing.T) {
 	assert.Equal(t, 0, j.Result, "wrong result")
 }
 
+func TestPeersWhenWrongHTTPMethod(t *testing.T) {
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
+
+	s := rpc.NewServer()
+
+	h := handler.New(
+		logger.New(fixtures.LogCategory),
+		s,
+		time.Now(),
+		"1.0",
+		uint64(5),
+	)
+
+	req := httptest.NewRequest("POST", "http://not.exist", nil)
+	w := httptest.NewRecorder()
+	h.Peers(w, req)
+
+	resp := w.Result()
+	var j eResp
+	_ = json.NewDecoder(resp.Body).Decode(&j)
+	assert.Equal(t, notAllowed, j.Error, "wrong method")
+}
+
+func TestPeersWhenNotAllow(t *testing.T) {
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
+
+	s := rpc.NewServer()
+
+	h := handler.New(
+		logger.New(fixtures.LogCategory),
+		s,
+		time.Now(),
+		"1.0",
+		uint64(5),
+	)
+
+	req := httptest.NewRequest("GET", "http://test.com", nil)
+	w := httptest.NewRecorder()
+
+	h.Peers(w, req)
+
+	resp := w.Result()
+	var j eResp
+	_ = json.NewDecoder(resp.Body).Decode(&j)
+	assert.Equal(t, "forbidden", j.Error, "wrong not allow")
+}
+
+func TestPeersWhenTooManyConnections(t *testing.T) {
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
+
+	s := rpc.NewServer()
+
+	h := handler.New(
+		logger.New(fixtures.LogCategory),
+		s,
+		time.Now(),
+		"1.0",
+		uint64(0),
+	)
+
+	allow := make(map[string][]*net.IPNet)
+	_, ipNet, _ := net.ParseCIDR("192.0.2.1/32")
+	allow["peers"] = []*net.IPNet{ipNet}
+	h.SetAllow(allow)
+
+	req := httptest.NewRequest("GET", "http://not.exist", nil)
+	w := httptest.NewRecorder()
+	h.Peers(w, req)
+
+	resp := w.Result()
+	var j eResp
+	_ = json.NewDecoder(resp.Body).Decode(&j)
+	assert.Equal(t, tooManyRequests, j.Error, "wrong method")
+}
+
 func TestConnections(t *testing.T) {
 	fixtures.SetupTestLogger()
 	defer fixtures.TeardownTestLogger()
@@ -178,6 +339,84 @@ func TestConnections(t *testing.T) {
 	resp := w.Result()
 	b, _ := ioutil.ReadAll(resp.Body)
 	assert.Contains(t, string(b), "connectedTo", "wrong response")
+}
+
+func TestConnectionWhenWrongHTTPMethod(t *testing.T) {
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
+
+	s := rpc.NewServer()
+
+	h := handler.New(
+		logger.New(fixtures.LogCategory),
+		s,
+		time.Now(),
+		"1.0",
+		uint64(5),
+	)
+
+	req := httptest.NewRequest("POST", "http://not.exist", nil)
+	w := httptest.NewRecorder()
+	h.Connections(w, req)
+
+	resp := w.Result()
+	var j eResp
+	_ = json.NewDecoder(resp.Body).Decode(&j)
+	assert.Equal(t, notAllowed, j.Error, "wrong method")
+}
+
+func TestConnectionsWhenNotAllow(t *testing.T) {
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
+
+	s := rpc.NewServer()
+
+	h := handler.New(
+		logger.New(fixtures.LogCategory),
+		s,
+		time.Now(),
+		"1.0",
+		uint64(5),
+	)
+
+	req := httptest.NewRequest("GET", "http://test.com", nil)
+	w := httptest.NewRecorder()
+
+	h.Connections(w, req)
+
+	resp := w.Result()
+	var j eResp
+	_ = json.NewDecoder(resp.Body).Decode(&j)
+	assert.Equal(t, "forbidden", j.Error, "wrong not allow")
+}
+
+func TestConnectionsWhenTooManyConnections(t *testing.T) {
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
+
+	s := rpc.NewServer()
+
+	h := handler.New(
+		logger.New(fixtures.LogCategory),
+		s,
+		time.Now(),
+		"1.0",
+		uint64(0),
+	)
+
+	allow := make(map[string][]*net.IPNet)
+	_, ipNet, _ := net.ParseCIDR("192.0.2.1/32")
+	allow["connections"] = []*net.IPNet{ipNet}
+	h.SetAllow(allow)
+
+	req := httptest.NewRequest("GET", "http://not.exist", nil)
+	w := httptest.NewRecorder()
+	h.Connections(w, req)
+
+	resp := w.Result()
+	var j eResp
+	_ = json.NewDecoder(resp.Body).Decode(&j)
+	assert.Equal(t, tooManyRequests, j.Error, "wrong method")
 }
 
 func TestDetails(t *testing.T) {
@@ -207,4 +446,82 @@ func TestDetails(t *testing.T) {
 	resp := w.Result()
 	b, _ := ioutil.ReadAll(resp.Body)
 	assert.Contains(t, string(b), "Stopped", "wrong response")
+}
+
+func TestDetailsWhenWrongHTTPMethod(t *testing.T) {
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
+
+	s := rpc.NewServer()
+
+	h := handler.New(
+		logger.New(fixtures.LogCategory),
+		s,
+		time.Now(),
+		"1.0",
+		uint64(5),
+	)
+
+	req := httptest.NewRequest("POST", "http://not.exist", nil)
+	w := httptest.NewRecorder()
+	h.Details(w, req)
+
+	resp := w.Result()
+	var j eResp
+	_ = json.NewDecoder(resp.Body).Decode(&j)
+	assert.Equal(t, notAllowed, j.Error, "wrong method")
+}
+
+func TestDetailsWhenNotAllow(t *testing.T) {
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
+
+	s := rpc.NewServer()
+
+	h := handler.New(
+		logger.New(fixtures.LogCategory),
+		s,
+		time.Now(),
+		"1.0",
+		uint64(5),
+	)
+
+	req := httptest.NewRequest("GET", "http://test.com", nil)
+	w := httptest.NewRecorder()
+
+	h.Details(w, req)
+
+	resp := w.Result()
+	var j eResp
+	_ = json.NewDecoder(resp.Body).Decode(&j)
+	assert.Equal(t, "forbidden", j.Error, "wrong not allow")
+}
+
+func TestDetailsWhenTooManyConnections(t *testing.T) {
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
+
+	s := rpc.NewServer()
+
+	h := handler.New(
+		logger.New(fixtures.LogCategory),
+		s,
+		time.Now(),
+		"1.0",
+		uint64(0),
+	)
+
+	allow := make(map[string][]*net.IPNet)
+	_, ipNet, _ := net.ParseCIDR("192.0.2.1/32")
+	allow["details"] = []*net.IPNet{ipNet}
+	h.SetAllow(allow)
+
+	req := httptest.NewRequest("GET", "http://not.exist", nil)
+	w := httptest.NewRecorder()
+	h.Details(w, req)
+
+	resp := w.Result()
+	var j eResp
+	_ = json.NewDecoder(resp.Body).Decode(&j)
+	assert.Equal(t, tooManyRequests, j.Error, "wrong method")
 }
