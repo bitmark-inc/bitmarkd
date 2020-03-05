@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/fault"
+
 	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
 	"github.com/bitmark-inc/bitmarkd/rpc/transaction"
 
@@ -46,4 +48,23 @@ func TestTransactionStatus(t *testing.T) {
 	err := tr.Status(&arg, &reply)
 	assert.Nil(t, err, "wrong Status")
 	assert.Equal(t, reservoir.StateConfirmed.String(), reply.Status, "")
+}
+
+func TestTransactionStatusWhenReservoirEmpty(t *testing.T) {
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
+
+	ctl := gomock.NewController(t)
+	defer ctl.Finish()
+
+	now := time.Now()
+
+	tr := transaction.New(logger.New(fixtures.LogCategory), now, nil)
+
+	arg := transaction.Arguments{TxId: merkle.Digest{1, 2, 3, 4}}
+
+	var reply transaction.StatusReply
+	err := tr.Status(&arg, &reply)
+	assert.NotNil(t, err, "wrong Status")
+	assert.Equal(t, fault.MissingReservoir, err, "wrong error message")
 }
