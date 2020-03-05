@@ -33,12 +33,15 @@ func (n *Node) Setup(configuration *Configuration, version string, dnsPeerOnly d
 	}
 	maAddrs := util.IPPortToMultiAddr(listenIPPorts)
 	n.Registers = NewRegistration(registerExpireTime)
-	prvKey, err := util.DecodePrivKeyFromHex(configuration.SecretKey) //Hex Decoded binaryString
+	prvKey, err := util.DecodePrivKeyFromHex(configuration.SecretKey)
 	if err != nil {
 		return err
 	}
 	n.PrivateKey = prvKey
-	n.NewHost(n.NodeType, maAddrs, n.PrivateKey)
+	err = n.NewHost(n.NodeType, maAddrs, n.PrivateKey)
+	if nil != err {
+		return err
+	}
 	err = n.setAnnounce(configuration.Announce)
 	if err != nil {
 		if fault.NoAnnounceAddrs == err {
@@ -51,7 +54,7 @@ func (n *Node) Setup(configuration *Configuration, version string, dnsPeerOnly d
 	n.listen(configuration.Announce)
 	n.MetricsNetwork = NewMetricsNetwork(n.Host, n.Log)
 
-	//Start Broadcsting
+	// start broadcasting
 	ps, err := pubsub.NewGossipSub(context.Background(), n.Host)
 	if err != nil {
 		return err
@@ -67,7 +70,7 @@ func (n *Node) Setup(configuration *Configuration, version string, dnsPeerOnly d
 	return nil
 }
 
-// NewHost create a NewHost according to nodetype
+// NewHost create a new host according to nodetype
 func (n *Node) NewHost(nodetype nodeType, listenAddrs []ma.Multiaddr, prvKey crypto.PrivKey) error {
 	options := []libp2p.Option{libp2p.Identity(prvKey), libp2p.Security(tls.ID, tls.New)}
 	if ClientNode != nodetype {
@@ -77,6 +80,9 @@ func (n *Node) NewHost(nodetype nodeType, listenAddrs []ma.Multiaddr, prvKey cry
 	if err != nil {
 		return err
 	}
+	if newHost == nil {
+		return fault.NotInitialised
+	}
 	n.Host = newHost
 	for _, a := range newHost.Addrs() {
 		n.Log.Info(fmt.Sprintf("Host Address: %s/%v/%s\n", a, nodeProtocol, newHost.ID()))
@@ -84,7 +90,7 @@ func (n *Node) NewHost(nodetype nodeType, listenAddrs []ma.Multiaddr, prvKey cry
 	return nil
 }
 
-//setAnnounce: Set Announce address in Routing
+// setAnnounce set address in Routing
 func (n *Node) setAnnounce(announceAddrs []string) error {
 	maAddrs := util.IPPortToMultiAddr(announceAddrs)
 	n.Announce = n.announceFullAddr(maAddrs)
@@ -112,6 +118,10 @@ func (n *Node) listen(announceAddrs []string) {
 }
 
 func (n *Node) announceFullAddr(ipportAnnounce []ma.Multiaddr) []ma.Multiaddr {
+	if nil == n.Host {
+		panic("announceFullAddr called without setting up Node.Host")
+	}
+
 	maAddrs := []ma.Multiaddr{}
 	p2pMa, err := ma.NewMultiaddr(fmt.Sprintf("/%s/%s", nodeProtocol, n.Host.ID().String()))
 	if err != nil {
