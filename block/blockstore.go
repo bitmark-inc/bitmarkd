@@ -57,8 +57,10 @@ func (blk *blockstore) process(item *messagebus.Message) {
 		packedBlock := item.Parameters[0]
 		err := StoreIncoming(packedBlock, nil, RescanVerified)
 		if nil == err {
-			// broadcast this packedBlock to peers if the block was valid
-			messagebus.Bus.P2P.Send("block", packedBlock)
+			// broadcast this packedBlock to peers if the block was valid (only local)
+			if item.Command == "local" {
+				messagebus.Bus.P2P.Send("block", packedBlock)
+			}
 		} else {
 			log.Debugf("store block: %x  error: %s", packedBlock, err)
 		}
