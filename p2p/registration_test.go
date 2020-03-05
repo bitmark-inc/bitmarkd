@@ -13,7 +13,7 @@ import (
 
 const (
 	registersNum   = 10
-	expireDuration = 1 * time.Second // should be greate than 10 microsecond
+	expireDuration = 1 * time.Second // must be greater than 10 microseconds
 )
 
 func TestNewRegistration(t *testing.T) {
@@ -52,17 +52,6 @@ func TestUnRegistered(t *testing.T) {
 	status, ok = reg.peers[id2]
 	assert.Equal(t, true, ok, fmt.Sprintf("unRegister  peer not in the list"))
 	assert.Equal(t, false, status.Registered, fmt.Sprintf("unRegister  peer fail"))
-}
-
-func TestIsExpire(t *testing.T) {
-	reg, ids, err := newMockRegistrationData()
-	assert.NoError(t, err, fmt.Sprintf("generate mock data error:%v", err))
-	reg.addRegister(ids[0])
-	time.Sleep(10 * time.Microsecond)
-	assert.Equal(t, false, reg.isExpire(ids[0]), "should not expire")
-	time.Sleep(time.Duration(expireDuration)) // 1 sec
-	assert.Equal(t, true, reg.isExpire(ids[0]), "should expire")
-
 }
 
 func TestRegisteredPeers(t *testing.T) {
