@@ -207,3 +207,42 @@ func TestAssetsGetWhenUnpackError(t *testing.T) {
 	assert.Equal(t, "", reply.Assets[0].Record, "wrong record")
 	assert.False(t, reply.Assets[0].Confirmed, "wrong confirmed")
 }
+
+func TestRegister(t *testing.T) {
+	fixtures.SetupTestLogger()
+	defer fixtures.TeardownTestLogger()
+
+	mode.Initialise(chain.Testing)
+	defer mode.Finalise()
+
+	ctl := gomock.NewController(t)
+	defer ctl.Finish()
+
+	p := mocks.NewMockHandle(ctl)
+
+	acc := &account.Account{
+		AccountInterface: &account.ED25519Account{
+			Test:      true,
+			PublicKey: fixtures.IssuerPublicKey,
+		},
+	}
+	ad := transactionrecord.AssetData{
+		Name:        "test",
+		Fingerprint: "123456789",
+		Metadata:    "owner\x00test",
+		Registrant:  acc,
+	}
+	packed, _ := ad.Pack(acc)
+	signature := ed25519.Sign(fixtures.IssuerPrivateKey, packed)
+	ad.Signature = signature
+	packed, _ = ad.Pack(acc)
+
+	p.EXPECT().Has(gomock.Any()).Return(true).Times(1)
+
+	status, data, err := assets.Register([]*transactionrecord.AssetData{&ad}, p)
+	assert.Nil(t, err, "wrong Register")
+	assert.NotNil(t, data, "wrong data")
+	assert.Equal(t, 1, len(status), "wrong status count")
+	assert.Equal(t, true, status[0].Duplicate, "wrong duplicate status")
+	assert.Equal(t, ad.AssetId(), *status[0].AssetId, "wrong asset ID")
+}
