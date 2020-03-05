@@ -86,7 +86,6 @@ func NewHTTPS(
 	tlsConfig *tls.Config,
 	hdlr handler.Handler,
 ) (Listener, error) {
-
 	if 0 == len(configuration.Listen) {
 		log.Infof("disable: %s", httpsLogName)
 		return nil, nil

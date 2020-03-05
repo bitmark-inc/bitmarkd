@@ -54,7 +54,7 @@ var globalData rpcData
 var connectionCountRPC counter.Counter
 
 // Initialise - setup peer background processes
-func Initialise(rpcConfiguration *listeners.RPCConfiguration, httpsConfiguration *listeners.HTTPSConfiguration, version string) error {
+func Initialise(rpcConfiguration *listeners.RPCConfiguration, httpsConfiguration *listeners.HTTPSConfiguration, version string, ann announce.Announce) error {
 
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -81,7 +81,7 @@ func Initialise(rpcConfiguration *listeners.RPCConfiguration, httpsConfiguration
 		log,
 		&connectionCountRPC,
 		s,
-		announce.Get(),
+		ann,
 		tlsConfig,
 		certificateFingerprint,
 	)
@@ -110,6 +110,7 @@ func Initialise(rpcConfiguration *listeners.RPCConfiguration, httpsConfiguration
 	if nil != err {
 		return err
 	}
+
 	err = httpsListener.Serve()
 	if nil != err {
 		return err
@@ -123,7 +124,6 @@ func Initialise(rpcConfiguration *listeners.RPCConfiguration, httpsConfiguration
 
 // Finalise - stop all background tasks
 func Finalise() error {
-
 	if !globalData.initialised {
 		return fault.NotInitialised
 	}
