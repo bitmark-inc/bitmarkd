@@ -8,11 +8,6 @@ package listeners_test
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/bitmark-inc/bitmarkd/rpc/certificate"
-	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
-	"github.com/bitmark-inc/bitmarkd/rpc/listeners"
-	"github.com/bitmark-inc/logger"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"math/rand"
 	"net"
@@ -22,6 +17,12 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/certificate"
+	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
+	"github.com/bitmark-inc/bitmarkd/rpc/listeners"
+	"github.com/bitmark-inc/logger"
+	"github.com/stretchr/testify/assert"
 )
 
 type testHandler struct{}
@@ -46,9 +47,7 @@ func (h testHandler) Root(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte("Root"))
 }
 
-func (h testHandler) SetAllow(_ map[string][]*net.IPNet) {
-	return
-}
+func (h testHandler) SetAllow(_ map[string][]*net.IPNet) {}
 
 var client *http.Client
 

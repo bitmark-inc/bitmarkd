@@ -133,22 +133,6 @@ func TestAssetsGetWhenNilAsset(t *testing.T) {
 	arg := assets.GetArguments{Fingerprints: []string{"fin1"}}
 	var reply assets.GetReply
 	bin1 := transactionrecord.NewAssetIdentifier([]byte("fin1"))
-	acc := &account.Account{
-		AccountInterface: &account.ED25519Account{
-			Test:      true,
-			PublicKey: fixtures.IssuerPublicKey,
-		},
-	}
-	ad := transactionrecord.AssetData{
-		Name:        "test",
-		Fingerprint: "123456789",
-		Metadata:    "owner\x00test",
-		Registrant:  acc,
-	}
-	packed, _ := ad.Pack(acc)
-	signature := ed25519.Sign(fixtures.IssuerPrivateKey, packed)
-	ad.Signature = signature
-	packed, _ = ad.Pack(acc)
 
 	p.EXPECT().GetNB(bin1[:]).Return(uint64(1), nil).Times(1)
 
@@ -181,22 +165,6 @@ func TestAssetsGetWhenUnpackError(t *testing.T) {
 	var reply assets.GetReply
 	bin1 := transactionrecord.NewAssetIdentifier([]byte("fin1"))
 	bin2 := transactionrecord.NewAssetIdentifier([]byte("fin2"))
-	acc := &account.Account{
-		AccountInterface: &account.ED25519Account{
-			Test:      true,
-			PublicKey: fixtures.IssuerPublicKey,
-		},
-	}
-	ad := transactionrecord.AssetData{
-		Name:        "test",
-		Fingerprint: "123456789",
-		Metadata:    "owner\x00test",
-		Registrant:  acc,
-	}
-	packed, _ := ad.Pack(acc)
-	signature := ed25519.Sign(fixtures.IssuerPrivateKey, packed)
-	ad.Signature = signature
-	packed, _ = ad.Pack(acc)
 
 	p.EXPECT().GetNB(bin1[:]).Return(uint64(1), []byte{}).Times(1)
 	p.EXPECT().GetNB(bin2[:]).Return(uint64(1), []byte{}).Times(1)
@@ -235,7 +203,6 @@ func TestRegister(t *testing.T) {
 	packed, _ := ad.Pack(acc)
 	signature := ed25519.Sign(fixtures.IssuerPrivateKey, packed)
 	ad.Signature = signature
-	packed, _ = ad.Pack(acc)
 
 	p.EXPECT().Has(gomock.Any()).Return(true).Times(1)
 

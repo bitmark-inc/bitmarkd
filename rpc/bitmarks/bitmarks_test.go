@@ -69,7 +69,6 @@ func TestBitmarksCreate(t *testing.T) {
 	}
 	packed, _ := ad.Pack(&acc)
 	ad.Signature = ed25519.Sign(fixtures.IssuerPrivateKey, packed)
-	packed, _ = ad.Pack(&acc)
 	aid := ad.AssetId()
 
 	is := transactionrecord.BitmarkIssue{
@@ -78,9 +77,6 @@ func TestBitmarksCreate(t *testing.T) {
 		Nonce:     1,
 		Signature: nil,
 	}
-	packed2, _ := is.Pack(&acc)
-	is.Signature = ed25519.Sign(fixtures.IssuerPrivateKey, packed2)
-	packed2, _ = is.Pack(&acc)
 
 	arg := bitmarks.CreateArguments{
 		Assets: []*transactionrecord.AssetData{
