@@ -23,8 +23,8 @@ type Consensus struct {
 	sync.RWMutex            // to allow locking
 	Log           *logger.L // logger
 	Node          *p2p.Node
-	machine       Machine
-	votingMetrics MetricsPeersVoting
+	machine       *Machine
+	votingMetrics *MetricsPeersVoting
 	initialised   bool
 	background    *background.T
 }
@@ -43,12 +43,12 @@ func Initialise(node *p2p.Node, fastsync bool) error {
 	globalData.Log = logger.New("consensus")
 	globalData.votingMetrics = NewMetricsPeersVoting(node)
 	globalData.Log.Info("starting…")
-	globalData.machine = NewConsensusMachine(node, &globalData.votingMetrics, fastsync)
+	globalData.machine = NewConsensusMachine(node, globalData.votingMetrics, fastsync)
 	globalData.Log.Info("start background…")
 
 	processes := background.Processes{
-		&globalData.machine,
-		&globalData.votingMetrics,
+		globalData.machine,
+		globalData.votingMetrics,
 	}
 
 	globalData.background = background.Start(processes, globalData.Log)

@@ -31,8 +31,8 @@ type MetricsPeersVoting struct {
 }
 
 //NewMetricsPeersVoting return a MetricsPeersVoting for voting
-func NewMetricsPeersVoting(thisNode *p2p.Node) MetricsPeersVoting {
-	metrics := MetricsPeersVoting{watchNode: thisNode, Log: globalData.Log}
+func NewMetricsPeersVoting(thisNode *p2p.Node) *MetricsPeersVoting {
+	metrics := &MetricsPeersVoting{watchNode: thisNode, Log: globalData.Log}
 	metrics.UpdateCandidates()
 	return metrics
 }
@@ -119,6 +119,7 @@ loop:
 
 //SetMetrics set the voting metrics value
 func (p *MetricsPeersVoting) SetMetrics(id peerlib.ID, height uint64, digest blockdigest.Digest) {
+loop:
 	for _, candidate := range p.Candidates {
 		if util.IDEqual(candidate.ID, id) {
 			localheight := blockheader.Height()
@@ -127,7 +128,7 @@ func (p *MetricsPeersVoting) SetMetrics(id peerlib.ID, height uint64, digest blo
 			candidate.UpdateMetrics(id.String(), height, localheight, digest, respTime)
 			p.Unlock()
 			//util.LogInfo(p.Log, util.CoCyan, fmt.Sprintf("SetMetrics:ID:%s, remoteHeight:%d, localHeight:%d, digest:%s, responseTime:%v", id.ShortString(), height, localheight, digest, respTime))
-			break
+			break loop
 		}
 	}
 }
