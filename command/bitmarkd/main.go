@@ -11,9 +11,8 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/bitmark-inc/bitmarkd/ownership"
-
 	"github.com/bitmark-inc/bitmarkd/announce/broadcast"
+	"github.com/bitmark-inc/bitmarkd/ownership"
 
 	//"runtime/pprof"
 	"syscall"
@@ -24,14 +23,13 @@ import (
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/chain"
+	"github.com/bitmark-inc/bitmarkd/consensus"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/p2p"
 	"github.com/bitmark-inc/bitmarkd/payment"
-	"github.com/bitmark-inc/bitmarkd/publish"
-
-	"github.com/bitmark-inc/bitmarkd/consensus"
 	"github.com/bitmark-inc/bitmarkd/proof"
+	"github.com/bitmark-inc/bitmarkd/publish"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/storage"
@@ -189,10 +187,10 @@ func main() {
 		Assets:            storage.Pool.Assets,
 		BlockOwnerPayment: storage.Pool.BlockOwnerPayment,
 		Transactions:      storage.Pool.Transactions,
-		OwnerTx:           storage.Pool.OwnerTxIndex,
+		OwnerTxIndex:      storage.Pool.OwnerTxIndex,
 		OwnerData:         storage.Pool.OwnerData,
-		Share:             storage.Pool.ShareQuantity,
-		ShareQuantity:     storage.Pool.Shares,
+		Share:             storage.Pool.Shares,
+		ShareQuantity:     storage.Pool.ShareQuantity,
 	}
 	err = reservoir.Initialise(masterConfiguration.CacheDirectory, handles)
 	if nil != err {

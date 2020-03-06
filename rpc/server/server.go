@@ -9,10 +9,9 @@ import (
 	"net/rpc"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/counter"
-
 	"github.com/bitmark-inc/bitmarkd/announce"
 	blockrecord2 "github.com/bitmark-inc/bitmarkd/blockrecord"
+	"github.com/bitmark-inc/bitmarkd/counter"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/ownership"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
@@ -36,7 +35,7 @@ func Create(log *logger.L, version string, rpcCount *counter.Counter) *rpc.Serve
 		BlockOwnerPayment: storage.Pool.BlockOwnerPayment,
 		Blocks:            storage.Pool.Blocks,
 		Transactions:      storage.Pool.Transactions,
-		OwnerTx:           storage.Pool.OwnerTxIndex,
+		OwnerTxIndex:      storage.Pool.OwnerTxIndex,
 		OwnerData:         storage.Pool.OwnerData,
 		Share:             storage.Pool.Shares,
 		ShareQuantity:     storage.Pool.ShareQuantity,

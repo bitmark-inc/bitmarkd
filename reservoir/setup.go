@@ -90,7 +90,7 @@ type Handles struct {
 	BlockOwnerPayment storage.Handle
 	Blocks            storage.Handle
 	Transactions      storage.Handle
-	OwnerTx           storage.Handle
+	OwnerTxIndex      storage.Handle
 	OwnerData         storage.Handle
 	Share             storage.Handle
 	ShareQuantity     storage.Handle
@@ -146,7 +146,7 @@ func (g *globalDataType) StoreTransfer(transfer transactionrecord.BitmarkTransfe
 	return storeTransfer(
 		transfer,
 		g.handles.Transactions,
-		g.handles.OwnerTx,
+		g.handles.OwnerTxIndex,
 		g.handles.OwnerData,
 		g.handles.BlockOwnerPayment,
 	)
