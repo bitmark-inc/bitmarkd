@@ -179,6 +179,7 @@ coin:run-bitcoin,--server:run-litecoin,--server
     if [ -z "${target}" ]
     then
       tmux new-session -d -s "${session}" -n "${window}"
+      tmux set-option -g history-limit 5000
     else
       tmux new-window -a -t "${target}" -n "${window}"
     fi
