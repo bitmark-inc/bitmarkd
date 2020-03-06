@@ -7,20 +7,18 @@ import (
 	"sync"
 	"time"
 
-	proto "github.com/golang/protobuf/proto"
-	p2pcore "github.com/libp2p/go-libp2p-core"
-	crypto "github.com/libp2p/go-libp2p-core/crypto"
-	peerlib "github.com/libp2p/go-libp2p-core/peer"
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	ma "github.com/multiformats/go-multiaddr"
-	"github.com/prometheus/common/log"
-
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
+	"github.com/golang/protobuf/proto"
+	p2pcore "github.com/libp2p/go-libp2p-core"
+	"github.com/libp2p/go-libp2p-core/crypto"
+	peerlib "github.com/libp2p/go-libp2p-core/peer"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	ma "github.com/multiformats/go-multiaddr"
 )
 
 // global data
@@ -146,17 +144,17 @@ func Initialise(configuration *Configuration, version string, dnsPeerOnly dnsOnl
 
 	for wait := 0; wait < 3; wait++ { // consensus package depended on p2p.Node
 		if nil != globalData.Host {
-			log.Debug("p2p host  has initialized")
+			globalData.Log.Debug("p2p host  has initialized")
 			return nil
 		}
-		log.Debug("wait for host to initialize")
+		globalData.Log.Debug("wait for host to initialize")
 		time.Sleep(2 * time.Second)
 	}
 	return errors.New("host does not initialize")
 }
 
 // Run  wait for incoming requests, process them and reply
-func (n *Node) Run(args interface{}, shutdown <-chan struct{}) {
+func (n *Node) Run(_ interface{}, shutdown <-chan struct{}) {
 	log := n.Log
 	log.Info("starting…")
 	queue := messagebus.Bus.P2P.Chan()
@@ -288,12 +286,21 @@ func MulticastCommand(packedMessage []byte) error {
 
 //ID return this node host ID
 func ID() peerlib.ID {
+	if globalData.Host == nil {
+		return peerlib.ID("")
+	}
+
 	return globalData.Host.ID()
 }
 
 // GetAllPeers - obtain a list of all connector clients
 func GetAllPeers() []*Connected {
 	var peers []*Connected
+
+	if globalData.Registers == nil {
+		return peers
+	}
+
 	for _, id := range globalData.Registers.RegisteredPeers() {
 		if globalData.MetricsNetwork.IsConnected(id) {
 			addrInfo := globalData.Host.Peerstore().PeerInfo(id)

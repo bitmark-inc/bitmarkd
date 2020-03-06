@@ -41,7 +41,7 @@ func NewTransactionRestorer(unpacked interface{}, packed interface{}, handles Ha
 
 		return &transferRestoreData{
 			unpacked:          unpacked.(transactionrecord.BitmarkTransfer),
-			transaction:       handles.Transaction,
+			transaction:       handles.Transactions,
 			ownerTx:           handles.OwnerTx,
 			ownerData:         handles.OwnerData,
 			blockOwnerPayment: handles.BlockOwnerPayment,
@@ -116,7 +116,7 @@ func (i *issueRestoreData) Restore() error {
 		i.packed = i.packed[n:]
 	}
 
-	_, _, err := StoreIssues(issues, i.assetHandle, i.blockOwnerPaymentHandle)
+	_, _, err := storeIssues(issues, i.assetHandle, i.blockOwnerPaymentHandle)
 	if nil != err {
 		return fmt.Errorf("store issue with error: %s", err)
 	}
@@ -137,7 +137,7 @@ func (t *transferRestoreData) String() string {
 }
 
 func (t *transferRestoreData) Restore() error {
-	_, _, err := StoreTransfer(t.unpacked, t.transaction, t.ownerTx, t.ownerData, t.blockOwnerPayment)
+	_, _, err := storeTransfer(t.unpacked, t.transaction, t.ownerTx, t.ownerData, t.blockOwnerPayment)
 	if nil != err {
 		return fmt.Errorf("fail to restore transfer: %s", err)
 	}
@@ -157,7 +157,7 @@ func (g *grantRestoreData) String() string {
 }
 
 func (g *grantRestoreData) Restore() error {
-	_, _, err := StoreGrant(g.unpacked, g.shareQuantity, g.share, g.ownerData, g.blockOwnerPayment)
+	_, _, err := storeGrant(g.unpacked, g.shareQuantity, g.share, g.ownerData, g.blockOwnerPayment, storage.Pool.Transactions)
 
 	if nil != err {
 		return fmt.Errorf("fail to restore grant: %s", err)
@@ -178,7 +178,7 @@ func (s *swapRestoreData) String() string {
 }
 
 func (s *swapRestoreData) Restore() error {
-	_, _, err := StoreSwap(s.unpacked, s.shareQuantity, s.share, s.ownerData, s.blockOwnerPayment)
+	_, _, err := storeSwap(s.unpacked, s.shareQuantity, s.share, s.ownerData, s.blockOwnerPayment)
 	if nil != err {
 		return fmt.Errorf("create swap restorer with error: %s", err)
 	}

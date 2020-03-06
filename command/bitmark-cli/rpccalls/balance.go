@@ -8,7 +8,7 @@ package rpccalls
 import (
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/merkle"
-	"github.com/bitmark-inc/bitmarkd/rpc"
+	"github.com/bitmark-inc/bitmarkd/rpc/share"
 )
 
 // BalanceData - the parameters for a balance request
@@ -19,7 +19,7 @@ type BalanceData struct {
 }
 
 // GetBalance - retrieve some balance data
-func (client *Client) GetBalance(balanceConfig *BalanceData) (*rpc.ShareBalanceReply, error) {
+func (client *Client) GetBalance(balanceConfig *BalanceData) (*share.BalanceReply, error) {
 
 	var shareId merkle.Digest // if not present the all zero id
 	if "" != balanceConfig.ShareId {
@@ -28,7 +28,7 @@ func (client *Client) GetBalance(balanceConfig *BalanceData) (*rpc.ShareBalanceR
 		}
 	}
 
-	balanceArgs := rpc.ShareBalanceArguments{
+	balanceArgs := share.BalanceArguments{
 		Owner:   balanceConfig.Owner,
 		ShareId: shareId,
 		Count:   balanceConfig.Count,
@@ -36,7 +36,7 @@ func (client *Client) GetBalance(balanceConfig *BalanceData) (*rpc.ShareBalanceR
 
 	client.printJson("Balance Request", balanceArgs)
 
-	reply := &rpc.ShareBalanceReply{}
+	reply := &share.BalanceReply{}
 	err := client.client.Call("Share.Balance", balanceArgs, reply)
 	if nil != err {
 		return nil, err

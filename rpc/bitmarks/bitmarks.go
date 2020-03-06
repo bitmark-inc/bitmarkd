@@ -3,10 +3,14 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package rpc
+package bitmarks
 
 import (
 	"encoding/hex"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/ratelimit"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/assets"
 
 	"golang.org/x/time/rate"
 
@@ -23,10 +27,19 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
+const (
+	rateLimitBitmarks = 200
+	rateBurstBitmarks = reservoir.MaximumIssues
+)
+
 // Bitmarks - type for the RPC
 type Bitmarks struct {
-	log     *logger.L
-	limiter *rate.Limiter
+	Log                   *logger.L
+	Limiter               *rate.Limiter
+	IsNormalMode          func(mode.Mode) bool
+	Rsvr                  reservoir.Reservoir
+	PoolAssets            storage.Handle
+	PoolBlockOwnerPayment storage.Handle
 }
 
 // IssueStatus - results from an issue
@@ -40,9 +53,20 @@ type CreateArguments struct {
 	Issues []*transactionrecord.BitmarkIssue `json:"issues"`
 }
 
+func New(log *logger.L, pools reservoir.Handles, isNormalMode func(mode.Mode) bool, rsvr reservoir.Reservoir) *Bitmarks {
+	return &Bitmarks{
+		Log:                   log,
+		Limiter:               rate.NewLimiter(rateLimitBitmarks, rateBurstBitmarks),
+		IsNormalMode:          isNormalMode,
+		Rsvr:                  rsvr,
+		PoolAssets:            pools.Assets,
+		PoolBlockOwnerPayment: pools.BlockOwnerPayment,
+	}
+}
+
 // CreateReply - results from create RPC
 type CreateReply struct {
-	Assets     []AssetStatus                                   `json:"assets"`
+	Assets     []assets.Status                                 `json:"assets"`
 	Issues     []IssueStatus                                   `json:"issues"`
 	PayId      pay.PayId                                       `json:"payId"`
 	PayNonce   reservoir.PayNonce                              `json:"payNonce"`
@@ -53,7 +77,7 @@ type CreateReply struct {
 // Create - create assets and issues
 func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply) error {
 
-	log := bitmarks.log
+	log := bitmarks.Log
 	assetCount := len(arguments.Assets)
 	issueCount := len(arguments.Issues)
 
@@ -67,17 +91,17 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 	if count > reservoir.MaximumIssues {
 		count = reservoir.MaximumIssues
 	}
-	if err := rateLimitN(bitmarks.limiter, count, reservoir.MaximumIssues); nil != err {
+	if err := ratelimit.LimitN(bitmarks.Limiter, count, reservoir.MaximumIssues); nil != err {
 		return err
 	}
 
-	if !mode.Is(mode.Normal) {
+	if !bitmarks.IsNormalMode(mode.Normal) {
 		return fault.NotAvailableDuringSynchronise
 	}
 
 	log.Infof("Bitmarks.Create: %+v", arguments)
 
-	assetStatus, packedAssets, err := assetRegister(arguments.Assets)
+	assetStatus, packedAssets, err := assets.Register(arguments.Assets, bitmarks.PoolAssets)
 	if nil != err {
 		return err
 	}
@@ -90,7 +114,7 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 	var stored *reservoir.IssueInfo
 	duplicate := false
 	if issueCount > 0 {
-		stored, duplicate, err = reservoir.StoreIssues(arguments.Issues, storage.Pool.Assets, storage.Pool.BlockOwnerPayment)
+		stored, duplicate, err = bitmarks.Rsvr.StoreIssues(arguments.Issues)
 		if nil != err {
 			return err
 		}
@@ -124,9 +148,9 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 		if nil != stored.Payments {
 			result.Payments = make(map[string]transactionrecord.PaymentAlternative)
 
-			for _, payment := range stored.Payments {
-				c := payment[0].Currency.String()
-				result.Payments[c] = payment
+			for _, p := range stored.Payments {
+				c := p[0].Currency.String()
+				result.Payments[c] = p
 			}
 		}
 
@@ -157,14 +181,13 @@ type ProofReply struct {
 
 // Proof - supply proof that client-side hashing to confirm free issue was done
 func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) error {
-
-	if err := rateLimit(bitmarks.limiter); nil != err {
+	if err := ratelimit.Limit(bitmarks.Limiter); nil != err {
 		return err
 	}
 
-	log := bitmarks.log
+	log := bitmarks.Log
 
-	if !mode.Is(mode.Normal) {
+	if !bitmarks.IsNormalMode(mode.Normal) {
 		return fault.NotAvailableDuringSynchronise
 	}
 
@@ -197,7 +220,7 @@ func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) er
 	messagebus.Bus.P2P.Send("proof", packed)
 
 	// check if proof matches
-	reply.Status = reservoir.TryProof(arguments.PayId, nonce)
+	reply.Status = bitmarks.Rsvr.TryProof(arguments.PayId, nonce)
 
 	return nil
 }

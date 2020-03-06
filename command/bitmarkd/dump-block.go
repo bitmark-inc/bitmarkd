@@ -42,7 +42,8 @@ func dumpBlock(number uint64) (*blockResult, error) {
 		return nil, fault.BlockNotFound
 	}
 
-	header, digest, data, err := blockrecord.ExtractHeader(packed, number, false)
+	br := blockrecord.Get()
+	header, digest, data, err := br.ExtractHeader(packed, number, false)
 	if nil != err {
 		return nil, err
 	}

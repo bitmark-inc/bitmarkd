@@ -39,8 +39,8 @@ type verifiedGrantInfo struct {
 	issueBlockNumber    uint64
 }
 
-// StoreGrant - validate and store a grant request
-func StoreGrant(grant *transactionrecord.ShareGrant, shareQuantityHandle storage.Handle, shareHandle storage.Handle, ownerDataHandle storage.Handle, blockOwnerPaymentHandle storage.Handle) (*GrantInfo, bool, error) {
+// storeGrant - validate and store a grant request
+func storeGrant(grant *transactionrecord.ShareGrant, shareQuantityHandle storage.Handle, shareHandle storage.Handle, ownerDataHandle storage.Handle, blockOwnerPaymentHandle storage.Handle, transactionsHandle storage.Handle) (*GrantInfo, bool, error) {
 	if nil == shareQuantityHandle || nil == shareHandle || nil == ownerDataHandle || nil == blockOwnerPaymentHandle {
 		return nil, false, fault.NilPointer
 	}
@@ -48,7 +48,7 @@ func StoreGrant(grant *transactionrecord.ShareGrant, shareQuantityHandle storage
 	globalData.Lock()
 	defer globalData.Unlock()
 
-	verifyResult, duplicate, err := verifyGrant(grant, shareQuantityHandle, shareHandle, ownerDataHandle)
+	verifyResult, duplicate, err := verifyGrant(grant, shareQuantityHandle, shareHandle, ownerDataHandle, transactionsHandle)
 	if err != nil {
 		return nil, false, err
 	}
@@ -80,7 +80,7 @@ func StoreGrant(grant *transactionrecord.ShareGrant, shareQuantityHandle storage
 			result.Payments = entry.payments
 		} else {
 			// this would mean that reservoir data is corrupt
-			logger.Panicf("StoreGrant: failed to get current payment data for: %s  payid: %s", txId, payId)
+			logger.Panicf("storeGrant: failed to get current payment data for: %s  payid: %s", txId, payId)
 		}
 		return result, true, nil
 	}
@@ -138,7 +138,7 @@ func makeSpendKey(owner *account.Account, shareId merkle.Digest) spendKey {
 
 	ob := owner.Bytes()
 	if len(ob) > len(oKey.owner) {
-		logger.Panicf("StoreGrant: owner bytes length: %d expected less than: %d", len(ob), len(oKey.owner))
+		logger.Panicf("storeGrant: owner bytes length: %d expected less than: %d", len(ob), len(oKey.owner))
 	}
 	copy(oKey.owner[:], ob)
 	return oKey
@@ -173,7 +173,7 @@ func CheckGrantBalance(trx storage.Transaction, grant *transactionrecord.ShareGr
 }
 
 // verify that a grant is ok
-func verifyGrant(grant *transactionrecord.ShareGrant, shareQuantityHandle storage.Handle, shareHandle storage.Handle, ownerDataHandle storage.Handle) (*verifiedGrantInfo, bool, error) {
+func verifyGrant(grant *transactionrecord.ShareGrant, shareQuantityHandle storage.Handle, shareHandle storage.Handle, ownerDataHandle storage.Handle, transactionsHandle storage.Handle) (*verifiedGrantInfo, bool, error) {
 	if nil == shareQuantityHandle || nil == shareHandle || nil == ownerDataHandle {
 		return nil, false, fault.NilPointer
 	}
@@ -213,7 +213,7 @@ func verifyGrant(grant *transactionrecord.ShareGrant, shareQuantityHandle storag
 		return nil, false, fault.TransactionAlreadyExists
 	}
 	// a single confirmed transfer fails the whole block
-	if storage.Pool.Transactions.Has(txId[:]) {
+	if transactionsHandle.Has(txId[:]) {
 		return nil, false, fault.TransactionAlreadyExists
 	}
 

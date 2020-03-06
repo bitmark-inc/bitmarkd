@@ -17,6 +17,7 @@ import "errors"
 func e(s string) error {
 	return errors.New(s)
 }
+
 // auto generated error vars: *** DO NOT MODIFY ***
 
 var (
@@ -129,6 +130,7 @@ var (
 	MissingPaymentLitecoinSection         = e("missing payment litecoin section")
 	MissingPreviousBlockHeader            = e("missing previous block header")
 	MultiaddrIsNil                        = e("multiaddr is nil")
+	MissingReservoir                      = e("missing reservoir interface")
 	NameTooLong                           = e("name too long")
 	NilPointer                            = e("nil pointer")
 	NoAddress                             = e("no address")

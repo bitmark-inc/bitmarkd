@@ -7,7 +7,7 @@ package rpccalls
 
 import (
 	"github.com/bitmark-inc/bitmarkd/merkle"
-	"github.com/bitmark-inc/bitmarkd/rpc"
+	"github.com/bitmark-inc/bitmarkd/rpc/bitmark"
 )
 
 // ProvenanceData - data for a provenance request
@@ -24,7 +24,7 @@ type ProvenanceReply struct {
 
 // provenanceItem - transaction record in provenance chain
 type provenanceItem struct {
-	rpc.ProvenanceRecord
+	bitmark.ProvenanceRecord
 	Identity string `json:"_IDENTITY"`
 }
 
@@ -36,14 +36,14 @@ func (client *Client) GetProvenance(provenanceConfig *ProvenanceData) (*Provenan
 		return nil, err
 	}
 
-	provenanceArgs := rpc.ProvenanceArguments{
+	provenanceArgs := bitmark.ProvenanceArguments{
 		TxId:  txId,
 		Count: provenanceConfig.Count,
 	}
 
 	client.printJson("Provenance Request", provenanceArgs)
 
-	var reply rpc.ProvenanceReply
+	var reply bitmark.ProvenanceReply
 	err := client.client.Call("Bitmark.Provenance", provenanceArgs, &reply)
 	if nil != err {
 		return nil, err

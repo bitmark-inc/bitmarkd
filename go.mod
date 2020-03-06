@@ -18,6 +18,7 @@ require (
 	github.com/libp2p/go-libp2p-crypto v0.1.0
 	github.com/libp2p/go-libp2p-pubsub v0.1.1
 	github.com/libp2p/go-libp2p-tls v0.1.1
+	github.com/magiconair/properties v1.8.0
 	github.com/miekg/dns v1.1.16
 	github.com/multiformats/go-multiaddr v0.1.1
 	github.com/onsi/ginkgo v1.10.1 // indirect

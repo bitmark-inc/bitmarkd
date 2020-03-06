@@ -3,7 +3,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package rpc
+package handler
 
 import (
 	"encoding/json"
@@ -16,6 +16,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/rpc/node"
+
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
@@ -24,6 +26,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/p2p"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
+	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/util"
 	peerlib "github.com/libp2p/go-libp2p-core/peer"
 
@@ -38,7 +41,7 @@ const (
 	maximumCount = 100
 )
 
-// InternalConnection - type to allow rpc system to interface to http request
+// InternalConnection - type to allow RPC system to interface to http request
 type InternalConnection struct {
 	in  io.Reader
 	out io.Writer
@@ -55,7 +58,16 @@ func (c *InternalConnection) Close() error {
 }
 
 // the argument passed to the handlers
-type httpHandler struct {
+type Handler interface {
+	Peers(http.ResponseWriter, *http.Request)
+	RPC(http.ResponseWriter, *http.Request)
+	Details(http.ResponseWriter, *http.Request)
+	Connections(http.ResponseWriter, *http.Request)
+	Root(http.ResponseWriter, *http.Request)
+	SetAllow(allow map[string][]*net.IPNet)
+}
+
+type handler struct {
 	log                *logger.L
 	server             *rpc.Server
 	start              time.Time
@@ -64,25 +76,45 @@ type httpHandler struct {
 	maximumConnections uint64
 }
 
+func New(
+	log *logger.L,
+	server *rpc.Server,
+	start time.Time,
+	version string,
+	maximumConnections uint64,
+) Handler {
+	return &handler{
+		log:                log,
+		server:             server,
+		start:              start,
+		version:            version,
+		maximumConnections: maximumConnections,
+	}
+}
+
+func (h *handler) SetAllow(allow map[string][]*net.IPNet) {
+	h.allow = allow
+}
+
 // global atomic connection counter
 // all listening ports share this count
 var connectionCountHTTPS counter.Counter
 
 // this matches anything not matched and returns error
-func (s *httpHandler) root(w http.ResponseWriter, r *http.Request) {
+func (h *handler) Root(w http.ResponseWriter, _ *http.Request) {
 	sendNotFound(w)
 }
 
 // performs a call to any normal RPC
-func (s *httpHandler) rpc(w http.ResponseWriter, r *http.Request) {
+func (h *handler) RPC(w http.ResponseWriter, r *http.Request) {
 	if http.MethodPost != r.Method {
 		sendMethodNotAllowed(w)
 		return
 	}
 
-	server := s.server
+	server := h.server
 
-	if connectionCountHTTPS.Increment() > s.maximumConnections {
+	if connectionCountHTTPS.Increment() > h.maximumConnections {
 		connectionCountHTTPS.Decrement()
 		sendTooManyRequests(w)
 		return
@@ -90,6 +122,7 @@ func (s *httpHandler) rpc(w http.ResponseWriter, r *http.Request) {
 	defer connectionCountHTTPS.Decrement()
 
 	serverCodec := jsonrpc.NewServerCodec(&InternalConnection{in: r.Body, out: w})
+
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(http.StatusOK)
@@ -101,13 +134,13 @@ func (s *httpHandler) rpc(w http.ResponseWriter, r *http.Request) {
 }
 
 // check if remote address is allowed
-func (s *httpHandler) isAllowed(api string, r *http.Request) bool {
+func (h *handler) isAllowed(api string, r *http.Request) bool {
 	last := strings.LastIndex(r.RemoteAddr, ":")
 	if last <= 0 {
 		return false
 	}
 
-	cidr, ok := s.allow[api]
+	cidr, ok := h.allow[api]
 	if !ok {
 		return false
 	}
@@ -132,19 +165,19 @@ func (s *httpHandler) isAllowed(api string, r *http.Request) bool {
 }
 
 // to allow a GET for the same response and Node.Info RPC
-func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
+func (h *handler) Details(w http.ResponseWriter, r *http.Request) {
 	if http.MethodGet != r.Method {
 		sendMethodNotAllowed(w)
 		return
 	}
 
-	if !s.isAllowed("details", r) {
-		s.log.Warnf("Deny access: %q", r.RemoteAddr)
+	if !h.isAllowed("details", r) {
+		h.log.Warnf("Deny access: %q", r.RemoteAddr)
 		sendForbidden(w)
 		return
 	}
 
-	if connectionCountHTTPS.Increment() > s.maximumConnections {
+	if connectionCountHTTPS.Increment() > h.maximumConnections {
 		connectionCountHTTPS.Decrement()
 		sendTooManyRequests(w)
 		return
@@ -162,17 +195,17 @@ func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type theReply struct {
-		Chain               string     `json:"chain"`
-		Mode                string     `json:"mode"`
-		Block               blockInfo  `json:"block"`
-		RPCs                uint64     `json:"rpcs"`
-		Peers               uint64     `json:"peers"`
-		TransactionCounters Counters   `json:"transactionCounters"`
-		Difficulty          float64    `json:"difficulty"`
-		Hashrate            float64    `json:"hashrate,omitempty"`
-		Version             string     `json:"version"`
-		Uptime              string     `json:"uptime"`
-		PeerID              peerlib.ID `json:"peerid"`
+		Chain               string        `json:"chain"`
+		Mode                string        `json:"mode"`
+		Block               blockInfo     `json:"block"`
+		RPCs                uint64        `json:"rpcs"`
+		Peers               uint64        `json:"peers"`
+		TransactionCounters node.Counters `json:"transactionCounters"`
+		Difficulty          float64       `json:"difficulty"`
+		Hashrate            float64       `json:"hashrate,omitempty"`
+		Version             string        `json:"version"`
+		Uptime              string        `json:"uptime"`
+		PeerID              peerlib.ID    `json:"peerid"`
 	}
 
 	reply := theReply{
@@ -183,14 +216,14 @@ func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 				Local:  blockheader.Height(),
 				Remote: consensus.BlockHeight(),
 			},
-			Hash: block.LastBlockHash(),
+			Hash: block.LastBlockHash(storage.Pool.Blocks),
 		},
 		RPCs: connectionCountHTTPS.Uint64(),
 		// Miners : mine.ConnectionCount(),
 		Difficulty: difficulty.Current.Value(),
 		Hashrate:   difficulty.Hashrate(),
-		Version:    s.version,
-		Uptime:     time.Since(s.start).String(),
+		Version:    h.version,
+		Uptime:     time.Since(h.start).String(),
 		PeerID:     p2p.ID(),
 	}
 
@@ -200,19 +233,19 @@ func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 	sendReply(w, reply)
 }
 
-func (s *httpHandler) connections(w http.ResponseWriter, r *http.Request) {
+func (h *handler) Connections(w http.ResponseWriter, r *http.Request) {
 	if http.MethodGet != r.Method {
 		sendMethodNotAllowed(w)
 		return
 	}
 
-	if !s.isAllowed("connections", r) {
-		s.log.Warnf("Deny access: %q", r.RemoteAddr)
+	if !h.isAllowed("connections", r) {
+		h.log.Warnf("Deny access: %q", r.RemoteAddr)
 		sendForbidden(w)
 		return
 	}
 
-	if connectionCountHTTPS.Increment() > s.maximumConnections {
+	if connectionCountHTTPS.Increment() > h.maximumConnections {
 		connectionCountHTTPS.Decrement()
 		sendTooManyRequests(w)
 		return
@@ -243,18 +276,18 @@ type entry struct {
 // query parameters:
 //   public_key=<64-hex-characters>   [32 byte public key in hex]
 //   count=<int>                      [1..100  default: 10]
-func (s *httpHandler) peers(w http.ResponseWriter, r *http.Request) {
+func (h *handler) Peers(w http.ResponseWriter, r *http.Request) {
 	if http.MethodGet != r.Method {
 		sendMethodNotAllowed(w)
 		return
 	}
-	if !s.isAllowed("peers", r) {
-		s.log.Warnf("Deny access: %q", r.RemoteAddr)
+	if !h.isAllowed("peers", r) {
+		h.log.Warnf("Deny access: %q", r.RemoteAddr)
 		sendForbidden(w)
 		return
 	}
 
-	if connectionCountHTTPS.Increment() > s.maximumConnections {
+	if connectionCountHTTPS.Increment() > h.maximumConnections {
 		connectionCountHTTPS.Decrement()
 		sendTooManyRequests(w)
 		return
@@ -277,7 +310,7 @@ item_loop:
 	for i := 0; i < count; i += 1 {
 		startID, err := peerlib.IDB58Decode(startkey)
 		if err != nil {
-			s.log.Warnf("ID DecodeBase58 Error :%v ID::%v", err, startkey)
+			h.log.Warnf("ID DecodeBase58 Error :%v ID::%v", err, startkey)
 			continue item_loop
 		}
 		id, listeners, timestamp, err := announce.GetNext(startID)
@@ -347,7 +380,7 @@ func sendError(w http.ResponseWriter, message string, code int) {
 	})
 	if nil != err {
 		// manually composed error just in case JSON fails
-		http.Error(w, `{"code":500,"error":"Internal Server Error"}`, http.StatusInternalServerError)
+		http.Error(w, `{"code":500,"error":"Internal server Error"}`, http.StatusInternalServerError)
 		return
 	}
 

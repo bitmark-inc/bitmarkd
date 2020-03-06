@@ -79,10 +79,24 @@ type Header struct {
 	Nonce            NonceType              `json:"nonce"`
 }
 
+type Record interface {
+	ExtractHeader([]byte, uint64, bool) (*Header, blockdigest.Digest, []byte, error)
+}
+
+type record struct {
+	PoolBlockHeaderHash storage.Handle
+}
+
+var recordData record
 var log *logger.L
 
+func (r record) ExtractHeader(block []byte, checkHeight uint64, skipDigest bool) (*Header, blockdigest.Digest, []byte, error) {
+	return extractHeader(block, checkHeight, skipDigest, r.PoolBlockHeaderHash)
+}
+
 // Initialise - initialize
-func Initialise() {
+func Initialise(handle storage.Handle) {
+	recordData.PoolBlockHeaderHash = handle
 	log = logger.New("blockrecord")
 	log.Info("starting")
 }
@@ -93,10 +107,14 @@ func Finalise() {
 	log.Flush()
 }
 
-// ExtractHeader - extract a header from the front of a []byte
+func Get() Record {
+	return &recordData
+}
+
+// extractHeader - extract a header from the front of a []byte
 // if checkHeight non-zero then verify correct block number first
 // to reduce hashing load for obviously incorrect blocks
-func ExtractHeader(block []byte, checkHeight uint64, skipDigest bool) (*Header, blockdigest.Digest, []byte, error) {
+func extractHeader(block []byte, checkHeight uint64, skipDigest bool, pool storage.Handle) (*Header, blockdigest.Digest, []byte, error) {
 	if len(block) < totalBlockSize {
 		return nil, blockdigest.Digest{}, nil, fault.InvalidBlockHeaderSize
 	}
@@ -122,7 +140,7 @@ func ExtractHeader(block []byte, checkHeight uint64, skipDigest bool) (*Header, 
 
 	thisBlockNumberKey := make([]byte, 8)
 	binary.BigEndian.PutUint64(thisBlockNumberKey, header.Number)
-	digest := DigestFromHashPool(storage.Pool.BlockHeaderHash, thisBlockNumberKey)
+	digest := DigestFromHashPool(pool, thisBlockNumberKey)
 	if !digest.IsEmpty() {
 		return header, digest, block[totalBlockSize:], nil
 	}
@@ -341,7 +359,7 @@ func timestampOfBlock(height uint64) (uint64, error) {
 		return uint64(0), fault.BlockNotFound
 	}
 
-	header, _, _, err := ExtractHeader(packed, 0, true)
+	header, _, _, err := extractHeader(packed, 0, true, storage.Pool.BlockHeaderHash)
 	if err != nil {
 		return uint64(0), err
 	}
@@ -358,7 +376,7 @@ func difficultyOfBlock(height uint64) (float64, error) {
 		return float64(0), fault.BlockNotFound
 	}
 
-	header, _, _, err := ExtractHeader(packed, 0, true)
+	header, _, _, err := extractHeader(packed, 0, true, storage.Pool.BlockHeaderHash)
 	if err != nil {
 		return float64(0), err
 	}

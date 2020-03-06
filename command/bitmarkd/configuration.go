@@ -11,13 +11,14 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/bitmark-inc/bitmarkd/rpc/listeners"
+
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/configuration"
 	"github.com/bitmark-inc/bitmarkd/p2p"
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/proof"
 	"github.com/bitmark-inc/bitmarkd/publish"
-	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 )
@@ -77,15 +78,15 @@ type Configuration struct {
 	Fastsync      bool         `gluamapper:"fast_sync" json:"fast_sync"`
 	Database      DatabaseType `gluamapper:"database" json:"database"`
 
-	CacheDirectory string                 `gluamapper:"cache_directory" json:"cache_directory"`
-	DNSPeerOnly    bool                   `gluamapper:"dns_peers_only" json:"dns_peers_only"`
-	ClientRPC      rpc.RPCConfiguration   `gluamapper:"client_rpc" json:"client_rpc"`
-	HttpsRPC       rpc.HTTPSConfiguration `gluamapper:"https_rpc" json:"https_rpc"`
-	Peering        p2p.Configuration      `gluamapper:"peering" json:"peering"`
-	Publishing     publish.Configuration  `gluamapper:"publishing" json:"publishing"`
-	Proofing       proof.Configuration    `gluamapper:"proofing" json:"proofing"`
-	Payment        payment.Configuration  `gluamapper:"payment" json:"payment"`
-	Logging        logger.Configuration   `gluamapper:"logging" json:"logging"`
+	CacheDirectory string                       `gluamapper:"cache_directory" json:"cache_directory"`
+	DNSPeerOnly    bool                         `gluamapper:"dns_peers_only" json:"dns_peers_only"`
+	ClientRPC      listeners.RPCConfiguration   `gluamapper:"client_rpc" json:"client_rpc"`
+	HttpsRPC       listeners.HTTPSConfiguration `gluamapper:"https_rpc" json:"https_rpc"`
+	Peering        p2p.Configuration            `gluamapper:"peering" json:"peering"`
+	Publishing     publish.Configuration        `gluamapper:"publishing" json:"publishing"`
+	Proofing       proof.Configuration          `gluamapper:"proofing" json:"proofing"`
+	Payment        payment.Configuration        `gluamapper:"payment" json:"payment"`
+	Logging        logger.Configuration         `gluamapper:"logging" json:"logging"`
 }
 
 // will read decode and verify the configuration
@@ -111,13 +112,13 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 			Name:      defaultBitmarkDatabase,
 		},
 
-		ClientRPC: rpc.RPCConfiguration{
+		ClientRPC: listeners.RPCConfiguration{
 			MaximumConnections: defaultRPCClients,
 			Bandwidth:          defaultBandwidth,
 		},
 
 		// default: share config with normal RPC
-		HttpsRPC: rpc.HTTPSConfiguration{
+		HttpsRPC: listeners.HTTPSConfiguration{
 			MaximumConnections: defaultRPCClients,
 		},
 

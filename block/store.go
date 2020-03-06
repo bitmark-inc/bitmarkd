@@ -56,14 +56,15 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 	var digest blockdigest.Digest
 	var header *blockrecord.Header
 	var data []byte
+	br := blockrecord.Get()
 
 	if shouldFastSync {
-		h, _, d, err := blockrecord.ExtractHeader(packedBlock, height+1, true)
+		h, _, d, err := br.ExtractHeader(packedBlock, height+1, true)
 		if nil != err {
 			globalData.log.Errorf("extract header error: %s", err)
 			return err
 		}
-		nextH, _, _, err := blockrecord.ExtractHeader(packedNextBlock, height+2, true)
+		nextH, _, _, err := br.ExtractHeader(packedNextBlock, height+2, true)
 		if nil != err {
 			globalData.log.Errorf("extract header error: %s", err)
 			return err
@@ -72,7 +73,7 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 		digest = nextH.PreviousBlock
 		data = d
 	} else {
-		h, di, d, err := blockrecord.ExtractHeader(packedBlock, height+1, false)
+		h, di, d, err := br.ExtractHeader(packedBlock, height+1, false)
 		if nil != err {
 			globalData.log.Errorf("extract header error: %s", err)
 			return err
@@ -210,7 +211,7 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 					return err
 				}
 
-				if !ownership.CurrentlyOwns(nil, linkOwner, link) {
+				if !ownership.CurrentlyOwns(nil, linkOwner, link, storage.Pool.OwnerTxIndex) {
 					return fault.DoubleTransferAttempt
 				}
 
@@ -238,7 +239,7 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 				if nil != err {
 					return err
 				}
-				if !ownership.CurrentlyOwns(nil, linkOwner, link) {
+				if !ownership.CurrentlyOwns(nil, linkOwner, link, storage.Pool.OwnerTxIndex) {
 					return fault.DoubleTransferAttempt
 				}
 

@@ -6,13 +6,13 @@
 package rpccalls
 
 import (
+	"github.com/bitmark-inc/bitmarkd/rpc/share"
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/pay"
-	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 
@@ -42,18 +42,18 @@ func (client *Client) Share(shareConfig *ShareData) (*ShareReply, error) {
 		return nil, err
 	}
 
-	share, err := makeShare(client.testnet, link, shareConfig.Quantity, shareConfig.Owner)
+	sh, err := makeShare(client.testnet, link, shareConfig.Quantity, shareConfig.Owner)
 	if nil != err {
 		return nil, err
 	}
-	if nil == share {
+	if nil == sh {
 		return nil, fault.MakeShareFailed
 	}
 
-	client.printJson("Share Request", share)
+	client.printJson("Share Request", sh)
 
-	var reply rpc.ShareCreateReply
-	err = client.client.Call("Share.Create", share, &reply)
+	var reply share.CreateReply
+	err = client.client.Call("Share.Create", sh, &reply)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func (client *Client) Share(shareConfig *ShareData) (*ShareReply, error) {
 	return &response, nil
 }
 
-func makeShare(testnet bool, link merkle.Digest, quantity uint64, owner *configuration.Private) (*transactionrecord.BitmarkShare, error) {
+func makeShare(_ bool, link merkle.Digest, quantity uint64, owner *configuration.Private) (*transactionrecord.BitmarkShare, error) {
 
 	r := transactionrecord.BitmarkShare{
 		Link:      link,

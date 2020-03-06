@@ -97,7 +97,8 @@ func TestExtractHeader_SkipDigest(t *testing.T) {
 		t.Fatalf("hex decode string error: %s", err)
 	}
 
-	header, digest, _, err := blockrecord.ExtractHeader(leBinaryBlock, 0, true)
+	br := blockrecord.Get()
+	header, digest, _, err := br.ExtractHeader(leBinaryBlock, 0, true)
 	if header == nil {
 		t.Errorf("no header")
 	}
@@ -120,7 +121,8 @@ func TestExtractHeader_NoSkipDigest(t *testing.T) {
 		t.Fatalf("hex decode string error: %s", err)
 	}
 
-	_, digest, _, err := blockrecord.ExtractHeader(leBinaryBlock, 0, false)
+	br := blockrecord.Get()
+	_, digest, _, err := br.ExtractHeader(leBinaryBlock, 0, false)
 
 	if digest == defaultDigest {
 		t.Fail()
@@ -275,10 +277,11 @@ func TestBlockDigestFromBlock(t *testing.T) {
 	// check that truncated records give error
 	// note: this stops at 1 less than block header size
 	// so will never give a non-error response
+	br := blockrecord.Get()
 loop:
 	for i := 0; i < len(p); i += 1 {
 		// test the unpacker with bad records
-		h, _, _, err := blockrecord.ExtractHeader(p[:i], h.Number, true)
+		h, _, _, err := br.ExtractHeader(p[:i], h.Number, true)
 		if nil != err {
 			continue loop
 		}

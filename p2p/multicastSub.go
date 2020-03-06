@@ -207,7 +207,9 @@ func processIssues(packed []byte) error {
 		return fault.MissingParameters
 	}
 
-	_, duplicate, err := reservoir.StoreIssues(issues, storage.Pool.Assets, storage.Pool.BlockOwnerPayment)
+	r := reservoir.Get()
+
+	_, duplicate, err := r.StoreIssues(issues)
 	if nil != err {
 		return err
 	}
@@ -221,7 +223,6 @@ func processIssues(packed []byte) error {
 
 // unpack transfer and process it
 func processTransfer(packed []byte) error {
-
 	if 0 == len(packed) {
 		return fault.MissingParameters
 	}
@@ -237,17 +238,19 @@ func processTransfer(packed []byte) error {
 
 	duplicate := false
 
+	r := reservoir.Get()
+
 	transfer, ok := transaction.(transactionrecord.BitmarkTransfer)
 	if ok {
-		_, duplicate, err = reservoir.StoreTransfer(transfer, storage.Pool.Transactions, storage.Pool.OwnerTxIndex, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
+		_, duplicate, err = r.StoreTransfer(transfer)
 	} else {
 		switch tx := transaction.(type) {
 
 		case *transactionrecord.ShareGrant:
-			_, duplicate, err = reservoir.StoreGrant(tx, storage.Pool.ShareQuantity, storage.Pool.Shares, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
+			_, duplicate, err = r.StoreGrant(tx)
 
 		case *transactionrecord.ShareSwap:
-			_, duplicate, err = reservoir.StoreSwap(tx, storage.Pool.ShareQuantity, storage.Pool.Shares, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
+			_, duplicate, err = r.StoreSwap(tx)
 
 		default:
 			return fault.TransactionIsNotATransfer
@@ -267,7 +270,6 @@ func processTransfer(packed []byte) error {
 
 // process proof block
 func processProof(packed []byte) error {
-
 	if 0 == len(packed) {
 		return fault.MissingParameters
 	}
@@ -282,7 +284,8 @@ func processProof(packed []byte) error {
 	}
 	copy(payId[:], packed[:len(payId)])
 	nonce := packed[len(payId):]
-	status := reservoir.TryProof(payId, nonce)
+	r := reservoir.Get()
+	status := r.TryProof(payId, nonce)
 	if reservoir.TrackingAccepted != status {
 		// pay id already processed or was invalid
 		return fault.PayIdAlreadyUsed

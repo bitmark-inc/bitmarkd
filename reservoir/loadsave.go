@@ -15,7 +15,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/pay"
-	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
 )
@@ -33,17 +32,6 @@ const (
 // the BOF tag to check file version
 // exact match is required
 var bofData = []byte("bitmark-cache v1.0")
-
-// Handles - storage handles used when restore from cache file
-type Handles struct {
-	Assets            storage.Handle
-	BlockOwnerPayment storage.Handle
-	Transaction       storage.Handle
-	OwnerTx           storage.Handle
-	OwnerData         storage.Handle
-	Share             storage.Handle
-	ShareQuantity     storage.Handle
-}
 
 // LoadFromFile - load transactions from file
 // called later when system is able to handle the tx and proofs
@@ -118,7 +106,7 @@ restore_loop:
 			}
 			copy(payId[:], packed[:pn])
 			nonce := packed[pn:]
-			TryProof(payId, nonce)
+			tryProof(payId, nonce)
 
 		default:
 			// in case any unsupported tag exist

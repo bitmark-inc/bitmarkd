@@ -8,6 +8,8 @@ package rpccalls
 import (
 	"encoding/hex"
 
+	"github.com/bitmark-inc/bitmarkd/rpc/blockowner"
+
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/bitmark-inc/bitmarkd/account"
@@ -16,7 +18,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/pay"
-	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 
@@ -72,7 +73,7 @@ func (client *Client) SingleSignedBlockTransfer(blockTransferConfig *BlockTransf
 // CountersignBlockTransfer - perform a transfer
 func (client *Client) CountersignBlockTransfer(blockTransfer *transactionrecord.BlockOwnerTransfer) (*BlockTransferReply, error) {
 
-	var reply rpc.BlockOwnerTransferReply
+	var reply blockowner.TransferReply
 	err := client.client.Call("BlockOwner.Transfer", blockTransfer, &reply)
 	if nil != err {
 		return nil, err
@@ -85,8 +86,8 @@ func (client *Client) CountersignBlockTransfer(blockTransfer *transactionrecord.
 
 	commands := make(map[string]string)
 	for _, payment := range reply.Payments {
-		currency := payment[0].Currency
-		commands[currency.String()] = paymentCommand(client.testnet, currency, string(tpid), payment)
+		c := payment[0].Currency
+		commands[c.String()] = paymentCommand(client.testnet, c, string(tpid), payment)
 	}
 
 	client.printJson("BlockTransfer Reply", reply)
@@ -102,7 +103,7 @@ func (client *Client) CountersignBlockTransfer(blockTransfer *transactionrecord.
 	return &response, nil
 }
 
-func makeBlockTransferOneSignature(testnet bool, link merkle.Digest, payments currency.Map, owner *configuration.Private, newOwner *account.Account) ([]byte, *transactionrecord.BlockOwnerTransfer, error) {
+func makeBlockTransferOneSignature(_ bool, link merkle.Digest, payments currency.Map, owner *configuration.Private, newOwner *account.Account) ([]byte, *transactionrecord.BlockOwnerTransfer, error) {
 
 	r := transactionrecord.BlockOwnerTransfer{
 		Link:             link,
