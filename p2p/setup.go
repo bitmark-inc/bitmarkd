@@ -93,6 +93,7 @@ type PeerNode interface {
 	GetAllPeers() []*Connected
 	listen(announceAddrs []string)
 	Run()
+	Setup(configuration *Configuration, version string, dnsPeerOnly dnsOnlyType) error
 	Finalise()
 }
 

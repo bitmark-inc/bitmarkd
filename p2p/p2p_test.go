@@ -1,7 +1,9 @@
 package p2p
 
 import (
+	"crypto/rand"
 	"fmt"
+	"math/big"
 	"net"
 	"os"
 	"strconv"
@@ -14,11 +16,42 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
+// Note: test will fail very badly if something is using this port
+//       lots of "bind: address already in use" will be produced
+//
+// According to https://tools.ietf.org/html/rfc6335
+//
+// *  the Dynamic Ports, also known as the Private or Ephemeral Ports,
+//    from 49152-65535 (never assigned)
+//
+// Choose a random port in the dynamic range to avoid conflict
+// (uses crypto/rand to avoid the deterministic values of math/rand)
+func unusedPortForTesting(t *testing.T) int {
+	const start = 49152
+	const finish = 65535
+	portRange := big.NewInt(finish - start)
+	port, err := rand.Int(rand.Reader, portRange)
+	if nil != err {
+		t.Fatalf("port generation error: %s", err)
+	}
+	//t.Errorf("port: %d", port.Int64()+start)
+	return int(port.Int64() + start)
+}
+
+// this protects against error cascade and resulting panic
+// usage: _ = assert.NoError(t, err, "…") || die(t)
+func die(t *testing.T) bool {
+	t.Fatal("assertNoError must die")
+	return true
+}
+
 func TestMain(m *testing.M) {
+	const theLogFile = "p2p_test.log"
+	_ = os.Remove(theLogFile)
 	curPath := os.Getenv("PWD")
 	var logConfig = logger.Configuration{
 		Directory: curPath,
-		File:      "p2p_test.log",
+		File:      theLogFile,
 		Size:      1048576,
 		Count:     20,
 		Console:   false,
@@ -30,51 +63,56 @@ func TestMain(m *testing.M) {
 		panic(fmt.Sprintf("logger initialization failed: %s", err))
 	}
 	globalData.Log = logger.New("nodes")
-	os.Exit(m.Run())
+	rc := m.Run()
+	_ = os.Remove(theLogFile)
+	os.Exit(rc)
 }
+
 func TestIDMarshalUnmarshal(t *testing.T) {
-	conf, err := mockConfiguration("server", 12136)
-	assert.NoError(t, err, "generate mock data error")
+	conf, err := mockConfiguration("server", unusedPortForTesting(t))
+	_ = assert.NoError(t, err, "generate mock data error") || die(t)
 	secretKey, err := util.DecodePrivKeyFromHex(conf.SecretKey)
-	assert.NoError(t, err, "Decode Hex Key Error")
+	_ = assert.NoError(t, err, "Decode Hex Key Error") || die(t)
 	id, err := peerlib.IDFromPrivateKey(secretKey)
-	assert.NoError(t, err, "IDFromSecretKey Error")
+	_ = assert.NoError(t, err, "IDFromSecretKey Error") || die(t)
 	mID, err := id.Marshal()
-	assert.NoError(t, err, "ID Marshal Error:")
+	_ = assert.NoError(t, err, "ID Marshal Error:") || die(t)
 	id2, err := peerlib.IDFromBytes(mID)
-	assert.NoError(t, err, "not a valid id bytes")
-	assert.Equal(t, id.String(), id2.String(), fmt.Sprintf("Convert ID fail! id:%v", id2.ShortString()))
+	_ = assert.NoError(t, err, "not a valid id bytes") || die(t)
+	assert.Equal(t, id.String(), id2.String(), fmt.Sprintf("Convert ID fail! id: %v", id2.ShortString()))
 
 }
 
 func TestNewP2P(t *testing.T) {
-	config, err := mockConfiguration("server", 22136)
-	assert.NoError(t, err, "mockdata generate error")
+	config, err := mockConfiguration("server", unusedPortForTesting(t))
+	_ = assert.NoError(t, err, "mockdata generate error") || die(t)
 	err = Initialise(config, "v1.0.0", false)
-	assert.NoError(t, err, "P2P  initialized error")
+	_ = assert.NoError(t, err, "P2P  initialized error") || die(t)
 	Finalise()
 }
 
 func TestListen(t *testing.T) {
-	config, err := mockConfiguration("server", 22136)
-	assert.NoError(t, err, "mockdata generate error")
+	config, err := mockConfiguration("server", unusedPortForTesting(t))
+	_ = assert.NoError(t, err, "mockdata generate error") || die(t)
 	n1 := Node{}
 	n1.Log = logger.New("p2p")
-	n1.Setup(config, "p2p-v1", false)
+	err = n1.Setup(config, "p2p-v1", false)
+	_ = assert.NoError(t, err, fmt.Sprintf("node setup error: %s", err)) || die(t)
 	conn, err := net.Dial("tcp", "127.0.0.1:"+strconv.Itoa(config.Port))
-	assert.NoError(t, err, fmt.Sprintf("listen error : %v", err))
+	_ = assert.NoError(t, err, fmt.Sprintf("listen error: %s", err)) || die(t)
 	conn.Close()
 	n1.Host.Close()
 }
 
 func TestIsTheSameNode(t *testing.T) {
-	config, err := mockConfiguration("server", 22136)
-	assert.NoError(t, err, "mockdata generate error")
+	config, err := mockConfiguration("server", unusedPortForTesting(t))
+	_ = assert.NoError(t, err, "mockdata generate error") || die(t)
 	n1 := Node{}
 	n1.Log = logger.New("p2p")
-	n1.Setup(config, "p2p-v1", false)
+	err = n1.Setup(config, "p2p-v1", false)
+	_ = assert.NoError(t, err, fmt.Sprintf("node setup error: %s", err)) || die(t)
 	n1Info, err := peerlib.AddrInfoFromP2pAddr(n1.Announce[0])
-	assert.NoError(t, err, fmt.Sprintf("convert AddrInfo fail address:%v", n1.Announce[0]))
+	_ = assert.NoError(t, err, fmt.Sprintf("convert AddrInfo fail address:%v", n1.Announce[0])) || die(t)
 	same := n1.isSameNode(*n1Info)
 	assert.Equal(t, true, same, "should be the same node but not")
 }

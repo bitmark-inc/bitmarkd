@@ -18,7 +18,6 @@ type PeerRegisteration interface {
 	addRegister(id peerlib.ID)
 	unRegister(id peerlib.ID)
 	delRegister(id peerlib.ID)
-	isExpire(id peerlib.ID) bool
 	updateRegistersExpiry()
 }
 
@@ -43,6 +42,8 @@ func NewRegistration(expireTime time.Duration) PeerRegisteration {
 
 // RegisteredPeers return current registered peers' ID
 func (r *BasicPeerRegistration) RegisteredPeers() []peerlib.ID {
+	r.RLock()
+	defer r.RUnlock()
 	peers := []peerlib.ID{}
 	for id, status := range r.peers {
 		if status.Registered {
@@ -53,13 +54,11 @@ func (r *BasicPeerRegistration) RegisteredPeers() []peerlib.ID {
 }
 
 // IsRegistered return if the given ID peer registered
-func (r *BasicPeerRegistration) IsRegistered(id peerlib.ID) (registered bool) {
-	r.Lock()
-	if status, ok := r.peers[id]; ok && status != nil && status.Registered {
-		registered = true
-	}
-	r.Unlock()
-	return
+func (r *BasicPeerRegistration) IsRegistered(id peerlib.ID) bool {
+	r.RLock()
+	defer r.RUnlock()
+	status := r.peers[id]
+	return status != nil && status.Registered
 }
 
 func (r *BasicPeerRegistration) addRegister(id peerlib.ID) {
@@ -69,46 +68,37 @@ func (r *BasicPeerRegistration) addRegister(id peerlib.ID) {
 	//util.LogInfo(r.Log, util.CoCyan, fmt.Sprintf("addRegister ID:%s Registered:%v time:%v", id.ShortString(), r.peers[id].Registered, r.peers[id].LatestRegisterTime.String()))
 }
 
-//unRegister unRegister change a peers's  Registered status  to false,  but it doe not not delete the register in the Registers
+// unRegister unRegister change a peers's  Registered status  to false,  but it doe not not delete the register in the Registers
 func (r *BasicPeerRegistration) unRegister(id peerlib.ID) {
 	r.Lock()
+	defer r.Unlock()
 	status, ok := r.peers[id]
 	if ok && status != nil { // keep LatestRegisterTime for last record purpose
 		status.Registered = false
 	}
-	r.Unlock()
 }
 
-//delRegister delete a Registerer  in the Registers map
+// delRegister delete a Registerer  in the Registers map
 func (r *BasicPeerRegistration) delRegister(id peerlib.ID) {
 	r.Lock()
+	defer r.Unlock()
 	_, ok := r.peers[id]
 	if ok { // keep LatestRegisterTime for last record purpose
 		delete(r.peers, id)
 	}
-	r.Unlock()
 }
 
-//isExpire is the register expire
-func (r *BasicPeerRegistration) isExpire(id peerlib.ID) bool {
-	if status, ok := r.peers[id]; ok && status != nil && status.Registered {
-		expire := status.LatestRegisterTime.Add(r.expireDuration)
-		passInterval := time.Since(expire)
-		if passInterval > 0 { // expire
-			return true
-		}
-	}
-	return false
-}
-
-//updateRegistersExpiry mark Registered false when time is expired
+// updateRegistersExpiry mark Registered false when time is expired
 func (r *BasicPeerRegistration) updateRegistersExpiry() {
+	r.Lock()
+	defer r.Unlock()
 	for id, status := range r.peers {
-		if r.isExpire(id) { //Keep time for record of last registered time
-			r.Lock()
-			status.Registered = false
-			r.Unlock()
-			util.LogDebug(r.Log, util.CoWhite, fmt.Sprintf("IsExpire ID:%v is expire", id.ShortString()))
+		if nil != status && status.Registered {
+			expire := status.LatestRegisterTime.Add(r.expireDuration)
+			if time.Since(expire) > 0 { //expire
+				status.Registered = false
+				util.LogDebug(r.Log, util.CoWhite, fmt.Sprintf("IsExpire ID:%v is expire", id.ShortString()))
+			}
 		}
 	}
 }
