@@ -1,7 +1,9 @@
 package p2p
 
 import (
+	"crypto/rand"
 	"fmt"
+	"math/big"
 	"net"
 	"os"
 	"strconv"
@@ -16,7 +18,25 @@ import (
 
 // Note: test will fail very badly if something is using this port
 //       lots of "bind: address already in use" will be produced
-const unusedPortForTesting = 32136
+//
+// According to https://tools.ietf.org/html/rfc6335
+//
+// *  the Dynamic Ports, also known as the Private or Ephemeral Ports,
+//    from 49152-65535 (never assigned)
+//
+// Choose a random port in the dynamic range to avoid conflict
+// (uses crypto/rand to avoid the deterministic values of math/rand)
+func unusedPortForTesting(t *testing.T) int {
+	const start = 49152
+	const finish = 65535
+	portRange := big.NewInt(finish - start)
+	port, err := rand.Int(rand.Reader, portRange)
+	if nil != err {
+		t.Fatalf("port generation error: %s", err)
+	}
+	//t.Errorf("port: %d", port.Int64()+start)
+	return int(port.Int64() + start)
+}
 
 // this protects against error cascade and resulting panic
 // usage: _ = assert.NoError(t, err, "…") || die(t)
@@ -49,7 +69,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestIDMarshalUnmarshal(t *testing.T) {
-	conf, err := mockConfiguration("server", unusedPortForTesting)
+	conf, err := mockConfiguration("server", unusedPortForTesting(t))
 	_ = assert.NoError(t, err, "generate mock data error") || die(t)
 	secretKey, err := util.DecodePrivKeyFromHex(conf.SecretKey)
 	_ = assert.NoError(t, err, "Decode Hex Key Error") || die(t)
@@ -64,7 +84,7 @@ func TestIDMarshalUnmarshal(t *testing.T) {
 }
 
 func TestNewP2P(t *testing.T) {
-	config, err := mockConfiguration("server", unusedPortForTesting)
+	config, err := mockConfiguration("server", unusedPortForTesting(t))
 	_ = assert.NoError(t, err, "mockdata generate error") || die(t)
 	err = Initialise(config, "v1.0.0", false)
 	_ = assert.NoError(t, err, "P2P  initialized error") || die(t)
@@ -72,7 +92,7 @@ func TestNewP2P(t *testing.T) {
 }
 
 func TestListen(t *testing.T) {
-	config, err := mockConfiguration("server", unusedPortForTesting)
+	config, err := mockConfiguration("server", unusedPortForTesting(t))
 	_ = assert.NoError(t, err, "mockdata generate error") || die(t)
 	n1 := Node{}
 	n1.Log = logger.New("p2p")
@@ -85,7 +105,7 @@ func TestListen(t *testing.T) {
 }
 
 func TestIsTheSameNode(t *testing.T) {
-	config, err := mockConfiguration("server", unusedPortForTesting)
+	config, err := mockConfiguration("server", unusedPortForTesting(t))
 	_ = assert.NoError(t, err, "mockdata generate error") || die(t)
 	n1 := Node{}
 	n1.Log = logger.New("p2p")
