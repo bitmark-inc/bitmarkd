@@ -31,7 +31,7 @@ type handles struct {
 	asset             *mocks.MockHandle
 	blockOwnerPayment *mocks.MockHandle
 	transaction       *mocks.MockHandle
-	ownerTx           *mocks.MockHandle
+	ownerTxIndex      *mocks.MockHandle
 	ownerData         *mocks.MockHandle
 	share             *mocks.MockHandle
 	shareQuantity     *mocks.MockHandle
@@ -302,7 +302,7 @@ func setupMocks(t *testing.T) (*gomock.Controller, handles, reservoir.Handles) {
 		asset:             mocks.NewMockHandle(ctl),
 		blockOwnerPayment: mocks.NewMockHandle(ctl),
 		transaction:       mocks.NewMockHandle(ctl),
-		ownerTx:           mocks.NewMockHandle(ctl),
+		ownerTxIndex:      mocks.NewMockHandle(ctl),
 		ownerData:         mocks.NewMockHandle(ctl),
 		share:             mocks.NewMockHandle(ctl),
 		shareQuantity:     mocks.NewMockHandle(ctl),
@@ -312,7 +312,7 @@ func setupMocks(t *testing.T) (*gomock.Controller, handles, reservoir.Handles) {
 		Assets:            h.asset,
 		BlockOwnerPayment: h.blockOwnerPayment,
 		Transactions:      h.transaction,
-		OwnerTx:           h.ownerTx,
+		OwnerTxIndex:      h.ownerTxIndex,
 		OwnerData:         h.ownerData,
 		Share:             h.share,
 		ShareQuantity:     h.shareQuantity,
@@ -474,7 +474,7 @@ func TestLoadFromFileWhenTransferUnratified(t *testing.T) {
 
 	reservoirHandles.Transactions.(*mocks.MockHandle).EXPECT().GetNB(gomock.Any()).Return(uint64(2), packed).Times(1)
 	reservoirHandles.Transactions.(*mocks.MockHandle).EXPECT().Has(gomock.Any()).Return(false).Times(1)
-	reservoirHandles.OwnerTx.(*mocks.MockHandle).EXPECT().Get(gomock.Any()).Return([]byte("1")).Times(1)
+	reservoirHandles.OwnerTxIndex.(*mocks.MockHandle).EXPECT().Get(gomock.Any()).Return([]byte("1")).Times(1)
 	reservoirHandles.OwnerData.(*mocks.MockHandle).EXPECT().Get(gomock.Any()).Return(packedOwnerData).Times(1)
 
 	_ = reservoir.Initialise(dataDirectory, reservoirHandles)
@@ -538,7 +538,7 @@ func TestLoadFromFileWhenShare(t *testing.T) {
 	mockHandles.transaction.EXPECT().GetNB(gomock.Any()).Return(uint64(2), packed).Times(2)
 	mockHandles.transaction.EXPECT().Has(gomock.Any()).Return(false).Times(2)
 
-	mockHandles.ownerTx.EXPECT().Get(gomock.Any()).Return([]byte("1")).Times(2)
+	mockHandles.ownerTxIndex.EXPECT().Get(gomock.Any()).Return([]byte("1")).Times(2)
 
 	mockHandles.ownerData.EXPECT().Get(gomock.Any()).Return(packedOwnerData).Times(2)
 

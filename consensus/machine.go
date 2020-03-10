@@ -64,8 +64,8 @@ type Machine struct {
 }
 
 // NewConsensusMachine get a new StateMachine
-func NewConsensusMachine(node *p2p.Node, metric *MetricsPeersVoting, fastsync bool) Machine {
-	machine := Machine{log: globalData.Log, votingMetrics: metric, attachedNode: node}
+func NewConsensusMachine(node *p2p.Node, metric *MetricsPeersVoting, fastsync bool) *Machine {
+	machine := &Machine{log: globalData.Log, votingMetrics: metric, attachedNode: node}
 	machine.nextState(cStateConnecting)
 	machine.votes = voting.NewVoting()
 	machine.fastsyncEnabled = fastsync

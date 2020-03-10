@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/account"
-
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/currency"
@@ -91,7 +90,7 @@ type Handles struct {
 	BlockOwnerPayment storage.Handle
 	Blocks            storage.Handle
 	Transactions      storage.Handle
-	OwnerTx           storage.Handle
+	OwnerTxIndex      storage.Handle
 	OwnerData         storage.Handle
 	Share             storage.Handle
 	ShareQuantity     storage.Handle
@@ -143,17 +142,17 @@ type globalDataType struct {
 // globals as a struct to allow lock
 var globalData globalDataType
 
-func (g globalDataType) StoreTransfer(transfer transactionrecord.BitmarkTransfer) (*TransferInfo, bool, error) {
+func (g *globalDataType) StoreTransfer(transfer transactionrecord.BitmarkTransfer) (*TransferInfo, bool, error) {
 	return storeTransfer(
 		transfer,
 		g.handles.Transactions,
-		g.handles.OwnerTx,
+		g.handles.OwnerTxIndex,
 		g.handles.OwnerData,
 		g.handles.BlockOwnerPayment,
 	)
 }
 
-func (g globalDataType) StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, error) {
+func (g *globalDataType) StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, error) {
 	return storeIssues(
 		issues,
 		g.handles.Assets,
@@ -161,19 +160,19 @@ func (g globalDataType) StoreIssues(issues []*transactionrecord.BitmarkIssue) (*
 	)
 }
 
-func (g globalDataType) TryProof(payID pay.PayId, clientNonce []byte) TrackingStatus {
+func (g *globalDataType) TryProof(payID pay.PayId, clientNonce []byte) TrackingStatus {
 	return tryProof(payID, clientNonce)
 }
 
-func (g globalDataType) TransactionStatus(txID merkle.Digest) TransactionState {
+func (g *globalDataType) TransactionStatus(txID merkle.Digest) TransactionState {
 	return transactionStatus(txID)
 }
 
-func (g globalDataType) ShareBalance(owner *account.Account, startSharedID merkle.Digest, count int) ([]BalanceInfo, error) {
+func (g *globalDataType) ShareBalance(owner *account.Account, startSharedID merkle.Digest, count int) ([]BalanceInfo, error) {
 	return shareBalance(owner, startSharedID, count, g.handles.ShareQuantity)
 }
 
-func (g globalDataType) StoreGrant(grant *transactionrecord.ShareGrant) (*GrantInfo, bool, error) {
+func (g *globalDataType) StoreGrant(grant *transactionrecord.ShareGrant) (*GrantInfo, bool, error) {
 	return storeGrant(
 		grant,
 		g.handles.ShareQuantity,
@@ -184,7 +183,7 @@ func (g globalDataType) StoreGrant(grant *transactionrecord.ShareGrant) (*GrantI
 	)
 }
 
-func (g globalDataType) StoreSwap(swap *transactionrecord.ShareSwap) (*SwapInfo, bool, error) {
+func (g *globalDataType) StoreSwap(swap *transactionrecord.ShareSwap) (*SwapInfo, bool, error) {
 	return storeSwap(
 		swap,
 		g.handles.ShareQuantity,

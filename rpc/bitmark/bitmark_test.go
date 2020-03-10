@@ -9,7 +9,8 @@ import (
 	"crypto/ed25519"
 	"testing"
 
-	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/chain"
@@ -20,11 +21,10 @@ import (
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/rpc/bitmark"
+	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
 	"github.com/bitmark-inc/bitmarkd/rpc/mocks"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestBitmarkTransfer(t *testing.T) {
@@ -114,14 +114,14 @@ func TestBitmarkProvenanceWhenBitmarkIssuance(t *testing.T) {
 	r := mocks.NewMockReservoir(ctl)
 	poolT := mocks.NewMockHandle(ctl)
 	poolA := mocks.NewMockHandle(ctl)
-	poolO := mocks.NewMockHandle(ctl)
+	poolD := mocks.NewMockHandle(ctl)
 
 	b := bitmark.New(
 		logger.New(fixtures.LogCategory),
 		reservoir.Handles{
 			Assets:       poolA,
 			Transactions: poolT,
-			OwnerTx:      poolO,
+			OwnerTxIndex: poolD,
 		},
 		func(_ mode.Mode) bool { return true },
 		func() bool { return true },
@@ -164,7 +164,7 @@ func TestBitmarkProvenanceWhenBitmarkIssuance(t *testing.T) {
 	packed2, _ = ass.Pack(&acc)
 
 	poolT.EXPECT().GetNB(txID[:]).Return(uint64(1), packed1).Times(1)
-	poolO.EXPECT().Has(gomock.Any()).Return(true).Times(1)
+	poolD.EXPECT().Has(gomock.Any()).Return(true).Times(1)
 	poolA.EXPECT().GetNB(gomock.Any()).Return(uint64(1), packed2).Times(1)
 
 	var reply bitmark.ProvenanceReply
@@ -196,14 +196,14 @@ func TestBitmarkProvenanceWhenOldBaseData(t *testing.T) {
 	r := mocks.NewMockReservoir(ctl)
 	poolT := mocks.NewMockHandle(ctl)
 	poolA := mocks.NewMockHandle(ctl)
-	poolO := mocks.NewMockHandle(ctl)
+	poolD := mocks.NewMockHandle(ctl)
 
 	b := bitmark.New(
 		logger.New(fixtures.LogCategory),
 		reservoir.Handles{
 			Assets:       poolA,
 			Transactions: poolT,
-			OwnerTx:      poolO,
+			OwnerTxIndex: poolD,
 		},
 		func(_ mode.Mode) bool { return true },
 		func() bool { return true },
@@ -236,7 +236,7 @@ func TestBitmarkProvenanceWhenOldBaseData(t *testing.T) {
 	packed1, _ = tr1.Pack(&acc)
 
 	poolT.EXPECT().GetNB(txID[:]).Return(uint64(1), packed1).Times(1)
-	poolO.EXPECT().Has(gomock.Any()).Return(true).Times(1)
+	poolD.EXPECT().Has(gomock.Any()).Return(true).Times(1)
 
 	var reply bitmark.ProvenanceReply
 	err := b.Provenance(&arg, &reply)
@@ -261,14 +261,14 @@ func TestBitmarkProvenanceWhenBlockFoundation(t *testing.T) {
 	r := mocks.NewMockReservoir(ctl)
 	poolT := mocks.NewMockHandle(ctl)
 	poolA := mocks.NewMockHandle(ctl)
-	poolO := mocks.NewMockHandle(ctl)
+	poolD := mocks.NewMockHandle(ctl)
 
 	b := bitmark.New(
 		logger.New(fixtures.LogCategory),
 		reservoir.Handles{
 			Assets:       poolA,
 			Transactions: poolT,
-			OwnerTx:      poolO,
+			OwnerTxIndex: poolD,
 		},
 		func(_ mode.Mode) bool { return true },
 		func() bool { return true },
@@ -304,7 +304,7 @@ func TestBitmarkProvenanceWhenBlockFoundation(t *testing.T) {
 	packed1, _ = tr1.Pack(&acc)
 
 	poolT.EXPECT().GetNB(txID[:]).Return(uint64(1), packed1).Times(1)
-	poolO.EXPECT().Has(gomock.Any()).Return(false).Times(1)
+	poolD.EXPECT().Has(gomock.Any()).Return(false).Times(1)
 
 	var reply bitmark.ProvenanceReply
 	err := b.Provenance(&arg, &reply)
@@ -329,14 +329,14 @@ func TestBitmarkProvenanceWhenTransferUnratified(t *testing.T) {
 	r := mocks.NewMockReservoir(ctl)
 	poolT := mocks.NewMockHandle(ctl)
 	poolA := mocks.NewMockHandle(ctl)
-	poolO := mocks.NewMockHandle(ctl)
+	poolD := mocks.NewMockHandle(ctl)
 
 	b := bitmark.New(
 		logger.New(fixtures.LogCategory),
 		reservoir.Handles{
 			Assets:       poolA,
 			Transactions: poolT,
-			OwnerTx:      poolO,
+			OwnerTxIndex: poolD,
 		},
 		func(_ mode.Mode) bool { return true },
 		func() bool { return true },
@@ -369,7 +369,7 @@ func TestBitmarkProvenanceWhenTransferUnratified(t *testing.T) {
 
 	poolT.EXPECT().GetNB(txID[:]).Return(uint64(1), packed1).Times(1)
 	poolT.EXPECT().GetNB(merkle.Digest{}.Bytes()).Return(uint64(0), nil).Times(1)
-	poolO.EXPECT().Has(gomock.Any()).Return(true).Times(1)
+	poolD.EXPECT().Has(gomock.Any()).Return(true).Times(1)
 
 	var reply bitmark.ProvenanceReply
 	err := b.Provenance(&arg, &reply)
@@ -394,14 +394,14 @@ func TestBitmarkProvenanceWhenBitmarkShare(t *testing.T) {
 	r := mocks.NewMockReservoir(ctl)
 	poolT := mocks.NewMockHandle(ctl)
 	poolA := mocks.NewMockHandle(ctl)
-	poolO := mocks.NewMockHandle(ctl)
+	poolD := mocks.NewMockHandle(ctl)
 
 	b := bitmark.New(
 		logger.New(fixtures.LogCategory),
 		reservoir.Handles{
 			Assets:       poolA,
 			Transactions: poolT,
-			OwnerTx:      poolO,
+			OwnerTxIndex: poolD,
 		},
 		func(_ mode.Mode) bool { return true },
 		func() bool { return true },

@@ -57,6 +57,9 @@ jobs:
           name: Run golint
           command: golint ./...
       - run:
+          name: Run go vet
+          command: go vet ./...
+      - run:
           name: run misspell
           command: ./misspell ./...
       - run:

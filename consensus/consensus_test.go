@@ -26,6 +26,8 @@ func TestMain(m *testing.M) {
 	if err := logger.Initialise(logConfig); err != nil {
 		panic(fmt.Sprintf("logger initialization failed: %s", err))
 	}
+	newMachine := NewConsensusMachine(&p2p.Node{}, &MetricsPeersVoting{}, false)
+	globalData.machine = newMachine
 	globalData.machine.log = logger.New("consensus")
 	os.Exit(m.Run())
 }

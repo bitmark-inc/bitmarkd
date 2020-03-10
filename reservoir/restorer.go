@@ -42,7 +42,7 @@ func NewTransactionRestorer(unpacked interface{}, packed interface{}, handles Ha
 		return &transferRestoreData{
 			unpacked:          unpacked.(transactionrecord.BitmarkTransfer),
 			transaction:       handles.Transactions,
-			ownerTx:           handles.OwnerTx,
+			ownerTxIndex:      handles.OwnerTxIndex,
 			ownerData:         handles.OwnerData,
 			blockOwnerPayment: handles.BlockOwnerPayment,
 		}, nil
@@ -127,7 +127,7 @@ func (i *issueRestoreData) Restore() error {
 type transferRestoreData struct {
 	unpacked          transactionrecord.BitmarkTransfer
 	transaction       storage.Handle
-	ownerTx           storage.Handle
+	ownerTxIndex      storage.Handle
 	ownerData         storage.Handle
 	blockOwnerPayment storage.Handle
 }
@@ -137,7 +137,7 @@ func (t *transferRestoreData) String() string {
 }
 
 func (t *transferRestoreData) Restore() error {
-	_, _, err := storeTransfer(t.unpacked, t.transaction, t.ownerTx, t.ownerData, t.blockOwnerPayment)
+	_, _, err := storeTransfer(t.unpacked, t.transaction, t.ownerTxIndex, t.ownerData, t.blockOwnerPayment)
 	if nil != err {
 		return fmt.Errorf("fail to restore transfer: %s", err)
 	}
