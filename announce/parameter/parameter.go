@@ -8,6 +8,8 @@ package parameter
 import "time"
 
 const (
+	InitialiseInterval  = 2 * time.Minute       // startup delay before first send
+	PollingInterval     = 11 * time.Minute      // regular polling time
 	BroadcastInterval   = 11 * time.Minute      // regular polling time
 	ExpiryInterval      = 5 * BroadcastInterval // if no responses received within this time, delete the entry
 	RebroadcastInterval = 7 * time.Minute       // to prevent too frequent rebroadcasts
