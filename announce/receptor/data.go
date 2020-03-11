@@ -84,7 +84,7 @@ func (e *StoreEntity) UnmarshalText(data []byte) error {
 }
 
 // Backup store all peers into a backup file
-func Backup(peerFile string, tree *avl.Tree) error {
+func Backup(backupFile string, tree *avl.Tree) error {
 	if tree.Count() <= 2 {
 		return nil
 	}
@@ -117,7 +117,7 @@ func Backup(peerFile string, tree *avl.Tree) error {
 		list = append(list, e)
 	}
 
-	f, err := os.OpenFile(peerFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
+	f, err := os.OpenFile(backupFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	if err != nil {
 		return err
 	}
