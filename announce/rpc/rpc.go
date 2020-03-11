@@ -24,13 +24,15 @@ const (
 	maxNodeCount = 1000
 )
 
+// RPC - interface for RPC operations
 type RPC interface {
 	Set(fingerprint.Fingerprint, []byte) error
 	Add([]byte, []byte, uint64) bool
 	Expire()
-	IsSet() bool
+	IsInitialised() bool
 	Fetch(start uint64, count int) ([]Entry, uint64, error)
 	Self() []byte
+	ID() fingerprint.Fingerprint
 }
 
 // TODO: rename RPCEntry => Entry
@@ -49,52 +51,52 @@ type node struct {
 
 type rpc struct {
 	sync.RWMutex
-	fin   fingerprint.Fingerprint
-	set   bool
-	nodes []*node
-	index map[fingerprint.Fingerprint]int
-	self  []byte
+	fin         fingerprint.Fingerprint
+	initialised bool
+	nodes       []*node
+	index       map[fingerprint.Fingerprint]int
+	self        []byte
 }
 
-// Set- set this node's rpc announcement data
+// Set - initialise this node's rpc announcement data
 func (r *rpc) Set(fin fingerprint.Fingerprint, rpcs []byte) error {
 	r.Lock()
 	defer r.Unlock()
 
-	if r.set {
+	if r.initialised {
 		return fault.AlreadyInitialised
 	}
 
 	r.fin = fin
 	r.self = rpcs
-	r.set = true
+	r.initialised = true
 
-	// add this nodes data to database
+	// save node info
 	r.add(fin, rpcs, uint64(time.Now().Unix()), true)
 
 	return nil
 }
 
-// AddRPC - add an remote RPC listener
+// Add - add an remote RPC listener
 // returns:
 //   true  if this was a new/updated entry
 //   false if the update was within the limits (to prevent continuous relaying)
-func (r *rpc) Add(f []byte, rpcs []byte, timestamp uint64) bool {
+func (r *rpc) Add(f []byte, listeners []byte, timestamp uint64) bool {
 	var fp fingerprint.Fingerprint
 	// discard invalid records
-	if len(fp) != len(f) || len(rpcs) > addressLimit {
+	if len(fp) != len(f) || len(listeners) > addressLimit {
 		return false
 	}
 	copy(fp[:], f)
 
 	r.Lock()
-	rc := r.add(fp, rpcs, timestamp, false)
+	rc := r.add(fp, listeners, timestamp, false)
 	r.Unlock()
 	return rc
 }
 
 // internal add an remote RPC listener, hold lock before calling
-func (r *rpc) add(fin fingerprint.Fingerprint, rpcs []byte, timestamp uint64, local bool) bool {
+func (r *rpc) add(fin fingerprint.Fingerprint, listeners []byte, timestamp uint64, local bool) bool {
 	i, ok := r.index[fin]
 
 	// if new item
@@ -106,7 +108,7 @@ func (r *rpc) add(fin fingerprint.Fingerprint, rpcs []byte, timestamp uint64, lo
 
 		// ***** FIX THIS: add more validation here
 		e := &node{
-			address:   rpcs,
+			address:   listeners,
 			fin:       fin,
 			timestamp: ts,
 			local:     local,
@@ -120,8 +122,8 @@ func (r *rpc) add(fin fingerprint.Fingerprint, rpcs []byte, timestamp uint64, lo
 
 	e := r.nodes[i]
 	// update old item
-	if !bytes.Equal(e.address, rpcs) {
-		e.address = rpcs
+	if !bytes.Equal(e.address, listeners) {
+		e.address = listeners
 	}
 
 	// check for too frequent update
@@ -132,9 +134,10 @@ func (r *rpc) add(fin fingerprint.Fingerprint, rpcs []byte, timestamp uint64, lo
 	return rc
 }
 
-// called in background to expire old RPC entries
-// hold lock before calling
+// Expire - called in background to expire outdated RPC entries
 func (r *rpc) Expire() {
+	r.Lock()
+	defer r.Unlock()
 
 	n := len(r.nodes)
 
@@ -161,11 +164,12 @@ expiration:
 	r.nodes = r.nodes[:n] // shrink the list
 }
 
-func (r *rpc) IsSet() bool {
-	return r.set
+// IsInitialised - return flag of initialised status
+func (r *rpc) IsInitialised() bool {
+	return r.initialised
 }
 
-// Fetch- fetch some records
+// Fetch - fetch some records
 func (r *rpc) Fetch(start uint64, count int) ([]Entry, uint64, error) {
 	if count <= 0 {
 		return nil, 0, fault.InvalidCount
@@ -215,6 +219,12 @@ func (r *rpc) Self() []byte {
 	return r.self
 }
 
+// ID - SHA3 of a node's certificate public key
+func (r *rpc) ID() fingerprint.Fingerprint {
+	return r.fin
+}
+
+// New - return RPC interface
 func New() RPC {
 	return &rpc{
 		index: make(map[fingerprint.Fingerprint]int, maxNodeCount),

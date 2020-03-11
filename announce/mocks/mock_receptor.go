@@ -5,11 +5,12 @@
 package mocks
 
 import (
+	reflect "reflect"
+	time "time"
+
 	id "github.com/bitmark-inc/bitmarkd/announce/id"
 	avl "github.com/bitmark-inc/bitmarkd/avl"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
-	time "time"
 )
 
 // MockReceptor is a mock of Receptor interface
@@ -97,16 +98,16 @@ func (mr *MockReceptorMockRecorder) Random(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Random", reflect.TypeOf((*MockReceptor)(nil).Random), arg0)
 }
 
-// Rebalance mocks base method
-func (m *MockReceptor) Rebalance() {
+// ReBalance mocks base method
+func (m *MockReceptor) ReBalance() {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Rebalance")
+	m.ctrl.Call(m, "ReBalance")
 }
 
-// Rebalance indicates an expected call of Rebalance
+// ReBalance indicates an expected call of ReBalance
 func (mr *MockReceptorMockRecorder) Rebalance() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rebalance", reflect.TypeOf((*MockReceptor)(nil).Rebalance))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReBalance", reflect.TypeOf((*MockReceptor)(nil).ReBalance))
 }
 
 // UpdateTime mocks base method
@@ -121,18 +122,18 @@ func (mr *MockReceptorMockRecorder) UpdateTime(arg0, arg1 interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTime", reflect.TypeOf((*MockReceptor)(nil).UpdateTime), arg0, arg1)
 }
 
-// Changed mocks base method
-func (m *MockReceptor) Changed() bool {
+// IsChanged mocks base method
+func (m *MockReceptor) IsChanged() bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Changed")
+	ret := m.ctrl.Call(m, "IsChanged")
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
-// Changed indicates an expected call of Changed
+// IsChanged indicates an expected call of IsChanged
 func (mr *MockReceptorMockRecorder) Changed() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Changed", reflect.TypeOf((*MockReceptor)(nil).Changed))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsChanged", reflect.TypeOf((*MockReceptor)(nil).IsChanged))
 }
 
 // Change mocks base method
@@ -147,18 +148,18 @@ func (mr *MockReceptorMockRecorder) Change(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Change", reflect.TypeOf((*MockReceptor)(nil).Change), arg0)
 }
 
-// IsSet mocks base method
-func (m *MockReceptor) IsSet() bool {
+// IsInitialised mocks base method
+func (m *MockReceptor) IsInitialised() bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsSet")
+	ret := m.ctrl.Call(m, "IsInitialised")
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
-// IsSet indicates an expected call of IsSet
+// IsInitialised indicates an expected call of IsInitialised
 func (mr *MockReceptorMockRecorder) IsSet() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsSet", reflect.TypeOf((*MockReceptor)(nil).IsSet))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsInitialised", reflect.TypeOf((*MockReceptor)(nil).IsInitialised))
 }
 
 // Connectable mocks base method
@@ -203,18 +204,18 @@ func (mr *MockReceptorMockRecorder) Self() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Self", reflect.TypeOf((*MockReceptor)(nil).Self))
 }
 
-// SelfAddress mocks base method
-func (m *MockReceptor) SelfAddress() []byte {
+// SelfListener mocks base method
+func (m *MockReceptor) SelfListener() []byte {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SelfAddress")
+	ret := m.ctrl.Call(m, "SelfListener")
 	ret0, _ := ret[0].([]byte)
 	return ret0
 }
 
-// SelfAddress indicates an expected call of SelfAddress
+// SelfListener indicates an expected call of SelfListener
 func (mr *MockReceptorMockRecorder) SelfAddress() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SelfAddress", reflect.TypeOf((*MockReceptor)(nil).SelfAddress))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SelfListener", reflect.TypeOf((*MockReceptor)(nil).SelfListener))
 }
 
 // Expire mocks base method

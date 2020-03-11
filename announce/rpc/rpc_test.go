@@ -25,7 +25,7 @@ func TestSet(t *testing.T) {
 	startIndex := uint64(0)
 
 	err := r.Set(f, []byte{5, 6, 7, 8})
-	assert.Nil(t, err, "wrong set")
+	assert.Nil(t, err, "wrong initialised")
 
 	entries, start, err := r.Fetch(startIndex, 10)
 	assert.Nil(t, err, "wrong fetch")
@@ -39,10 +39,10 @@ func TestSetWhenRepeat(t *testing.T) {
 	f := fingerprint.Fingerprint{1, 2, 3, 4}
 
 	err := r.Set(f, []byte{5, 6, 7, 8})
-	assert.Nil(t, err, "wrong set")
+	assert.Nil(t, err, "wrong initialised")
 
 	err = r.Set(f, []byte{5, 6, 7, 8})
-	assert.Equal(t, fault.AlreadyInitialised, err, "wrong second set")
+	assert.Equal(t, fault.AlreadyInitialised, err, "wrong second initialised")
 }
 
 func TestAdd(t *testing.T) {
@@ -148,12 +148,12 @@ func TestExpire(t *testing.T) {
 
 func TestIsSet(t *testing.T) {
 	r := rpc.New()
-	assert.False(t, r.IsSet(), "wrong set")
+	assert.False(t, r.IsInitialised(), "wrong initialised")
 
 	err := r.Set(fingerprint.Fingerprint{1, 2, 3, 4}, []byte{5, 6, 7, 8})
-	assert.Nil(t, err, "wrong set")
+	assert.Nil(t, err, "wrong initialised")
 
-	assert.True(t, r.IsSet(), "wrong set")
+	assert.True(t, r.IsInitialised(), "wrong initialised")
 }
 
 func TestSelf(t *testing.T) {

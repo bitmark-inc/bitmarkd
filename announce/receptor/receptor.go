@@ -29,20 +29,21 @@ import (
 // format for timestamps
 const timeFormat = "2006-01-02 15:04:05"
 
+// Receptor - interface for receptor operations
 type Receptor interface {
 	Add([]byte, []byte, uint64) bool
 	SetSelf([]byte, []byte) error
 	Next([]byte) ([]byte, []byte, time.Time, error)
 	Random([]byte) ([]byte, []byte, time.Time, error)
-	Rebalance()
+	ReBalance()
 	UpdateTime([]byte, time.Time)
-	Changed() bool
+	IsChanged() bool
 	Change(bool)
-	IsSet() bool
+	IsInitialised() bool
 	Connectable() *avl.Tree
 	ID() id.ID
 	Self() *avl.Node
-	SelfAddress() []byte
+	SelfListener() []byte
 	Expire()
 }
 
@@ -53,7 +54,7 @@ type receptor struct {
 	changed     bool
 	id          id.ID
 	log         *logger.L
-	set         bool
+	initialised bool
 	listeners   []byte
 }
 
@@ -101,18 +102,17 @@ func (r *receptor) Add(publicKey []byte, listeners []byte, timestamp uint64) boo
 	return true
 }
 
-// SetSelf - called by the initialisation to set up this
-// node's announcement data
+// SetSelf - called by announce initialisation to setup own announcement data
 func (r *receptor) SetSelf(publicKey []byte, listeners []byte) error {
 	r.Lock()
 
-	if r.set {
+	if r.initialised {
 		r.Unlock()
 		return fault.AlreadyInitialised
 	}
 	r.id = publicKey
 	r.listeners = listeners
-	r.set = true
+	r.initialised = true
 	r.Unlock()
 
 	r.Add(publicKey, listeners, uint64(time.Now().Unix()))
@@ -121,12 +121,13 @@ func (r *receptor) SetSelf(publicKey []byte, listeners []byte) error {
 	r.self, _ = r.connectable.Search(id.ID(publicKey))
 	r.Unlock()
 
-	r.Rebalance()
+	r.ReBalance()
 
 	return nil
 }
 
-func (r *receptor) Rebalance() {
+// ReBalance - re-balance tree for better connections
+func (r *receptor) ReBalance() {
 	r.Lock()
 	defer r.Unlock()
 
@@ -202,7 +203,7 @@ deduplicate:
 	}
 }
 
-// Next - fetch the data for the next node in the ring for a given public key
+// Next - fetch data for next node in the ring for a given public key
 func (r *receptor) Next(publicKey []byte) ([]byte, []byte, time.Time, error) {
 	r.Lock()
 	defer r.Unlock()
@@ -221,7 +222,7 @@ func (r *receptor) Next(publicKey []byte) ([]byte, []byte, time.Time, error) {
 	return e.PublicKey, e.Listeners, e.Timestamp, nil
 }
 
-// Random - fetch the data for a random node in the ring not matching a given public key
+// Random - fetch a random node data in the ring not matching a given public key
 func (r *receptor) Random(publicKey []byte) ([]byte, []byte, time.Time, error) {
 	r.Lock()
 	defer r.Unlock()
@@ -252,7 +253,7 @@ loop:
 	return []byte{}, []byte{}, time.Now(), fault.InvalidPublicKey
 }
 
-// UpdateTime - set the timestamp for the connectable entity with given public key
+// UpdateTime - initialised timestamp for connectable entity with given public key
 func (r *receptor) UpdateTime(publicKey []byte, timestamp time.Time) {
 	r.Lock()
 	defer r.Unlock()
@@ -268,35 +269,46 @@ func (r *receptor) UpdateTime(publicKey []byte, timestamp time.Time) {
 	e.Timestamp = timestamp
 }
 
+// Change - update flag of changed status
 func (r *receptor) Change(changed bool) {
 	r.changed = changed
 }
 
-func (r *receptor) Changed() bool {
+// IsChanged - return flag of changed status
+func (r *receptor) IsChanged() bool {
 	return r.changed
 }
 
-func (r *receptor) IsSet() bool {
-	return r.set
+// IsInitialised - return flag of initialised status
+func (r *receptor) IsInitialised() bool {
+	return r.initialised
 }
 
+// Connectable - return tree of all connectable nodes
 func (r *receptor) Connectable() *avl.Tree {
 	return r.connectable
 }
 
+// ID - public key of a node
 func (r *receptor) ID() id.ID {
 	return r.id
 }
 
+// Self - return this node data
 func (r *receptor) Self() *avl.Node {
 	return r.self
 }
 
-func (r *receptor) SelfAddress() []byte {
+// SelfListener - return self listener
+func (r *receptor) SelfListener() []byte {
 	return r.listeners
 }
 
+// Expire - remove outdated node
 func (r *receptor) Expire() {
+	r.Lock()
+	defer r.Unlock()
+
 	now := time.Now()
 	nextNode := r.connectable.First()
 	log := r.log
@@ -323,6 +335,7 @@ scanNodes:
 	}
 }
 
+// New - return Receptor interface
 func New(log *logger.L) Receptor {
 	return &receptor{
 		connectable: avl.New(),

@@ -76,13 +76,13 @@ func TestChanged(t *testing.T) {
 	defer fixtures.TeardownTestLogger()
 
 	r := receptor.New(logger.New(fixtures.LogCategory))
-	assert.False(t, r.Changed(), "not changed")
+	assert.False(t, r.IsChanged(), "not changed")
 
 	listeners := []byte{1, 2}
 
 	added := r.Add([]byte("test"), listeners, uint64(time.Now().Unix()))
 	assert.True(t, added, "not add")
-	assert.True(t, r.Changed(), "not changed")
+	assert.True(t, r.IsChanged(), "not changed")
 }
 
 func TestNext(t *testing.T) {
@@ -148,14 +148,14 @@ func TestSetSelf(t *testing.T) {
 	defer fixtures.TeardownTestLogger()
 
 	r := receptor.New(logger.New(fixtures.LogCategory))
-	assert.False(t, r.IsSet(), "wrong set")
+	assert.False(t, r.IsInitialised(), "wrong initialised")
 
 	myID := []byte("test")
 	listeners := []byte{1, 2}
 
 	err := r.SetSelf(myID, listeners)
 	assert.Nil(t, err, "wrong SetSelf")
-	assert.True(t, r.IsSet(), "wrong set")
+	assert.True(t, r.IsInitialised(), "wrong initialised")
 
 	pid, addrs, _, err := r.Next(myID)
 	assert.Nil(t, err, "wrong next")
@@ -210,10 +210,10 @@ func TestChange(t *testing.T) {
 	defer fixtures.TeardownTestLogger()
 
 	r := receptor.New(logger.New(fixtures.LogCategory))
-	assert.False(t, r.Changed(), "wrong change")
+	assert.False(t, r.IsChanged(), "wrong change")
 
 	r.Change(true)
-	assert.True(t, r.Changed(), "wrong change")
+	assert.True(t, r.IsChanged(), "wrong change")
 }
 
 func TestSelfAddress(t *testing.T) {
@@ -225,7 +225,7 @@ func TestSelfAddress(t *testing.T) {
 	listeners := []byte{1, 2}
 	_ = r.SetSelf(pid, listeners)
 
-	addrs := r.SelfAddress()
+	addrs := r.SelfListener()
 	assert.Equal(t, 2, len(addrs), "wrong address count")
 	assert.Equal(t, listeners[0], addrs[0], "wrong address")
 	assert.Equal(t, listeners[1], addrs[1], "wrong address")
