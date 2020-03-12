@@ -1,10 +1,12 @@
 module github.com/bitmark-inc/bitmarkd
 
+go 1.14
+
 require (
 	github.com/bitmark-inc/certgen v0.1.1
 	github.com/bitmark-inc/exitwithstatus v0.1.2
 	github.com/bitmark-inc/getoptions v0.1.1
-	github.com/bitmark-inc/go-argon2 v0.1.4
+	github.com/bitmark-inc/go-argon2 v0.1.5
 	github.com/bitmark-inc/logger v0.3.4
 	github.com/btcsuite/btcd v0.0.0-20190824003749-130ea5bddde3
 	github.com/fsnotify/fsnotify v1.4.7
@@ -24,7 +26,7 @@ require (
 	github.com/onsi/ginkgo v1.10.1 // indirect
 	github.com/onsi/gomega v1.7.0 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible
-	github.com/pebbe/zmq4 v1.0.0
+	github.com/pebbe/zmq4 v1.2.0
 	github.com/prometheus/common v0.7.0
 	github.com/stretchr/testify v1.4.0
 	github.com/syndtr/goleveldb v1.0.0
@@ -37,5 +39,3 @@ require (
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 )
-
-go 1.13

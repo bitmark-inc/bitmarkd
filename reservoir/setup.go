@@ -193,6 +193,7 @@ func (g *globalDataType) StoreSwap(swap *transactionrecord.ShareSwap) (*SwapInfo
 	)
 }
 
+// Reservoir - APIs
 type Reservoir interface {
 	StoreTransfer(transactionrecord.BitmarkTransfer) (*TransferInfo, bool, error)
 	StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, error)
@@ -203,11 +204,9 @@ type Reservoir interface {
 	StoreSwap(swap *transactionrecord.ShareSwap) (*SwapInfo, bool, error)
 }
 
+// Get - return reservoir APIs
 func Get() Reservoir {
-	if globalData.enabled {
-		return &globalData
-	}
-	return nil
+	return &globalData
 }
 
 // Initialise - create the cache

@@ -193,12 +193,6 @@ func (sub *submission) process(socket *zmq.Socket) {
 
 	log.Infof("json to send: %s", result)
 
-	// if _, err := socket.Send(to, zmq.SNDMORE|zmq.DONTWAIT); nil != err {
-	// 	return err
-	// }
-	// if _, err := socket.Send(command, zmq.SNDMORE|zmq.DONTWAIT); nil != err {
-	// 	return err
-	// }
 	_, err = socket.SendBytes(result, 0|zmq.DONTWAIT)
 	logger.PanicIfError("Submission", err)
 }
