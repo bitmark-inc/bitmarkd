@@ -25,10 +25,7 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-// type of listener
 const (
-	TypeRPC     = iota
-	TypePeer    = iota
 	logCategory = "announce"
 )
 
