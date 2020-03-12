@@ -35,7 +35,6 @@ type RPC interface {
 	ID() fingerprint.Fingerprint
 }
 
-// TODO: rename RPCEntry => Entry
 // Entry type of returned data
 type Entry struct {
 	Fingerprint fingerprint.Fingerprint `json:"fingerprint"`
