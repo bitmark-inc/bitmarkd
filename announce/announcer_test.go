@@ -31,7 +31,7 @@ func TestSendRegistration(t *testing.T) {
 
 	// make sure background jobs already finish first round, so
 	// no logger will be called
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(20 * time.Millisecond)
 
 	ctl := gomock.NewController(t)
 	defer ctl.Finish()

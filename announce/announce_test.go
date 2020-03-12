@@ -29,7 +29,7 @@ func TestInitialise(t *testing.T) {
 
 	// make sure background jobs already finish first round, so
 	// no logger will be called
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(20 * time.Millisecond)
 
 	assert.Nil(t, err, "wrong Initialise")
 }
@@ -49,7 +49,7 @@ func TestInitialiseWhenSecondTime(t *testing.T) {
 
 	// make sure background jobs already finish first round, so
 	// no logger will be called
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(20 * time.Millisecond)
 
 	assert.Equal(t, fault.AlreadyInitialised, err, "wrong second Initialise")
 }
@@ -67,7 +67,7 @@ func TestFinalise(t *testing.T) {
 
 	// make sure background jobs already finish first round, so
 	// no logger will be called
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(20 * time.Millisecond)
 
 	err = announce.Finalise()
 	assert.Nil(t, err, "wrong Finalise")
