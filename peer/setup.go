@@ -140,7 +140,7 @@ process_listen:
 		}
 		l = append(l, c.Pack()...)
 	}
-	if err := announce.SetPeer(publicKey, l); nil != err {
+	if err := announce.SetSelf(publicKey, l); nil != err {
 		globalData.log.Errorf("announce.SetPeer error: %s", err)
 		return err
 	}

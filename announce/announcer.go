@@ -39,7 +39,7 @@ func GetRandom(publicKey []byte) ([]byte, []byte, time.Time, error) {
 
 // SetPeer - called by the peering initialisation to set up this
 // node's announcement data
-func SetPeer(publicKey []byte, listeners []byte) error {
+func SetSelf(publicKey []byte, listeners []byte) error {
 	return globalData.receptors.SetSelf(publicKey, listeners)
 }
 
