@@ -120,9 +120,13 @@ func TestRandom(t *testing.T) {
 	id2 := []byte("test2")
 	_ = r.Add(id2, listeners2, uint64(now.Unix()))
 
+	listeners3 := []byte{4}
+	id3 := []byte("test3")
+	_ = r.Add(id3, listeners3, uint64(now.Unix()))
+
 	pid, addr, ts, err := r.Random(id1)
 	assert.Nil(t, err, "wrong random")
-	assert.Equal(t, id2, pid, "wrong id")
+	assert.NotEqual(t, id1, pid, "wrong id")
 	assert.Equal(t, 1, len(addr), "wrong addr count")
 	assert.Equal(t, time.Unix(now.Unix(), 0), ts, "wrong time")
 }
