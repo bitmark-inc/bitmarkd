@@ -8,7 +8,6 @@ package announce
 import (
 	"path"
 	"sync"
-	"time"
 
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 
@@ -21,11 +20,8 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/announce/receptor"
 
-	"github.com/bitmark-inc/bitmarkd/announce/fingerprint"
-
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 )
 
@@ -38,14 +34,6 @@ const (
 
 // file for storing saves peers
 const backupFile = "peers.json"
-
-// RPC Entity
-type Entry struct {
-	address     util.PackedConnection   // packed addresses
-	fingerprint fingerprint.Fingerprint // SHA3-256(certificate)
-	timestamp   time.Time               // creation time
-	local       bool                    // true => never expires
-}
 
 // globals for background process
 type announcerData struct {
