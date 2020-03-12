@@ -7,6 +7,7 @@ package announce_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/bitmark-inc/bitmarkd/fault"
 
@@ -25,6 +26,11 @@ func TestInitialise(t *testing.T) {
 	f := func(_ string) ([]string, error) { return []string{}, nil }
 
 	err := announce.Initialise("domain.not.exist", "cache", f)
+
+	// make sure background jobs already finish first round, so
+	// no logger will be called
+	time.Sleep(10 * time.Millisecond)
+
 	assert.Nil(t, err, "wrong Initialise")
 }
 
@@ -41,6 +47,10 @@ func TestInitialiseWhenSecondTime(t *testing.T) {
 
 	err := announce.Initialise("domain.not.exist", "cache", f)
 
+	// make sure background jobs already finish first round, so
+	// no logger will be called
+	time.Sleep(10 * time.Millisecond)
+
 	assert.Equal(t, fault.AlreadyInitialised, err, "wrong second Initialise")
 }
 
@@ -54,6 +64,10 @@ func TestFinalise(t *testing.T) {
 
 	err := announce.Initialise("domain.not.exist", "cache", f)
 	assert.Nil(t, err, "wrong Initialise")
+
+	// make sure background jobs already finish first round, so
+	// no logger will be called
+	time.Sleep(10 * time.Millisecond)
 
 	err = announce.Finalise()
 	assert.Nil(t, err, "wrong Finalise")
