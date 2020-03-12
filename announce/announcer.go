@@ -21,7 +21,7 @@ func SendRegistration(client zmqutil.Client, fn string) error {
 	timestamp := make([]byte, 8)
 	binary.BigEndian.PutUint64(timestamp, uint64(time.Now().Unix()))
 
-	return client.Send(fn, chain, globalData.receptors.Self(), globalData.receptors.SelfListener(), timestamp)
+	return client.Send(fn, chain, globalData.receptors.ID(), globalData.receptors.SelfListener(), timestamp)
 }
 
 // AddPeer - add a peer announcement to the in-memory tree
