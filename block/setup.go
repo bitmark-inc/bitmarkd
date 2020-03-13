@@ -389,12 +389,12 @@ func Finalise() error {
 }
 
 // LastBlockHash - return the last block hash in hex string if found
-func LastBlockHash() string {
+func LastBlockHash(pool storage.Handle) string {
 
 	log := globalData.log
 	br := blockrecord.Get()
 
-	if last, ok := storage.Pool.Blocks.LastElement(); ok {
+	if last, ok := pool.LastElement(); ok {
 
 		_, digest, _, err := br.ExtractHeader(last.Value, 0, false)
 		if nil != err {

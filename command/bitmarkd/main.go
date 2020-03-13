@@ -11,6 +11,8 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/bitmark-inc/bitmarkd/ownership"
+
 	//"runtime/pprof"
 	"syscall"
 
@@ -219,6 +221,8 @@ func main() {
 			exitwithstatus.Message("initialise difficulty error: %s", err)
 		}
 	}
+
+	ownership.Initialise(storage.Pool.OwnerList, storage.Pool.OwnerData)
 
 	// reservoir and block are both ready
 	// so can restore any previously saved transactions
