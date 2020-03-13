@@ -129,6 +129,7 @@ var (
 	MissingPaymentDiscoverySection        = e("missing payment discovery section")
 	MissingPaymentLitecoinSection         = e("missing payment litecoin section")
 	MissingPreviousBlockHeader            = e("missing previous block header")
+	MissingReservoir                      = e("missing reservoir interface")
 	NameTooLong                           = e("name too long")
 	NilPointer                            = e("nil pointer")
 	NoAddressToReturn                     = e("no address to return")
