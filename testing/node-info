@@ -148,7 +148,7 @@ ONCE() {
   filter='
     def rj($f;$w): ("          "+($f|tostring))[-$w:];
     def lj($f;$w): (($f|tostring)+"          ")[:$w];
-    "\u001b[1;32mb: \u001b[1;33m" + rj(.node.block.count.local;2) +
+    "\u001b[1;32mb:\u001b[1;33m" + rj(.node.block.count.local;4) +
     "\u001b[0;33m " + (.node.block.hash[56:64]+"--------")[:8] +
     "  \u001b[" + (if .node.mode=="Normal" then "1;32" else "0;31" end) + "m" + .node.mode[0:6] +
     "  \u001b[0;36m" + .node.chain +
