@@ -18,6 +18,8 @@ import (
 	"strings"
 	"time"
 
+	storage2 "github.com/bitmark-inc/bitmarkd/storage"
+
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
@@ -68,7 +70,7 @@ type httpHandler struct {
 var connectionCountHTTPS counter.Counter
 
 // this matches anything not matched and returns error
-func (s *httpHandler) root(w http.ResponseWriter, r *http.Request) {
+func (s *httpHandler) root(w http.ResponseWriter, _ *http.Request) {
 	sendNotFound(w)
 }
 
@@ -187,7 +189,7 @@ func (s *httpHandler) details(w http.ResponseWriter, r *http.Request) {
 				Local:  blockheader.Height(),
 				Remote: peer.BlockHeight(),
 			},
-			Hash: block.LastBlockHash(),
+			Hash: block.LastBlockHash(storage2.Pool.Blocks),
 		},
 		RPCs: connectionCountHTTPS.Uint64(),
 		// Miners : mine.ConnectionCount(),

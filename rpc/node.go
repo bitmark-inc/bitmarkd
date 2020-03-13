@@ -9,6 +9,8 @@ import (
 	"encoding/hex"
 	"time"
 
+	storage2 "github.com/bitmark-inc/bitmarkd/storage"
+
 	"github.com/bitmark-inc/bitmarkd/announce/rpc"
 
 	"golang.org/x/time/rate"
@@ -119,7 +121,7 @@ func (node *Node) Info(_ *InfoArguments, reply *InfoReply) error {
 	reply.Mode = mode.String()
 	reply.Block = BlockInfo{
 		Height: blockheader.Height(),
-		Hash:   block.LastBlockHash(),
+		Hash:   block.LastBlockHash(storage2.Pool.Blocks),
 	}
 	reply.Miner = MinerInfo{
 		Success: uint64(proof.MinedBlocks()),

@@ -68,8 +68,10 @@ func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransferCou
 		}
 	}
 
+	rsvr := reservoir.Get()
+
 	// save transfer/check for duplicate
-	stored, duplicate, err := reservoir.StoreTransfer(transfer, storage.Pool.Transactions, storage.Pool.OwnerTxIndex, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
+	stored, duplicate, err := rsvr.StoreTransfer(transfer)
 	if nil != err {
 		return err
 	}
@@ -170,7 +172,7 @@ loop:
 
 		case *transactionrecord.OldBaseData:
 			if 0 == i {
-				h.IsOwner = ownership.CurrentlyOwns(nil, tx.Owner, id)
+				h.IsOwner = ownership.CurrentlyOwns(nil, tx.Owner, id, storage.Pool.OwnerTxIndex)
 			}
 
 			provenance = append(provenance, h)
@@ -178,7 +180,7 @@ loop:
 
 		case *transactionrecord.BlockFoundation:
 			if 0 == i {
-				h.IsOwner = ownership.CurrentlyOwns(nil, tx.Owner, id)
+				h.IsOwner = ownership.CurrentlyOwns(nil, tx.Owner, id, storage.Pool.OwnerTxIndex)
 			}
 
 			provenance = append(provenance, h)
@@ -186,7 +188,7 @@ loop:
 
 		case *transactionrecord.BitmarkIssue:
 			if 0 == i {
-				h.IsOwner = ownership.CurrentlyOwns(nil, tx.Owner, id)
+				h.IsOwner = ownership.CurrentlyOwns(nil, tx.Owner, id, storage.Pool.OwnerTxIndex)
 			}
 			provenance = append(provenance, h)
 
@@ -215,7 +217,7 @@ loop:
 			tr := tx.(transactionrecord.BitmarkTransfer)
 
 			if 0 == i {
-				h.IsOwner = ownership.CurrentlyOwns(nil, tr.GetOwner(), id)
+				h.IsOwner = ownership.CurrentlyOwns(nil, tr.GetOwner(), id, storage.Pool.OwnerTxIndex)
 			}
 
 			provenance = append(provenance, h)

@@ -39,6 +39,7 @@ func (t *Transaction) Status(arguments *TransactionArguments, reply *Transaction
 		return err
 	}
 
-	reply.Status = reservoir.TransactionStatus(arguments.TxId).String()
+	rsvr := reservoir.Get()
+	reply.Status = rsvr.TransactionStatus(arguments.TxId).String()
 	return nil
 }

@@ -17,7 +17,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
-	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
@@ -89,8 +88,9 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 	packedIssues := []byte{}
 	var stored *reservoir.IssueInfo
 	duplicate := false
+	rsvr := reservoir.Get()
 	if issueCount > 0 {
-		stored, duplicate, err = reservoir.StoreIssues(arguments.Issues, storage.Pool.Assets, storage.Pool.BlockOwnerPayment)
+		stored, duplicate, err = rsvr.StoreIssues(arguments.Issues)
 		if nil != err {
 			return err
 		}
@@ -124,9 +124,9 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 		if nil != stored.Payments {
 			result.Payments = make(map[string]transactionrecord.PaymentAlternative)
 
-			for _, payment := range stored.Payments {
-				c := payment[0].Currency.String()
-				result.Payments[c] = payment
+			for _, p := range stored.Payments {
+				c := p[0].Currency.String()
+				result.Payments[c] = p
 			}
 		}
 
@@ -197,7 +197,8 @@ func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) er
 	messagebus.Bus.Broadcast.Send("proof", packed)
 
 	// check if proof matches
-	reply.Status = reservoir.TryProof(arguments.PayId, nonce)
+	rsvr := reservoir.Get()
+	reply.Status = rsvr.TryProof(arguments.PayId, nonce)
 
 	return nil
 }

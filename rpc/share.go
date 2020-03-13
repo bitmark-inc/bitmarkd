@@ -15,7 +15,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
-	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
 )
@@ -55,8 +54,10 @@ func (share *Share) Create(bmfr *transactionrecord.BitmarkShare, reply *ShareCre
 		return fault.NotAvailableDuringSynchronise
 	}
 
+	rsvr := reservoir.Get()
+
 	// save transfer/check for duplicate
-	stored, duplicate, err := reservoir.StoreTransfer(bmfr, storage.Pool.Transactions, storage.Pool.OwnerTxIndex, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
+	stored, duplicate, err := rsvr.StoreTransfer(bmfr)
 	if nil != err {
 		return err
 	}
@@ -133,7 +134,8 @@ func (share *Share) Balance(arguments *ShareBalanceArguments, reply *ShareBalanc
 		return fault.WrongNetworkForPublicKey
 	}
 
-	result, err := reservoir.ShareBalance(arguments.Owner, arguments.ShareId, arguments.Count)
+	rsvr := reservoir.Get()
+	result, err := rsvr.ShareBalance(arguments.Owner, arguments.ShareId, arguments.Count)
 	if nil != err {
 		return err
 	}
@@ -186,7 +188,8 @@ func (share *Share) Grant(arguments *transactionrecord.ShareGrant, reply *ShareG
 	}
 
 	// save transfer/check for duplicate
-	stored, duplicate, err := reservoir.StoreGrant(arguments, storage.Pool.ShareQuantity, storage.Pool.Shares, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
+	rsvr := reservoir.Get()
+	stored, duplicate, err := rsvr.StoreGrant(arguments)
 	if nil != err {
 		return err
 	}
@@ -259,7 +262,8 @@ func (share *Share) Swap(arguments *transactionrecord.ShareSwap, reply *ShareSwa
 	}
 
 	// save transfer/check for duplicate
-	stored, duplicate, err := reservoir.StoreSwap(arguments, storage.Pool.ShareQuantity, storage.Pool.Shares, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
+	rsvr := reservoir.Get()
+	stored, duplicate, err := rsvr.StoreSwap(arguments)
 	if nil != err {
 		return err
 	}

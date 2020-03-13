@@ -59,7 +59,8 @@ func (bitmark *BlockOwner) TxIdForBlock(info *TxIdForBlockArguments, reply *TxId
 		return fault.BlockNotFound
 	}
 
-	header, digest, _, err := blockrecord.ExtractHeader(packedBlock, 0, false)
+	br := blockrecord.Get()
+	header, digest, _, err := br.ExtractHeader(packedBlock, 0, false)
 	if nil != err {
 		return err
 	}
@@ -99,8 +100,10 @@ func (bitmark *BlockOwner) Transfer(transfer *transactionrecord.BlockOwnerTransf
 		return fault.WrongNetworkForPublicKey
 	}
 
+	rsvr := reservoir.Get()
+
 	// save transfer/check for duplicate
-	stored, duplicate, err := reservoir.StoreTransfer(transfer, storage.Pool.Transactions, storage.Pool.OwnerTxIndex, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
+	stored, duplicate, err := rsvr.StoreTransfer(transfer)
 	if nil != err {
 		return err
 	}
