@@ -23,13 +23,13 @@ type BalanceInfo struct {
 	Available uint64        `json:"available"`
 }
 
-// ShareBalance - get a list of balances
-func ShareBalance(owner *account.Account, startShareId merkle.Digest, count int) ([]BalanceInfo, error) {
+// shareBalance - get a list of balances
+func shareBalance(owner *account.Account, startShareId merkle.Digest, count int, pool storage.Handle) ([]BalanceInfo, error) {
 
 	ownerBytes := owner.Bytes()
 	prefix := append(ownerBytes, startShareId[:]...)
 
-	cursor := storage.Pool.ShareQuantity.NewFetchCursor().Seek(prefix)
+	cursor := pool.NewFetchCursor().Seek(prefix)
 
 	items, err := cursor.Fetch(count)
 	if nil != err {

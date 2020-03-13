@@ -40,8 +40,8 @@ type verifiedSwapInfo struct {
 	issueBlockNumber    uint64
 }
 
-// StoreSwap - verify and store a swap request
-func StoreSwap(swap *transactionrecord.ShareSwap, shareQuantityHandle storage.Handle, shareHandle storage.Handle, ownerDataHandle storage.Handle, blockOwnerPaymentHandle storage.Handle) (*SwapInfo, bool, error) {
+// storeSwap - verify and store a swap request
+func storeSwap(swap *transactionrecord.ShareSwap, shareQuantityHandle storage.Handle, shareHandle storage.Handle, ownerDataHandle storage.Handle, blockOwnerPaymentHandle storage.Handle) (*SwapInfo, bool, error) {
 	if nil == shareQuantityHandle || nil == shareHandle || nil == ownerDataHandle || nil == blockOwnerPaymentHandle {
 		return nil, false, fault.NilPointer
 	}
@@ -84,7 +84,7 @@ func StoreSwap(swap *transactionrecord.ShareSwap, shareQuantityHandle storage.Ha
 			result.Payments = entry.payments
 		} else {
 			// this would mean that reservoir data is corrupt
-			logger.Panicf("StoreSwap: failed to get current payment data for: %s  payid: %s", txId, payId)
+			logger.Panicf("storeSwap: failed to get current payment data for: %s  payid: %s", txId, payId)
 		}
 		return result, true, nil
 	}

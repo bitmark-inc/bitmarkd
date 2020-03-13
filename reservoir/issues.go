@@ -36,14 +36,14 @@ type IssueInfo struct {
 	Payments   []transactionrecord.PaymentAlternative
 }
 
-// StoreIssues - store packed record(s) in the pending table
+// storeIssues - store packed record(s) in the pending table
 //
 // return payment id and a duplicate flag
 //
 // for duplicate to be true all transactions must all match exactly to a
 // previous set - this is to allow for multiple submission from client
 // without receiving a duplicate transaction error
-func StoreIssues(issues []*transactionrecord.BitmarkIssue, assetHandle storage.Handle, blockOwnerPaymentHandle storage.Handle) (*IssueInfo, bool, error) {
+func storeIssues(issues []*transactionrecord.BitmarkIssue, assetHandle storage.Handle, blockOwnerPaymentHandle storage.Handle) (*IssueInfo, bool, error) {
 	if nil == assetHandle || nil == blockOwnerPaymentHandle {
 		return nil, false, fault.NilPointer
 	}
@@ -287,27 +287,27 @@ func StoreIssues(issues []*transactionrecord.BitmarkIssue, assetHandle storage.H
 	return result, false, nil
 }
 
-// TryProof - instead of paying, try a proof from the client nonce
-func TryProof(payId pay.PayId, clientNonce []byte) TrackingStatus {
+// tryProof - instead of paying, try a proof from the client nonce
+func tryProof(payId pay.PayId, clientNonce []byte) TrackingStatus {
 
 	globalData.RLock()
 	r, ok := globalData.pendingFreeIssues[payId]
 	globalData.RUnlock()
 
 	if !ok {
-		globalData.log.Debugf("TryProof: issue item not found")
+		globalData.log.Debugf("tryProof: issue item not found")
 		return TrackingNotFound
 	}
 
 	if nil == r.difficulty { // only payment tracking; proof not allowed
-		globalData.log.Debugf("TryProof: item with out a difficulty")
+		globalData.log.Debugf("tryProof: item with out a difficulty")
 		return TrackingInvalid
 	}
 
 	// convert difficulty
 	bigDifficulty := r.difficulty.BigInt()
 
-	globalData.log.Infof("TryProof: difficulty: 0x%064x", bigDifficulty)
+	globalData.log.Infof("tryProof: difficulty: 0x%064x", bigDifficulty)
 
 	// compute hash with all possible payNonces
 	h := sha3.New256()
@@ -317,13 +317,13 @@ try_loop:
 	for i := uint64(0); i < 20; i += 1 {
 
 		if i >= height {
-			globalData.log.Criticalf("TryProof: height: %d too low at loop: %d", height, i)
+			globalData.log.Criticalf("tryProof: height: %d too low at loop: %d", height, i)
 			break try_loop
 		}
 
 		payNonce := PayNonceFromBlock(height - i)
 
-		globalData.log.Debugf("TryProof: payNonce[%d]: %x", i, payNonce)
+		globalData.log.Debugf("tryProof: payNonce[%d]: %x", i, payNonce)
 
 		h.Reset()
 		h.Write(payId[:])
@@ -332,16 +332,16 @@ try_loop:
 		var digest [32]byte
 		h.Sum(digest[:0])
 
-		//globalData.log.Debugf("TryProof: digest: %x", digest)
+		//globalData.log.Debugf("tryProof: digest: %x", digest)
 
 		// convert to big integer from BE byte slice
 		bigDigest := new(big.Int).SetBytes(digest[:])
 
-		globalData.log.Debugf("TryProof: digest: 0x%064x", bigDigest)
+		globalData.log.Debugf("tryProof: digest: 0x%064x", bigDigest)
 
 		// check difficulty and verify if ok
 		if bigDigest.Cmp(bigDifficulty) <= 0 {
-			globalData.log.Debugf("TryProof: success: pay id: %s", payId)
+			globalData.log.Debugf("tryProof: success: pay id: %s", payId)
 			verifyIssueByNonce(payId, clientNonce)
 			return TrackingAccepted
 		}

@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/currency"
@@ -83,6 +84,18 @@ type spendKey struct {
 	share merkle.Digest
 }
 
+// Handles - storage handles used when restore from cache file
+type Handles struct {
+	Assets            storage.Handle
+	BlockOwnerPayment storage.Handle
+	Blocks            storage.Handle
+	Transactions      storage.Handle
+	OwnerTxIndex      storage.Handle
+	OwnerData         storage.Handle
+	Share             storage.Handle
+	ShareQuantity     storage.Handle
+}
+
 type globalDataType struct {
 	sync.RWMutex
 
@@ -122,10 +135,79 @@ type globalDataType struct {
 
 	// set once during initialise
 	initialised bool
+
+	handles Handles
 }
 
 // globals as a struct to allow lock
 var globalData globalDataType
+
+func (g *globalDataType) StoreTransfer(transfer transactionrecord.BitmarkTransfer) (*TransferInfo, bool, error) {
+	return storeTransfer(
+		transfer,
+		g.handles.Transactions,
+		g.handles.OwnerTxIndex,
+		g.handles.OwnerData,
+		g.handles.BlockOwnerPayment,
+	)
+}
+
+func (g *globalDataType) StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, error) {
+	return storeIssues(
+		issues,
+		g.handles.Assets,
+		g.handles.BlockOwnerPayment,
+	)
+}
+
+func (g *globalDataType) TryProof(payID pay.PayId, clientNonce []byte) TrackingStatus {
+	return tryProof(payID, clientNonce)
+}
+
+func (g *globalDataType) TransactionStatus(txID merkle.Digest) TransactionState {
+	return transactionStatus(txID)
+}
+
+func (g *globalDataType) ShareBalance(owner *account.Account, startSharedID merkle.Digest, count int) ([]BalanceInfo, error) {
+	return shareBalance(owner, startSharedID, count, g.handles.ShareQuantity)
+}
+
+func (g *globalDataType) StoreGrant(grant *transactionrecord.ShareGrant) (*GrantInfo, bool, error) {
+	return storeGrant(
+		grant,
+		g.handles.ShareQuantity,
+		g.handles.Share,
+		g.handles.OwnerData,
+		g.handles.BlockOwnerPayment,
+		g.handles.Transactions,
+	)
+}
+
+func (g *globalDataType) StoreSwap(swap *transactionrecord.ShareSwap) (*SwapInfo, bool, error) {
+	return storeSwap(
+		swap,
+		g.handles.ShareQuantity,
+		g.handles.Share,
+		g.handles.OwnerData,
+		g.handles.BlockOwnerPayment,
+	)
+}
+
+// Reservoir - APIs
+type Reservoir interface {
+	StoreTransfer(transactionrecord.BitmarkTransfer) (*TransferInfo, bool, error)
+	StoreIssues(issues []*transactionrecord.BitmarkIssue) (*IssueInfo, bool, error)
+	TryProof(pay.PayId, []byte) TrackingStatus
+	TransactionStatus(merkle.Digest) TransactionState
+	ShareBalance(*account.Account, merkle.Digest, int) ([]BalanceInfo, error)
+	StoreGrant(*transactionrecord.ShareGrant) (*GrantInfo, bool, error)
+	StoreSwap(swap *transactionrecord.ShareSwap) (*SwapInfo, bool, error)
+}
+
+// Get - return reservoir APIs
+func Get() Reservoir {
+	return &globalData
+}
 
 // Initialise - create the cache
 func Initialise(cacheDirectory string) error {
@@ -242,8 +324,8 @@ func (state TransactionState) String() string {
 	}
 }
 
-// TransactionStatus - get status of a transaction
-func TransactionStatus(txId merkle.Digest) TransactionState {
+// transactionStatus - get status of a transaction
+func transactionStatus(txId merkle.Digest) TransactionState {
 	globalData.RLock()
 	defer globalData.RUnlock()
 
@@ -443,7 +525,7 @@ func rescanItem(item *transactionData) {
 		tr := tx.(transactionrecord.BitmarkTransfer)
 		link := tr.GetLink()
 		_, linkOwner := ownership.OwnerOf(nil, link)
-		if nil == linkOwner || !ownership.CurrentlyOwns(nil, linkOwner, link) {
+		if nil == linkOwner || !ownership.CurrentlyOwns(nil, linkOwner, link, storage.Pool.OwnerTxIndex) {
 			internalDeleteByTxId(txId)
 		}
 
@@ -454,14 +536,14 @@ func rescanItem(item *transactionData) {
 	case *transactionrecord.BlockOwnerTransfer:
 		link := tx.Link
 		_, linkOwner := ownership.OwnerOf(nil, link)
-		if nil == linkOwner || !ownership.CurrentlyOwns(nil, linkOwner, link) {
+		if nil == linkOwner || !ownership.CurrentlyOwns(nil, linkOwner, link, storage.Pool.OwnerTxIndex) {
 			internalDeleteByTxId(txId)
 		}
 
 	case *transactionrecord.BitmarkShare:
 		link := tx.Link
 		_, linkOwner := ownership.OwnerOf(nil, link)
-		if nil == linkOwner || !ownership.CurrentlyOwns(nil, linkOwner, link) {
+		if nil == linkOwner || !ownership.CurrentlyOwns(nil, linkOwner, link, storage.Pool.OwnerTxIndex) {
 			internalDeleteByTxId(txId)
 		}
 

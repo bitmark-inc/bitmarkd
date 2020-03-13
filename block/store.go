@@ -210,7 +210,7 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 					return err
 				}
 
-				if !ownership.CurrentlyOwns(nil, linkOwner, link) {
+				if !ownership.CurrentlyOwns(nil, linkOwner, link, storage.Pool.OwnerTxIndex) {
 					return fault.DoubleTransferAttempt
 				}
 
@@ -238,7 +238,7 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 				if nil != err {
 					return err
 				}
-				if !ownership.CurrentlyOwns(nil, linkOwner, link) {
+				if !ownership.CurrentlyOwns(nil, linkOwner, link, storage.Pool.OwnerTxIndex) {
 					return fault.DoubleTransferAttempt
 				}
 
