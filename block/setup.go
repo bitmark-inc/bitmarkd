@@ -394,6 +394,11 @@ func LastBlockHash(pool storage.Handle) string {
 	log := globalData.log
 	br := blockrecord.Get()
 
+	// prevent too early get, storage is not ready
+	if pool == nil {
+		return ""
+	}
+
 	if last, ok := pool.LastElement(); ok {
 
 		_, digest, _, err := br.ExtractHeader(last.Value, 0, false)
