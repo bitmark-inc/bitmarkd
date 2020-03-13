@@ -39,10 +39,11 @@ func DeleteDownToBlock(finalBlockNumber uint64) error {
 	defer reservoir.Enable()
 
 	packedBlock := last.Value
+	br := blockrecord.Get()
 
 outer_loop:
 	for {
-		header, digest, data, err := blockrecord.ExtractHeader(packedBlock, 0, false)
+		header, digest, data, err := br.ExtractHeader(packedBlock, 0, false)
 		if nil != err {
 			log.Criticalf("failed to unpack block: %d from storage  error: %s", binary.BigEndian.Uint64(last.Key), err)
 			return err

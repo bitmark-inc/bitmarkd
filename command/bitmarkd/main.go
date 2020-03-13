@@ -192,7 +192,7 @@ func main() {
 	defer blockheader.Finalise()
 
 	log.Info("initialise blockrecord")
-	blockrecord.Initialise()
+	blockrecord.Initialise(storage.Pool.BlockHeaderHash)
 	defer blockrecord.Finalise()
 
 	// block data storage - depends on storage and mode
@@ -226,8 +226,8 @@ func main() {
 	handles := reservoir.Handles{
 		Assets:            storage.Pool.Assets,
 		BlockOwnerPayment: storage.Pool.BlockOwnerPayment,
-		Transaction:       storage.Pool.Transactions,
-		OwnerTx:           storage.Pool.OwnerTxIndex,
+		Transactions:      storage.Pool.Transactions,
+		OwnerTxIndex:      storage.Pool.OwnerTxIndex,
 		OwnerData:         storage.Pool.OwnerData,
 		Share:             storage.Pool.ShareQuantity,
 		ShareQuantity:     storage.Pool.Shares,
