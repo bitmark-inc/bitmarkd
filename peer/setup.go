@@ -175,7 +175,7 @@ func PublicKey() []byte {
 }
 
 // GetCounts - return connection counts:
-//   incoming - total peers connectng to all listeners
+//   incoming - total peers connecting to all listeners
 //   outgoing - total outgoing connections
 func GetCounts() (uint64, uint64) {
 	return globalData.lstn.connections, uint64(globalData.clientCount)
