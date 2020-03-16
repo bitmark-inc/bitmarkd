@@ -307,7 +307,7 @@ func main() {
 	defer publish.Finalise()
 
 	// start up the rpc background processes
-	err = rpc.Initialise(&masterConfiguration.ClientRPC, &masterConfiguration.HttpsRPC, version)
+	err = rpc.Initialise(&masterConfiguration.ClientRPC, &masterConfiguration.HttpsRPC, version, announce.Get())
 	if nil != err {
 		log.Criticalf("rpc initialise error: %s", err)
 		exitwithstatus.Message("peer initialise error: %s", err)

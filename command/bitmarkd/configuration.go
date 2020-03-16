@@ -11,18 +11,19 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/bitmark-inc/bitmarkd/rpc/listeners"
+
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/configuration"
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/peer"
 	"github.com/bitmark-inc/bitmarkd/proof"
 	"github.com/bitmark-inc/bitmarkd/publish"
-	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 )
 
-// basic defaults (directories and files are relative to the "DataDirectory" from Configuration file)
+// basic defaults (directories and files are relative to the "DataDirectory" from RPCConfiguration file)
 const (
 	defaultDataDirectory = "" // this will error; use "." for the same directory as the config file
 
@@ -68,7 +69,7 @@ type DatabaseType struct {
 	Name      string `gluamapper:"name" json:"name"`
 }
 
-// Configuration - the main configuration file data
+// RPCConfiguration - the main configuration file data
 type Configuration struct {
 	DataDirectory string       `gluamapper:"data_directory" json:"data_directory"`
 	PidFile       string       `gluamapper:"pidfile" json:"pidfile"`
@@ -79,13 +80,13 @@ type Configuration struct {
 
 	CacheDirectory string `gluamapper:"cache_directory" json:"cache_directory"`
 
-	ClientRPC  rpc.RPCConfiguration   `gluamapper:"client_rpc" json:"client_rpc"`
-	HttpsRPC   rpc.HTTPSConfiguration `gluamapper:"https_rpc" json:"https_rpc"`
-	Peering    peer.Configuration     `gluamapper:"peering" json:"peering"`
-	Publishing publish.Configuration  `gluamapper:"publishing" json:"publishing"`
-	Proofing   proof.Configuration    `gluamapper:"proofing" json:"proofing"`
-	Payment    payment.Configuration  `gluamapper:"payment" json:"payment"`
-	Logging    logger.Configuration   `gluamapper:"logging" json:"logging"`
+	ClientRPC  listeners.RPCConfiguration   `gluamapper:"client_rpc" json:"client_rpc"`
+	HttpsRPC   listeners.HTTPSConfiguration `gluamapper:"https_rpc" json:"https_rpc"`
+	Peering    peer.Configuration           `gluamapper:"peering" json:"peering"`
+	Publishing publish.Configuration        `gluamapper:"publishing" json:"publishing"`
+	Proofing   proof.Configuration          `gluamapper:"proofing" json:"proofing"`
+	Payment    payment.Configuration        `gluamapper:"payment" json:"payment"`
+	Logging    logger.Configuration         `gluamapper:"logging" json:"logging"`
 }
 
 // will read decode and verify the configuration
@@ -111,13 +112,13 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 			Name:      defaultBitmarkDatabase,
 		},
 
-		ClientRPC: rpc.RPCConfiguration{
+		ClientRPC: listeners.RPCConfiguration{
 			MaximumConnections: defaultRPCClients,
 			Bandwidth:          defaultBandwidth,
 		},
 
 		// default: share config with normal RPC
-		HttpsRPC: rpc.HTTPSConfiguration{
+		HttpsRPC: listeners.HTTPSConfiguration{
 			MaximumConnections: defaultRPCClients,
 		},
 
