@@ -395,11 +395,35 @@ func newHashFromStr(hashString string) *chainhash.Hash {
 }
 
 func init() {
-	btcMainNetParams.Checkpoints = []chaincfg.Checkpoint{{588665, newHashFromStr("0000000000000000001bbd854842ad2562993e71ae06ed7ecaf8f04f07688692")}}
-	btcTestNet3Params.Checkpoints = []chaincfg.Checkpoint{{1568498, newHashFromStr("000000000000004654a8d2599a24a95274f9d26c57be147e1c94324071d7363e")}}
 
-	ltcMainNetParams.Checkpoints = []chaincfg.Checkpoint{{1679794, newHashFromStr("ca37528e6644cf6a4417493909699881e920086ec609679387c9ee83c73c7ce3")}}
-	ltcTestNet4Params.Checkpoints = []chaincfg.Checkpoint{{1162128, newHashFromStr("1b0bb65ecba47aa1991cbf1d2adb9348a493040becb871ce1d750e027d900cf4")}}
+	btcMainNetParams.Checkpoints = []chaincfg.Checkpoint{
+		{
+			Height: 588665,
+			Hash:   newHashFromStr("0000000000000000001bbd854842ad2562993e71ae06ed7ecaf8f04f07688692"),
+		},
+	}
+
+	btcTestNet3Params.Checkpoints = []chaincfg.Checkpoint{
+		{
+			Height: 1568498,
+			Hash:   newHashFromStr("000000000000004654a8d2599a24a95274f9d26c57be147e1c94324071d7363e"),
+		},
+	}
+
+	ltcMainNetParams.Checkpoints = []chaincfg.Checkpoint{
+		{
+			Height: 1679794,
+			Hash:   newHashFromStr("ca37528e6644cf6a4417493909699881e920086ec609679387c9ee83c73c7ce3"),
+		},
+	}
+
+	ltcTestNet4Params.Checkpoints = []chaincfg.Checkpoint{
+		{
+			Height: 1162128,
+			Hash:   newHashFromStr("1b0bb65ecba47aa1991cbf1d2adb9348a493040becb871ce1d750e027d900cf4"),
+		},
+	}
+
 }
 
 func (currency Currency) ChainParam(chainName string) *chaincfg.Params {
