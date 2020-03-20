@@ -7,6 +7,7 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"os/signal"
 
@@ -263,7 +264,7 @@ func main() {
 		// trying to fetch the TXT records for validation
 		nodesDomain = masterConfiguration.Nodes // just assume it is a domain name
 	}
-	err = announce.Initialise(nodesDomain, masterConfiguration.CacheDirectory)
+	err = announce.Initialise(nodesDomain, masterConfiguration.CacheDirectory, net.LookupTXT)
 	if nil != err {
 		log.Criticalf("announce initialise error: %s", err)
 		exitwithstatus.Message("announce initialise error: %s", err)

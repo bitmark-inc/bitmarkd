@@ -3,32 +3,40 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package announce
+package receptor
 
 import (
 	"encoding/hex"
 	"encoding/json"
 	"os"
+	"time"
 
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
+
+	"github.com/bitmark-inc/bitmarkd/avl"
 )
 
-// PeerItem is the basic structure for backup and restore peers
-type PeerItem struct {
+type Entity struct {
 	PublicKey []byte
 	Listeners []byte
-	Timestamp uint64
+	Timestamp time.Time // last seen time
+}
+
+type StoreEntity struct {
+	PublicKey []byte
+	Listeners []byte
+	Timestamp uint64 // last seen time
 }
 
 // MarshalText is the json marshal function for PeerItem
-func (item PeerItem) MarshalText() ([]byte, error) {
-	b := []byte{}
-	b = append(b, util.ToVarint64(uint64(len(item.PublicKey)))...)
-	b = append(b, item.PublicKey...)
-	b = append(b, util.ToVarint64(uint64(len(item.Listeners)))...)
-	b = append(b, item.Listeners...)
-	b = append(b, util.ToVarint64(uint64(item.Timestamp))...)
+func (e StoreEntity) MarshalText() ([]byte, error) {
+	var b []byte
+	b = append(b, util.ToVarint64(uint64(len(e.PublicKey)))...)
+	b = append(b, e.PublicKey...)
+	b = append(b, util.ToVarint64(uint64(len(e.Listeners)))...)
+	b = append(b, e.Listeners...)
+	b = append(b, util.ToVarint64(e.Timestamp)...)
 
 	output := make([]byte, hex.EncodedLen(len(b)))
 	hex.Encode(output, b)
@@ -36,7 +44,7 @@ func (item PeerItem) MarshalText() ([]byte, error) {
 }
 
 // UnmarshalText is the json unmarshal function for PeerItem
-func (item *PeerItem) UnmarshalText(data []byte) error {
+func (e *StoreEntity) UnmarshalText(data []byte) error {
 	b := make([]byte, hex.DecodedLen(len(data)))
 	_, err := hex.Decode(b, data)
 	if err != nil {
@@ -69,66 +77,59 @@ func (item *PeerItem) UnmarshalText(data []byte) error {
 		return fault.InvalidTimestamp
 	}
 
-	item.PublicKey = publicKey
-	item.Listeners = listener
-	item.Timestamp = timestamp
+	e.PublicKey = publicKey
+	e.Listeners = listener
+	e.Timestamp = timestamp
 	return nil
 }
 
-// NewPeerItem is to create a PeerItem from peerEntry
-func NewPeerItem(peer *peerEntry) *PeerItem {
-	if peer == nil {
-		return nil
-	}
-	return &PeerItem{
-		PublicKey: peer.publicKey,
-		Listeners: peer.listeners,
-		Timestamp: uint64(peer.timestamp.Unix()),
-	}
-}
-
-// PeerList is a list of PeerItem
-type PeerList []PeerItem
-
-// backupPeers will backup all peers into a peer file
-func backupPeers(peerFile string) error {
-	if globalData.peerTree.Count() <= 2 {
-		globalData.log.Info("no need to backup. peer nodes are less than two")
+// Backup store all peers into a backup file
+func Backup(backupFile string, tree *avl.Tree) error {
+	if tree.Count() <= 2 {
 		return nil
 	}
 
-	var peers PeerList
-	lastNode := globalData.peerTree.Last()
-	node := globalData.peerTree.First()
+	var list []StoreEntity
+	lastNode := tree.Last()
+	node := tree.First()
 
 	for node != lastNode {
-		peer, ok := node.Value().(*peerEntry)
-		if ok && len(peer.listeners) > 0 {
-			p := NewPeerItem(peer)
-			peers = append(peers, *p)
+		n, ok := node.Value().(*Entity)
+		if ok && len(n.Listeners) > 0 {
+			e := StoreEntity{
+				PublicKey: n.PublicKey,
+				Listeners: n.Listeners,
+				Timestamp: uint64(n.Timestamp.Unix()),
+			}
+			list = append(list, e)
 		}
 		node = node.Next()
 	}
+
 	// backup the last node
-	peer, ok := lastNode.Value().(*peerEntry)
-	if ok && len(peer.listeners) > 0 {
-		p := NewPeerItem(peer)
-		peers = append(peers, *p)
+	n, ok := lastNode.Value().(*Entity)
+	if ok && len(n.Listeners) > 0 {
+		e := StoreEntity{
+			PublicKey: n.PublicKey,
+			Listeners: n.Listeners,
+			Timestamp: uint64(n.Timestamp.Unix()),
+		}
+		list = append(list, e)
 	}
 
-	f, err := os.OpenFile(peerFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
+	f, err := os.OpenFile(backupFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
 	enc := json.NewEncoder(f)
-	return enc.Encode(peers)
+	return enc.Encode(list)
 }
 
-// restorePeers will backup peers from a peer file
-func restorePeers(peerFile string) error {
-	var peers PeerList
+// Restore peers from a backup file
+func Restore(peerFile string, r Receptor) error {
+	var list []StoreEntity
 
 	f, err := os.OpenFile(peerFile, os.O_RDONLY, 0600)
 	if err != nil {
@@ -142,13 +143,13 @@ func restorePeers(peerFile string) error {
 	defer f.Close()
 
 	d := json.NewDecoder(f)
-	err = d.Decode(&peers)
+	err = d.Decode(&list)
 	if err != nil {
 		return err
 	}
 
-	for _, peer := range peers {
-		addPeer(peer.PublicKey, peer.Listeners, peer.Timestamp)
+	for _, peer := range list {
+		_ = r.Add(peer.PublicKey, peer.Listeners, peer.Timestamp)
 	}
 	return nil
 }

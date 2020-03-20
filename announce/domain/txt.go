@@ -3,7 +3,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package announce
+package domain
 
 import (
 	"encoding/hex"
@@ -14,8 +14,8 @@ import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 )
 
-// the tag to detect applicable TXT records from DNS
-var supportedTags = map[string]struct{}{
+// supported tag of TXT records from DNS
+var supported = map[string]struct{}{
 	"bitmark=v2": {},
 	"bitmark=v3": {},
 }
@@ -23,26 +23,23 @@ var supportedTags = map[string]struct{}{
 const (
 	publicKeyLength   = 2 * 32 // characters
 	fingerprintLength = 2 * 32 // characters
+	maxPortNumber     = 65535
+	minPortNumber     = 1
 )
 
-type tagline struct {
-	ipv4                   net.IP
-	ipv6                   net.IP
-	rpcPort                uint16
-	connectPort            uint16
-	certificateFingerprint []byte
-	publicKey              []byte
+// DnsTXT - structure for dns txt record
+type DnsTXT struct {
+	IPv4                   net.IP
+	IPv6                   net.IP
+	RPCPort                uint16
+	ConnectPort            uint16
+	CertificateFingerprint []byte
+	PublicKey              []byte
 }
 
-// decode DNS TXT records of these forms
-//
-//   <TAG> a=<IPv4;IPv6> c=<PORT> r=<PORT> f=<SHA3-256(cert)> p=<PUBLIC-KEY>
-//
-// other invalid combinations or extraneous items are ignored
-
-func parseTag(s string) (*tagline, error) {
-
-	t := &tagline{}
+// Parse - parse a dns txt record
+func Parse(s string) (*DnsTXT, error) {
+	t := &DnsTXT{}
 
 	countA := 0
 	countC := 0
@@ -54,7 +51,7 @@ words:
 	for i, w := range strings.Split(strings.TrimSpace(s), " ") {
 
 		if 0 == i {
-			if _, ok := supportedTags[w]; ok {
+			if _, ok := supported[w]; ok {
 				continue words
 			}
 			return nil, fault.InvalidDnsTxtRecord
@@ -90,27 +87,27 @@ words:
 				} else {
 					err = nil
 					if nil != IP.To4() {
-						t.ipv4 = IP
+						t.IPv4 = IP
 					} else {
-						t.ipv6 = IP
+						t.IPv6 = IP
 					}
 				}
 			}
 			countA += 1
 
 		case 'c':
-			t.connectPort, err = getPort(parameter)
+			t.ConnectPort, err = getPort(parameter)
 			countC += 1
-		case 's': // not actually used but stil check
+		case 's': // not actually used but still check
 			_, err = getPort(parameter)
 		case 'r':
-			t.rpcPort, err = getPort(parameter)
+			t.RPCPort, err = getPort(parameter)
 			countR += 1
 		case 'p':
 			if len(parameter) != publicKeyLength {
 				err = fault.InvalidPublicKey
 			} else {
-				t.publicKey, err = hex.DecodeString(parameter)
+				t.PublicKey, err = hex.DecodeString(parameter)
 				if nil != err {
 					err = fault.InvalidPublicKey
 				}
@@ -120,7 +117,7 @@ words:
 			if len(parameter) != fingerprintLength {
 				err = fault.InvalidFingerprint
 			} else {
-				t.certificateFingerprint, err = hex.DecodeString(parameter)
+				t.CertificateFingerprint, err = hex.DecodeString(parameter)
 				if nil != err {
 					err = fault.InvalidFingerprint
 				}
@@ -143,12 +140,11 @@ words:
 }
 
 func getPort(s string) (uint16, error) {
-
 	port, err := strconv.Atoi(s)
 	if nil != err {
 		return 0, fault.InvalidPortNumber
 	}
-	if port < 1 || port > 65535 {
+	if port < minPortNumber || port > maxPortNumber {
 		return 0, fault.InvalidPortNumber
 	}
 	return uint16(port), nil

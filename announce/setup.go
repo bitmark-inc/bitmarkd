@@ -6,70 +6,50 @@
 package announce
 
 import (
-	"encoding/hex"
 	"path"
 	"sync"
-	"time"
 
-	"github.com/bitmark-inc/bitmarkd/avl"
+	"github.com/bitmark-inc/bitmarkd/messagebus"
+
+	"github.com/bitmark-inc/bitmarkd/announce/domain"
+
+	"github.com/bitmark-inc/bitmarkd/announce/broadcast"
+	"github.com/bitmark-inc/bitmarkd/announce/parameter"
+
+	"github.com/bitmark-inc/bitmarkd/announce/rpc"
+
+	"github.com/bitmark-inc/bitmarkd/announce/receptor"
+
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 )
 
-// type of listener
 const (
-	TypeRPC  = iota
-	TypePeer = iota
+	logCategory = "announce"
 )
 
 // file for storing saves peers
-const peerFile = "peers.json"
-
-// type for SHA3 fingerprints
-type fingerprintType [32]byte
-
-// RPC entries
-type rpcEntry struct {
-	address     util.PackedConnection // packed addresses
-	fingerprint fingerprintType       // SHA3-256(certificate)
-	timestamp   time.Time             // creation time
-	local       bool                  // true => never expires
-}
-
-// format for timestamps
-const timeFormat = "2006-01-02 15:04:05"
+const backupFile = "peers.json"
 
 // globals for background process
 type announcerData struct {
 	sync.RWMutex // to allow locking
 
-	// logger
 	log *logger.L
 
-	// this node's packed annoucements
-	publicKey   []byte
-	listeners   []byte
-	fingerprint fingerprintType
-	rpcs        []byte
-	peerSet     bool
-	rpcsSet     bool
+	// RPC interface
+	rpcs rpc.RPC
 
-	// tree of nodes available
-	peerTree    *avl.Tree
-	thisNode    *avl.Node // this node's position in the tree
-	treeChanged bool      // tree was changed
-	peerFile    string
+	// Receptor interface
+	receptors receptor.Receptor
 
-	// database of all RPCs
-	rpcIndex map[fingerprintType]int // index to find rpc entry
-	rpcList  []*rpcEntry             // array of RPCs
+	backupFile string
 
 	// data for thread
-	ann announcer
+	brdc background.Process
 
-	nodesLookup nodesLookup
+	domain background.Process
 
 	// for background
 	background *background.T
@@ -84,42 +64,47 @@ var globalData announcerData
 // Initialise - set up the announcement system
 // pass a fully qualified domain for root node list
 // or empty string for no root nodes
-func Initialise(nodesDomain, cacheDirectory string) error {
-
+func Initialise(domainName, cacheDirectory string, f func(string) ([]string, error)) error {
 	globalData.Lock()
 	defer globalData.Unlock()
+
+	var err error
 
 	// no need to start if already started
 	if globalData.initialised {
 		return fault.AlreadyInitialised
 	}
 
-	globalData.log = logger.New("announce")
+	globalData.log = logger.New(logCategory)
 	globalData.log.Info("starting…")
 
-	globalData.peerTree = avl.New()
-	globalData.thisNode = nil
-	globalData.treeChanged = false
+	globalData.receptors = receptor.New(globalData.log)
+	globalData.backupFile = path.Join(cacheDirectory, backupFile)
 
-	globalData.rpcIndex = make(map[fingerprintType]int, 1000)
-	globalData.rpcList = make([]*rpcEntry, 0, 1000)
-
-	globalData.peerSet = false
-	globalData.rpcsSet = false
-	globalData.peerFile = path.Join(cacheDirectory, peerFile)
-
-	globalData.log.Info("start restoring peer data…")
-	if err := restorePeers(globalData.peerFile); err != nil {
-		globalData.log.Errorf("fail to restore peer data: %s", err.Error())
+	globalData.log.Info("start restoring backup data…")
+	if err := receptor.Restore(globalData.backupFile, globalData.receptors); err != nil {
+		globalData.log.Errorf("fail to restore backup data: %s", err.Error())
 	}
 
-	if err := globalData.nodesLookup.initialise(nodesDomain); nil != err {
+	globalData.rpcs = rpc.New()
+
+	globalData.domain, err = domain.New(
+		globalData.log,
+		domainName,
+		globalData.receptors,
+		f,
+	)
+	if nil != err {
 		return err
 	}
 
-	if err := globalData.ann.initialise(); nil != err {
-		return err
-	}
+	globalData.brdc = broadcast.New(
+		globalData.log,
+		globalData.receptors,
+		globalData.rpcs,
+		parameter.InitialiseInterval,
+		parameter.PollingInterval,
+	)
 
 	// all data initialised
 	globalData.initialised = true
@@ -128,17 +113,16 @@ func Initialise(nodesDomain, cacheDirectory string) error {
 	globalData.log.Info("start background…")
 
 	processes := background.Processes{
-		&globalData.nodesLookup, &globalData.ann,
+		globalData.domain, globalData.brdc,
 	}
 
-	globalData.background = background.Start(processes, globalData.log)
+	globalData.background = background.Start(processes, messagebus.Bus.Announce.Chan())
 
 	return nil
 }
 
 // Finalise - stop all background tasks
 func Finalise() error {
-
 	if !globalData.initialised {
 		return fault.NotInitialised
 	}
@@ -149,8 +133,11 @@ func Finalise() error {
 	// stop background
 	globalData.background.Stop()
 
+	// release message bus
+	messagebus.Bus.Announce.Release()
+
 	globalData.log.Info("start backing up peer data…")
-	if err := backupPeers(globalData.peerFile); err != nil {
+	if err := receptor.Backup(globalData.backupFile, globalData.receptors.Connectable()); err != nil {
 		globalData.log.Errorf("fail to backup peer data: %s", err.Error())
 	}
 
@@ -161,12 +148,4 @@ func Finalise() error {
 	globalData.log.Flush()
 
 	return nil
-}
-
-// MarshalText - convert fingerprint to little endian hex text
-func (fingerprint fingerprintType) MarshalText() ([]byte, error) {
-	size := hex.EncodedLen(len(fingerprint))
-	buffer := make([]byte, size)
-	hex.Encode(buffer, fingerprint[:])
-	return buffer, nil
 }

@@ -7,6 +7,7 @@ package upstream
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"testing"
 	"time"
@@ -79,7 +80,7 @@ func newTestUpstream(t *testing.T) (Upstream, *gomock.Controller, *mocks.MockCli
 
 func TestCachedRemoteDigestOfLocalHeight(t *testing.T) {
 	u, ctl, _ := newTestUpstream(t)
-	_ = announce.Initialise("test", "")
+	_ = announce.Initialise("test", "", net.LookupTXT)
 	defer ctl.Finish()
 	defer teardownTestUpstreamLogger()
 	defer announce.Finalise()
