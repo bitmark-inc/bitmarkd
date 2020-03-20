@@ -11,14 +11,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/bitmark-inc/bitmarkd/rpc/listeners"
-
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/configuration"
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/peer"
 	"github.com/bitmark-inc/bitmarkd/proof"
 	"github.com/bitmark-inc/bitmarkd/publish"
+	"github.com/bitmark-inc/bitmarkd/rpc/listeners"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 )

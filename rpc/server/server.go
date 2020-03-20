@@ -9,10 +9,9 @@ import (
 	"net/rpc"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/counter"
-
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
+	"github.com/bitmark-inc/bitmarkd/counter"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/ownership"
 	"github.com/bitmark-inc/bitmarkd/reservoir"

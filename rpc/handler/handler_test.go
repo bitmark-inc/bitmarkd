@@ -17,14 +17,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/announce"
-
 	"github.com/stretchr/testify/assert"
 
-	"github.com/bitmark-inc/logger"
-
+	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
 	"github.com/bitmark-inc/bitmarkd/rpc/handler"
+	"github.com/bitmark-inc/logger"
 )
 
 const (

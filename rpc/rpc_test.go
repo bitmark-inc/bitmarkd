@@ -12,19 +12,15 @@ import (
 	"path"
 	"testing"
 
-	announce2 "github.com/bitmark-inc/bitmarkd/announce"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/mocks"
 	"github.com/golang/mock/gomock"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/listeners"
-
-	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/stretchr/testify/assert"
 
+	announce2 "github.com/bitmark-inc/bitmarkd/announce"
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/rpc"
+	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
+	"github.com/bitmark-inc/bitmarkd/rpc/listeners"
+	"github.com/bitmark-inc/bitmarkd/rpc/mocks"
 )
 
 func TestInitialise(t *testing.T) {

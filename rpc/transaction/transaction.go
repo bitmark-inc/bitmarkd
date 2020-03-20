@@ -8,14 +8,12 @@ package transaction
 import (
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/fault"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/ratelimit"
-
 	"golang.org/x/time/rate"
 
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
+	"github.com/bitmark-inc/bitmarkd/rpc/ratelimit"
 	"github.com/bitmark-inc/logger"
 )
 

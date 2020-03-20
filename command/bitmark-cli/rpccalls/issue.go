@@ -12,8 +12,6 @@ import (
 	"io"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/rpc/bitmarks"
-
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/sha3"
 
@@ -22,6 +20,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
+	"github.com/bitmark-inc/bitmarkd/rpc/bitmarks"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 

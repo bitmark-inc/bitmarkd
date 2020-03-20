@@ -10,31 +10,22 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/bitmark-inc/bitmarkd/fault"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
-
-	"github.com/bitmark-inc/bitmarkd/messagebus"
-
-	"github.com/bitmark-inc/bitmarkd/chain"
-
-	"github.com/bitmark-inc/bitmarkd/currency"
-
-	"github.com/bitmark-inc/bitmarkd/pay"
-	"github.com/bitmark-inc/bitmarkd/reservoir"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/mocks"
 	"github.com/golang/mock/gomock"
-
-	"github.com/bitmark-inc/bitmarkd/mode"
-
-	"github.com/bitmark-inc/bitmarkd/account"
-
-	"github.com/bitmark-inc/bitmarkd/merkle"
-	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/bitmark-inc/bitmarkd/account"
+	"github.com/bitmark-inc/bitmarkd/chain"
+	"github.com/bitmark-inc/bitmarkd/currency"
+	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/bitmark-inc/bitmarkd/messagebus"
+	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/pay"
+	"github.com/bitmark-inc/bitmarkd/reservoir"
+	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
+	"github.com/bitmark-inc/bitmarkd/rpc/mocks"
 	"github.com/bitmark-inc/bitmarkd/rpc/share"
+	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
 )
 

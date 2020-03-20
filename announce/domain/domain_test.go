@@ -10,14 +10,13 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/bitmark-inc/bitmarkd/announce/domain"
-
-	"github.com/bitmark-inc/bitmarkd/announce/fixtures"
-
-	"github.com/bitmark-inc/bitmarkd/announce/mocks"
-	"github.com/bitmark-inc/logger"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/bitmark-inc/bitmarkd/announce/domain"
+	"github.com/bitmark-inc/bitmarkd/announce/fixtures"
+	"github.com/bitmark-inc/bitmarkd/announce/mocks"
+	"github.com/bitmark-inc/logger"
 )
 
 func TestNewDomain(t *testing.T) {

@@ -12,18 +12,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/messagebus"
-
-	"github.com/bitmark-inc/bitmarkd/fault"
-
-	"github.com/bitmark-inc/bitmarkd/announce/id"
-
 	"github.com/bitmark-inc/bitmarkd/announce/helper"
+	"github.com/bitmark-inc/bitmarkd/announce/id"
 	"github.com/bitmark-inc/bitmarkd/announce/parameter"
-
-	"github.com/bitmark-inc/logger"
-
 	"github.com/bitmark-inc/bitmarkd/avl"
+	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/messagebus"
+	"github.com/bitmark-inc/logger"
 )
 
 // format for timestamps

@@ -8,8 +8,6 @@ package blockowner
 import (
 	"encoding/binary"
 
-	"github.com/bitmark-inc/bitmarkd/rpc/ratelimit"
-
 	"golang.org/x/time/rate"
 
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
@@ -19,6 +17,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
+	"github.com/bitmark-inc/bitmarkd/rpc/ratelimit"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"

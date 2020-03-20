@@ -16,15 +16,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/announce/mocks"
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/bitmark-inc/bitmarkd/announce/fixtures"
-
 	"github.com/bitmark-inc/bitmarkd/announce/id"
+	"github.com/bitmark-inc/bitmarkd/announce/mocks"
 	"github.com/bitmark-inc/bitmarkd/announce/receptor"
 	"github.com/bitmark-inc/bitmarkd/avl"
-	"github.com/stretchr/testify/assert"
 )
 
 const (

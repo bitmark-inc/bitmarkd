@@ -10,30 +10,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/announce/fingerprint"
-
-	"github.com/bitmark-inc/bitmarkd/announce/id"
-	"github.com/bitmark-inc/bitmarkd/avl"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/bitmark-inc/bitmarkd/announce/mocks"
-	"github.com/golang/mock/gomock"
-
-	"github.com/bitmark-inc/bitmarkd/announce/parameter"
-
-	"github.com/bitmark-inc/bitmarkd/announce/fixtures"
-
-	"github.com/bitmark-inc/bitmarkd/background"
-
-	"github.com/bitmark-inc/bitmarkd/messagebus"
-
-	"github.com/bitmark-inc/bitmarkd/announce/rpc"
-
-	"github.com/bitmark-inc/bitmarkd/announce/receptor"
-
-	"github.com/bitmark-inc/logger"
-
 	"github.com/bitmark-inc/bitmarkd/announce/broadcast"
+	"github.com/bitmark-inc/bitmarkd/announce/fingerprint"
+	"github.com/bitmark-inc/bitmarkd/announce/fixtures"
+	"github.com/bitmark-inc/bitmarkd/announce/id"
+	"github.com/bitmark-inc/bitmarkd/announce/mocks"
+	"github.com/bitmark-inc/bitmarkd/announce/parameter"
+	"github.com/bitmark-inc/bitmarkd/announce/receptor"
+	"github.com/bitmark-inc/bitmarkd/announce/rpc"
+	"github.com/bitmark-inc/bitmarkd/avl"
+	"github.com/bitmark-inc/bitmarkd/background"
+	"github.com/bitmark-inc/bitmarkd/messagebus"
+	"github.com/bitmark-inc/logger"
 )
 
 func TestRunWhenSendingShutdown(t *testing.T) {

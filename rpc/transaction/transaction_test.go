@@ -9,21 +9,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/fault"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
-	"github.com/bitmark-inc/bitmarkd/rpc/transaction"
-
-	"github.com/bitmark-inc/bitmarkd/reservoir"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/mocks"
-
 	"github.com/golang/mock/gomock"
-
 	"github.com/stretchr/testify/assert"
 
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
-
+	"github.com/bitmark-inc/bitmarkd/reservoir"
+	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
+	"github.com/bitmark-inc/bitmarkd/rpc/mocks"
+	"github.com/bitmark-inc/bitmarkd/rpc/transaction"
 	"github.com/bitmark-inc/logger"
 )
 

@@ -9,28 +9,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/reservoir"
-
-	"github.com/bitmark-inc/bitmarkd/counter"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
-
-	"github.com/bitmark-inc/bitmarkd/storage"
-
-	"github.com/bitmark-inc/bitmarkd/chain"
-	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/bitmark-inc/bitmarkd/announce/fingerprint"
 	"github.com/bitmark-inc/bitmarkd/announce/rpc"
-	"github.com/bitmark-inc/bitmarkd/util"
-
+	"github.com/bitmark-inc/bitmarkd/chain"
+	"github.com/bitmark-inc/bitmarkd/counter"
+	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/reservoir"
+	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
 	"github.com/bitmark-inc/bitmarkd/rpc/mocks"
-
-	"github.com/golang/mock/gomock"
-
-	"github.com/stretchr/testify/assert"
-
 	"github.com/bitmark-inc/bitmarkd/rpc/node"
+	"github.com/bitmark-inc/bitmarkd/storage"
+	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
 )
 

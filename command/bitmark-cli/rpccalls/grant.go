@@ -8,8 +8,6 @@ package rpccalls
 import (
 	"encoding/hex"
 
-	"github.com/bitmark-inc/bitmarkd/rpc/share"
-
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/bitmark-inc/bitmarkd/account"
@@ -17,6 +15,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/pay"
+	"github.com/bitmark-inc/bitmarkd/rpc/share"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 

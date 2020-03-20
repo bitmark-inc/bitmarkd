@@ -8,14 +8,12 @@ package rpccalls
 import (
 	"fmt"
 
-	"github.com/bitmark-inc/bitmarkd/rpc/bitmarks"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/assets"
-
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/rpc/assets"
+	"github.com/bitmark-inc/bitmarkd/rpc/bitmarks"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 

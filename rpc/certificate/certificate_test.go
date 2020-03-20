@@ -12,13 +12,12 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bitmark-inc/bitmarkd/rpc/certificate"
-	"github.com/bitmark-inc/logger"
-	"github.com/stretchr/testify/assert"
-
 	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
+	"github.com/bitmark-inc/logger"
 )
 
 func TestGet(t *testing.T) {

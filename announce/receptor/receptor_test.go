@@ -9,18 +9,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/announce/parameter"
-
-	"github.com/bitmark-inc/bitmarkd/announce/id"
-
-	"github.com/bitmark-inc/bitmarkd/fault"
-
-	"github.com/bitmark-inc/bitmarkd/announce/receptor"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/bitmark-inc/bitmarkd/announce/fixtures"
-
+	"github.com/bitmark-inc/bitmarkd/announce/id"
+	"github.com/bitmark-inc/bitmarkd/announce/parameter"
+	"github.com/bitmark-inc/bitmarkd/announce/receptor"
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/logger"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestAdd(t *testing.T) {

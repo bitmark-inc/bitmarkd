@@ -18,11 +18,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/bitmark-inc/bitmarkd/rpc/certificate"
 	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
 	"github.com/bitmark-inc/bitmarkd/rpc/listeners"
 	"github.com/bitmark-inc/logger"
-	"github.com/stretchr/testify/assert"
 )
 
 type testHandler struct{}

@@ -9,14 +9,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/announce/parameter"
-
-	"github.com/bitmark-inc/bitmarkd/fault"
-
 	"github.com/stretchr/testify/assert"
 
 	"github.com/bitmark-inc/bitmarkd/announce/fingerprint"
+	"github.com/bitmark-inc/bitmarkd/announce/parameter"
 	"github.com/bitmark-inc/bitmarkd/announce/rpc"
+	"github.com/bitmark-inc/bitmarkd/fault"
 )
 
 func TestSet(t *testing.T) {

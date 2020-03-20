@@ -10,14 +10,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/bitmark-inc/bitmarkd/announce"
-
 	"github.com/bitmark-inc/bitmarkd/announce/fixtures"
-
 	"github.com/bitmark-inc/bitmarkd/announce/mocks"
-	"github.com/golang/mock/gomock"
 )
 
 func TestSendRegistration(t *testing.T) {

@@ -16,20 +16,16 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/bitmark-inc/bitmarkd/fault"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/certificate"
-
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/bitmark-inc/bitmarkd/rpc/mocks"
-	"github.com/golang/mock/gomock"
-
 	"github.com/bitmark-inc/bitmarkd/counter"
-	"github.com/bitmark-inc/logger"
-
+	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/rpc/certificate"
 	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
 	"github.com/bitmark-inc/bitmarkd/rpc/listeners"
+	"github.com/bitmark-inc/bitmarkd/rpc/mocks"
+	"github.com/bitmark-inc/logger"
 )
 
 type Add struct{}

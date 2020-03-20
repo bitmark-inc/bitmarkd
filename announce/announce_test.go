@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/announce/fixtures"
-	"github.com/stretchr/testify/assert"
+	"github.com/bitmark-inc/bitmarkd/fault"
 )
 
 func TestInitialise(t *testing.T) {

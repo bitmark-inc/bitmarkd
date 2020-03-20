@@ -45,7 +45,7 @@ loop:
 			timer = time.After(interval(d.domainName, d.log))
 			txts, err := d.lookuper.Lookup(d.domainName)
 			if nil != err {
-				continue
+				continue loop
 			}
 
 			addTXTs(txts, d.log, d.receptors)

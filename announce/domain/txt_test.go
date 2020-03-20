@@ -8,13 +8,10 @@ package domain_test
 import (
 	"testing"
 
-	"github.com/bitmark-inc/bitmarkd/announce/fixtures"
-
-	"github.com/bitmark-inc/logger"
-
 	"github.com/bitmark-inc/bitmarkd/announce/domain"
-
+	"github.com/bitmark-inc/bitmarkd/announce/fixtures"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/logger"
 )
 
 func TestValidTag(t *testing.T) {

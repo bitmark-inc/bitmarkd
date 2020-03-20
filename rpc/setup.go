@@ -9,18 +9,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/rpc/handler"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/certificate"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/server"
-
-	"github.com/bitmark-inc/bitmarkd/counter"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/listeners"
-
 	"github.com/bitmark-inc/bitmarkd/announce"
+	"github.com/bitmark-inc/bitmarkd/counter"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/rpc/certificate"
+	"github.com/bitmark-inc/bitmarkd/rpc/handler"
+	"github.com/bitmark-inc/bitmarkd/rpc/listeners"
+	"github.com/bitmark-inc/bitmarkd/rpc/server"
 	"github.com/bitmark-inc/logger"
 )
 

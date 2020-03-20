@@ -11,10 +11,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/avl"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
-
-	"github.com/bitmark-inc/bitmarkd/avl"
 )
 
 type Entity struct {

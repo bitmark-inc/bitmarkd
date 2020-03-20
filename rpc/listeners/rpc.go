@@ -12,9 +12,8 @@ import (
 	"net/rpc/jsonrpc"
 	"strings"
 
-	"github.com/bitmark-inc/bitmarkd/counter"
-
 	"github.com/bitmark-inc/bitmarkd/announce"
+	"github.com/bitmark-inc/bitmarkd/counter"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
@@ -53,11 +52,12 @@ func (r rpcListener) Serve() error {
 }
 
 func doServeRPC(listen net.Listener, server *rpc.Server, maximumConnections uint64, log *logger.L, count *counter.Counter) {
+serve_loop:
 	for {
 		conn, err := listen.Accept()
 		if err != nil {
 			log.Errorf("rpc.server terminated: accept error:", err)
-			break
+			break serve_loop
 		}
 		if count.Increment() <= maximumConnections {
 			go func() {
@@ -122,9 +122,10 @@ func NewRPC(
 	// setup announce
 	l := make([]byte, 0, connectionLimit) // ***** FIX THIS: need a better default size
 
+config_loop:
 	for _, address := range configuration.Announce {
 		if "" == address {
-			continue
+			continue config_loop
 		}
 		c, err := util.NewConnection(address)
 		if nil != err {

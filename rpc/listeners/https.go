@@ -12,11 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/rpc/handler"
-
-	"github.com/bitmark-inc/logger"
-
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/rpc/handler"
+	"github.com/bitmark-inc/logger"
 )
 
 const (

@@ -9,8 +9,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/bitmark-inc/bitmarkd/announce/id"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/bitmark-inc/bitmarkd/announce/id"
 )
 
 func TestCompare(t *testing.T) {

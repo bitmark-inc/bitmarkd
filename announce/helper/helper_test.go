@@ -9,8 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/announce/helper"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/bitmark-inc/bitmarkd/announce/helper"
 )
 
 func TestResetFutureTimestampToNow(t *testing.T) {

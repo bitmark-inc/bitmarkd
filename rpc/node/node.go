@@ -9,26 +9,21 @@ import (
 	"encoding/hex"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/peer"
-
-	"github.com/bitmark-inc/bitmarkd/fault"
-
-	"github.com/bitmark-inc/bitmarkd/counter"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/ratelimit"
-
-	"github.com/bitmark-inc/bitmarkd/storage"
-
 	"golang.org/x/time/rate"
 
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/announce/rpc"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
+	"github.com/bitmark-inc/bitmarkd/counter"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
+	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/peer"
 	"github.com/bitmark-inc/bitmarkd/proof"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
+	"github.com/bitmark-inc/bitmarkd/rpc/ratelimit"
+	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/logger"
 )
 

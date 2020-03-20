@@ -13,36 +13,24 @@ import (
 	"os"
 	"testing"
 
-	"github.com/bitmark-inc/bitmarkd/rpc/share"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/transaction"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/blockowner"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/node"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/owner"
-
-	"github.com/bitmark-inc/bitmarkd/pay"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/bitmarks"
-
-	"github.com/bitmark-inc/bitmarkd/merkle"
-	"github.com/bitmark-inc/bitmarkd/rpc/bitmark"
-	"github.com/bitmark-inc/bitmarkd/transactionrecord"
-
-	"github.com/bitmark-inc/bitmarkd/fault"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/assets"
-
 	"github.com/stretchr/testify/assert"
 
 	"github.com/bitmark-inc/bitmarkd/counter"
-
-	"github.com/bitmark-inc/bitmarkd/rpc/server"
-	"github.com/bitmark-inc/logger"
-
+	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/bitmark-inc/bitmarkd/pay"
+	"github.com/bitmark-inc/bitmarkd/rpc/assets"
+	"github.com/bitmark-inc/bitmarkd/rpc/bitmark"
+	"github.com/bitmark-inc/bitmarkd/rpc/bitmarks"
+	"github.com/bitmark-inc/bitmarkd/rpc/blockowner"
 	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
+	"github.com/bitmark-inc/bitmarkd/rpc/node"
+	"github.com/bitmark-inc/bitmarkd/rpc/owner"
+	"github.com/bitmark-inc/bitmarkd/rpc/server"
+	"github.com/bitmark-inc/bitmarkd/rpc/share"
+	"github.com/bitmark-inc/bitmarkd/rpc/transaction"
+	"github.com/bitmark-inc/bitmarkd/transactionrecord"
+	"github.com/bitmark-inc/logger"
 )
 
 var port string

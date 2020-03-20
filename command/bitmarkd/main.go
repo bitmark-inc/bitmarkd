@@ -10,10 +10,6 @@ import (
 	"net"
 	"os"
 	"os/signal"
-
-	"github.com/bitmark-inc/bitmarkd/ownership"
-
-	//"runtime/pprof"
 	"syscall"
 
 	"github.com/bitmark-inc/bitmarkd/announce"
@@ -24,6 +20,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/mode"
+	"github.com/bitmark-inc/bitmarkd/ownership"
 	"github.com/bitmark-inc/bitmarkd/payment"
 	"github.com/bitmark-inc/bitmarkd/peer"
 	"github.com/bitmark-inc/bitmarkd/proof"

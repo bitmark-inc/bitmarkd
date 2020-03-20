@@ -10,11 +10,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/announce/fingerprint"
 	"github.com/bitmark-inc/bitmarkd/announce/helper"
 	"github.com/bitmark-inc/bitmarkd/announce/parameter"
-
-	"github.com/bitmark-inc/bitmarkd/announce/fingerprint"
-
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 )

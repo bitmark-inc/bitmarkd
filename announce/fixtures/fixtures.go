@@ -12,7 +12,6 @@ import (
 	zmq "github.com/pebbe/zmq4"
 
 	"github.com/bitmark-inc/bitmarkd/util"
-
 	"github.com/bitmark-inc/logger"
 )
 

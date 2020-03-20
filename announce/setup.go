@@ -9,19 +9,14 @@ import (
 	"path"
 	"sync"
 
-	"github.com/bitmark-inc/bitmarkd/messagebus"
-
-	"github.com/bitmark-inc/bitmarkd/announce/domain"
-
 	"github.com/bitmark-inc/bitmarkd/announce/broadcast"
+	"github.com/bitmark-inc/bitmarkd/announce/domain"
 	"github.com/bitmark-inc/bitmarkd/announce/parameter"
-
-	"github.com/bitmark-inc/bitmarkd/announce/rpc"
-
 	"github.com/bitmark-inc/bitmarkd/announce/receptor"
-
+	"github.com/bitmark-inc/bitmarkd/announce/rpc"
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/logger"
 )
 
