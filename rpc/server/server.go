@@ -12,7 +12,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/counter"
 
 	"github.com/bitmark-inc/bitmarkd/announce"
-	blockrecord2 "github.com/bitmark-inc/bitmarkd/blockrecord"
+	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/ownership"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
@@ -50,7 +50,7 @@ func Create(log *logger.L, version string, rpcCount *counter.Counter) *rpc.Serve
 	_ = server.Register(owner.New(log, pools, ownership.Get()))
 	_ = server.Register(node.New(log, pools, start, version, rpcCount, announce.Get()))
 	_ = server.Register(transaction.New(log, start, reservoir.Get()))
-	_ = server.Register(blockowner.New(log, pools, mode.Is, mode.IsTesting, reservoir.Get(), blockrecord2.Get()))
+	_ = server.Register(blockowner.New(log, pools, mode.Is, mode.IsTesting, reservoir.Get(), blockrecord.Get()))
 	_ = server.Register(share.New(log, mode.Is, reservoir.Get()))
 
 	return server
