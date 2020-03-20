@@ -6,13 +6,13 @@
 package rpccalls
 
 import (
-	"github.com/bitmark-inc/bitmarkd/rpc"
+	"github.com/bitmark-inc/bitmarkd/rpc/node"
 )
 
 // GetBitmarkInfo - request status from bitmarkd (must be matching version)
-func (client *Client) GetBitmarkInfo() (*rpc.InfoReply, error) {
-	var reply rpc.InfoReply
-	if err := client.client.Call("Node.Info", rpc.InfoArguments{}, &reply); err != nil {
+func (client *Client) GetBitmarkInfo() (*node.InfoReply, error) {
+	var reply node.InfoReply
+	if err := client.client.Call("Node.Info", node.InfoArguments{}, &reply); err != nil {
 		return nil, err
 	}
 
@@ -22,7 +22,7 @@ func (client *Client) GetBitmarkInfo() (*rpc.InfoReply, error) {
 // GetBitmarkInfoCompat - request status from bitmarkd (any version)
 func (client *Client) GetBitmarkInfoCompat() (map[string]interface{}, error) {
 	var reply map[string]interface{}
-	if err := client.client.Call("Node.Info", rpc.InfoArguments{}, &reply); err != nil {
+	if err := client.client.Call("Node.Info", node.InfoArguments{}, &reply); err != nil {
 		return nil, err
 	}
 

@@ -3,10 +3,12 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package rpc
+package blockowner
 
 import (
 	"encoding/binary"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/ratelimit"
 
 	"golang.org/x/time/rate"
 
@@ -25,41 +27,67 @@ import (
 // Block Owner
 // -----------
 
+const (
+	rateLimitBlockOwner = 200
+	rateBurstBlockOwner = 100
+)
+
 // BlockOwner - the type of the RPC
 type BlockOwner struct {
-	log     *logger.L
-	limiter *rate.Limiter
+	Log            *logger.L
+	Limiter        *rate.Limiter
+	Pool           storage.Handle
+	Br             blockrecord.Record
+	IsNormalMode   func(mode.Mode) bool
+	IsTestingChain func() bool
+	Rsvr           reservoir.Reservoir
 }
 
-// TxIdForBlockArguments - get the id for a given block number
-type TxIdForBlockArguments struct {
+// TxIDForBlockArguments - get the id for a given block number
+type TxIDForBlockArguments struct {
 	BlockNumber uint64 `json:"blockNumber"`
 }
 
-// TxIdForBlockReply - results for block id
-type TxIdForBlockReply struct {
+// TxIDForBlockReply - results for block id
+type TxIDForBlockReply struct {
 	TxId merkle.Digest `json:"txId"`
 }
 
-// TxIdForBlock - RPC to get transaction id for block ownership record
-func (bitmark *BlockOwner) TxIdForBlock(info *TxIdForBlockArguments, reply *TxIdForBlockReply) error {
+func New(log *logger.L, pools reservoir.Handles, isNormalMode func(mode.Mode) bool, isTestingChain func() bool, rsvr reservoir.Reservoir, br blockrecord.Record) *BlockOwner {
+	return &BlockOwner{
+		Log:            log,
+		Limiter:        rate.NewLimiter(rateLimitBlockOwner, rateBurstBlockOwner),
+		Pool:           pools.Blocks,
+		Br:             br,
+		IsNormalMode:   isNormalMode,
+		IsTestingChain: isTestingChain,
+		Rsvr:           rsvr,
+	}
+}
 
-	if err := rateLimit(bitmark.limiter); nil != err {
+// TxIDForBlock - RPC to get transaction id for block ownership record
+func (bitmark *BlockOwner) TxIDForBlock(info *TxIDForBlockArguments, reply *TxIDForBlockReply) error {
+
+	if err := ratelimit.Limit(bitmark.Limiter); nil != err {
 		return err
 	}
 
-	log := bitmark.log
+	log := bitmark.Log
 
-	log.Infof("BlockOwner.TxIdForBlock: %+v", info)
+	log.Infof("BlockOwner.TxIDForBlock: %+v", info)
+
+	if bitmark.Pool == nil {
+		return fault.DatabaseIsNotSet
+	}
 
 	blockNumberKey := make([]byte, 8)
 	binary.BigEndian.PutUint64(blockNumberKey, info.BlockNumber)
-	packedBlock := storage.Pool.Blocks.Get(blockNumberKey)
+	packedBlock := bitmark.Pool.Get(blockNumberKey)
 	if nil == packedBlock {
 		return fault.BlockNotFound
 	}
 
-	header, digest, _, err := blockrecord.ExtractHeader(packedBlock, 0, false)
+	header, digest, _, err := bitmark.Br.ExtractHeader(packedBlock, 0, false)
 	if nil != err {
 		return err
 	}
@@ -72,8 +100,8 @@ func (bitmark *BlockOwner) TxIdForBlock(info *TxIdForBlockArguments, reply *TxId
 // Block owner transfer
 // --------------------
 
-// BlockOwnerTransferReply - results of transferring block ownership
-type BlockOwnerTransferReply struct {
+// TransferReply - results of transferring block ownership
+type TransferReply struct {
 	TxId     merkle.Digest                                   `json:"txId"`
 	PayId    pay.PayId                                       `json:"payId"`
 	Payments map[string]transactionrecord.PaymentAlternative `json:"payments"`
@@ -81,26 +109,26 @@ type BlockOwnerTransferReply struct {
 
 // Transfer - transfer the ownership of a block to new account and/or
 // payment addresses
-func (bitmark *BlockOwner) Transfer(transfer *transactionrecord.BlockOwnerTransfer, reply *BlockOwnerTransferReply) error {
+func (bitmark *BlockOwner) Transfer(transfer *transactionrecord.BlockOwnerTransfer, reply *TransferReply) error {
 
-	if err := rateLimit(bitmark.limiter); nil != err {
+	if err := ratelimit.Limit(bitmark.Limiter); nil != err {
 		return err
 	}
 
-	log := bitmark.log
+	log := bitmark.Log
 
 	log.Infof("BlockOwner.Transfer: %+v", transfer)
 
-	if !mode.Is(mode.Normal) {
+	if !bitmark.IsNormalMode(mode.Normal) {
 		return fault.NotAvailableDuringSynchronise
 	}
 
-	if transfer.Owner.IsTesting() != mode.IsTesting() {
+	if transfer.Owner.IsTesting() != bitmark.IsTestingChain() {
 		return fault.WrongNetworkForPublicKey
 	}
 
 	// save transfer/check for duplicate
-	stored, duplicate, err := reservoir.StoreTransfer(transfer, storage.Pool.Transactions, storage.Pool.OwnerTxIndex, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
+	stored, duplicate, err := bitmark.Rsvr.StoreTransfer(transfer)
 	if nil != err {
 		return err
 	}

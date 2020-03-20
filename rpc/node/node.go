@@ -3,33 +3,49 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package rpc
+package node
 
 import (
 	"encoding/hex"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/announce/rpc"
+	"github.com/bitmark-inc/bitmarkd/peer"
+
+	"github.com/bitmark-inc/bitmarkd/fault"
+
+	"github.com/bitmark-inc/bitmarkd/counter"
+
+	"github.com/bitmark-inc/bitmarkd/rpc/ratelimit"
+
+	"github.com/bitmark-inc/bitmarkd/storage"
 
 	"golang.org/x/time/rate"
 
 	"github.com/bitmark-inc/bitmarkd/announce"
+	"github.com/bitmark-inc/bitmarkd/announce/rpc"
 	"github.com/bitmark-inc/bitmarkd/block"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/mode"
-	"github.com/bitmark-inc/bitmarkd/peer"
 	"github.com/bitmark-inc/bitmarkd/proof"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/logger"
 )
 
+const (
+	rateLimitNode = 200
+	rateBurstNode = 100
+)
+
 // Node - type for RPC calls
 type Node struct {
-	log     *logger.L
-	limiter *rate.Limiter
-	start   time.Time
-	version string
+	Log      *logger.L
+	Limiter  *rate.Limiter
+	Start    time.Time
+	Version  string
+	Announce announce.Announce
+	Pool     storage.Handle
+	counter  *counter.Counter
 }
 
 // limit for count
@@ -37,26 +53,38 @@ const maximumNodeList = 100
 
 // ---
 
-// NodeArguments - arguments for RPC
-type NodeArguments struct {
-	Start uint64 `json:"start,string"`
+// Arguments - arguments for RPC
+type Arguments struct {
+	Start uint64 `json:"Start,string"`
 	Count int    `json:"count"`
 }
 
-// NodeReply - result from RPC
-type NodeReply struct {
+// Reply - result from RPC
+type Reply struct {
 	Nodes     []rpc.Entry `json:"nodes"`
 	NextStart uint64      `json:"nextStart,string"`
 }
 
-// List - list all node offering RPC functionality
-func (node *Node) List(arguments *NodeArguments, reply *NodeReply) error {
+func New(log *logger.L, pools reservoir.Handles, start time.Time, version string, counter *counter.Counter, ann announce.Announce) *Node {
+	return &Node{
+		Log:      log,
+		Limiter:  rate.NewLimiter(rateLimitNode, rateBurstNode),
+		Start:    start,
+		Version:  version,
+		Announce: ann,
+		Pool:     pools.Blocks,
+		counter:  counter,
+	}
+}
 
-	if err := rateLimitN(node.limiter, arguments.Count, maximumNodeList); nil != err {
+// List - list all node offering RPC functionality
+func (node *Node) List(arguments *Arguments, reply *Reply) error {
+
+	if err := ratelimit.LimitN(node.Limiter, arguments.Count, maximumNodeList); nil != err {
 		return err
 	}
 
-	nodes, nextStart, err := announce.FetchRPCs(arguments.Start, arguments.Count)
+	nodes, nextStart, err := node.Announce.Fetch(arguments.Start, arguments.Count)
 	if nil != err {
 		return err
 	}
@@ -82,7 +110,7 @@ type InfoReply struct {
 	TransactionCounters Counters  `json:"transactionCounters"`
 	Difficulty          float64   `json:"difficulty"`
 	Hashrate            float64   `json:"hashrate"`
-	Version             string    `json:"version"`
+	Version             string    `json:"Version"`
 	Uptime              string    `json:"uptime"`
 	PublicKey           string    `json:"publicKey"`
 }
@@ -110,28 +138,33 @@ type MinerInfo struct {
 // for more detail information use HTTP GET requests
 func (node *Node) Info(_ *InfoArguments, reply *InfoReply) error {
 
-	if err := rateLimit(node.limiter); nil != err {
+	if err := ratelimit.Limit(node.Limiter); nil != err {
 		return err
 	}
 
-	incoming, outgoing := peer.GetCounts()
+	if node.Pool == nil {
+		return fault.DatabaseIsNotSet
+	}
+
+	in, out := peer.GetCounts()
+
 	reply.Chain = mode.ChainName()
 	reply.Mode = mode.String()
 	reply.Block = BlockInfo{
 		Height: blockheader.Height(),
-		Hash:   block.LastBlockHash(),
+		Hash:   block.LastBlockHash(node.Pool),
 	}
 	reply.Miner = MinerInfo{
 		Success: uint64(proof.MinedBlocks()),
 		Failed:  uint64(proof.FailMinedBlocks()),
 	}
-	reply.RPCs = connectionCountRPC.Uint64()
-	reply.Peers = incoming + outgoing
+	reply.RPCs = node.counter.Uint64()
+	reply.Peers = in + out
 	reply.TransactionCounters.Pending, reply.TransactionCounters.Verified = reservoir.ReadCounters()
 	reply.Difficulty = difficulty.Current.Value()
 	reply.Hashrate = difficulty.Hashrate()
-	reply.Version = node.version
-	reply.Uptime = time.Since(node.start).String()
+	reply.Version = node.Version
+	reply.Uptime = time.Since(node.Start).String()
 	reply.PublicKey = hex.EncodeToString(peer.PublicKey())
 	return nil
 }

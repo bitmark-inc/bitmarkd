@@ -8,6 +8,8 @@ package rpccalls
 import (
 	"encoding/hex"
 
+	"github.com/bitmark-inc/bitmarkd/rpc/bitmark"
+
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/bitmark-inc/bitmarkd/account"
@@ -15,7 +17,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/pay"
-	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 
@@ -66,7 +67,7 @@ func (client *Client) Transfer(transferConfig *TransferData) (*TransferReply, er
 
 	client.printJson("Transfer Request", transfer)
 
-	var reply rpc.BitmarkTransferReply
+	var reply bitmark.TransferReply
 	err = client.client.Call("Bitmark.Transfer", transfer, &reply)
 	if err != nil {
 		return nil, err
@@ -129,7 +130,7 @@ func (client *Client) CountersignTransfer(transfer *transactionrecord.BitmarkTra
 
 	client.printJson("Transfer Request", transfer)
 
-	var reply rpc.BitmarkTransferReply
+	var reply bitmark.TransferReply
 	err := client.client.Call("Bitmark.Transfer", transfer, &reply)
 	if nil != err {
 		return nil, err

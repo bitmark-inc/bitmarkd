@@ -319,8 +319,8 @@ func setupMocks(t *testing.T) ([]*gomock.Controller, handles, reservoir.Handles)
 	return ctls, h, reservoir.Handles{
 		Assets:            h.asset,
 		BlockOwnerPayment: h.blockOwnerPayment,
-		Transaction:       h.transaction,
-		OwnerTx:           h.ownerTx,
+		Transactions:      h.transaction,
+		OwnerTxIndex:      h.ownerTx,
 		OwnerData:         h.ownerData,
 		Share:             h.share,
 		ShareQuantity:     h.shareQuantity,
@@ -384,11 +384,12 @@ func TestLoadFromFileWhenAssetIssuance(t *testing.T) {
 	mockHandles.blockOwnerPayment.EXPECT().Get(gomock.Any()).Return(data).Times(1)
 
 	_ = reservoir.Initialise(dataDirectory)
+	rsvr := reservoir.Get()
 
 	err := reservoir.LoadFromFile(reservoirHandles)
 	assert.Equal(t, nil, err, "wrong error")
 
-	state := reservoir.TransactionStatus(assetTxID)
+	state := rsvr.TransactionStatus(assetTxID)
 	assert.Equal(t, reservoir.StatePending, state, "wrong asset issuance state")
 }
 
@@ -493,11 +494,12 @@ func TestLoadFromFileWhenTransferUnratified(t *testing.T) {
 	mockHandles.ownerData.EXPECT().Get(gomock.Any()).Return(packedOwnerData).Times(1)
 
 	_ = reservoir.Initialise(dataFile)
+	rsvr := reservoir.Get()
 
 	err = reservoir.LoadFromFile(reservoirHandles)
 	assert.Equal(t, nil, err, "wrong error")
 
-	result := reservoir.TransactionStatus(txUnratifiedID)
+	result := rsvr.TransactionStatus(txUnratifiedID)
 	assert.Equal(t, reservoir.StatePending, result, "wrong transfer unratified state")
 }
 
@@ -557,11 +559,12 @@ func TestLoadFromFileWhenShare(t *testing.T) {
 	mockHandles.ownerData.EXPECT().Get(gomock.Any()).Return(packedOwnerData).Times(2)
 
 	_ = reservoir.Initialise(dataFile)
+	rsvr := reservoir.Get()
 
 	err = reservoir.LoadFromFile(reservoirHandles)
 	assert.Equal(t, nil, err, "wrong error")
 
-	result := reservoir.TransactionStatus(txShareID)
+	result := rsvr.TransactionStatus(txShareID)
 	assert.Equal(t, reservoir.StatePending, result, "wrong share state")
 }
 
@@ -608,13 +611,15 @@ func TestLoadFromFileWhenGrant(t *testing.T) {
 	mockHandles.ownerData.EXPECT().Get(gomock.Any()).Return(packedOwnerData).Times(1)
 	mockHandles.shareQuantity.EXPECT().GetN(gomock.Any()).Return(uint64(shareQuantity), true).Times(1)
 	mockHandles.share.EXPECT().GetNB(gomock.Any()).Return(uint64(shareQuantity), []byte{}).Times(1)
+	mockHandles.transaction.EXPECT().Has(gomock.Any()).Return(false).Times(1)
 
 	_ = reservoir.Initialise(dataFile)
+	rsvr := reservoir.Get()
 
 	err := reservoir.LoadFromFile(reservoirHandles)
 	assert.Equal(t, nil, err, "wrong error")
 
-	result := reservoir.TransactionStatus(grantID)
+	result := rsvr.TransactionStatus(grantID)
 	assert.Equal(t, reservoir.StatePending, result, "wrong share state")
 }
 
@@ -664,10 +669,11 @@ func TestLoadFromFileWhenSwap(t *testing.T) {
 	mockHandles.ownerData.EXPECT().Get(gomock.Any()).Return(packedOwnerData).Times(1)
 
 	_ = reservoir.Initialise(dataFile)
+	rsvr := reservoir.Get()
 
 	err := reservoir.LoadFromFile(reservoirHandles)
 	assert.Equal(t, nil, err, "wrong error")
 
-	result := reservoir.TransactionStatus(swapID)
+	result := rsvr.TransactionStatus(swapID)
 	assert.Equal(t, reservoir.StatePending, result, "wrong swap state")
 }

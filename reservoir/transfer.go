@@ -39,8 +39,14 @@ type verifiedTransferInfo struct {
 	issueBlockNumber    uint64
 }
 
-// StoreTransfer - verify and store a transfer request
-func StoreTransfer(transfer transactionrecord.BitmarkTransfer, transactionHandle storage.Handle, ownerTxHandle storage.Handle, ownerDataHandle storage.Handle, blockOwnerPaymentHandle storage.Handle) (*TransferInfo, bool, error) {
+// storeTransfer - verify and store a transfer request
+func storeTransfer(
+	transfer transactionrecord.BitmarkTransfer,
+	transactionHandle storage.Handle,
+	ownerTxHandle storage.Handle,
+	ownerDataHandle storage.Handle,
+	blockOwnerPaymentHandle storage.Handle,
+) (*TransferInfo, bool, error) {
 	if nil == transactionHandle || nil == ownerTxHandle || nil == ownerDataHandle || nil == blockOwnerPaymentHandle {
 		return nil, false, fault.NilPointer
 	}
@@ -78,7 +84,7 @@ func StoreTransfer(transfer transactionrecord.BitmarkTransfer, transactionHandle
 			result.Payments = entry.payments
 		} else {
 			// this would mean that reservoir data is corrupt
-			logger.Panicf("StoreTransfer: failed to get current payment data for: %s  payid: %s", txId, payId)
+			logger.Panicf("storeTransfer: failed to get current payment data for: %s  payid: %s", txId, payId)
 		}
 		return result, true, nil
 	}

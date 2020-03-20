@@ -104,7 +104,8 @@ func genDigestFromPool(pool storage.Handle, blockNumber []byte) (blockdigest.Dig
 		return blockdigest.Digest{}, fault.BlockNotFound
 	}
 
-	_, digest, _, err := blockrecord.ExtractHeader(packed, 0, false)
+	br := blockrecord.Get()
+	_, digest, _, err := br.ExtractHeader(packed, 0, false)
 
 	return digest, err
 }

@@ -11,6 +11,8 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/bitmark-inc/bitmarkd/ownership"
+
 	//"runtime/pprof"
 	"syscall"
 
@@ -192,7 +194,7 @@ func main() {
 	defer blockheader.Finalise()
 
 	log.Info("initialise blockrecord")
-	blockrecord.Initialise()
+	blockrecord.Initialise(storage.Pool.BlockHeaderHash)
 	defer blockrecord.Finalise()
 
 	// block data storage - depends on storage and mode
@@ -220,14 +222,16 @@ func main() {
 		}
 	}
 
+	ownership.Initialise(storage.Pool.OwnerList, storage.Pool.OwnerData)
+
 	// reservoir and block are both ready
 	// so can restore any previously saved transactions
 	// before any peer services are started
 	handles := reservoir.Handles{
 		Assets:            storage.Pool.Assets,
 		BlockOwnerPayment: storage.Pool.BlockOwnerPayment,
-		Transaction:       storage.Pool.Transactions,
-		OwnerTx:           storage.Pool.OwnerTxIndex,
+		Transactions:      storage.Pool.Transactions,
+		OwnerTxIndex:      storage.Pool.OwnerTxIndex,
 		OwnerData:         storage.Pool.OwnerData,
 		Share:             storage.Pool.ShareQuantity,
 		ShareQuantity:     storage.Pool.Shares,
@@ -303,7 +307,7 @@ func main() {
 	defer publish.Finalise()
 
 	// start up the rpc background processes
-	err = rpc.Initialise(&masterConfiguration.ClientRPC, &masterConfiguration.HttpsRPC, version)
+	err = rpc.Initialise(&masterConfiguration.ClientRPC, &masterConfiguration.HttpsRPC, version, announce.Get())
 	if nil != err {
 		log.Criticalf("rpc initialise error: %s", err)
 		exitwithstatus.Message("peer initialise error: %s", err)

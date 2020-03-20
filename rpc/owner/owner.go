@@ -3,9 +3,11 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package rpc
+package owner
 
 import (
+	"github.com/bitmark-inc/bitmarkd/reservoir"
+	"github.com/bitmark-inc/bitmarkd/rpc/ratelimit"
 	"golang.org/x/time/rate"
 
 	"github.com/bitmark-inc/bitmarkd/account"
@@ -23,28 +25,33 @@ import (
 
 // Owner - type for the RPC
 type Owner struct {
-	log     *logger.L
-	limiter *rate.Limiter
+	Log              *logger.L
+	Limiter          *rate.Limiter
+	PoolTransactions storage.Handle
+	PoolAssets       storage.Handle
+	Ownership        ownership.Ownership
 }
 
 // Owner bitmarks
 // --------------
 
 const (
-	maximumBitmarksCount = 100
+	MaximumBitmarksCount = 100
+	rateLimitOwner       = 200
+	rateBurstOwner       = 100
 )
 
-// OwnerBitmarksArguments - arguments for RPC
-type OwnerBitmarksArguments struct {
+// BitmarksArguments - arguments for RPC
+type BitmarksArguments struct {
 	Owner *account.Account `json:"owner"`        // base58
-	Start uint64           `json:"start,string"` // first record number
+	Start uint64           `json:"Start,string"` // first record number
 	Count int              `json:"count"`        // number of records
 }
 
-// OwnerBitmarksReply - result of owner RPC
-type OwnerBitmarksReply struct {
-	Next uint64                    `json:"next,string"` // start value for the next call
-	Data []ownership.Ownership     `json:"data"`        // list of bitmarks either issue or transfer
+// BitmarksReply - result of owner RPC
+type BitmarksReply struct {
+	Next uint64                    `json:"next,string"` // Start value for the next call
+	Data []ownership.Record        `json:"data"`        // list of bitmarks either issue or transfer
 	Tx   map[string]BitmarksRecord `json:"tx"`          // table of tx records
 }
 
@@ -62,17 +69,27 @@ type BlockAsset struct {
 	Number uint64 `json:"number"`
 }
 
-// Bitmarks - list bitmarks belonging to an account
-func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitmarksReply) error {
+func New(log *logger.L, pools reservoir.Handles, os ownership.Ownership) *Owner {
+	return &Owner{
+		Log:              log,
+		Limiter:          rate.NewLimiter(rateLimitOwner, rateBurstOwner),
+		PoolTransactions: pools.Transactions,
+		PoolAssets:       pools.Assets,
+		Ownership:        os,
+	}
+}
 
-	if err := rateLimitN(owner.limiter, arguments.Count, maximumBitmarksCount); nil != err {
+// Bitmarks - list bitmarks belonging to an account
+func (owner *Owner) Bitmarks(arguments *BitmarksArguments, reply *BitmarksReply) error {
+
+	if err := ratelimit.LimitN(owner.Limiter, arguments.Count, MaximumBitmarksCount); nil != err {
 		return err
 	}
 
-	log := owner.log
+	log := owner.Log
 	log.Infof("Owner.Bitmarks: %+v", arguments)
 
-	ownershipData, err := ownership.ListBitmarksFor(arguments.Owner, arguments.Start, arguments.Count)
+	ownershipData, err := owner.Ownership.ListBitmarksFor(arguments.Owner, arguments.Start, arguments.Count)
 	if nil != err {
 		return err
 	}
@@ -121,7 +138,7 @@ func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitm
 
 		log.Debugf("txId: %v", txId)
 
-		inBlock, transaction := storage.Pool.Transactions.GetNB(txId[:])
+		inBlock, transaction := owner.PoolTransactions.GetNB(txId[:])
 		if nil == transaction {
 			return fault.LinkToInvalidOrUnconfirmedTransaction
 		}
@@ -149,9 +166,8 @@ func (owner *Owner) Bitmarks(arguments *OwnerBitmarksArguments, reply *OwnerBitm
 		}
 	}
 
-asset_loop:
+assetsLoop:
 	for assetId := range assetIds {
-
 		log.Debugf("asset id: %v", assetId)
 
 		var nnn transactionrecord.AssetIdentifier
@@ -163,10 +179,10 @@ asset_loop:
 					Number: 0,
 				},
 			}
-			continue asset_loop
+			continue assetsLoop
 		}
 
-		inBlock, transaction := storage.Pool.Assets.GetNB(assetId[:])
+		inBlock, transaction := owner.PoolAssets.GetNB(assetId[:])
 		if nil == transaction {
 			return fault.AssetNotFound
 		}

@@ -8,6 +8,8 @@ package rpccalls
 import (
 	"encoding/hex"
 
+	"github.com/bitmark-inc/bitmarkd/rpc/share"
+
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/bitmark-inc/bitmarkd/account"
@@ -15,7 +17,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/pay"
-	"github.com/bitmark-inc/bitmarkd/rpc"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 )
 
@@ -96,7 +97,7 @@ func (client *Client) CountersignSwap(swap *transactionrecord.ShareSwap) (*SwapR
 
 	client.printJson("Swap Request", swap)
 
-	var reply rpc.ShareSwapReply
+	var reply share.SwapReply
 	err := client.client.Call("Share.Swap", swap, &reply)
 	if nil != err {
 		return nil, err

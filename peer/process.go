@@ -25,7 +25,7 @@ import (
 func processSubscription(log *logger.L, command string, arguments [][]byte) {
 
 	dataLength := len(arguments)
-	switch string(command) {
+	switch command {
 	case "block":
 		if dataLength < 1 {
 			log.Debugf("block with too few data: %d items", dataLength)
@@ -202,7 +202,8 @@ func processIssues(packed []byte) error {
 		return fault.MissingParameters
 	}
 
-	_, duplicate, err := reservoir.StoreIssues(issues, storage.Pool.Assets, storage.Pool.BlockOwnerPayment)
+	rsvr := reservoir.Get()
+	_, duplicate, err := rsvr.StoreIssues(issues)
 	if nil != err {
 		return err
 	}
@@ -233,18 +234,20 @@ func processTransfer(packed []byte) error {
 	duplicate := false
 
 	transfer, ok := transaction.(transactionrecord.BitmarkTransfer)
+
+	rsvr := reservoir.Get()
 	if ok {
 
-		_, duplicate, err = reservoir.StoreTransfer(transfer, storage.Pool.Transactions, storage.Pool.OwnerTxIndex, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
+		_, duplicate, err = rsvr.StoreTransfer(transfer)
 
 	} else {
 		switch tx := transaction.(type) {
 
 		case *transactionrecord.ShareGrant:
-			_, duplicate, err = reservoir.StoreGrant(tx, storage.Pool.ShareQuantity, storage.Pool.Shares, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
+			_, duplicate, err = rsvr.StoreGrant(tx)
 
 		case *transactionrecord.ShareSwap:
-			_, duplicate, err = reservoir.StoreSwap(tx, storage.Pool.ShareQuantity, storage.Pool.Shares, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
+			_, duplicate, err = rsvr.StoreSwap(tx)
 
 		default:
 			return fault.TransactionIsNotATransfer
@@ -281,7 +284,8 @@ func processProof(packed []byte) error {
 
 	copy(payId[:], packed[:len(payId)])
 	nonce := packed[len(payId):]
-	status := reservoir.TryProof(payId, nonce)
+	rsvr := reservoir.Get()
+	status := rsvr.TryProof(payId, nonce)
 	if reservoir.TrackingAccepted != status {
 		// pay id already processed or was invalid
 		return fault.PayIdAlreadyUsed

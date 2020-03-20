@@ -266,11 +266,12 @@ func validateAndReturnLastBlock(last storage.Element) (*blockrecord.Header, bloc
 		blocks = append(blocks, block) // append
 	}
 
+	br := blockrecord.Get()
 	for i, blockData := range blocks {
 		var data []byte
 		var err error
 
-		h, d, data, err := blockrecord.ExtractHeader(blockData, 0, false)
+		h, d, data, err := br.ExtractHeader(blockData, 0, false)
 		if err != nil {
 			globalData.log.Error("can not extract header")
 			return h, d, err
@@ -388,13 +389,19 @@ func Finalise() error {
 }
 
 // LastBlockHash - return the last block hash in hex string if found
-func LastBlockHash() string {
+func LastBlockHash(pool storage.Handle) string {
 
 	log := globalData.log
+	br := blockrecord.Get()
 
-	if last, ok := storage.Pool.Blocks.LastElement(); ok {
+	// prevent too early get, storage is not ready
+	if pool == nil {
+		return ""
+	}
 
-		_, digest, _, err := blockrecord.ExtractHeader(last.Value, 0, false)
+	if last, ok := pool.LastElement(); ok {
+
+		_, digest, _, err := br.ExtractHeader(last.Value, 0, false)
 		if nil != err {
 			log.Criticalf("failed to unpack block: %d from storage error: %s", binary.BigEndian.Uint64(last.Key), err)
 			return ""

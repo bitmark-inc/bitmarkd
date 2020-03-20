@@ -3,9 +3,11 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package rpc
+package share
 
 import (
+	"github.com/bitmark-inc/bitmarkd/rpc/owner"
+	"github.com/bitmark-inc/bitmarkd/rpc/ratelimit"
 	"golang.org/x/time/rate"
 
 	"github.com/bitmark-inc/bitmarkd/account"
@@ -15,7 +17,6 @@ import (
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
-	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
 )
@@ -23,17 +24,33 @@ import (
 // Share
 // --------
 
+const (
+	rateLimitShare = 200
+	rateBurstShare = 100
+)
+
 // Share - type for RPC
 type Share struct {
-	log     *logger.L
-	limiter *rate.Limiter
+	Log          *logger.L
+	Limiter      *rate.Limiter
+	IsNormalMode func(mode.Mode) bool
+	Rsvr         reservoir.Reservoir
+}
+
+func New(log *logger.L, isNormalMode func(mode.Mode) bool, rsvr reservoir.Reservoir) *Share {
+	return &Share{
+		Log:          log,
+		Limiter:      rate.NewLimiter(rateLimitShare, rateBurstShare),
+		IsNormalMode: isNormalMode,
+		Rsvr:         rsvr,
+	}
 }
 
 // Create a share with initial balance
 // -----------------------------------
 
-// ShareCreateReply - results from creating a share
-type ShareCreateReply struct {
+// CreateReply - results from creating a share
+type CreateReply struct {
 	TxId     merkle.Digest                                   `json:"txId"`
 	ShareId  merkle.Digest                                   `json:"shareId"`
 	PayId    pay.PayId                                       `json:"payId"`
@@ -41,22 +58,22 @@ type ShareCreateReply struct {
 }
 
 // Create - create fractional bitmark
-func (share *Share) Create(bmfr *transactionrecord.BitmarkShare, reply *ShareCreateReply) error {
+func (share *Share) Create(bmfr *transactionrecord.BitmarkShare, reply *CreateReply) error {
 
-	if err := rateLimit(share.limiter); nil != err {
+	if err := ratelimit.Limit(share.Limiter); nil != err {
 		return err
 	}
 
-	log := share.log
+	log := share.Log
 
 	log.Infof("Share.Create: %+v", bmfr)
 
-	if !mode.Is(mode.Normal) {
+	if !share.IsNormalMode(mode.Normal) {
 		return fault.NotAvailableDuringSynchronise
 	}
 
 	// save transfer/check for duplicate
-	stored, duplicate, err := reservoir.StoreTransfer(bmfr, storage.Pool.Transactions, storage.Pool.OwnerTxIndex, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
+	stored, duplicate, err := share.Rsvr.StoreTransfer(bmfr)
 	if nil != err {
 		return err
 	}
@@ -90,26 +107,26 @@ func (share *Share) Create(bmfr *transactionrecord.BitmarkShare, reply *ShareCre
 // Get share balance
 // --------------------
 
-// ShareBalanceArguments - arguments for RPC
-type ShareBalanceArguments struct {
+// BalanceArguments - arguments for RPC
+type BalanceArguments struct {
 	Owner   *account.Account `json:"owner"` // base58
 	ShareId merkle.Digest    `json:"shareId"`
 	Count   int              `json:"count"` // number of records
 }
 
-// ShareBalanceReply - balances of shares belonging to an account
-type ShareBalanceReply struct {
+// BalanceReply - balances of shares belonging to an account
+type BalanceReply struct {
 	Balances []reservoir.BalanceInfo `json:"balances"`
 }
 
 // Balance - list balances for an account
-func (share *Share) Balance(arguments *ShareBalanceArguments, reply *ShareBalanceReply) error {
+func (share *Share) Balance(arguments *BalanceArguments, reply *BalanceReply) error {
 
-	if err := rateLimit(share.limiter); nil != err {
+	if err := ratelimit.Limit(share.Limiter); nil != err {
 		return err
 	}
 
-	log := share.log
+	log := share.Log
 
 	log.Infof("Share.Balance: %+v", arguments)
 
@@ -121,11 +138,11 @@ func (share *Share) Balance(arguments *ShareBalanceArguments, reply *ShareBalanc
 	if count <= 0 {
 		return fault.InvalidCount
 	}
-	if count > maximumBitmarksCount {
-		count = maximumBitmarksCount
+	if count > owner.MaximumBitmarksCount {
+		count = owner.MaximumBitmarksCount
 	}
 
-	if !mode.Is(mode.Normal) {
+	if !share.IsNormalMode(mode.Normal) {
 		return fault.NotAvailableDuringSynchronise
 	}
 
@@ -133,7 +150,7 @@ func (share *Share) Balance(arguments *ShareBalanceArguments, reply *ShareBalanc
 		return fault.WrongNetworkForPublicKey
 	}
 
-	result, err := reservoir.ShareBalance(arguments.Owner, arguments.ShareId, arguments.Count)
+	result, err := share.Rsvr.ShareBalance(arguments.Owner, arguments.ShareId, arguments.Count)
 	if nil != err {
 		return err
 	}
@@ -146,8 +163,8 @@ func (share *Share) Balance(arguments *ShareBalanceArguments, reply *ShareBalanc
 // Grant some shares
 // -----------------
 
-// ShareGrantReply - result of granting some shares to another account
-type ShareGrantReply struct {
+// GrantReply - result of granting some shares to another account
+type GrantReply struct {
 	Remaining uint64                                          `json:"remaining"`
 	TxId      merkle.Digest                                   `json:"txId"`
 	PayId     pay.PayId                                       `json:"payId"`
@@ -155,13 +172,13 @@ type ShareGrantReply struct {
 }
 
 // Grant - grant a number of shares to another account
-func (share *Share) Grant(arguments *transactionrecord.ShareGrant, reply *ShareGrantReply) error {
+func (share *Share) Grant(arguments *transactionrecord.ShareGrant, reply *GrantReply) error {
 
-	if err := rateLimit(share.limiter); nil != err {
+	if err := ratelimit.Limit(share.Limiter); nil != err {
 		return err
 	}
 
-	log := share.log
+	log := share.Log
 
 	log.Infof("Share.Grant: %+v", arguments)
 
@@ -173,7 +190,7 @@ func (share *Share) Grant(arguments *transactionrecord.ShareGrant, reply *ShareG
 		return fault.ShareQuantityTooSmall
 	}
 
-	if !mode.Is(mode.Normal) {
+	if !share.IsNormalMode(mode.Normal) {
 		return fault.NotAvailableDuringSynchronise
 	}
 
@@ -186,7 +203,7 @@ func (share *Share) Grant(arguments *transactionrecord.ShareGrant, reply *ShareG
 	}
 
 	// save transfer/check for duplicate
-	stored, duplicate, err := reservoir.StoreGrant(arguments, storage.Pool.ShareQuantity, storage.Pool.Shares, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
+	stored, duplicate, err := share.Rsvr.StoreGrant(arguments)
 	if nil != err {
 		return err
 	}
@@ -218,8 +235,8 @@ func (share *Share) Grant(arguments *transactionrecord.ShareGrant, reply *ShareG
 // Swap some shares
 // -------------------
 
-// ShareSwapReply - result of a share swap
-type ShareSwapReply struct {
+// SwapReply - result of a share swap
+type SwapReply struct {
 	RemainingOne uint64                                          `json:"remainingOne"`
 	RemainingTwo uint64                                          `json:"remainingTwo"`
 	TxId         merkle.Digest                                   `json:"txId"`
@@ -228,13 +245,13 @@ type ShareSwapReply struct {
 }
 
 // Swap - atomically swap shares between accounts
-func (share *Share) Swap(arguments *transactionrecord.ShareSwap, reply *ShareSwapReply) error {
+func (share *Share) Swap(arguments *transactionrecord.ShareSwap, reply *SwapReply) error {
 
-	if err := rateLimit(share.limiter); nil != err {
+	if err := ratelimit.Limit(share.Limiter); nil != err {
 		return err
 	}
 
-	log := share.log
+	log := share.Log
 
 	log.Infof("Share.Swap: %+v", arguments)
 
@@ -246,7 +263,7 @@ func (share *Share) Swap(arguments *transactionrecord.ShareSwap, reply *ShareSwa
 		return fault.ShareQuantityTooSmall
 	}
 
-	if !mode.Is(mode.Normal) {
+	if !share.IsNormalMode(mode.Normal) {
 		return fault.NotAvailableDuringSynchronise
 	}
 
@@ -259,7 +276,7 @@ func (share *Share) Swap(arguments *transactionrecord.ShareSwap, reply *ShareSwa
 	}
 
 	// save transfer/check for duplicate
-	stored, duplicate, err := reservoir.StoreSwap(arguments, storage.Pool.ShareQuantity, storage.Pool.Shares, storage.Pool.OwnerData, storage.Pool.BlockOwnerPayment)
+	stored, duplicate, err := share.Rsvr.StoreSwap(arguments)
 	if nil != err {
 		return err
 	}
