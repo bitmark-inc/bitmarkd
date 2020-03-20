@@ -33,8 +33,7 @@ type rpcData struct {
 	// set once during initialise
 	initialised bool
 
-	rpcCounter   counter.Counter
-	httpsCounter counter.Counter
+	rpcCounter counter.Counter
 }
 
 // global data
