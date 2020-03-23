@@ -1,3 +1,9 @@
+bitmarkd (0.12.5-rc.2-1ubuntu1) bionic; urgency=medium
+
+  * more test coverage
+
+ -- Christopher Hall <hsw@bitmark.com>  Mon, 23 Mar 2020 02:00:03 +0000
+
 bitmarkd (0.12.5-rc.1-1ubuntu1) bionic; urgency=medium
 
   * various minor fixes, mostly testing scripts
