@@ -214,7 +214,7 @@ func Get() Reservoir {
 }
 
 // Initialise - create the cache
-func Initialise(cacheDirectory string) error {
+func Initialise(cacheDirectory string, handles Handles) error {
 	globalData.Lock()
 	defer globalData.Unlock()
 
@@ -248,6 +248,8 @@ func Initialise(cacheDirectory string) error {
 	globalData.enabled = true
 
 	globalData.filename = path.Join(cacheDirectory, reservoirFile)
+
+	globalData.handles = handles
 
 	// all data initialised
 	globalData.initialised = true
