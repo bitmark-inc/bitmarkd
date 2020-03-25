@@ -7,7 +7,7 @@ require (
 	github.com/bitmark-inc/exitwithstatus v0.1.2
 	github.com/bitmark-inc/getoptions v0.1.1
 	github.com/bitmark-inc/go-argon2 v0.1.5
-	github.com/bitmark-inc/logger v0.3.4
+	github.com/bitmark-inc/logger v0.3.5
 	github.com/btcsuite/btcd v0.20.1-beta
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/golang/mock v1.4.1

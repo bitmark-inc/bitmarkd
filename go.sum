@@ -8,8 +8,8 @@ github.com/bitmark-inc/getoptions v0.1.1 h1:jFau6OG1oUzdj0BCgFGmHveoxTTSyCoL3MXz
 github.com/bitmark-inc/getoptions v0.1.1/go.mod h1:++zQVcw89sB6Lah2SJae420l+xKtRGkdKTxqLLeEhS4=
 github.com/bitmark-inc/go-argon2 v0.1.5 h1:WTuvgjBO0M5w1kX5udidcWWSrjkO1K9leFqK5m6pTqI=
 github.com/bitmark-inc/go-argon2 v0.1.5/go.mod h1:K3gDyH7GzKOF9g2Lnc3q3PjHlvp2O6TlejcwpCfj5ts=
-github.com/bitmark-inc/logger v0.3.4 h1:e7980AjquNdW1/d2IqTbf6Kz1I9rjzMfslGKr5D5lPc=
-github.com/bitmark-inc/logger v0.3.4/go.mod h1:Rvakkd0Q4O4fIEe0lMTp1GJV0HyoJpLr+OE4KGMXRgs=
+github.com/bitmark-inc/logger v0.3.5 h1:AIYHqe4bQOxzJxpphLcTB8EjOP+Px7L8U3B4OWsX+Y4=
+github.com/bitmark-inc/logger v0.3.5/go.mod h1:ObxwfAGdVHGz5sY0wHKVK91NZV/L5nexMQkwbAnaB54=
 github.com/btcsuite/btcd v0.20.1-beta h1:Ik4hyJqN8Jfyv3S4AGBOmyouMsYE3EdYODkMbQjwPGw=
 github.com/btcsuite/btcd v0.20.1-beta/go.mod h1:wVuoA8VJLEcwgqHBwHmzLRazpKxTv13Px/pDuV7OomQ=
 github.com/btcsuite/btclog v0.0.0-20170628155309-84c8d2346e9f h1:bAs4lUbRJpnnkd9VhRV3jjAVU7DJVjMaK+IsvSeZvFo=
