@@ -383,7 +383,7 @@ func TestLoadFromFileWhenAssetIssuance(t *testing.T) {
 	data, _ := currencyMap.Pack(true)
 	mockHandles.blockOwnerPayment.EXPECT().Get(gomock.Any()).Return(data).Times(1)
 
-	_ = reservoir.Initialise(dataDirectory)
+	_ = reservoir.Initialise(dataDirectory, reservoirHandles)
 	rsvr := reservoir.Get()
 
 	err := reservoir.LoadFromFile(reservoirHandles)
@@ -432,7 +432,7 @@ func TestLoadFromFileWhenAssetData(t *testing.T) {
 
 	mockHandles.asset.EXPECT().Has(gomock.Any()).Return(false).Times(1)
 
-	_ = reservoir.Initialise(dataFile)
+	_ = reservoir.Initialise(dataFile, reservoirHandles)
 
 	err := reservoir.LoadFromFile(reservoirHandles)
 	assert.Equal(t, nil, err, "wrong error")
