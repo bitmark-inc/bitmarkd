@@ -181,8 +181,8 @@ func main() {
 		Transactions:      storage.Pool.Transactions,
 		OwnerTxIndex:      storage.Pool.OwnerTxIndex,
 		OwnerData:         storage.Pool.OwnerData,
-		Share:             storage.Pool.ShareQuantity,
-		ShareQuantity:     storage.Pool.Shares,
+		Shares:            storage.Pool.Shares,
+		ShareQuantity:     storage.Pool.ShareQuantity,
 	}
 
 	// start the reservoir (verified transaction data cache)

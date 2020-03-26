@@ -37,7 +37,7 @@ func Create(log *logger.L, version string, rpcCount *counter.Counter) *rpc.Serve
 		Transactions:      storage.Pool.Transactions,
 		OwnerTxIndex:      storage.Pool.OwnerTxIndex,
 		OwnerData:         storage.Pool.OwnerData,
-		Share:             storage.Pool.Shares,
+		Shares:            storage.Pool.Shares,
 		ShareQuantity:     storage.Pool.ShareQuantity,
 	}
 
