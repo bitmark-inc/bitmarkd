@@ -52,7 +52,7 @@ func NewTransactionRestorer(unpacked interface{}, packed interface{}, handles Ha
 		return &grantRestoreData{
 			unpacked:          t,
 			shareQuantity:     handles.ShareQuantity,
-			share:             handles.Share,
+			shares:            handles.Shares,
 			ownerData:         handles.OwnerData,
 			blockOwnerPayment: handles.BlockOwnerPayment,
 			transactions:      handles.Transactions,
@@ -63,7 +63,7 @@ func NewTransactionRestorer(unpacked interface{}, packed interface{}, handles Ha
 		return &swapRestoreData{
 			unpacked:          t,
 			shareQuantity:     handles.ShareQuantity,
-			share:             handles.Share,
+			shares:            handles.Shares,
 			ownerData:         handles.OwnerData,
 			blockOwnerPayment: handles.BlockOwnerPayment,
 		}, nil
@@ -148,7 +148,7 @@ func (t *transferRestoreData) Restore() error {
 type grantRestoreData struct {
 	unpacked          *transactionrecord.ShareGrant
 	shareQuantity     storage.Handle
-	share             storage.Handle
+	shares            storage.Handle
 	ownerData         storage.Handle
 	blockOwnerPayment storage.Handle
 	transactions      storage.Handle
@@ -159,7 +159,7 @@ func (g *grantRestoreData) String() string {
 }
 
 func (g *grantRestoreData) Restore() error {
-	_, _, err := storeGrant(g.unpacked, g.shareQuantity, g.share, g.ownerData, g.blockOwnerPayment, g.transactions)
+	_, _, err := storeGrant(g.unpacked, g.shareQuantity, g.shares, g.ownerData, g.blockOwnerPayment, g.transactions)
 
 	if nil != err {
 		return fmt.Errorf("fail to restore grant: %s", err)
@@ -170,7 +170,7 @@ func (g *grantRestoreData) Restore() error {
 type swapRestoreData struct {
 	unpacked          *transactionrecord.ShareSwap
 	shareQuantity     storage.Handle
-	share             storage.Handle
+	shares            storage.Handle
 	ownerData         storage.Handle
 	blockOwnerPayment storage.Handle
 }
@@ -180,7 +180,7 @@ func (s *swapRestoreData) String() string {
 }
 
 func (s *swapRestoreData) Restore() error {
-	_, _, err := storeSwap(s.unpacked, s.shareQuantity, s.share, s.ownerData, s.blockOwnerPayment)
+	_, _, err := storeSwap(s.unpacked, s.shareQuantity, s.shares, s.ownerData, s.blockOwnerPayment)
 	if nil != err {
 		return fmt.Errorf("create swap restorer with error: %s", err)
 	}

@@ -92,7 +92,7 @@ type Handles struct {
 	Transactions      storage.Handle
 	OwnerTxIndex      storage.Handle
 	OwnerData         storage.Handle
-	Share             storage.Handle
+	Shares            storage.Handle
 	ShareQuantity     storage.Handle
 }
 
@@ -176,7 +176,7 @@ func (g *globalDataType) StoreGrant(grant *transactionrecord.ShareGrant) (*Grant
 	return storeGrant(
 		grant,
 		g.handles.ShareQuantity,
-		g.handles.Share,
+		g.handles.Shares,
 		g.handles.OwnerData,
 		g.handles.BlockOwnerPayment,
 		g.handles.Transactions,
@@ -187,7 +187,7 @@ func (g *globalDataType) StoreSwap(swap *transactionrecord.ShareSwap) (*SwapInfo
 	return storeSwap(
 		swap,
 		g.handles.ShareQuantity,
-		g.handles.Share,
+		g.handles.Shares,
 		g.handles.OwnerData,
 		g.handles.BlockOwnerPayment,
 	)
@@ -214,7 +214,7 @@ func Get() Reservoir {
 }
 
 // Initialise - create the cache
-func Initialise(cacheDirectory string) error {
+func Initialise(cacheDirectory string, handles Handles) error {
 	globalData.Lock()
 	defer globalData.Unlock()
 
@@ -248,6 +248,8 @@ func Initialise(cacheDirectory string) error {
 	globalData.enabled = true
 
 	globalData.filename = path.Join(cacheDirectory, reservoirFile)
+
+	globalData.handles = handles
 
 	// all data initialised
 	globalData.initialised = true

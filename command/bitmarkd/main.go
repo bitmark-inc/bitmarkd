@@ -172,9 +172,22 @@ func main() {
 	}
 	defer asset.Finalise()
 
+	// reservoir and block are both ready
+	// so can restore any previously saved transactions
+	// before any peer services are started
+	handles := reservoir.Handles{
+		Assets:            storage.Pool.Assets,
+		BlockOwnerPayment: storage.Pool.BlockOwnerPayment,
+		Transactions:      storage.Pool.Transactions,
+		OwnerTxIndex:      storage.Pool.OwnerTxIndex,
+		OwnerData:         storage.Pool.OwnerData,
+		Shares:            storage.Pool.Shares,
+		ShareQuantity:     storage.Pool.ShareQuantity,
+	}
+
 	// start the reservoir (verified transaction data cache)
 	log.Info("initialise reservoir")
-	err = reservoir.Initialise(masterConfiguration.CacheDirectory)
+	err = reservoir.Initialise(masterConfiguration.CacheDirectory, handles)
 	if nil != err {
 		log.Criticalf("reservoir initialise error: %s", err)
 		exitwithstatus.Message("reservoir initialise error: %s", err)
@@ -221,18 +234,6 @@ func main() {
 
 	ownership.Initialise(storage.Pool.OwnerList, storage.Pool.OwnerData)
 
-	// reservoir and block are both ready
-	// so can restore any previously saved transactions
-	// before any peer services are started
-	handles := reservoir.Handles{
-		Assets:            storage.Pool.Assets,
-		BlockOwnerPayment: storage.Pool.BlockOwnerPayment,
-		Transactions:      storage.Pool.Transactions,
-		OwnerTxIndex:      storage.Pool.OwnerTxIndex,
-		OwnerData:         storage.Pool.OwnerData,
-		Share:             storage.Pool.ShareQuantity,
-		ShareQuantity:     storage.Pool.Shares,
-	}
 	err = reservoir.LoadFromFile(handles)
 	if nil != err && !os.IsNotExist(err) {
 		log.Criticalf("reservoir reload error: %s", err)
