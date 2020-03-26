@@ -28,20 +28,20 @@ type broadcast struct {
 
 // Run - background process interface
 func (b *broadcast) Run(arg interface{}, shutdown <-chan struct{}) {
-	//log := b.log		// ***** FIX THIS: panics in test
-	//log.Info("starting…")   // ***** FIX THIS: panics in test
+	log := b.log
+	log.Info("starting…")
 
 	queue := arg.(<-chan messagebus.Message)
 
 	delay := time.After(b.initialiseInterval)
 loop:
 	for {
-		//log.Debug("waiting…")   // ***** FIX THIS: panics in test
+		log.Debug("waiting…")
 		select {
 		case <-shutdown:
 			break loop
 		case item := <-queue:
-			//log.Infof("received control: %s  parameters: %x", item.Command, item.Parameters)   // ***** FIX THIS: panics in test
+			log.Infof("received control: %s  parameters: %x", item.Command, item.Parameters)
 			switch item.Command {
 			case "reconnect":
 				b.receptors.ReBalance()
