@@ -1,3 +1,12 @@
+bitmarkd (0.12.5-rc.3-1ubuntu1) bionic; urgency=medium
+
+  * use updated logger module
+  * fix reservoir handle not consistent
+  * fix test due to Initialise change
+  * fix reservoir storage handles not initialised
+
+ -- Christopher Hall <hsw@bitmark.com>  Thu, 26 Mar 2020 04:11:46 +0000
+
 bitmarkd (0.12.5-rc.2-1ubuntu1) bionic; urgency=medium
 
   * more test coverage
