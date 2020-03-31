@@ -248,7 +248,7 @@ func (transfer *BitmarkTransferUnratified) check(testnet bool) error {
 
 	// Note: In this case Owner can be zero ⇒ bitmark is destroyed
 	//       and no further transfers are allowed.
-	//       theddress cannot be zero to prevent discovery of the
+	//       the address cannot be zero to prevent discovery of the
 	//       corresponding private key being able to transfer all
 	//       previously destroyed bitmarks to a new account.
 	if nil == transfer.Owner {
