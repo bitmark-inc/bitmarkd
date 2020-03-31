@@ -6,8 +6,11 @@
 package proof
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"strings"
+	"time"
 
 	zmq "github.com/pebbe/zmq4"
 
@@ -175,6 +178,14 @@ func (sub *submission) process(socket *zmq.Socket) {
 
 	// increase minedBlockCount
 	if ok {
+		// do a little delay average around 50ms
+		b := make([]byte, 1)
+		_, err := rand.Read(b)
+		if err != nil {
+			b[0] = 5
+		}
+		time.Sleep((time.Duration(b[0]&0x7f) + 5) * time.Millisecond)
+
 		sub.minedBlockCount.Increment()
 	} else {
 		sub.failedBlockCount.Increment()
@@ -193,14 +204,22 @@ func (sub *submission) process(socket *zmq.Socket) {
 
 	log.Infof("json to send: %s", result)
 
-	// if _, err := socket.Send(to, zmq.SNDMORE|zmq.DONTWAIT); nil != err {
-	// 	return err
-	// }
-	// if _, err := socket.Send(command, zmq.SNDMORE|zmq.DONTWAIT); nil != err {
-	// 	return err
-	// }
-	_, err = socket.SendBytes(result, 0|zmq.DONTWAIT)
-	logger.PanicIfError("Submission", err)
+	// retry sending for a few seconds
+	// in case the send was interrupted
+	const sendRetries = 25
+send_loop:
+	for retry := 1; retry <= sendRetries; retry += 1 {
+		_, err = socket.SendBytes(result, 0|zmq.DONTWAIT)
+		if nil == err {
+			break send_loop
+		}
+		log.Warnf("send try: %d/%d  error: %s", retry, sendRetries, err)
+		if strings.Contains(err.Error(), "resource temporarily unavailable") {
+			time.Sleep(50 * time.Millisecond)
+			continue send_loop
+		}
+		logger.PanicIfError("Submission", err)
+	}
 }
 
 func MinedBlocks() counter.Counter {
