@@ -285,22 +285,6 @@ M.proofing = {
     },
 }
 
--- determine proxy addresses based on the chain selected
-function proxy_address()
-    local proxy = {
-        sub_endpoint = "127.0.0.1:18008",
-        req_endpoint = "127.0.0.1:18009",
-    }
-    if M.chain == "bitmark" then
-        proxy.sub_endpoint = "dsc-1.live.bitmark.com:17008"
-        proxy.req_endpoint = "dsc-1.live.bitmark.com:17009"
-    end
-    if M.chain == "testing" then
-        proxy.sub_endpoint = "coins.test.bitmark.com:16008"
-        proxy.req_endpoint = "coins.test.bitmark.com:16009"
-    end
-    return proxy
-end
 
 -- determine port address based on chain selected
 function bitcoin_port()
@@ -341,7 +325,7 @@ end
 -- setup for every payment service
 M.payment = {
 
-    -- the mode must be one of the following: p2p, discovery, rest, noverify
+    -- the mode must be one of the following: p2p, rest, noverify
     mode = payment_mode or "p2p",
     p2p_cache = {
         btc_directory = M.chain .. "-btc-cache",
@@ -351,10 +335,6 @@ M.payment = {
         bitcoin = {},
         litecoin = {}
     },
-
-    -- setup proxy addresses based on selected chain
-    -- required if the mode is set to "rest"
-    discovery = proxy_address(),
 
     -- local bitcoin access to REST API
     -- required if the mode is set to "rest"
@@ -401,7 +381,6 @@ M.logging = {
         -- broadcaster = "info",
         -- checker = "info",
         -- connector = "info",
-        -- discoverer = "info",
         -- expiration = "info",
         -- listener = "info",
         -- litecoin = "info",

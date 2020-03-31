@@ -41,6 +41,7 @@ USAGE()
   echo '       --file=FILE        -f FILE       set alternative logfile ['"${logfile}"']'
   echo '       --list             -l            list properties for user'
   echo '       --status=FILE      -s FILE       check status from a specific logfile'
+  echo '       --ignore=N         -i N          ignore the N most recent commits'
   echo '       --continue         -c            do not stop on transaction already exists'
   echo '       --debug                          debuging messages'
   exit 1
@@ -90,7 +91,7 @@ CLI() {
           ;;
         (*)
           [ -z "${r}" ] && r='unknown error: stdout empty'
-          [ X"${verbose}" = X"yes" ] && printf '\033[1;33mCLI[%s]: error: \033[1;31m%s\033[0m\n' "${network}/${user}" "${r}"
+          [ X"${verbose}" = X"yes" ] && printf '\033[1;33mCLI[%s/%s@%d]: error: \033[1;31m%s\033[0m\n' "${network}" "${user}" "${connection}" "${r}"
           # make JSON: {"error": "string"}
           r=$(jq --null-input --arg error "${r}" '{error:$error}')
           return 1
@@ -278,6 +279,7 @@ user=
 logfile="bmr-${network}-$(date '+%Y%m%d_%H%M%S').log"
 list=no
 status=
+ignore=0
 continue=no
 
 # required programs
@@ -315,7 +317,7 @@ case "$(uname)" in
 esac
 [ -x "${getopt}" ] || ERROR 'getopt: "%s" is not executable or not installed' "${getopt}"
 
-args=$(${getopt} -o hvp:n:C:u:f:lcs:D --long=help,verbose,url:,network:,connection:,user:,file:,list,continue,status:,debug -- "$@") || exit 1
+args=$(${getopt} -o hvp:n:C:u:f:lcs:i:D --long=help,verbose,url:,network:,connection:,user:,file:,list,continue,status:,ignore:,debug -- "$@") || exit 1
 
 # replace the arguments with the parsed values
 eval set -- "${args}"
@@ -357,6 +359,14 @@ do
       connection="$(printf '%s' "${2}" | tr -d -C '0-9')"
       [ X"${connection}" != X"${2}" ] && ERROR 'connection: '%s' is not a number' "${2}"
       [ "${connection}" -lt 0 ] && ERROR 'connection: '%s' cannot be negative' "${2}"
+      shift
+      ;;
+
+    (-i|--ignore)
+      [ -z "${2}" ] && ERROR 'ignore cannot be blank'
+      ignore="$(printf '%s' "${2}" | tr -d -C '0-9')"
+      [ X"${ignore}" != X"${2}" ] && ERROR 'ignore: '%s' is not a number' "${2}"
+      [ "${ignore}" -lt 0 ] && ERROR 'ignore: '%s' cannot be negative' "${2}"
       shift
       ;;
 
@@ -482,6 +492,7 @@ git log --date=iso8601-strict --date-order --format='%H %cI' | (
   while read commit timestamp junk
   do
     i=$((i + 1))
+    [ ${i} -le ${ignore} ] && continue
     CLI -v "${user}" create -z -f "${url}/${commit}" -a "" -m "date\u0000${timestamp}" -q 1
     if [ $? -eq 0 ]
     then

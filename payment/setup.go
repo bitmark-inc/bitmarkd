@@ -32,22 +32,16 @@ type P2PCache struct {
 
 // Configuration - structure for configuration file
 type Configuration struct {
-	Mode           string                      `gluamapper:"mode" hcl:"mode" json:"mode"`
+	Mode           string                      `gluamapper:"mode" json:"mode"`
 	P2PCache       P2PCache                    `gluamapper:"p2p_cache" json:"p2p_cache"`
-	BootstrapNodes bootstrapNodesConfiguration `gluamapper:"bootstrap_nodes" hcl:"bootstrap_nodes" json:"bootstrap_nodes"`
-	Discovery      *discoveryConfiguration     `gluamapper:"discovery" hcl:"discovery" json:"discovery"`
-	Bitcoin        *currencyConfiguration      `gluamapper:"bitcoin" hcl:"bitcoin" json:"bitcoin"`
-	Litecoin       *currencyConfiguration      `gluamapper:"litecoin" hcl:"litecoin" json:"litecoin"`
+	BootstrapNodes bootstrapNodesConfiguration `gluamapper:"bootstrap_nodes" json:"bootstrap_nodes"`
+	Bitcoin        *currencyConfiguration      `gluamapper:"bitcoin" json:"bitcoin"`
+	Litecoin       *currencyConfiguration      `gluamapper:"litecoin" json:"litecoin"`
 }
 
 type bootstrapNodesConfiguration struct {
-	Bitcoin  []string `gluamapper:"bitcoin" hcl:"bitcoin" json:"bitcoin"`
-	Litecoin []string `gluamapper:"litecoin" hcl:"litecoin" json:"litecoin"`
-}
-
-type discoveryConfiguration struct {
-	ReqEndpoint string `gluamapper:"req_endpoint" hcl:"req_endpoint" json:"req_endpoint"`
-	SubEndpoint string `gluamapper:"sub_endpoint" hcl:"sub_endpoint" json:"sub_endpoint"`
+	Bitcoin  []string `gluamapper:"bitcoin" json:"bitcoin"`
+	Litecoin []string `gluamapper:"litecoin" json:"litecoin"`
 }
 
 type currencyConfiguration struct {
@@ -88,14 +82,13 @@ func Initialise(configuration *Configuration) error {
 	// initialise the handler for each currency
 	globalData.handlers = make(map[string]currencyHandler)
 	if configuration.Mode != "p2p" {
-		useDiscovery := configuration.Mode == "discovery"
 		for c := currency.First; c <= currency.Last; c++ {
 			switch c {
 			case currency.Bitcoin:
 				if nil == configuration.Bitcoin {
 					return fault.MissingPaymentBitcoinSection
 				}
-				handler, err := newBitcoinHandler(useDiscovery, configuration.Bitcoin)
+				handler, err := newBitcoinHandler(configuration.Bitcoin)
 				if err != nil {
 					return err
 				}
@@ -104,7 +97,7 @@ func Initialise(configuration *Configuration) error {
 				if nil == configuration.Litecoin {
 					return fault.MissingPaymentLitecoinSection
 				}
-				handler, err := newLitecoinHandler(useDiscovery, configuration.Litecoin)
+				handler, err := newLitecoinHandler(configuration.Litecoin)
 				if err != nil {
 					return err
 				}
@@ -137,16 +130,6 @@ func Initialise(configuration *Configuration) error {
 			return err
 		}
 		processes = append(processes, btcP2pWatcher, ltcP2pWatcher)
-	case "discovery":
-		globalData.log.Info("discovery…")
-		if nil == configuration.Discovery {
-			return fault.MissingPaymentDiscoverySection
-		}
-		discoverer, err := newDiscoverer(configuration.Discovery.SubEndpoint, configuration.Discovery.ReqEndpoint)
-		if err != nil {
-			return err
-		}
-		processes = append(processes, discoverer)
 	case "rest":
 		globalData.log.Info("checker…")
 		processes = append(processes, &checker{})

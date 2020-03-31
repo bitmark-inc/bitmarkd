@@ -77,12 +77,8 @@ type litecoinHandler struct {
 	state *litecoinState
 }
 
-func newLitecoinHandler(useDiscovery bool, conf *currencyConfiguration) (*litecoinHandler, error) {
+func newLitecoinHandler(conf *currencyConfiguration) (*litecoinHandler, error) {
 	log := logger.New("litecoin")
-
-	if useDiscovery {
-		return &litecoinHandler{log: log}, nil
-	}
 
 	state, err := newLitecoinState(conf.URL)
 	if err != nil {

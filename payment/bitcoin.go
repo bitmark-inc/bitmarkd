@@ -73,12 +73,8 @@ type bitcoinHandler struct {
 	state *bitcoinState
 }
 
-func newBitcoinHandler(useDiscovery bool, conf *currencyConfiguration) (*bitcoinHandler, error) {
+func newBitcoinHandler(conf *currencyConfiguration) (*bitcoinHandler, error) {
 	log := logger.New("bitcoin")
-
-	if useDiscovery {
-		return &bitcoinHandler{log: log}, nil
-	}
 
 	state, err := newBitcoinState(conf.URL)
 	if err != nil {

@@ -126,7 +126,6 @@ var (
 	MissingOwnerData                      = e("missing owner data")
 	MissingParameters                     = e("missing parameters")
 	MissingPaymentBitcoinSection          = e("missing payment bitcoin section")
-	MissingPaymentDiscoverySection        = e("missing payment discovery section")
 	MissingPaymentLitecoinSection         = e("missing payment litecoin section")
 	MissingPreviousBlockHeader            = e("missing previous block header")
 	MissingReservoir                      = e("missing reservoir interface")

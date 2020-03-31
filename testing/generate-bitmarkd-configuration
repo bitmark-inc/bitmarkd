@@ -43,7 +43,7 @@ USAGE()
   echo '       --chain=chain         -c CHAIN      set the chain [bitmark|testing|local]: ['"${chain}"']'
   echo '       --nodes=DOMAIN        -n DOMAIN     set the nodes [none|chain|nodes.domain.tld]: ['"${nodes}"']'
   echo '       --connect=K:H:P       -C K:H:P      connect to specific bitmarkd public_key:host:port'
-  echo '       --payment=PRD         -p PRD        set payment mode [p2p|rest|discovery]: ['"${payment_mode}"']'
+  echo '       --payment=PRD         -p PRD        set payment mode [p2p|rest|noverify]: ['"${payment_mode}"']'
   echo '       --recorderd-public    -r            allow external recorderd connections for local chain'
   echo '       --internal-hash       -i            internal hash for local'
   echo '       --console             -k            log to console'
@@ -64,7 +64,7 @@ verbose=no
 chain=local
 nodes=none
 bitmarkd_connect=
-payment_mode=discovery
+payment_mode=noverify
 recorderd_public=0
 internal_hash=false
 log_size=1048576
@@ -160,8 +160,8 @@ do
         (r|rest)
           payment_mode=rest
           ;;
-        (d|discovery)
-          payment_mode=discovery
+        (n|noverify)
+          payment_mode=noverify
           ;;
         (*)
           USAGE 'invalid payment verification mode: %s' "${2}"

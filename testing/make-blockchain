@@ -299,7 +299,6 @@ PAY() {
 
   script2='Qfs6jPxLBd2qJezyLNGHbxafj9MXtktbcX'
   script1='2NCWLcP66AWykAUEviGEGXG9Eakui2faUYf'
-  #pay=$(printf '%s' "${pay}" | sed "s/${script2}/${script1}/g;s#/test/test-#/${network}/${network}-#")
   pay=$(printf '%s' "${pay}" | sed "s/${script1}/${script2}/g;s#/test/test-#/${network}/${network}-#")
   VERBOSE 'run pay: %s' "${pay}"
 
@@ -307,13 +306,11 @@ PAY() {
   CLI "${user_1}" status -t "${txid}"
   status=$(GET .status)
 
-  if [ X"${status}" = X"Pending" ]
-  then
-    # shellcheck disable=SC2086
-    eval env WALLET_PASSWORD="${wallet_password}" ${pay} | jq .
-    printf '\n'
-    eval GEN_${currency}
-  fi
+  # shellcheck disable=SC2086
+  eval env WALLET_PASSWORD="${wallet_password}" ${pay} | jq .
+  printf '\n'
+  eval GEN_${currency}
+
   WAIT "${txid}"
 }
 
