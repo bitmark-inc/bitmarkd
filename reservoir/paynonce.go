@@ -16,12 +16,27 @@ import (
 // Note: no reversal is required for this
 type PayNonce [8]byte
 
+// values to round block numbers
+const (
+	PayNonceHeightMask    uint64 = ^uint64(0x7f)
+	PayNonceHeightDelta   uint64 = 0x80
+	PayNonceHeightMinimum uint64 = 0xff
+)
+
 // NewPayNonce - create a random pay nonce
 func NewPayNonce() PayNonce {
-	_, digest, _, _ := blockheader.Get()
-	nonce := PayNonce{}
-	copy(nonce[:], digest[:])
-	return nonce
+	return PayNonceFromBlock(PayNonceRoundedHeight())
+}
+
+// get the rounded height
+func PayNonceRoundedHeight() uint64 {
+	height := blockheader.Height() & PayNonceHeightMask
+	if height > PayNonceHeightMinimum {
+		height -= PayNonceHeightDelta
+	} else {
+		height = 1
+	}
+	return height
 }
 
 // PayNonceFromBlock - get a previous paynonce

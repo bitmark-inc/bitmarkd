@@ -14,7 +14,6 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bitmark-inc/bitmarkd/asset"
-	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/constants"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -312,18 +311,18 @@ func tryProof(payId pay.PayId, clientNonce []byte) TrackingStatus {
 	// compute hash with all possible payNonces
 	h := sha3.New256()
 
-	height := blockheader.Height()
+	// start with the current rounded height and
+	// later decrement it by the delta value
+	height := PayNonceRoundedHeight()
+
+	// at 2 min/block 128 blocks is 4 hours
+	// so 6 loops is 1 day
 try_loop:
-	for i := uint64(0); i < 20; i += 1 {
+	for i := uint64(0); i < 6; i += 1 {
 
-		if i >= height {
-			globalData.log.Criticalf("tryProof: height: %d too low at loop: %d", height, i)
-			break try_loop
-		}
+		payNonce := PayNonceFromBlock(height)
 
-		payNonce := PayNonceFromBlock(height - i)
-
-		globalData.log.Debugf("tryProof: payNonce[%d]: %x", i, payNonce)
+		globalData.log.Debugf("tryProof: payNonce[%d]@%d: %x", i, height, payNonce)
 
 		h.Reset()
 		h.Write(payId[:])
@@ -345,6 +344,11 @@ try_loop:
 			verifyIssueByNonce(payId, clientNonce)
 			return TrackingAccepted
 		}
+
+		if height < PayNonceHeightDelta {
+			break try_loop
+		}
+		height -= PayNonceHeightDelta
 	}
 
 	return TrackingInvalid
