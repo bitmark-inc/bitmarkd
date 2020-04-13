@@ -1,3 +1,13 @@
+bitmarkd (0.13.0-rc.1-1ubuntu1) bionic; urgency=medium
+
+  * after testing the changes on 12.5-rc are somewhat
+    incompatible with 0.12.4 so change to 0.13.x
+  * change paynonce generation to allow proofs
+    to survive across a restart and short term fork
+  * remove deprecated discovery code
+
+ -- Christopher Hall <hsw@bitmark.com>  Thu, 09 Apr 2020 03:03:12 +0000
+
 bitmarkd (0.12.5-rc.3-1ubuntu1) bionic; urgency=medium
 
   * use updated logger module
