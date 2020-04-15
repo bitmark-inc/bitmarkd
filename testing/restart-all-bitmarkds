@@ -153,7 +153,9 @@ then
       mv "${dst_dir}" "${bk_dir}"
     fi
 
-     rm -f "${config_root}${i}/reservoir-local.cache"
+    rm -fr "${config_root}${i}/local-cache"
+    rm -fr "${config_root}${i}/local-btc-cache"
+    rm -fr "${config_root}${i}/local-ltc-cache"
 
     if [ -n "${src_dir}" ]
     then
