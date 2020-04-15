@@ -65,6 +65,14 @@ func initialiseJobQueue() {
 	jobQueue.clear = false
 }
 
+// remove all data links to help GC recover memory
+func clearEntry(entry *entryType) {
+	entry.item.TxZero = nil
+	entry.item.TxIds = nil
+	entry.item = nil
+	entry.transactions = nil
+}
+
 // create a job number
 func enqueueToJobQueue(item *PublishedItem, txdata []byte) {
 	jobQueue.Lock()
@@ -72,7 +80,7 @@ func enqueueToJobQueue(item *PublishedItem, txdata []byte) {
 	item.Job = fmt.Sprintf("%04x", jobQueue.count)
 	n := jobQueue.count % queueSize
 	if nil != jobQueue.entries[n] {
-		jobQueue.entries[n].transactions = nil
+		clearEntry(jobQueue.entries[n])
 		jobQueue.entries[n] = nil
 	}
 	jobQueue.entries[n] = &entryType{
@@ -137,7 +145,7 @@ cleanup:
 	// erase the queue
 	for i := range jobQueue.entries {
 		if nil != jobQueue.entries[i] {
-			jobQueue.entries[i].transactions = nil
+			clearEntry(jobQueue.entries[i])
 			jobQueue.entries[i] = nil
 		}
 	}
