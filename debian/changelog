@@ -1,3 +1,24 @@
+bitmarkd (0.13.0-1ubuntu1) bionic; urgency=medium
+
+  Consolidate all 0.12.5-rc and 0.13.0-rc into a release:
+
+  * fix some test scripts
+  * clean queue structures to speed garbage collection
+  * after testing the changes on 12.5-rc are somewhat
+    incompatible with 0.12.4 so change to 0.13.x
+  * change paynonce generation to allow proofs
+    to survive across a restart and short term fork
+  * remove deprecated discovery code
+  * use updated logger module
+  * fix reservoir handle not consistent
+  * fix test due to Initialise change
+  * fix reservoir storage handles not initialised
+  * more test coverage
+  * various minor fixes, mostly testing scripts
+  * update modules for go 1.14
+
+ -- Christopher Hall <hsw@bitmark.com>  Tue, 21 Apr 2020 02:22:36 +0000
+
 bitmarkd (0.13.0-rc.2-1ubuntu1) bionic; urgency=medium
 
   * fix some test scripts

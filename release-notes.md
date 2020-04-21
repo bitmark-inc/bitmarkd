@@ -1,8 +1,16 @@
 # Release Notes
 
-Version: 0.12.4
+Version: 0.13.0
 
 # How to Upgrade
+
+## From V0.12.x
+
+* No database changes needed
+* No config changes needed
+
+
+## From 0.11.x and Earlier
 
 If upgrading from an older setup:
 
@@ -22,11 +30,30 @@ The above actions will re-download the entire blockchain for the new format Leve
 
 # Downgrade warning
 
-If the blocks and index LevelDBs have been removed then a downgrade
-will have to reload the block chain.
+## To 0.12.x
+
+Free issue proofs are incompatible so any stored in the local
+transaction cache will become invalid.
+
+## To 0.11.x
+
+If the blocks and index LevelDBs have been removed then a downgrade to
+anything earlier than 0.12.x will have to reload the block chain.
 
 
 # Notable changes
+
+## Changes Since 0.12.x
+
+* clean queue structures to speed garbage collection
+* change paynonce generation to allow proofs to survive across a
+  restart and short term fork
+* remove deprecated discovery code
+* use updated logger module
+* fix reservoir handle bugs
+* update modules for go 1.14
+
+## Changes Since 0.11.x
 
 * Fix the `peers.json` corruption by relocating each blockchain's
   version to its own subdirectory
@@ -35,6 +62,12 @@ will have to reload the block chain.
 * LevelDB layout improvements and fast download of block chain
 
 ## Data
+
+### Changes Since 0.12.x
+
+Data is the same as 0.12.x
+
+### Changes Since 0.11.x
 
 The naming and location of data and cache files has been changed
 
@@ -47,9 +80,16 @@ The naming and location of data and cache files has been changed
 
 ## RPCs
 
-No RPC have changed
+No RPC have changed since 0.11.x
+
 
 ## Configuration options
+
+### Since 0.12.x
+
+The payment mode is option **discovery** has been removed.
+
+### Since 0.11.x
 
 Quick configuration is now split out from the main file and the
 standard `bitmarkd.conf` uses `bitmarkd.conf.sub` to perform the
