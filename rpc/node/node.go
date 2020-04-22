@@ -105,7 +105,7 @@ type InfoReply struct {
 	TransactionCounters Counters  `json:"transactionCounters"`
 	Difficulty          float64   `json:"difficulty"`
 	Hashrate            float64   `json:"hashrate"`
-	Version             string    `json:"Version"`
+	Version             string    `json:"version"`
 	Uptime              string    `json:"uptime"`
 	PublicKey           string    `json:"publicKey"`
 }
