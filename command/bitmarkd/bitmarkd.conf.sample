@@ -71,6 +71,10 @@ announce_ips = {
 --prefer_ipv6 = false
 
 ------------------------------------------------------------------------
+-- to enable go profiler
+--enable_profiling = true
+
+------------------------------------------------------------------------
 -- return the complete configuration
 local d = arg[0]:match("^(.*/)") or ""
 return dofile(d .. "bitmarkd.conf.sub")

@@ -46,6 +46,8 @@ USAGE()
   echo '       --payment=PRD         -p PRD        set payment mode [p2p|rest|noverify]: ['"${payment_mode}"']'
   echo '       --recorderd-public    -r            allow external recorderd connections for local chain'
   echo '       --internal-hash       -i            internal hash for local'
+  echo '       --profile             -P            enable 2132 HTTP profile port'
+  echo '       --ipv4-only           -4            turn off IPv6 preference'
   echo '       --console             -k            log to console'
   echo '       --more                -m            more logging output'
   echo '       --update              -u            overwrite an existing configuration, does not change exiting keys'
@@ -67,6 +69,8 @@ bitmarkd_connect=
 payment_mode=noverify
 recorderd_public=0
 internal_hash=false
+profile=false
+prefer_ipv6=true
 log_size=1048576
 log_count=100
 log_console=false
@@ -98,7 +102,7 @@ case "$(uname)" in
 esac
 [ -x "${getopt}" ] || ERROR 'getopt: "%s" is not executable or not installed' "${getopt}"
 
-args=$(${getopt} -o hvc:n:C:p:rikmuD --long=help,verbose,chain:,nodes:,connect:,payment:,recorderd-public,internal-hash,console,more,update,debug -- "$@") || exit 1
+args=$(${getopt} -o hvc:n:C:p:riP4kmuD --long=help,verbose,chain:,nodes:,connect:,payment:,recorderd-public,internal-hash,profile,ipv4_only,console,more,update,debug -- "$@") || exit 1
 
 # replace the arguments with the parsed values
 eval set -- "${args}"
@@ -176,6 +180,13 @@ do
 
     (-i|--internal-hash)
       internal_hash=true
+      ;;
+
+    (-P|--profile)
+      profile=true
+      ;;
+    (-4|--ipv4-only)
+      prefer_ipv6=false
       ;;
 
     (-k|--console)
@@ -274,27 +285,29 @@ do
   litecoin_test="mjPkDNakVA4w4hJZ6WF7p8yKUV2merhyCM"
   litecoin_live="LYg45SVcJALHWHSMVkHSKAnbAEXAbhei7h"
 
-  awk < "$(dirname "${0}")/../command/bitmarkd/bitmarkd.conf.sub" > "${config}" '
+  awk < "$(dirname "${0}")/../command/bitmarkd/bitmarkd.conf.sub" > "${config}" \
+      -v recorderd_public="${recorderd_public}" \
+      -v chain="${chain}" \
+      -v nodes="${nodes}" \
+      -v profile="${profile}" \
+      -v prefer_ipv6="${prefer_ipv6}" \
+      -v internal_hash="${internal_hash}" \
+      -v port_offset="${port_offset}" \
+      -v connections="${connections}" \
+      -v payment_mode="${payment_mode}" \
+      -v bitcoin_test="${bitcoin_test}" \
+      -v bitcoin_live="${bitcoin_live}" \
+      -v litecoin_test="${litecoin_test}" \
+      -v litecoin_live="${litecoin_live}" \
+      -v log_size="${log_size}" \
+      -v log_count="${log_count}" \
+      -v log_console="${log_console}" \
+      -v log_default="${log_default}" \
+    '
 
     BEGIN {
       check_logging = 0
       skip_proofing = 0
-      recorderd_public = '"${recorderd_public}"'
-      chain = "'"${chain}"'"
-      nodes = "'"${nodes}"'"
-      port_offset = '"${port_offset}"'
-      connections = "'"${connections}"'"
-      payment_mode = "'"${payment_mode}"'"
-      bitcoin_test = "'"${bitcoin_test}"'"
-      bitcoin_live = "'"${bitcoin_live}"'"
-      litecoin_test = "'"${litecoin_test}"'"
-      litecoin_live = "'"${litecoin_live}"'"
-      log_size = '"${log_size}"'
-      log_count = '"${log_count}"'
-      log_console = "'"${log_console}"'"
-      internal_hash = "'"${internal_hash}"'"
-      # add quotes and trailing ',' to simplify comparisons
-      log_default = "\"'"${log_default}"'\","
       drop_this = 0
     }
 
@@ -349,8 +362,11 @@ do
       print "    test = \"" litecoin_test "\","
       print "    live = \"" litecoin_live "\","
       print "}"
-      # change payment mode
+      # various settings
       print "payment_mode = \"" payment_mode "\""
+      print "log_level = \"" log_default "\""
+      print "prefer_ipv6 = " prefer_ipv6
+      print "enable_profiling = " profile
     }
 
     # port_offset for bitmarkds 2..N
@@ -400,15 +416,6 @@ do
         print "    count = " log_count ","
       } else if ($1 == "console") {
         print "    console = " log_console ","
-      } else if ($1 == "DEFAULT") {
-        if ($3 == log_default) {
-          print $0
-        } else {
-          $1 = $1 # strip leading spaces from $0
-          print "        -- " $0
-        }
-      } else if ($2 == "DEFAULT" && $4 == log_default) {
-        print "        DEFAULT = " log_default
       } else {
         print $0
       }

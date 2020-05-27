@@ -75,6 +75,7 @@ type Configuration struct {
 	Chain         string       `gluamapper:"chain" json:"chain"`
 	Nodes         string       `gluamapper:"nodes" json:"nodes"`
 	Fastsync      bool         `gluamapper:"fast_sync" json:"fast_sync"`
+	ProfileHTTP   string       `gluamapper:"profile_http" json:"profile_http"`
 	Database      DatabaseType `gluamapper:"database" json:"database"`
 
 	CacheDirectory string `gluamapper:"cache_directory" json:"cache_directory"`

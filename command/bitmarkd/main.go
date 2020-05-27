@@ -8,6 +8,8 @@ package main
 import (
 	"fmt"
 	"net"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
@@ -129,17 +131,16 @@ func main() {
 	}
 	defer mode.Finalise()
 
-	// // if requested start profiling
-	// if "" != masterConfiguration.ProfileFile {
-	// 	f, err := os.Create(masterConfiguration.ProfileFile)
-	// 	if nil != err {
-	// 		log.Criticalf("cannot open profile output file: '%s'  error: %s", masterConfiguration.ProfileFile, err)
-	// 		exitwithstatus.Exit(1)
-	// 	}
-	// 	defer f.Close()
-	// 	pprof.StartCPUProfile(f)
-	// 	defer pprof.StopCPUProfile()
-	// }
+	// start a profiling http server
+	// this uses the default builtin HTTP handler
+	// and is not associated with the normal ClientRPC HTTPS server
+	if "" != masterConfiguration.ProfileHTTP {
+		go func() {
+			log.Warnf("profile listener on: %s", masterConfiguration.ProfileHTTP)
+			err = http.ListenAndServe(masterConfiguration.ProfileHTTP, nil)
+			exitwithstatus.Message("profile error: %s", err)
+		}()
+	}
 
 	// general info
 	log.Infof("test mode: %v", mode.IsTesting())

@@ -141,6 +141,17 @@ M.cache_directory = M.chain .. "-cache"
 -- that speeds up the bitmark node to get it ready operating.
 M.fast_sync = true
 
+-- setup a profiling port
+-- best to use "localhost" here to prevent exposure to public access
+-- this is not accessible of 2131 HTTPS-RPC port
+-- it is plain HTTP i.e.,
+if enable_profiling then
+    M.profile_http = add_port("localhost", 2132)
+else
+    M.profile_http = ""
+end
+
+
 -- for JSON clients on TLS connection
 M.client_rpc = {
 

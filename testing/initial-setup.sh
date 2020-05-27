@@ -2,11 +2,12 @@
 # generate all LOCAL bitmarkd configuration configurations
 
 # do not change these defaults (use bm-tester.conf to override)
-all=$(seq 1 12)       # sets list of daemons to run
-console='1 2 8'       # sets console=true
-more='1 2 8'          # repeat a number to increase detail
-internal_hash='1'     # use internal hash
-recorderd_public=no   # enable recorder interface on 0.0.0.0
+all=$(seq 1 12)             # sets list of daemons to run
+console='1 2 8'             # sets console=true
+more='1 2 8'                # repeat a number to increase detail
+internal_hash='1'           # use internal hash
+recorderd_public=no         # enable recorder interface on 0.0.0.0
+bitmarkd_profile="${all}"   # enable bitmarkd 22132 HTTP profile port
 
 # to setup the DNS TXT records (can be set by bm-tester.conf)
 nodes_domain=''
@@ -165,6 +166,11 @@ do
   eval "internal_hash_${i}"=yes
 done
 
+for i in ${bitmarkd_profile}
+do
+  eval "bitmarkd_profile_${i}"=yes
+done
+
 opts=
 OPT() {
   opts="${opts} $*"
@@ -178,6 +184,7 @@ CONFIGURE() {
     eval "console=\"\${console_${i}:-no}\""
     eval "more=\"\${more_${i}:-0}\""
     eval "internal_hash=\"\${internal_hash_${i}:-no}\""
+    eval "profile_enable=\"\${bitmarkd_profile_${i}:-no}\""
     opts=''
     OPT --chain=local
     OPT --payment=p2p
@@ -185,6 +192,7 @@ CONFIGURE() {
     OPT --update
     [ X"${recorderd_public}" = X"yes" ] && OPT --recorderd-public
     [ X"${internal_hash}" = X"yes" ] && OPT --internal-hash
+    [ X"${profile_enable}" = X"yes" ] && OPT --profile
     [ X"${console}" = X"yes" ] && OPT --console
     while [ "${more}" -gt 0 ]
     do
