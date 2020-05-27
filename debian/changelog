@@ -1,3 +1,10 @@
+bitmarkd (0.13.2-1ubuntu1) bionic; urgency=medium
+
+  * comment out pending tx rebroadcast code
+  * add config option to enable profiling on http://localhost:2132
+
+ -- Christopher Hall <hsw@bitmark.com>  Wed, 27 May 2020 06:53:51 +0000
+
 bitmarkd (0.13.1-1ubuntu1) bionic; urgency=medium
 
   bug fix for 0.13.0:
