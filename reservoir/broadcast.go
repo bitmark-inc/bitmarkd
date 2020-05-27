@@ -41,24 +41,27 @@ loop:
 	log.Info("stopped")
 }
 
-// process all pending and verified transactions
+// process transactions for rebroadcasting
 func (r *rebroadcaster) process() {
 	log := r.log
 	globalData.RLock()
 
 	log.Info("Start rebroadcasting local transactions…")
 
-	// pending
-
-	for _, item := range globalData.pendingTransactions {
-		broadcastTransaction(item.tx)
-	}
-	for _, item := range globalData.pendingFreeIssues {
-		broadcastFreeIssue(item)
-	}
-	for _, item := range globalData.pendingPaidIssues {
-		broadcastPaidIssue(item)
-	}
+	//+ *** start: just comment out for further testing ***
+	//
+	// // pending
+	//
+	// for _, item := range globalData.pendingTransactions {
+	// 	broadcastTransaction(item.tx)
+	// }
+	// for _, item := range globalData.pendingFreeIssues {
+	// 	broadcastFreeIssue(item)
+	// }
+	// for _, item := range globalData.pendingPaidIssues {
+	// 	broadcastPaidIssue(item)
+	// }
+	//- *** end ***
 
 	// verified
 
