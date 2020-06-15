@@ -31,18 +31,19 @@ datadir = "."
 walletdb = "wallet.dat"
 
 agent {
+  btc {agent {
   btc {
     type = "daemon"
     node = "localhost:18443"
-    user = "btcuser1"
-    pass = "beis7uvei9ALei4ofeu6ahFaeQu0IephTheebuchuuXio5ia"
+    user = "asgymsscumjvwluanhpmzhhc"
+    pass = "cuh-OAHtwo6-4ZsXvm8syxthCmV8oyHY07T1oHm18-c="
   }
 
   ltc {
     type = "daemon"
     node = "localhost:19443"
-    user = "litecoinuser"
-    pass = "gdbhrkztqxgnfsggqzpzsxrmkgzvksfjwgngwgjsgqjknrnqspxgrvrmxdwxbbmt"
+    user = "xehjpioqyawynunxknoawpun"
+    pass = "OGjFWI5zkuVTQ4fdiCfbPvRO8hJN2gV_qv0syEDr-6g="
   }
 }
 
