@@ -43,7 +43,7 @@ const (
 //   represents the 256 bit value: 007f ffff ffff ffff c000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000
 type Difficulty struct {
 	m          *sync.RWMutex // pointer since MarshallJSON is pass by value
-	big        big.Int       // master value 256 bit integer expanded from bits
+	big        big.Int       // difficulty value: 256 bit integer expanded from bits
 	reciprocal float64       // cache: floating point reciprocal difficulty
 	bits       uint64        // cache: compat difficulty (encoded value)
 }

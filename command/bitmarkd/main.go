@@ -80,19 +80,19 @@ func main() {
 
 	// read options and parse the configuration file
 	configurationFile := options["config-file"][0]
-	masterConfiguration, err := getConfiguration(configurationFile)
+	theConfiguration, err := getConfiguration(configurationFile)
 	if nil != err {
 		exitwithstatus.Message("%s: failed to read configuration from: %q  error: %s", program, configurationFile, err)
 	}
 
 	// these commands require the configuration and
 	// perform enquiries on the configuration
-	if len(arguments) > 0 && processConfigCommand(arguments, masterConfiguration) {
+	if len(arguments) > 0 && processConfigCommand(arguments, theConfiguration) {
 		return
 	}
 
 	// start logging
-	if err = logger.Initialise(masterConfiguration.Logging); nil != err {
+	if err = logger.Initialise(theConfiguration.Logging); nil != err {
 		exitwithstatus.Message("%s: logger setup failed with error: %s", program, err)
 	}
 	defer logger.Finalise()
@@ -102,7 +102,7 @@ func main() {
 	defer log.Info("finished")
 	log.Info("starting…")
 	log.Infof("version: %s", version)
-	log.Debugf("masterConfiguration: %v", masterConfiguration)
+	log.Debugf("theConfiguration: %v", theConfiguration)
 
 	// ------------------
 	// start of real main
@@ -110,21 +110,21 @@ func main() {
 
 	// optional PID file
 	// use if not running under a supervisor program like daemon(8)
-	if "" != masterConfiguration.PidFile {
-		lockFile, err := os.OpenFile(masterConfiguration.PidFile, os.O_WRONLY|os.O_EXCL|os.O_CREATE, os.ModeExclusive|0600)
+	if "" != theConfiguration.PidFile {
+		lockFile, err := os.OpenFile(theConfiguration.PidFile, os.O_WRONLY|os.O_EXCL|os.O_CREATE, os.ModeExclusive|0600)
 		if err != nil {
 			if os.IsExist(err) {
 				exitwithstatus.Message("%s: another instance is already running", program)
 			}
-			exitwithstatus.Message("%s: PID file: %q creation failed, error: %s", program, masterConfiguration.PidFile, err)
+			exitwithstatus.Message("%s: PID file: %q creation failed, error: %s", program, theConfiguration.PidFile, err)
 		}
 		fmt.Fprintf(lockFile, "%d\n", os.Getpid())
 		lockFile.Close()
-		defer os.Remove(masterConfiguration.PidFile)
+		defer os.Remove(theConfiguration.PidFile)
 	}
 
 	// set the initial system mode - before any background tasks are started
-	err = mode.Initialise(masterConfiguration.Chain)
+	err = mode.Initialise(theConfiguration.Chain)
 	if nil != err {
 		log.Criticalf("mode initialise error: %s", err)
 		exitwithstatus.Message("mode initialise error: %s", err)
@@ -134,27 +134,27 @@ func main() {
 	// start a profiling http server
 	// this uses the default builtin HTTP handler
 	// and is not associated with the normal ClientRPC HTTPS server
-	if "" != masterConfiguration.ProfileHTTP {
+	if "" != theConfiguration.ProfileHTTP {
 		go func() {
-			log.Warnf("profile listener on: %s", masterConfiguration.ProfileHTTP)
-			err = http.ListenAndServe(masterConfiguration.ProfileHTTP, nil)
+			log.Warnf("profile listener on: %s", theConfiguration.ProfileHTTP)
+			err = http.ListenAndServe(theConfiguration.ProfileHTTP, nil)
 			exitwithstatus.Message("profile error: %s", err)
 		}()
 	}
 
 	// general info
 	log.Infof("test mode: %v", mode.IsTesting())
-	log.Infof("database: %q", masterConfiguration.Database)
+	log.Infof("database: %q", theConfiguration.Database)
 
 	// connection info
-	log.Debugf("%s = %#v", "ClientRPC", masterConfiguration.ClientRPC)
-	log.Debugf("%s = %#v", "Peering", masterConfiguration.Peering)
-	log.Debugf("%s = %#v", "Publishing", masterConfiguration.Publishing)
-	log.Debugf("%s = %#v", "Proofing", masterConfiguration.Proofing)
+	log.Debugf("%s = %#v", "ClientRPC", theConfiguration.ClientRPC)
+	log.Debugf("%s = %#v", "Peering", theConfiguration.Peering)
+	log.Debugf("%s = %#v", "Publishing", theConfiguration.Publishing)
+	log.Debugf("%s = %#v", "Proofing", theConfiguration.Proofing)
 
 	// start the data storage
 	log.Info("initialise storage")
-	err = storage.Initialise(masterConfiguration.Database.Name, storage.ReadWrite)
+	err = storage.Initialise(theConfiguration.Database.Name, storage.ReadWrite)
 	if nil != err {
 		log.Criticalf("storage initialise error: %s", err)
 		exitwithstatus.Message("storage initialise error: %s", err)
@@ -188,7 +188,7 @@ func main() {
 
 	// start the reservoir (verified transaction data cache)
 	log.Info("initialise reservoir")
-	err = reservoir.Initialise(masterConfiguration.CacheDirectory, handles)
+	err = reservoir.Initialise(theConfiguration.CacheDirectory, handles)
 	if nil != err {
 		log.Criticalf("reservoir initialise error: %s", err)
 		exitwithstatus.Message("reservoir initialise error: %s", err)
@@ -218,7 +218,7 @@ func main() {
 	defer block.Finalise()
 
 	// these commands are allowed to access the internal database
-	if len(arguments) > 0 && processDataCommand(log, arguments, masterConfiguration) {
+	if len(arguments) > 0 && processDataCommand(log, arguments, theConfiguration) {
 		return
 	}
 
@@ -244,7 +244,7 @@ func main() {
 	// network announcements need to be before peer and rpc initialisation
 	log.Info("initialise announce")
 	nodesDomain := "" // initially none
-	switch masterConfiguration.Nodes {
+	switch theConfiguration.Nodes {
 	case "":
 		log.Critical("nodes cannot be blank choose from: none, chain or sub.domain.tld")
 		exitwithstatus.Message("nodes cannot be blank choose from: none, chain or sub.domain.tld")
@@ -265,9 +265,9 @@ func main() {
 	default:
 		// domain names are complex to validate so just rely on
 		// trying to fetch the TXT records for validation
-		nodesDomain = masterConfiguration.Nodes // just assume it is a domain name
+		nodesDomain = theConfiguration.Nodes // just assume it is a domain name
 	}
-	err = announce.Initialise(nodesDomain, masterConfiguration.CacheDirectory, net.LookupTXT)
+	err = announce.Initialise(nodesDomain, theConfiguration.CacheDirectory, net.LookupTXT)
 	if nil != err {
 		log.Criticalf("announce initialise error: %s", err)
 		exitwithstatus.Message("announce initialise error: %s", err)
@@ -275,7 +275,7 @@ func main() {
 	defer announce.Finalise()
 
 	// start payment services
-	err = payment.Initialise(&masterConfiguration.Payment)
+	err = payment.Initialise(&theConfiguration.Payment)
 	if nil != err {
 		log.Criticalf("payment initialise  error: %s", err)
 		exitwithstatus.Message("payment initialise error: %s", err)
@@ -290,7 +290,7 @@ func main() {
 	}
 
 	// start up the peering background processes
-	err = peer.Initialise(&masterConfiguration.Peering, version, masterConfiguration.Fastsync)
+	err = peer.Initialise(&theConfiguration.Peering, version, theConfiguration.Fastsync)
 	if nil != err {
 		log.Criticalf("peer initialise error: %s", err)
 		exitwithstatus.Message("peer initialise error: %s", err)
@@ -298,7 +298,7 @@ func main() {
 	defer peer.Finalise()
 
 	// start up the publishing background processes
-	err = publish.Initialise(&masterConfiguration.Publishing, version)
+	err = publish.Initialise(&theConfiguration.Publishing, version)
 	if nil != err {
 		log.Criticalf("publish initialise error: %s", err)
 		exitwithstatus.Message("publish initialise error: %s", err)
@@ -306,7 +306,7 @@ func main() {
 	defer publish.Finalise()
 
 	// start up the rpc background processes
-	err = rpc.Initialise(&masterConfiguration.ClientRPC, &masterConfiguration.HttpsRPC, version, announce.Get())
+	err = rpc.Initialise(&theConfiguration.ClientRPC, &theConfiguration.HttpsRPC, version, announce.Get())
 	if nil != err {
 		log.Criticalf("rpc initialise error: %s", err)
 		exitwithstatus.Message("peer initialise error: %s", err)
@@ -314,7 +314,7 @@ func main() {
 	defer rpc.Finalise()
 
 	// start proof background processes
-	err = proof.Initialise(&masterConfiguration.Proofing)
+	err = proof.Initialise(&theConfiguration.Proofing)
 	if nil != err {
 		log.Criticalf("proof initialise error: %s", err)
 		exitwithstatus.Message("proof initialise error: %s", err)

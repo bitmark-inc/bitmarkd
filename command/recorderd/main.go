@@ -77,13 +77,13 @@ func main() {
 		exitwithstatus.Message("%s: failed to read configuration from: %q  error: %s", program, configurationFile, err)
 	}
 
-	masterConfiguration, err := reader.GetConfig()
+	theConfiguration, err := reader.GetConfig()
 	if nil != err {
 		exitwithstatus.Message("%s: configuration is not found", program)
 	}
 
 	// start logging
-	if err = logger.Initialise(masterConfiguration.Logging); nil != err {
+	if err = logger.Initialise(theConfiguration.Logging); nil != err {
 		exitwithstatus.Message("%s: logger setup failed with error: %s", program, err)
 	}
 	defer logger.Finalise()
@@ -116,7 +116,7 @@ func main() {
 	defer log.Info("shutting down…")
 	log.Info("starting…")
 	log.Infof("version: %s", version)
-	log.Debugf("masterConfiguration: %v", masterConfiguration)
+	log.Debugf("theConfiguration: %v", theConfiguration)
 
 	// ------------------
 	// start of real main
@@ -124,24 +124,24 @@ func main() {
 
 	// optional PID file
 	// use if not running under a supervisor program like daemon(8)
-	if "" != masterConfiguration.PidFile {
-		lockFile, err := os.OpenFile(masterConfiguration.PidFile, os.O_WRONLY|os.O_EXCL|os.O_CREATE, os.ModeExclusive|0600)
+	if "" != theConfiguration.PidFile {
+		lockFile, err := os.OpenFile(theConfiguration.PidFile, os.O_WRONLY|os.O_EXCL|os.O_CREATE, os.ModeExclusive|0600)
 		if err != nil {
 			if os.IsExist(err) {
 				exitwithstatus.Message("%s: another instance is already running", program)
 			}
-			exitwithstatus.Message("%s: PID file: %q creation failed, error: %s", program, masterConfiguration.PidFile, err)
+			exitwithstatus.Message("%s: PID file: %q creation failed, error: %s", program, theConfiguration.PidFile, err)
 		}
 		fmt.Fprintf(lockFile, "%d\n", os.Getpid())
 		lockFile.Close()
-		defer os.Remove(masterConfiguration.PidFile)
+		defer os.Remove(theConfiguration.PidFile)
 	}
 
 	// // if requested start profiling
-	// if "" != masterConfiguration.ProfileFile {
-	// 	f, err := os.Create(masterConfiguration.ProfileFile)
+	// if "" != theConfiguration.ProfileFile {
+	// 	f, err := os.Create(theConfiguration.ProfileFile)
 	// 	if nil != err {
-	// 		log.Criticalf("cannot open profile output file: '%s'  error: %s", masterConfiguration.ProfileFile, err)
+	// 		log.Criticalf("cannot open profile output file: '%s'  error: %s", theConfiguration.ProfileFile, err)
 	// 		exitwithstatus.Exit(1)
 	// 	}
 	// 	defer f.Close()
@@ -150,22 +150,22 @@ func main() {
 	// }
 
 	// set the initial system mode - before any background tasks are started
-	mode.Initialise(masterConfiguration.Chain)
+	mode.Initialise(theConfiguration.Chain)
 	defer mode.Finalise()
 
 	// ensure keys are set
-	if "" == masterConfiguration.Peering.PublicKey || "" == masterConfiguration.Peering.PrivateKey {
+	if "" == theConfiguration.Peering.PublicKey || "" == theConfiguration.Peering.PrivateKey {
 		exitwithstatus.Message("%s: both peering Public and Private keys must be specified", program)
 	}
-	publicKey, err := zmqutil.ReadPublicKey(masterConfiguration.Peering.PublicKey)
+	publicKey, err := zmqutil.ReadPublicKey(theConfiguration.Peering.PublicKey)
 	if nil != err {
-		log.Criticalf("read error on: %s  error: %s", masterConfiguration.Peering.PublicKey, err)
-		exitwithstatus.Message("%s: failed reading Public Key: %q  error: %s", program, masterConfiguration.Peering.PublicKey, err)
+		log.Criticalf("read error on: %s  error: %s", theConfiguration.Peering.PublicKey, err)
+		exitwithstatus.Message("%s: failed reading Public Key: %q  error: %s", program, theConfiguration.Peering.PublicKey, err)
 	}
-	privateKey, err := zmqutil.ReadPrivateKey(masterConfiguration.Peering.PrivateKey)
+	privateKey, err := zmqutil.ReadPrivateKey(theConfiguration.Peering.PrivateKey)
 	if nil != err {
-		log.Criticalf("read error on: %s  error: %s", masterConfiguration.Peering.PrivateKey, err)
-		exitwithstatus.Message("%s: failed reading Private Key: %q  error: %s", program, masterConfiguration.Peering.PrivateKey, err)
+		log.Criticalf("read error on: %s  error: %s", theConfiguration.Peering.PrivateKey, err)
+		exitwithstatus.Message("%s: failed reading Private Key: %q  error: %s", program, theConfiguration.Peering.PrivateKey, err)
 	}
 
 	// general info
@@ -176,7 +176,7 @@ func main() {
 	log.Tracef("private key: %x", privateKey)
 
 	// connection info
-	log.Debugf("%s = %#v", "Peering", masterConfiguration.Peering)
+	log.Debugf("%s = %#v", "Peering", theConfiguration.Peering)
 
 	// internal queues
 	ProofProxy()
@@ -212,7 +212,7 @@ func main() {
 	// start up bitmarkd clients these subscribe to bitmarkd
 	// blocks publisher to obtain blocks for mining
 connection_setup:
-	for i, remote := range masterConfiguration.Peering.Connect {
+	for i, remote := range theConfiguration.Peering.Connect {
 
 		serverPublicKey, err := zmqutil.ReadPublicKey(remote.PublicKey)
 		if nil != err {
