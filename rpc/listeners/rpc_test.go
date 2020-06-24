@@ -97,7 +97,7 @@ func TestRpcListenerServe(t *testing.T) {
 		InsecureSkipVerify: true,
 	}
 
-	c, err := tls.Dial("tcp", fmt.Sprintf(":%d", port), &tlsConfig)
+	c, err := tls.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", port), &tlsConfig)
 	if nil != err {
 		t.Error("dial with error: ", err)
 		t.FailNow()
