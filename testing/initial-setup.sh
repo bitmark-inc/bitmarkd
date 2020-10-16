@@ -17,8 +17,7 @@ dns_txt='1 2'
 
 ERROR() {
   printf 'error: '
-  # shellcheck disable=SC2059
-  printf -- "$@"
+  printf "$@"
   printf '\n'
   exit 1
 }
@@ -27,8 +26,7 @@ SEP() {
   printf '==================================================\n'
   [ -z "${1}" ] && return
   printf '== '
-  # shellcheck disable=SC2059
-  printf -- "$@"
+  printf "$@"
   printf '\n'
   printf '==================================================\n'
 }
@@ -75,7 +73,6 @@ if [ -f "${cfg}" ]
 then
   printf 'using configuration override: %s\n' "${cfg}"
   sleep 2
-  # shellcheck source=/dev/null
   . "${cfg}"
 fi
 
@@ -94,7 +91,6 @@ fi
 [ -z "${nodes_domain}" ] && ERROR 'missing nodes-domain argument'
 
 xdg_home="${XDG_CONFIG_HOME}"
-# shellcheck disable=SC2016
 [ -z "${xdg_home}" ] && ERROR 'export XDG_CONFIG_HOME="${HOME}/.config"  or similar'
 [ -d "${xdg_home}" ] || ERROR 'missing directory: "%s" please create first' "${xdg_home}"
 
@@ -117,30 +113,6 @@ CHECK_PROGRAM make-blockchain node-info
 
 # fail if something is missing
 [ X"${ok}" = X"no" ] && ERROR 'missing programs'
-
-# detect GNU getopt
-getopt=
-case "$(uname)" in
-  (FreeBSD|DragonFly)
-    getopt=/usr/local/bin/getopt
-    ;;
-  (NetBSD)
-    getopt=/usr/pkg/bin/getopt
-    ;;
-  (OpenBSD)
-    getopt=/usr/local/bin/gnugetopt
-    ;;
-  (Darwin)
-    getopt=/usr/local/opt/gnu-getopt/bin/getopt
-    ;;
-  (Linux)
-    getopt=/usr/bin/getopt
-    ;;
-  (*)
-    ERROR 'OS: %s is not supported' "$(uname)"
-    ;;
-esac
-[ -x "${getopt}" ] || ERROR 'getopt: "%s" is not executable or not installed' "${getopt}"
 
 # check coins setup
 for program in bitcoin litecoin recorderd

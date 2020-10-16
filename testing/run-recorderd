@@ -1,36 +1,34 @@
 #!/bin/sh
 # test recorderd
 
-ERROR()
-{
+ERROR() {
   printf 'error: '
-  # shellcheck disable=SC2059
-  printf -- "$@"
+  printf "${@}"
   printf '\n'
   exit 1
 }
 
-VERBOSE()
-{
-  # shellcheck disable=SC2059
-  [ X"${verbose}" = X"yes" ] && printf -- "$@"
+VERBOSE() {
+  [ X"${verbose}" = X"no" ] && return 0
+  printf "${@}"
+  printf '\n'
 }
 
-USAGE()
-{
-  if [ -n "$1" ]
+USAGE() {
+  if [ -n "${1}" ]
   then
     printf 'error: '
-    # shellcheck disable=SC2059
-    printf -- "$@"
+    printf "${@}"
     printf '\n'
   fi
-  echo usage: "$(basename "$0")" '[options] recorderd-arguments...'
-  echo '       --help             -h            this message'
-  echo '       --verbose          -v            more messages'
-  echo '       --config=FILE      -c FILE       set configuration file ['"${config}"']'
-  echo '       --generate         -g            generate all keys'
-  echo '       --debug                          debuging messages'
+  cat <<EOF
+usage: ${0##*/} [options] recorderd-arguments...
+       --help             -h            this message
+       --verbose          -v            more messages
+       --config=FILE      -c FILE       set configuration file [${config}]
+       --generate         -g            generate all keys
+       --debug            -D            show debug information
+EOF
   exit 1
 }
 
@@ -47,87 +45,72 @@ generate=no
 config="${xdg_home}/recorderd/recorderd.conf"
 generate_items='generate-identity'
 
-getopt=
-case "$(uname)" in
-  (FreeBSD|DragonFly)
-    getopt=/usr/local/bin/getopt
-    ;;
-  (NetBSD)
-    getopt=/usr/pkg/bin/getopt
-    ;;
-  (OpenBSD)
-    getopt=/usr/local/bin/gnugetopt
-    ;;
-  (Darwin)
-    getopt=/usr/local/opt/gnu-getopt/bin/getopt
-    ;;
-  (Linux)
-    getopt=/usr/bin/getopt
-    ;;
-  (*)
-    ERROR 'OS: %s is not supported' "$(uname)"
-    ;;
-esac
-[ -x "${getopt}" ] || ERROR 'getopt: "%s" is not executable or not installed' "${getopt}"
-
-args=$(${getopt} -o hvc:gD --long=help,verbose,config:,generate,debug -- "$@") || exit 1
-
-# replace the arguments with the parsed values
-eval set -- "${args}"
-
-while :
+# parse options
+while getopts :hvc:gD-: option
 do
-  case "$1" in
-    (-v|--verbose)
+  # convert long options
+  if [ X"${option}" = X"-" ]
+  then
+    option="${OPTARG%%=*}"
+    OPTARG="${OPTARG#${option}}"
+    OPTARG="${OPTARG#=}"
+  fi
+  case "${option}" in
+    (v|verbose)
       verbose=yes
       ;;
 
-    (-c|--config)
-      case "$2" in
+    (c|config)
+      case "${OPTARG}" in
         (%[1-9]|%[1-9][0-9])
-          n="${2#%}"
+          n="${OPTARG#%}"
           config="${xdg_home}/recorderd${n}/recorderd.conf"
           ;;
         (%*)
-          ERROR 'unsupported config shortcut: %s' "$2"
+          ERROR 'unsupported config shortcut: %s' "${OPTARG}"
           ;;
         (*)
-          config="$2"
+          config="${OPTARG}"
           ;;
       esac
-      shift
       ;;
 
-    (-g|--generate)
+    (g|generate)
       generate=yes
       ;;
 
-    (-D|--debug)
-      debug=yes
-      ;;
-
     (--)
-      shift
       break
       ;;
 
-    (-h|--help)
+    (D|debug)
+      debug=yes
+      ;;
+
+    (h|help)
       USAGE
       ;;
 
+    ('?')
+      USAGE 'invalid option: -%s' "${OPTARG}"
+      ;;
+
     (*)
-      USAGE 'invalid option: %s' "$1"
+      USAGE 'invalid option: --%s' "${option}"
       ;;
   esac
-  shift
 done
 
+shift $((OPTIND - 1))
+
 # verify arguments
+[ ${#} -ne 0 ] && USAGE 'extraneous arguments: %s' "${*}"
+
 [ -f "${config}" ] || USAGE 'configuration file: "%s" does not exist' "${config}"
 config_dir=$(dirname "${config}")
 VERBOSE 'config dir: "%s"\n' "${config_dir}"
 
-# enable debuging
+# enable debugging
 [ X"${debug}" = X"yes" ] && set -x
 
 # determine if a recorderd is running
@@ -164,7 +147,6 @@ run_again()
   program="$1"
   while :
   do
-    # shellcheck disable=SC2034
     read -r -p "Run ${program} again? " yorn junk
     case "${yorn}" in
       ([yY]|[yY][eE][sS])

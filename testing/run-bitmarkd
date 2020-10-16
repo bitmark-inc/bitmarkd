@@ -1,41 +1,39 @@
 #!/bin/sh
 # test bitmarkd
 
-ERROR()
-{
+ERROR() {
   printf 'error: '
-  # shellcheck disable=SC2059
-  printf -- "$@"
+  printf "${@}"
   printf '\n'
   exit 1
 }
 
-VERBOSE()
-{
-  # shellcheck disable=SC2059
-  [ X"${verbose}" = X"yes" ] && printf -- "$@"
+VERBOSE() {
+  [ X"${verbose}" = X"no" ] && return 0
+  printf "${@}"
+  printf '\n'
 }
 
-USAGE()
-{
-  if [ -n "$1" ]
+USAGE() {
+  if [ -n "${1}" ]
   then
     printf 'error: '
-    # shellcheck disable=SC2059
-    printf -- "$@"
+    printf "${@}"
     printf '\n'
   fi
-  echo usage: "$(basename "$0")" '[options] bitmarkd-arguments...'
-  echo '       --help             -h            this message'
-  echo '       --verbose          -v            more messages'
-  echo '       --quiet            -q            less messages'
-  echo '       --config=FILE      -c FILE       set configuration file ['"${config}"']'
-  echo '                                        or %1..%99 or %T1..%T99 or %L1..%L99'
-  echo '       --generate         -g            generate all keys/certificates'
-  echo '       --reset            -r            reset the database'
-  echo '       --from=DIR         -f DIR        reset the database  from this sample'
-  echo '       --sleep=SECONDS    -s SECONDS    start delay'
-  echo '       --debug                          debuging messages'
+  cat <<EOF
+usage: ${0##*/} [options] bitmarkd-arguments...
+       --help             -h            this message
+       --verbose          -v            more messages
+       --quiet            -q            less messages
+       --config=FILE      -c FILE       set configuration file [${config}]
+                                        or %1..%99 or %T1..%T99 or %L1..%L99
+       --generate         -g            generate all keys/certificates
+       --reset            -r            reset the database
+       --from=DIR         -f DIR        reset the database  from this sample
+       --sleep=SECONDS    -s SECONDS    start delay
+       --debug            -D            show debug information
+EOF
   exit 1
 }
 
@@ -46,8 +44,8 @@ xdg_home="${XDG_CONFIG_HOME}"
 [ -d "${xdg_home}" ] || ERROR 'missing directory: "%s" please create first' "${xdg_home}"
 
 verbose=no
-quiet=no
 debug=no
+quiet=no
 reset=no
 from=
 generate=no
@@ -55,113 +53,95 @@ config="${xdg_home}/bitmarkd/bitmarkd.conf"
 generate_items='gen-peer-identity gen-rpc-cert gen-proof-identity'
 sleep=
 
-getopt=
-case "$(uname)" in
-  (FreeBSD|DragonFly)
-    getopt=/usr/local/bin/getopt
-    ;;
-  (NetBSD)
-    getopt=/usr/pkg/bin/getopt
-    ;;
-  (OpenBSD)
-    getopt=/usr/local/bin/gnugetopt
-    ;;
-  (Darwin)
-    getopt=/usr/local/opt/gnu-getopt/bin/getopt
-    ;;
-  (Linux)
-    getopt=/usr/bin/getopt
-    ;;
-  (*)
-    ERROR 'OS: %s is not supported' "$(uname)"
-    ;;
-esac
-[ -x "${getopt}" ] || ERROR 'getopt: "%s" is not executable or not installed' "${getopt}"
-
-args=$(${getopt} -o hvqc:grf:s:D --long=help,verbose,quiet,config:,generate,reset,from:,sleep:,debug -- "$@") || exit 1
-
-# replace the arguments with the parsed values
-eval set -- "${args}"
-
-while :
+# parse options
+while getopts :hvqc:grf:s:D-: option
 do
-  case "$1" in
-    (-v|--verbose)
+  # convert long options
+  if [ X"${option}" = X"-" ]
+  then
+    option="${OPTARG%%=*}"
+    OPTARG="${OPTARG#${option}}"
+    OPTARG="${OPTARG#=}"
+  fi
+  case "${option}" in
+    (v|verbose)
       verbose=yes
-      quiet=no
       ;;
 
-    (-q|--quiet)
+    (q|quiet)
       quiet=yes
       verbose=no
       ;;
 
-    (-c|--config)
-      case "$2" in
+    (c|config)
+      case "${OPTARG}" in
         (%[1-9]|%[1-9][0-9]|%T[1-9]|%T[1-9][0-9]|%L[1-9]|%L[1-9][0-9])
-          n="${2#%}"
+          n="${OPTARG#%}"
           config="${xdg_home}/bitmarkd${n}/bitmarkd.conf"
           ;;
         (%*)
-          ERROR 'unsupported config shortcut: %s' "$2"
+          ERROR 'unsupported config shortcut: %s' "${OPTARG}"
           ;;
         (*)
-          config="$2"
+          config="${OPTARG}"
           ;;
       esac
-      shift
       ;;
 
-    (-g|--generate)
+    (g|generate)
       generate=yes
       ;;
 
-    (-r|--reset)
+    (r|reset)
       reset=yes
       ;;
 
-    (-f|--from)
-      from="$2"
-      shift
+    (f|from)
+      from="${OPTARG}"
       [ -d "${from}" ] || USAGE 'not a levelDB: --from="%s"' "${from}"
       [ -f "${from}/CURRENT" ] || USAGE 'not a levelDB: --from="%S"' "${from}"
       ;;
 
-    (-s|--sleep)
-      sleep="$2"
+    (s|sleep)
+      sleep="${OPTARG}"
       [ -z "${sleep}" ] && USAGE 'sleep cannot be blank'
       [ -z "$(printf '%s' "${sleep}" | tr -d '[:digit:]')" ] || USAGE 'sleep value: "%s" is not a number' "${sleep}"
-      shift
-      ;;
-
-    (-D|--debug)
-      debug=yes
       ;;
 
     (--)
-      shift
       break
       ;;
 
-    (-h|--help)
+    (D|debug)
+      debug=yes
+      ;;
+
+    (h|help)
       USAGE
       ;;
 
+    ('?')
+      USAGE 'invalid option: -%s' "${OPTARG}"
+      ;;
+
     (*)
-      USAGE 'invalid option: %s' "$1"
+      USAGE 'invalid option: --%s' "${option}"
       ;;
   esac
-  shift
 done
 
+shift $((OPTIND - 1))
+
 # verify arguments
+[ ${#} -ne 0 ] && USAGE 'extraneous arguments: %s' "${*}"
+
 [ X"${reset}" = X"no" ] && [ -n "${from}" ] && USAGE 'conflicting --from requires --reset'
 
 [ -f "${config}" ] || USAGE 'configuration file: "%s" does not exist' "${config}"
 config_dir=$(dirname "${config}")
-VERBOSE 'config dir: "%s"\n' "${config_dir}"
+VERBOSE 'config dir: "%s"' "${config_dir}"
 
-# enable debuging
+# enable debugging
 [ X"${debug}" = X"yes" ] && set -x
 
 # determine if a bitmarkd is running
@@ -205,7 +185,6 @@ run_again()
   program="$1"
   while :
   do
-    # shellcheck disable=SC2034
     read -r -p "Run ${program} again? " yorn junk
     case "${yorn}" in
       ([yY]|[yY][eE][sS])

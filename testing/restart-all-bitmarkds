@@ -1,39 +1,37 @@
 #!/bin/sh
 # stop all bitmarkd run by bm-tester and then restart them all
 
-ERROR()
-{
+ERROR() {
   printf 'error: '
-  # shellcheck disable=SC2059
-  printf -- "$@"
+  printf "${@}"
   printf '\n'
   exit 1
 }
 
-VERBOSE()
-{
-  # shellcheck disable=SC2059
-  [ X"${verbose}" = X"yes" ] && printf -- "$@"
+VERBOSE() {
+  [ X"${verbose}" = X"no" ] && return 0
+  printf "${@}"
+  printf '\n'
 }
 
-USAGE()
-{
-  if [ -n "$1" ]
+USAGE() {
+  if [ -n "${1}" ]
   then
     printf 'error: '
-    # shellcheck disable=SC2059
-    printf -- "$@"
+    printf "${@}"
     printf '\n'
   fi
-  echo usage: "$(basename "$0")" '<options>'
-  echo '       --help           -h         this message'
-  echo '       --verbose        -v         more messages'
-  echo '       --copy-from=N    -f N       copy database from node N, backup first'
-  echo '       --peer-delete    -p         delete peers.json'
-  echo '       --log-delete     -d         delete logs/*'
-  echo '       --reset-data     -r         remove DB, but backup first'
-  echo '       --sequence=DELAY -s DELAY   delay seconds befor starting each bitmarkd'
-  echo '       --debug          -D         show debug information'
+  cat <<EOF
+usage: ${0##*/} <options>
+       --help           -h         this message
+       --verbose        -v         more messages
+       --copy-from=N    -f N       copy database from node N, backup first
+       --peer-delete    -p         delete peers.json
+       --log-delete     -d         delete logs/*
+       --reset-data     -r         remove DB, but backup first
+       --sequence=DELAY -s DELAY   delay seconds befor starting each bitmarkd
+       --debug          -D         show debug information
+EOF
   exit 1
 }
 
@@ -49,87 +47,71 @@ reset=no
 sequence_delay=
 config_root="${HOME}/.config/bitmarkd"
 
-getopt=
-case "$(uname)" in
-  (FreeBSD|DragonFly)
-    getopt=/usr/local/bin/getopt
-    ;;
-  (NetBSD)
-    getopt=/usr/pkg/bin/getopt
-    ;;
-  (OpenBSD)
-    getopt=/usr/local/bin/gnugetopt
-    ;;
-  (Darwin)
-    getopt=/usr/local/opt/gnu-getopt/bin/getopt
-    ;;
-  (Linux)
-    getopt=/usr/bin/getopt
-    ;;
-  (*)
-    ERROR 'OS: %s is not supported' "$(uname)"
-    ;;
-esac
-[ -x "${getopt}" ] || ERROR 'getopt: "%s" is not executable or not installed' "${getopt}"
-
-args=$(${getopt} -o hvf:plrs:D --long=help,verbose,copy-from:,peer-delete,log-delete,reset-data,sequence:,debug -- "$@") ||exit 1
-
-# replace the arguments with the parsed values
-eval set -- "${args}"
-
-while :
+# parse options
+while getopts :hvf:plrs:D-: option
 do
-  case "${1}" in
-    (-v|--verbose)
+  # convert long options
+  if [ X"${option}" = X"-" ]
+  then
+    option="${OPTARG%%=*}"
+    OPTARG="${OPTARG#${option}}"
+    OPTARG="${OPTARG#=}"
+  fi
+  case "${option}" in
+    (v|verbose)
       verbose=yes
       ;;
 
     (-f|--copy-from)
-      from="${2}"
-      shift
+      from="${OPTARG}"
       ;;
 
-    (-p|--peer-delete)
+    (p|peer-delete)
       peer_delete=yes
       ;;
 
-    (-l|--log-delete)
+    (l|log-delete)
       log_delete=yes
       ;;
 
-    (-r|--reset-data)
+    (r|reset-data)
       reset=yes
       ;;
 
-    (-s|--sequence)
-      sequence_delay="${2}"
-      shift
-      ;;
-    (-D|--debug)
-      debug=yes
+    (s|sequence)
+      sequence_delay="${OPTARG}"
       ;;
 
     (--)
-      shift
       break
       ;;
 
-    (-h|--help)
+    (D|debug)
+      debug=yes
+      ;;
+
+    (h|help)
       USAGE
       ;;
 
+    ('?')
+      USAGE 'invalid option: -%s' "${OPTARG}"
+      ;;
+
     (*)
-      USAGE 'invalid argument: "%s"' "$1"
+      USAGE 'invalid option: --%s' "${option}"
       ;;
   esac
-  shift
 done
 
-#[ $# -eq 0 ] && USAGE 'missing arguments'
-[ $# -ne 0 ] && USAGE 'extraneous arguments'
+shift $((OPTIND - 1))
+
+# verify arguments
+[ ${#} -ne 0 ] && USAGE 'extraneous arguments: %s' "${*}"
 
 [ -n "${from}" ] && [ -n "${from#[1-9]}" ] && ERROR 'invalid --copy=from="%s"' "${from}"
 
+# enable debugging
 [ X"${debug}" = X"yes" ] && set -x
 
 # stop all existing bitmarkds
@@ -173,7 +155,6 @@ then
 fi
 
 tmux list-panes -a -F '#{pane_id} #{pane_title}' | (
-  # shellcheck disable=SC2034
   while read -r id command config other
   do
     case "${command}" in

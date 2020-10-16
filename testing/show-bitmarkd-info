@@ -1,31 +1,27 @@
 #!/bin/sh
 # simple display of network main nodes
 
-ERROR()
-{
+ERROR() {
   printf 'error: '
-  # shellcheck disable=SC2059
-  printf -- "$@"
+  printf "${@}"
   printf '\n'
   exit 1
 }
 
-VERBOSE()
-{
-  # shellcheck disable=SC2059
-  [ X"${verbose}" = X"yes" ] && printf -- "$@"
+VERBOSE() {
+  [ X"${verbose}" = X"no" ] && return 0
+  printf "${@}"
+  printf '\n'
 }
 
-USAGE()
-{
-  if [ -n "$1" ]
+USAGE() {
+  if [ -n "${1}" ]
   then
     printf 'error: '
-    # shellcheck disable=SC2059
-    printf -- "$@"
+    printf "${@}"
     printf '\n'
   fi
-  echo usage: "$(basename "$0")" '[options] [start [finish]]'
+  echo usage: "${0##*/}" '[options] [start [finish]]'
   echo '       --help             -h            this message'
   echo '       --verbose          -v            more messages'
   echo '       --compact          -c            squash output'
@@ -36,51 +32,31 @@ USAGE()
 
 # main program
 verbose=no
-compact=no
 debug=no
+compact=no
 network=testing
 
-getopt=
-case "$(uname)" in
-  (FreeBSD|DragonFly)
-    getopt=/usr/local/bin/getopt
-    ;;
-  (NetBSD)
-    getopt=/usr/pkg/bin/getopt
-    ;;
-  (OpenBSD)
-    getopt=/usr/local/bin/gnugetopt
-    ;;
-  (Darwin)
-    getopt=/usr/local/opt/gnu-getopt/bin/getopt
-    ;;
-  (Linux)
-    getopt=/usr/bin/getopt
-    ;;
-  (*)
-    ERROR 'OS: %s is not supported' "$(uname)"
-    ;;
-esac
-[ -x "${getopt}" ] || ERROR 'getopt: "%s" is not executable or not installed' "${getopt}"
-
-args=$(${getopt} -o hvcn:D --long=help,verbose,compact,network:,debug -- "$@") || exit 1
-
-# replace the arguments with the parsed values
-eval set -- "${args}"
-
-while :
+# parse options
+while getopts :hvcn:D-: option
 do
-  case "$1" in
-    (-v|--verbose)
+  # convert long options
+  if [ X"${option}" = X"-" ]
+  then
+    option="${OPTARG%%=*}"
+    OPTARG="${OPTARG#${option}}"
+    OPTARG="${OPTARG#=}"
+  fi
+  case "${option}" in
+    (v|verbose)
       verbose=yes
       ;;
 
-    (-c|--compact)
+    (c|compact)
       compact=yes
       ;;
 
-    (-n|--network)
-      case "${2}" in
+    (n|network)
+      case "${OPTARG}" in
         (l|live|b|bitmark)
           network=bitmark
           ;;
@@ -88,38 +64,43 @@ do
           network=testing
           ;;
         (*)
-          USAGE 'invalid network: "%s"' "${2}"
+          USAGE 'invalid network: "%s"' "${OPTARG}"
           ;;
       esac
-      shift
-      ;;
-
-    (-D|--debug)
-      debug=yes
       ;;
 
     (--)
-      shift
       break
       ;;
 
-    (-h|--help)
+    (D|debug)
+      debug=yes
+      ;;
+
+    (h|help)
       USAGE
       ;;
 
+    ('?')
+      USAGE 'invalid option: -%s' "${OPTARG}"
+      ;;
+
     (*)
-      USAGE 'invalid option: %s' "$1"
+      USAGE 'invalid option: --%s' "${option}"
       ;;
   esac
-  shift
 done
 
-# verify arguments
-#[ $# -eq 0 ] && USAGE 'missing argument'
-[ $# -gt 2 ] && USAGE 'invalid extraneous arguments'
+shift $((OPTIND - 1))
 
-# enable debuging
+# verify arguments
+#[ ${#} -ne 0 ] && USAGE 'extraneous arguments: %s' "${*}"
+[ $# -gt 2 ] && USAGE 'invalid extraneous arguments: %s' "${*}"
+[ $# -lt 2 ] && USAGE 'insufficient arguments: %s' "${*}"
+
+# enable debugging
 [ X"${debug}" = X"yes" ] && set -x
+
 
 start="${1}"
 finish="${2}"
@@ -146,7 +127,6 @@ else
   compact_up='up: '
 fi
 
-# shellcheck disable=SC2016
 filter='
     def rj($f;$w): ("                    "+($f|tostring))[-$w:];
     def lj($f;$w): (($f|tostring)+"                    ")[:$w];
@@ -172,7 +152,7 @@ filter='
 # loop through all nodes
 for i in $(seq "${start}" "${finish}")
 do
-  if ! r=$(bitmark-cli --network="${network}" --connection="${i}" bitmarkd 2>&1)
+  if ! r="$(bitmark-cli --network="${network}" --connection="${i}" bitmarkd 2>&1)"
   then
     printf 'conn %2d: %s\n' "${i}" "${r}"
   else

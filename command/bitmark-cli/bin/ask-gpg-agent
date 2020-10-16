@@ -1,98 +1,115 @@
 #!/bin/sh
-# obtain aand cache a password from gpg-agent
+# obtain and cache a password from gpg-agent
 
-ERROR()
-{
-  printf 'error: '
-  printf "$@"
-  printf '\n'
+ERROR() {
+  printf 'error: ' >&2
+  printf "${@}" >&2
+  printf '\n' >&2
   exit 1
 }
 
-USAGE()
-{
-  if [ -n "$1" ]
+VERBOSE() {
+  [ X"${verbose}" = X"no" ] && return 0
+  printf "${@}"
+  printf '\n'
+}
+
+USAGE() {
+  if [ -n "${1}" ]
   then
     printf 'error: '
-    printf "$@"
+    printf "${@}"
     printf '\n'
   fi
-  echo usage: $(basename "$0") cache-id error prompt description
-  echo '       --help             -h            this message'
-  echo '       --verbose          -v            more messages'
-  echo '       --confirm=N        -c N          require N confirmations'
-  echo '       --clear            -C            clear previous passphrase'
-  echo '       --debug            -D            debuging messages'
+  cat <<EOF
+usage: ${0##*/} cache-id error prompt description
+       --help             -h            this message
+       --verbose          -v            more messages
+       --confirm=N        -c N          require N confirmations
+       --clear            -C            clear previous passphrase
+       --debug            -D            show debug information
+EOF
   exit 1
 }
 
-# main
+# main program
 verbose=no
 debug=no
 confirm=0
 clear=no
 
-getopt=/usr/local/bin/getopt
-[ -x "${getopt}" ] || getopt=getopt
-args=$(${getopt} -o hvc:CD --long=help,verbose,confirm:,clear,debug -- "$@") ||exit 1
+xxd="$(command -v xxd 2>/dev/null)"
+[ -x "${xxd}" ] || ERROR 'missing "xxd" try: sudo pkg install editors/vim-console'
 
-# replace the arguments with the parsed values
-eval set -- "${args}"
-
-while :
+# parse options
+while getopts :hvc:CD-: option
 do
-  case "$1" in
-    (-v|--verbose)
+  # convert long options
+  if [ X"${option}" = X"-" ]
+  then
+    option="${OPTARG%%=*}"
+    OPTARG="${OPTARG#${option}}"
+    OPTARG="${OPTARG#=}"
+  fi
+  case "${option}" in
+    (v|verbose)
       verbose=yes
       ;;
 
-    (-c|--confirm)
-      confirm="$2"
+    (c|confirm)
+      confirm="${OPTARG}"
+      [ -z "${confirm}" ] && USAGE 'confirm cannot be blank'
       [ -z "$(printf '%s' "${confirm}" | tr -d '0-9')" ] || USAGE 'confirm="%s" must be numeric' "${confirm}"
-      shift
       ;;
 
-    (-C|--clear)
+    (C|clear)
       clear=yes
       ;;
 
-    (-D|--debug)
-      debug=yes
-      ;;
-
     (--)
-      shift
       break
       ;;
 
-    (-h|--help)
+    (D|debug)
+      debug=yes
+      ;;
+
+    (h|help)
       USAGE
       ;;
 
+    ('?')
+      USAGE 'invalid option: -%s' "${OPTARG}"
+      ;;
+
     (*)
-      USAGE 'invalid option: %s' "$1"
+      USAGE 'invalid option: --%s' "${option}"
       ;;
   esac
-  shift
 done
 
-# validate arguments
-[ $# -ne 4 ] && USAGE 'incorrect number of arguments'
+shift $((OPTIND - 1))
 
-# enable debuging
+# verify arguments
+#[ ${#} -ne 0 ] && USAGE 'extraneous arguments: %s' "${*}"
+[ ${#} -ne 4 ] && USAGE 'incorrect number of arguments'
+
+# enable debugging
 [ X"${debug}" = X"yes" ] && set -x
 
 # process arguments
-cache_id="$1"; shift
-error=$(printf '%s' "$1" | sed 's/ /%20/g'); shift
-prompt=$(printf '%s' "$1" | sed 's/ /%20/g'); shift
-description=$(printf '%s' "$1" | sed 's/ /%20/g'); shift
+cache_id="${1}"
+error="$(printf '%s' "${2}" | sed 's/ /%20/g')"
+prompt="$(printf '%s' "${3}" | sed 's/ /%20/g')"
+description="$(printf '%s' "${4}" | sed 's/ /%20/g')"
 
 [ -z "${cache_id}" ] && USAGE 'cache-id cannot be blank'
 [ -z "${error}" ] && error=X
 [ -z "${prompt}" ] && prompt=X
 [ -z "${description}" ] && USAGE 'description cannot be blank'
 
+# if on ssh connection reset tty to avoid X11 access
+[ -n "${SSH_TTY}" ] && export GPG_TTY="${SSH_TTY}"
 
 [ X"${clear}" = X"yes" ] && printf 'CLEAR_PASSPHRASE --mode=normal %s' "${cache_id}" | gpg-connect-agent --decode --hex > /dev/null
 

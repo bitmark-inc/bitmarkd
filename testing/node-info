@@ -14,16 +14,15 @@ done
 ERROR()
 {
   printf 'error: '
-  # shellcheck disable=SC2059
   printf -- "$@"
   printf '\n'
   exit 1
 }
 
-VERBOSE()
-{
-  # shellcheck disable=SC2059
-  [ X"${verbose}" = X"yes" ] && printf -- "$@"
+VERBOSE() {
+  [ X"${verbose}" = X"no" ] && return 0
+  printf "${@}"
+  printf '\n'
 }
 
 USAGE()
@@ -31,90 +30,75 @@ USAGE()
   if [ -n "$1" ]
   then
     printf 'error: '
-    # shellcheck disable=SC2059
     printf -- "$@"
     printf '\n'
   fi
-  echo usage: "$(basename "$0")" '[options] [N...|all]'
-  echo '       --help             -h            this message'
-  echo '       --verbose          -v            more messages'
-  echo '       --repeat           -r            clear screen and display like top'
-  echo '       --debug            -D            debuging messages'
+  cat <<EOF
+usage: ${0##*/} [options]
+       --help             -h            this message
+       --verbose          -v            more messages
+       --repeat           -r            clear screen and display like top
+       --debug            -D            debuging messages
+EOF
   exit 1
 }
 
 
 # main program
 verbose=no
-repeat=no
 debug=no
+repeat=no
 
-getopt=
-case "$(uname)" in
-  (FreeBSD|DragonFly)
-    getopt=/usr/local/bin/getopt
-    ;;
-  (NetBSD)
-    getopt=/usr/pkg/bin/getopt
-    ;;
-  (OpenBSD)
-    getopt=/usr/local/bin/gnugetopt
-    ;;
-  (Darwin)
-    getopt=/usr/local/opt/gnu-getopt/bin/getopt
-    ;;
-  (Linux)
-    getopt=/usr/bin/getopt
-    ;;
-  (*)
-    ERROR 'OS: %s is not supported' "$(uname)"
-    ;;
-esac
-[ -x "${getopt}" ] || ERROR 'getopt: "%s" is not executable or not installed' "${getopt}"
-
-args=$(${getopt} -o hvrD --long=help,verbose,repeat,debug -- "$@") || exit 1
-
-# replace the arguments with the parsed values
-eval set -- "${args}"
-
-while :
+# parse options
+while getopts :hvrD-: option
 do
-  case "$1" in
-    (-v|--verbose)
+  # convert long options
+  if [ X"${option}" = X"-" ]
+  then
+    option="${OPTARG%%=*}"
+    OPTARG="${OPTARG#${option}}"
+    OPTARG="${OPTARG#=}"
+  fi
+  case "${option}" in
+    (v|verbose)
       verbose=yes
       ;;
 
-    (-r|--repeat)
+    (r|repeat)
       repeat=yes
       ;;
 
-    (-D|--debug)
-      debug=yes
-      ;;
-
     (--)
-      shift
       break
       ;;
 
-    (-h|--help)
+    (D|debug)
+      debug=yes
+      ;;
+
+    (h|help)
       USAGE
       ;;
 
+    ('?')
+      USAGE 'invalid option: -%s' "${OPTARG}"
+      ;;
+
     (*)
-      USAGE 'invalid option: %s' "$1"
+      USAGE 'invalid option: --%s' "${option}"
       ;;
   esac
-  shift
 done
 
-# verify arguments
-[ $# -ne 0 ] && USAGE 'invalid extraneous arguments'
+shift $((OPTIND - 1))
 
-# enable debuging
+# verify arguments
+[ ${#} -ne 0 ] && USAGE 'extraneous arguments: %s' "${*}"
+
+# enable debugging
 [ X"${debug}" = X"yes" ] && set -x
 
-VERBOSE 'servers: %s\n' "${servers}"
+VERBOSE 'servers: %s' "${servers}"
 
 ONCE() {
   keys='{'
@@ -125,7 +109,7 @@ ONCE() {
     printf '%+d' "${n}"
     host="${s%:*}"
     port="${s##*:}"
-    r=$(curl -sk "https://${host}:${port}/bitmarkd/details" "https://${host}:${port}/bitmarkd/connections")
+    r="$(curl -sk "https://${host}:${port}/bitmarkd/details" "https://${host}:${port}/bitmarkd/connections")"
     rc="$?"
 
     if [ -z "${r}" ] || [ "${rc}" -ne 0 ]
@@ -135,7 +119,7 @@ ONCE() {
       continue
     fi
 
-    r=$(printf '%s' "${r}" | jq --slurp '{node:.[0],conn:.[1].connectedTo}' 2> /dev/null)
+    r="$(printf '%s' "${r}" | jq --slurp '{node:.[0],conn:.[1].connectedTo}' 2> /dev/null)"
 
     eval info_${n}="'${r}'"
     keys="${keys}\"$(printf '%s' "${r}" | jq --raw-output .node.publicKey 2> /dev/null)\":${n},"
@@ -144,7 +128,6 @@ ONCE() {
   keys="${keys}\"\":9999}"
   printf '\n'
 
-  # shellcheck disable=SC2016
   filter='
     def rj($f;$w): ("          "+($f|tostring))[-$w:];
     def lj($f;$w): (($f|tostring)+"          ")[:$w];
@@ -170,8 +153,7 @@ ONCE() {
   do
     n=$((n + 1))
     eval "info=\"\${info_${n}}\""
-    # shellcheck disable=SC2154
-    r=$(printf '%s' "${info}" | jq --raw-output --argjson keys "${keys}" "${filter}" 2> /dev/null)
+    r="$(printf '%s' "${info}" | jq --raw-output --argjson keys "${keys}" "${filter}" 2> /dev/null)"
     [ -z "${r}" ] && r='OFFLINE'
     printf '[%2d]: %s\n' "${n}" "${r}"
 

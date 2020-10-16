@@ -4,8 +4,7 @@
 ERROR()
 {
   printf 'error: '
-  # shellcheck disable=SC2059
-  printf -- "$@"
+  printf "$@"
   printf '\n'
   exit 1
 }
@@ -14,8 +13,7 @@ VERBOSE()
 {
   if [ X"${verbose}" = X"yes" ]
   then
-    # shellcheck disable=SC2059
-    printf -- "$@"
+    printf "$@"
     printf '\n'
   fi
 }
@@ -23,8 +21,7 @@ VERBOSE()
 WARNING()
 {
   printf 'WARNING: '
-  # shellcheck disable=SC2059
-  printf -- "$@"
+  printf "$@"
   printf '\n'
 }
 
@@ -33,25 +30,26 @@ USAGE()
   if [ -n "$1" ]
   then
     printf 'error: '
-    # shellcheck disable=SC2059
-    printf -- "$@"
+    printf "$@"
     printf '\n'
   fi
-  echo usage: "$(basename "$0")" '[options] index-numbers...'
-  echo '       --help                -h            this message'
-  echo '       --verbose             -v            more messages'
-  echo '       --chain=chain         -c CHAIN      set the chain [bitmark|testing|local]: ['"${chain}"']'
-  echo '       --nodes=DOMAIN        -n DOMAIN     set the nodes [none|chain|nodes.domain.tld]: ['"${nodes}"']'
-  echo '       --connect=K:H:P       -C K:H:P      connect to specific bitmarkd public_key:host:port'
-  echo '       --payment=PRD         -p PRD        set payment mode [p2p|rest|noverify]: ['"${payment_mode}"']'
-  echo '       --recorderd-public    -r            allow external recorderd connections for local chain'
-  echo '       --internal-hash       -i            internal hash for local'
-  echo '       --profile             -P            enable 2132 HTTP profile port'
-  echo '       --ipv4-only           -4            turn off IPv6 preference'
-  echo '       --console             -k            log to console'
-  echo '       --more                -m            more logging output'
-  echo '       --update              -u            overwrite an existing configuration, does not change exiting keys'
-  echo '       --debug               -D            debuging messages'
+  cat <<EOF
+usage: ${##*/0} [options] index-numbers...
+       --help                -h            this message
+       --verbose             -v            more messages
+       --chain=chain         -c CHAIN      set the chain [bitmark|testing|local]: [${chain}]
+       --nodes=DOMAIN        -n DOMAIN     set the nodes [none|chain|nodes.domain.tld]: [${nodes}]
+       --connect=K:H:P       -C K:H:P      connect to specific bitmarkd public_key:host:port
+       --payment=PRD         -p PRD        set payment mode [p2p|rest|noverify]: [${payment_mode}]
+       --recorderd-public    -r            allow external recorderd connections for local chain
+       --internal-hash       -i            internal hash for local
+       --profile             -P            enable 2132 HTTP profile port
+       --ipv4-only           -4            turn off IPv6 preference
+       --console             -k            log to console
+       --more                -m            more logging output
+       --update              -u            overwrite an existing configuration, does not change exiting keys
+       --debug               -D            show debug information
+EOF
   exit 1
 }
 
@@ -63,6 +61,7 @@ xdg_home="${XDG_CONFIG_HOME}"
 [ -d "${xdg_home}" ] || ERROR 'missing directory: "%s" please create first' "${xdg_home}"
 
 verbose=no
+debug=no
 chain=local
 nodes=none
 bitmarkd_connect=
@@ -75,47 +74,26 @@ log_size=1048576
 log_count=100
 log_console=false
 log_default=error
-debug=no
 update=no
 
-# detect GNU getopt
-getopt=
-case "$(uname)" in
-  (FreeBSD|DragonFly)
-    getopt=/usr/local/bin/getopt
-    ;;
-  (NetBSD)
-    getopt=/usr/pkg/bin/getopt
-    ;;
-  (OpenBSD)
-    getopt=/usr/local/bin/gnugetopt
-    ;;
-  (Darwin)
-    getopt=/usr/local/opt/gnu-getopt/bin/getopt
-    ;;
-  (Linux)
-    getopt=/usr/bin/getopt
-    ;;
-  (*)
-    ERROR 'OS: %s is not supported' "$(uname)"
-    ;;
-esac
-[ -x "${getopt}" ] || ERROR 'getopt: "%s" is not executable or not installed' "${getopt}"
 
-args=$(${getopt} -o hvc:n:C:p:riP4kmuD --long=help,verbose,chain:,nodes:,connect:,payment:,recorderd-public,internal-hash,profile,ipv4_only,console,more,update,debug -- "$@") || exit 1
-
-# replace the arguments with the parsed values
-eval set -- "${args}"
-
-while :
+# parse options
+while getopts :hvc:n:C:p:riP4kmuD-: option
 do
-  case "${1}" in
-    (-v|--verbose)
+  # convert long options
+  if [ X"${option}" = X"-" ]
+  then
+    option="${OPTARG%%=*}"
+    OPTARG="${OPTARG#${option}}"
+    OPTARG="${OPTARG#=}"
+  fi
+  case "${option}" in
+    (v|verbose)
       verbose=yes
       ;;
 
-    (-c|--chain)
-      case "${2}" in
+    (c|chain)
+      case "${OPTARG}" in
         (bitmark)
           chain=bitmark
           ;;
@@ -126,38 +104,35 @@ do
           chain=local
           ;;
         (*)
-          ERROR 'invalid chain: %s' "${2}"
+          ERROR 'invalid chain: %s' "${OPTARG}"
           ;;
       esac
-      shift
       ;;
 
-    (-n|--nodes)
-      case "${2}" in
+    (n|nodes)
+      case "${OPTARG}" in
         (none|chain)
-          nodes="${2}"
+          nodes="${OPTARG}"
           ;;
         (*.*)
-          nodes="${2}"
+          nodes="${OPTARG}"
           n=$(host -t TXT "${nodes}") || USAGE 'nodes cannot fetch TXT record for: "%s"' "${nodes}"
           [ -z "${n}" ] && USAGE 'nodes cannot empty TXT record for: "%s"' "${nodes}"
           ;;
         (*)
-          ERROR 'invalid nodes: %s' "${2}"
+          ERROR 'invalid nodes: %s' "${OPTARG}"
           ;;
       esac
-      shift
       ;;
 
-    (-C|--connect)
-      conn="${2}"
+    (C|connect)
+      conn="${OPTARG}"
       [ -z "${conn}" ] && USAGE 'bitmarkd connect cannot be empty'
-      shift
       bitmarkd_connect="${bitmarkd_connect} ${conn}"
       ;;
 
     (-p|--payment)
-      case "${2}" in
+      case "${OPTARG}" in
         (p|p2p)
           payment_mode=p2p
           ;;
@@ -168,32 +143,32 @@ do
           payment_mode=noverify
           ;;
         (*)
-          USAGE 'invalid payment verification mode: %s' "${2}"
+          USAGE 'invalid payment verification mode: %s' "${OPTARG}"
           ;;
       esac
-      shift
       ;;
 
-    (-r|--recorderd-public)
+    (r|recorderd-public)
       recorderd_public=1
       ;;
 
-    (-i|--internal-hash)
+    (i|internal-hash)
       internal_hash=true
       ;;
 
-    (-P|--profile)
+    (P|profile)
       profile=true
       ;;
-    (-4|--ipv4-only)
+
+    (4|ipv4-only)
       prefer_ipv6=false
       ;;
 
-    (-k|--console)
+    (k|console)
       log_console=true
       ;;
 
-    (-m|--more)
+    (m|more)
       case "${log_default}" in
         (error)
           log_default=warn
@@ -213,31 +188,36 @@ do
       esac
       ;;
 
-    (-u|--update)
+    (u|update)
       update=yes
       ;;
 
-    (-D|--debug)
-      debug=yes
-      ;;
-
     (--)
-      shift
       break
       ;;
 
-    (-h|--help)
+    (D|debug)
+      debug=yes
+      ;;
+
+    (h|help)
       USAGE
       ;;
 
+    ('?')
+      USAGE 'invalid option: -%s' "${OPTARG}"
+      ;;
+
     (*)
-      USAGE 'invalid option: %s' "$1"
+      USAGE 'invalid option: --%s' "${option}"
       ;;
   esac
-  shift
 done
 
+shift $((OPTIND - 1))
+
 # verify arguments
+#[ ${#} -ne 0 ] && USAGE 'extraneous arguments: %s' "${*}"
 [ $# -eq 0 ] && USAGE "missing arguments"
 
 # enable debugging
@@ -259,7 +239,6 @@ for i in "$@"
 do
   j="${i#[LT]}"
 
-  # shellcheck disable=SC2015
   [ "${j}" -ge 1 ] && [ "${j}" -le 99 ] || ERROR 'index is out of range: %s' "${j}"
 
   dir="${xdg_home}/bitmarkd${i}"

@@ -21,8 +21,7 @@ session=LOCAL
 # error handler
 ERROR() {
   printf 'error: '
-  # shellcheck disable=SC2059
-  printf -- "$@"
+  printf "$@"
   printf '\n'
   exit 1
 }

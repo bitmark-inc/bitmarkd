@@ -63,15 +63,14 @@ programs='jq bitmark-cli bitmark-wallet run-bitcoin run-litecoin'
 USAGE() {
   if [ -n "${1}" ]
      then
-       printf 'error:'
-       # shellcheck disable=SC2059
-       printf -- "$@"
+       printf 'error: '
+       printf "$@"
        printf '\n'
   fi
 cat <<EOF
-usage: $(basename "${0}") command
+usage: ${0##*/} command
     new [btc|ltc]    - build block chain from zero (only once)
-    issue [btc|ltc]  - issue more assest and transfer some
+    issue [btc|ltc]  - issue more assets and transfer some
     bt [btc|ltc]     - transfer block ownership
     balance          - list balance records
     ownership        - list ownership records

@@ -2,8 +2,7 @@
 # bitmark all commits in a git repository
 dir=$(dirname "$0")
 
-ERROR()
-{
+ERROR() {
   printf 'error: '
   printf "$@"
   printf '\n'
@@ -12,38 +11,39 @@ ERROR()
 
 VERBOSE() {
   [ X"${verbose}" = X"yes" ] || return
-  printf -- "$@"
+  printf "$@"
   printf '\n'
 }
 
 LOG() {
   [ -z "${logfile}" ] && return
-  printf -- "$@" >> "${logfile}"
+  printf "$@" >> "${logfile}"
   printf '\n' >> "${logfile}"
 }
 
-USAGE()
-{
+USAGE() {
   if [ -n "$1" ]
   then
     printf 'error: '
     printf "$@"
     printf '\n'
   fi
-  echo usage: $(basename "$0") '[options]'
-  echo '       --help             -h            this message'
-  echo '       --verbose          -v            more messages'
-  echo '       --remote=NAME      -r NAME       set remote name ['"${remote}"']'
-  echo '       --url=URL-PREFIX   -p URL-PREFIX set URL prefix ['"${url}"']'
-  echo '       --user=NAME        -u NAME       set blockchain user'
-  echo '       --network=NET      -n NET        set blockchain network [bitmark|testing|local]: ['"${network}"']'
-  echo '       --connection=N     -C N          set cli connection number [0..]: ['"${connection}"']'
-  echo '       --file=FILE        -f FILE       set alternative logfile ['"${logfile}"']'
-  echo '       --list             -l            list properties for user'
-  echo '       --status=FILE      -s FILE       check status from a specific logfile'
-  echo '       --ignore=N         -i N          ignore the N most recent commits'
-  echo '       --continue         -c            do not stop on transaction already exists'
-  echo '       --debug                          debuging messages'
+  cat <<EOF
+usage: ${0##*/} [options]
+       --help             -h            this message
+       --verbose          -v            more messages
+       --remote=NAME      -r NAME       set remote name [${remote}]
+       --url=URL-PREFIX   -p URL-PREFIX set URL prefix [${url}]
+       --user=NAME        -u NAME       set blockchain user
+       --network=NET      -n NET        set blockchain network [bitmark|testing|local]: [${network}]
+       --connection=N     -C N          set cli connection number [0..]: [${connection}]
+       --file=FILE        -f FILE       set alternative logfile [${logfile}]
+       --list             -l            list properties for user
+       --status=FILE      -s FILE       check status from a specific logfile
+       --ignore=N         -i N          ignore the N most recent commits
+       --continue         -c            do not stop on transaction already exists
+       --debug            -D            show debug information
+EOF
   exit 1
 }
 
@@ -79,8 +79,7 @@ CLI() {
 
   while :
   do
-    r=$(bitmark-cli -i "${user}" -p "${password}" -n "${network}" -c "${connection}" "$@" 2>&1)
-    if [ $? -ne 0 ]
+    if ! r="$(bitmark-cli -i "${user}" -p "${password}" -n "${network}" -c "${connection}" "$@" 2>&1)"
     then
       case "${r#terminated with error: }" in
         ('not available during synchronise')
@@ -293,144 +292,119 @@ do
   [ -x "${x}" ] || ERROR 'program: "%s" (%s) is not executable' "${p}" "${x}"
 done
 
-# decode command-line
-getopt=
-case "$(uname)" in
-  (FreeBSD|DragonFly)
-    getopt=/usr/local/bin/getopt
-    ;;
-  (NetBSD)
-    getopt=/usr/pkg/bin/getopt
-    ;;
-  (OpenBSD)
-    getopt=/usr/local/bin/gnugetopt
-    ;;
-  (Darwin)
-    getopt=/usr/local/opt/gnu-getopt/bin/getopt
-    ;;
-  (Linux)
-    getopt=/usr/bin/getopt
-    ;;
-  (*)
-    ERROR 'OS: %s is not supported' "$(uname)"
-    ;;
-esac
-[ -x "${getopt}" ] || ERROR 'getopt: "%s" is not executable or not installed' "${getopt}"
-
-args=$(${getopt} -o hvp:n:C:u:f:lcs:i:D --long=help,verbose,url:,network:,connection:,user:,file:,list,continue,status:,ignore:,debug -- "$@") || exit 1
-
-# replace the arguments with the parsed values
-eval set -- "${args}"
-
-while :
+# parse options
+while getopts :hvp:n:C:u:f:lcs:i:D-: option
 do
-  case "${1}" in
-    (-v|--verbose)
+  # convert long options
+  if [ X"${option}" = X"-" ]
+  then
+    option="${OPTARG%%=*}"
+    OPTARG="${OPTARG#${option}}"
+    OPTARG="${OPTARG#=}"
+  fi
+  case "${option}" in
+    (v|verbose)
       verbose=yes
       ;;
 
-    (-r|--remote)
-      [ -z "${2}" ] && ERROR 'remote cannot be blank'
-      remote="${2}"
-      shift
+    (r|remote)
+      [ -z "${OPTARG}" ] && ERROR 'remote cannot be blank'
+      remote="${OPTARG}"
       ;;
 
-    (-p|--url)
-      [ -z "${2}" ] && ERROR 'url prefix cannot be blank'
-      url="${2}"
-      shift
+    (p|url)
+      [ -z "${OPTARG}" ] && ERROR 'url prefix cannot be blank'
+      url="${OPTARG}"
       ;;
 
-    (-n|--network)
-      case "${2}" in
+    (n|network)
+      case "${OPTARG}" in
         (local|testing|bitmark)
-          network="${2}"
+          network="${OPTARG}"
           logfile="bmr-${network}-$(date '+%Y%m%d_%H%M%S').log"
           ;;
         (*)
-          USAGE 'invalid network: "%s" use: [bitmark|testing|local]' "${2}"
+          USAGE 'invalid network: "%s" use: [bitmark|testing|local]' "${OPTARG}"
           ;;
       esac
-      shift
       ;;
 
-    (-C|--connection)
-      [ -z "${2}" ] && ERROR 'connection cannot be blank'
-      connection="$(printf '%s' "${2}" | tr -d -C '0-9')"
-      [ X"${connection}" != X"${2}" ] && ERROR 'connection: '%s' is not a number' "${2}"
-      [ "${connection}" -lt 0 ] && ERROR 'connection: '%s' cannot be negative' "${2}"
-      shift
+    (C|connection)
+      [ -z "${OPTARG}" ] && ERROR 'connection cannot be blank'
+      connection="$(printf '%s' "${OPTARG}" | tr -d -C '0-9')"
+      [ X"${connection}" != X"${OPTARG}" ] && ERROR 'connection: '%s' is not a number' "${OPTARG}"
+      [ "${connection}" -lt 0 ] && ERROR 'connection: '%s' cannot be negative' "${OPTARG}"
       ;;
 
-    (-i|--ignore)
-      [ -z "${2}" ] && ERROR 'ignore cannot be blank'
-      ignore="$(printf '%s' "${2}" | tr -d -C '0-9')"
-      [ X"${ignore}" != X"${2}" ] && ERROR 'ignore: '%s' is not a number' "${2}"
-      [ "${ignore}" -lt 0 ] && ERROR 'ignore: '%s' cannot be negative' "${2}"
-      shift
+    (i|ignore)
+      [ -z "${OPTARG}" ] && ERROR 'ignore cannot be blank'
+      ignore="$(printf '%s' "${OPTARG}" | tr -d -C '0-9')"
+      [ X"${ignore}" != X"${OPTARG}" ] && ERROR 'ignore: '%s' is not a number' "${OPTARG}"
+      [ "${ignore}" -lt 0 ] && ERROR 'ignore: '%s' cannot be negative' "${OPTARG}"
       ;;
 
-    (-u|--user)
-      [ -z "${2}" ] && ERROR 'user cannot be blank'
-      user="${2}"
-      shift
+    (u|user)
+      [ -z "${OPTARG}" ] && ERROR 'user cannot be blank'
+      user="${OPTARG}"
       ;;
 
-    (-f|--file)
-      [ -z "${2}" ] && ERROR 'file cannot be blank'
-      logfile="${2}"
-      shift
+    (f|file)
+      [ -z "${OPTARG}" ] && ERROR 'file cannot be blank'
+      logfile="${OPTARG}"
       ;;
 
-    (-l|--list)
+    (l|list)
       list=yes
       ;;
 
-    (-s|--status)
-      [ -z "${2}" ] && ERROR 'ststus cannot be blank'
-      status="${2}"
-      shift
+    (s|status)
+      [ -z "${OPTARG}" ] && ERROR 'status cannot be blank'
+      status="${OPTARG}"
       ;;
 
-    (-c|--continue)
+    (c|continue)
       continue=yes
       ;;
 
-    (-D|--debug)
-      debug=yes
-      ;;
-
     (--)
-      shift
       break
       ;;
 
-    (-h|--help)
+    (D|debug)
+      debug=yes
+      ;;
+
+    (h|help)
       USAGE
       ;;
 
+    ('?')
+      USAGE 'invalid option: -%s' "${OPTARG}"
+      ;;
+
     (*)
-      USAGE 'invalid option: %s' "$1"
+      USAGE 'invalid option: --%s' "${option}"
       ;;
   esac
-  shift
 done
 
+shift $((OPTIND - 1))
+
 # verify arguments
+[ ${#} -ne 0 ] && USAGE 'extraneous arguments: %s' "${*}"
+
 [ -z "${remote}" ] && ERROR 'remote cannot be blank'
 [ -z "${user}" ] && ERROR 'user cannot be blank'
-[ $# -ne 0 ] && USAGE 'extraneous extra arguments'
 
-# enable debuging
+# enable debugging
 [ X"${debug}" = X"yes" ] && set -x
-
 
 # determine git url
 [ -d '.git' ] || ERROR 'not a git repository: %s' "${PWD}"
 
 if [ -z "${url}" ]
 then
-   url=$(git config --local --get "remote.${remote}.url")
+   url="$(git config --local --get "remote.${remote}.url")"
    [ $? -ne 0 ] && ERROR 'git remote: "%s" not found' "${remote}"
 fi
 
@@ -462,7 +436,7 @@ then
 fi
 
 # status
-if [ ! -z "${status}" ]
+if [ -n "${status}" ]
 then
   SHOW_STATUS "${status}"
   exit 0

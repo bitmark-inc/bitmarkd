@@ -1,109 +1,90 @@
 #!/bin/sh
 # graph the node with graphviz
 
-ERROR()
-{
+ERROR() {
   printf 'error: '
-  # shellcheck disable=SC2059
-  printf -- "$@"
+  printf "${@}"
   printf '\n'
   exit 1
 }
 
-USAGE()
-{
-  if [ -n "$1" ]
+VERBOSE() {
+  [ X"${verbose}" = X"no" ] && return 0
+  printf "${@}"
+  printf '\n'
+}
+
+USAGE() {
+  if [ -n "${1}" ]
   then
     printf 'error: '
-    # shellcheck disable=SC2059
-    printf -- "$@"
+    printf "${@}"
     printf '\n'
   fi
-  echo usage: "$(basename "$0")" '[options]'
-  echo '       --help             -h            this message'
-  echo '       --verbose          -v            more messages'
-  echo '       --output=FILE      -o FILE       the output PNG file ['"${output}"']'
-  echo '       --debug            -D            debuging messages'
+  cat <<EOF
+usage: ${0##*/} [options]
+       --help             -h            this message
+       --verbose          -v            more messages
+       --output=FILE      -o FILE       the output PNG file [${output}]
+       --debug            -D            debuging messages
+EOF
   exit 1
 }
 
-VERBOSE()
-{
-  # shellcheck disable=SC2059
-  [ X"${verbose}" = X"yes" ] && printf -- "$@"
-}
 
 # main program
 verbose=no
 debug=no
 output=nodes.mpeg
 
-getopt=
-case "$(uname)" in
-  (FreeBSD|DragonFly)
-    getopt=/usr/local/bin/getopt
-    ;;
-  (NetBSD)
-    getopt=/usr/pkg/bin/getopt
-    ;;
-  (OpenBSD)
-    getopt=/usr/local/bin/gnugetopt
-    ;;
-  (Darwin)
-    getopt=/usr/local/opt/gnu-getopt/bin/getopt
-    ;;
-  (Linux)
-    getopt=/usr/bin/getopt
-    ;;
-  (*)
-    ERROR 'OS: %s is not supported' "$(uname)"
-    ;;
-esac
-[ -x "${getopt}" ] || ERROR 'getopt: "%s" is not executable or not installed' "${getopt}"
-
-args=$(${getopt} -o hvo:D --long=help,verbose,output:,debug -- "$@") || exit 1
-
-# replace the arguments with the parsed values
-eval set -- "${args}"
-
-while :
+# parse options
+while getopts :hvo:D-: option
 do
-  case "$1" in
-    (-v|--verbose)
+  # convert long options
+  if [ X"${option}" = X"-" ]
+  then
+    option="${OPTARG%%=*}"
+    OPTARG="${OPTARG#${option}}"
+    OPTARG="${OPTARG#=}"
+  fi
+  case "${option}" in
+    (v|verbose)
       verbose=yes
       ;;
 
-    (-o|--output)
-      output="${2}"
+    (o|output)
+      output="${OPTARG}"
       [ -z "${output}" ] && USAGE 'missing output file'
-      shift
-      ;;
-
-    (-D|--debug)
-      debug=yes
       ;;
 
     (--)
-      shift
       break
       ;;
 
-    (-h|--help)
+    (D|debug)
+      debug=yes
+      ;;
+
+    (h|help)
       USAGE
       ;;
 
+    ('?')
+      USAGE 'invalid option: -%s' "${OPTARG}"
+      ;;
+
     (*)
-      USAGE 'invalid option: %s' "$1"
+      USAGE 'invalid option: --%s' "${option}"
       ;;
   esac
-  shift
 done
 
-# verify arguments
-#[ $# -eq 0 ] && USAGE 'missing argument'
-[ $# -ne 0 ] && USAGE 'invalid extraneous arguments'
+shift $((OPTIND - 1))
 
-# enable debuging
+# verify arguments
+[ ${#} -ne 0 ] && USAGE 'extraneous arguments: %s' "${*}"
+
+# enable debugging
 [ X"${debug}" = X"yes" ] && set -x
 
 # create frames
@@ -118,7 +99,7 @@ do
 
   frame="$(printf 'frame-%03d.png' "${f}")"
 
-  VERBOSE 'frame: %s\n' "${frame}"
+  VERBOSE 'frame: %s' "${frame}"
   montage graph-*.png -geometry 300x300+2+2 -tile 4x3 "${frame}"
   sleep 2
 done
