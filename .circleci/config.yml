@@ -32,7 +32,7 @@ jobs:
           command: |
             sudo apt-get update
             sudo apt-get -t testing install libargon2-1 libargon2-dev
-            sudo apt-get install uuid-dev libzmq3-dev wget
+            sudo apt-get install uuid-dev libzmq3-dev wget gcc-8-base
             sudo apt-get -t testing install pkg-config
       - run:
           name: Get misspell
