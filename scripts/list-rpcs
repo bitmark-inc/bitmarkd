@@ -21,4 +21,4 @@ awk '
 }
 
 
-' rpc/*.go | sort
+' rpc/*/*.go | sort
