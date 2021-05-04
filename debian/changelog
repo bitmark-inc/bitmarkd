@@ -1,3 +1,9 @@
+bitmarkd (0.13.3-rc.1-1ubuntu1) bionic; urgency=medium
+
+  * fix for locking RLock→Lock since storeTransfer modifies the map
+
+ -- Christopher Hall <hsw@bitmark.com>  Tue, 04 May 2021 06:32:59 +0000
+
 bitmarkd (0.13.2-1ubuntu1) bionic; urgency=medium
 
   * comment out pending tx rebroadcast code
