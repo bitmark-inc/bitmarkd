@@ -1,3 +1,9 @@
+bitmarkd (0.13.3-1ubuntu1) bionic; urgency=medium
+
+  * new version from source version: 0.13.3-rc.3
+
+ -- Christopher Hall <hsw@bitmark.com>  Tue, 13 Jul 2021 08:13:18 +0000
+
 bitmarkd (0.13.3-rc.2-1ubuntu1) bionic; urgency=medium
 
   * update dependencies
