@@ -1,3 +1,12 @@
+bitmarkd (0.14.0-beta.1-1ubuntu1) bionic; urgency=medium
+
+  * add Bitmark.FullProvenance RPC
+  * add Node.DumpBlock RPC [not stable yet]
+  * add cli "fullprovenance" command
+  * fix JSON float64 conversion error by outputting uint64 as strings
+
+ -- Christopher Hall <hsw@bitmark.com>  Mon, 16 Aug 2021 08:58:27 +0000
+
 bitmarkd (0.13.3-1ubuntu1) bionic; urgency=medium
 
   * new version from source version: 0.13.3-rc.3
