@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: ISC
-// Copyright (c) 2014-2020 Bitmark Inc.
+// Copyright (c) 2014-2021 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package main
+package blockdump
 
 import (
 	"encoding/binary"
@@ -31,7 +31,7 @@ type blockResult struct {
 }
 
 // dump of a particular block
-func dumpBlock(number uint64) (*blockResult, error) {
+func BlockDump(number uint64) (*blockResult, error) {
 
 	// fetch block and compute digest
 	n := make([]byte, 8)
