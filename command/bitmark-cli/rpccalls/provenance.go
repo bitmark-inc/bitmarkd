@@ -25,7 +25,7 @@ type ProvenanceReply struct {
 // provenanceItem - transaction record in provenance chain
 type provenanceItem struct {
 	bitmark.ProvenanceRecord
-	Identity string `json:"_IDENTITY"`
+	Identity string `json:"_IDENTITY,omitempty"`
 }
 
 // GetProvenance - obtain the provenance chain from a specific transaction id
