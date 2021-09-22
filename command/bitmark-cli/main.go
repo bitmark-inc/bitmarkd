@@ -12,9 +12,8 @@ import (
 	"path"
 	"strings"
 
-	"github.com/urfave/cli"
-
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
+	"github.com/urfave/cli"
 )
 
 type metadata struct {
@@ -233,7 +232,7 @@ func main() {
 		},
 		{
 			Name:      "provenance",
-			Usage:     "list provenance of a bitmark",
+			Usage:     "list provenance starting at a specific transaction",
 			ArgsUsage: "\n   (* = required)",
 			Flags: []cli.Flag{
 				cli.StringFlag{
@@ -248,6 +247,19 @@ func main() {
 				},
 			},
 			Action: runProvenance,
+		},
+		{
+			Name:      "fullprovenance",
+			Usage:     "list full provenance of a bitmark",
+			ArgsUsage: "\n   (* = required)",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "bitmarkid, b",
+					Value: "",
+					Usage: "*bitmark id to list provenance `BITMARKID`",
+				},
+			},
+			Action: runFullProvenance,
 		},
 		{
 			Name:      "owned",

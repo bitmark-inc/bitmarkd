@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: ISC
-// Copyright (c) 2014-2020 Bitmark Inc.
+// Copyright (c) 2014-2021 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -78,10 +78,10 @@ type AssetData struct {
 
 // BitmarkIssue - the unpacked BitmarkIssue structure
 type BitmarkIssue struct {
-	AssetId   AssetIdentifier   `json:"assetId"`   // link to asset record
-	Owner     *account.Account  `json:"owner"`     // base58: the "destination" owner
-	Nonce     uint64            `json:"nonce"`     // to allow for multiple issues at the same time
-	Signature account.Signature `json:"signature"` // hex: corresponds to owner in linked record
+	AssetId   AssetIdentifier   `json:"assetId"`      // link to asset record
+	Owner     *account.Account  `json:"owner"`        // base58: the "destination" owner
+	Nonce     uint64            `json:"nonce,string"` // to allow for multiple issues at the same time
+	Signature account.Signature `json:"signature"`    // hex: corresponds to owner in linked record
 }
 
 // Payment - optional payment record
@@ -129,11 +129,11 @@ type BitmarkTransferCountersigned struct {
 // BlockFoundation - the unpacked Proofer Data structure
 // this is first tx in every block and can only be used there
 type BlockFoundation struct {
-	Version   uint64            `json:"version"`      // reflects combination of supported currencies
-	Payments  currency.Map      `json:"payments"`     // contents depend on version
-	Owner     *account.Account  `json:"owner"`        // base58
-	Nonce     uint64            `json:"nonce,string"` // unsigned 0..N
-	Signature account.Signature `json:"signature"`    // hex
+	Version   uint64            `json:"version,string"` // reflects combination of supported currencies
+	Payments  currency.Map      `json:"payments"`       // contents depend on version
+	Owner     *account.Account  `json:"owner"`          // base58
+	Nonce     uint64            `json:"nonce,string"`   // unsigned 0..N
+	Signature account.Signature `json:"signature"`      // hex
 }
 
 // BlockOwnerTransfer - the unpacked Block Owner Transfer Data structure
@@ -142,7 +142,7 @@ type BlockFoundation struct {
 type BlockOwnerTransfer struct {
 	Link             merkle.Digest     `json:"link"`             // previous record
 	Escrow           *Payment          `json:"escrow"`           // optional escrow payment address
-	Version          uint64            `json:"version"`          // reflects combination of supported currencies
+	Version          uint64            `json:"version,string"`   // reflects combination of supported currencies
 	Payments         currency.Map      `json:"payments"`         // require length and contents depend on version
 	Owner            *account.Account  `json:"owner"`            // base58
 	Signature        account.Signature `json:"signature"`        // hex
@@ -151,33 +151,33 @@ type BlockOwnerTransfer struct {
 
 // BitmarkShare - turn a bitmark provenance chain into a fungible share
 type BitmarkShare struct {
-	Link      merkle.Digest     `json:"link"`      // previous record
-	Quantity  uint64            `json:"quantity"`  // initial balance quantity
-	Signature account.Signature `json:"signature"` // hex
+	Link      merkle.Digest     `json:"link"`            // previous record
+	Quantity  uint64            `json:"quantity,string"` // initial balance quantity
+	Signature account.Signature `json:"signature"`       // hex
 }
 
 // ShareGrant - grant some shares to another (one way transfer)
 type ShareGrant struct {
-	ShareId          merkle.Digest     `json:"shareId"`          // share = issue id
-	Quantity         uint64            `json:"quantity"`         // shares to transfer > 0
-	Owner            *account.Account  `json:"owner"`            // base58
-	Recipient        *account.Account  `json:"recipient"`        // base58
-	BeforeBlock      uint64            `json:"beforeBlock"`      // expires when chain height > before block
-	Signature        account.Signature `json:"signature"`        // hex
-	Countersignature account.Signature `json:"countersignature"` // hex: corresponds to owner in this record
+	ShareId          merkle.Digest     `json:"shareId"`            // share = issue id
+	Quantity         uint64            `json:"quantity,string"`    // shares to transfer > 0
+	Owner            *account.Account  `json:"owner"`              // base58
+	Recipient        *account.Account  `json:"recipient"`          // base58
+	BeforeBlock      uint64            `json:"beforeBlock,string"` // expires when chain height > before block
+	Signature        account.Signature `json:"signature"`          // hex
+	Countersignature account.Signature `json:"countersignature"`   // hex: corresponds to owner in this record
 }
 
 // ShareSwap - swap some shares to another (two way transfer)
 type ShareSwap struct {
-	ShareIdOne       merkle.Digest     `json:"shareIdOne"`       // share = issue id
-	QuantityOne      uint64            `json:"quantityOne"`      // shares to transfer > 0
-	OwnerOne         *account.Account  `json:"ownerOne"`         // base58
-	ShareIdTwo       merkle.Digest     `json:"shareIdTwo"`       // share = issue id
-	QuantityTwo      uint64            `json:"quantityTwo"`      // shares to transfer > 0
-	OwnerTwo         *account.Account  `json:"ownerTwo"`         // base58
-	BeforeBlock      uint64            `json:"beforeBlock"`      // expires when chain height > before block
-	Signature        account.Signature `json:"signature"`        // hex
-	Countersignature account.Signature `json:"countersignature"` // hex: corresponds to owner in this record
+	ShareIdOne       merkle.Digest     `json:"shareIdOne"`         // share = issue id
+	QuantityOne      uint64            `json:"quantityOne,string"` // shares to transfer > 0
+	OwnerOne         *account.Account  `json:"ownerOne"`           // base58
+	ShareIdTwo       merkle.Digest     `json:"shareIdTwo"`         // share = issue id
+	QuantityTwo      uint64            `json:"quantityTwo,string"` // shares to transfer > 0
+	OwnerTwo         *account.Account  `json:"ownerTwo"`           // base58
+	BeforeBlock      uint64            `json:"beforeBlock,string"` // expires when chain height > before block
+	Signature        account.Signature `json:"signature"`          // hex
+	Countersignature account.Signature `json:"countersignature"`   // hex: corresponds to owner in this record
 }
 
 // Type - returns the record type code

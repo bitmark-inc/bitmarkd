@@ -6,6 +6,10 @@
 package bitmark
 
 import (
+	"bytes"
+	"errors"
+	"strings"
+
 	"golang.org/x/time/rate"
 
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -36,6 +40,7 @@ type Bitmark struct {
 	PoolTransactions storage.Handle
 	PoolAssets       storage.Handle
 	PoolOwnerTxIndex storage.Handle
+	PoolOwnerData    storage.Handle
 }
 
 // TransferReply - result from transfer RPC
@@ -56,6 +61,7 @@ func New(log *logger.L, pools reservoir.Handles, isNormalMode func(mode.Mode) bo
 		PoolTransactions: pools.Transactions,
 		PoolAssets:       pools.Assets,
 		PoolOwnerTxIndex: pools.OwnerTxIndex,
+		PoolOwnerData:    pools.OwnerData,
 	}
 }
 
@@ -142,7 +148,7 @@ type ProvenanceRecord struct {
 	Record  string      `json:"record"`
 	IsOwner bool        `json:"isOwner"`
 	TxId    interface{} `json:"txId,omitempty"`
-	InBlock uint64      `json:"inBlock"`
+	InBlock uint64      `json:"inBlock,string"`
 	AssetId interface{} `json:"assetId,omitempty"`
 	Data    interface{} `json:"data"`
 }
@@ -232,6 +238,168 @@ loop:
 				InBlock: inBlock,
 				AssetId: tx.AssetId,
 				Data:    assetTx,
+			}
+			provenance = append(provenance, h)
+			break loop
+
+		case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned, *transactionrecord.BlockOwnerTransfer:
+			tr := tx.(transactionrecord.BitmarkTransfer)
+
+			if 0 == i {
+				h.IsOwner = ownership.CurrentlyOwns(nil, tr.GetOwner(), id, bitmark.PoolOwnerTxIndex)
+			}
+
+			provenance = append(provenance, h)
+			id = tr.GetLink()
+
+		case *transactionrecord.BitmarkShare:
+			h.IsOwner = true // share terminates a provenance chain so will always be owner
+			provenance = append(provenance, h)
+			id = tx.Link
+
+		default:
+			break loop
+		}
+	}
+
+	reply.Data = provenance
+
+	return nil
+}
+
+// Trace the full history of a bitmarkId
+// -------------------------------------
+
+// FullProvenanceArguments - arguments for provenance RPC
+type FullProvenanceArguments struct {
+	BitmarkId merkle.Digest `json:"bitmarkId"`
+}
+
+// FullProvenanceRecord - can be any of the transaction records
+type FullProvenanceRecord struct {
+	Record   string      `json:"record"`
+	IsOwner  bool        `json:"isOwner,omitempty"`
+	TxId     interface{} `json:"txId,omitempty"`
+	InBlock  uint64      `json:"inBlock,string"`
+	AssetId  interface{} `json:"assetId,omitempty"`
+	Data     interface{} `json:"data"`
+	Metadata interface{} `json:"metadata,omitempty"`
+}
+
+// FullProvenanceReply - results from provenance RPC
+type FullProvenanceReply struct {
+	Data []FullProvenanceRecord `json:"data"`
+}
+
+var errDone = errors.New("scanning is done")
+
+// FullProvenance - list the provenance from s transaction id
+func (bitmark *Bitmark) FullProvenance(arguments *FullProvenanceArguments, reply *FullProvenanceReply) error {
+
+	if err := ratelimit.LimitN(bitmark.Limiter, 1, 1); nil != err {
+		return err
+	}
+
+	log := bitmark.Log
+
+	log.Infof("Bitmark.FullProvenance: %+v", arguments)
+
+	bitmarkId := arguments.BitmarkId
+
+	// data: 00 ⧺ transfer BN ⧺ issue txId ⧺ issue BN ⧺ asset id
+	// data: 01 ⧺ transfer BN ⧺ issue txId ⧺ issue BN ⧺ owned BN
+	// data: 02 ⧺ transfer BN ⧺ issue txId ⧺ issue BN ⧺ asset id
+	cursor := bitmark.PoolOwnerData.NewFetchCursor()
+
+	id := merkle.Digest{}
+
+	err := cursor.Map(func(key []byte, value []byte) error {
+		if bytes.Equal(bitmarkId[:], value[9:9+32]) {
+			copy(id[:], key[:])
+			return errDone
+		}
+		return nil
+	})
+
+	if nil == err {
+		return fault.TransactionIsNotAnIssue
+	} else if errDone != err {
+		return err
+	}
+
+	provenance := make([]FullProvenanceRecord, 0, 10000)
+
+loop:
+	for i := 0; true; i += 1 {
+
+		inBlock, packed := bitmark.PoolTransactions.GetNB(id[:])
+		if nil == packed {
+			break loop
+		}
+
+		transaction, _, err := transactionrecord.Packed(packed).Unpack(mode.IsTesting())
+		if nil != err {
+			break loop
+		}
+
+		record, _ := transactionrecord.RecordName(transaction)
+		h := FullProvenanceRecord{
+			Record:  record,
+			IsOwner: false,
+			TxId:    id,
+			InBlock: inBlock,
+			AssetId: nil,
+			Data:    transaction,
+		}
+
+		switch tx := transaction.(type) {
+
+		case *transactionrecord.OldBaseData:
+			if 0 == i {
+				h.IsOwner = ownership.CurrentlyOwns(nil, tx.Owner, id, bitmark.PoolOwnerTxIndex)
+			}
+
+			provenance = append(provenance, h)
+			break loop
+
+		case *transactionrecord.BlockFoundation:
+			if 0 == i {
+				h.IsOwner = ownership.CurrentlyOwns(nil, tx.Owner, id, bitmark.PoolOwnerTxIndex)
+			}
+
+			provenance = append(provenance, h)
+			break loop
+
+		case *transactionrecord.BitmarkIssue:
+			if 0 == i {
+				h.IsOwner = ownership.CurrentlyOwns(nil, tx.Owner, id, bitmark.PoolOwnerTxIndex)
+			}
+			provenance = append(provenance, h)
+
+			inBlock, packedAsset := bitmark.PoolAssets.GetNB(tx.AssetId[:])
+			if nil == packedAsset {
+				break loop
+			}
+			assetTx, _, err := transactionrecord.Packed(packedAsset).Unpack(mode.IsTesting())
+			if nil != err {
+				break loop
+			}
+
+			meta := strings.Split(assetTx.(*transactionrecord.AssetData).Metadata, "\u0000")
+			metamap := make(map[string]string)
+			for i := 0; i < len(meta); i += 2 {
+				metamap[meta[i]] = meta[i+1]
+			}
+
+			record, _ := transactionrecord.RecordName(assetTx)
+			h = FullProvenanceRecord{
+				Record:   record,
+				IsOwner:  false,
+				TxId:     nil,
+				InBlock:  inBlock,
+				AssetId:  tx.AssetId,
+				Data:     assetTx,
+				Metadata: metamap,
 			}
 			provenance = append(provenance, h)
 			break loop

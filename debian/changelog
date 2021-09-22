@@ -1,3 +1,30 @@
+bitmarkd (0.14.0-beta.1-1ubuntu1) bionic; urgency=medium
+
+  * add Bitmark.FullProvenance RPC
+  * add Node.DumpBlock RPC [not stable yet]
+  * add cli "fullprovenance" command
+  * fix JSON float64 conversion error by outputting uint64 as strings
+
+ -- Christopher Hall <hsw@bitmark.com>  Mon, 16 Aug 2021 08:58:27 +0000
+
+bitmarkd (0.13.3-1ubuntu1) bionic; urgency=medium
+
+  * new version from source version: 0.13.3-rc.3
+
+ -- Christopher Hall <hsw@bitmark.com>  Tue, 13 Jul 2021 08:13:18 +0000
+
+bitmarkd (0.13.3-rc.2-1ubuntu1) bionic; urgency=medium
+
+  * update dependencies
+
+ -- Christopher Hall <hsw@bitmark.com>  Mon, 31 May 2021 07:52:14 +0000
+
+bitmarkd (0.13.3-rc.1-1ubuntu1) bionic; urgency=medium
+
+  * fix for locking RLock→Lock since storeTransfer modifies the map
+
+ -- Christopher Hall <hsw@bitmark.com>  Tue, 04 May 2021 06:32:59 +0000
+
 bitmarkd (0.13.2-1ubuntu1) bionic; urgency=medium
 
   * comment out pending tx rebroadcast code

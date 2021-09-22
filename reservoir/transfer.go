@@ -51,8 +51,8 @@ func storeTransfer(
 		return nil, false, fault.NilPointer
 	}
 
-	globalData.RLock()
-	defer globalData.RUnlock()
+	globalData.Lock()
+	defer globalData.Unlock()
 
 	verifyResult, duplicate, err := verifyTransfer(transfer, transactionHandle, ownerTxHandle, ownerDataHandle)
 	if err != nil {

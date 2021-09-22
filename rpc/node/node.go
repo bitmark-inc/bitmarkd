@@ -14,6 +14,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/announce/rpc"
 	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/blockdump"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/counter"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
@@ -162,4 +163,28 @@ func (node *Node) Info(_ *InfoArguments, reply *InfoReply) error {
 	reply.Uptime = time.Since(node.Start).String()
 	reply.PublicKey = hex.EncodeToString(peer.PublicKey())
 	return nil
+}
+
+// BlockDumpInfo - the block to be dumped
+type BlockDumpArguments struct {
+	Height uint64 `json:"height"`
+}
+
+// BlockDumpReply - BlockDump header and transactions
+type BlockDumpReply struct {
+	Block interface{} `json:"block"`
+}
+
+// BlockDump - return a dump of the block
+func (node *Node) BlockDump(arguments *BlockDumpArguments, reply *BlockDumpReply) error {
+
+	if err := ratelimit.Limit(node.Limiter); nil != err {
+		return err
+	}
+
+	block, err := blockdump.BlockDump(arguments.Height)
+	if nil == err {
+		reply.Block = block
+	}
+	return err
 }

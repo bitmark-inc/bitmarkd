@@ -623,6 +623,7 @@ func DeleteByLink(link merkle.Digest) {
 
 // delete all buffered transactions relating to a pay id
 // (after it has been confirmed)
+// Lock must be held before calling this
 func internalDelete(payId pay.PayId) {
 
 	// pending

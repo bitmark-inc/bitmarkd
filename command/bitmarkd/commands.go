@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: ISC
-// Copyright (c) 2014-2020 Bitmark Inc.
+// Copyright (c) 2014-2021 Bitmark Inc.
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -19,6 +19,7 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/block"
+	"github.com/bitmark-inc/bitmarkd/blockdump"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
@@ -281,7 +282,7 @@ func processDataCommand(log *logger.L, arguments []string, options *Configuratio
 
 		fmt.Fprintf(fd, "[\n")
 		for ; n <= nEnd; n += 1 {
-			block, err := dumpBlock(n)
+			block, err := blockdump.BlockDump(n)
 			if nil != err {
 				exitwithstatus.Message("dump block error: %s", err)
 			}
