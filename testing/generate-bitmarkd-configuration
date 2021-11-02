@@ -131,7 +131,7 @@ do
       bitmarkd_connect="${bitmarkd_connect} ${conn}"
       ;;
 
-    (-p|--payment)
+    (p|payment)
       case "${OPTARG}" in
         (p|p2p)
           payment_mode=p2p
@@ -263,6 +263,10 @@ do
   ## litecoin_key="cUhoPFEKgWzxX9Ycynemjtvh4kEv3vcoVW6RgLaxzEVTGHFWF6WY"
   litecoin_test="mjPkDNakVA4w4hJZ6WF7p8yKUV2merhyCM"
   litecoin_live="LYg45SVcJALHWHSMVkHSKAnbAEXAbhei7h"
+
+  ## litecoin_key="cRJAxVH5NHkqontyHrz3uMrLaJ7517MGQBo1RXnGxLhyEh7BqPm3"
+  #litecoin_test="QbsRp4j7av6ShGvYgiWdETDM98xjGwsJ5q"
+  #litecoin_live=""
 
   awk < "$(dirname "${0}")/../command/bitmarkd/bitmarkd.conf.sub" > "${config}" \
       -v recorderd_public="${recorderd_public}" \
