@@ -188,7 +188,7 @@ func main() {
 
 	// start the reservoir (verified transaction data cache)
 	log.Info("initialise reservoir")
-	err = reservoir.Initialise(theConfiguration.CacheDirectory, handles)
+	err = reservoir.Initialise(theConfiguration.CacheDirectory, handles, theConfiguration.Payment.AutoVerify)
 	if nil != err {
 		log.Criticalf("reservoir initialise error: %s", err)
 		exitwithstatus.Message("reservoir initialise error: %s", err)

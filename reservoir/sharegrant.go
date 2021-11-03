@@ -107,7 +107,7 @@ func storeGrant(
 	// already received the payment for the grant
 	// approve the grant immediately if payment is ok
 	detail, ok := globalData.orphanPayments[payId]
-	if ok {
+	if ok || globalData.autoVerify {
 		if acceptablePayment(detail, payments) {
 			globalData.verifiedTransactions[payId] = grantItem
 			globalData.verifiedIndex[txId] = payId

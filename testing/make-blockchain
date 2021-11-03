@@ -58,6 +58,11 @@ network=local
 # verbose output
 verbose=yes
 
+# disable payment to check the auto_verify setting in bitmarkd
+#disable_payment=no
+disable_payment=yes
+
+
 # required programs
 programs='jq bitmark-cli bitmark-wallet run-bitcoin run-litecoin'
 
@@ -295,6 +300,13 @@ SET() {
 PAY() {
   txid="${1}"; shift
   pay="${1}"; shift
+
+  if [ X"${disable_payment}" = X"yes" ]
+  then
+     VERBOSE 'not paying: just wait for tx to be mined'
+     WAIT "${txid}"
+     return 0
+  fi
 
   VERBOSE 'raw pay: %s' "${pay}"
 

@@ -104,7 +104,7 @@ func storeSwap(swap *transactionrecord.ShareSwap, shareQuantityHandle storage.Ha
 	// already received the payment for the swap
 	// approve the swap immediately if payment is ok
 	detail, ok := globalData.orphanPayments[payId]
-	if ok {
+	if ok || globalData.autoVerify {
 		if acceptablePayment(detail, payments) {
 			globalData.verifiedTransactions[payId] = swapItem
 			globalData.verifiedIndex[txId] = payId

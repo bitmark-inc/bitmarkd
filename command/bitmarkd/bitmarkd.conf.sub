@@ -336,6 +336,11 @@ end
 -- setup for every payment service
 M.payment = {
 
+    -- if true globally ignore payment system and immediately verify items
+    -- this allows testing without having to setup payment system
+    -- can be combined with any payment mode, but "noverify" is normally used
+    auto_verify = false,
+
     -- the mode must be one of the following: p2p, rest, noverify
     mode = payment_mode or "p2p",
     p2p_cache = {

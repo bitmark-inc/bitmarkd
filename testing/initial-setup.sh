@@ -8,6 +8,7 @@ more='1 2 8'                # repeat a number to increase detail
 internal_hash='1'           # use internal hash
 recorderd_public=no         # enable recorder interface on 0.0.0.0
 bitmarkd_profile="${all}"   # enable bitmarkd 22132 HTTP profile port
+auto_verify=no              # require payment processing
 
 # to setup the DNS TXT records (can be set by bm-tester.conf)
 nodes_domain=''
@@ -165,6 +166,7 @@ CONFIGURE() {
     [ X"${recorderd_public}" = X"yes" ] && OPT --recorderd-public
     [ X"${internal_hash}" = X"yes" ] && OPT --internal-hash
     [ X"${profile_enable}" = X"yes" ] && OPT --profile
+    [ X"${auto_verify}" = X"yes" ] && OPT --auto-verify
     [ X"${console}" = X"yes" ] && OPT --console
     while [ "${more}" -gt 0 ]
     do

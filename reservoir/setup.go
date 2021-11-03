@@ -133,10 +133,14 @@ type globalDataType struct {
 	// tracking the shares
 	spend map[spendKey]uint64
 
+	// for storage access
+	handles Handles
+
+	// if true the assume all payments are successful and verify immediately
+	autoVerify bool
+
 	// set once during initialise
 	initialised bool
-
-	handles Handles
 }
 
 // globals as a struct to allow lock
@@ -214,7 +218,7 @@ func Get() Reservoir {
 }
 
 // Initialise - create the cache
-func Initialise(cacheDirectory string, handles Handles) error {
+func Initialise(cacheDirectory string, handles Handles, autoVerify bool) error {
 	globalData.Lock()
 	defer globalData.Unlock()
 
@@ -251,8 +255,16 @@ func Initialise(cacheDirectory string, handles Handles) error {
 
 	globalData.handles = handles
 
+	// if true the assume all payments are successful
+	globalData.autoVerify = autoVerify
+
 	// all data initialised
 	globalData.initialised = true
+
+	// warn about disable payments
+	if globalData.autoVerify {
+		globalData.log.Warn("auto verify option selected - **PAYMENTS ARE NOW OPTIONAL**")
+	}
 
 	globalData.log.Debugf("load from file: %s", globalData.filename)
 
@@ -408,6 +420,11 @@ func setVerified(payId pay.PayId, detail *PaymentDetail) bool {
 
 // check that the incoming payment details match the stored payments records
 func acceptablePayment(detail *PaymentDetail, payments []transactionrecord.PaymentAlternative) bool {
+
+	// immediate verify if payment is optional
+	if globalData.autoVerify {
+		return true
+	}
 
 next_currency:
 	for _, p := range payments {
