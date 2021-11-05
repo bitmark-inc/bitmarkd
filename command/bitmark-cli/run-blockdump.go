@@ -26,11 +26,11 @@ func runBlockDump(c *cli.Context) error {
 		return fmt.Errorf("invalid count: %d", count)
 	}
 
-	binary := c.Bool("binary")
+	txs := c.Bool("txs")
 	if m.verbose {
 		fmt.Fprintf(m.e, "start block: %d\n", block)
 		fmt.Fprintf(m.e, "count: %d\n", count)
-		fmt.Fprintf(m.e, "binary: %t\n", binary)
+		fmt.Fprintf(m.e, "decode txs: %t\n", txs)
 	}
 
 	client, err := rpccalls.NewClient(m.testnet, m.config.Connections[m.connectionOffset], m.verbose, m.e)
@@ -40,9 +40,9 @@ func runBlockDump(c *cli.Context) error {
 	defer client.Close()
 
 	blockDumpConfig := &rpccalls.BlockDumpData{
-		Block:  block,
-		Count:  count,
-		Binary: binary,
+		Block: block,
+		Count: count,
+		Txs:   txs,
 	}
 
 	response, err := client.GetBlocks(blockDumpConfig)

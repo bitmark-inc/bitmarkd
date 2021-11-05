@@ -32,7 +32,7 @@ type blockResult struct {
 }
 
 // BlockDump dump of a particular block
-func BlockDump(number uint64, binaryOnly bool) (*blockResult, error) {
+func BlockDump(number uint64, decodeTxs bool) (*blockResult, error) {
 
 	// fetch block and compute digest
 	n := make([]byte, 8)
@@ -43,24 +43,28 @@ func BlockDump(number uint64, binaryOnly bool) (*blockResult, error) {
 		return nil, fault.BlockNotFound
 	}
 
-	if binaryOnly {
-		r := blockResult{
-			Packed: packed,
-		}
-		return &r, nil
-	}
-
-	return BlockDecode(packed, number)
+	return BlockDecode(packed, number, decodeTxs)
 }
 
 // BlockDump dump of a particular block
-func BlockDecode(packed []byte, number uint64) (*blockResult, error) {
+func BlockDecode(packed []byte, number uint64, decodeTxs bool) (*blockResult, error) {
 
 	br := blockrecord.Get()
 
 	header, digest, data, err := br.ExtractHeader(packed, number, false)
 	if nil != err {
 		return nil, err
+	}
+
+	if !decodeTxs {
+		result := &blockResult{
+			Digest:       &digest,
+			Header:       header,
+			Transactions: nil,
+			Packed:       packed,
+		}
+
+		return result, nil
 	}
 
 	txs := make([]transactionItem, header.TransactionCount)

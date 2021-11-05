@@ -11,9 +11,9 @@ import (
 
 // BlockDumpData - the parameters for a blockDump request
 type BlockDumpData struct {
-	Block  uint64
-	Count  int
-	Binary bool
+	Block uint64
+	Count int
+	Txs   bool
 }
 
 // GetBlocks - retrieve some blocks
@@ -22,7 +22,7 @@ func (client *Client) GetBlocks(blockDumpConfig *BlockDumpData) (*node.BlockDump
 	blockDumpArgs := node.BlockDumpRangeArguments{
 		Height: blockDumpConfig.Block,
 		Count:  blockDumpConfig.Count,
-		Binary: blockDumpConfig.Binary,
+		Txs:    blockDumpConfig.Txs,
 	}
 
 	client.printJson("BlockDump Request", blockDumpArgs)

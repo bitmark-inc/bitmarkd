@@ -1,3 +1,9 @@
+bitmarkd (0.14.0-beta.3-1ubuntu1) bionic; urgency=medium
+
+  * block dump and decode RPCs
+
+ -- Christopher Hall <hsw@bitmark.com>  Fri, 05 Nov 2021 09:02:08 +0000
+
 bitmarkd (0.14.0-beta.2-1ubuntu1) bionic; urgency=medium
 
   * add a testing mode to bypass payment checking

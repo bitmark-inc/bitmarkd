@@ -207,7 +207,7 @@ func (node *Node) BlockDecode(arguments *BlockDecodeArguments, reply *BlockDecod
 		return err
 	}
 
-	block, err := blockdump.BlockDecode(arguments.Packed, 0)
+	block, err := blockdump.BlockDecode(arguments.Packed, 0, true)
 	if nil == err {
 		reply.Block = block
 	}
@@ -219,7 +219,7 @@ func (node *Node) BlockDecode(arguments *BlockDecodeArguments, reply *BlockDecod
 type BlockDumpRangeArguments struct {
 	Height uint64 `json:"height,string"`
 	Count  int    `json:"count"`
-	Binary bool   `json:"binary"`
+	Txs    bool   `json:"txs"`
 }
 
 // BlockDumpRangeReply - BlockDumpRange header and transactions
@@ -244,12 +244,12 @@ func (node *Node) BlockDumpRange(arguments *BlockDumpRangeArguments, reply *Bloc
 		count = 100
 	}
 
-	binary := arguments.Binary
+	decodeTxs := arguments.Txs
 
 	blocks := make([]interface{}, count)
 
 	for i := 0; i < arguments.Count; i += 1 {
-		block, err := blockdump.BlockDump(height, binary)
+		block, err := blockdump.BlockDump(height, decodeTxs)
 		if nil != err {
 			return err
 		}

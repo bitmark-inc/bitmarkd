@@ -440,8 +440,8 @@ func main() {
 					Usage: " maximum records to output `COUNT`",
 				},
 				cli.BoolFlag{
-					Name:  "binary, b",
-					Usage: " only output the Base64 binary data",
+					Name:  "txs, t",
+					Usage: " decode all the transactions",
 				},
 			},
 			Action: runBlockDump,
