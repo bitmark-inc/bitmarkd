@@ -425,6 +425,41 @@ func main() {
 			Action: runBitmarkdInfo,
 		},
 		{
+			Name:      "blockdump",
+			Usage:     "dump a series of blocks starting at a specific number",
+			ArgsUsage: "\n   (* = required)",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "start, s",
+					Value: "",
+					Usage: "*start block `NUMBER`",
+				},
+				cli.IntFlag{
+					Name:  "count, c",
+					Value: 100,
+					Usage: " maximum records to output `COUNT`",
+				},
+				cli.BoolFlag{
+					Name:  "binary, b",
+					Usage: " only output the Base64 binary data",
+				},
+			},
+			Action: runBlockDump,
+		},
+		{
+			Name:      "blockdecode",
+			Usage:     "decode a packed",
+			ArgsUsage: "\n   (* = required)",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "packed, p",
+					Value: "",
+					Usage: "*packed data `BASE64`",
+				},
+			},
+			Action: runBlockDecode,
+		},
+		{
 			Name:  "seed",
 			Usage: "decrypt and display an identity's recovery seed",
 			Flags: []cli.Flag{

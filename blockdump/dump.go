@@ -25,13 +25,14 @@ type transactionItem struct {
 }
 
 type blockResult struct {
-	Digest       blockdigest.Digest  `json:"digest"`
-	Header       *blockrecord.Header `json:"header"`
-	Transactions []transactionItem   `json:"transactions"`
+	Digest       *blockdigest.Digest `json:"digest,omitempty"`
+	Header       *blockrecord.Header `json:"header,omitempty"`
+	Transactions []transactionItem   `json:"transactions,omitempty"`
+	Packed       []byte              `json:"binary,omitempty"`
 }
 
-// dump of a particular block
-func BlockDump(number uint64) (*blockResult, error) {
+// BlockDump dump of a particular block
+func BlockDump(number uint64, binaryOnly bool) (*blockResult, error) {
 
 	// fetch block and compute digest
 	n := make([]byte, 8)
@@ -41,6 +42,19 @@ func BlockDump(number uint64) (*blockResult, error) {
 	if nil == packed {
 		return nil, fault.BlockNotFound
 	}
+
+	if binaryOnly {
+		r := blockResult{
+			Packed: packed,
+		}
+		return &r, nil
+	}
+
+	return BlockDecode(packed, number)
+}
+
+// BlockDump dump of a particular block
+func BlockDecode(packed []byte, number uint64) (*blockResult, error) {
 
 	br := blockrecord.Get()
 
@@ -70,9 +84,10 @@ loop:
 	}
 
 	result := &blockResult{
-		Digest:       digest,
+		Digest:       &digest,
 		Header:       header,
 		Transactions: txs,
+		Packed:       packed,
 	}
 
 	return result, nil
