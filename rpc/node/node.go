@@ -248,7 +248,7 @@ func (node *Node) BlockDumpRange(arguments *BlockDumpRangeArguments, reply *Bloc
 
 	blocks := make([]interface{}, count)
 
-	for i := 0; i < arguments.Count; i += 1 {
+	for i := 0; i < count; i += 1 {
 		block, err := blockdump.BlockDump(height, decodeTxs)
 		if nil != err {
 			return err
