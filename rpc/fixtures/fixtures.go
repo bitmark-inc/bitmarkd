@@ -67,7 +67,7 @@ func SetupTestLogger() {
 
 	logging := logger.Configuration{
 		Directory: TestingDirName,
-		File:      fmt.Sprintf("%s.Log", LogCategory),
+		File:      fmt.Sprintf("%s.log", LogCategory),
 		Size:      1048576,
 		Count:     10,
 		Console:   false,

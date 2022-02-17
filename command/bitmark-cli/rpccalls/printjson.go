@@ -16,7 +16,9 @@ func (client *Client) printJson(title string, message interface{}) error {
 		return nil
 	}
 
-	b, err := json.MarshalIndent(message, "", "  ")
+	prefix := ""
+	indent := "  "
+	b, err := json.MarshalIndent(message, prefix, indent)
 	if nil != err {
 		return err
 	}

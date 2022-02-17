@@ -9,8 +9,6 @@ import (
 	"encoding/hex"
 	"time"
 
-	"golang.org/x/time/rate"
-
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/announce/rpc"
 	"github.com/bitmark-inc/bitmarkd/block"
@@ -26,6 +24,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/rpc/ratelimit"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/logger"
+	"golang.org/x/time/rate"
 )
 
 const (
@@ -51,7 +50,7 @@ const maximumNodeList = 100
 
 // Arguments - arguments for RPC
 type Arguments struct {
-	Start uint64 `json:"Start,string"`
+	Start uint64 `json:"start,string"`
 	Count int    `json:"count"`
 }
 
@@ -165,9 +164,10 @@ func (node *Node) Info(_ *InfoArguments, reply *InfoReply) error {
 	return nil
 }
 
-// BlockDumpInfo - the block to be dumped
+// BlockDumpArguments - the block to be dumped
 type BlockDumpArguments struct {
-	Height uint64 `json:"height"`
+	Height uint64 `json:"height,string"`
+	Binary bool   `json:"binary"`
 }
 
 // BlockDumpReply - BlockDump header and transactions
@@ -182,9 +182,81 @@ func (node *Node) BlockDump(arguments *BlockDumpArguments, reply *BlockDumpReply
 		return err
 	}
 
-	block, err := blockdump.BlockDump(arguments.Height)
+	block, err := blockdump.BlockDump(arguments.Height, arguments.Binary)
 	if nil == err {
 		reply.Block = block
 	}
+
 	return err
+}
+
+// BlockDecodeArguments - the block to be decodeed
+type BlockDecodeArguments struct {
+	Packed []byte `json:"packed"`
+}
+
+// BlockDecodeReply - BlockDecode header and transactions
+type BlockDecodeReply struct {
+	Block interface{} `json:"block"`
+}
+
+// BlockDecode - return a decoded version of the block
+func (node *Node) BlockDecode(arguments *BlockDecodeArguments, reply *BlockDecodeReply) error {
+
+	if err := ratelimit.Limit(node.Limiter); nil != err {
+		return err
+	}
+
+	block, err := blockdump.BlockDecode(arguments.Packed, 0, true)
+	if nil == err {
+		reply.Block = block
+	}
+
+	return err
+}
+
+// BlockDumpRangeArguments - the block to be dumped
+type BlockDumpRangeArguments struct {
+	Height uint64 `json:"height,string"`
+	Count  int    `json:"count"`
+	Txs    bool   `json:"txs"`
+}
+
+// BlockDumpRangeReply - BlockDumpRange header and transactions
+type BlockDumpRangeReply struct {
+	Blocks []interface{} `json:"blocks"`
+}
+
+// BlockDumpRange - return a dump of the block
+func (node *Node) BlockDumpRange(arguments *BlockDumpRangeArguments, reply *BlockDumpRangeReply) error {
+
+	if err := ratelimit.Limit(node.Limiter); nil != err {
+		return err
+	}
+
+	height := arguments.Height
+
+	count := arguments.Count
+	if count < 1 {
+		count = 1
+	}
+	if count > 100 {
+		count = 100
+	}
+
+	decodeTxs := arguments.Txs
+
+	blocks := make([]interface{}, count)
+
+	for i := 0; i < count; i += 1 {
+		block, err := blockdump.BlockDump(height, decodeTxs)
+		if nil != err {
+			return err
+		}
+		blocks[i] = block
+		height += 1
+	}
+
+	reply.Blocks = blocks
+	return nil
 }

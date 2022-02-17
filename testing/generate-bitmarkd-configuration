@@ -47,6 +47,7 @@ usage: ${##*/0} [options] index-numbers...
        --ipv4-only           -4            turn off IPv6 preference
        --console             -k            log to console
        --more                -m            more logging output
+       --auto-verify         -a            make all payments optional and auto-verify all tx
        --update              -u            overwrite an existing configuration, does not change exiting keys
        --debug               -D            show debug information
 EOF
@@ -74,11 +75,12 @@ log_size=1048576
 log_count=100
 log_console=false
 log_default=error
+auto_verify=false
 update=no
 
 
 # parse options
-while getopts :hvc:n:C:p:riP4kmuD-: option
+while getopts :hvc:n:C:p:riP4kmauD-: option
 do
   # convert long options
   if [ X"${option}" = X"-" ]
@@ -131,7 +133,7 @@ do
       bitmarkd_connect="${bitmarkd_connect} ${conn}"
       ;;
 
-    (-p|--payment)
+    (p|payment)
       case "${OPTARG}" in
         (p|p2p)
           payment_mode=p2p
@@ -166,6 +168,10 @@ do
 
     (k|console)
       log_console=true
+      ;;
+
+    (a|auto-verify)
+      auto_verify=true
       ;;
 
     (m|more)
@@ -264,6 +270,10 @@ do
   litecoin_test="mjPkDNakVA4w4hJZ6WF7p8yKUV2merhyCM"
   litecoin_live="LYg45SVcJALHWHSMVkHSKAnbAEXAbhei7h"
 
+  ## litecoin_key="cRJAxVH5NHkqontyHrz3uMrLaJ7517MGQBo1RXnGxLhyEh7BqPm3"
+  #litecoin_test="QbsRp4j7av6ShGvYgiWdETDM98xjGwsJ5q"
+  #litecoin_live=""
+
   awk < "$(dirname "${0}")/../command/bitmarkd/bitmarkd.conf.sub" > "${config}" \
       -v recorderd_public="${recorderd_public}" \
       -v chain="${chain}" \
@@ -274,6 +284,7 @@ do
       -v port_offset="${port_offset}" \
       -v connections="${connections}" \
       -v payment_mode="${payment_mode}" \
+      -v auto_verify="${auto_verify}" \
       -v bitcoin_test="${bitcoin_test}" \
       -v bitcoin_live="${bitcoin_live}" \
       -v litecoin_test="${litecoin_test}" \
@@ -287,6 +298,7 @@ do
     BEGIN {
       check_logging = 0
       skip_proofing = 0
+      in_payment = 0
       drop_this = 0
     }
 
@@ -303,6 +315,17 @@ do
     # end of proofing block
     /^}/ {
       skip_proofing = 0
+    }
+
+    # detect start of payment block
+    /^M[.]payment/ {
+      in_payment = 1
+    }
+
+    /auto_verify[[:space:]]+=/ && in_payment {
+      print "    auto_verify = " auto_verify ","
+      in_payment = 0
+      drop_this = 1
     }
 
     # uncomment the right data directory line

@@ -240,7 +240,7 @@ func processDataCommand(log *logger.L, arguments []string, options *Configuratio
 	case "start", "run":
 		return false // continue processing
 
-	case "block", "b":
+	case "block", "b", "raw":
 		if len(arguments) < 1 {
 			exitwithstatus.Message("missing block number argument")
 		}
@@ -254,6 +254,7 @@ func processDataCommand(log *logger.L, arguments []string, options *Configuratio
 		}
 
 		output := "-"
+		binaryOnly := command == "raw"
 
 		// optional end range
 		nEnd := n
@@ -282,7 +283,7 @@ func processDataCommand(log *logger.L, arguments []string, options *Configuratio
 
 		fmt.Fprintf(fd, "[\n")
 		for ; n <= nEnd; n += 1 {
-			block, err := blockdump.BlockDump(n)
+			block, err := blockdump.BlockDump(n, binaryOnly)
 			if nil != err {
 				exitwithstatus.Message("dump block error: %s", err)
 			}

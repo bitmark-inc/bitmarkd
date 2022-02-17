@@ -41,10 +41,12 @@ asset_fp_2='017df4886c8352a566b9695b3acae38fc544c3d721d59825e074450d5d30999fc9be
 
 # regtest addresses for block owner transfer + private keys
 btc_1='2N5yyS646Kts3i6u9tRzyWkW5g619bkJ3CP'  # priv='cMyE7Fh5Nvkx2GZQpq6KpCBQzz7Soj1fn1HMjHiUA2WRLyzP2VL8'
-ltc_1='Qby5deiUsVkp8PJHrfnFrWuQfYfheTquYM'   # priv='cSQE4ESDyYgY7tZ12ECd4MrwpVtM3XoitZtRtYG1CRY1A3ihbDcW'
+#ltc_1='Qby5deiUsVkp8PJHrfnFrWuQfYfheTquYM'   # priv='cSQE4ESDyYgY7tZ12ECd4MrwpVtM3XoitZtRtYG1CRY1A3ihbDcW'
+ltc_1='n2TbjCx4irDrwhFNGyKCj6kpevRfYq7Jt7'   # priv='cSQE4ESDyYgY7tZ12ECd4MrwpVtM3XoitZtRtYG1CRY1A3ihbDcW' [legacy]
 
-btc_2="2N95f5yThatYUrwMnAqoxXL5UNs8HYmeinL"  # priv='cTPAdf5MNmc8Fycf9NSkzRQjXJYbTnUhNeXbvVXtWbytsTFbzEaw'
-ltc_2="Qb7NQ3PjhvVBLJYTzTc834txdokHmHfLiS"   # priv='cN9tHtJSz35wyHh4XFot7iKpeLmUqApMQcT2dkFHxF1Rxtarm6Pw'
+btc_2='2N95f5yThatYUrwMnAqoxXL5UNs8HYmeinL'  # priv='cTPAdf5MNmc8Fycf9NSkzRQjXJYbTnUhNeXbvVXtWbytsTFbzEaw'
+#ltc_2='Qb7NQ3PjhvVBLJYTzTc834txdokHmHfLiS'   # priv='cN9tHtJSz35wyHh4XFot7iKpeLmUqApMQcT2dkFHxF1Rxtarm6Pw'
+ltc_2='mrbwikLAVQ45bXfQmKm25LDLVpRED8guiz'   # priv='cN9tHtJSz35wyHh4XFot7iKpeLmUqApMQcT2dkFHxF1Rxtarm6Pw' [legacy]
 
 
 # BTC or LTC - set in NEW_CHAIN
@@ -56,16 +58,21 @@ network=local
 # verbose output
 verbose=yes
 
+# disable payment to check the auto_verify setting in bitmarkd
+#disable_payment=no
+disable_payment=yes
+
+
 # required programs
 programs='jq bitmark-cli bitmark-wallet run-bitcoin run-litecoin'
 
 # usage message
 USAGE() {
   if [ -n "${1}" ]
-     then
-       printf 'error: '
-       printf "$@"
-       printf '\n'
+  then
+    printf 'error: '
+    printf "$@"
+    printf '\n'
   fi
 cat <<EOF
 usage: ${0##*/} command
@@ -293,6 +300,13 @@ SET() {
 PAY() {
   txid="${1}"; shift
   pay="${1}"; shift
+
+  if [ X"${disable_payment}" = X"yes" ]
+  then
+     VERBOSE 'not paying: just wait for tx to be mined'
+     WAIT "${txid}"
+     return 0
+  fi
 
   VERBOSE 'raw pay: %s' "${pay}"
 

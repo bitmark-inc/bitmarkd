@@ -13,7 +13,10 @@ import (
 
 func printJson(handle io.Writer, message interface{}) error {
 
-	b, err := json.MarshalIndent(message, "", "  ")
+	prefix := ""
+	indent := "  "
+
+	b, err := json.MarshalIndent(message, prefix, indent)
 	if nil != err {
 		return err
 	}

@@ -11,8 +11,6 @@ import (
 	"math/big"
 	"time"
 
-	"golang.org/x/crypto/sha3"
-
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/constants"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
@@ -23,6 +21,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
+	"golang.org/x/crypto/sha3"
 )
 
 // IssueInfo - result returned by store issues
@@ -240,7 +239,7 @@ func storeIssues(issues []*transactionrecord.BitmarkIssue, assetHandle storage.H
 	// already received the payment for the issues
 	// approve the transfer immediately if payment is ok
 	detail, ok := globalData.orphanPayments[payId]
-	if ok {
+	if ok || !freeIssueAllowed && globalData.autoVerify {
 		if acceptablePayment(detail, result.Payments) {
 			for _, txId := range txIds {
 				globalData.verifiedIndex[txId] = payId

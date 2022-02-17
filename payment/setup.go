@@ -32,6 +32,7 @@ type P2PCache struct {
 
 // Configuration - structure for configuration file
 type Configuration struct {
+	AutoVerify     bool                        `gluamapper:"auto_verify" json:"auto_verify"`
 	Mode           string                      `gluamapper:"mode" json:"mode"`
 	P2PCache       P2PCache                    `gluamapper:"p2p_cache" json:"p2p_cache"`
 	BootstrapNodes bootstrapNodesConfiguration `gluamapper:"bootstrap_nodes" json:"bootstrap_nodes"`
