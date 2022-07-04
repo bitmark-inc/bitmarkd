@@ -59,8 +59,7 @@ network=local
 verbose=yes
 
 # disable payment to check the auto_verify setting in bitmarkd
-#disable_payment=no
-disable_payment=yes
+disable_payment=no
 
 
 # required programs
@@ -76,12 +75,12 @@ USAGE() {
   fi
 cat <<EOF
 usage: ${0##*/} command
-    new [btc|ltc]    - build block chain from zero (only once)
-    issue [btc|ltc]  - issue more assets and transfer some
-    bt [btc|ltc]     - transfer block ownership
-    balance          - list balance records
-    ownership        - list ownership records
-    show             - list all
+    new [btc|ltc|no]    - build block chain from zero (only once)
+    issue [btc|ltc|no]  - issue more assets and transfer some
+    bt [btc|ltc|no]     - transfer block ownership
+    balance             - list balance records
+    ownership           - list ownership records
+    show                - list all
 EOF
 
   exit 1
@@ -106,9 +105,15 @@ SET_CURRENCY() {
   case "${1}" in
     ([bB][tT][cC])
       currency=BTC
+      disable_payment=no
       ;;
     ([lL][tT][cC])
       currency=LTC
+      disable_payment=no
+      ;;
+    ([nN][oO]*)
+      currency=LTC
+      disable_payment=yes
       ;;
     (*)
       ERROR 'invalid currency: %s' "${1}"
