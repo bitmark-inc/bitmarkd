@@ -7,11 +7,12 @@ jobs:
   test:
     docker:
       # specify the version
-      - image: circleci/golang:1.13
+      #- image: circleci/golang:1.18.3
+      - image: cimg/go:1.18.3
         environment:
           - GO111MODULE: "on"
 
-    working_directory: /go/src/github.com/bitmark-inc/bitmarkd
+    working_directory: ${HOME}/go/src/github.com/bitmark-inc/bitmarkd
     steps:
       - checkout
       - run: sudo sh -c 'mkdir -p /etc/apt/source.list.d/'
@@ -42,14 +43,14 @@ jobs:
       - run:
           name: Get gosec
           command: |
-             wget https://github.com/securego/gosec/releases/download/v2.1.0/gosec_2.1.0_linux_amd64.tar.gz
-             tar -xpvf gosec_2.1.0_linux_amd64.tar.gz
+             wget https://github.com/securego/gosec/releases/download/v2.12.0/gosec_2.12.0_linux_amd64.tar.gz
+             tar -xpvf gosec_2.12.0_linux_amd64.tar.gz
       - run:
           name: Get golangcli-lint
           command: |
-             wget https://github.com/golangci/golangci-lint/releases/download/v1.21.0/golangci-lint-1.21.0-linux-amd64.tar.gz
-             tar -xpvf golangci-lint-1.21.0-linux-amd64.tar.gz
-             mv golangci-lint-1.21.0-linux-amd64/golangci-lint .
+             wget https://github.com/golangci/golangci-lint/releases/download/v1.46.2/golangci-lint-1.46.2-linux-amd64.tar.gz
+             tar -xpvf golangci-lint-1.46.2-linux-amd64.tar.gz
+             mv golangci-lint-1.46.2-linux-amd64/golangci-lint .
       - run:
           name: Get golint
           command: go get -v golang.org/x/lint/golint
