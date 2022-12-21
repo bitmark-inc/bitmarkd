@@ -12,12 +12,11 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/chain"
+	"github.com/bitmark-inc/logger"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
-
-	"github.com/bitmark-inc/bitmarkd/chain"
-	"github.com/bitmark-inc/logger"
 )
 
 var btcMainNetParams *chaincfg.Params = &chaincfg.MainNetParams
@@ -137,19 +136,31 @@ var (
 		MinerConfirmationWindow:       8064, //
 		Deployments: [chaincfg.DefinedDeployments]chaincfg.ConsensusDeployment{
 			chaincfg.DeploymentTestDummy: {
-				BitNumber:  28,
-				StartTime:  1199145601, // January 1, 2008 UTC
-				ExpireTime: 1230767999, // December 31, 2008 UTC
+				BitNumber: 28,
+				DeploymentStarter: chaincfg.NewMedianTimeDeploymentStarter(
+					time.Unix(1199145601, 0), // January 1, 2008 UTC
+				),
+				DeploymentEnder: chaincfg.NewMedianTimeDeploymentEnder(
+					time.Unix(1230767999, 0), // December 31, 2008 UTC
+				),
 			},
 			chaincfg.DeploymentCSV: {
-				BitNumber:  0,
-				StartTime:  1485561600, // January 28, 2017 UTC
-				ExpireTime: 1517356801, // January 31st, 2018 UTC
+				BitNumber: 0,
+				DeploymentStarter: chaincfg.NewMedianTimeDeploymentStarter(
+					time.Unix(1485561600, 0), // January 28, 2017 UTC
+				),
+				DeploymentEnder: chaincfg.NewMedianTimeDeploymentEnder(
+					time.Unix(1517356801, 0), // January 31st, 2018 UTC
+				),
 			},
 			chaincfg.DeploymentSegwit: {
-				BitNumber:  1,
-				StartTime:  1485561600, // January 28, 2017 UTC
-				ExpireTime: 1517356801, // January 31st, 2018 UTC.
+				BitNumber: 1,
+				DeploymentStarter: chaincfg.NewMedianTimeDeploymentStarter(
+					time.Unix(1485561600, 0), // January 28, 2017 UTC
+				),
+				DeploymentEnder: chaincfg.NewMedianTimeDeploymentEnder(
+					time.Unix(1517356801, 0), // January 31st, 2018 UTC.
+				),
 			},
 		},
 
@@ -245,19 +256,31 @@ var (
 		MinerConfirmationWindow:       2016,
 		Deployments: [chaincfg.DefinedDeployments]chaincfg.ConsensusDeployment{
 			chaincfg.DeploymentTestDummy: {
-				BitNumber:  28,
-				StartTime:  1199145601, // January 1, 2008 UTC
-				ExpireTime: 1230767999, // December 31, 2008 UTC
+				BitNumber: 28,
+				DeploymentStarter: chaincfg.NewMedianTimeDeploymentStarter(
+					time.Unix(1199145601, 0), // January 1, 2008 UTC
+				),
+				DeploymentEnder: chaincfg.NewMedianTimeDeploymentEnder(
+					time.Unix(1230767999, 0), // December 31, 2008 UTC
+				),
 			},
 			chaincfg.DeploymentCSV: {
-				BitNumber:  0,
-				StartTime:  1483228800, // January 1, 2017
-				ExpireTime: 1517356801, // January 31st, 2018
+				BitNumber: 0,
+				DeploymentStarter: chaincfg.NewMedianTimeDeploymentStarter(
+					time.Unix(1483228800, 0), // January 1, 2017
+				),
+				DeploymentEnder: chaincfg.NewMedianTimeDeploymentEnder(
+					time.Unix(1517356801, 0), // January 31st, 2018
+				),
 			},
 			chaincfg.DeploymentSegwit: {
-				BitNumber:  1,
-				StartTime:  1483228800, // January 1, 2017
-				ExpireTime: 1517356801, // January 31st, 2018
+				BitNumber: 1,
+				DeploymentStarter: chaincfg.NewMedianTimeDeploymentStarter(
+					time.Unix(1483228800, 0), // January 1, 2017
+				),
+				DeploymentEnder: chaincfg.NewMedianTimeDeploymentEnder(
+					time.Unix(1517356801, 0), // January 31st, 2018
+				),
 			},
 		},
 
@@ -351,19 +374,31 @@ var (
 		MinerConfirmationWindow:       144,
 		Deployments: [chaincfg.DefinedDeployments]chaincfg.ConsensusDeployment{
 			chaincfg.DeploymentTestDummy: {
-				BitNumber:  28,
-				StartTime:  0,             // Always available for vote
-				ExpireTime: math.MaxInt64, // Never expires
+				BitNumber: 28,
+				DeploymentStarter: chaincfg.NewMedianTimeDeploymentStarter(
+					time.Unix(0, 0), // Always available for vote
+				),
+				DeploymentEnder: chaincfg.NewMedianTimeDeploymentEnder(
+					time.Unix(math.MaxInt64, 0), // Never expires
+				),
 			},
 			chaincfg.DeploymentCSV: {
-				BitNumber:  0,
-				StartTime:  0,             // Always available for vote
-				ExpireTime: math.MaxInt64, // Never expires
+				BitNumber: 0,
+				DeploymentStarter: chaincfg.NewMedianTimeDeploymentStarter(
+					time.Unix(0, 0), // Always available for vote
+				),
+				DeploymentEnder: chaincfg.NewMedianTimeDeploymentEnder(
+					time.Unix(math.MaxInt64, 0), // Never expires
+				),
 			},
 			chaincfg.DeploymentSegwit: {
-				BitNumber:  1,
-				StartTime:  0,             // Always available for vote
-				ExpireTime: math.MaxInt64, // Never expires.
+				BitNumber: 1,
+				DeploymentStarter: chaincfg.NewMedianTimeDeploymentStarter(
+					time.Unix(0, 0), // Always available for vote
+				),
+				DeploymentEnder: chaincfg.NewMedianTimeDeploymentEnder(
+					time.Unix(math.MaxInt64, 0), // Never expires.
+				),
 			},
 		},
 

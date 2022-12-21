@@ -13,15 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/btcsuite/btcd/addrmgr"
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/connmgr"
-	"github.com/btcsuite/btcd/peer"
-	"github.com/btcsuite/btcd/txscript"
-	"github.com/btcsuite/btcd/wire"
-	"github.com/patrickmn/go-cache"
-
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/currency/litecoin"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -30,6 +21,14 @@ import (
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/logger"
+	"github.com/btcsuite/btcd/addrmgr"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/connmgr"
+	"github.com/btcsuite/btcd/peer"
+	"github.com/btcsuite/btcd/txscript"
+	"github.com/btcsuite/btcd/wire"
+	"github.com/patrickmn/go-cache"
 )
 
 const checkpointBackLimit = 2000
@@ -48,7 +47,7 @@ type p2pWatcher struct {
 	addrManager    *addrmgr.AddrManager
 	connManager    *connmgr.ConnManager
 	networkParams  *chaincfg.Params
-	srcAddr        *wire.NetAddress
+	srcAddr        *wire.NetAddressV2
 	checkpoint     chaincfg.Checkpoint
 	storage        storage.P2PStorage
 	blockCache     *cache.Cache
@@ -84,13 +83,16 @@ func newP2pWatcher(c currency.Currency, peerDirectory string, bootstrapNodes []s
 
 	addrManager := addrmgr.New(peerDirectory, nil)
 
+	//sa := wire.NewNetAddressV2IPPort(net.ParseIP("0.0.0.0"), uint16(defaultPort), 0)
+	sa := wire.NetAddressV2FromBytes(time.Time{}, 0, net.ParseIP("0.0.0.0"), uint16(defaultPort))
+
 	w := &p2pWatcher{
 		currency:       c,
 		connectedPeers: NewPeerMap(),
 		bootstrapNodes: bootstrapNodes,
 		addrManager:    addrManager,
 		networkParams:  networkParams,
-		srcAddr:        wire.NewNetAddressIPPort(net.ParseIP("0.0.0.0"), uint16(defaultPort), 0),
+		srcAddr:        sa,
 		storage:        paymentStore,
 		blockCache:     cache.New(time.Hour, 2*time.Hour),
 		log:            log,
@@ -118,10 +120,7 @@ func newP2pWatcher(c currency.Currency, peerDirectory string, bootstrapNodes []s
 				return nil, fault.NoAddressToReturn
 			}
 			address := ka.NetAddress()
-			addr := &net.TCPAddr{
-				Port: int(address.Port),
-				IP:   address.IP,
-			}
+
 			attemptLock.Lock()
 			defer attemptLock.Unlock()
 
@@ -129,13 +128,13 @@ func newP2pWatcher(c currency.Currency, peerDirectory string, bootstrapNodes []s
 				return nil, fault.NoAddressToReturn
 			}
 
-			if w.connectedPeers.Exist(addr.String()) {
-				w.log.Warnf("ignore connected peer: %s", addr.String())
+			if w.connectedPeers.Exist(address.Addr.String()) {
+				w.log.Warnf("ignore connected peer: %s", address.Addr.String())
 				return nil, fault.NoAddressToReturn
 			}
 
 			addrManager.Attempt(address)
-			return addr, nil
+			return address.Addr, nil
 		},
 		Dial: func(addr net.Addr) (net.Conn, error) {
 			return net.Dial("tcp", addr.String())
@@ -469,9 +468,9 @@ func (w *p2pWatcher) onPeerVerAck(p *peer.Peer, msg *wire.MsgVerAck) {
 }
 
 // onPeerAddr will add discovered new addresses into address manager
-func (w *p2pWatcher) onPeerAddr(p *peer.Peer, msg *wire.MsgAddr) {
+func (w *p2pWatcher) onPeerAddr(p *peer.Peer, msg *wire.MsgAddrV2) {
 	for _, a := range msg.AddrList {
-		w.log.Tracef("Receive new address: %s:%d. Peer service: %s", a.IP, a.Port, a.Services)
+		w.log.Tracef("Receive new address: %s:%d. Peer service: %s", a.Addr.String(), a.Port, a.Services)
 		w.addrManager.AddAddress(a, w.srcAddr)
 	}
 }
@@ -677,7 +676,7 @@ func (w *p2pWatcher) peerConfig() *peer.Config {
 				return nil
 			},
 			OnVerAck:  w.onPeerVerAck,
-			OnAddr:    w.onPeerAddr,
+			OnAddrV2:  w.onPeerAddr,
 			OnHeaders: w.onPeerHeaders,
 			OnBlock: func(p *peer.Peer, msg *wire.MsgBlock, buf []byte) {
 				w.log.Tracef("on block: %s", msg.BlockHash())
