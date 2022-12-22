@@ -1,3 +1,9 @@
+bitmarkd (0.15.0-1ubuntu1) bionic; urgency=medium
+
+  * new release
+
+ -- Christopher Hall <hsw@bitmark.com>  Thu, 22 Dec 2022 10:13:23 +0000
+
 bitmarkd (0.15.0-rc.1-1ubuntu1) bionic; urgency=medium
 
   * update dependencies
