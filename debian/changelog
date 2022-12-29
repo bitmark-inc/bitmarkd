@@ -1,3 +1,9 @@
+bitmarkd (0.15.1-1ubuntu1) bionic; urgency=medium
+
+  * update Go language version to 1.19
+
+ -- Christopher Hall <hsw@bitmark.com>  Thu, 29 Dec 2022 02:33:21 +0000
+
 bitmarkd (0.15.0-1ubuntu1) bionic; urgency=medium
 
   * new release
