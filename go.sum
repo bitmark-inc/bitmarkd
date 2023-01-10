@@ -8,8 +8,8 @@ github.com/bitmark-inc/getoptions v0.1.1 h1:jFau6OG1oUzdj0BCgFGmHveoxTTSyCoL3MXz
 github.com/bitmark-inc/getoptions v0.1.1/go.mod h1:++zQVcw89sB6Lah2SJae420l+xKtRGkdKTxqLLeEhS4=
 github.com/bitmark-inc/go-argon2 v0.1.5 h1:WTuvgjBO0M5w1kX5udidcWWSrjkO1K9leFqK5m6pTqI=
 github.com/bitmark-inc/go-argon2 v0.1.5/go.mod h1:K3gDyH7GzKOF9g2Lnc3q3PjHlvp2O6TlejcwpCfj5ts=
-github.com/bitmark-inc/logger v0.3.5 h1:AIYHqe4bQOxzJxpphLcTB8EjOP+Px7L8U3B4OWsX+Y4=
-github.com/bitmark-inc/logger v0.3.5/go.mod h1:ObxwfAGdVHGz5sY0wHKVK91NZV/L5nexMQkwbAnaB54=
+github.com/bitmark-inc/logger v0.3.6 h1:64KoVtqLFaD3lx2mFGjwXKNEhYrqprOUknoiGcy9Yxo=
+github.com/bitmark-inc/logger v0.3.6/go.mod h1:jPlD29aeIRJ65FKNs7/xowG1KcCMKsJrNhjqVdO2U2g=
 github.com/btcsuite/btcd v0.20.1-beta/go.mod h1:wVuoA8VJLEcwgqHBwHmzLRazpKxTv13Px/pDuV7OomQ=
 github.com/btcsuite/btcd v0.22.0-beta.0.20220111032746-97732e52810c/go.mod h1:tjmYdS6MLJ5/s0Fj4DbLgSbDHbEqLJrtnHecBFkdz5M=
 github.com/btcsuite/btcd v0.23.0/go.mod h1:0QJIIN1wwIXF/3G/m87gIwGniDMDQqjVn4SZgnFpsYY=
@@ -106,7 +106,6 @@ github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQD
 github.com/shurcooL/sanitized_anchor_name v1.0.0/go.mod h1:1NzhyTcUVG4SuEtjjoZeVRXNmyL/1OwPU0+IJeTBvfc=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.4.0/go.mod h1:YvHI0jy2hoMjB+UWwv71VJQ9isScKT/TqJzVSSt89Yw=
-github.com/stretchr/testify v1.5.1/go.mod h1:5W2xD1RspED5o8YsWQXVCued0rvSQ+mT+I5cxcmMvtA=
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.8.0 h1:pSgiaMZlXftHpm5L7V1+rVB+AZJydKsMxsQBIJw4PKk=

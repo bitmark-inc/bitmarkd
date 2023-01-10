@@ -1,3 +1,9 @@
+bitmarkd (0.15.2-1ubuntu1) bionic; urgency=medium
+
+  * update logger dependency
+
+ -- Christopher Hall <hsw@bitmark.com>  Tue, 10 Jan 2023 09:18:20 +0000
+
 bitmarkd (0.15.1-1ubuntu1) bionic; urgency=medium
 
   * update Go language version to 1.19
