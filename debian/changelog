@@ -1,3 +1,9 @@
+bitmarkd (0.15.3-beta.1-1ubuntu1) bionic; urgency=medium
+
+  * btcd as local dependency to check if this fixes memory leak
+
+ -- Christopher Hall <hsw@bitmark.com>  Wed, 11 Jan 2023 06:44:40 +0000
+
 bitmarkd (0.15.2-1ubuntu1) bionic; urgency=medium
 
   * update logger dependency
