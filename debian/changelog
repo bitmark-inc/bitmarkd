@@ -1,3 +1,9 @@
+bitmarkd (0.15.3-beta.2-1ubuntu1) bionic; urgency=medium
+
+  * switch back to btcsuite fork after leak fix was merged
+
+ -- Christopher Hall <hsw@bitmark.com>  Mon, 16 Jan 2023 06:35:47 +0000
+
 bitmarkd (0.15.3-beta.1-1ubuntu1) bionic; urgency=medium
 
   * btcd as local dependency to check if this fixes memory leak
