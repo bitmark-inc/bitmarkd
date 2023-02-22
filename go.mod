@@ -1,6 +1,6 @@
 module github.com/bitmark-inc/bitmarkd
 
-go 1.19
+go 1.20
 
 require (
 	github.com/bitmark-inc/certgen v0.1.1
