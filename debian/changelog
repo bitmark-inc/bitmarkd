@@ -1,3 +1,9 @@
+bitmarkd (0.15.5-1ubuntu1) bionic; urgency=medium
+
+  * update several dependencies especially zmq and crypto
+
+ -- Christopher Hall <hsw@bitmark.com>  Tue, 17 Oct 2023 01:44:25 +0000
+
 bitmarkd (0.15.4-1ubuntu1) bionic; urgency=medium
 
   * update dependencies golang.org/x/net
