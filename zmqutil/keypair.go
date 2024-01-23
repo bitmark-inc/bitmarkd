@@ -11,10 +11,9 @@ import (
 	"os"
 	"strings"
 
-	zmq "github.com/pebbe/zmq4"
-
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
+	zmq "github.com/pebbe/zmq4"
 )
 
 const (
@@ -37,18 +36,18 @@ func MakeKeyPair(publicKeyFileName string, privateKeyFileName string) error {
 
 	// keys are encoded in in Z85 (ZeroMQ Base-85 Encoding) see: http://rfc.zeromq.org/spec:32
 	publicKey, privateKey, err := zmq.NewCurveKeypair()
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	publicKey = taggedPublic + hex.EncodeToString([]byte(zmq.Z85decode(publicKey))) + "\n"
 	privateKey = taggedPrivate + hex.EncodeToString([]byte(zmq.Z85decode(privateKey))) + "\n"
 
-	if err = ioutil.WriteFile(publicKeyFileName, []byte(publicKey), 0666); err != nil {
+	if err := ioutil.WriteFile(publicKeyFileName, []byte(publicKey), 0o666); err != nil {
 		return err
 	}
 
-	if err = ioutil.WriteFile(privateKeyFileName, []byte(privateKey), 0600); err != nil {
+	if err := ioutil.WriteFile(privateKeyFileName, []byte(privateKey), 0o600); err != nil {
 		os.Remove(publicKeyFileName)
 		return err
 	}

@@ -70,10 +70,10 @@ func Initialise(configuration *Configuration) error {
 	globalData.log = logger.New("proof")
 	globalData.log.Info("starting…")
 
-	if err := globalData.pub.initialise(configuration); nil != err {
+	if err := globalData.pub.initialise(configuration); err != nil {
 		return err
 	}
-	if err := globalData.sub.initialise(configuration); nil != err {
+	if err := globalData.sub.initialise(configuration); err != nil {
 		return err
 	}
 
@@ -97,11 +97,11 @@ func Initialise(configuration *Configuration) error {
 	// start internal hasher for local chain
 	if mode.ChainName() == chain.Local && configuration.InternalHashEnable {
 		h, err := NewInternalHasherForTest(internalHasherRequest, internalHasherReply)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 		err = h.Initialise()
-		if nil != err {
+		if err != nil {
 			return err
 		}
 		h.Start()

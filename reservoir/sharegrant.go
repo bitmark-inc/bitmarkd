@@ -48,7 +48,7 @@ func storeGrant(
 	blockOwnerPaymentHandle storage.Handle,
 	transactionHandle storage.Handle,
 ) (*GrantInfo, bool, error) {
-	if nil == shareQuantityHandle || nil == shareHandle || nil == ownerDataHandle || nil == blockOwnerPaymentHandle {
+	if shareQuantityHandle == nil || shareHandle == nil || ownerDataHandle == nil || blockOwnerPaymentHandle == nil {
 		return nil, false, fault.NilPointer
 	}
 
@@ -83,7 +83,7 @@ func storeGrant(
 	// if already seen just return pay id and previous payments if present
 	entry, ok := globalData.pendingTransactions[payId]
 	if ok {
-		if nil != entry.payments {
+		if entry.payments != nil {
 			result.Payments = entry.payments
 		} else {
 			// this would mean that reservoir data is corrupt
@@ -153,19 +153,19 @@ func makeSpendKey(owner *account.Account, shareId merkle.Digest) spendKey {
 
 // CheckGrantBalance - check sufficient balance to be able to execute a grant request
 func CheckGrantBalance(trx storage.Transaction, grant *transactionrecord.ShareGrant, shareQuantityHandle storage.Handle) (uint64, error) {
-	if nil == shareQuantityHandle {
+	if shareQuantityHandle == nil {
 		return 0, fault.NilPointer
 	}
 
 	// check incoming quantity
-	if 0 == grant.Quantity {
+	if grant.Quantity == 0 {
 		return 0, fault.ShareQuantityTooSmall
 	}
 
 	oKey := append(grant.Owner.Bytes(), grant.ShareId[:]...)
 	var balance uint64
 	var ok bool
-	if nil == trx {
+	if trx == nil {
 		balance, ok = shareQuantityHandle.GetN(oKey)
 	} else {
 		balance, ok = trx.GetN(shareQuantityHandle, oKey)
@@ -187,7 +187,7 @@ func verifyGrant(
 	ownerDataHandle storage.Handle,
 	transactionHandle storage.Handle,
 ) (*verifiedGrantInfo, bool, error) {
-	if nil == shareQuantityHandle || nil == shareHandle || nil == ownerDataHandle {
+	if shareQuantityHandle == nil || shareHandle == nil || ownerDataHandle == nil {
 		return nil, false, fault.NilPointer
 	}
 
@@ -197,13 +197,13 @@ func verifyGrant(
 	}
 
 	balance, err := CheckGrantBalance(nil, grant, shareQuantityHandle)
-	if nil != err {
+	if err != nil {
 		return nil, false, err
 	}
 
 	// pack grant and check signature
 	packedGrant, err := grant.Pack(grant.Owner)
-	if nil != err {
+	if err != nil {
 		return nil, false, err
 	}
 
@@ -234,12 +234,12 @@ func verifyGrant(
 
 	// the owner data is under tx id of share record
 	_ /*totalValue*/, shareTxId := shareHandle.GetNB(grant.ShareId[:])
-	if nil == shareTxId {
+	if shareTxId == nil {
 		return nil, false, fault.DoubleTransferAttempt
 	}
 
 	ownerData, err := ownership.GetOwnerDataB(nil, shareTxId, ownerDataHandle)
-	if nil != err {
+	if err != nil {
 		return nil, false, fault.DoubleTransferAttempt
 	}
 	// log.Debugf("ownerData: %x", ownerData)

@@ -15,28 +15,32 @@ import (
 
 // Unpack - turn a byte slice into a record
 // Note: the unpacker will access the underlying array of the packed
-//       record so p[x:y].Unpack() can read past p[y] and couldcontinue up to cap(p)
-//       i.e p[x:cap(p)].Unpack() performs the same operation
-//       elements beefore p[x] cannot be accessed
-//       see: https://blog.golang.org/go-slices-usage-and-internals
+//
+//	record so p[x:y].Unpack() can read past p[y] and couldcontinue up to cap(p)
+//	i.e p[x:cap(p)].Unpack() performs the same operation
+//	elements beefore p[x] cannot be accessed
+//	see: https://blog.golang.org/go-slices-usage-and-internals
 //
 // must cast result to correct type
 //
 // e.g.
-//   registration, ok := result.(*transaction.Registration)
+//
+//	registration, ok := result.(*transaction.Registration)
+//
 // or:
-//   switch tx := result.(type) {
-//   case *transaction.Registration:
+//
+//	switch tx := result.(type) {
+//	case *transaction.Registration:
 func (record Packed) Unpack(testnet bool) (t Transaction, n int, e error) {
 
 	defer func() {
-		if r := recover(); nil != r {
+		if r := recover(); r != nil {
 			e = fault.NotTransactionPack
 		}
 	}()
 
 	recordType, n := util.ClippedVarint64(record, 1, 8192)
-	if 0 == n {
+	if n == 0 {
 		return nil, 0, fault.NotTransactionPack
 	}
 
@@ -47,18 +51,18 @@ unpack_switch:
 
 		// currency
 		c, currencyLength := util.FromVarint64(record[n:])
-		if 0 == currencyLength {
+		if currencyLength == 0 {
 			break unpack_switch
 		}
 		n += currencyLength
-		currency, err := currency.FromUint64(c)
-		if nil != err {
+		currencyValue, err := currency.FromUint64(c)
+		if err != nil {
 			return nil, 0, err
 		}
 
 		// paymentAddress
 		paymentAddressLength, paymentAddressOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == paymentAddressOffset {
+		if paymentAddressOffset == 0 {
 			break unpack_switch
 		}
 		n += paymentAddressOffset
@@ -67,12 +71,12 @@ unpack_switch:
 
 		// owner public key
 		ownerLength, ownerOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == ownerOffset {
+		if ownerOffset == 0 {
 			break unpack_switch
 		}
 		n += ownerOffset
 		owner, err := account.AccountFromBytes(record[n : n+ownerLength])
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		if owner.IsTesting() != testnet {
@@ -82,14 +86,14 @@ unpack_switch:
 
 		// nonce
 		nonce, nonceLength := util.FromVarint64(record[n:])
-		if 0 == nonceLength {
+		if nonceLength == 0 {
 			break unpack_switch
 		}
 		n += nonceLength
 
 		// signature is remainder of record
 		signatureLength, signatureOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == signatureOffset {
+		if signatureOffset == 0 {
 			break unpack_switch
 		}
 		signature := make(account.Signature, signatureLength)
@@ -99,13 +103,13 @@ unpack_switch:
 
 		r := &OldBaseData{
 			Owner:          owner,
-			Currency:       currency,
+			Currency:       currencyValue,
 			PaymentAddress: string(paymentAddress),
 			Nonce:          nonce,
 			Signature:      signature,
 		}
 		err = r.check(testnet)
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		return r, n, nil
@@ -122,7 +126,7 @@ unpack_switch:
 
 		// fingerprint
 		fingerprintLength, fingerprintOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == fingerprintOffset {
+		if fingerprintOffset == 0 {
 			break unpack_switch
 		}
 		fingerprint := make([]byte, fingerprintLength)
@@ -132,7 +136,7 @@ unpack_switch:
 
 		// metadata (can be zero length)
 		metadataLength, metadataOffset := util.ClippedVarint64(record[n:], 0, 8192) // Note: zero is valid here
-		if 0 == metadataOffset {
+		if metadataOffset == 0 {
 			break unpack_switch
 		}
 		metadata := make([]byte, metadataLength)
@@ -142,12 +146,12 @@ unpack_switch:
 
 		// registrant public key
 		registrantLength, registrantOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == registrantOffset {
+		if registrantOffset == 0 {
 			break unpack_switch
 		}
 		n += registrantOffset
 		registrant, err := account.AccountFromBytes(record[n : n+registrantLength])
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		if registrant.IsTesting() != testnet {
@@ -157,7 +161,7 @@ unpack_switch:
 
 		// signature is remainder of record
 		signatureLength, signatureOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == signatureOffset {
+		if signatureOffset == 0 {
 			break unpack_switch
 		}
 		signature := make(account.Signature, signatureLength)
@@ -173,7 +177,7 @@ unpack_switch:
 			Signature:   signature,
 		}
 		err = r.check(testnet)
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		return r, n, nil
@@ -182,25 +186,25 @@ unpack_switch:
 
 		// asset id
 		assetIdentifierLength, assetIdentifierOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == assetIdentifierOffset {
+		if assetIdentifierOffset == 0 {
 			break unpack_switch
 		}
 		n += assetIdentifierOffset
 		var assetId AssetIdentifier
 		err := AssetIdentifierFromBytes(&assetId, record[n:n+assetIdentifierLength])
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		n += assetIdentifierLength
 
 		// owner public key
 		ownerLength, ownerOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == ownerOffset {
+		if ownerOffset == 0 {
 			break unpack_switch
 		}
 		n += ownerOffset
 		owner, err := account.AccountFromBytes(record[n : n+ownerLength])
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		if owner.IsTesting() != testnet {
@@ -210,14 +214,14 @@ unpack_switch:
 
 		// nonce
 		nonce, nonceLength := util.FromVarint64(record[n:])
-		if 0 == nonceLength {
+		if nonceLength == 0 {
 			break unpack_switch
 		}
 		n += nonceLength
 
 		// signature is remainder of record
 		signatureLength, signatureOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == signatureOffset {
+		if signatureOffset == 0 {
 			break unpack_switch
 		}
 		signature := make(account.Signature, signatureLength)
@@ -232,7 +236,7 @@ unpack_switch:
 			Nonce:     nonce,
 		}
 		err = r.check(testnet)
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		return r, n, nil
@@ -241,31 +245,31 @@ unpack_switch:
 
 		// link
 		linkLength, linkOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == linkOffset {
+		if linkOffset == 0 {
 			break unpack_switch
 		}
 		n += linkOffset
 		var link merkle.Digest
 		err := merkle.DigestFromBytes(&link, record[n:n+linkLength])
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		n += linkLength
 
 		// optional escrow payment
 		escrow, n, err := unpackEscrow(record, n)
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 
 		// owner public key
 		ownerLength, ownerOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == ownerOffset {
+		if ownerOffset == 0 {
 			break unpack_switch
 		}
 		n += ownerOffset
 		owner, err := account.AccountFromBytes(record[n : n+ownerLength])
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		if owner.IsTesting() != testnet {
@@ -275,7 +279,7 @@ unpack_switch:
 
 		// signature is remainder of record
 		signatureLength, signatureOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == signatureOffset {
+		if signatureOffset == 0 {
 			break unpack_switch
 		}
 		signature := make(account.Signature, signatureLength)
@@ -290,7 +294,7 @@ unpack_switch:
 			Signature: signature,
 		}
 		err = r.check(testnet)
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		return r, n, nil
@@ -299,31 +303,31 @@ unpack_switch:
 
 		// link
 		linkLength, linkOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == linkOffset {
+		if linkOffset == 0 {
 			break unpack_switch
 		}
 		n += linkOffset
 		var link merkle.Digest
 		err := merkle.DigestFromBytes(&link, record[n:n+linkLength])
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		n += linkLength
 
 		// optional escrow payment
 		escrow, n, err := unpackEscrow(record, n)
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 
 		// owner public key
 		ownerLength, ownerOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == ownerOffset {
+		if ownerOffset == 0 {
 			break unpack_switch
 		}
 		n += ownerOffset
 		owner, err := account.AccountFromBytes(record[n : n+ownerLength])
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		if owner.IsTesting() != testnet {
@@ -333,7 +337,7 @@ unpack_switch:
 
 		// signature
 		signatureLength, signatureOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == signatureOffset {
+		if signatureOffset == 0 {
 			break unpack_switch
 		}
 		signature := make(account.Signature, signatureLength)
@@ -343,7 +347,7 @@ unpack_switch:
 
 		// countersignature
 		countersignatureLength, countersignatureOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == countersignatureOffset {
+		if countersignatureOffset == 0 {
 			break unpack_switch
 		}
 		countersignature := make(account.Signature, countersignatureLength)
@@ -359,7 +363,7 @@ unpack_switch:
 			Countersignature: countersignature,
 		}
 		err = r.check(testnet)
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		return r, n, nil
@@ -368,7 +372,7 @@ unpack_switch:
 
 		// version
 		version, versionLength := util.FromVarint64(record[n:])
-		if 0 == versionLength {
+		if versionLength == 0 {
 			break unpack_switch
 		}
 		n += versionLength
@@ -378,12 +382,12 @@ unpack_switch:
 
 		// payment map
 		paymentsLength, paymentsOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == paymentsOffset {
+		if paymentsOffset == 0 {
 			break unpack_switch
 		}
 		n += paymentsOffset
 		payments, cs, err := currency.UnpackMap(record[n:n+paymentsLength], testnet)
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		if cs != versions[version] {
@@ -393,12 +397,12 @@ unpack_switch:
 
 		// owner public key
 		ownerLength, ownerOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == ownerOffset {
+		if ownerOffset == 0 {
 			break unpack_switch
 		}
 		n += ownerOffset
 		owner, err := account.AccountFromBytes(record[n : n+ownerLength])
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		if owner.IsTesting() != testnet {
@@ -408,14 +412,14 @@ unpack_switch:
 
 		// nonce
 		nonce, nonceLength := util.FromVarint64(record[n:])
-		if 0 == nonceLength {
+		if nonceLength == 0 {
 			break unpack_switch
 		}
 		n += nonceLength
 
 		// signature is remainder of record
 		signatureLength, signatureOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == signatureOffset {
+		if signatureOffset == 0 {
 			break unpack_switch
 		}
 		signature := make(account.Signature, signatureLength)
@@ -431,7 +435,7 @@ unpack_switch:
 			Signature: signature,
 		}
 		err = r.check(testnet)
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		return r, n, nil
@@ -440,26 +444,26 @@ unpack_switch:
 
 		// link
 		linkLength, linkOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == linkOffset {
+		if linkOffset == 0 {
 			break unpack_switch
 		}
 		n += linkOffset
 		var link merkle.Digest
 		err := merkle.DigestFromBytes(&link, record[n:n+linkLength])
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		n += linkLength
 
 		// optional escrow payment
 		escrow, n, err := unpackEscrow(record, n)
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 
 		// version
 		version, versionLength := util.FromVarint64(record[n:])
-		if 0 == versionLength {
+		if versionLength == 0 {
 			break unpack_switch
 		}
 		n += versionLength
@@ -470,12 +474,12 @@ unpack_switch:
 		// payment map
 
 		paymentsLength, paymentsOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == paymentsOffset {
+		if paymentsOffset == 0 {
 			break unpack_switch
 		}
 		n += paymentsOffset
 		payments, cs, err := currency.UnpackMap(record[n:n+paymentsLength], testnet)
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		if cs != versions[version] {
@@ -485,12 +489,12 @@ unpack_switch:
 
 		// owner public key
 		ownerLength, ownerOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == ownerOffset {
+		if ownerOffset == 0 {
 			break unpack_switch
 		}
 		n += ownerOffset
 		owner, err := account.AccountFromBytes(record[n : n+ownerLength])
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		if owner.IsTesting() != testnet {
@@ -500,7 +504,7 @@ unpack_switch:
 
 		// signature
 		signatureLength, signatureOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == signatureOffset {
+		if signatureOffset == 0 {
 			break unpack_switch
 		}
 		signature := make(account.Signature, signatureLength)
@@ -510,7 +514,7 @@ unpack_switch:
 
 		// countersignature
 		countersignatureLength, countersignatureOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == countersignatureOffset {
+		if countersignatureOffset == 0 {
 			break unpack_switch
 		}
 		countersignature := make(account.Signature, countersignatureLength)
@@ -528,7 +532,7 @@ unpack_switch:
 			Countersignature: countersignature,
 		}
 		err = r.check(testnet)
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		return r, n, nil
@@ -537,27 +541,27 @@ unpack_switch:
 
 		// link
 		linkLength, linkOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == linkOffset {
+		if linkOffset == 0 {
 			break unpack_switch
 		}
 		n += linkOffset
 		var link merkle.Digest
 		err := merkle.DigestFromBytes(&link, record[n:n+linkLength])
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		n += linkLength
 
 		// total number of shares to issue
 		quantity, quantityLength := util.FromVarint64(record[n:])
-		if 0 == quantityLength {
+		if quantityLength == 0 {
 			break unpack_switch
 		}
 		n += quantityLength
 
 		// signature
 		signatureLength, signatureOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == signatureOffset {
+		if signatureOffset == 0 {
 			break unpack_switch
 		}
 		signature := make(account.Signature, signatureLength)
@@ -571,7 +575,7 @@ unpack_switch:
 			Signature: signature,
 		}
 		err = r.check(testnet)
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		return r, n, nil
@@ -580,32 +584,32 @@ unpack_switch:
 
 		// share id
 		shareIdLength, shareIdOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == shareIdOffset {
+		if shareIdOffset == 0 {
 			break unpack_switch
 		}
 		n += shareIdOffset
 		var shareId merkle.Digest
 		err := merkle.DigestFromBytes(&shareId, record[n:n+shareIdLength])
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		n += shareIdLength
 
 		// number of shares to transfer
 		quantity, quantityLength := util.FromVarint64(record[n:])
-		if 0 == quantityLength {
+		if quantityLength == 0 {
 			break unpack_switch
 		}
 		n += quantityLength
 
 		// owner public key
 		ownerLength, ownerOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == ownerOffset {
+		if ownerOffset == 0 {
 			break unpack_switch
 		}
 		n += ownerOffset
 		owner, err := account.AccountFromBytes(record[n : n+ownerLength])
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		if owner.IsTesting() != testnet {
@@ -615,12 +619,12 @@ unpack_switch:
 
 		// recipient public key
 		recipientLength, recipientOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == recipientOffset {
+		if recipientOffset == 0 {
 			break unpack_switch
 		}
 		n += recipientOffset
 		recipient, err := account.AccountFromBytes(record[n : n+recipientLength])
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		if recipient.IsTesting() != testnet {
@@ -630,14 +634,14 @@ unpack_switch:
 
 		// time limit
 		beforeBlock, beforeBlockLength := util.FromVarint64(record[n:])
-		if 0 == beforeBlockLength {
+		if beforeBlockLength == 0 {
 			break unpack_switch
 		}
 		n += beforeBlockLength
 
 		// signature
 		signatureLength, signatureOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == signatureOffset {
+		if signatureOffset == 0 {
 			break unpack_switch
 		}
 		signature := make(account.Signature, signatureLength)
@@ -647,7 +651,7 @@ unpack_switch:
 
 		// countersignature
 		countersignatureLength, countersignatureOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == countersignatureOffset {
+		if countersignatureOffset == 0 {
 			break unpack_switch
 		}
 		countersignature := make(account.Signature, countersignatureLength)
@@ -665,7 +669,7 @@ unpack_switch:
 			Countersignature: countersignature,
 		}
 		err = r.check(testnet)
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		return r, n, nil
@@ -674,32 +678,32 @@ unpack_switch:
 
 		// share one
 		shareIdOneLength, shareIdOneOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == shareIdOneOffset {
+		if shareIdOneOffset == 0 {
 			break unpack_switch
 		}
 		n += shareIdOneOffset
 		var shareIdOne merkle.Digest
 		err := merkle.DigestFromBytes(&shareIdOne, record[n:n+shareIdOneLength])
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		n += shareIdOneLength
 
 		// number of shares to transfer
 		quantityOne, quantityOneLength := util.FromVarint64(record[n:])
-		if 0 == quantityOneLength {
+		if quantityOneLength == 0 {
 			break unpack_switch
 		}
 		n += quantityOneLength
 
 		// owner one public key
 		ownerOneLength, ownerOneOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == ownerOneOffset {
+		if ownerOneOffset == 0 {
 			break unpack_switch
 		}
 		n += ownerOneOffset
 		ownerOne, err := account.AccountFromBytes(record[n : n+ownerOneLength])
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		if ownerOne.IsTesting() != testnet {
@@ -709,32 +713,32 @@ unpack_switch:
 
 		// share two
 		shareIdTwoLength, shareIdTwoOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == shareIdTwoOffset {
+		if shareIdTwoOffset == 0 {
 			break unpack_switch
 		}
 		n += shareIdTwoOffset
 		var shareIdTwo merkle.Digest
 		err = merkle.DigestFromBytes(&shareIdTwo, record[n:n+shareIdTwoLength])
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		n += shareIdTwoLength
 
 		// number of shares to transfer
 		quantityTwo, quantityTwoLength := util.FromVarint64(record[n:])
-		if 0 == quantityTwoLength {
+		if quantityTwoLength == 0 {
 			break unpack_switch
 		}
 		n += quantityTwoLength
 
 		// owner two public key
 		ownerTwoLength, ownerTwoOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == ownerTwoOffset {
+		if ownerTwoOffset == 0 {
 			break unpack_switch
 		}
 		n += ownerTwoOffset
 		ownerTwo, err := account.AccountFromBytes(record[n : n+ownerTwoLength])
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		if ownerTwo.IsTesting() != testnet {
@@ -744,14 +748,14 @@ unpack_switch:
 
 		// time limit
 		beforeBlock, beforeBlockLength := util.FromVarint64(record[n:])
-		if 0 == beforeBlockLength {
+		if beforeBlockLength == 0 {
 			break unpack_switch
 		}
 		n += beforeBlockLength
 
 		// signature
 		signatureLength, signatureOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == signatureOffset {
+		if signatureOffset == 0 {
 			break unpack_switch
 		}
 		signature := make(account.Signature, signatureLength)
@@ -761,7 +765,7 @@ unpack_switch:
 
 		// countersignature
 		countersignatureLength, countersignatureOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == countersignatureOffset {
+		if countersignatureOffset == 0 {
 			break unpack_switch
 		}
 		countersignature := make(account.Signature, countersignatureLength)
@@ -781,7 +785,7 @@ unpack_switch:
 			Countersignature: countersignature,
 		}
 		err = r.check(testnet)
-		if nil != err {
+		if err != nil {
 			return nil, 0, err
 		}
 		return r, n, nil
@@ -796,25 +800,26 @@ func unpackEscrow(record []byte, n int) (*Payment, int, error) {
 	// optional escrow payment
 	payment := (*Payment)(nil)
 
-	if 0 == record[n] {
+	switch record[n] {
+	case 0:
 		n += 1
-	} else if 1 == record[n] {
+	case 1:
 		n += 1
 
 		// currency
 		c, currencyLength := util.FromVarint64(record[n:])
-		if 0 == currencyLength {
+		if currencyLength == 0 {
 			return nil, 0, fault.NotTransactionPack
 		}
 		n += currencyLength
-		currency, err := currency.FromUint64(c)
-		if nil != err {
+		currencyValue, err := currency.FromUint64(c)
+		if err != nil {
 			return nil, 0, err
 		}
 
 		// address
 		addressLength, addressOffset := util.ClippedVarint64(record[n:], 1, 8192)
-		if 0 == addressOffset {
+		if addressOffset == 0 {
 			return nil, 0, fault.NotTransactionPack
 		}
 		n += addressOffset
@@ -823,17 +828,17 @@ func unpackEscrow(record []byte, n int) (*Payment, int, error) {
 
 		// amount
 		amount, amountLength := util.FromVarint64(record[n:])
-		if 0 == amountLength {
+		if amountLength == 0 {
 			return nil, 0, fault.NotTransactionPack
 		}
 		n += amountLength
 
 		payment = &Payment{
-			Currency: currency,
+			Currency: currencyValue,
 			Address:  address,
 			Amount:   amount,
 		}
-	} else {
+	default:
 		return nil, 0, fault.NotTransactionPack
 	}
 	return payment, n, nil

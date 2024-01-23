@@ -8,9 +8,8 @@ package pay
 import (
 	"encoding/hex"
 
-	"golang.org/x/crypto/sha3"
-
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"golang.org/x/crypto/sha3"
 )
 
 // PayId - type to represent a payment identifier
@@ -53,7 +52,7 @@ func (payid *PayId) UnmarshalText(s []byte) error {
 		return fault.NotAPayId
 	}
 	byteCount, err := hex.Decode(payid[:], s)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	if len(payid) != byteCount {

@@ -76,8 +76,9 @@ func (r *rpc) Set(fin fingerprint.Fingerprint, rpcs []byte) error {
 
 // Add - add an remote RPC listener
 // returns:
-//   true  if this was a new/updated entry
-//   false if the update was within the limits (to prevent continuous relaying)
+//
+//	true  if this was a new/updated entry
+//	false if the update was within the limits (to prevent continuous relaying)
 func (r *rpc) Add(f []byte, listeners []byte, timestamp uint64) bool {
 	var fp fingerprint.Fingerprint
 	// discard invalid records
@@ -142,7 +143,7 @@ expiration:
 	for i := n - 1; i >= 0; i-- {
 
 		e := r.nodes[i]
-		if nil == e || e.local {
+		if e == nil || e.local {
 			continue expiration
 		}
 
@@ -197,7 +198,7 @@ func (r *rpc) Fetch(start uint64, count int) ([]Entry, uint64, error) {
 	loop:
 		for {
 			c, n := a.Unpack()
-			if 0 == n {
+			if n == 0 {
 				break loop
 			}
 			conn = append(conn, c)

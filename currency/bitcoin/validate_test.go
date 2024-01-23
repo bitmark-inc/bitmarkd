@@ -59,11 +59,11 @@ func TestMain(t *testing.T) {
 	for i, item := range addresses {
 		actualVersion, actualBytes, err := bitcoin.ValidateAddress(item.address)
 		if item.valid {
-			if nil != err {
+			if err != nil {
 				t.Fatalf("%d: error: %s", i, err)
 			}
 			eb, err := hex.DecodeString(item.addrBytes)
-			if nil != err {
+			if err != nil {
 				t.Fatalf("%d: hex decode error: %s", i, err)
 			}
 			expectedBytes := bitcoin.AddressBytes{}
@@ -80,7 +80,7 @@ func TestMain(t *testing.T) {
 			}
 
 			t.Logf("%d: version: %d bytes: %x", i, actualVersion, actualBytes)
-		} else if nil == err {
+		} else if err == nil {
 			t.Errorf("%d: unexpected success", i)
 		}
 	}

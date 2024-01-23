@@ -55,7 +55,7 @@ func Initialise(rpcConfiguration *listeners.RPCConfiguration, httpsConfiguration
 		rpcConfiguration.Certificate,
 		rpcConfiguration.PrivateKey,
 	)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -73,17 +73,17 @@ func Initialise(rpcConfiguration *listeners.RPCConfiguration, httpsConfiguration
 		tlsConfig,
 		tlsFingerprint,
 	)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	err = rpcListener.Serve()
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	tlsConfig, _, err = certificate.Get(globalData.log, "https", httpsConfiguration.Certificate, httpsConfiguration.PrivateKey)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	log.Infof("https certificate: SHA3-256 fingerprint: %x", tlsFingerprint)
@@ -100,12 +100,12 @@ func Initialise(rpcConfiguration *listeners.RPCConfiguration, httpsConfiguration
 		tlsConfig,
 		hdlr,
 	)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	err = httpsListener.Serve()
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

@@ -8,10 +8,9 @@ package zmqutil
 import (
 	"time"
 
-	zmq "github.com/pebbe/zmq4"
-
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
+	zmq "github.com/pebbe/zmq4"
 )
 
 // point at which to disconnect large message senders
@@ -34,26 +33,26 @@ func NewSignalPair(signal string) (receiver *zmq.Socket, sender *zmq.Socket, err
 
 	// PAIR server, half of signalling channel
 	receiver, err = zmq.NewSocket(zmq.PAIR)
-	if nil != err {
+	if err != nil {
 		return nil, nil, err
 	}
 	receiver.SetLinger(0)
 	err = receiver.Bind(signal)
-	if nil != err {
+	if err != nil {
 		receiver.Close()
 		return nil, nil, err
 	}
 
 	// PAIR Client, half of signalling channel
 	sender, err = zmq.NewSocket(zmq.PAIR)
-	if nil != err {
+	if err != nil {
 		receiver.Close()
 		sender.Close()
 		return nil, nil, err
 	}
 	sender.SetLinger(0)
 	err = sender.Connect(signal)
-	if nil != err {
+	if err != nil {
 		receiver.Close()
 		sender.Close()
 		return nil, nil, err
@@ -75,15 +74,15 @@ func NewBind(log *logger.L, socketType zmq.Type, zapDomain string, privateKey []
 	for i, address := range listen {
 		bindTo, v6 := address.CanonicalIPandPort("tcp://")
 		if v6 {
-			if nil == socket6 {
+			if socket6 == nil {
 				socket6, err = NewServerSocket(socketType, zapDomain, privateKey, publicKey, v6)
 			}
 		} else {
-			if nil == socket4 {
+			if socket4 == nil {
 				socket4, err = NewServerSocket(socketType, zapDomain, privateKey, publicKey, v6)
 			}
 		}
-		if nil != err {
+		if err != nil {
 			goto fail
 		}
 
@@ -92,7 +91,7 @@ func NewBind(log *logger.L, socketType zmq.Type, zapDomain string, privateKey []
 		} else {
 			err = socket4.Bind(bindTo)
 		}
-		if nil != err {
+		if err != nil {
 			log.Errorf("cannot bind[%d]: %q  error: %s", i, bindTo, err)
 			goto fail
 		}
@@ -103,10 +102,10 @@ func NewBind(log *logger.L, socketType zmq.Type, zapDomain string, privateKey []
 
 	// if an error close any open sockets
 fail:
-	if nil != socket4 {
+	if socket4 != nil {
 		socket4.Close()
 	}
-	if nil != socket6 {
+	if socket6 != nil {
 		socket6.Close()
 	}
 	log.Errorf("socket error: %s", err)
@@ -117,7 +116,7 @@ fail:
 func NewServerSocket(socketType zmq.Type, zapDomain string, privateKey []byte, publicKey []byte, v6 bool) (*zmq.Socket, error) {
 
 	socket, err := zmq.NewSocket(socketType)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -135,7 +134,7 @@ func NewServerSocket(socketType zmq.Type, zapDomain string, privateKey []byte, p
 	socket.SetCurveSecretkey(string(privateKey))
 
 	err = socket.SetZapDomain(zapDomain)
-	if nil != err {
+	if err != nil {
 		goto failure
 	}
 
@@ -144,7 +143,7 @@ func NewServerSocket(socketType zmq.Type, zapDomain string, privateKey []byte, p
 
 	// conditionally set IPv6 state
 	err = socket.SetIpv6(v6)
-	if nil != err {
+	if err != nil {
 		goto failure
 	}
 
@@ -153,28 +152,28 @@ func NewServerSocket(socketType zmq.Type, zapDomain string, privateKey []byte, p
 	socket.SetLinger(100 * time.Millisecond)
 
 	err = socket.SetSndtimeo(120 * time.Second)
-	if nil != err {
+	if err != nil {
 		goto failure
 	}
 	err = socket.SetRcvtimeo(120 * time.Second)
-	if nil != err {
+	if err != nil {
 		goto failure
 	}
 
 	err = socket.SetTcpKeepalive(1)
-	if nil != err {
+	if err != nil {
 		goto failure
 	}
 	err = socket.SetTcpKeepaliveCnt(5)
-	if nil != err {
+	if err != nil {
 		goto failure
 	}
 	err = socket.SetTcpKeepaliveIdle(60)
-	if nil != err {
+	if err != nil {
 		goto failure
 	}
 	err = socket.SetTcpKeepaliveIntvl(60)
-	if nil != err {
+	if err != nil {
 		goto failure
 	}
 
@@ -182,20 +181,20 @@ func NewServerSocket(socketType zmq.Type, zapDomain string, privateKey []byte, p
 	// ***** FIX THIS: socket disconnects, perhaps after IVL value
 	// heartbeat
 	// err = socket.SetHeartbeatIvl(heartbeatInterval)
-	// if nil != err {
+	// if err != nil {
 	// 	goto failure
 	// }
 	// err = socket.SetHeartbeatTimeout(heartbeatTimeout)
-	// if nil != err {
+	// if err != nil {
 	// 	goto failure
 	// }
 	// err = socket.SetHeartbeatTtl(heartbeatTTL)
-	// if nil != err {
+	// if err != nil {
 	// 	goto failure
 	// }
 
 	err = socket.SetMaxmsgsize(maximumPacketSize)
-	if nil != err {
+	if err != nil {
 		goto failure
 	}
 

@@ -33,14 +33,17 @@ const (
 // Difficulty - Type for difficulty
 //
 // bits is encoded as:
-//    8 bit exponent,
-//   57 bit mantissa normalised so msb is '1' and omitted
+//
+//	 8 bit exponent,
+//	57 bit mantissa normalised so msb is '1' and omitted
+//
 // mantissa is shifted by exponent+8
 // examples:
-//   the "One" value: 00 ff  ff ff  ff ff  ff ff
-//   represents the 256 bit value: 00ff ffff ffff ffff 8000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000
-//   value: 01 ff  ff ff  ff ff  ff ff
-//   represents the 256 bit value: 007f ffff ffff ffff c000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000
+//
+//	the "One" value: 00 ff  ff ff  ff ff  ff ff
+//	represents the 256 bit value: 00ff ffff ffff ffff 8000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000
+//	value: 01 ff  ff ff  ff ff  ff ff
+//	represents the 256 bit value: 007f ffff ffff ffff c000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000
 type Difficulty struct {
 	m          *sync.RWMutex // pointer since MarshallJSON is pass by value
 	big        big.Int       // difficulty value: 256 bit integer expanded from bits
@@ -114,7 +117,7 @@ func (difficulty *Difficulty) BigInt() *big.Int {
 // reset difficulty to minimum
 // ensure write locked before calling this
 func (difficulty *Difficulty) internalReset() *Difficulty {
-	if nil == difficulty.m {
+	if difficulty.m == nil {
 		difficulty.m = new(sync.RWMutex)
 	}
 	difficulty.big.Set(&one)
@@ -200,53 +203,54 @@ func (difficulty *Difficulty) convertDifficultyIntoReciprocal(f float64) float64
 	// need to extract 56 bits with 1st bit as 1  and compute exponent
 scan_buffer:
 	for i, b := range buffer {
-		if 0 != b {
-			u := uint64(b) << 56
-			if i+1 < len(buffer) {
-				u |= uint64(buffer[i+1]) << 48
-			}
-			if i+2 < len(buffer) {
-				u |= uint64(buffer[i+2]) << 40
-			}
-			if i+3 < len(buffer) {
-				u |= uint64(buffer[i+3]) << 32
-			}
-			if i+4 < len(buffer) {
-				u |= uint64(buffer[i+4]) << 24
-			}
-			if i+5 < len(buffer) {
-				u |= uint64(buffer[i+5]) << 16
-			}
-			if i+6 < len(buffer) {
-				u |= uint64(buffer[i+6]) << 8
-			}
-			if i+7 < len(buffer) {
-				u |= uint64(buffer[i+7])
-			}
-
-			// compute exponent
-			e := uint64(32-len(buffer)+i)*8 - 1
-
-			// normalise
-			rounder := 0
-			for 0x0100000000000000 != 0xff00000000000000&u {
-				if 1 == u&1 {
-					rounder += 1
-				}
-				u >>= 1
-				e -= 1
-			}
-
-			if rounder > 4 {
-				u += 1
-			}
-			// hide 56th bit and incorporate exponent
-			u = u&0x00ffffffffffffff | e<<56
-			//fmt.Printf("bits: %016x\n", u)
-
-			difficulty.bits = u
-			break scan_buffer
+		if b == 0 {
+			continue scan_buffer
 		}
+		u := uint64(b) << 56
+		if i+1 < len(buffer) {
+			u |= uint64(buffer[i+1]) << 48
+		}
+		if i+2 < len(buffer) {
+			u |= uint64(buffer[i+2]) << 40
+		}
+		if i+3 < len(buffer) {
+			u |= uint64(buffer[i+3]) << 32
+		}
+		if i+4 < len(buffer) {
+			u |= uint64(buffer[i+4]) << 24
+		}
+		if i+5 < len(buffer) {
+			u |= uint64(buffer[i+5]) << 16
+		}
+		if i+6 < len(buffer) {
+			u |= uint64(buffer[i+6]) << 8
+		}
+		if i+7 < len(buffer) {
+			u |= uint64(buffer[i+7])
+		}
+
+		// compute exponent
+		e := uint64(32-len(buffer)+i)*8 - 1
+
+		// normalise
+		rounder := 0
+		for 0xff00000000000000&u != 0x0100000000000000 {
+			if u&1 == 1 {
+				rounder += 1
+			}
+			u >>= 1
+			e -= 1
+		}
+
+		if rounder > 4 {
+			u += 1
+		}
+		// hide 56th bit and incorporate exponent
+		u = u&0x00ffffffffffffff | e<<56
+		//fmt.Printf("bits: %016x\n", u)
+
+		difficulty.bits = u
+		break scan_buffer
 	}
 
 	return difficulty.reciprocal
@@ -288,7 +292,7 @@ func (difficulty Difficulty) MarshalText() ([]byte, error) {
 func (difficulty *Difficulty) UnmarshalText(s []byte) error {
 	buffer := make([]byte, hex.DecodedLen(len(s)))
 	_, err := hex.Decode(buffer, s)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	difficulty.internalReset()

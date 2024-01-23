@@ -12,9 +12,6 @@ import (
 	"io"
 	"time"
 
-	"golang.org/x/crypto/ed25519"
-	"golang.org/x/crypto/sha3"
-
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
@@ -22,6 +19,8 @@ import (
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/rpc/bitmarks"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
+	"golang.org/x/crypto/ed25519"
+	"golang.org/x/crypto/sha3"
 )
 
 // IssueData - data for an issue request
@@ -48,7 +47,7 @@ type IssueReply struct {
 // Issue - perform an issue request
 func (client *Client) Issue(issueConfig *IssueData) (*IssueReply, error) {
 
-	if issueConfig.FreeIssue && 1 != issueConfig.Quantity {
+	if issueConfig.FreeIssue && issueConfig.Quantity != 1 {
 		return nil, fmt.Errorf("quantity: %d > 1 is not allowed for free", issueConfig.Quantity)
 	}
 
@@ -60,10 +59,10 @@ func (client *Client) Issue(issueConfig *IssueData) (*IssueReply, error) {
 	issues := make([]*transactionrecord.BitmarkIssue, issueConfig.Quantity)
 	for i := 0; i < len(issues); i += 1 {
 		issue, err := makeIssue(client.testnet, issueConfig, uint64(nonce)+uint64(i))
-		if nil != err {
+		if err != nil {
 			return nil, err
 		}
-		if nil == issue {
+		if issue == nil {
 			return nil, fault.MakeIssueFailed
 		}
 		issues[i] = issue
@@ -94,10 +93,10 @@ func (client *Client) Issue(issueConfig *IssueData) (*IssueReply, error) {
 		SubmittedNonce: "",
 	}
 
-	if nil != issuesReply.Payments && len(issuesReply.Payments) > 0 {
+	if issuesReply.Payments != nil && len(issuesReply.Payments) > 0 {
 
 		tpid, err := issuesReply.PayId.MarshalText()
-		if nil != err {
+		if err != nil {
 			return nil, err
 		}
 
@@ -157,19 +156,18 @@ func internalMakeIssue(testnet bool, issueConfig *IssueData, nonce uint64, gener
 
 	// pack without signature
 	packed, err := r.Pack(issuerAccount)
-	if nil == err {
+	if err == nil {
 		return nil, nil, fault.MakeIssueFailed
 	} else if fault.InvalidSignature != err {
 		return nil, nil, err
 	}
 
 	// manually sign the record and attach signature
-	signature := ed25519.Sign(issueConfig.Issuer.PrivateKey.PrivateKeyBytes(), packed)
-	r.Signature = signature[:]
+	r.Signature = ed25519.Sign(issueConfig.Issuer.PrivateKey.PrivateKeyBytes(), packed)
 
 	// check that signature is correct by packing again
 	pkFull, err := r.Pack(issuerAccount)
-	if nil != err {
+	if err != nil {
 		return nil, nil, err
 	}
 	if generateDigest {
@@ -200,7 +198,7 @@ func makeProof(payId pay.PayId, payNonce reservoir.PayNonce, difficulty string, 
 		h.Write(nonceBuffer)
 		var digest [32]byte
 		h.Sum(digest[:0])
-		if 0 == digest[0]|digest[1] {
+		if digest[0]|digest[1] == 0 {
 			if verbose {
 				hps := float64(hashCount) / time.Since(start).Seconds() / 1.0e6
 				fmt.Fprintf(handle, "%f MH/s: possible nonce: %x  with digest: %x\n", hps, nonceBuffer, digest)

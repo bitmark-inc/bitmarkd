@@ -76,7 +76,7 @@ func TestNextProoferID(t *testing.T) {
 		copy(p.proofIDs, s.ids)
 
 		actual, err := p.nextProoferID()
-		if actual != errorProoferID && nil != err {
+		if actual != errorProoferID && err != nil {
 			t.Errorf("%dth test fail, error message: %s", i, err.Error())
 		}
 		if actual != s.expected {
@@ -160,11 +160,12 @@ func TestDeleteProofer(t *testing.T) {
 	wg.Add(count)
 
 	go func() {
-		//nolint:ignore S1000 XXX: We should use for range here
+		//lint:ignore S1000  We should use for range here
 		for i := 0; i < count; i++ {
 			select {
-			//nolint:ignore S1000 for the test code it is OK to use for and select
-			//     instead of for range
+			//lint:ignore S1000 for the test code it
+			// is OK to use for and select instead of for
+			// range
 			case <-p.stopChannel:
 				received++
 				wg.Done()

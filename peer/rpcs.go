@@ -17,9 +17,9 @@ func FetchConnectors() []*zmqutil.Connected {
 	result := make([]*zmqutil.Connected, 0, len(globalData.connectorClients))
 
 	for _, c := range globalData.connectorClients {
-		if nil != c {
+		if c != nil {
 			connect := c.ConnectedTo()
-			if nil != connect {
+			if connect != nil {
 				result = append(result, connect)
 			}
 		}

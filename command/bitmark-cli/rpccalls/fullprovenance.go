@@ -31,7 +31,7 @@ type fullProvenanceItem struct {
 func (client *Client) GetFullProvenance(fullProvenanceConfig *FullProvenanceData) (*FullProvenanceReply, error) {
 
 	var bitmarkId merkle.Digest
-	if err := bitmarkId.UnmarshalText([]byte(fullProvenanceConfig.BitmarkId)); nil != err {
+	if err := bitmarkId.UnmarshalText([]byte(fullProvenanceConfig.BitmarkId)); err != nil {
 		return nil, err
 	}
 
@@ -43,7 +43,7 @@ func (client *Client) GetFullProvenance(fullProvenanceConfig *FullProvenanceData
 
 	var reply bitmark.FullProvenanceReply
 	err := client.client.Call("Bitmark.FullProvenance", fullProvenanceArgs, &reply)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -58,7 +58,7 @@ func (client *Client) GetFullProvenance(fullProvenanceConfig *FullProvenanceData
 
 		m := d.Data.(map[string]interface{})
 		owner := m["owner"]
-		if nil == owner {
+		if owner == nil {
 			owner = m["registrant"]
 		}
 		if s, ok := owner.(string); ok {

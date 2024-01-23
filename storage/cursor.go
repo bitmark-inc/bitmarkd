@@ -8,9 +8,8 @@ package storage
 import (
 	"math/big"
 
-	"github.com/syndtr/goleveldb/leveldb/util"
-
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
 // FetchCursor - cursor structure
@@ -47,14 +46,14 @@ var one = big.NewInt(1)
 
 // Fetch - return some elements starting from key
 func (cursor *FetchCursor) Fetch(count int) ([]Element, error) {
-	if nil == cursor {
+	if cursor == nil {
 		return nil, fault.InvalidCursor
 	}
 	if count <= 0 {
 		return nil, fault.InvalidCount
 	}
 
-	if nil == cursor.pool.dataAccess {
+	if cursor.pool.dataAccess == nil {
 		return nil, nil
 	}
 
@@ -103,11 +102,11 @@ iterating:
 
 // Map - run a function on all elements in the range
 func (cursor *FetchCursor) Map(f func(key []byte, value []byte) error) error {
-	if nil == cursor {
+	if cursor == nil {
 		return fault.InvalidCursor
 	}
 
-	if nil == cursor.pool.dataAccess {
+	if cursor.pool.dataAccess == nil {
 		return nil
 	}
 
@@ -129,12 +128,12 @@ iterating:
 		copy(dataValue, value)
 
 		err = f(dataKey, dataValue)
-		if nil != err {
+		if err != nil {
 			break iterating
 		}
 	}
 	iter.Release()
-	if nil == err {
+	if err == nil {
 		err = iter.Error()
 	}
 	return err

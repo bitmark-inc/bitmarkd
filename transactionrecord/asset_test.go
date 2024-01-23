@@ -11,12 +11,11 @@ import (
 	"reflect"
 	"testing"
 
-	"golang.org/x/crypto/ed25519"
-
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
+	"golang.org/x/crypto/ed25519"
 )
 
 // test the packing/unpacking of registration record
@@ -80,8 +79,8 @@ func TestPackAssetData(t *testing.T) {
 
 	// test the packer
 	packed, err := r.Pack(registrantAccount)
-	if nil != err {
-		if nil != packed {
+	if err != nil {
+		if packed != nil {
 			t.Errorf("partial packed:\n%s", util.FormatBytes("expected", packed))
 		}
 		t.Fatalf("pack error: %s", err)
@@ -119,7 +118,7 @@ func TestPackAssetData(t *testing.T) {
 
 	// test the unpacker
 	unpacked, n, err := packed.Unpack(true)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("unpack error: %s", err)
 	}
 	if len(packed) != n {
@@ -142,7 +141,7 @@ func TestPackAssetData(t *testing.T) {
 		AssetData: reg,
 	}
 	b, err := json.MarshalIndent(item, "", "  ")
-	if nil != err {
+	if err != nil {
 		t.Fatalf("json error: %s", err)
 	}
 
@@ -191,7 +190,7 @@ func TestPackAssetDataWithEmptyName(t *testing.T) {
 
 	// test the packer
 	packed, err := r.Pack(registrantAccount)
-	if nil != err {
+	if err != nil {
 		t.Errorf("pack error: %s", err)
 	}
 
@@ -202,7 +201,7 @@ func TestPackAssetDataWithEmptyName(t *testing.T) {
 	}
 
 	unpacked, n, err := packed.Unpack(true)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("unpack error: %s", err)
 	}
 
@@ -235,7 +234,7 @@ func TestPackAssetDataWithEmptyFingerprint(t *testing.T) {
 
 	// test the packer
 	_, err := r.Pack(registrantAccount)
-	if nil == err {
+	if err == nil {
 		t.Fatalf("pack should have failed")
 	}
 	if fault.FingerprintTooShort != err {
@@ -258,7 +257,7 @@ func TestPackAssetDataWithInvalidMetadata(t *testing.T) {
 
 	// test the packer
 	_, err := r.Pack(registrantAccount)
-	if nil == err {
+	if err == nil {
 		t.Fatalf("pack should have failed")
 	}
 	if fault.MetadataIsNotMap != err {
@@ -320,8 +319,8 @@ func TestPackAssetDataWithEmptyMetadata(t *testing.T) {
 
 	// test the packer
 	packed, err := r.Pack(registrantAccount)
-	if nil != err {
-		if nil != packed {
+	if err != nil {
+		if packed != nil {
 			t.Errorf("partial packed:\n%s", util.FormatBytes("expected", packed))
 		}
 		t.Errorf("pack error: %s", err)
@@ -357,7 +356,7 @@ func TestPackAssetDataWithEmptyMetadata(t *testing.T) {
 
 	// test the unpacker
 	unpacked, n, err := packed.Unpack(true)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("unpack error: %s", err)
 	}
 	if len(packed) != n {
@@ -392,7 +391,7 @@ func TestPackAssetDataWithZeroAccount(t *testing.T) {
 
 	// test the packer
 	_, err := r.Pack(registrantAccount)
-	if nil == err {
+	if err == nil {
 		t.Fatalf("pack should have failed")
 	}
 	if fault.InvalidOwnerOrRegistrant != err {

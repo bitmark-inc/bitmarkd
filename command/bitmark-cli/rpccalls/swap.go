@@ -8,8 +8,6 @@ package rpccalls
 import (
 	"encoding/hex"
 
-	"golang.org/x/crypto/ed25519"
-
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -17,6 +15,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/rpc/share"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
+	"golang.org/x/crypto/ed25519"
 )
 
 // SwapData - data for a swap request
@@ -55,29 +54,29 @@ func (client *Client) Swap(swapConfig *SwapData) (*SwapSingleSignedReply, error)
 
 	var shareIdOne merkle.Digest
 	err := shareIdOne.UnmarshalText([]byte(swapConfig.ShareIdOne))
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
 	var shareIdTwo merkle.Digest
 	err = shareIdTwo.UnmarshalText([]byte(swapConfig.ShareIdTwo))
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
-	if 0 == swapConfig.BeforeBlock {
+	if swapConfig.BeforeBlock == 0 {
 		info, err := client.GetBitmarkInfo()
-		if nil != err {
+		if err != nil {
 			return nil, err
 		}
 		swapConfig.BeforeBlock = info.Block.Height + 100 // allow plenty of time to mine
 	}
 
 	packed, swap, err := makeSwapOneSignature(client.testnet, shareIdOne, swapConfig.QuantityOne, swapConfig.OwnerOne, shareIdTwo, swapConfig.QuantityTwo, swapConfig.OwnerTwo, swapConfig.BeforeBlock)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
-	if nil == swap {
+	if swap == nil {
 		return nil, fault.MakeSwapFailed
 	}
 
@@ -98,12 +97,12 @@ func (client *Client) CountersignSwap(swap *transactionrecord.ShareSwap) (*SwapR
 
 	var reply share.SwapReply
 	err := client.client.Call("Share.Swap", swap, &reply)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
 	tpid, err := reply.PayId.MarshalText()
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -144,19 +143,18 @@ func makeSwapOneSignature(testnet bool, shareIdOne merkle.Digest, quantityOne ui
 
 	// pack without signature
 	packed, err := r.Pack(ownerOneAccount)
-	if nil == err {
+	if err == nil {
 		return nil, nil, fault.MakeSwapFailed
 	} else if fault.InvalidSignature != err {
 		return nil, nil, err
 	}
 
 	// attach signature
-	signature := ed25519.Sign(ownerOne.PrivateKey.PrivateKeyBytes(), packed)
-	r.Signature = signature[:]
+	r.Signature = ed25519.Sign(ownerOne.PrivateKey.PrivateKeyBytes(), packed)
 
 	// include first signature by packing again
 	packed, err = r.Pack(ownerOneAccount)
-	if nil == err {
+	if err == nil {
 		return nil, nil, fault.MakeSwapFailed
 	} else if fault.InvalidSignature != err {
 		return nil, nil, err

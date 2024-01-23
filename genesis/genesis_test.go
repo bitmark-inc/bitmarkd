@@ -133,12 +133,12 @@ func TestTestGenesisAssembly(t *testing.T) {
 func checkAssembly(t *testing.T, title string, source SourceData, gDigest blockdigest.Digest, gBlock []byte) {
 
 	proofedbyAccount, err := account.AccountFromBase58(source.ProofedBy)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("failed to parse account: error: %s", err)
 	}
 
 	timestamp, err := time.Parse(time.RFC3339, source.Timestamp.utc)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("failed to parse time: error: %s", err)
 	}
 	timeUint64 := uint64(timestamp.UTC().Unix())
@@ -158,7 +158,7 @@ func checkAssembly(t *testing.T, title string, source SourceData, gDigest blockd
 	}
 
 	base, err := b.Pack(proofedbyAccount)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("failed to pack base: error: %s", err)
 	}
 	baseDigest := merkle.Digest(base.MakeLink())
@@ -202,8 +202,7 @@ func checkAssembly(t *testing.T, title string, source SourceData, gDigest blockd
 	if hDigest != gDigest {
 		t.Errorf("digest mismatch actual: %#v  expected: %#v", hDigest, gDigest)
 		//t.Log(util.FormatBytes(title+"ProposedBlockHeader", header))
-		t.Log(util.FormatBytes(title+"ProposedLEhash", []byte(hDigest[:])))
-
+		t.Log(util.FormatBytes(title+"ProposedLEhash", hDigest[:]))
 	}
 
 	// check difficulty
@@ -231,7 +230,7 @@ func checkAssembly(t *testing.T, title string, source SourceData, gDigest blockd
 		line += fmt.Sprintf("%08x ", i)
 		text := ""
 		for j := 0; j < 16; j += 1 {
-			if 8 == j {
+			if j == 8 {
 				line += " "
 			}
 			if i+j >= len(blk) {
@@ -254,7 +253,7 @@ func checkAssembly(t *testing.T, title string, source SourceData, gDigest blockd
 	// unpack the block header
 	br := blockrecord.Get()
 	unpackedHeader, _, _, err := br.ExtractHeader(blk, genesis.BlockNumber, true)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("unpack block header failed: error: %s", err)
 	}
 

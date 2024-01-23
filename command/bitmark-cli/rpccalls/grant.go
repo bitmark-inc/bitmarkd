@@ -8,8 +8,6 @@ package rpccalls
 import (
 	"encoding/hex"
 
-	"golang.org/x/crypto/ed25519"
-
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -17,6 +15,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/rpc/share"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
+	"golang.org/x/crypto/ed25519"
 )
 
 // GrantData - data for a grant request
@@ -53,23 +52,23 @@ func (client *Client) Grant(grantConfig *GrantData) (*GrantSingleSignedReply, er
 
 	var shareId merkle.Digest
 	err := shareId.UnmarshalText([]byte(grantConfig.ShareId))
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
-	if 0 == grantConfig.BeforeBlock {
+	if grantConfig.BeforeBlock == 0 {
 		info, err := client.GetBitmarkInfo()
-		if nil != err {
+		if err != nil {
 			return nil, err
 		}
 		grantConfig.BeforeBlock = info.Block.Height + 100 // allow plenty of time to mine
 	}
 
 	packed, grant, err := makeGrantOneSignature(client.testnet, shareId, grantConfig.Quantity, grantConfig.Owner, grantConfig.Recipient, grantConfig.BeforeBlock)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
-	if nil == grant {
+	if grant == nil {
 		return nil, fault.MakeGrantFailed
 	}
 
@@ -90,12 +89,12 @@ func (client *Client) CountersignGrant(grant *transactionrecord.ShareGrant) (*Gr
 
 	var reply share.GrantReply
 	err := client.client.Call("Share.Grant", grant, &reply)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
 	tpid, err := reply.PayId.MarshalText()
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -134,19 +133,18 @@ func makeGrantOneSignature(testnet bool, shareId merkle.Digest, quantity uint64,
 
 	// pack without signature
 	packed, err := r.Pack(ownerAccount)
-	if nil == err {
+	if err == nil {
 		return nil, nil, fault.MakeGrantFailed
 	} else if fault.InvalidSignature != err {
 		return nil, nil, err
 	}
 
 	// attach signature
-	signature := ed25519.Sign(owner.PrivateKey.PrivateKeyBytes(), packed)
-	r.Signature = signature[:]
+	r.Signature = ed25519.Sign(owner.PrivateKey.PrivateKeyBytes(), packed)
 
 	// include first signature by packing again
 	packed, err = r.Pack(ownerAccount)
-	if nil == err {
+	if err == nil {
 		return nil, nil, fault.MakeGrantFailed
 	} else if fault.InvalidSignature != err {
 		return nil, nil, err

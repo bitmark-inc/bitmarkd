@@ -55,8 +55,9 @@ type receptor struct {
 
 // Add - add a connectable entity to in-memory tree
 // returns:
-//   true  if this was a new/updated entry
-//   false if the update was within the limits (to prevent continuous relaying)
+//
+//	true  if this was a new/updated entry
+//	false if the update was within the limits (to prevent continuous relaying)
 func (r *receptor) Add(publicKey []byte, listeners []byte, timestamp uint64) bool {
 	r.Lock()
 	defer r.Unlock()
@@ -72,7 +73,7 @@ func (r *receptor) Add(publicKey []byte, listeners []byte, timestamp uint64) boo
 		Timestamp: ts,
 	}
 
-	if node, _ := r.connectable.Search(id.ID(publicKey)); nil != node {
+	if node, _ := r.connectable.Search(id.ID(publicKey)); node != nil {
 		e := node.Value().(*Entity)
 
 		if ts.Sub(e.Timestamp) < parameter.RebroadcastInterval {
@@ -128,7 +129,7 @@ func (r *receptor) ReBalance() {
 
 	log := r.log
 
-	if nil == r.self {
+	if r.self == nil {
 		log.Errorf("determineConnections called to early")
 		return // called to early
 	}
@@ -188,9 +189,9 @@ deduplicate:
 			v -= count
 		}
 		node := r.connectable.Get(v)
-		if nil != node {
+		if node != nil {
 			e := node.Value().(*Entity)
-			if nil != e {
+			if e != nil {
 				log.Infof("%s: connectable entity: %s", names[i], e)
 				messagebus.Bus.Connector.Send(names[i], e.PublicKey, e.Listeners)
 			}
@@ -204,13 +205,13 @@ func (r *receptor) Next(publicKey []byte) ([]byte, []byte, time.Time, error) {
 	defer r.Unlock()
 
 	node, _ := r.connectable.Search(id.ID(publicKey))
-	if nil != node {
+	if node != nil {
 		node = node.Next()
 	}
-	if nil == node {
+	if node == nil {
 		node = r.connectable.First()
 	}
-	if nil == node {
+	if node == nil {
 		return nil, nil, time.Now(), fault.InvalidPublicKey
 	}
 	e := node.Value().(*Entity)
@@ -226,17 +227,17 @@ loop:
 	for tries := 1; tries <= 5; tries += 1 {
 		max := big.NewInt(int64(r.connectable.Count()))
 		num, err := rand.Int(rand.Reader, max)
-		if nil != err {
+		if err != nil {
 			continue loop
 		}
 
 		n := int(num.Int64()) // 0 … max-1
 
 		node := r.connectable.Get(n)
-		if nil == node {
+		if node == nil {
 			node = r.connectable.First()
 		}
-		if nil == node {
+		if node == nil {
 			break loop
 		}
 		e := node.Value().(*Entity)
@@ -255,7 +256,7 @@ func (r *receptor) UpdateTime(publicKey []byte, timestamp time.Time) {
 
 	node, _ := r.connectable.Search(id.ID(publicKey))
 	log := r.log
-	if nil == node {
+	if node == nil {
 		log.Errorf("The connectable entity with public key %x is not existing in tree", publicKey)
 		return
 	}
@@ -309,7 +310,7 @@ func (r *receptor) Expire() {
 	log := r.log
 
 scanNodes:
-	for node := nextNode; nil != node; node = nextNode {
+	for node := nextNode; node != nil; node = nextNode {
 
 		peer := node.Value().(*Entity)
 		key := node.Key()

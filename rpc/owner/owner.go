@@ -6,8 +6,6 @@
 package owner
 
 import (
-	"golang.org/x/time/rate"
-
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
@@ -18,6 +16,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
+	"golang.org/x/time/rate"
 )
 
 // Owner
@@ -82,7 +81,7 @@ func New(log *logger.L, pools reservoir.Handles, os ownership.Ownership) *Owner 
 // Bitmarks - list bitmarks belonging to an account
 func (owner *Owner) Bitmarks(arguments *BitmarksArguments, reply *BitmarksReply) error {
 
-	if err := ratelimit.LimitN(owner.Limiter, arguments.Count, MaximumBitmarksCount); nil != err {
+	if err := ratelimit.LimitN(owner.Limiter, arguments.Count, MaximumBitmarksCount); err != nil {
 		return err
 	}
 
@@ -90,7 +89,7 @@ func (owner *Owner) Bitmarks(arguments *BitmarksArguments, reply *BitmarksReply)
 	log.Infof("Owner.Bitmarks: %+v", arguments)
 
 	ownershipData, err := owner.Ownership.ListBitmarksFor(arguments.Owner, arguments.Start, arguments.Count)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -108,19 +107,19 @@ func (owner *Owner) Bitmarks(arguments *BitmarksArguments, reply *BitmarksReply)
 		switch r.Item {
 		case ownership.OwnedAsset:
 			ai := r.AssetId
-			if nil == ai {
+			if ai == nil {
 				log.Criticalf("asset id is nil: %+v", r)
 				logger.Panicf("asset id is nil: %+v", r)
 			}
 			assetIds[*r.AssetId] = struct{}{}
 		case ownership.OwnedBlock:
-			if nil == r.BlockNumber {
+			if r.BlockNumber == nil {
 				log.Criticalf("block number is nil: %+v", r)
 				logger.Panicf("blockNumber is nil: %+v", r)
 			}
 		case ownership.OwnedShare:
 			ai := r.AssetId
-			if nil == ai {
+			if ai == nil {
 				log.Criticalf("asset id is nil: %+v", r)
 				logger.Panicf("asset id is nil: %+v", r)
 			}
@@ -139,12 +138,12 @@ func (owner *Owner) Bitmarks(arguments *BitmarksArguments, reply *BitmarksReply)
 		log.Debugf("txId: %v", txId)
 
 		inBlock, transaction := owner.PoolTransactions.GetNB(txId[:])
-		if nil == transaction {
+		if transaction == nil {
 			return fault.LinkToInvalidOrUnconfirmedTransaction
 		}
 
 		tx, _, err := transactionrecord.Packed(transaction).Unpack(mode.IsTesting())
-		if nil != err {
+		if err != nil {
 			return err
 		}
 
@@ -154,7 +153,7 @@ func (owner *Owner) Bitmarks(arguments *BitmarksArguments, reply *BitmarksReply)
 			return fault.LinkToInvalidOrUnconfirmedTransaction
 		}
 		textTxId, err := txId.MarshalText()
-		if nil != err {
+		if err != nil {
 			return err
 		}
 
@@ -183,12 +182,12 @@ assetsLoop:
 		}
 
 		inBlock, transaction := owner.PoolAssets.GetNB(assetId[:])
-		if nil == transaction {
+		if transaction == nil {
 			return fault.AssetNotFound
 		}
 
 		tx, _, err := transactionrecord.Packed(transaction).Unpack(mode.IsTesting())
-		if nil != err {
+		if err != nil {
 			return err
 		}
 
@@ -197,7 +196,7 @@ assetsLoop:
 			return fault.AssetNotFound
 		}
 		textAssetId, err := assetId.MarshalText()
-		if nil != err {
+		if err != nil {
 			return err
 		}
 
@@ -214,7 +213,7 @@ assetsLoop:
 
 	// if no record were found the just return Next as zero
 	// otherwise the next possible number
-	if 0 == current {
+	if current == 0 {
 		reply.Next = 0
 	} else {
 		reply.Next = current + 1

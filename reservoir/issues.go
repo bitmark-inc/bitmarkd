@@ -42,14 +42,14 @@ type IssueInfo struct {
 // previous set - this is to allow for multiple submission from client
 // without receiving a duplicate transaction error
 func storeIssues(issues []*transactionrecord.BitmarkIssue, assetHandle storage.Handle, blockOwnerPaymentHandle storage.Handle) (*IssueInfo, bool, error) {
-	if nil == assetHandle || nil == blockOwnerPaymentHandle {
+	if assetHandle == nil || blockOwnerPaymentHandle == nil {
 		return nil, false, fault.NilPointer
 	}
 
 	count := len(issues)
 	if count > MaximumIssues {
 		return nil, false, fault.TooManyItemsToProcess
-	} else if 0 == count {
+	} else if count == 0 {
 		return nil, false, fault.MissingParameters
 	}
 
@@ -74,7 +74,7 @@ func storeIssues(issues []*transactionrecord.BitmarkIssue, assetHandle storage.H
 	// verify each transaction
 	for i, issue := range issues {
 
-		if nil == issue || nil == issue.Owner {
+		if issue == nil || issue.Owner == nil {
 			return nil, false, fault.InvalidItem
 		}
 
@@ -83,13 +83,13 @@ func storeIssues(issues []*transactionrecord.BitmarkIssue, assetHandle storage.H
 		}
 
 		// all are free or all are non-free
-		if 0 != issue.Nonce {
+		if issue.Nonce != 0 {
 			freeIssueAllowed = false
 		}
 
 		// validate issue record
 		packedIssue, err := issue.Pack(issue.Owner)
-		if nil != err {
+		if err != nil {
 			return nil, false, err
 		}
 
@@ -187,7 +187,7 @@ func storeIssues(issues []*transactionrecord.BitmarkIssue, assetHandle storage.H
 
 		assetBlockNumber, t := assetHandle.GetNB(uniqueAssetId[:])
 
-		if nil == t || assetBlockNumber <= genesis.BlockNumber {
+		if t == nil || assetBlockNumber <= genesis.BlockNumber {
 			return nil, false, fault.AssetNotFound
 		}
 
@@ -195,7 +195,7 @@ func storeIssues(issues []*transactionrecord.BitmarkIssue, assetHandle storage.H
 		binary.BigEndian.PutUint64(blockNumberKey, assetBlockNumber)
 
 		p := getPayment(blockNumberKey, blockOwnerPaymentHandle)
-		if nil == p { // would be an internal database error
+		if p == nil { // would be an internal database error
 			globalData.log.Errorf("missing payment for asset id: %s", issues[0].AssetId)
 			return nil, false, fault.AssetNotFound
 		}
@@ -297,7 +297,7 @@ func tryProof(payId pay.PayId, clientNonce []byte) TrackingStatus {
 		return TrackingNotFound
 	}
 
-	if nil == r.difficulty { // only payment tracking; proof not allowed
+	if r.difficulty == nil { // only payment tracking; proof not allowed
 		globalData.log.Debugf("tryProof: item with out a difficulty")
 		return TrackingInvalid
 	}
@@ -356,7 +356,7 @@ try_loop:
 // move transaction(s) to verified cache
 func verifyIssueByNonce(payId pay.PayId, nonce []byte) bool {
 
-	if nil == nonce || 0 == len(nonce) {
+	if nonce == nil || len(nonce) == 0 {
 		globalData.log.Warn("nonce nil or empty")
 		return false
 	}
@@ -368,7 +368,7 @@ func verifyIssueByNonce(payId pay.PayId, nonce []byte) bool {
 	entry, ok := globalData.pendingFreeIssues[payId]
 	if ok {
 
-		copy(entry.nonce[:], nonce[:])
+		copy(entry.nonce[:], nonce)
 
 		// move each transaction to verified pool
 		for _, tx := range entry.txs {

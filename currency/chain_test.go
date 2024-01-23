@@ -15,31 +15,31 @@ func TestBtcChainParams(t *testing.T) {
 
 	btcLocalParams := Bitcoin.ChainParam(chain.Local)
 
-	if "regtest" != btcLocalParams.Name {
+	if btcLocalParams.Name != "regtest" {
 		t.Fatal("invalid network")
 	}
 
-	if 1 != btcLocalParams.HDCoinType {
+	if btcLocalParams.HDCoinType != 1 {
 		t.Fatal("incorrect currency")
 	}
 
 	btcTestnetParams := Bitcoin.ChainParam(chain.Testing)
 
-	if "testnet3" != btcTestnetParams.Name {
+	if btcTestnetParams.Name != "testnet3" {
 		t.Fatal("invalid network")
 	}
 
-	if 1 != btcTestnetParams.HDCoinType {
+	if btcTestnetParams.HDCoinType != 1 {
 		t.Fatal("incorrect currency")
 	}
 
 	btcMainnetParams := Bitcoin.ChainParam(chain.Bitmark)
 
-	if "mainnet" != btcMainnetParams.Name {
+	if btcMainnetParams.Name != "mainnet" {
 		t.Fatal("invalid network")
 	}
 
-	if 0 != btcMainnetParams.HDCoinType {
+	if btcMainnetParams.HDCoinType != 0 {
 		t.Fatal("incorrect currency")
 	}
 }
@@ -48,31 +48,31 @@ func TestLtcChainParams(t *testing.T) {
 
 	ltcLocalParams := Litecoin.ChainParam(chain.Local)
 
-	if "regtest" != ltcLocalParams.Name {
+	if ltcLocalParams.Name != "regtest" {
 		t.Fatal("invalid network")
 	}
 
-	if 1 != ltcLocalParams.HDCoinType {
+	if ltcLocalParams.HDCoinType != 1 {
 		t.Fatal("incorrect currency")
 	}
 
 	ltcTestnetParams := Litecoin.ChainParam(chain.Testing)
 
-	if "testnet4" != ltcTestnetParams.Name {
+	if ltcTestnetParams.Name != "testnet4" {
 		t.Fatal("invalid network")
 	}
 
-	if 1 != ltcTestnetParams.HDCoinType {
+	if ltcTestnetParams.HDCoinType != 1 {
 		t.Fatal("incorrect currency")
 	}
 
 	ltcMainnetParams := Litecoin.ChainParam(chain.Bitmark)
 
-	if "mainnet" != ltcMainnetParams.Name {
+	if ltcMainnetParams.Name != "mainnet" {
 		t.Fatal("invalid network")
 	}
 
-	if 2 != ltcMainnetParams.HDCoinType {
+	if ltcMainnetParams.HDCoinType != 2 {
 		t.Fatal("incorrect currency")
 	}
 }

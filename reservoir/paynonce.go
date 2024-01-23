@@ -43,7 +43,7 @@ func PayNonceRoundedHeight() uint64 {
 func PayNonceFromBlock(number uint64) PayNonce {
 	nonce := PayNonce{}
 	digest, err := blockheader.DigestForBlock(number)
-	if nil != err {
+	if err != nil {
 		return nonce
 	}
 	copy(nonce[:], digest[:])
@@ -74,7 +74,7 @@ func (paynonce *PayNonce) UnmarshalText(s []byte) error {
 		return fault.NotAPayNonce
 	}
 	byteCount, err := hex.Decode(paynonce[:], s)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	if len(paynonce) != byteCount {

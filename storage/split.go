@@ -18,7 +18,7 @@ type PoolNB struct {
 
 // Put - store a key/value bytes pair to the database
 func (p *PoolNB) Put(key []byte, nValue []byte, bValue []byte) {
-	if 8 != len(nValue) {
+	if len(nValue) != 8 {
 		logger.Panic("pool.PutNB 1st parameter must be 8 bytes")
 		return
 	}
@@ -56,7 +56,7 @@ func (p *PoolNB) GetN(key []byte) (uint64, bool) {
 // this returns the actual element in the second parameter - copy the result if it must be preserved
 func (p *PoolNB) GetNB(key []byte) (uint64, []byte) {
 	buffer := p.pool.Get(key)
-	if nil == buffer {
+	if buffer == nil {
 		return 0, nil
 	}
 	if len(buffer) < 9 { // must have at least one byte after the N value
@@ -81,7 +81,7 @@ func (p *PoolNB) Commit() error {
 
 // Ready - check if struct is empty
 func (p *PoolNB) Ready() bool {
-	return nil == p || 0 == p.pool.prefix
+	return p == nil || p.pool.prefix == 0
 }
 
 // LastElement - last element

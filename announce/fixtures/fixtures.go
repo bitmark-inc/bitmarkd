@@ -49,7 +49,7 @@ func init() {
 
 func SetupTestLogger() {
 	removeFiles()
-	_ = os.Mkdir(dir, 0700)
+	_ = os.Mkdir(dir, 0o700)
 
 	logging := logger.Configuration{
 		Directory: dir,
@@ -73,7 +73,7 @@ func TeardownTestLogger() {
 
 func removeFiles() {
 	err := os.RemoveAll(dir)
-	if nil != err {
+	if err != nil {
 		fmt.Println("remove dir with error: ", err)
 	}
 }

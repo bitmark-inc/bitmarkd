@@ -25,13 +25,13 @@ func runBalance(c *cli.Context) error {
 	}
 
 	name, owner, err := checkRecipient(c, "owner", m.config)
-	if nil != err {
+	if err != nil {
 		name = c.GlobalString("identity")
-		if "" == name {
+		if name == "" {
 			name = m.config.DefaultIdentity
 		}
 		owner, err = m.config.Account(name)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 	}
@@ -43,7 +43,7 @@ func runBalance(c *cli.Context) error {
 	}
 
 	client, err := rpccalls.NewClient(m.testnet, m.config.Connections[m.connectionOffset], m.verbose, m.e)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	defer client.Close()
@@ -55,7 +55,7 @@ func runBalance(c *cli.Context) error {
 	}
 
 	response, err := client.GetBalance(balanceConfig)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

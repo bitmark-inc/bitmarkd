@@ -44,14 +44,14 @@ func LoadFromFile(handles Handles) error {
 	log.Info("starting…")
 
 	f, err := os.Open(globalData.filename)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	defer f.Close()
 
 	// must have BOF record first
 	tag, packed, err := readRecord(f)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -68,7 +68,7 @@ func LoadFromFile(handles Handles) error {
 restore_loop:
 	for {
 		tag, packed, err := readRecord(f)
-		if nil != err {
+		if err != nil {
 			log.Errorf("read record with error: %s\n", err)
 			continue restore_loop
 		}
@@ -80,19 +80,19 @@ restore_loop:
 
 		case taggedTransaction:
 			unpacked, _, err := packed.Unpack(mode.IsTesting())
-			if nil != err {
+			if err != nil {
 				log.Errorf("unable to unpack asset: %s", err)
 				continue restore_loop
 			}
 
 			restorer, err := NewTransactionRestorer(unpacked, packed, handles)
-			if nil != err {
+			if err != nil {
 				log.Errorf("create transaction restorer with error: %s", err)
 				continue restore_loop
 			}
 
 			err = restorer.Restore()
-			if nil != err {
+			if err != nil {
 				log.Errorf("restore %s with error: %s", restorer, err)
 				continue restore_loop
 			}
@@ -133,21 +133,21 @@ func saveToFile() error {
 
 	log.Info("saving…")
 
-	f, err := os.OpenFile(globalData.filename, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
-	if nil != err {
+	f, err := os.OpenFile(globalData.filename, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
+	if err != nil {
 		return err
 	}
 	defer f.Close()
 
 	// write beginning of file marker
 	err = writeRecord(f, taggedBOF, bofData)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	// all assets at start of file
 	err = backupAssets(f)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -155,23 +155,23 @@ func saveToFile() error {
 
 	for _, item := range globalData.verifiedTransactions {
 		err := writeRecord(f, taggedTransaction, item.packed)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 	}
 	for _, item := range globalData.verifiedFreeIssues {
 		err := writeBlock(f, taggedTransaction, item.txs)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 		err = writeRecord(f, taggedProof, packProof(item.payId, item.nonce))
-		if nil != err {
+		if err != nil {
 			return err
 		}
 	}
 	for _, item := range globalData.verifiedPaidIssues {
 		err := writeBlock(f, taggedTransaction, item.txs)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 	}
@@ -180,30 +180,30 @@ func saveToFile() error {
 
 	for _, item := range globalData.pendingTransactions {
 		err := writeRecord(f, taggedTransaction, item.tx.packed)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 	}
 	for _, item := range globalData.pendingFreeIssues {
 		err := writeBlock(f, taggedTransaction, item.txs)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 		err = writeRecord(f, taggedProof, packProof(item.payId, item.nonce))
-		if nil != err {
+		if err != nil {
 			return err
 		}
 	}
 	for _, item := range globalData.pendingPaidIssues {
 		err := writeBlock(f, taggedTransaction, item.txs)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 	}
 
 	// end the file
 	err = writeRecord(f, taggedEOF, []byte("EOF"))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -252,12 +252,12 @@ func backupAssets(f *os.File) error {
 backup_loop:
 	for assetId := range allAssets {
 		packedAsset := asset.Get(assetId)
-		if nil == packedAsset {
+		if packedAsset == nil {
 			globalData.log.Errorf("asset [%s]: not in pending buffer", assetId)
 			continue backup_loop // skip the corresponding issue since asset is corrupt
 		}
 		err := writeRecord(f, taggedTransaction, packedAsset)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 	}
@@ -270,7 +270,7 @@ func packProof(payId pay.PayId, nonce PayNonce) []byte {
 	lp := len(payId)
 	ln := len(nonce)
 	packed := make([]byte, lp+ln)
-	copy(packed[:], payId[:])
+	copy(packed, payId[:])
 	copy(packed[lp:], nonce[:])
 
 	return packed
@@ -294,14 +294,14 @@ func writeRecord(f *os.File, tag tagType, packed []byte) error {
 	}
 
 	_, err := f.Write([]byte{byte(tag)})
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	count := make([]byte, 2)
 	binary.BigEndian.PutUint16(count, uint16(len(packed)))
 	_, err = f.Write(count)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	_, err = f.Write(packed)
@@ -312,19 +312,19 @@ func readRecord(f *os.File) (tagType, transactionrecord.Packed, error) {
 
 	tag := make([]byte, 1)
 	n, err := f.Read(tag)
-	if nil != err {
+	if err != nil {
 		return taggedEOF, []byte{}, err
 	}
-	if 1 != n {
+	if n != 1 {
 		return taggedEOF, []byte{}, fmt.Errorf("read record name: read: %d, expected: %d", n, 1)
 	}
 
 	countBuffer := make([]byte, 2)
 	n, err = f.Read(countBuffer)
-	if nil != err {
+	if err != nil {
 		return taggedEOF, []byte{}, err
 	}
-	if 2 != n {
+	if n != 2 {
 		return taggedEOF, []byte{}, fmt.Errorf("read record key count: read: %d, expected: %d", n, 2)
 	}
 
@@ -333,7 +333,7 @@ func readRecord(f *os.File) (tagType, transactionrecord.Packed, error) {
 	if count > 0 {
 		buffer := make([]byte, count)
 		n, err := f.Read(buffer)
-		if nil != err {
+		if err != nil {
 			return taggedEOF, []byte{}, err
 		}
 		if count != n {

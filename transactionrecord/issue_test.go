@@ -12,12 +12,11 @@ import (
 	"reflect"
 	"testing"
 
-	"golang.org/x/crypto/ed25519"
-
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
+	"golang.org/x/crypto/ed25519"
 )
 
 // test the packing/unpacking of Bitmark issue record
@@ -29,7 +28,7 @@ func TestPackBitmarkIssue(t *testing.T) {
 
 	var assetId transactionrecord.AssetIdentifier
 	_, err := fmt.Sscan("59d06155d25dffdb982729de8dce9d7855ca094d8bab8124b347c40668477056b3c27ccb7d71b54043d207ccd187642bf9c8466f9a8d0dbefb4c41633a7e39ef", &assetId)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to asset id error: %s", err)
 	}
 
@@ -71,8 +70,8 @@ func TestPackBitmarkIssue(t *testing.T) {
 
 	// test the packer
 	packed, err := r.Pack(issuerAccount)
-	if nil != err {
-		if nil != packed {
+	if err != nil {
+		if packed != nil {
 			t.Errorf("partial packed:\n%s", util.FormatBytes("expected", packed))
 		}
 		t.Errorf("pack error: %s", err)
@@ -98,7 +97,7 @@ func TestPackBitmarkIssue(t *testing.T) {
 
 	// test the unpacker
 	unpacked, n, err := packed.Unpack(true)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("unpack error: %s", err)
 	}
 	if len(packed) != n {
@@ -119,7 +118,7 @@ func TestPackBitmarkIssue(t *testing.T) {
 		bmt,
 	}
 	b, err := json.MarshalIndent(item, "", "  ")
-	if nil != err {
+	if err != nil {
 		t.Fatalf("json error: %s", err)
 	}
 
@@ -143,7 +142,7 @@ func TestPackTenBitmarkIssues(t *testing.T) {
 
 	var assetId transactionrecord.AssetIdentifier
 	_, err := fmt.Sscan("59d06155d25dffdb982729de8dce9d7855ca094d8bab8124b347c40668477056b3c27ccb7d71b54043d207ccd187642bf9c8466f9a8d0dbefb4c41633a7e39ef", &assetId)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to asset id error: %s", err)
 	}
 
@@ -158,7 +157,7 @@ func TestPackTenBitmarkIssues(t *testing.T) {
 
 		partial, err := r.Pack(issuerAccount)
 		if fault.InvalidSignature != err {
-			if nil != partial {
+			if partial != nil {
 				t.Errorf("partial packed:\n%s", util.FormatBytes("expected", partial))
 			}
 			t.Fatalf("pack error: %s", err)
@@ -167,13 +166,13 @@ func TestPackTenBitmarkIssues(t *testing.T) {
 		r.Signature = signature
 
 		_, err = r.Pack(issuerAccount)
-		if nil != err {
+		if err != nil {
 			t.Fatalf("pack error: %s", err)
 		}
 	}
 	// display a JSON version for information
 	b, err := json.MarshalIndent(rs, "", "  ")
-	if nil != err {
+	if err != nil {
 		t.Fatalf("json error: %s", err)
 	}
 
@@ -187,7 +186,7 @@ func TestPackBitmarkIssueWithZeroAccount(t *testing.T) {
 
 	var assetId transactionrecord.AssetIdentifier
 	_, err := fmt.Sscan("59d06155d25dffdb982729de8dce9d7855ca094d8bab8124b347c40668477056b3c27ccb7d71b54043d207ccd187642bf9c8466f9a8d0dbefb4c41633a7e39ef", &assetId)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to asset id error: %s", err)
 	}
 
@@ -200,7 +199,7 @@ func TestPackBitmarkIssueWithZeroAccount(t *testing.T) {
 
 	// test the packer
 	_, err = r.Pack(issuerAccount)
-	if nil == err {
+	if err == nil {
 		t.Fatalf("pack should have failed")
 	}
 	if fault.InvalidOwnerOrRegistrant != err {

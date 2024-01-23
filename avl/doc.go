@@ -7,8 +7,9 @@
 // pointers to allow iteration through the nodes
 //
 // Note: an individual tree is not thread safe, so either access only
-//       in a single go routine or use mutex/rwmutex to restrict
-//       access.
+//
+//	in a single go routine or use mutex/rwmutex to restrict
+//	access.
 //
 // The base algorithm was described in an old book by Niklaus Wirth
 // called Algorithms + Data Structures = Programs.

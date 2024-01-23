@@ -88,16 +88,16 @@ func (v *VotingData) existVoteForDigest(digest blockdigest.Digest) bool {
 func (v *VotingData) VoteBy(candidate upstream.Upstream) {
 	height := candidate.CachedRemoteHeight()
 	digest := candidate.CachedRemoteDigestOfLocalHeight()
-	upstream := candidate.Name()
+	upstreamName := candidate.Name()
 
 	remoteAddr, err := candidate.RemoteAddr()
-	if nil != err {
+	if err != nil {
 		v.log.Infof("remote addr error: %s", err)
 	}
 
 	v.log.Infof(
 		"%s connects to remote %s, cached remote height: %d with digest: %s",
-		upstream,
+		upstreamName,
 		remoteAddr,
 		height,
 		digest.String(),
@@ -122,7 +122,7 @@ func (v *VotingData) VoteBy(candidate upstream.Upstream) {
 		return
 	}
 
-	v.log.Debugf("%s connect to remote %s, vote success", upstream, remoteAddr)
+	v.log.Debugf("%s connect to remote %s, vote success", upstreamName, remoteAddr)
 	v.votes[digest] = []*voters{e}
 }
 
@@ -133,7 +133,7 @@ func (v *VotingData) validHeight(height uint64) bool {
 // ElectedCandidate - get candidate that is most vote
 func (v *VotingData) ElectedCandidate() (upstream.Upstream, uint64, error) {
 	err := v.countVotes()
-	if nil != err {
+	if err != nil {
 		v.log.Warnf("count votes with error: %s", err)
 		return nil, uint64(0), err
 	}
@@ -160,7 +160,7 @@ func (v *VotingData) countVotes() error {
 		v.result.majorityHeight,
 	)
 
-	if nil == v.result.winner {
+	if v.result.winner == nil {
 		return fault.VotesWithEmptyWinner
 	}
 
@@ -204,14 +204,14 @@ func (v *VotingData) drawElection() (upstream.Upstream, uint64, error) {
 
 	v.log.Infof("election in draw with vote counts %d", v.result.highestNumVotes)
 	v.result.winner, err = v.drawWinner()
-	if nil != err {
+	if err != nil {
 		return nil, uint64(0), err
 	}
 	return v.result.winner, v.result.winner.CachedRemoteHeight(), nil
 }
 
 func (v *VotingData) drawWinner() (upstream.Upstream, error) {
-	if 0 == v.result.highestNumVotes {
+	if v.result.highestNumVotes == 0 {
 		return nil, fault.VotesWithZeroCount
 	}
 

@@ -52,7 +52,7 @@ func (e *StoreEntity) UnmarshalText(data []byte) error {
 	n := 0
 
 	publicKeyLength, publicKeyOffset := util.ClippedVarint64(b[n:], 1, 8192)
-	if 0 == publicKeyOffset || 32 != publicKeyLength {
+	if publicKeyOffset == 0 || publicKeyLength != 32 {
 		return fault.NotPublicKey
 	}
 	publicKey := make([]byte, publicKeyLength)
@@ -63,7 +63,7 @@ func (e *StoreEntity) UnmarshalText(data []byte) error {
 	listenerLength, listenerOffset := util.ClippedVarint64(b[n:], 1, 8192)
 
 	ll := listenerLength / 19
-	if 0 == listenerOffset || ll < 1 || ll > 2 {
+	if listenerOffset == 0 || ll < 1 || ll > 2 {
 		return fault.InvalidIpAddress
 	}
 	listener := make([]byte, listenerLength)
@@ -72,7 +72,7 @@ func (e *StoreEntity) UnmarshalText(data []byte) error {
 	n += listenerLength
 
 	timestamp, timestampLength := util.FromVarint64(b[n:])
-	if 0 == timestampLength {
+	if timestampLength == 0 {
 		return fault.InvalidTimestamp
 	}
 
@@ -116,7 +116,7 @@ func Backup(backupFile string, tree *avl.Tree) error {
 		list = append(list, e)
 	}
 
-	f, err := os.OpenFile(backupFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
+	f, err := os.OpenFile(backupFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 	if err != nil {
 		return err
 	}
@@ -130,7 +130,7 @@ func Backup(backupFile string, tree *avl.Tree) error {
 func Restore(peerFile string, r Receptor) error {
 	var list []StoreEntity
 
-	f, err := os.OpenFile(peerFile, os.O_RDONLY, 0600)
+	f, err := os.OpenFile(peerFile, os.O_RDONLY, 0o600)
 	if err != nil {
 		// peer file not exist shouldn't return error, for example when starting
 		// bitmarkd first time, peer file doesn't exist.

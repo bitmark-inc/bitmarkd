@@ -7,7 +7,6 @@ package storage
 
 import (
 	"fmt"
-	"sync"
 )
 
 // Transaction - concept from RDBMS
@@ -29,7 +28,6 @@ type Transaction interface {
 // could it use "delegate pattern" for better abstraction
 
 type TransactionData struct {
-	sync.Mutex
 	access []Access
 }
 
@@ -80,7 +78,7 @@ func (t *TransactionData) Delete(h Handle, key []byte) {
 func (t *TransactionData) Commit() error {
 	for _, access := range t.access {
 		err := access.Commit()
-		if nil != err {
+		if err != nil {
 			return err
 		}
 	}

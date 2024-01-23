@@ -10,12 +10,11 @@ import (
 	"crypto/rand"
 	"fmt"
 
+	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/bitmark-inc/bitmarkd/util"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/nacl/secretbox"
 	"golang.org/x/crypto/sha3"
-
-	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/util"
 )
 
 // seed parameters
@@ -58,7 +57,7 @@ const (
 func PrivateKeyFromBase58Seed(seedBase58Encoded string) (*PrivateKey, error) {
 
 	sk, testnet, err := parseBase58Seed(seedBase58Encoded)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -88,7 +87,7 @@ func PrivateKeyFromBase58Seed(seedBase58Encoded string) (*PrivateKey, error) {
 
 		ed25519Seed = make([]byte, ed25519.SeedSize)
 		n, err := hash.Read(ed25519Seed)
-		if nil != err {
+		if err != nil {
 			return nil, err
 		}
 		if ed25519.SeedSize != n {
@@ -101,7 +100,7 @@ func PrivateKeyFromBase58Seed(seedBase58Encoded string) (*PrivateKey, error) {
 
 	// generate key pair from encrypted secret key
 	_, priv, err := ed25519.GenerateKey(bytes.NewBuffer(ed25519Seed))
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -143,7 +142,7 @@ func parseBase58Seed(seedBase58Encoded string) ([]byte, bool, error) {
 		// copy the secret key from seed
 		sk = make([]byte, secretKeyV1Length)
 		secretStart := seedHeaderLength + seedPrefixLength
-		copy(sk[:], seed[secretStart:])
+		copy(sk, seed[secretStart:])
 
 		prefix := seed[seedHeaderLength:secretStart]
 		// first byte of prefix is test/live indication
@@ -154,7 +153,7 @@ func parseBase58Seed(seedBase58Encoded string) ([]byte, bool, error) {
 		sk = seed[seedHeaderLength:checksumStart]
 
 		// verify valid secret key
-		if secretKeyV2Length != len(sk) || 0 != sk[16]&0x0f {
+		if len(sk) != secretKeyV2Length || sk[16]&0x0f != 0 {
 			return nil, false, fault.InvalidSeedLength
 		}
 
@@ -174,7 +173,7 @@ func NewBase58EncodedSeedV1(testnet bool) (string, error) {
 	// generate new seed
 	sk := make([]byte, secretKeyV1Length)
 	_, err := rand.Read(sk)
-	if nil != err {
+	if err != nil {
 		return "", err
 	}
 
@@ -182,7 +181,8 @@ func NewBase58EncodedSeedV1(testnet bool) (string, error) {
 	if testnet {
 		net = 0x01
 	}
-	seed := append(seedHeaderV1, byte(net))
+	seed := append([]byte{}, seedHeaderV1...)
+	seed = append(seed, byte(net))
 	seed = append(seed, sk...)
 	checksum := sha3.Sum256(seed)
 	seed = append(seed, checksum[:seedChecksumLength]...)
@@ -198,7 +198,7 @@ func NewBase58EncodedSeedV2(testnet bool) (string, error) {
 	sk := make([]byte, secretKeyV2EntropyLength, secretKeyV2Length)
 
 	_, err := rand.Read(sk)
-	if nil != err {
+	if err != nil {
 		return "", err
 	}
 
@@ -212,12 +212,13 @@ func NewBase58EncodedSeedV2(testnet bool) (string, error) {
 	// network flag
 	mode := sk[0]&0x80 | sk[1]&0x40 | sk[2]&0x20 | sk[3]&0x10
 	if testnet {
-		mode = mode ^ 0xf0
+		mode ^= 0xf0
 	}
 	sk[15] = mode | sk[15]&0x0f
 
 	// encode seed to base58
-	seed := append(seedHeaderV2, sk...)
+	seed := append([]byte{}, seedHeaderV2...)
+	seed = append(seed, sk...)
 	digest := sha3.Sum256(seed)
 	checksum := digest[:seedChecksumLength]
 	seed = append(seed, checksum...)

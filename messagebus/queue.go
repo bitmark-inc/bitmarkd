@@ -42,8 +42,7 @@ type signature [32]byte
 // BroadcastQueue - a 1:M queue
 // out is synchronous, so messages to routines not waiting are dropped
 type BroadcastQueue struct {
-	sync.RWMutex
-
+	mu          sync.RWMutex
 	out         []chan Message
 	defaultSize int
 	cache       map[signature]struct{}
@@ -85,7 +84,7 @@ func init() {
 		// if size specified and valid positive integer override default
 		if len(sizeTag) > 0 {
 			s, err := strconv.Atoi(sizeTag)
-			if nil == err && s > 0 {
+			if err == nil && s > 0 {
 				queueSize = s
 			} else {
 				m := fmt.Sprintf("queue: %v  has invalid size: %q", fieldInfo, sizeTag)
@@ -160,9 +159,9 @@ func (queue *BroadcastQueue) Send(command string, parameters ...[]byte) {
 	var sum signature
 	copy(sum[:], h.Sum([]byte{}))
 
-	queue.Lock()
+	queue.mu.Lock()
 	if _, ok := queue.cache[sum]; ok {
-		queue.Unlock()
+		queue.mu.Unlock()
 		return
 	}
 	queue.cache[sum] = struct{}{}
@@ -172,14 +171,14 @@ func (queue *BroadcastQueue) Send(command string, parameters ...[]byte) {
 		s := queue.index.Remove(queue.index.Front()).(signature)
 		delete(queue.cache, s)
 	}
-	queue.Unlock()
+	queue.mu.Unlock()
 
 	for _, out := range queue.out {
 
 		// check for more than one free entry
 		if len(out) < cap(out)-1 {
 			out <- m
-		} else if "block" == command {
+		} else if command == "block" {
 			// allow block messages to use the last free entry
 			select {
 			case out <- m:

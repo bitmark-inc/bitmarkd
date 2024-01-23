@@ -9,11 +9,10 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/syndtr/goleveldb/leveldb"
-
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/logger"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 var CheckpointKey = []byte("checkpoint")
@@ -44,7 +43,7 @@ func (p *PaymentTable) prefixKey(key []byte) []byte {
 
 // store a key/value bytes pair to the database
 func (p *PaymentTable) Put(key []byte, value []byte) error {
-	if nil == p.database {
+	if p.database == nil {
 		return fault.DatabaseIsNotSet
 	}
 	return p.database.Put(p.prefixKey(key), value, nil)
@@ -52,7 +51,7 @@ func (p *PaymentTable) Put(key []byte, value []byte) error {
 
 // remove a key from the database
 func (p *PaymentTable) Delete(key []byte) error {
-	if nil == p.database {
+	if p.database == nil {
 		return fault.DatabaseIsNotSet
 	}
 	return p.database.Delete(p.prefixKey(key), nil)
@@ -62,11 +61,11 @@ func (p *PaymentTable) Delete(key []byte) error {
 //
 // this returns the actual element - copy the result if it must be preserved
 func (p *PaymentTable) Get(key []byte) []byte {
-	if nil == p.database {
+	if p.database == nil {
 		return nil
 	}
 	value, err := p.database.Get(p.prefixKey(key), nil)
-	if nil != err {
+	if err != nil {
 		return nil
 	}
 	return value
@@ -74,7 +73,7 @@ func (p *PaymentTable) Get(key []byte) []byte {
 
 // Check if a key exists
 func (p *PaymentTable) Has(key []byte) bool {
-	if nil == p.database {
+	if p.database == nil {
 		return false
 	}
 	value, _ := p.database.Has(p.prefixKey(key), nil)

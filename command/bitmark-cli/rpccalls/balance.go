@@ -22,8 +22,8 @@ type BalanceData struct {
 func (client *Client) GetBalance(balanceConfig *BalanceData) (*share.BalanceReply, error) {
 
 	var shareId merkle.Digest // if not present the all zero id
-	if "" != balanceConfig.ShareId {
-		if err := shareId.UnmarshalText([]byte(balanceConfig.ShareId)); nil != err {
+	if balanceConfig.ShareId != "" {
+		if err := shareId.UnmarshalText([]byte(balanceConfig.ShareId)); err != nil {
 			return nil, err
 		}
 	}
@@ -38,7 +38,7 @@ func (client *Client) GetBalance(balanceConfig *BalanceData) (*share.BalanceRepl
 
 	reply := &share.BalanceReply{}
 	err := client.client.Call("Share.Balance", balanceArgs, reply)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 

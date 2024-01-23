@@ -10,9 +10,9 @@ func balanceLeft(pp **Node) bool {
 	h := true
 	p := *pp
 	// h; left branch has shrunk
-	if -1 == p.balance {
+	if p.balance == -1 {
 		p.balance = 0
-	} else if 0 == p.balance {
+	} else if p.balance == 0 {
 		p.balance = 1
 		h = false
 	} else { // balance = 1, rebalance
@@ -21,7 +21,7 @@ func balanceLeft(pp **Node) bool {
 			// single RR rotation
 			p.right = p1.left
 			p1.left = p
-			if 0 == p1.balance {
+			if p1.balance == 0 {
 				p.balance = 1
 				p1.balance = -1
 				h = false
@@ -36,7 +36,7 @@ func balanceLeft(pp **Node) bool {
 
 			p1.up = p.up
 			p.up = p1
-			if nil != p.right {
+			if p.right != nil {
 				p.right.up = p
 			}
 
@@ -48,12 +48,12 @@ func balanceLeft(pp **Node) bool {
 			p2.right = p1
 			p.right = p2.left
 			p2.left = p
-			if +1 == p2.balance {
+			if p2.balance == +1 {
 				p.balance = -1
 			} else {
 				p.balance = 0
 			}
-			if -1 == p2.balance {
+			if p2.balance == -1 {
 				p1.balance = 1
 			} else {
 				p1.balance = 0
@@ -70,10 +70,10 @@ func balanceLeft(pp **Node) bool {
 			p2.rightNodes = nr
 
 			p2.up = p.up
-			if nil != p.right {
+			if p.right != nil {
 				p.right.up = p
 			}
-			if nil != p1.left {
+			if p1.left != nil {
 				p1.left.up = p1
 			}
 			p.up = p2
@@ -90,9 +90,9 @@ func balanceRight(pp **Node) bool {
 	h := true
 	p := *pp
 	// h; right branch has shrunk
-	if 1 == p.balance {
+	if p.balance == 1 {
 		p.balance = 0
-	} else if 0 == p.balance {
+	} else if p.balance == 0 {
 		p.balance = -1
 		h = false
 	} else { // balance = -1, rebalance
@@ -101,7 +101,7 @@ func balanceRight(pp **Node) bool {
 			// single LL rotation
 			p.left = p1.right
 			p1.right = p
-			if 0 == p1.balance {
+			if p1.balance == 0 {
 				p.balance = -1
 				p1.balance = 1
 				h = false
@@ -116,7 +116,7 @@ func balanceRight(pp **Node) bool {
 
 			p1.up = p.up
 			p.up = p1
-			if nil != p.left {
+			if p.left != nil {
 				p.left.up = p
 			}
 
@@ -128,12 +128,12 @@ func balanceRight(pp **Node) bool {
 			p2.left = p1
 			p.left = p2.right
 			p2.right = p
-			if -1 == p2.balance {
+			if p2.balance == -1 {
 				p.balance = 1
 			} else {
 				p.balance = 0
 			}
-			if +1 == p2.balance {
+			if p2.balance == +1 {
 				p1.balance = -1
 			} else {
 				p1.balance = 0
@@ -150,10 +150,10 @@ func balanceRight(pp **Node) bool {
 			p2.rightNodes = nr
 
 			p2.up = p.up
-			if nil != p.left {
+			if p.left != nil {
 				p.left.up = p
 			}
-			if nil != p1.right {
+			if p1.right != nil {
 				p1.right.up = p1
 			}
 			p.up = p2
@@ -168,7 +168,7 @@ func balanceRight(pp **Node) bool {
 // delete: rearrange deleted node
 func del(qq **Node, rr **Node) bool {
 	h := false
-	if nil != (*rr).right {
+	if (*rr).right != nil {
 		h = del(qq, &(*rr).right)
 		(*rr).rightNodes -= 1
 		if h {
@@ -178,7 +178,7 @@ func del(qq **Node, rr **Node) bool {
 		q := *qq
 		r := *rr
 		rl := r.left
-		if nil != rl {
+		if rl != nil {
 			rl.up = r.up
 		}
 
@@ -191,10 +191,10 @@ func del(qq **Node, rr **Node) bool {
 		r.balance = q.balance
 		r.rightNodes = q.rightNodes
 
-		if nil != r.right {
+		if r.right != nil {
 			r.right.up = r
 		}
-		if nil != r.left {
+		if r.left != nil {
 			r.left.up = r
 		}
 
@@ -208,7 +208,7 @@ func del(qq **Node, rr **Node) bool {
 
 // Delete - removes a specific item from the tree
 func (tree *Tree) Delete(key Item) interface{} {
-	value, removed, _ := delete(key, &tree.root)
+	value, removed, _ := intdelete(key, &tree.root)
 	if removed {
 		tree.count -= 1
 	}
@@ -216,16 +216,16 @@ func (tree *Tree) Delete(key Item) interface{} {
 }
 
 // internal delete routine
-func delete(key Item, pp **Node) (interface{}, bool, bool) {
+func intdelete(key Item, pp **Node) (interface{}, bool, bool) {
 	h := false
-	if nil == *pp { // key not in tree
+	if *pp == nil { // key not in tree
 		return nil, false, h
 	}
 	value := interface{}(nil)
 	removed := false
 	switch (*pp).key.Compare(key) {
 	case +1: // (*pp).key > key
-		value, removed, h = delete(key, &(*pp).left)
+		value, removed, h = intdelete(key, &(*pp).left)
 		if removed {
 			(*pp).leftNodes -= 1
 		}
@@ -233,7 +233,7 @@ func delete(key Item, pp **Node) (interface{}, bool, bool) {
 			h = balanceLeft(pp)
 		}
 	case -1: // (*pp).key < key
-		value, removed, h = delete(key, &(*pp).right)
+		value, removed, h = intdelete(key, &(*pp).right)
 		if removed {
 			(*pp).rightNodes -= 1
 		}
@@ -243,14 +243,14 @@ func delete(key Item, pp **Node) (interface{}, bool, bool) {
 	default: // found: delete p
 		q := *pp
 		value = q.value // preserve the value part
-		if nil == q.right {
-			if nil != q.left {
+		if q.right == nil {
+			if q.left != nil {
 				q.left.up = q.up
 			}
 			*pp = q.left
 			h = true
-		} else if nil == q.left {
-			if nil != q.right {
+		} else if q.left == nil {
+			if q.right != nil {
 				q.right.up = q.up
 			}
 			*pp = q.right

@@ -18,7 +18,7 @@ func runShare(c *cli.Context) error {
 	m := c.App.Metadata["config"].(*metadata)
 
 	txId, err := checkTxId(c.String("txid"))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -28,7 +28,7 @@ func runShare(c *cli.Context) error {
 	}
 
 	from, owner, err := checkOwnerWithPasswordPrompt(c.GlobalString("identity"), m.config, c)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -39,7 +39,7 @@ func runShare(c *cli.Context) error {
 	}
 
 	client, err := rpccalls.NewClient(m.testnet, m.config.Connections[m.connectionOffset], m.verbose, m.e)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	defer client.Close()
@@ -52,7 +52,7 @@ func runShare(c *cli.Context) error {
 	}
 
 	response, err := client.Share(shareConfig)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

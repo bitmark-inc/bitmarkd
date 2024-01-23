@@ -167,9 +167,9 @@ func init() {
 		fmt.Printf("issuance pack err: %s\n", err)
 	}
 	signature := ed25519.Sign(privateKey, packed)
-	assetIssuance.Signature = signature[:]
+	assetIssuance.Signature = signature
 	p2, err := assetIssuance.Pack(&owner)
-	if nil != err {
+	if err != nil {
 		fmt.Printf("second asset pack err: %s\n", err)
 	}
 	assetTxID = p2.MakeLink()
@@ -186,9 +186,9 @@ func init() {
 		fmt.Printf("tx unratified pack err: %s\n", err)
 	}
 	signature = ed25519.Sign(privateKey, packed)
-	txUnratifiedData.Signature = signature[:]
+	txUnratifiedData.Signature = signature
 	p2, err = txUnratifiedData.Pack(&owner)
-	if nil != err {
+	if err != nil {
 		fmt.Printf("second tx pack err: %s\n", err)
 	}
 	txUnratifiedID = p2.MakeLink()
@@ -204,9 +204,9 @@ func init() {
 		fmt.Printf("share pack error: %s\n", err)
 	}
 	signature = ed25519.Sign(privateKey, packed)
-	txShareData.Signature = signature[:]
+	txShareData.Signature = signature
 	p2, err = txShareData.Pack(&owner)
-	if nil != err {
+	if err != nil {
 		fmt.Printf("second share pack err: %s\n", err)
 	}
 	txShareID = p2.MakeLink()
@@ -226,15 +226,15 @@ func init() {
 		fmt.Printf("grant pack eerror: %s\n", err)
 	}
 	signature = ed25519.Sign(privateKey, packed)
-	grantData.Signature = signature[:]
+	grantData.Signature = signature
 	packed, err = grantData.Pack(&owner)
 	if fault.InvalidSignature != err {
 		fmt.Printf("second grant pack err: %s\n", err)
 	}
 	signature = ed25519.Sign(privateKey2, packed)
-	grantData.Countersignature = signature[:]
+	grantData.Countersignature = signature
 	p2, err = grantData.Pack(&owner)
-	if nil != err {
+	if err != nil {
 		fmt.Printf("second grant err: %s\n", err)
 	}
 	grantID = p2.MakeLink()
@@ -256,7 +256,7 @@ func init() {
 		fmt.Printf("swap pack err: %s\n", err)
 	}
 	signature = ed25519.Sign(privateKey, packed)
-	swapData.Signature = signature[:]
+	swapData.Signature = signature
 	packed, err = swapData.Pack(&owner)
 	if fault.InvalidSignature != err {
 		fmt.Printf("swap pack 2 err: %s\n", err)
@@ -264,7 +264,7 @@ func init() {
 	signature = ed25519.Sign(privateKey2, packed)
 	swapData.Countersignature = signature
 	packed, err = swapData.Pack(&owner)
-	if nil != err {
+	if err != nil {
 		fmt.Printf("swap pack 3 err: %s\n", err)
 	}
 	swapID = packed.MakeLink()
@@ -349,8 +349,8 @@ func writeAssetIssuance(f *os.File) {
 }
 
 func setupAssetIssuanceBackupFile() {
-	_ = os.Mkdir(dataDirectory, 0700)
-	f, _ := os.OpenFile(dataFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
+	_ = os.Mkdir(dataDirectory, 0o700)
+	f, _ := os.OpenFile(dataFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 	defer f.Close()
 
 	// begin of file
@@ -402,8 +402,8 @@ func writeAssetData(f *os.File) {
 }
 
 func setupAssetDataBackupFile() {
-	_ = os.Mkdir(dataDirectory, 0700)
-	f, _ := os.OpenFile(dataFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
+	_ = os.Mkdir(dataDirectory, 0o700)
+	f, _ := os.OpenFile(dataFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 	defer f.Close()
 
 	// begin of file
@@ -450,8 +450,8 @@ func writeTransferUnratified(f *os.File) {
 }
 
 func setupTransferUnratifiedBackupFile() {
-	_ = os.Mkdir(dataDirectory, 0700)
-	f, _ := os.OpenFile(dataFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
+	_ = os.Mkdir(dataDirectory, 0o700)
+	f, _ := os.OpenFile(dataFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 	defer f.Close()
 
 	// begin of file
@@ -481,7 +481,7 @@ func TestLoadFromFileWhenTransferUnratified(t *testing.T) {
 	mockHandles.blockOwnerPayment.EXPECT().Get(gomock.Any()).Return(data).AnyTimes()
 
 	packed, err := assetIssuance.Pack(&owner)
-	if nil != err {
+	if err != nil {
 		fmt.Printf("asset pack err: %s\n", err)
 	}
 
@@ -512,8 +512,8 @@ func writeShareIssuance(f *os.File) {
 }
 
 func setupShareBackupFile() {
-	_ = os.Mkdir(dataDirectory, 0700)
-	f, _ := os.OpenFile(dataFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
+	_ = os.Mkdir(dataDirectory, 0o700)
+	f, _ := os.OpenFile(dataFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 	defer f.Close()
 
 	// begin of file
@@ -546,7 +546,7 @@ func TestLoadFromFileWhenShare(t *testing.T) {
 	mockHandles.blockOwnerPayment.EXPECT().Get(gomock.Any()).Return(data).AnyTimes()
 
 	packed, err := assetIssuance.Pack(&owner)
-	if nil != err {
+	if err != nil {
 		fmt.Printf("asset pack err: %s\n", err)
 	}
 
@@ -577,8 +577,8 @@ func writeGrant(f *os.File) {
 }
 
 func setupGrantBackupFile() {
-	_ = os.Mkdir(dataDirectory, 0700)
-	f, _ := os.OpenFile(dataFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
+	_ = os.Mkdir(dataDirectory, 0o700)
+	f, _ := os.OpenFile(dataFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 	defer f.Close()
 
 	// begin of file
@@ -632,8 +632,8 @@ func writeSwap(f *os.File) {
 }
 
 func setupSwapBackupFile() {
-	_ = os.Mkdir(dataDirectory, 0700)
-	f, _ := os.OpenFile(dataFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
+	_ = os.Mkdir(dataDirectory, 0o700)
+	f, _ := os.OpenFile(dataFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 	defer f.Close()
 
 	// begin of file

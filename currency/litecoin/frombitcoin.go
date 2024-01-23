@@ -18,7 +18,7 @@ func FromBitcoin(address string) (string, error) {
 
 	version, addressBytes, err := bitcoin.ValidateAddress(address)
 
-	if nil != err {
+	if err != nil {
 		return "", err
 	}
 

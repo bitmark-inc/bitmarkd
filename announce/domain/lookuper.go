@@ -26,13 +26,13 @@ type lookuper struct {
 func (l *lookuper) Lookup(domainName string) ([]DnsTXT, error) {
 	log := l.log
 	var result []DnsTXT
-	if "" == domainName {
+	if domainName == "" {
 		log.Error("invalid node domain")
 		return result, fault.InvalidNodeDomain
 	}
 
 	txts, err := l.f(domainName)
-	if nil != err {
+	if err != nil {
 		log.Errorf("lookup TXT record error: %s", err)
 		return result, err
 	}
@@ -41,7 +41,7 @@ func (l *lookuper) Lookup(domainName string) ([]DnsTXT, error) {
 		t = strings.TrimSpace(t)
 		txt, err := Parse(t)
 
-		if nil != err {
+		if err != nil {
 			log.Debugf("ignore TXT[%d]: %q  error: %s", i, t, err)
 		} else {
 			log.Infof("process TXT[%d]: %q", i, t)
@@ -49,7 +49,7 @@ func (l *lookuper) Lookup(domainName string) ([]DnsTXT, error) {
 			log.Infof("result[%d]: peer public key: %x", i, txt.PublicKey)
 			log.Infof("result[%d]: rpc fingerprint: %x", i, txt.CertificateFingerprint)
 
-			if nil == txt.IPv4 && nil == txt.IPv6 {
+			if txt.IPv4 == nil && txt.IPv6 == nil {
 				log.Debugf("result[%d]: ignoring invalid record", i)
 			} else {
 				result = append(result, *txt)

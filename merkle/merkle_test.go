@@ -17,11 +17,11 @@ import (
 func hexToLink(t *testing.T, s string) *merkle.Digest {
 	var link merkle.Digest
 	n, err := fmt.Sscan(s, &link)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to link error: %s", err)
 		return nil
 	}
-	if 1 != n {
+	if n != 1 {
 		t.Fatalf("hex to link scanned: %d  expected: 1", n)
 		return nil
 	}
@@ -73,7 +73,8 @@ func TestMerkle(t *testing.T) {
 		hi := hexToLink(t, hexTree[i])
 		t.Logf("h%d = %#v", i, hi)
 
-		b := append(merkleRoot[:], hi[:]...)
+		b := append([]byte{}, merkleRoot[:]...)
+		b = append(b, hi[:]...)
 		merkleRoot = merkle.NewDigest(b)
 
 		t.Logf("hm = %#v", merkleRoot)
@@ -365,7 +366,8 @@ loop:
 }
 
 // data from:
-//   http://blockexplorer.com/rawblock/0000000000000000001436c6d5f9118a6a2f00087629dbf6fac3e5cd9672f0b6
+//
+//	http://blockexplorer.com/rawblock/0000000000000000001436c6d5f9118a6a2f00087629dbf6fac3e5cd9672f0b6
 const block328656TransactionCount = 1199
 
 var block328656MerkleTree = []string{

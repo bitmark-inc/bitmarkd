@@ -89,7 +89,7 @@ func Initialise(domainName, cacheDirectory string, f func(string) ([]string, err
 		globalData.receptors,
 		f,
 	)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

@@ -11,8 +11,6 @@ import (
 	"sync"
 	"time"
 
-	zmq "github.com/pebbe/zmq4"
-
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
@@ -22,6 +20,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
+	zmq "github.com/pebbe/zmq4"
 )
 
 // Upstream - upstream connection
@@ -79,7 +78,7 @@ var upstreamCounter counter.Counter
 func New(privateKey []byte, publicKey []byte, timeout time.Duration) (Upstream, error) {
 
 	client, event, err := zmqutil.NewClient(zmq.REQ, privateKey, publicKey, timeout, zmq.EVENT_ALL)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -125,7 +124,7 @@ loop:
 				u.RUnlock()
 
 				remoteHeight, err := u.height()
-				if nil == err {
+				if err == nil {
 					u.lastResponseTime = time.Now()
 
 					u.Lock()
@@ -140,7 +139,7 @@ loop:
 
 				localHeight := blockheader.Height()
 				digest, err := u.RemoteDigestOfHeight(localHeight)
-				if nil != err {
+				if err != nil {
 					log.Warnf("remote digest for local height: %d  error: %s", localHeight, err)
 					continue loop
 				}
@@ -160,7 +159,7 @@ loop:
 			if u.connected {
 				u.RUnlock()
 				err := u.push(&item)
-				if nil != err {
+				if err != nil {
 					log.Errorf("push: error: %s", err)
 				}
 			} else {
@@ -224,7 +223,7 @@ func (u *upstreamData) handleEvent(event zmqutil.Event, state *connectedState) {
 			// try to close/open the socket makes the socket works as expectation.
 			log.Infof("reconnecting to %q", event.Address)
 			err := u.client.Reconnect()
-			if nil != err {
+			if err != nil {
 				u.log.Warnf("reconnect error: %s", err)
 				return
 			}
@@ -240,7 +239,7 @@ func (u *upstreamData) handleEvent(event zmqutil.Event, state *connectedState) {
 
 		if *state == stateDisconnected {
 			err := u.requestBlockchainInfo()
-			if nil == err {
+			if err == nil {
 				*state = stateConnected
 				u.Lock()
 				u.connected = true
@@ -264,7 +263,7 @@ func (u *upstreamData) requestBlockchainInfo() error {
 
 	u.RLock()
 	err := announce.SendRegistration(client, "R")
-	if nil != err {
+	if err != nil {
 		u.RUnlock()
 		log.Errorf("register: %s send error: %s", client, err)
 		return err
@@ -272,7 +271,7 @@ func (u *upstreamData) requestBlockchainInfo() error {
 	data, err := client.Receive(0)
 	u.RUnlock()
 
-	if nil != err {
+	if err != nil {
 		log.Errorf("register: %s receive error: %s", client, err)
 		return err
 	}
@@ -310,7 +309,7 @@ func (u *upstreamData) height() (uint64, error) {
 
 	u.RLock()
 	err := client.Send("N")
-	if nil != err {
+	if err != nil {
 		u.RUnlock()
 		log.Errorf("height: %s send error: %s", client, err)
 		return 0, err
@@ -319,11 +318,11 @@ func (u *upstreamData) height() (uint64, error) {
 	data, err := client.Receive(0)
 	u.RUnlock()
 
-	if nil != err {
+	if err != nil {
 		log.Errorf("height: %s receive error: %s", client, err)
 		return 0, err
 	}
-	if 2 != len(data) {
+	if len(data) != 2 {
 		return 0, fmt.Errorf("height received: %d  expected: 2", len(data))
 	}
 
@@ -331,7 +330,7 @@ func (u *upstreamData) height() (uint64, error) {
 	case "E":
 		return 0, fmt.Errorf("height: error response: %q", data[1])
 	case "N":
-		if 8 != len(data[1]) {
+		if len(data[1]) != 8 {
 			return 0, fmt.Errorf("hight: invalid response: %q", data[1])
 		}
 		height := binary.BigEndian.Uint64(data[1])
@@ -349,7 +348,7 @@ func (u *upstreamData) push(item *messagebus.Message) error {
 
 	u.RLock()
 	err := client.Send(item.Command, item.Parameters)
-	if nil != err {
+	if err != nil {
 		u.RUnlock()
 		log.Errorf("push: %s send error: %s", client, err)
 		return err
@@ -358,11 +357,11 @@ func (u *upstreamData) push(item *messagebus.Message) error {
 	data, err := client.Receive(0)
 	u.RUnlock()
 
-	if nil != err {
+	if err != nil {
 		log.Errorf("push: %s receive error: %s", client, err)
 		return err
 	}
-	if 2 != len(data) {
+	if len(data) != 2 {
 		return fmt.Errorf("push received: %d  expected: 2", len(data))
 	}
 

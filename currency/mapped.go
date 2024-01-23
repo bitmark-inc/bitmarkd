@@ -15,9 +15,10 @@ type Map map[Currency]string
 
 // Pack - validate and pack a currency → address mapping
 // create packed data as: (N = Address length)
-//   Currency N Address   {first item}
-//   …                    {more items}
-//   Currency N Address   {final item}
+//
+//	Currency N Address   {first item}
+//	…                    {more items}
+//	Currency N Address   {final item}
 func (m Map) Pack(testnet bool) ([]byte, error) {
 	buffer := make([]byte, 0, 40*len(m)) // approx: currency+byte_count+address
 	n := 0
@@ -25,11 +26,11 @@ func (m Map) Pack(testnet bool) ([]byte, error) {
 scan_currency:
 	for currency := First; currency <= Last; currency += 1 {
 		address := m[currency]
-		if "" == address {
+		if address == "" {
 			continue scan_currency
 		}
 		err := currency.ValidateAddress(address, testnet)
-		if nil != err {
+		if err != nil {
 			return nil, err
 		}
 
@@ -51,7 +52,7 @@ scan_currency:
 // UnpackMap - unpack and validate a currency address mapping
 func UnpackMap(buffer []byte, testnet bool) (Map, Set, error) {
 
-	if nil == buffer || len(buffer) < 2 {
+	if buffer == nil || len(buffer) < 2 {
 		return nil, Set{}, fault.InvalidBuffer
 	}
 
@@ -63,11 +64,11 @@ func UnpackMap(buffer []byte, testnet bool) (Map, Set, error) {
 
 		// currency
 		c, currencyLength := util.FromVarint64(buffer[n:])
-		if 0 == currencyLength {
+		if currencyLength == 0 {
 			return nil, Set{}, fault.InvalidCurrency
 		}
 		currency, err := FromUint64(c)
-		if nil != err {
+		if err != nil {
 			return nil, Set{}, err
 		}
 		// do not allow the empty value
@@ -81,7 +82,7 @@ func UnpackMap(buffer []byte, testnet bool) (Map, Set, error) {
 
 		// paymentAddress (limit address length)
 		paymentAddressLength, paymentAddressOffset := util.ClippedVarint64(buffer[n:], 1, 255)
-		if 0 == paymentAddressOffset {
+		if paymentAddressOffset == 0 {
 			return nil, Set{}, fault.InvalidCount
 		}
 		n += paymentAddressOffset
@@ -90,7 +91,7 @@ func UnpackMap(buffer []byte, testnet bool) (Map, Set, error) {
 		n += int(paymentAddressLength)
 
 		err = currency.ValidateAddress(paymentAddress, testnet)
-		if nil != err {
+		if err != nil {
 			return nil, Set{}, err
 		}
 

@@ -15,18 +15,18 @@ import (
 // FetchJSON - fetch a JSON response from an HTTP request and decode
 // it
 func FetchJSON(client *http.Client, url string, reply interface{}) error {
-	request, err := http.NewRequest("GET", url, nil)
-	if nil != err {
+	request, err := http.NewRequest("GET", url, http.NoBody)
+	if err != nil {
 		return err
 	}
 
 	response, err := client.Do(request)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	defer response.Body.Close()
 	body, err := ioutil.ReadAll(response.Body)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

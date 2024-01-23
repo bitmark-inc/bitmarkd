@@ -47,7 +47,7 @@ func storeTransfer(
 	ownerDataHandle storage.Handle,
 	blockOwnerPaymentHandle storage.Handle,
 ) (*TransferInfo, bool, error) {
-	if nil == transactionHandle || nil == ownerTxHandle || nil == ownerDataHandle || nil == blockOwnerPaymentHandle {
+	if transactionHandle == nil || ownerTxHandle == nil || ownerDataHandle == nil || blockOwnerPaymentHandle == nil {
 		return nil, false, fault.NilPointer
 	}
 
@@ -80,7 +80,7 @@ func storeTransfer(
 	// if already seen just return pay id and previous payments if present
 	entry, ok := globalData.pendingTransactions[payId]
 	if ok {
-		if nil != entry.payments {
+		if entry.payments != nil {
 			result.Payments = entry.payments
 		} else {
 			// this would mean that reservoir data is corrupt
@@ -141,12 +141,12 @@ func verifyTransfer(transfer transactionrecord.BitmarkTransfer, transactionHandl
 
 	// find the current owner via the link
 	_, previousPacked := transactionHandle.GetNB(transfer.GetLink().Bytes())
-	if nil == previousPacked {
+	if previousPacked == nil {
 		return nil, false, fault.LinkToInvalidOrUnconfirmedTransaction
 	}
 
 	previousTransaction, _, err := transactionrecord.Packed(previousPacked).Unpack(mode.IsTesting())
-	if nil != err {
+	if err != nil {
 		return nil, false, err
 	}
 
@@ -218,7 +218,7 @@ func verifyTransfer(transfer transactionrecord.BitmarkTransfer, transactionHandl
 
 	// pack transfer and check signature
 	packedTransfer, err := transfer.Pack(currentOwner)
-	if nil != err {
+	if err != nil {
 		return nil, false, err
 	}
 
@@ -265,13 +265,13 @@ func verifyTransfer(transfer transactionrecord.BitmarkTransfer, transactionHandl
 	dKey := append(currentOwner.Bytes(), link[:]...)
 	// log.Infof("dKey: %x", dKey)
 	dCount := ownerTxHandle.Get(dKey)
-	if nil == dCount {
+	if dCount == nil {
 		return nil, false, fault.DoubleTransferAttempt
 	}
 
 	// get ownership data
 	ownerData, err := ownership.GetOwnerData(nil, link, ownerDataHandle)
-	if nil != err {
+	if err != nil {
 		globalData.log.Errorf("owner data error: %s", err)
 		return nil, false, err //fault.DoubleTransferAttempt
 	}

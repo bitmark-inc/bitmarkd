@@ -8,13 +8,12 @@ package rpccalls
 import (
 	"fmt"
 
-	"golang.org/x/crypto/ed25519"
-
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/rpc/assets"
 	"github.com/bitmark-inc/bitmarkd/rpc/bitmarks"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
+	"golang.org/x/crypto/ed25519"
 )
 
 // AssetData - asset data for bitmark creation
@@ -44,11 +43,11 @@ func (client *Client) MakeAsset(assetConfig *AssetData) (*AssetResult, error) {
 	client.printJson("Asset Get Request", getArgs)
 
 	var getReply assets.GetReply
-	if err := client.client.Call("Assets.Get", &getArgs, &getReply); nil != err {
+	if err := client.client.Call("Assets.Get", &getArgs, &getReply); err != nil {
 		return nil, err
 	}
 
-	if 1 != len(getReply.Assets) {
+	if len(getReply.Assets) != 1 {
 		return nil, fmt.Errorf("multple asset response")
 	}
 
@@ -73,14 +72,14 @@ func (client *Client) MakeAsset(assetConfig *AssetData) (*AssetResult, error) {
 
 		ai := &transactionrecord.AssetIdentifier{}
 		err := ai.UnmarshalText([]byte(buffer))
-		if nil != err {
+		if err != nil {
 			return nil, err
 		}
 		result.AssetId = ai
 		result.Confirmed = getReply.Assets[0].Confirmed
 
 	default:
-		if nil != getReply.Assets[0].Data {
+		if getReply.Assets[0].Data != nil {
 			return nil, fmt.Errorf("non-asset response")
 		}
 	}
@@ -103,11 +102,10 @@ func (client *Client) MakeAsset(assetConfig *AssetData) (*AssetResult, error) {
 	}
 
 	// manually sign the record and attach signature
-	signature := ed25519.Sign(assetConfig.Registrant.PrivateKey.PrivateKeyBytes(), packed)
-	r.Signature = signature[:]
+	r.Signature = ed25519.Sign(assetConfig.Registrant.PrivateKey.PrivateKeyBytes(), packed)
 
 	// check that signature is correct by packing again
-	if _, err = r.Pack(registrant); nil != err {
+	if _, err = r.Pack(registrant); err != nil {
 		return nil, err
 	}
 
@@ -119,7 +117,7 @@ func (client *Client) MakeAsset(assetConfig *AssetData) (*AssetResult, error) {
 	}
 
 	var reply bitmarks.CreateReply
-	if err := client.client.Call("Bitmarks.Create", &args, &reply); nil != err {
+	if err := client.client.Call("Bitmarks.Create", &args, &reply); err != nil {
 		return nil, err
 	}
 

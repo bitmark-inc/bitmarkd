@@ -56,7 +56,7 @@ func TestRpcListenerServe(t *testing.T) {
 
 	s := rpc.NewServer()
 	err := s.Register(Add{})
-	if nil != err {
+	if err != nil {
 		t.Error("register with error: ", err)
 		t.FailNow()
 	}
@@ -75,7 +75,7 @@ func TestRpcListenerServe(t *testing.T) {
 		fixtures.Certificate(fixturePath),
 		fixtures.Key(fixturePath),
 	)
-	if nil != err {
+	if err != nil {
 		fmt.Printf("get certificate with error: %s\n", err)
 	}
 
@@ -98,7 +98,7 @@ func TestRpcListenerServe(t *testing.T) {
 	}
 
 	c, err := tls.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", port), &tlsConfig)
-	if nil != err {
+	if err != nil {
 		t.Error("dial with error: ", err)
 		t.FailNow()
 	}

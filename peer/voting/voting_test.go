@@ -48,7 +48,7 @@ var (
 
 func setupTestLogger() {
 	removeFiles()
-	_ = os.Mkdir(testingDirName, 0700)
+	_ = os.Mkdir(testingDirName, 0o700)
 
 	logging := logger.Configuration{
 		Directory: testingDirName,

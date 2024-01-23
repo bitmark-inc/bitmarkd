@@ -82,7 +82,7 @@ func setupTestJobManager() *JobManagerData {
 }
 
 func setupTestManagerLogger() {
-	_ = os.Mkdir(logDirectory, 0770)
+	_ = os.Mkdir(logDirectory, 0o770)
 	managerLogging = loggerConfiguration()
 	_ = logger.Initialise(managerLogging)
 }

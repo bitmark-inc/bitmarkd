@@ -9,16 +9,15 @@ import (
 	"os"
 	"testing"
 
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
-
 	"github.com/bitmark-inc/bitmarkd/storage/mocks"
 	"github.com/bitmark-inc/logger"
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 )
 
 func setupTestLogger() {
 	removeFiles()
-	_ = os.Mkdir(testingDirName, 0700)
+	_ = os.Mkdir(testingDirName, 0o700)
 
 	logging := logger.Configuration{
 		Directory: testingDirName,

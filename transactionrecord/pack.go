@@ -33,19 +33,20 @@ const (
 // signature last
 //
 // NOTE: returns the "unsigned" message on signature failure - for
-//       debugging/testing
+//
+//	debugging/testing
 func (baseData *OldBaseData) Pack(address *account.Account) (Packed, error) {
-	if nil == address || address.IsZero() {
+	if address == nil || address.IsZero() {
 		return nil, fault.InvalidOwnerOrRegistrant
 	}
 
 	err := baseData.check(address.IsTesting())
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
 	err = baseData.Currency.ValidateAddress(baseData.PaymentAddress, address.IsTesting())
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -58,7 +59,7 @@ func (baseData *OldBaseData) Pack(address *account.Account) (Packed, error) {
 
 	// signature
 	err = address.CheckSignature(message, baseData.Signature)
-	if nil != err {
+	if err != nil {
 		return message, err
 	}
 	// Signature Last
@@ -71,7 +72,7 @@ func (baseData *OldBaseData) check(testnet bool) error {
 	}
 
 	// prevent nil or zero account
-	if nil == baseData.Owner || baseData.Owner.IsZero() {
+	if baseData.Owner == nil || baseData.Owner.IsZero() {
 		return fault.InvalidOwnerOrRegistrant
 	}
 
@@ -84,18 +85,20 @@ func (baseData *OldBaseData) check(testnet bool) error {
 // signature last.
 //
 // Note: the metadata field consists of key value pairs each preceded
-//       by its count (
+//
+//	by its count (
 //
 // NOTE: returns the "unsigned" message on signature failure - for
-//       debugging/testing
+//
+//	debugging/testing
 func (assetData *AssetData) Pack(address *account.Account) (Packed, error) {
 	// prevent nil or zero account
-	if nil == address || address.IsZero() {
+	if address == nil || address.IsZero() {
 		return nil, fault.InvalidOwnerOrRegistrant
 	}
 
 	err := assetData.check(address.IsTesting())
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -108,7 +111,7 @@ func (assetData *AssetData) Pack(address *account.Account) (Packed, error) {
 
 	// signature
 	err = address.CheckSignature(message, assetData.Signature)
-	if nil != err {
+	if err != nil {
 		return message, err
 	}
 	// Signature Last
@@ -121,7 +124,7 @@ func (assetData *AssetData) check(testnet bool) error {
 	}
 
 	// prevent nil or zero account
-	if nil == assetData.Registrant || assetData.Registrant.IsZero() {
+	if assetData.Registrant == nil || assetData.Registrant.IsZero() {
 		return fault.InvalidOwnerOrRegistrant
 	}
 
@@ -144,13 +147,13 @@ func (assetData *AssetData) check(testnet bool) error {
 	// i.e.  key1 <NUL> value1 <NUL> key2 <NUL> value2 <NUL> … keyN <NUL> valueN
 	// Notes: 1: no NUL after last value
 	//        2: no empty key or value is allowed
-	if 0 != len(assetData.Metadata) {
+	if assetData.Metadata != "" {
 		splitMetadata := strings.Split(assetData.Metadata, "\u0000")
-		if 1 == len(splitMetadata)%2 {
+		if len(splitMetadata)%2 == 1 {
 			return fault.MetadataIsNotMap
 		}
 		for _, v := range splitMetadata {
-			if 0 == len(v) {
+			if v == "" {
 				return fault.MetadataIsNotMap
 			}
 		}
@@ -164,14 +167,15 @@ func (assetData *AssetData) check(testnet bool) error {
 // signature last
 //
 // NOTE: returns the "unsigned" message on signature failure - for
-//       debugging/testing
+//
+//	debugging/testing
 func (issue *BitmarkIssue) Pack(address *account.Account) (Packed, error) {
-	if nil == address || address.IsZero() {
+	if address == nil || address.IsZero() {
 		return nil, fault.InvalidOwnerOrRegistrant
 	}
 
 	err := issue.check(address.IsTesting())
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -183,7 +187,7 @@ func (issue *BitmarkIssue) Pack(address *account.Account) (Packed, error) {
 
 	// signature
 	err = address.CheckSignature(message, issue.Signature)
-	if nil != err {
+	if err != nil {
 		return message, err
 	}
 
@@ -197,7 +201,7 @@ func (issue *BitmarkIssue) check(testnet bool) error {
 	}
 
 	// prevent nil or zero account
-	if nil == issue.Owner || issue.Owner.IsZero() {
+	if issue.Owner == nil || issue.Owner.IsZero() {
 		return fault.InvalidOwnerOrRegistrant
 	}
 	return nil
@@ -209,14 +213,15 @@ func (issue *BitmarkIssue) check(testnet bool) error {
 // signature last
 //
 // NOTE: returns the "unsigned" message on signature failure - for
-//       debugging/testing
+//
+//	debugging/testing
 func (transfer *BitmarkTransferUnratified) Pack(address *account.Account) (Packed, error) {
-	if nil == address || address.IsZero() {
+	if address == nil || address.IsZero() {
 		return nil, fault.InvalidOwnerOrRegistrant
 	}
 
 	err := transfer.check(address.IsTesting())
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -226,14 +231,14 @@ func (transfer *BitmarkTransferUnratified) Pack(address *account.Account) (Packe
 	message := createPacked(BitmarkTransferUnratifiedTag)
 	message.appendBytes(transfer.Link[:])
 	_, err = message.appendEscrow(transfer.Escrow, testnet)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 	message.appendAccount(transfer.Owner)
 
 	// signature
 	err = address.CheckSignature(message, transfer.Signature)
-	if nil != err {
+	if err != nil {
 		return message, err
 	}
 
@@ -251,7 +256,7 @@ func (transfer *BitmarkTransferUnratified) check(testnet bool) error {
 	//       the address cannot be zero to prevent discovery of the
 	//       corresponding private key being able to transfer all
 	//       previously destroyed bitmarks to a new account.
-	if nil == transfer.Owner {
+	if transfer.Owner == nil {
 		return fault.InvalidOwnerOrRegistrant
 	}
 
@@ -264,14 +269,15 @@ func (transfer *BitmarkTransferUnratified) check(testnet bool) error {
 // signature last
 //
 // NOTE: returns the "unsigned" message on signature failure - for
-//       debugging/testing
+//
+//	debugging/testing
 func (transfer *BitmarkTransferCountersigned) Pack(address *account.Account) (Packed, error) {
-	if nil == address || address.IsZero() {
+	if address == nil || address.IsZero() {
 		return nil, fault.InvalidOwnerOrRegistrant
 	}
 
 	err := transfer.check(address.IsTesting())
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -281,14 +287,14 @@ func (transfer *BitmarkTransferCountersigned) Pack(address *account.Account) (Pa
 	message := createPacked(BitmarkTransferCountersignedTag)
 	message.appendBytes(transfer.Link[:])
 	_, err = message.appendEscrow(transfer.Escrow, testnet)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 	message.appendAccount(transfer.Owner)
 
 	// signature
 	err = address.CheckSignature(message, transfer.Signature)
-	if nil != err {
+	if err != nil {
 		return message, err
 	}
 
@@ -296,7 +302,7 @@ func (transfer *BitmarkTransferCountersigned) Pack(address *account.Account) (Pa
 	message.appendBytes(transfer.Signature)
 
 	err = transfer.Owner.CheckSignature(message, transfer.Countersignature)
-	if nil != err {
+	if err != nil {
 		return message, err
 	}
 
@@ -314,7 +320,7 @@ func (transfer *BitmarkTransferCountersigned) check(testnet bool) error {
 	}
 
 	// Note: impossible to have 2 signature transfer to zero public key
-	if nil == transfer.Owner || transfer.Owner.IsZero() {
+	if transfer.Owner == nil || transfer.Owner.IsZero() {
 		return fault.InvalidOwnerOrRegistrant
 	}
 
@@ -327,19 +333,20 @@ func (transfer *BitmarkTransferCountersigned) check(testnet bool) error {
 // signature last
 //
 // NOTE: returns the "unsigned" message on signature failure - for
-//       debugging/testing
+//
+//	debugging/testing
 func (foundation *BlockFoundation) Pack(address *account.Account) (Packed, error) {
-	if nil == address || address.IsZero() {
+	if address == nil || address.IsZero() {
 		return nil, fault.InvalidOwnerOrRegistrant
 	}
 
 	err := foundation.check(address.IsTesting())
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
 	packedPayments, err := foundation.Payments.Pack(address.IsTesting())
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -352,7 +359,7 @@ func (foundation *BlockFoundation) Pack(address *account.Account) (Packed, error
 
 	// signature
 	err = address.CheckSignature(message, foundation.Signature)
-	if nil != err {
+	if err != nil {
 		return message, err
 	}
 	// Signature Last
@@ -365,12 +372,12 @@ func (foundation *BlockFoundation) check(testnet bool) error {
 	}
 
 	// prevent nil or zero account
-	if nil == foundation.Owner || foundation.Owner.IsZero() {
+	if foundation.Owner == nil || foundation.Owner.IsZero() {
 		return fault.InvalidOwnerOrRegistrant
 	}
 
 	err := CheckPayments(foundation.Version, testnet, foundation.Payments)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	return nil
@@ -382,19 +389,20 @@ func (foundation *BlockFoundation) check(testnet bool) error {
 // signature last
 //
 // NOTE: returns the "unsigned" message on signature failure - for
-//       debugging/testing
+//
+//	debugging/testing
 func (transfer *BlockOwnerTransfer) Pack(address *account.Account) (Packed, error) {
-	if nil == address || address.IsZero() {
+	if address == nil || address.IsZero() {
 		return nil, fault.InvalidOwnerOrRegistrant
 	}
 
 	err := transfer.check(address.IsTesting())
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
 	packedPayments, err := transfer.Payments.Pack(address.IsTesting())
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -404,7 +412,7 @@ func (transfer *BlockOwnerTransfer) Pack(address *account.Account) (Packed, erro
 	message := createPacked(BlockOwnerTransferTag)
 	message.appendBytes(transfer.Link[:])
 	_, err = message.appendEscrow(transfer.Escrow, testnet)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 	message.appendUint64(transfer.Version)
@@ -413,13 +421,13 @@ func (transfer *BlockOwnerTransfer) Pack(address *account.Account) (Packed, erro
 
 	// signature
 	err = address.CheckSignature(message, transfer.Signature)
-	if nil != err {
+	if err != nil {
 		return message, err
 	}
 	message.appendBytes(transfer.Signature)
 
 	err = transfer.Owner.CheckSignature(message, transfer.Countersignature)
-	if nil != err {
+	if err != nil {
 		return message, err
 	}
 
@@ -437,12 +445,12 @@ func (transfer *BlockOwnerTransfer) check(testnet bool) error {
 	}
 
 	// prevent nil or zero account
-	if nil == transfer.Owner || transfer.Owner.IsZero() {
+	if transfer.Owner == nil || transfer.Owner.IsZero() {
 		return fault.InvalidOwnerOrRegistrant
 	}
 
 	err := CheckPayments(transfer.Version, testnet, transfer.Payments)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -455,14 +463,15 @@ func (transfer *BlockOwnerTransfer) check(testnet bool) error {
 // signature last
 //
 // NOTE: returns the "unsigned" message on signature failure - for
-//       debugging/testing
+//
+//	debugging/testing
 func (share *BitmarkShare) Pack(address *account.Account) (Packed, error) {
-	if nil == address || address.IsZero() {
+	if address == nil || address.IsZero() {
 		return nil, fault.InvalidOwnerOrRegistrant
 	}
 
 	err := share.check(address.IsTesting())
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -473,7 +482,7 @@ func (share *BitmarkShare) Pack(address *account.Account) (Packed, error) {
 
 	// signature
 	err = address.CheckSignature(message, share.Signature)
-	if nil != err {
+	if err != nil {
 		return message, err
 	}
 	// Signature Last
@@ -498,16 +507,18 @@ func (share *BitmarkShare) check(testnet bool) error {
 // signature last
 //
 // NOTE: returns the "unsigned" message on signature failure - for
-//       debugging/testing
+//
+//	debugging/testing
+//
 // NOTE: in this case address _MUST_ point to the record.Owner
 func (grant *ShareGrant) Pack(address *account.Account) (Packed, error) {
-	if nil == address || address.IsZero() ||
+	if address == nil || address.IsZero() ||
 		address != grant.Owner {
 		return nil, fault.InvalidOwnerOrRegistrant
 	}
 
 	err := grant.check(address.IsTesting())
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -521,13 +532,13 @@ func (grant *ShareGrant) Pack(address *account.Account) (Packed, error) {
 
 	// signature
 	err = grant.Owner.CheckSignature(message, grant.Signature)
-	if nil != err {
+	if err != nil {
 		return message, err
 	}
 	message.appendBytes(grant.Signature)
 
 	err = grant.Recipient.CheckSignature(message, grant.Countersignature)
-	if nil != err {
+	if err != nil {
 		return message, err
 	}
 
@@ -545,7 +556,7 @@ func (grant *ShareGrant) check(testnet bool) error {
 	}
 
 	// prevent nil or zero account
-	if nil == grant.Owner || nil == grant.Recipient ||
+	if grant.Owner == nil || grant.Recipient == nil ||
 		grant.Owner.IsZero() || grant.Recipient.IsZero() ||
 		grant.Owner == grant.Recipient {
 		return fault.InvalidOwnerOrRegistrant
@@ -564,16 +575,18 @@ func (grant *ShareGrant) check(testnet bool) error {
 // signature last
 //
 // NOTE: returns the "unsigned" message on signature failure - for
-//       debugging/testing
+//
+//	debugging/testing
+//
 // NOTE: in this case address _MUST_ point to the record.OwnerOne
 func (swap *ShareSwap) Pack(address *account.Account) (Packed, error) {
-	if nil == address || address.IsZero() ||
+	if address == nil || address.IsZero() ||
 		address != swap.OwnerOne {
 		return nil, fault.InvalidOwnerOrRegistrant
 	}
 
 	err := swap.check(address.IsTesting())
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -589,13 +602,13 @@ func (swap *ShareSwap) Pack(address *account.Account) (Packed, error) {
 
 	// signature
 	err = swap.OwnerOne.CheckSignature(message, swap.Signature)
-	if nil != err {
+	if err != nil {
 		return message, err
 	}
 	message.appendBytes(swap.Signature)
 
 	err = swap.OwnerTwo.CheckSignature(message, swap.Countersignature)
-	if nil != err {
+	if err != nil {
 		return message, err
 	}
 
@@ -613,7 +626,7 @@ func (swap *ShareSwap) check(testnet bool) error {
 	}
 
 	// prevent nil or zero account
-	if nil == swap.OwnerOne || nil == swap.OwnerTwo ||
+	if swap.OwnerOne == nil || swap.OwnerTwo == nil ||
 		swap.OwnerOne.IsZero() || swap.OwnerTwo.IsZero() ||
 		swap.OwnerOne == swap.OwnerTwo {
 		return fault.InvalidOwnerOrRegistrant
@@ -645,7 +658,7 @@ func CheckPayments(version uint64, testnet bool, payments currency.Map) error {
 	for currency, address := range payments {
 
 		err := currency.ValidateAddress(address, testnet)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 
@@ -709,11 +722,11 @@ func (buffer *Packed) appendUint64(value uint64) *Packed {
 // append a Escrop[ payment to buffer
 func (buffer *Packed) appendEscrow(escrow *Payment, testnet bool) (*Packed, error) {
 
-	if nil == escrow {
+	if escrow == nil {
 		*buffer = append(*buffer, 0)
 	} else {
 		err := escrow.Currency.ValidateAddress(escrow.Address, testnet)
-		if nil != err {
+		if err != nil {
 			return nil, err
 		}
 		*buffer = append(*buffer, 1)

@@ -37,7 +37,7 @@ func Subscribe(
 	log.Info("starting…")
 
 	socket, err := zmq.NewSocket(zmq.SUB)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -70,13 +70,13 @@ func Subscribe(
 	socket.SetSubscribe("")
 
 	socket.Connect(connectTo)
-	if nil != err {
+	if err != nil {
 		socket.Close()
 	}
 
 	// to submit hashing requests
 	proof, err := zmq.NewSocket(zmq.PUSH)
-	if nil != err {
+	if err != nil {
 		socket.Close()
 		return err
 	}
@@ -87,7 +87,7 @@ func Subscribe(
 	proof.SetLinger(0)
 	proof.SetIdentity(identity)
 	err = proof.Connect(proofRequest)
-	if nil != err {
+	if err != nil {
 		socket.Close()
 		proof.Close()
 	}

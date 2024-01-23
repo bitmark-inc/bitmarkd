@@ -8,8 +8,6 @@ package rpccalls
 import (
 	"encoding/hex"
 
-	"golang.org/x/crypto/ed25519"
-
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -17,6 +15,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/rpc/bitmark"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
+	"golang.org/x/crypto/ed25519"
 )
 
 // TransferData - data for a transfer request
@@ -52,15 +51,15 @@ func (client *Client) Transfer(transferConfig *TransferData) (*TransferReply, er
 
 	var link merkle.Digest
 	err := link.UnmarshalText([]byte(transferConfig.TxId))
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
 	transfer, err := makeTransferUnratified(client.testnet, link, transferConfig.Owner, transferConfig.NewOwner)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
-	if nil == transfer {
+	if transfer == nil {
 		return nil, fault.MakeTransferFailed
 	}
 
@@ -73,7 +72,7 @@ func (client *Client) Transfer(transferConfig *TransferData) (*TransferReply, er
 	}
 
 	tpid, err := reply.PayId.MarshalText()
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -102,15 +101,15 @@ func (client *Client) SingleSignedTransfer(transferConfig *TransferData) (*Trans
 
 	var link merkle.Digest
 	err := link.UnmarshalText([]byte(transferConfig.TxId))
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
 	packed, transfer, err := makeTransferOneSignature(client.testnet, link, transferConfig.Owner, transferConfig.NewOwner)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
-	if nil == transfer {
+	if transfer == nil {
 		return nil, fault.MakeTransferFailed
 	}
 
@@ -131,12 +130,12 @@ func (client *Client) CountersignTransfer(transfer *transactionrecord.BitmarkTra
 
 	var reply bitmark.TransferReply
 	err := client.client.Call("Bitmark.Transfer", transfer, &reply)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
 	tpid, err := reply.PayId.MarshalText()
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -172,19 +171,18 @@ func makeTransferUnratified(testnet bool, link merkle.Digest, owner *configurati
 
 	// pack without signature
 	packed, err := r.Pack(ownerAccount)
-	if nil == err {
+	if err == nil {
 		return nil, fault.MakeTransferFailed
 	} else if fault.InvalidSignature != err {
 		return nil, err
 	}
 
 	// attach signature
-	signature := ed25519.Sign(owner.PrivateKey.PrivateKeyBytes(), packed)
-	r.Signature = signature[:]
+	r.Signature = ed25519.Sign(owner.PrivateKey.PrivateKeyBytes(), packed)
 
 	// check that signature is correct by packing again
 	_, err = r.Pack(ownerAccount)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 	return &r, nil
@@ -203,19 +201,18 @@ func makeTransferOneSignature(testnet bool, link merkle.Digest, owner *configura
 
 	// pack without signature
 	packed, err := r.Pack(ownerAccount)
-	if nil == err {
+	if err == nil {
 		return nil, nil, fault.MakeTransferFailed
 	} else if fault.InvalidSignature != err {
 		return nil, nil, err
 	}
 
 	// attach signature
-	signature := ed25519.Sign(owner.PrivateKey.PrivateKeyBytes(), packed)
-	r.Signature = signature[:]
+	r.Signature = ed25519.Sign(owner.PrivateKey.PrivateKeyBytes(), packed)
 
 	// include first signature by packing again
 	packed, err = r.Pack(ownerAccount)
-	if nil == err {
+	if err == nil {
 		return nil, nil, fault.MakeTransferFailed
 	} else if fault.InvalidSignature != err {
 		return nil, nil, err

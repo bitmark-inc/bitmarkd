@@ -116,18 +116,18 @@ func Finalise() error {
 
 // Cache - cache an incoming asset
 func Cache(asset *transactionrecord.AssetData, assetHandle storage.Handle) (*transactionrecord.AssetIdentifier, transactionrecord.Packed, error) {
-	if nil == assetHandle {
+	if assetHandle == nil {
 		return nil, transactionrecord.Packed{}, fault.NilPointer
 	}
 
 	packedAsset, err := asset.Pack(asset.Registrant)
-	if nil != err {
+	if err != nil {
 		return nil, nil, err
 	}
 
 	// ensure unpack consistency
 	_, _, err = transactionrecord.Packed(packedAsset).Unpack(mode.IsTesting())
-	if nil != err {
+	if err != nil {
 		return nil, nil, err
 	}
 
@@ -188,7 +188,7 @@ func Cache(asset *transactionrecord.AssetData, assetHandle storage.Handle) (*tra
 
 // Exists - check if an item confirmed in storage handle
 func Exists(assetId transactionrecord.AssetIdentifier, assetHandle storage.Handle) bool {
-	if nil == assetHandle {
+	if assetHandle == nil {
 		return false
 	}
 
@@ -209,7 +209,7 @@ func Get(assetId transactionrecord.AssetIdentifier) transactionrecord.Packed {
 	globalData.RLock()
 	item := globalData.cache[assetId]
 	globalData.RUnlock()
-	if nil == item {
+	if item == nil {
 		return nil
 	}
 	return item.packed

@@ -18,14 +18,14 @@ func runCountersign(c *cli.Context) error {
 	m := c.App.Metadata["config"].(*metadata)
 
 	hex, err := checkTransferTx(c.String("transaction"))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	// this command is run by the receiver so from is used to get
 
 	to, newOwner, err := checkOwnerWithPasswordPrompt(c.GlobalString("identity"), m.config, c)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -35,7 +35,7 @@ func runCountersign(c *cli.Context) error {
 	}
 
 	client, err := rpccalls.NewClient(m.testnet, m.config.Connections[m.connectionOffset], m.verbose, m.e)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	defer client.Close()
@@ -46,7 +46,7 @@ func runCountersign(c *cli.Context) error {
 	}
 
 	response, err := client.Countersign(countersignConfig)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

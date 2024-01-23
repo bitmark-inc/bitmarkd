@@ -84,7 +84,7 @@ func (a *assetRestoreData) String() string {
 
 func (a *assetRestoreData) Restore() error {
 	_, _, err := asset.Cache(a.unpacked, storage.Pool.Assets)
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("fail to cache asset: %s", err)
 	}
 	return nil
@@ -105,7 +105,7 @@ func (i *issueRestoreData) Restore() error {
 
 	for len(i.packed) > 0 {
 		transaction, n, err := i.packed.Unpack(mode.IsTesting())
-		if nil != err {
+		if err != nil {
 			return fmt.Errorf("unable to unpack issue: %s", err)
 		}
 
@@ -118,7 +118,7 @@ func (i *issueRestoreData) Restore() error {
 	}
 
 	_, _, err := storeIssues(issues, i.assetHandle, i.blockOwnerPaymentHandle)
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("store issue with error: %s", err)
 	}
 
@@ -139,7 +139,7 @@ func (t *transferRestoreData) String() string {
 
 func (t *transferRestoreData) Restore() error {
 	_, _, err := storeTransfer(t.unpacked, t.transaction, t.ownerTx, t.ownerData, t.blockOwnerPayment)
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("fail to restore transfer: %s", err)
 	}
 	return err
@@ -161,7 +161,7 @@ func (g *grantRestoreData) String() string {
 func (g *grantRestoreData) Restore() error {
 	_, _, err := storeGrant(g.unpacked, g.shareQuantity, g.shares, g.ownerData, g.blockOwnerPayment, g.transactions)
 
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("fail to restore grant: %s", err)
 	}
 	return err
@@ -181,7 +181,7 @@ func (s *swapRestoreData) String() string {
 
 func (s *swapRestoreData) Restore() error {
 	_, _, err := storeSwap(s.unpacked, s.shareQuantity, s.shares, s.ownerData, s.blockOwnerPayment)
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("create swap restorer with error: %s", err)
 	}
 	return err

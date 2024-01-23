@@ -26,13 +26,13 @@ func TestCounter(t *testing.T) {
 	c1.Increment()
 	c1.Increment()
 
-	if 5 != c1.Uint64() {
+	if c1.Uint64() != 5 {
 		t.Errorf("counter is not 5 after iincrementing: %d", c1.Uint64())
 	}
 
 	c1.Decrement()
 
-	if 4 != c1.Uint64() {
+	if c1.Uint64() != 4 {
 		t.Errorf("counter is not 5 after iincrementing: %d", c1.Uint64())
 	}
 

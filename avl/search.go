@@ -11,7 +11,7 @@ func (tree *Tree) Search(key Item) (*Node, int) {
 }
 
 func search(key Item, tree *Node, index int) (*Node, int) {
-	if nil == tree {
+	if tree == nil {
 		return nil, -1
 	}
 

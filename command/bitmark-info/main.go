@@ -55,7 +55,7 @@ func main() {
 		exitwithstatus.Message("%s: version: %s", program, version)
 	}
 
-	if len(options["help"]) > 0 || 0 == len(arguments) {
+	if len(options["help"]) > 0 || len(arguments) == 0 {
 		exitwithstatus.Message("usage: %s [--help] host:port", program)
 	}
 

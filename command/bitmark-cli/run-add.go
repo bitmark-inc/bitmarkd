@@ -8,9 +8,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/urfave/cli"
-
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/urfave/cli"
 )
 
 func runAdd(c *cli.Context) error {
@@ -18,18 +17,18 @@ func runAdd(c *cli.Context) error {
 	m := c.App.Metadata["config"].(*metadata)
 
 	name, err := checkName(c.GlobalString("identity"))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	description, err := checkDescription(c.String("description"))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	// blank or a valid seed
 	seed := c.String("seed")
-	new := c.Bool("new")
+	newSeed := c.Bool("new")
 	acc := c.String("account")
 
 	if m.verbose {
@@ -37,31 +36,31 @@ func runAdd(c *cli.Context) error {
 		fmt.Fprintf(m.e, "description: %s\n", description)
 		fmt.Fprintf(m.e, "seed: %s\n", seed)
 		fmt.Fprintf(m.e, "account: %s\n", acc)
-		fmt.Fprintf(m.e, "new: %t\n", new)
+		fmt.Fprintf(m.e, "new: %t\n", newSeed)
 	}
 
-	if "" == acc {
-		seed, err = checkSeed(seed, new, m.testnet)
-		if nil != err {
+	if acc == "" {
+		seed, err = checkSeed(seed, newSeed, m.testnet)
+		if err != nil {
 			return err
 		}
 
 		password := c.GlobalString("password")
-		if "" == password {
+		if password == "" {
 			password, err = promptNewPassword()
-			if nil != err {
+			if err != nil {
 				return err
 			}
 		}
 
 		err = m.config.AddIdentity(name, description, seed, password)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 
-	} else if "" == seed && "" != acc && !new {
+	} else if seed == "" && acc != "" && !newSeed {
 		err = m.config.AddReceiveOnlyIdentity(name, description, acc)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 

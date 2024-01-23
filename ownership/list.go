@@ -33,13 +33,14 @@ func listBitmarksFor(owner *account.Account, start uint64, count int) ([]Record,
 	binary.BigEndian.PutUint64(startBytes, start)
 
 	ownerBytes := owner.Bytes()
-	prefix := append(ownerBytes, startBytes...)
+	prefix := append([]byte{}, ownerBytes...)
+	prefix = append(prefix, startBytes...)
 
 	cursor := storage.Pool.OwnerList.NewFetchCursor().Seek(prefix)
 
 	// owner ⧺ count → txId
 	items, err := cursor.Fetch(count)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -64,7 +65,7 @@ loop:
 		merkle.DigestFromBytes(&record.TxId, item.Value)
 
 		ownerData, err := GetOwnerData(nil, record.TxId, storage.Pool.OwnerData)
-		if nil != err {
+		if err != nil {
 			return nil, err
 		}
 

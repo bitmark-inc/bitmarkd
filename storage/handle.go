@@ -8,10 +8,9 @@ package storage
 import (
 	"encoding/binary"
 
+	"github.com/bitmark-inc/logger"
 	"github.com/syndtr/goleveldb/leveldb"
 	ldb_util "github.com/syndtr/goleveldb/leveldb/util"
-
-	"github.com/bitmark-inc/logger"
 )
 
 // Handle - interface for storage operations
@@ -69,7 +68,7 @@ func (p *PoolHandle) prefixKey(key []byte) []byte {
 func (p *PoolHandle) Put(key []byte, value []byte, dummy []byte) {
 	poolData.RLock()
 	defer poolData.RUnlock()
-	if nil == p.dataAccess {
+	if p.dataAccess == nil {
 		logger.Panic("pool.Put nil database")
 		return
 	}
@@ -95,7 +94,7 @@ func (p *PoolHandle) Remove(key []byte) {
 func (p *PoolHandle) Get(key []byte) []byte {
 	poolData.RLock()
 	defer poolData.RUnlock()
-	if nil == p.dataAccess {
+	if p.dataAccess == nil {
 		return nil
 	}
 	value, err := p.dataAccess.Get(p.prefixKey(key))
@@ -112,7 +111,7 @@ func (p *PoolHandle) Get(key []byte) []byte {
 // panics if not 8 (or more) bytes in the record
 func (p *PoolHandle) GetN(key []byte) (uint64, bool) {
 	buffer := p.Get(key)
-	if nil == buffer {
+	if buffer == nil {
 		return 0, false
 	}
 	if len(buffer) < 8 {
@@ -130,7 +129,7 @@ func (p *PoolHandle) GetN(key []byte) (uint64, bool) {
 // this returns the actual element in the second parameter - copy the result if it must be preserved
 func (p *PoolHandle) GetNB(key []byte) (uint64, []byte) {
 	buffer := p.Get(key)
-	if nil == buffer {
+	if buffer == nil {
 		return 0, nil
 	}
 	if len(buffer) < 9 { // must have at least one byte after the N value
@@ -144,7 +143,7 @@ func (p *PoolHandle) GetNB(key []byte) (uint64, []byte) {
 func (p *PoolHandle) Has(key []byte) bool {
 	poolData.RLock()
 	defer poolData.RUnlock()
-	if nil == p.dataAccess {
+	if p.dataAccess == nil {
 		return false
 	}
 	value, err := p.dataAccess.Has(p.prefixKey(key))
@@ -161,7 +160,7 @@ func (p *PoolHandle) LastElement() (Element, bool) {
 
 	poolData.RLock()
 	defer poolData.RUnlock()
-	if nil == p.dataAccess {
+	if p.dataAccess == nil {
 		return Element{}, false
 	}
 
@@ -202,5 +201,5 @@ func (p *PoolHandle) Commit() error {
 
 // Ready - check if db is ready
 func (p *PoolHandle) Ready() bool {
-	return 0 != p.prefix
+	return p.prefix != 0
 }

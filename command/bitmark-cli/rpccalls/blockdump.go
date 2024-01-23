@@ -29,7 +29,7 @@ func (client *Client) GetBlocks(blockDumpConfig *BlockDumpData) (*node.BlockDump
 
 	reply := &node.BlockDumpRangeReply{}
 	err := client.client.Call("Node.BlockDumpRange", blockDumpArgs, reply)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 

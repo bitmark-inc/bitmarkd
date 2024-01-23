@@ -8,8 +8,6 @@ package bitmarks
 import (
 	"encoding/hex"
 
-	"golang.org/x/time/rate"
-
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
@@ -23,6 +21,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
+	"golang.org/x/time/rate"
 )
 
 const (
@@ -81,7 +80,7 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 
 	if assetCount > reservoir.MaximumIssues || issueCount > reservoir.MaximumIssues {
 		return fault.TooManyItemsToProcess
-	} else if 0 == assetCount && 0 == issueCount {
+	} else if assetCount == 0 && issueCount == 0 {
 		return fault.MissingParameters
 	}
 
@@ -89,7 +88,7 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 	if count > reservoir.MaximumIssues {
 		count = reservoir.MaximumIssues
 	}
-	if err := ratelimit.LimitN(bitmarks.Limiter, count, reservoir.MaximumIssues); nil != err {
+	if err := ratelimit.LimitN(bitmarks.Limiter, count, reservoir.MaximumIssues); err != nil {
 		return err
 	}
 
@@ -100,7 +99,7 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 	log.Infof("Bitmarks.Create: %+v", arguments)
 
 	assetStatus, packedAssets, err := assets.Register(arguments.Assets, bitmarks.PoolAssets)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -113,7 +112,7 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 	duplicate := false
 	if issueCount > 0 {
 		stored, duplicate, err = bitmarks.Rsvr.StoreIssues(arguments.Issues)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 		packedIssues = stored.Packed
@@ -125,25 +124,25 @@ func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply)
 	}
 
 	// fail if no data sent
-	if 0 == len(assetStatus) && 0 == len(packedIssues) {
+	if len(assetStatus) == 0 && len(packedIssues) == 0 {
 		return fault.MissingParameters
 	}
 	// if data to send
-	if 0 != len(packedAssets) {
+	if len(packedAssets) != 0 {
 		// announce transaction block to other peers
 		messagebus.Bus.Broadcast.Send("assets", packedAssets)
 	}
 
-	if 0 != len(packedIssues) {
+	if len(packedIssues) != 0 {
 
 		result.PayId = stored.Id
 		result.PayNonce = stored.Nonce
-		if nil == stored.Difficulty {
+		if stored.Difficulty == nil {
 			result.Difficulty = "" // suppress difficulty if not applicable
 		} else {
 			result.Difficulty = stored.Difficulty.GoString()
 		}
-		if nil != stored.Payments {
+		if stored.Payments != nil {
 			result.Payments = make(map[string]transactionrecord.PaymentAlternative)
 
 			for _, p := range stored.Payments {
@@ -179,7 +178,7 @@ type ProofReply struct {
 
 // Proof - supply proof that client-side hashing to confirm free issue was done
 func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) error {
-	if err := ratelimit.Limit(bitmarks.Limiter); nil != err {
+	if err := ratelimit.Limit(bitmarks.Limiter); err != nil {
 		return err
 	}
 
@@ -200,7 +199,7 @@ func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) er
 
 	nonce := make([]byte, size)
 	byteCount, err := hex.Decode(nonce, []byte(arguments.Nonce))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	if byteCount != size {

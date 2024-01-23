@@ -124,13 +124,13 @@ func extractHeader(block []byte, checkHeight uint64, skipDigest bool, pool stora
 	copy(packedHeader[:], block[:totalBlockSize])
 
 	header, err := packedHeader.Unpack()
-	if nil != err {
+	if err != nil {
 		return nil, blockdigest.Digest{}, nil, err
 	}
 
 	if checkHeight > genesis.BlockNumber {
 		err := validNextHeightFromExpected(checkHeight, header.Number)
-		if nil != err {
+		if err != nil {
 			log.Errorf("check height %d, incoming block height %d, error: %s", checkHeight, header.Number, err)
 			return nil, blockdigest.Digest{}, nil, err
 		}
@@ -186,7 +186,7 @@ func (record PackedHeader) Unpack() (*Header, error) {
 	header.TransactionCount = binary.LittleEndian.Uint16(record[transactionCountOffset:])
 	header.Number = binary.LittleEndian.Uint64(record[numberOffset:])
 
-	if 1 == header.Number && 1 == header.TransactionCount && 1 == header.Version {
+	if header.Number == 1 && header.TransactionCount == 1 && header.Version == 1 {
 		// genesis block
 	} else {
 		// normal block
@@ -200,12 +200,12 @@ func (record PackedHeader) Unpack() (*Header, error) {
 	}
 
 	err := blockdigest.DigestFromBytes(&header.PreviousBlock, record[previousBlockOffset:merkleRootOffset])
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
 	err = merkle.DigestFromBytes(&header.MerkleRoot, record[merkleRootOffset:timestampOffset])
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -357,7 +357,7 @@ func timestampOfBlock(height uint64) (uint64, error) {
 	binary.BigEndian.PutUint64(blockKey, height)
 
 	packed := storage.Pool.Blocks.Get(blockKey)
-	if nil == packed {
+	if packed == nil {
 		return uint64(0), fault.BlockNotFound
 	}
 
@@ -374,7 +374,7 @@ func difficultyOfBlock(height uint64) (float64, error) {
 	binary.BigEndian.PutUint64(blockKey, height)
 
 	packed := storage.Pool.Blocks.Get(blockKey)
-	if nil == packed {
+	if packed == nil {
 		return float64(0), fault.BlockNotFound
 	}
 

@@ -199,13 +199,13 @@ func TestJSON(t *testing.T) {
 		d.SetBits(item.bits)
 
 		buffer, err := json.Marshal(d)
-		if nil != err {
+		if err != nil {
 			t.Fatalf("%d: JSON encode error: %s", i, err)
 		}
 
 		dNew := difficulty.New()
 		err = json.Unmarshal(buffer, dNew)
-		if nil != err {
+		if err != nil {
 			t.Fatalf("%d: JSON decode error: %s", i, err)
 		}
 

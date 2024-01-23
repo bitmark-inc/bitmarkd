@@ -175,7 +175,7 @@ func TestValidTag(t *testing.T) {
 	for _, item := range testData {
 		_, err := domain.Parse(item.txt)
 
-		if nil == item.err && nil != err {
+		if item.err == nil && err != nil {
 			t.Errorf("id[%d] error: \"%s\"  expected success", item.id, err)
 		} else if item.err != err {
 			t.Errorf("id[%d] error: \"%s\"  expected: \"%s\"", item.id, err, item.err)
@@ -188,9 +188,9 @@ func TestValidTag(t *testing.T) {
 
 		r, err := l.Lookup(item.txt)
 
-		if err == item.err && 1 != len(r) {
+		if err == item.err && len(r) != 1 {
 			t.Errorf("id[%d] expected 1 record but got: %d", item.id, len(r))
-		} else if err != item.err && 0 != len(r) {
+		} else if err != item.err && len(r) != 0 {
 			t.Errorf("id[%d] expected zero records bu got: %d", item.id, len(r))
 		}
 	}

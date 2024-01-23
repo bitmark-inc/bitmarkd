@@ -29,7 +29,7 @@ type Access interface {
 }
 
 type AccessData struct {
-	sync.Mutex
+	mu    sync.Mutex
 	inUse bool
 	db    *leveldb.DB
 	batch *leveldb.Batch
@@ -46,8 +46,8 @@ func newDA(db *leveldb.DB, trx *leveldb.Batch, cache Cache) Access {
 }
 
 func (d *AccessData) Begin() error {
-	d.Lock()
-	defer d.Unlock()
+	d.mu.Lock()
+	defer d.mu.Unlock()
 
 	if d.inUse {
 		return fmt.Errorf("batch already in use")
@@ -108,8 +108,8 @@ func (d *AccessData) InUse() bool {
 }
 
 func (d *AccessData) Abort() {
-	d.Lock()
-	defer d.Unlock()
+	d.mu.Lock()
+	defer d.mu.Unlock()
 
 	d.batch.Reset()
 	d.cache.Clear()

@@ -31,7 +31,7 @@ func TestPackBitmarkTransferCountersignedOne(t *testing.T) {
 
 	var link merkle.Digest
 	err := merkleDigestFromLE("79a67be2b3d313bd490363fb0d27901c46ed53d3f7b21f60d48bc42439b06084", &link)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to link error: %s", err)
 	}
 
@@ -75,7 +75,7 @@ func TestPackBitmarkTransferCountersignedOne(t *testing.T) {
 
 	// test the packer
 	packed, err := r.Pack(issuerAccount)
-	if nil != err {
+	if err != nil {
 		t.Errorf("pack error: %s", err)
 	}
 
@@ -99,7 +99,7 @@ func TestPackBitmarkTransferCountersignedOne(t *testing.T) {
 
 	// test the unpacker
 	unpacked, n, err := packed.Unpack(true)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("unpack error: %s", err)
 	}
 	if len(packed) != n {
@@ -120,7 +120,7 @@ func TestPackBitmarkTransferCountersignedOne(t *testing.T) {
 		bmt,
 	}
 	b, err := json.MarshalIndent(item, "", "  ")
-	if nil != err {
+	if err != nil {
 		t.Fatalf("json error: %s", err)
 	}
 
@@ -144,7 +144,7 @@ func TestPackBitmarkTransferCountersignedTwo(t *testing.T) {
 
 	var link merkle.Digest
 	err := merkleDigestFromLE("630c041cd1f586bcb9097e816189185c1e0379f67bbfc2f0626724f542047873", &link)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to link error: %s", err)
 	}
 
@@ -198,7 +198,7 @@ func TestPackBitmarkTransferCountersignedTwo(t *testing.T) {
 
 	// test the packer
 	packed, err := r.Pack(ownerOneAccount)
-	if nil != err {
+	if err != nil {
 		t.Errorf("pack error: %s", err)
 	}
 
@@ -222,7 +222,7 @@ func TestPackBitmarkTransferCountersignedTwo(t *testing.T) {
 
 	// test the unpacker
 	unpacked, n, err := packed.Unpack(true)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("unpack error: %s", err)
 	}
 	if len(packed) != n {
@@ -243,7 +243,7 @@ func TestPackBitmarkTransferCountersignedTwo(t *testing.T) {
 		bmt,
 	}
 	b, err := json.MarshalIndent(item, "", "  ")
-	if nil != err {
+	if err != nil {
 		t.Fatalf("json error: %s", err)
 	}
 
@@ -267,7 +267,7 @@ func TestPackBitmarkTransferCountersignedThree(t *testing.T) {
 
 	var link merkle.Digest
 	err := merkleDigestFromLE("14eb103a0c8fb22e50e73ae9b4ff88595b1cd5f60c4afb690d8fbd014c3ed091", &link)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to link error: %s", err)
 	}
 
@@ -312,7 +312,7 @@ func TestPackBitmarkTransferCountersignedThree(t *testing.T) {
 
 	// test the packer
 	packed, err := r.Pack(ownerTwoAccount)
-	if nil != err {
+	if err != nil {
 		t.Errorf("pack error: %s", err)
 	}
 
@@ -336,7 +336,7 @@ func TestPackBitmarkTransferCountersignedThree(t *testing.T) {
 
 	// test the unpacker
 	unpacked, n, err := packed.Unpack(true)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("unpack error: %s", err)
 	}
 	if len(packed) != n {
@@ -357,7 +357,7 @@ func TestPackBitmarkTransferCountersignedThree(t *testing.T) {
 		bmt,
 	}
 	b, err := json.MarshalIndent(item, "", "  ")
-	if nil != err {
+	if err != nil {
 		t.Fatalf("json error: %s", err)
 	}
 
@@ -380,7 +380,7 @@ func TestPackBitmarkTransferCountersignedFail(t *testing.T) {
 
 	var link merkle.Digest
 	err := merkleDigestFromLE("14eb103a0c8fb22e50e73ae9b4ff88595b1cd5f60c4afb690d8fbd014c3ed091", &link)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to link error: %s", err)
 	}
 
@@ -418,7 +418,7 @@ func TestPackBitmarkTransferCountersignedFail(t *testing.T) {
 	if fault.InvalidSignature == err {
 		return
 	}
-	if nil == err {
+	if err == nil {
 		t.Error("unexpected pack success, should fail with invalid signature")
 	} else {
 		t.Errorf("pack error: %s", err)
@@ -435,7 +435,7 @@ func TestPackBitmarkTransferCountersignedFromZeroAccount(t *testing.T) {
 
 	var link merkle.Digest
 	err := merkleDigestFromLE("14eb103a0c8fb22e50e73ae9b4ff88595b1cd5f60c4afb690d8fbd014c3ed091", &link)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to link error: %s", err)
 	}
 
@@ -449,7 +449,7 @@ func TestPackBitmarkTransferCountersignedFromZeroAccount(t *testing.T) {
 
 	// test the packer
 	_, err = r.Pack(ownerDeletedAccount)
-	if nil == err {
+	if err == nil {
 		t.Fatalf("pack should have failed")
 	}
 	if fault.InvalidOwnerOrRegistrant != err {
@@ -465,7 +465,7 @@ func TestPackBitmarkTransferCountersignedToZeroAccount(t *testing.T) {
 
 	var link merkle.Digest
 	err := merkleDigestFromLE("14eb103a0c8fb22e50e73ae9b4ff88595b1cd5f60c4afb690d8fbd014c3ed091", &link)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to link error: %s", err)
 	}
 
@@ -479,7 +479,7 @@ func TestPackBitmarkTransferCountersignedToZeroAccount(t *testing.T) {
 
 	// test the packer
 	_, err = r.Pack(ownerOneAccount)
-	if nil == err {
+	if err == nil {
 		t.Fatalf("pack should have failed")
 	}
 	if fault.InvalidOwnerOrRegistrant != err {

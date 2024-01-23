@@ -57,12 +57,12 @@ func TestMapPack(t *testing.T) {
 	for i, item := range testData {
 
 		buffer, err := item.m.Pack(true)
-		if nil != err {
+		if err != nil {
 			t.Fatalf("%d: pack error: %s", i, err)
 		}
 
 		mr, cs, err := currency.UnpackMap(buffer, true)
-		if nil != err {
+		if err != nil {
 			t.Fatalf("%d: unpack error: %s", i, err)
 		}
 
@@ -76,7 +76,7 @@ func TestMapPack(t *testing.T) {
 		}
 
 		j, err := json.Marshal(item.m)
-		if nil != err {
+		if err != nil {
 			t.Fatalf("%d: marshal JSON error: %s", i, err)
 		}
 		if string(j) != item.j {
@@ -160,7 +160,7 @@ func TestMapUnpackBuffer(t *testing.T) {
 	for i, item := range testData {
 
 		mr, cs, err := currency.UnpackMap(item.b, true)
-		if nil != err {
+		if err != nil {
 			t.Fatalf("%d: unpack error: %s", i, err)
 		}
 

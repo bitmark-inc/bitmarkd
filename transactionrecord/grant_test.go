@@ -29,7 +29,7 @@ func TestPackShareGrant(t *testing.T) {
 
 	var shareId merkle.Digest
 	err := merkleDigestFromLE("630c041cd1f586bcb9097e816189185c1e0379f67bbfc2f0626724f542047873", &shareId)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to share error: %s", err)
 	}
 
@@ -79,7 +79,7 @@ func TestPackShareGrant(t *testing.T) {
 
 	// test the packer
 	packed, err := r.Pack(ownerOneAccount)
-	if nil != err {
+	if err != nil {
 		t.Errorf("pack error: %s", err)
 	}
 
@@ -103,7 +103,7 @@ func TestPackShareGrant(t *testing.T) {
 
 	// test the unpacker
 	unpacked, n, err := packed.Unpack(true)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("unpack error: %s", err)
 	}
 	if len(packed) != n {
@@ -124,7 +124,7 @@ func TestPackShareGrant(t *testing.T) {
 		grant,
 	}
 	b, err := json.MarshalIndent(item, "", "  ")
-	if nil != err {
+	if err != nil {
 		t.Fatalf("json error: %s", err)
 	}
 
@@ -147,7 +147,7 @@ func TestPackShareGrantValueNotZero(t *testing.T) {
 
 	var shareId merkle.Digest
 	err := merkleDigestFromLE("630c041cd1f586bcb9097e816189185c1e0379f67bbfc2f0626724f542047873", &shareId)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to share error: %s", err)
 	}
 

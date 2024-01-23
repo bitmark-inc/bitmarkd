@@ -17,7 +17,7 @@ func printJson(handle io.Writer, message interface{}) error {
 	indent := "  "
 
 	b, err := json.MarshalIndent(message, prefix, indent)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

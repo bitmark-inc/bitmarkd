@@ -39,7 +39,7 @@ func toString(item OwnedItem) ([]byte, error) {
 // String - convert a owned item to its string symbol
 func (item OwnedItem) String() string {
 	s, err := toString(item)
-	if nil != err {
+	if err != nil {
 		logger.Panicf("invalid item enumeration: %d", item)
 	}
 	return string(s)
@@ -48,7 +48,7 @@ func (item OwnedItem) String() string {
 // MarshalText - convert item to text
 func (item OwnedItem) MarshalText() ([]byte, error) {
 	s, err := toString(item)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 	return s, nil

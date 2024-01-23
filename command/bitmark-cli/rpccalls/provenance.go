@@ -32,7 +32,7 @@ type provenanceItem struct {
 func (client *Client) GetProvenance(provenanceConfig *ProvenanceData) (*ProvenanceReply, error) {
 
 	var txId merkle.Digest
-	if err := txId.UnmarshalText([]byte(provenanceConfig.TxId)); nil != err {
+	if err := txId.UnmarshalText([]byte(provenanceConfig.TxId)); err != nil {
 		return nil, err
 	}
 
@@ -45,7 +45,7 @@ func (client *Client) GetProvenance(provenanceConfig *ProvenanceData) (*Provenan
 
 	var reply bitmark.ProvenanceReply
 	err := client.client.Call("Bitmark.Provenance", provenanceArgs, &reply)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -60,7 +60,7 @@ func (client *Client) GetProvenance(provenanceConfig *ProvenanceData) (*Provenan
 
 		m := d.Data.(map[string]interface{})
 		owner := m["owner"]
-		if nil == owner {
+		if owner == nil {
 			owner = m["registrant"]
 		}
 		if s, ok := owner.(string); ok {

@@ -73,7 +73,7 @@ func (c *ConfigReaderData) SetProofer(proofer Proofer) {
 
 func (c *ConfigReaderData) FirstTimeRun() {
 	err := c.Refresh()
-	if nil != err {
+	if err != nil {
 		return
 	}
 	c.notify()
@@ -88,7 +88,7 @@ func (c *ConfigReaderData) Start() {
 				c.log.Info("receive file change event, wait for 1 minute to adapt")
 				time.Sleep(c.refreshByMinute)
 				err := c.Refresh()
-				if nil != err {
+				if err != nil {
 					c.log.Errorf("failed to read configuration from %s error: %s",
 						fileName, err)
 				}
@@ -103,7 +103,7 @@ func (c *ConfigReaderData) Start() {
 
 func (c *ConfigReaderData) FirstRefresh(fileName string) error {
 	configuration, err := getConfiguration(fileName)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	c.update(configuration)
@@ -112,7 +112,7 @@ func (c *ConfigReaderData) FirstRefresh(fileName string) error {
 
 func (c *ConfigReaderData) Refresh() error {
 	configuration, err := c.parse()
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	c.update(configuration)
@@ -126,21 +126,21 @@ func (c *ConfigReaderData) notify() {
 
 func (c *ConfigReaderData) parse() (*Configuration, error) {
 	configuration, err := getConfiguration(c.watcher.FilePath())
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 	return configuration, nil
 }
 
 func (c *ConfigReaderData) GetConfig() (*Configuration, error) {
-	if nil == c.currentConfiguration {
+	if c.currentConfiguration == nil {
 		return nil, fmt.Errorf("configuration is empty")
 	}
 	return c.currentConfiguration, nil
 }
 
 func (c *ConfigReaderData) SetLog(log *logger.L) error {
-	if nil == log {
+	if log == nil {
 		return fmt.Errorf("logger %v is nil", log)
 	}
 	c.log = log

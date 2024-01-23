@@ -63,7 +63,7 @@ var (
 
 func SetupTestLogger() {
 	removeFiles()
-	_ = os.Mkdir(TestingDirName, 0700)
+	_ = os.Mkdir(TestingDirName, 0o700)
 
 	logging := logger.Configuration{
 		Directory: TestingDirName,
@@ -90,7 +90,7 @@ func removeFiles() {
 
 func Certificate(dirPath string) string {
 	data, err := ioutil.ReadFile(path.Join(dirPath, certificateFile))
-	if nil != err {
+	if err != nil {
 		fmt.Println("read certificate file with error: ", err)
 	}
 
@@ -99,7 +99,7 @@ func Certificate(dirPath string) string {
 
 func Key(dirPath string) string {
 	data, err := ioutil.ReadFile(path.Join(dirPath, certificateKey))
-	if nil != err {
+	if err != nil {
 		fmt.Println("read certificate file with error: ", err)
 	}
 

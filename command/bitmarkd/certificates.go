@@ -35,11 +35,11 @@ func makeSelfSignedCertificate(name string, certificateFileName string, privateK
 		return err
 	}
 
-	if err = ioutil.WriteFile(certificateFileName, cert, 0666); err != nil {
+	if err := ioutil.WriteFile(certificateFileName, cert, 0o666); err != nil {
 		return err
 	}
 
-	if err = ioutil.WriteFile(privateKeyFileName, key, 0600); err != nil {
+	if err = ioutil.WriteFile(privateKeyFileName, key, 0o600); err != nil {
 		os.Remove(certificateFileName)
 		return err
 	}

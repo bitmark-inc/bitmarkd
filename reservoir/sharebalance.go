@@ -27,12 +27,13 @@ type BalanceInfo struct {
 func shareBalance(owner *account.Account, startShareId merkle.Digest, count int, pool storage.Handle) ([]BalanceInfo, error) {
 
 	ownerBytes := owner.Bytes()
-	prefix := append(ownerBytes, startShareId[:]...)
+	prefix := append([]byte{}, ownerBytes...)
+	prefix = append(prefix, startShareId[:]...)
 
 	cursor := pool.NewFetchCursor().Seek(prefix)
 
 	items, err := cursor.Fetch(count)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 

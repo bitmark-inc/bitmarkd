@@ -19,11 +19,11 @@ func (client *Client) printJson(title string, message interface{}) error {
 	prefix := ""
 	indent := "  "
 	b, err := json.MarshalIndent(message, prefix, indent)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
-	if "" == title {
+	if title == "" {
 		fmt.Fprintf(client.handle, "%s\n", b)
 	} else {
 		fmt.Fprintf(client.handle, "%s:\n%s\n", title, b)

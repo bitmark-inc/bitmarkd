@@ -46,7 +46,7 @@ func processSubscription(log *logger.L, command string, arguments [][]byte) {
 		}
 		log.Infof("received assets: %x", arguments[0])
 		err := processAssets(arguments[0])
-		if nil != err {
+		if err != nil {
 			log.Debugf("failed assets: error: %s", err)
 		} else {
 			messagebus.Bus.Broadcast.Send("assets", arguments[0])
@@ -59,7 +59,7 @@ func processSubscription(log *logger.L, command string, arguments [][]byte) {
 		}
 		log.Infof("received issues: %x", arguments[0])
 		err := processIssues(arguments[0])
-		if nil != err {
+		if err != nil {
 			log.Debugf("failed issues: error: %s", err)
 		} else {
 			messagebus.Bus.Broadcast.Send("issues", arguments[0])
@@ -72,7 +72,7 @@ func processSubscription(log *logger.L, command string, arguments [][]byte) {
 		}
 		log.Infof("received transfer: %x", arguments[0])
 		err := processTransfer(arguments[0])
-		if nil != err {
+		if err != nil {
 			log.Debugf("failed transfer: error: %s", err)
 		} else {
 			messagebus.Bus.Broadcast.Send("transfer", arguments[0])
@@ -85,7 +85,7 @@ func processSubscription(log *logger.L, command string, arguments [][]byte) {
 		}
 		log.Infof("received proof: %x", arguments[0])
 		err := processProof(arguments[0])
-		if nil != err {
+		if err != nil {
 			log.Debugf("failed proof: error: %s", err)
 		} else {
 			messagebus.Bus.Broadcast.Send("proof", arguments[0])
@@ -96,7 +96,7 @@ func processSubscription(log *logger.L, command string, arguments [][]byte) {
 			log.Debugf("rpc with too few data: %d items", dataLength)
 			return
 		}
-		if 8 != len(arguments[2]) {
+		if len(arguments[2]) != 8 {
 			log.Debug("rpc with invalid timestamp")
 			return
 		}
@@ -111,7 +111,7 @@ func processSubscription(log *logger.L, command string, arguments [][]byte) {
 			log.Debugf("peer with too few data: %d items", dataLength)
 			return
 		}
-		if 8 != len(arguments[2]) {
+		if len(arguments[2]) != 8 {
 			log.Debug("peer with invalid timestamp")
 			return
 		}
@@ -130,7 +130,7 @@ func processSubscription(log *logger.L, command string, arguments [][]byte) {
 // un pack each asset and cache them
 func processAssets(packed []byte) error {
 
-	if 0 == len(packed) {
+	if len(packed) == 0 {
 		return fault.MissingParameters
 	}
 
@@ -139,19 +139,19 @@ func processAssets(packed []byte) error {
 	}
 
 	ok := false
-	for 0 != len(packed) {
+	for len(packed) != 0 {
 		transaction, n, err := transactionrecord.Packed(packed).Unpack(mode.IsTesting())
-		if nil != err {
+		if err != nil {
 			return err
 		}
 
 		switch tx := transaction.(type) {
 		case *transactionrecord.AssetData:
 			_, packedAsset, err := asset.Cache(tx, storage.Pool.Assets)
-			if nil != err {
+			if err != nil {
 				return err
 			}
-			if nil != packedAsset {
+			if packedAsset != nil {
 				ok = true
 			}
 
@@ -171,7 +171,7 @@ func processAssets(packed []byte) error {
 // un pack each issue and cache them
 func processIssues(packed []byte) error {
 
-	if 0 == len(packed) {
+	if len(packed) == 0 {
 		return fault.MissingParameters
 	}
 
@@ -183,9 +183,9 @@ func processIssues(packed []byte) error {
 	issueCount := 0 // for payment difficulty
 
 	issues := make([]*transactionrecord.BitmarkIssue, 0, reservoir.MaximumIssues)
-	for 0 != len(packedIssues) {
+	for len(packedIssues) != 0 {
 		transaction, n, err := packedIssues.Unpack(mode.IsTesting())
-		if nil != err {
+		if err != nil {
 			return err
 		}
 
@@ -198,13 +198,13 @@ func processIssues(packed []byte) error {
 		}
 		packedIssues = packedIssues[n:]
 	}
-	if 0 == len(issues) {
+	if len(issues) == 0 {
 		return fault.MissingParameters
 	}
 
 	rsvr := reservoir.Get()
 	_, duplicate, err := rsvr.StoreIssues(issues)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -218,7 +218,7 @@ func processIssues(packed []byte) error {
 // unpack transfer and process it
 func processTransfer(packed []byte) error {
 
-	if 0 == len(packed) {
+	if len(packed) == 0 {
 		return fault.MissingParameters
 	}
 
@@ -227,7 +227,7 @@ func processTransfer(packed []byte) error {
 	}
 
 	transaction, _, err := transactionrecord.Packed(packed).Unpack(mode.IsTesting())
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -254,7 +254,7 @@ func processTransfer(packed []byte) error {
 		}
 	}
 
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -268,7 +268,7 @@ func processTransfer(packed []byte) error {
 // process proof block
 func processProof(packed []byte) error {
 
-	if 0 == len(packed) {
+	if len(packed) == 0 {
 		return fault.MissingParameters
 	}
 

@@ -37,12 +37,12 @@ func (signature *Signature) Scan(state fmt.ScanState, verb rune) error {
 		}
 		return false
 	})
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	sig := make([]byte, hex.DecodedLen(len(token)))
 	byteCount, err := hex.Decode(sig, token)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	*signature = sig[:byteCount]
@@ -61,7 +61,7 @@ func (signature Signature) MarshalText() ([]byte, error) {
 func (signature *Signature) UnmarshalText(s []byte) error {
 	sig := make([]byte, hex.DecodedLen(len(s)))
 	byteCount, err := hex.Decode(sig, s)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	*signature = sig[:byteCount]

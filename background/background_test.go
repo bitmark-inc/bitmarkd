@@ -56,11 +56,12 @@ func (state *bg1) Run(args interface{}, shutdown <-chan struct{}) {
 	t := args.(*testing.T)
 
 	n := 0
-	if initialCount1 == state.count {
+	switch state.count {
+	case initialCount1:
 		n = 1
-	} else if initialCount2 == state.count {
+	case initialCount2:
 		n = 2
-	} else {
+	default:
 		t.Errorf("initialisation failed: unexpected initial count: %d", state.count)
 	}
 

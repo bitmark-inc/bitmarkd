@@ -20,9 +20,9 @@ const (
 	paymentCommandTest = "bitmark-wallet --conf ${XDG_CONFIG_HOME}/bitmark-wallet/test/test-bitmark-wallet.conf %s --testnet sendmany --hex-data '%s'"
 )
 
-func paymentCommand(testnet bool, currency currency.Currency, payId string, payments transactionrecord.PaymentAlternative) string {
+func paymentCommand(testnet bool, curr currency.Currency, payId string, payments transactionrecord.PaymentAlternative) string {
 
-	c := strings.ToLower(currency.String())
+	c := strings.ToLower(curr.String())
 
 	command := ""
 	if testnet {

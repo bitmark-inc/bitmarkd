@@ -20,7 +20,7 @@ var masks = []int{0, 1, 3, 7, 15, 31, 63, 127, 255, 511, 1023}
 func Base58EncodedSeedToPhrase(encodedSeed string) ([]string, error) {
 
 	sk, testnet, err := parseBase58Seed(encodedSeed)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 

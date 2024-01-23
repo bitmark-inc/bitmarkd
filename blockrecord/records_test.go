@@ -14,12 +14,11 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
 	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/stretchr/testify/assert"
 )
 
 type recordsTestType struct {
@@ -66,7 +65,7 @@ func TestBlockDigestFromHex(t *testing.T) {
 	leBlock := r.leVersion + r.leTransactionCount + r.leNumber + r.lePrevious + r.leMerkle + r.leTimestamp + r.leDifficultyBits + r.leNonce
 
 	leBinaryBlock, err := hex.DecodeString(leBlock)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex decode string error: %s", err)
 	}
 
@@ -74,11 +73,11 @@ func TestBlockDigestFromHex(t *testing.T) {
 
 	var expected blockdigest.Digest
 	n, err := fmt.Sscan(r.beExpectedDigest, &expected)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to link error: %s", err)
 	}
 
-	if 1 != n {
+	if n != 1 {
 		t.Fatalf("scanned %d items expected to scan 1", n)
 	}
 
@@ -93,7 +92,7 @@ func TestExtractHeader_SkipDigest(t *testing.T) {
 	leBlock := r.leVersion + r.leTransactionCount + r.leNumber + r.lePrevious + r.leMerkle + r.leTimestamp + r.leDifficultyBits + r.leNonce
 
 	leBinaryBlock, err := hex.DecodeString(leBlock)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex decode string error: %s", err)
 	}
 
@@ -117,7 +116,7 @@ func TestExtractHeader_NoSkipDigest(t *testing.T) {
 	leBlock := r.leVersion + r.leTransactionCount + r.leNumber + r.lePrevious + r.leMerkle + r.leTimestamp + r.leDifficultyBits + r.leNonce
 
 	leBinaryBlock, err := hex.DecodeString(leBlock)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex decode string error: %s", err)
 	}
 
@@ -138,7 +137,7 @@ func blockDigestFromLittleEndian(t *testing.T, s string) *blockdigest.Digest {
 	d := &blockdigest.Digest{}
 
 	_, err := fmt.Sscan(s, d)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex(%s) to block digest error: %s", s, err)
 	}
 
@@ -156,7 +155,7 @@ func merkleDigestFromLittleEndian(t *testing.T, s string) *merkle.Digest {
 	d := &merkle.Digest{}
 
 	_, err := fmt.Sscan(s, d)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex(%s) to merkle digest error: %s", s, err)
 	}
 
@@ -178,7 +177,7 @@ func TestBlockDigestFromBlock(t *testing.T) {
 
 	fromLE := func(s string) uint64 {
 		h, err := hex.DecodeString(s)
-		if nil != err {
+		if err != nil {
 			t.Fatalf("fromLE hex error: %s", err)
 		}
 		b := bytes.NewBuffer(h)
@@ -187,21 +186,21 @@ func TestBlockDigestFromBlock(t *testing.T) {
 		case 2:
 			n := uint16(0)
 			err = binary.Read(b, binary.LittleEndian, &n)
-			if nil != err {
+			if err != nil {
 				t.Fatalf("fromLE read error: %s", err)
 			}
 			return uint64(n)
 		case 4:
 			n := uint32(0)
 			err = binary.Read(b, binary.LittleEndian, &n)
-			if nil != err {
+			if err != nil {
 				t.Fatalf("fromLE read error: %s", err)
 			}
 			return uint64(n)
 		case 8:
 			n := uint64(0)
 			err = binary.Read(b, binary.LittleEndian, &n)
-			if nil != err {
+			if err != nil {
 				t.Fatalf("fromLE read error: %s", err)
 			}
 			return n
@@ -211,8 +210,8 @@ func TestBlockDigestFromBlock(t *testing.T) {
 		return 0
 	}
 
-	difficulty := difficulty.New()
-	difficulty.SetBits(fromLE(r.leDifficultyBits))
+	diff := difficulty.New()
+	diff.SetBits(fromLE(r.leDifficultyBits))
 	h := blockrecord.Header{
 		Version:          uint16(fromLE(r.leVersion)),
 		TransactionCount: uint16(fromLE(r.leTransactionCount)),
@@ -220,7 +219,7 @@ func TestBlockDigestFromBlock(t *testing.T) {
 		PreviousBlock:    *prevLink,
 		MerkleRoot:       *merkleRoot,
 		Timestamp:        fromLE(r.leTimestamp),
-		Difficulty:       difficulty,
+		Difficulty:       diff,
 		Nonce:            blockrecord.NonceType(fromLE(r.leNonce)),
 	}
 
@@ -230,11 +229,11 @@ func TestBlockDigestFromBlock(t *testing.T) {
 
 	var expected blockdigest.Digest
 	n, err := fmt.Sscan(r.beExpectedDigest, &expected)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to link error: %s", err)
 	}
 
-	if 1 != n {
+	if n != 1 {
 		t.Fatalf("scanned %d items expected to scan 1", n)
 	}
 
@@ -253,7 +252,7 @@ func TestBlockDigestFromBlock(t *testing.T) {
 
 	// marshal to JSON
 	j, err := json.Marshal(h)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("marshal to JSON error: %s", err)
 	}
 
@@ -266,7 +265,7 @@ func TestBlockDigestFromBlock(t *testing.T) {
 	// unmarshal json
 	var uHeader blockrecord.Header
 	err = json.Unmarshal(j, &uHeader)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("unmarshal from JSON error: %s", err)
 	}
 
@@ -282,7 +281,7 @@ loop:
 	for i := 0; i < len(p); i += 1 {
 		// test the unpacker with bad records
 		h, _, _, err := br.ExtractHeader(p[:i], h.Number, true)
-		if nil != err {
+		if err != nil {
 			continue loop
 		}
 		t.Errorf("unpack: unexpected success: header[:%d]: %+v", i, h)
@@ -293,6 +292,6 @@ func TestResetDifficulty(t *testing.T) {
 	difficulty.Current.Set(2)
 	blockrecord.ResetDifficulty()
 
-	difficulty := difficulty.Current.Value()
-	assert.Equal(t, float64(1), difficulty, "not reset difficulty")
+	diff := difficulty.Current.Value()
+	assert.Equal(t, float64(1), diff, "not reset difficulty")
 }

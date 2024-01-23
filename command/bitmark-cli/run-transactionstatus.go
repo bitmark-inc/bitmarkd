@@ -18,7 +18,7 @@ func runTransactionStatus(c *cli.Context) error {
 	m := c.App.Metadata["config"].(*metadata)
 
 	txId, err := checkTxId(c.String("txid"))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -27,7 +27,7 @@ func runTransactionStatus(c *cli.Context) error {
 	}
 
 	client, err := rpccalls.NewClient(m.testnet, m.config.Connections[m.connectionOffset], m.verbose, m.e)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	defer client.Close()
@@ -37,7 +37,7 @@ func runTransactionStatus(c *cli.Context) error {
 	}
 
 	response, err := client.GetTransactionStatus(statusConfig)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

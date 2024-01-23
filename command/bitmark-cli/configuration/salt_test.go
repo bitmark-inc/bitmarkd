@@ -12,7 +12,7 @@ import (
 // test Marshal and Unmarshal
 func TestSalt(t *testing.T) {
 	salt, err := MakeSalt()
-	if nil != err {
+	if err != nil {
 		t.Errorf("makeSalt fail: %s", err)
 	}
 

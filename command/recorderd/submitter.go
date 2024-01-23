@@ -38,14 +38,14 @@ func SubmitQueue() {
 // internal submit forwarding loop
 func submitForwarder() error {
 	in, err := zmq.NewSocket(zmq.PULL)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	defer in.Close()
 
 	in.SetLinger(0)
 	err = in.Bind(submission)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -53,14 +53,14 @@ func submitForwarder() error {
 	// so packet out of pull _MUST_ have id frame as first item
 	// other end is DEALER
 	out, err := zmq.NewSocket(zmq.ROUTER)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	defer out.Close()
 
 	out.SetLinger(0)
 	err = out.Bind(subdeal)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -76,7 +76,7 @@ func Submitter(i int, connectTo string, v6 bool, serverPublicKey []byte, publicK
 
 	// socket to dequeue submissions
 	dequeue, err := zmq.NewSocket(zmq.DEALER)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -85,7 +85,7 @@ func Submitter(i int, connectTo string, v6 bool, serverPublicKey []byte, publicK
 	dequeue.SetIdentity(identity) // set the identity of this thread
 
 	err = dequeue.Connect(subdeal)
-	if nil != err {
+	if err != nil {
 		dequeue.Close()
 		return err
 	}
@@ -93,7 +93,7 @@ func Submitter(i int, connectTo string, v6 bool, serverPublicKey []byte, publicK
 	log.Infof("connect to: %q", connectTo)
 
 	rpc, err := zmq.NewSocket(zmq.REQ)
-	if nil != err {
+	if err != nil {
 		dequeue.Close()
 		return err
 	}
@@ -127,7 +127,7 @@ func Submitter(i int, connectTo string, v6 bool, serverPublicKey []byte, publicK
 	// rpc.SetHeartbeatTtl(heartbeatTTL)
 
 	rpc.Connect(connectTo)
-	if nil != err {
+	if err != nil {
 		dequeue.Close()
 		rpc.Close()
 		return err
@@ -162,7 +162,7 @@ func Submitter(i int, connectTo string, v6 bool, serverPublicKey []byte, publicK
 			}
 
 			data, err := json.Marshal(toSend)
-			if nil != err {
+			if err != nil {
 				log.Errorf("JSON encode error: %s", err)
 				continue dequeue_items
 			}

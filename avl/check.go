@@ -16,7 +16,7 @@ func (tree *Tree) CheckUp() bool {
 
 // internal: consistency checker
 func checkUp(p *Node, up *Node) bool {
-	if nil == p {
+	if p == nil {
 		return true
 	}
 	if p.up != up {
@@ -36,12 +36,12 @@ func (tree *Tree) CheckCounts() bool {
 }
 
 func checkCounts(p *Node) (bool, int) {
-	if nil == p {
+	if p == nil {
 		return true, 0
 	}
 	bl := true
 	nl := 0
-	if nil != p.left {
+	if p.left != nil {
 		bl, nl = checkCounts(p.left)
 		if p.leftNodes != nl {
 			fmt.Printf("fail at node: %v  left actual: %d  record: %d\n", p.key, nl, p.leftNodes)
@@ -50,7 +50,7 @@ func checkCounts(p *Node) (bool, int) {
 	}
 	br := true
 	nr := 0
-	if nil != p.right {
+	if p.right != nil {
 		br, nr = checkCounts(p.right)
 		if p.rightNodes != nr {
 			fmt.Printf("fail at node: %v  right actual: %d  record: %d\n", p.key, nr, p.rightNodes)

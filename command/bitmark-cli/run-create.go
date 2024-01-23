@@ -9,9 +9,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/urfave/cli"
-
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/rpccalls"
+	"github.com/urfave/cli"
 )
 
 func runCreate(c *cli.Context) error {
@@ -21,12 +20,12 @@ func runCreate(c *cli.Context) error {
 	assetName := c.String("asset")
 
 	fingerprint, err := checkAssetFingerprint(c.String("fingerprint"))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	metadata, err := checkAssetMetadata(c.String("metadata"))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -41,7 +40,7 @@ func runCreate(c *cli.Context) error {
 	}
 
 	name, registrant, err := checkOwnerWithPasswordPrompt(c.GlobalString("identity"), m.config, c)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -58,7 +57,7 @@ func runCreate(c *cli.Context) error {
 	}
 
 	client, err := rpccalls.NewClient(m.testnet, m.config.Connections[m.connectionOffset], m.verbose, m.e)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	defer client.Close()
@@ -72,7 +71,7 @@ func runCreate(c *cli.Context) error {
 	}
 
 	assetResult, err := client.MakeAsset(assetConfig)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -81,11 +80,11 @@ func runCreate(c *cli.Context) error {
 		Issuer:    assetConfig.Registrant,
 		AssetId:   assetResult.AssetId,
 		Quantity:  assetConfig.Quantity,
-		FreeIssue: 1 == assetConfig.Quantity,
+		FreeIssue: assetConfig.Quantity == 1,
 	}
 
 	response, err := client.Issue(issueConfig)
-	if issueConfig.FreeIssue && nil != err && strings.Contains(err.Error(), "transaction already exists") {
+	if issueConfig.FreeIssue && err != nil && strings.Contains(err.Error(), "transaction already exists") {
 		// if free issue was already done, try again asking for payment
 		if zeroNonceOnly {
 			return err
@@ -94,7 +93,7 @@ func runCreate(c *cli.Context) error {
 		response, err = client.Issue(issueConfig)
 	}
 
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

@@ -20,12 +20,12 @@ func runSign(c *cli.Context) error {
 	m := c.App.Metadata["config"].(*metadata)
 
 	fileName, err := checkFileName(c.String("file"))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	from, owner, err := checkOwnerWithPasswordPrompt(c.GlobalString("identity"), m.config, c)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -35,12 +35,12 @@ func runSign(c *cli.Context) error {
 	}
 
 	file, err := os.Open(fileName)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	data, err := ioutil.ReadAll(file)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -70,17 +70,17 @@ func runVerify(c *cli.Context) error {
 	m := c.App.Metadata["config"].(*metadata)
 
 	fileName, err := checkFileName(c.String("file"))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	from, owner, err := checkRecipient(c, "owner", m.config)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	signature, err := checkSignature(c.String("signature"))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -91,12 +91,12 @@ func runVerify(c *cli.Context) error {
 	}
 
 	file, err := os.Open(fileName)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	data, err := ioutil.ReadAll(file)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

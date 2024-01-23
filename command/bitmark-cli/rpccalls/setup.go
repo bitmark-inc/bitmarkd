@@ -30,7 +30,7 @@ func NewClient(testnet bool, connect string, verbose bool, handle io.Writer) (*C
 	}
 
 	conn, err := tls.Dial("tcp", connect, tlsConfig)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 

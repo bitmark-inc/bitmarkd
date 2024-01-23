@@ -15,18 +15,18 @@ func runChangePassword(c *cli.Context) error {
 
 	// check existing password
 	name, owner, err := checkOwnerWithPasswordPrompt(c.GlobalString("identity"), m.config, c)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	// prompt new password and confirm
 	newPassword, err := promptNewPassword()
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	err = m.config.AddIdentity(name, owner.Description, owner.Seed, newPassword)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

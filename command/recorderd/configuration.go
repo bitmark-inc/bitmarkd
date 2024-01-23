@@ -87,7 +87,7 @@ type Configuration struct {
 func getConfiguration(configurationFileName string) (*Configuration, error) {
 
 	configurationFileName, err := filepath.Abs(filepath.Clean(configurationFileName))
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -130,15 +130,15 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 	}
 
 	// ensure absolute data directory
-	if "" == options.DataDirectory || "~" == options.DataDirectory {
+	if options.DataDirectory == "" || options.DataDirectory == "~" {
 		return nil, fmt.Errorf("Path: %q is not a valid directory", options.DataDirectory)
-	} else if "." == options.DataDirectory {
+	} else if options.DataDirectory == "." {
 		options.DataDirectory = dataDirectory // same directory as the configuration file
 	}
 	options.DataDirectory = filepath.Clean(options.DataDirectory)
 
 	// this directory must exist - i.e. must be created prior to running
-	if fileInfo, err := os.Stat(options.DataDirectory); nil != err {
+	if fileInfo, err := os.Stat(options.DataDirectory); err != nil {
 		return nil, err
 	} else if !fileInfo.IsDir() {
 		return nil, fmt.Errorf("Path: %q is not a directory", options.DataDirectory)
@@ -158,7 +158,7 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 		&options.PidFile,
 	}
 	for _, f := range optionalAbsolute {
-		if "" != *f {
+		if *f != "" {
 			*f = util.EnsureAbsolute(options.DataDirectory, *f)
 		}
 	}
@@ -173,7 +173,7 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 	for _, f := range mustNotBePaths {
 		switch filepath.Dir(*f[0]) {
 		case "", ".":
-			if nil != f[1] {
+			if f[1] != nil {
 				*f[0] = util.EnsureAbsolute(*f[1], *f[0])
 			}
 		default:
@@ -186,7 +186,7 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 		&options.Logging.Directory,
 	} {
 		*d = util.EnsureAbsolute(options.DataDirectory, *d)
-		if err := os.MkdirAll(*d, 0700); nil != err {
+		if err := os.MkdirAll(*d, 0o700); err != nil {
 			return nil, err
 		}
 	}

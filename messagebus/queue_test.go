@@ -116,7 +116,7 @@ func TestBroadcast(t *testing.T) {
 					} else {
 						l[n] += 1
 					}
-					if 0 == i {
+					if i == 0 {
 						wgFirst.Done()
 					}
 				}
@@ -187,11 +187,11 @@ func TestQueueOverflow(t *testing.T) {
 
 	for len(queue) > 0 {
 		m := <-queue
-		if "block" == m.Command {
+		if m.Command == "block" {
 			count += 1
 		}
 	}
-	if 0 == count {
+	if count == 0 {
 		t.Fatal("no block message in queue")
 	}
 }

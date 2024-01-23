@@ -30,5 +30,5 @@ func (ic *Counter) Uint64() uint64 {
 
 // IsZero - check if zero
 func (ic *Counter) IsZero() bool {
-	return 0 == atomic.AddUint64((*uint64)(ic), 0)
+	return atomic.AddUint64((*uint64)(ic), 0) == 0
 }

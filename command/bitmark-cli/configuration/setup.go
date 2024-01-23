@@ -36,7 +36,7 @@ func Load(filename string) (*Configuration, error) {
 	options := &Configuration{}
 
 	err := readConfiguration(filename, options)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 	return options, nil
@@ -46,19 +46,19 @@ func Load(filename string) (*Configuration, error) {
 func readConfiguration(filename string, options interface{}) error {
 
 	filename, err := filepath.Abs(filepath.Clean(filename))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	f, err := os.Open(filename)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	defer f.Close()
 
 	dec := json.NewDecoder(f)
 	err = dec.Decode(options)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -70,7 +70,7 @@ func (config *Configuration) Identity(name string) (*Identity, error) {
 
 	// account names cannot be identities to prevent confusion
 	_, err := account.AccountFromBase58(name)
-	if nil == err {
+	if err == nil {
 		return nil, fault.InvalidIdentityName
 	}
 
@@ -87,13 +87,13 @@ func (config *Configuration) Account(name string) (*account.Account, error) {
 	// check if valid account in Base58 first
 	// to prevent identifiers masquerading as accounts
 	acc, err := account.AccountFromBase58(name)
-	if nil == err {
+	if err == nil {
 		return acc, nil
 	}
 
 	// otherwise lookup as an identifier
 	id, err := config.Identity(name)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -105,7 +105,7 @@ func (config *Configuration) Account(name string) (*account.Account, error) {
 // Private - find identity decrypt all data for a given name
 func (config *Configuration) Private(password string, name string) (*Private, error) {
 	id, err := config.Identity(name)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -120,17 +120,17 @@ func (config *Configuration) AddIdentity(name string, description string, seed s
 	}
 
 	salt, secretKey, err := hashPassword(password)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	encrypted, err := encryptData(seed, secretKey)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	private, err := account.PrivateKeyFromBase58Seed(seed)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -152,7 +152,7 @@ func (config *Configuration) AddReceiveOnlyIdentity(name string, description str
 	}
 
 	_, err := account.AccountFromBase58(acc)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

@@ -10,8 +10,9 @@ package satoshi
 // i.e. "0.00000001" will convert to uint64(1)
 //
 // Note: Invalid characters are simply ignored and the conversion
-//       simply stops after 8 decimal places have been processed.
-//       Extra decimal points will also be ignored.
+//
+//	simply stops after 8 decimal places have been processed.
+//	Extra decimal points will also be ignored.
 func FromByteString(btc []byte) uint64 {
 
 	s := uint64(0)
@@ -29,7 +30,7 @@ get_digits:
 					break get_digits
 				}
 			}
-		} else if '.' == b {
+		} else if b == '.' {
 			point = true
 		}
 	}

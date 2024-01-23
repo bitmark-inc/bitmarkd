@@ -25,13 +25,14 @@ type CountersignData struct {
 func (client *Client) Countersign(countersignConfig *CountersignData) (interface{}, error) {
 
 	b, err := hex.DecodeString(countersignConfig.Transaction)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
-	bCs := append(b, 0x01, 0x00) // one-byte countersignature to allow unpack to succeed
+	bCs := append([]byte{}, b...)
+	bCs=append(bCs, 0x01, 0x00) // one-byte countersignature to allow unpack to succeed
 	r, _, err := transactionrecord.Packed(bCs).Unpack(client.testnet)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -40,19 +41,19 @@ func (client *Client) Countersign(countersignConfig *CountersignData) (interface
 
 	switch tx := r.(type) {
 	case *transactionrecord.BitmarkTransferCountersigned:
-		tx.Countersignature = signature[:]
+		tx.Countersignature = signature
 		return client.CountersignTransfer(tx)
 
 	case *transactionrecord.BlockOwnerTransfer:
-		tx.Countersignature = signature[:]
+		tx.Countersignature = signature
 		return client.CountersignBlockTransfer(tx)
 
 	case *transactionrecord.ShareGrant:
-		tx.Countersignature = signature[:]
+		tx.Countersignature = signature
 		return client.CountersignGrant(tx)
 
 	case *transactionrecord.ShareSwap:
-		tx.Countersignature = signature[:]
+		tx.Countersignature = signature
 		return client.CountersignSwap(tx)
 
 	default:

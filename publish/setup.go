@@ -56,19 +56,19 @@ func Initialise(configuration *Configuration, version string) error {
 	globalData.log = logger.New("publish")
 	globalData.log.Info("starting…")
 
-	if 0 == len(configuration.Broadcast) {
+	if len(configuration.Broadcast) == 0 {
 		globalData.log.Info("no broadcasts - disabling")
 		return nil
 	}
 
 	// read the keys
 	privateKey, err := zmqutil.ReadPrivateKey(configuration.PrivateKey)
-	if nil != err {
+	if err != nil {
 		globalData.log.Errorf("read private key file: %q  error: %s", configuration.PrivateKey, err)
 		return err
 	}
 	publicKey, err := zmqutil.ReadPublicKey(configuration.PublicKey)
-	if nil != err {
+	if err != nil {
 		globalData.log.Errorf("read public key file: %q  error: %s", configuration.PublicKey, err)
 		return err
 	}
@@ -77,7 +77,7 @@ func Initialise(configuration *Configuration, version string) error {
 
 	globalData.publicKey = publicKey
 
-	if err := globalData.brdc.initialise(privateKey, publicKey, configuration.Broadcast); nil != err {
+	if err := globalData.brdc.initialise(privateKey, publicKey, configuration.Broadcast); err != nil {
 		return err
 	}
 

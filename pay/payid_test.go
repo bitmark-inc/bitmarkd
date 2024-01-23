@@ -24,7 +24,7 @@ func TestPayId(t *testing.T) {
 	t.Logf("pay id: %#v", payId)
 
 	buffer, err := json.Marshal(payId)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("marshal JSON error: %s", err)
 	}
 
@@ -37,7 +37,7 @@ func TestPayId(t *testing.T) {
 
 	var payId2 pay.PayId
 	err = json.Unmarshal(buffer, &payId2)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("unmarshal JSON error: %s", err)
 	}
 

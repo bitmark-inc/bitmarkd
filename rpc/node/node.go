@@ -60,7 +60,7 @@ type Reply struct {
 	NextStart uint64      `json:"nextStart,string"`
 }
 
-func New(log *logger.L, pools reservoir.Handles, start time.Time, version string, counter *counter.Counter, ann announce.Announce) *Node {
+func New(log *logger.L, pools reservoir.Handles, start time.Time, version string, ctr *counter.Counter, ann announce.Announce) *Node {
 	return &Node{
 		Log:      log,
 		Limiter:  rate.NewLimiter(rateLimitNode, rateBurstNode),
@@ -68,19 +68,19 @@ func New(log *logger.L, pools reservoir.Handles, start time.Time, version string
 		Version:  version,
 		Announce: ann,
 		Pool:     pools.Blocks,
-		counter:  counter,
+		counter:  ctr,
 	}
 }
 
 // List - list all node offering RPC functionality
 func (node *Node) List(arguments *Arguments, reply *Reply) error {
 
-	if err := ratelimit.LimitN(node.Limiter, arguments.Count, maximumNodeList); nil != err {
+	if err := ratelimit.LimitN(node.Limiter, arguments.Count, maximumNodeList); err != nil {
 		return err
 	}
 
 	nodes, nextStart, err := node.Announce.Fetch(arguments.Start, arguments.Count)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	reply.Nodes = nodes
@@ -133,7 +133,7 @@ type MinerInfo struct {
 // for more detail information use HTTP GET requests
 func (node *Node) Info(_ *InfoArguments, reply *InfoReply) error {
 
-	if err := ratelimit.Limit(node.Limiter); nil != err {
+	if err := ratelimit.Limit(node.Limiter); err != nil {
 		return err
 	}
 
@@ -178,13 +178,13 @@ type BlockDumpReply struct {
 // BlockDump - return a dump of the block
 func (node *Node) BlockDump(arguments *BlockDumpArguments, reply *BlockDumpReply) error {
 
-	if err := ratelimit.Limit(node.Limiter); nil != err {
+	if err := ratelimit.Limit(node.Limiter); err != nil {
 		return err
 	}
 
-	block, err := blockdump.BlockDump(arguments.Height, arguments.Binary)
-	if nil == err {
-		reply.Block = block
+	blk, err := blockdump.BlockDump(arguments.Height, arguments.Binary)
+	if err == nil {
+		reply.Block = blk
 	}
 
 	return err
@@ -203,13 +203,13 @@ type BlockDecodeReply struct {
 // BlockDecode - return a decoded version of the block
 func (node *Node) BlockDecode(arguments *BlockDecodeArguments, reply *BlockDecodeReply) error {
 
-	if err := ratelimit.Limit(node.Limiter); nil != err {
+	if err := ratelimit.Limit(node.Limiter); err != nil {
 		return err
 	}
 
-	block, err := blockdump.BlockDecode(arguments.Packed, 0, true)
-	if nil == err {
-		reply.Block = block
+	blk, err := blockdump.BlockDecode(arguments.Packed, 0, true)
+	if err == nil {
+		reply.Block = blk
 	}
 
 	return err
@@ -230,7 +230,7 @@ type BlockDumpRangeReply struct {
 // BlockDumpRange - return a dump of the block
 func (node *Node) BlockDumpRange(arguments *BlockDumpRangeArguments, reply *BlockDumpRangeReply) error {
 
-	if err := ratelimit.Limit(node.Limiter); nil != err {
+	if err := ratelimit.Limit(node.Limiter); err != nil {
 		return err
 	}
 
@@ -249,11 +249,11 @@ func (node *Node) BlockDumpRange(arguments *BlockDumpRangeArguments, reply *Bloc
 	blocks := make([]interface{}, count)
 
 	for i := 0; i < count; i += 1 {
-		block, err := blockdump.BlockDump(height, decodeTxs)
-		if nil != err {
+		blk, err := blockdump.BlockDump(height, decodeTxs)
+		if err != nil {
 			return err
 		}
-		blocks[i] = block
+		blocks[i] = blk
 		height += 1
 	}
 

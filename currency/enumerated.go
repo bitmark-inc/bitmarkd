@@ -58,7 +58,7 @@ func fromString(in string) (Currency, error) {
 // String - convert a currency to its string symbol
 func (currency Currency) String() string {
 	s, err := toString(currency)
-	if nil != err {
+	if err != nil {
 		logger.Panicf("invalid currency enumeration: %d", currency)
 	}
 	return string(s)
@@ -83,11 +83,11 @@ func (currency *Currency) Scan(state fmt.ScanState, verb rune) error {
 		}
 		return false
 	})
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	parsed, err := fromString(string(token))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

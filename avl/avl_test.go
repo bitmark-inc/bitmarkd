@@ -121,12 +121,12 @@ func doList(t *testing.T, addList []stringItem) {
 
 	for i := 0; i < len(addList)+1; i += 1 {
 
-		//t.Logf("delete size: %d", i)
+		//my:dbg t.Logf("delete size: %d", i)
 		alreadyDeleted := make(map[stringItem]struct{})
 
 		tree := avl.New()
 		for _, key := range addList {
-			//t.Logf("add item: %q", key)
+			//my:dbg t.Logf("add item: %q", key)
 			tree.Insert(key, "data:"+key.String())
 		}
 
@@ -139,7 +139,7 @@ func doList(t *testing.T, addList []stringItem) {
 
 	delete_items:
 		for _, key := range addList[:i] {
-			//t.Logf("delete item: %q", key)
+			//my:dbg t.Logf("delete item: %q", key)
 			if _, ok := alreadyDeleted[key]; ok {
 				continue delete_items
 			}
@@ -160,7 +160,7 @@ func doList(t *testing.T, addList []stringItem) {
 
 	delete_remainder:
 		for _, key := range addList[i:] {
-			//t.Logf("delete item: %q", key)
+			//my:dbg t.Logf("delete item: %q", key)
 			if _, ok := alreadyDeleted[key]; ok {
 				continue delete_remainder
 			}
@@ -191,7 +191,7 @@ func doTraverse(t *testing.T, addList []stringItem) {
 	}
 
 	p := tree.First()
-	if nil == p {
+	if p == nil {
 		t.Fatalf("no first item")
 	}
 
@@ -202,8 +202,8 @@ func doTraverse(t *testing.T, addList []stringItem) {
 	sort.Strings(expected)
 
 	n := 0
-	for i := 0; nil != p; i += 1 {
-		if 0 != p.Key().Compare(stringItem{expected[i]}) {
+	for i := 0; p != nil; i += 1 {
+		if p.Key().Compare(stringItem{expected[i]}) != 0 {
 			t.Fatalf("next item: actual: %q  expected: %q", p.Key(), expected[i])
 		}
 		n += 1
@@ -215,29 +215,29 @@ func doTraverse(t *testing.T, addList []stringItem) {
 	}
 
 	p = tree.Last()
-	if nil == p {
+	if p == nil {
 		t.Fatalf("no last item")
 	}
 
 	n = 0
-	for i := len(expected) - 1; nil != p; i -= 1 {
-		if 0 != p.Key().Compare(stringItem{expected[i]}) {
+	for i := len(expected) - 1; p != nil; i -= 1 {
+		if p.Key().Compare(stringItem{expected[i]}) != 0 {
 			t.Fatalf("prev item: actual: %q  expected: %q", p.Key(), expected[i])
 		}
 		n += 1
 		p = p.Prev()
 	}
 
-	if n != len(expected) {
+	if len(expected) != n {
 		t.Fatalf("item count: actual: %d  expected: %d", n, len(addList))
 	}
-	if n != tree.Count() {
+	if tree.Count() != n {
 		t.Fatalf("tree count: actual: %d  expected: %d", tree.Count(), len(addList))
 	}
 
 	// delete remainder
 	for _, key := range expected {
-		//t.Logf("delete item: %q", key)
+		//my:dbg t.Logf("delete item: %q", key)
 		tree.Delete(stringItem{key})
 	}
 
@@ -247,7 +247,7 @@ func doTraverse(t *testing.T, addList []stringItem) {
 		t.Logf("depth: %d", depth)
 		t.Fatalf("remaining nodes")
 	}
-	if 0 != tree.Count() {
+	if tree.Count() != 0 {
 		t.Fatalf("remaining count not zero: %d", tree.Count())
 	}
 
@@ -281,15 +281,15 @@ func doGet(t *testing.T, addList []stringItem) {
 
 	for index, key := range expected {
 		node := tree.Get(index)
-		if nil == node {
+		if node == nil {
 			t.Fatalf("[%d] key: %q not it tree (nil result)", index, key)
 		}
-		if 0 != node.Key().Compare(stringItem{key}) {
+		if node.Key().Compare(stringItem{key}) != 0 {
 			t.Fatalf("[%d]: expected: %q but found: %q", index, key, node.Key())
 		}
-		//t.Logf("[%d]: expected: %q found: %q", index, key, node.Key())
+		//my:dbg t.Logf("[%d]: expected: %q found: %q", index, key, node.Key())
 		node1, index1 := tree.Search(stringItem{key})
-		if nil == node1 {
+		if node1 == nil {
 			t.Fatalf("[%d]: search: %q returned nil", index, key)
 		}
 		if index != index1 {
@@ -304,7 +304,7 @@ func doGet(t *testing.T, addList []stringItem) {
 
 	// delete even elements
 	for index, key := range expected {
-		if 0 == index%2 {
+		if index%2 == 0 {
 			tree.Delete(stringItem{key})
 		}
 	}
@@ -318,19 +318,19 @@ func doGet(t *testing.T, addList []stringItem) {
 	// check odd elements are all present
 odd_scan:
 	for index, key := range expected {
-		if 0 == index%2 {
+		if index%2 == 0 {
 			continue odd_scan
 		}
 		index >>= 1 // 1,3,5, … → 0,1,2, …
 		node := tree.Get(index)
-		if nil == node {
+		if node == nil {
 			t.Fatalf("[%d] key: %q not it tree (nil result)", index, key)
 		}
-		if 0 != node.Key().Compare(stringItem{key}) {
+		if node.Key().Compare(stringItem{key}) != 0 {
 			t.Fatalf("[%d]: expected: %q but found: %q", index, key, node.Key())
 		}
 
-		//t.Logf("[%d]: expected: %q found: %q", index, key, node.Key())
+		//my:dbg t.Logf("[%d]: expected: %q found: %q", index, key, node.Key())
 	}
 	if !tree.CheckCounts() {
 		t.Fatal("tree Checkcounts failed")
@@ -341,7 +341,7 @@ func makeKey() stringItem {
 
 	b := make([]byte, 4)
 	_, err := rand.Read(b)
-	if nil != err {
+	if err != nil {
 		panic("rand failed")
 	}
 	n := int(binary.BigEndian.Uint32(b))
@@ -373,7 +373,7 @@ func randomTree(t *testing.T, total int, toDelete int) {
 		if i < len(d) {
 			d[i] = key
 		}
-		//t.Logf("add item: %q", key)
+		//my:dbg t.Logf("add item: %q", key)
 		tree.Insert(key, "data:"+key.String())
 	}
 
@@ -384,7 +384,7 @@ func randomTree(t *testing.T, total int, toDelete int) {
 	}
 
 	for _, key := range d {
-		//t.Logf("delete item: %q", key)
+		//my:dbg t.Logf("delete item: %q", key)
 		tree.Delete(key)
 		if !tree.CheckUp() {
 			depth := tree.Print(true)
@@ -418,7 +418,7 @@ func randomTree(t *testing.T, total int, toDelete int) {
 
 	// check that test value is searchable
 	tv, _ := tree.Search(testKey)
-	if nil == tv {
+	if tv == nil {
 		t.Fatalf("could not find test key: %q", testKey)
 	}
 	if testKey != tv.Key() {
@@ -431,14 +431,14 @@ func randomTree(t *testing.T, total int, toDelete int) {
 	// check iterators
 	n := tv.Next()
 	p := tv.Prev()
-	if nil == n {
+	if n == nil {
 		t.Fatal("could not find next")
 	}
-	if nil == p {
+	if p == nil {
 		t.Fatal("could not find prev")
 	}
 
-	//t.Logf("test: %q  previous: %q  next: %q", tv.Value(), p.Value(), n.Value())
+	//my:dbg t.Logf("test: %q  previous: %q  next: %q", tv.Value(), p.Value(), n.Value())
 
 	// delete the test value, and check it return the correct
 	// value and is no longer in the tree
@@ -447,7 +447,7 @@ func randomTree(t *testing.T, total int, toDelete int) {
 		t.Fatalf("delete value mismatch: actual: %q  expected: %q", value, testValue)
 	}
 	tv, _ = tree.Search(testKey)
-	if nil != tv {
+	if tv != nil {
 		t.Fatalf("test key not deleted and contains: %q", tv.Value())
 	}
 }
@@ -462,7 +462,7 @@ func TestOverwriteAndNodeStability(t *testing.T) {
 
 	tree := avl.New()
 	for _, key := range addList {
-		//t.Logf("add item: %q", key)
+		//my:dbg t.Logf("add item: %q", key)
 		tree.Insert(key, "data:"+key.String())
 	}
 
@@ -488,7 +488,7 @@ func TestOverwriteAndNodeStability(t *testing.T) {
 
 	// check overwrite
 	node1, index1 := tree.Search(oKey)
-	//t.Logf("v:%p → %+v  @[%d]", node1, node1, index1)
+	//my:dbg t.Logf("v:%p → %+v  @[%d]", node1, node1, index1)
 	if oIndex != index1 {
 		t.Errorf("index1: %d  expected %d", index1, oIndex)
 	}
@@ -498,12 +498,12 @@ func TestOverwriteAndNodeStability(t *testing.T) {
 
 	// delete a node so the oKey node moves
 	dKey := stringItem{"06"}
-	//t.Logf("delete item: %q", dKey)
+	//my:dbg t.Logf("delete item: %q", dKey)
 	tree.Delete(dKey)
 
 	// ensure node did not move
 	node2, index2 := tree.Search(oKey)
-	//t.Logf("v:%p → %+v  @[%d]", node2, node2, index2)
+	//my:dbg t.Logf("v:%p → %+v  @[%d]", node2, node2, index2)
 	if oIndex != index2 {
 		t.Errorf("index1: %d  expected %d", index2, oIndex)
 	}

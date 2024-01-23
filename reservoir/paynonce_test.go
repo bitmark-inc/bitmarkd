@@ -27,7 +27,7 @@ func TestPayNonce(t *testing.T) {
 	t.Logf("pay nonce: %#v", nonce)
 
 	buffer, err := json.Marshal(nonce)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("marshal JSON error: %s", err)
 	}
 
@@ -40,7 +40,7 @@ func TestPayNonce(t *testing.T) {
 
 	var nonce2 reservoir.PayNonce
 	err = json.Unmarshal(buffer, &nonce2)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("unmarshal JSON error: %s", err)
 	}
 
@@ -64,7 +64,7 @@ func TestNewPayNonceBitmark(t *testing.T) {
 	t.Logf("pay nonce: %#v", nonce)
 
 	buffer, err := json.Marshal(nonce)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("marshal JSON error: %s", err)
 	}
 
@@ -91,7 +91,7 @@ func TestNewPayNonceTesting(t *testing.T) {
 	t.Logf("pay nonce: %#v", nonce)
 
 	buffer, err := json.Marshal(nonce)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("marshal JSON error: %s", err)
 	}
 

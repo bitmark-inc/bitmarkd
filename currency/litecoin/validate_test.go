@@ -327,11 +327,11 @@ func TestValidate(t *testing.T) {
 		actualVersion, actualBytes, err := litecoin.ValidateAddress(item.address)
 		if item.valid {
 			err := err
-			if nil != err {
+			if err != nil {
 				t.Fatalf("%d: %s  error: %s", i, item.address, err)
 			}
 			eb, err := hex.DecodeString(item.addrBytes)
-			if nil != err {
+			if err != nil {
 				t.Fatalf("%d: hex decode error: %s", i, err)
 			}
 			expectedBytes := litecoin.AddressBytes{}
@@ -349,18 +349,18 @@ func TestValidate(t *testing.T) {
 
 			// see if address transforms to its opposite type
 			ta, err := litecoin.TransformAddress(item.address)
-			if nil != err {
+			if err != nil {
 				t.Fatalf("%d: transfor error: %s", i, err)
 			}
 			transform := item.transform
-			if "" == transform {
+			if transform == "" {
 				transform = item.address
 			}
 			if ta != transform {
 				t.Fatalf("%d: %s transformed to: %s  expected: %s", i, item.address, ta, transform)
 			}
 			//t.Logf("%d: version: %d bytes: %x", i, actualVersion, actualBytes)
-		} else if nil == err {
+		} else if err == nil {
 			t.Errorf("%d: unexpected success", i)
 		}
 	}

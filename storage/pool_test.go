@@ -64,7 +64,7 @@ func checkResults(t *testing.T, p Handle) {
 	// ensure we get all of the pool
 	cursor := p.NewFetchCursor()
 	data, err := cursor.Fetch(20)
-	if nil != err {
+	if err != nil {
 		t.Errorf("Error on Fetch: %v", err)
 		return
 	}
@@ -88,12 +88,12 @@ func checkResults(t *testing.T, p Handle) {
 	// retrieve 2 elements then next 2 - ensure no overlap
 	cursor.Seek(nil)
 	firstPair, err := cursor.Fetch(2)
-	if nil != err {
+	if err != nil {
 		t.Errorf("Error on Fetch: %v", err)
 		return
 	}
 	secondPair, err := cursor.Fetch(2)
-	if nil != err {
+	if err != nil {
 		t.Errorf("Error on Fetch: %v", err)
 		return
 	}
@@ -108,7 +108,7 @@ func checkResults(t *testing.T, p Handle) {
 
 	// retrieve a key
 	d2 := p.Get(testKey)
-	if nil == d2 {
+	if d2 == nil {
 		t.Errorf("not found: %q", testKey)
 	}
 	if string(d2) != testData {
@@ -122,7 +122,7 @@ func checkResults(t *testing.T, p Handle) {
 
 	// retrieve a key not in the pool
 	dn := p.Get(nonExistantKey)
-	if nil != dn {
+	if dn != nil {
 		t.Errorf("Unexpected data on Get, got: '%s'  expected: nil", dn)
 	}
 }
@@ -134,11 +134,11 @@ func checkAgain(t *testing.T, empty bool) {
 	// cache will be empty
 	cursor := p.NewFetchCursor()
 	data, err := cursor.Fetch(100) // all data
-	if nil != err {
+	if err != nil {
 		t.Errorf("Error on Fetch: %v", err)
 		return
 	}
-	if empty && 0 != len(data) {
+	if empty && len(data) != 0 {
 		t.Errorf("Pool was not empty, count = %d", len(data))
 	}
 
@@ -146,11 +146,11 @@ func checkAgain(t *testing.T, empty bool) {
 
 		data := p.Get([]byte(e.Key))
 		if empty {
-			if nil != data {
+			if data != nil {
 				t.Errorf("checkAgain: %d: Unexpected data on Get('%s'), got: '%s'  expected: nil", i, e.Key, data)
 			}
 		} else {
-			if nil == data {
+			if data == nil {
 				t.Errorf("checkAgain: %d: Error on Get('%s') not found", i, e.Key)
 			}
 			if !bytes.Equal(data, e.Value) {
@@ -161,12 +161,12 @@ func checkAgain(t *testing.T, empty bool) {
 
 	// try to retrieve some more data - shout be zero
 	data, err = cursor.Fetch(100)
-	if nil != err {
+	if err != nil {
 		t.Errorf("Error on Fetch: %v", err)
 		return
 	}
 	n := len(data)
-	if 0 != n {
+	if n != 0 {
 		t.Errorf("checkAgain: extra: %d elements found", n)
 		t.Errorf("checkAgain: data: %s", data)
 	}
@@ -178,7 +178,7 @@ func checkAgain(t *testing.T, empty bool) {
 
 	// attempt to retrieve a key that does not exist
 	dn := p.Get(nonExistantKey)
-	if nil != dn {
+	if dn != nil {
 		t.Errorf("checkAgain: Unexpected data on Get('/nonexistant'), got: '%s'  expected: nil", dn)
 	}
 }

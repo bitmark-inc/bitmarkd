@@ -104,7 +104,7 @@ func broadcastFreeIssue(item *issueFreeData) {
 	for _, tx := range item.txs {
 		assetId := tx.transaction.(*transactionrecord.BitmarkIssue).AssetId
 		packedAsset := asset.Get(assetId)
-		if nil != packedAsset {
+		if packedAsset != nil {
 			packedAssets = append(packedAssets, packedAsset...)
 		}
 		packedIssues = append(packedIssues, tx.packed...)
@@ -115,7 +115,7 @@ func broadcastFreeIssue(item *issueFreeData) {
 	messagebus.Bus.Broadcast.Send("issues", packedIssues)
 
 	// if the issue is a free issue, broadcast the proof
-	if nil != item.difficulty {
+	if item.difficulty != nil {
 		packed := make([]byte, len(item.payId), len(item.payId)+len(item.nonce))
 		copy(packed, item.payId[:])
 		packed = append(packed, item.nonce[:]...)

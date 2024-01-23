@@ -203,7 +203,7 @@ func FetchVerified(count int) ([]merkle.Digest, []byte, error) {
 			if _, ok := seenAsset[tx.AssetId]; !ok {
 				if !storage.Pool.Assets.Has(tx.AssetId[:]) {
 					packedAsset := asset.Get(tx.AssetId)
-					if nil == packedAsset {
+					if packedAsset == nil {
 						globalData.log.Criticalf("missing asset: %v", tx.AssetId)
 						logger.Panicf("fetch verified missing asset: %v", tx.AssetId)
 					}

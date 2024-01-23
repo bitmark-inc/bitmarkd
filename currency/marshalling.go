@@ -13,7 +13,7 @@ func (currency Currency) MarshalText() ([]byte, error) {
 // UnmarshalText - convert currency string to a currency enumeration value from JSON
 func (currency *Currency) UnmarshalText(s []byte) error {
 	c, err := fromString(string(s))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	*currency = c

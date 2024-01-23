@@ -8,6 +8,7 @@ package peer
 import (
 	"bytes"
 	"container/list"
+	"errors"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -103,7 +104,7 @@ func (conn *connector) initialise(
 
 	// allocate all sockets
 	staticCount := len(connect) // can be zero
-	if 0 == staticCount && !dynamicEnabled {
+	if staticCount == 0 && !dynamicEnabled {
 		log.Error("zero static connections and dynamic is disabled")
 		return fault.NoConnectionsAvailable
 	}
@@ -133,13 +134,13 @@ func (conn *connector) initialise(
 			}
 
 			address, err := util.NewConnection(c.Address)
-			if nil != err {
+			if err != nil {
 				log.Errorf("client[%d]=address: %q  error: %s", i, c.Address, err)
 				errF(wg, ch, canonicalErrF(c, err))
 				return
 			}
 			serverPublicKey, err := zmqutil.ReadPublicKey(c.PublicKey)
-			if nil != err {
+			if err != nil {
 				log.Errorf("client[%d]=public: %q  error: %s", i, c.PublicKey, err)
 				errF(wg, ch, canonicalErrF(c, err))
 				return
@@ -154,7 +155,7 @@ func (conn *connector) initialise(
 			}
 
 			client, err := upstream.New(privateKey, publicKey, connectorTimeout)
-			if nil != err {
+			if err != nil {
 				log.Errorf("client[%d]=%q  error: %s", i, address, err)
 				errF(wg, ch, canonicalErrF(c, err))
 				return
@@ -166,7 +167,7 @@ func (conn *connector) initialise(
 			conn.Unlock()
 
 			err = client.Connect(address, serverPublicKey)
-			if nil != err {
+			if err != nil {
 				log.Errorf("connect[%d]=%q  error: %s", i, address, err)
 				errF(wg, ch, canonicalErrF(c, err))
 				return
@@ -200,7 +201,7 @@ func (conn *connector) initialise(
 	// just create sockets for dynamic clients
 	for i := 0; i < maximumDynamicClients; i++ {
 		client, e := upstream.New(privateKey, publicKey, connectorTimeout)
-		if nil != err {
+		if err != nil {
 			log.Errorf("client[%d]  error: %s", i, e)
 			err = e
 			goto fail
@@ -227,21 +228,21 @@ fail:
 }
 
 // combine multi error into one
-func compositeError(errors []error) error {
-	if nil == errors || 0 == len(errors) {
+func compositeError(errs []error) error {
+	if errs == nil || len(errs) == 0 {
 		return nil
 	}
 	var ce strings.Builder
 	ce.WriteString("composite error: [")
-	len := len(errors)
-	for i, e := range errors {
+	l := len(errs)
+	for i, e := range errs {
 		ce.WriteString(e.Error())
-		if i < len-1 {
+		if i < l-1 {
 			ce.WriteString(", ")
 		}
 	}
 	ce.WriteString("]")
-	return fmt.Errorf(ce.String())
+	return errors.New(ce.String())
 }
 
 func (conn *connector) allClients(
@@ -252,7 +253,7 @@ func (conn *connector) allClients(
 			f(client, nil)
 		}
 	}
-	for e := conn.dynamicClients.Front(); nil != e; e = e.Next() {
+	for e := conn.dynamicClients.Front(); e != nil; e = e.Next() {
 		if client := e.Value.(upstream.Upstream); client != nil {
 			f(client, e)
 		}
@@ -267,7 +268,7 @@ func (conn *connector) searchClients(
 			return
 		}
 	}
-	for e := conn.dynamicClients.Front(); nil != e; e = e.Next() {
+	for e := conn.dynamicClients.Front(); e != nil; e = e.Next() {
 		if f(e.Value.(upstream.Upstream), e) {
 			return
 		}
@@ -324,7 +325,7 @@ loop:
 					item.Parameters[0],
 					item.Parameters[1],
 				)
-				if nil != err {
+				if err != nil {
 					conn.log.Warnf("connect upstream error: %s", err)
 				}
 			}
@@ -344,8 +345,9 @@ func (conn *connector) process() {
 
 // run state machine
 // return:
-//   true  if want more cycles
-//   false to pase for I/O
+//
+//	true  if want more cycles
+//	false to pase for I/O
 func (conn *connector) runStateMachine() bool {
 	log := conn.log
 
@@ -412,13 +414,13 @@ func (conn *connector) runStateMachine() bool {
 		check_digests:
 			for h := height; h >= genesis.BlockNumber; h -= 1 {
 				digest, err := blockheader.DigestForBlock(h)
-				if nil != err {
+				if err != nil {
 					log.Infof("block number: %d  local digest error: %s", h, err)
 					conn.nextState(cStateHighestBlock) // retry
 					break check_digests
 				}
 				d, err := conn.theClient.RemoteDigestOfHeight(h)
-				if nil != err {
+				if err != nil {
 					log.Infof("block number: %d  fetch digest error: %s", h, err)
 					conn.nextState(cStateHighestBlock) // retry
 					break check_digests
@@ -434,7 +436,7 @@ func (conn *connector) runStateMachine() bool {
 
 					// remove old blocks
 					err := block.DeleteDownToBlock(conn.startBlockNumber)
-					if nil != err {
+					if err != nil {
 						log.Errorf("delete down to block number: %d  error: %s", conn.startBlockNumber, err)
 						conn.nextState(cStateHighestBlock) // retry
 					}
@@ -472,7 +474,7 @@ func (conn *connector) runStateMachine() bool {
 			}
 			if packedNextBlock == nil {
 				p, err := conn.theClient.GetBlockData(conn.startBlockNumber)
-				if nil != err {
+				if err != nil {
 					log.Errorf("fetch block number: %d  error: %s", conn.startBlockNumber, err)
 					conn.nextState(cStateHighestBlock) // retry
 					break fetch_blocks
@@ -488,13 +490,13 @@ func (conn *connector) runStateMachine() bool {
 					h := conn.startBlockNumber - uint64(rand.Intn(fastSyncSkipPerBlocks))
 					log.Debugf("select random block: %d to test for forgery", h)
 					digest, err := blockheader.DigestForBlock(h)
-					if nil != err {
+					if err != nil {
 						log.Infof("block number: %d  local digest error: %s", h, err)
 						conn.nextState(cStateHighestBlock) // retry
 						break fetch_blocks
 					}
 					d, err := conn.theClient.RemoteDigestOfHeight(h)
-					if nil != err {
+					if err != nil {
 						log.Infof("block number: %d  fetch digest error: %s", h, err)
 						conn.nextState(cStateHighestBlock) // retry
 						break fetch_blocks
@@ -506,7 +508,7 @@ func (conn *connector) runStateMachine() bool {
 						// remove old blocks
 						startingPoint := conn.startBlockNumber - uint64(i)
 						err := block.DeleteDownToBlock(startingPoint)
-						if nil != err {
+						if err != nil {
 							log.Errorf("delete down to block number: %d  error: %s", startingPoint, err)
 						}
 
@@ -521,7 +523,7 @@ func (conn *connector) runStateMachine() bool {
 				//   packedNextBlock will be nil when local height is same as remote
 				var err error
 				packedNextBlock, err = conn.theClient.GetBlockData(conn.startBlockNumber + 1)
-				if nil != err {
+				if err != nil {
 					log.Debugf("fetch next block number: %d  error: %s", conn.startBlockNumber+1, err)
 				}
 			} else {
@@ -530,7 +532,7 @@ func (conn *connector) runStateMachine() bool {
 
 			log.Debugf("store block number: %d", conn.startBlockNumber)
 			err := block.StoreIncoming(packedBlock, packedNextBlock, block.NoRescanVerified)
-			if nil != err {
+			if err != nil {
 				log.Errorf(
 					"store block number: %d  error: %s",
 					conn.startBlockNumber,
@@ -602,7 +604,7 @@ func (conn *connector) isSameChain() bool {
 	}
 
 	localDigest, err := blockheader.DigestForBlock(blockheader.Height())
-	if nil != err {
+	if err != nil {
 		return false
 	}
 
@@ -643,7 +645,7 @@ func (conn *connector) hasSmallerDigestThanLocal(localHeight uint64) bool {
 	}
 
 	localDigest, err := blockheader.DigestForBlock(localHeight)
-	if nil != err {
+	if err != nil {
 		conn.log.Warnf("local height: %d  digest error: %s", localHeight, err)
 		return false
 	}
@@ -656,14 +658,14 @@ func (conn *connector) updateHeightAndClient() bool {
 	conn.votes.SetMinHeight(blockheader.Height())
 	conn.startElection()
 	elected, height := conn.elected()
-	if 0 == height {
+	if height == 0 {
 		conn.height = 0
 		return false
 	}
 
 	winnerName := elected.Name()
 	remoteAddr, err := elected.RemoteAddr()
-	if nil != err {
+	if err != nil {
 		conn.log.Warnf("%s socket not connected", winnerName)
 		conn.height = 0
 		return false
@@ -675,7 +677,7 @@ func (conn *connector) updateHeightAndClient() bool {
 		remoteAddr,
 	)
 
-	if height > 0 && nil != elected {
+	if height > 0 && elected != nil {
 		globalData.blockHeight = height
 	}
 	conn.theClient = elected
@@ -693,13 +695,13 @@ func (conn *connector) startElection() {
 
 func (conn *connector) elected() (upstream.Upstream, uint64) {
 	elected, height, err := conn.votes.ElectedCandidate()
-	if nil != err {
+	if err != nil {
 		conn.log.Warnf("get elected with error: %s", err)
 		return nil, 0
 	}
 
 	remoteAddr, err := elected.RemoteAddr()
-	if nil != err {
+	if err != nil {
 		conn.log.Errorf("get client string with error: %s", err)
 		return nil, 0
 	}
@@ -731,11 +733,11 @@ func (conn *connector) connectUpstream(
 
 	// need to know if this node has IPv6
 	address := connV4
-	if nil != connV6 && conn.preferIPv6 {
+	if connV6 != nil && conn.preferIPv6 {
 		address = connV6
 	}
 
-	if nil == address {
+	if address == nil {
 		log.Errorf(
 			"reconnect: %x  error: no suitable address found ipv6 allowed: %t",
 			serverPublicKey,
@@ -750,7 +752,7 @@ func (conn *connector) connectUpstream(
 	alreadyConnected := false
 	conn.searchClients(func(client upstream.Upstream, e *list.Element) bool {
 		if client.IsConnectedTo(serverPublicKey) {
-			if nil == e {
+			if e == nil {
 				log.Debugf(
 					"already have static connection to: %x @ %s",
 					serverPublicKey,
@@ -774,7 +776,7 @@ func (conn *connector) connectUpstream(
 	log.Infof("reconnect: %x @ %s", serverPublicKey, *address)
 	client := conn.dynamicClients.Front().Value.(upstream.Upstream)
 	err := client.Connect(address, serverPublicKey)
-	if nil != err {
+	if err != nil {
 		log.Errorf("ConnectTo: %x @ %s  error: %s", serverPublicKey, *address, err)
 	} else {
 		conn.dynamicClients.MoveToBack(conn.dynamicClients.Front())

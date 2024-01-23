@@ -569,11 +569,11 @@ func main() {
 		}
 
 		p := os.Getenv("XDG_CONFIG_HOME")
-		if "" == p {
+		if p == "" {
 			return fmt.Errorf("XDG_CONFIG_HOME environment is not set")
 		}
 		dir, err := checkFileExists(p)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 		if !dir {
@@ -585,9 +585,9 @@ func main() {
 			fmt.Fprintf(e, "file: %q\n", file)
 		}
 
-		if "setup" == command {
+		if command == "setup" {
 			// do not run setup if there is an existing configuration
-			if _, err := checkFileExists(file); nil == err {
+			if _, err := checkFileExists(file); err == nil {
 				return fmt.Errorf("not overwriting existing configuration: %q", file)
 			}
 
@@ -607,7 +607,7 @@ func main() {
 			}
 
 			configuration, err := configuration.Load(file)
-			if nil != err {
+			if err != nil {
 				return err
 			}
 			connectionOffset := c.GlobalInt("connection")
@@ -642,7 +642,7 @@ func main() {
 				fmt.Fprintf(e, "updating config file: %s\n", m.file)
 			}
 			err := configuration.Save(m.file, m.config)
-			if nil != err {
+			if err != nil {
 				return err
 			}
 		}
@@ -650,7 +650,7 @@ func main() {
 	}
 
 	err := app.Run(os.Args)
-	if nil != err {
+	if err != nil {
 		fmt.Fprintf(app.ErrWriter, "terminated with error: %s\n", err)
 		os.Exit(1)
 	}

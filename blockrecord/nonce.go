@@ -29,7 +29,7 @@ func (nonce NonceType) MarshalText() ([]byte, error) {
 func (nonce *NonceType) UnmarshalText(b []byte) error {
 	buffer := make([]byte, hex.DecodedLen(len(b)))
 	_, err := hex.Decode(buffer, b)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	*nonce = NonceType(binary.LittleEndian.Uint64(buffer))

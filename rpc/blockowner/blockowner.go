@@ -8,8 +8,6 @@ package blockowner
 import (
 	"encoding/binary"
 
-	"golang.org/x/time/rate"
-
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
@@ -21,6 +19,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
+	"golang.org/x/time/rate"
 )
 
 // Block Owner
@@ -67,7 +66,7 @@ func New(log *logger.L, pools reservoir.Handles, isNormalMode func(mode.Mode) bo
 // TxIDForBlock - RPC to get transaction id for block ownership record
 func (bitmark *BlockOwner) TxIDForBlock(info *TxIDForBlockArguments, reply *TxIDForBlockReply) error {
 
-	if err := ratelimit.Limit(bitmark.Limiter); nil != err {
+	if err := ratelimit.Limit(bitmark.Limiter); err != nil {
 		return err
 	}
 
@@ -82,12 +81,12 @@ func (bitmark *BlockOwner) TxIDForBlock(info *TxIDForBlockArguments, reply *TxID
 	blockNumberKey := make([]byte, 8)
 	binary.BigEndian.PutUint64(blockNumberKey, info.BlockNumber)
 	packedBlock := bitmark.Pool.Get(blockNumberKey)
-	if nil == packedBlock {
+	if packedBlock == nil {
 		return fault.BlockNotFound
 	}
 
 	header, digest, _, err := bitmark.Br.ExtractHeader(packedBlock, 0, false)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -110,7 +109,7 @@ type TransferReply struct {
 // payment addresses
 func (bitmark *BlockOwner) Transfer(transfer *transactionrecord.BlockOwnerTransfer, reply *TransferReply) error {
 
-	if err := ratelimit.Limit(bitmark.Limiter); nil != err {
+	if err := ratelimit.Limit(bitmark.Limiter); err != nil {
 		return err
 	}
 
@@ -128,7 +127,7 @@ func (bitmark *BlockOwner) Transfer(transfer *transactionrecord.BlockOwnerTransf
 
 	// save transfer/check for duplicate
 	stored, duplicate, err := bitmark.Rsvr.StoreTransfer(transfer)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

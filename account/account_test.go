@@ -107,38 +107,38 @@ loop:
 
 		buffer := []byte{byte(test.algorithm<<4 | 0x01 | testnet)}
 		buffer = append(buffer, test.publicKey...)
-		account, err := account.AccountFromBytes(buffer)
-		if nil != err {
+		acc, err := account.AccountFromBytes(buffer)
+		if err != nil {
 			t.Errorf("%d: Create account from bytes failed: %s", index, err)
 			continue loop
 		}
-		t.Logf("%d: result: %s", index, account)
-		t.Logf("%d:    hex: %x", index, account.Bytes())
+		t.Logf("%d: result: %s", index, acc)
+		t.Logf("%d:    hex: %x", index, acc.Bytes())
 
-		if !bytes.Equal(buffer, account.Bytes()) {
-			t.Errorf("%d: account bytes: %x does not match: %x", index, account.Bytes(), buffer)
+		if !bytes.Equal(buffer, acc.Bytes()) {
+			t.Errorf("%d: account bytes: %x does not match: %x", index, acc.Bytes(), buffer)
 		}
 
 		accountIsZero := true
 	check_for_zero:
-		for _, b := range account.PublicKeyBytes() {
-			if 0 != b {
+		for _, b := range acc.PublicKeyBytes() {
+			if b != 0 {
 				accountIsZero = false
 				break check_for_zero
 			}
 		}
 		if test.zero {
 			if !accountIsZero {
-				t.Errorf("%d: account bytes: %x not zero, but should be zero", index, account.PublicKeyBytes())
+				t.Errorf("%d: account bytes: %x not zero, but should be zero", index, acc.PublicKeyBytes())
 			}
-			if !account.IsZero() {
+			if !acc.IsZero() {
 				t.Errorf("%d: account.IsZero() incorrectly returned false", index)
 			}
 		} else {
 			if accountIsZero {
-				t.Errorf("%d: account bytes: %x are all zero, but should not be", index, account.PublicKeyBytes())
+				t.Errorf("%d: account bytes: %x are all zero, but should not be", index, acc.PublicKeyBytes())
 			}
-			if account.IsZero() {
+			if acc.IsZero() {
 				t.Errorf("%d: account.IsZero() incorrectly returned true", index)
 			}
 		}
@@ -150,7 +150,7 @@ func TestValidBase58(t *testing.T) {
 loop:
 	for index, test := range testAccount {
 		acc, err := account.AccountFromBase58(test.base58Account)
-		if nil != err {
+		if err != nil {
 			t.Errorf("%d: from base58 error: %s", index, err)
 			continue loop
 		}
@@ -171,7 +171,7 @@ loop:
 		j := `"` + test.base58Account + `"`
 		var a account.Account
 		err = json.Unmarshal([]byte(j), &a)
-		if nil != err {
+		if err != nil {
 			t.Errorf("%d: from JSON string error: %s", index, err)
 			continue loop
 		}
@@ -187,7 +187,7 @@ loop:
 }
 
 // Test invalid account parsing
-// From account base58 encoded to account
+// From account[12~ base58 encoded to account
 func TestInvalidBase58(t *testing.T) {
 	for index, test := range testInvalidAccountFromBase58 {
 		_, err := account.AccountFromBase58(test.str)
