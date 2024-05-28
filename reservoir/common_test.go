@@ -38,7 +38,7 @@ func removeFiles() {
 func setup(t *testing.T, theChain ...string) {
 
 	removeFiles()
-	os.Mkdir(testingDirName, 0700)
+	os.Mkdir(testingDirName, 0o700)
 
 	logging := logger.Configuration{
 		Directory: testingDirName,
@@ -51,7 +51,7 @@ func setup(t *testing.T, theChain ...string) {
 		},
 	}
 	// start logging
-	if err := logger.Initialise(logging); nil != err {
+	if err := logger.Initialise(logging); err != nil {
 		panic("logger setup failed: " + err.Error())
 	}
 
@@ -63,13 +63,13 @@ func setup(t *testing.T, theChain ...string) {
 
 	// open database
 	err := storage.Initialise(databaseFileName, false)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("storage initialise error: %s", err)
 	}
 
 	// need to initialise block before any tests can be performed
 	err = blockheader.Initialise()
-	if nil != err {
+	if err != nil {
 		t.Fatalf("blockheader initialise error: %s", err)
 	}
 
@@ -79,7 +79,7 @@ func setup(t *testing.T, theChain ...string) {
 	handle := mocks.NewMockHandle(ctl)
 	handle.EXPECT().LastElement().Return(storage.Element{}, false).Times(1)
 	err = block.Initialise(handle)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("block initialise error: %s", err)
 	}
 }

@@ -39,23 +39,23 @@ type internalHasher struct {
 
 func (h *internalHasher) Initialise() error {
 	requestSocket, err := zmq.NewSocket(internalHasherProtocol)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	err = requestSocket.Connect(h.endpointRequestStr)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	h.requestSocket = requestSocket
 
 	replySocket, err := zmq.NewSocket(internalHasherProtocol)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	err = replySocket.Bind(h.endpointReplyStr)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	h.replySocket = replySocket
@@ -68,7 +68,7 @@ func (h *internalHasher) Start() {
 	loop:
 		for i := 1; ; i++ {
 			msg, err := h.requestSocket.Recv(0)
-			if nil != err {
+			if err != nil {
 				continue loop
 			}
 
@@ -90,7 +90,7 @@ func (h *internalHasher) Start() {
 			replyData, _ := json.Marshal(reply)
 
 			_, err = h.replySocket.SendBytes(replyData, 0)
-			if nil != err {
+			if err != nil {
 				continue loop
 			}
 		}

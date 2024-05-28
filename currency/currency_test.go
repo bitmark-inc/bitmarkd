@@ -47,11 +47,11 @@ func TestValidString(t *testing.T) {
 
 		var c currency.Currency
 		n, err := fmt.Sscan(test.str, &c)
-		if nil != err {
+		if err != nil {
 			t.Fatalf("%d: string to currency error: %s", index, err)
 		}
 
-		if 1 != n {
+		if n != 1 {
 			t.Fatalf("%d: scanned %d items expected to scan 1", index, n)
 		}
 
@@ -70,7 +70,7 @@ func TestInvalidString(t *testing.T) {
 			t.Fatalf("%d: string to currency error: %s", index, err)
 		}
 
-		if 0 != n {
+		if n != 0 {
 			t.Fatalf("%d: scanned %d items expected to scan 0(zero)", index, n)
 		}
 
@@ -81,7 +81,7 @@ func TestMarshalling(t *testing.T) {
 	for index, test := range valid {
 
 		buffer, err := json.Marshal(test.c)
-		if nil != err {
+		if err != nil {
 			t.Fatalf("%d: Marshal JSON error: %s", index, err)
 		}
 
@@ -98,7 +98,7 @@ func TestUnmarshalling(t *testing.T) {
 		buffer := []byte(`"` + test.str + `"`)
 		var c currency.Currency
 		err := json.Unmarshal(buffer, &c)
-		if nil != err {
+		if err != nil {
 			t.Fatalf("%d: Unmarshal JSON error: %s", index, err)
 		}
 

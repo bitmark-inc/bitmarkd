@@ -26,7 +26,7 @@ func recoverBlockHeaderHash(blockNumberBytes []byte, packedBlock []byte) error {
 
 	// reservoir.ClearSpend()
 	trx, err := storage.NewDBTransaction()
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -35,7 +35,7 @@ func recoverBlockHeaderHash(blockNumberBytes []byte, packedBlock []byte) error {
 	blockHeaderHashBytes := trx.Get(storage.Pool.BlockHeaderHash, blockNumberBytes)
 	if blockHeaderHashBytes == nil {
 		digest, err := blockrecord.ComputeHeaderHash(packedBlock)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 

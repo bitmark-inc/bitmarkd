@@ -57,7 +57,7 @@ func (assetId *AssetIdentifier) Scan(state fmt.ScanState, verb rune) error {
 		}
 		return false
 	})
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	if len(token) != hex.EncodedLen(AssetIdentifierLength) {
@@ -65,7 +65,7 @@ func (assetId *AssetIdentifier) Scan(state fmt.ScanState, verb rune) error {
 	}
 
 	byteCount, err := hex.Decode(assetId[:], token)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -89,7 +89,7 @@ func (assetId *AssetIdentifier) UnmarshalText(s []byte) error {
 		return fault.NotLink
 	}
 	byteCount, err := hex.Decode(assetId[:], s)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	if AssetIdentifierLength != byteCount {

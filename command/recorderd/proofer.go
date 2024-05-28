@@ -15,12 +15,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	zmq "github.com/pebbe/zmq4"
-
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/exitwithstatus"
 	"github.com/bitmark-inc/logger"
+	zmq "github.com/pebbe/zmq4"
 )
 
 const (
@@ -42,7 +41,7 @@ type Proofer interface {
 }
 
 type ProoferData struct {
-	sync.RWMutex
+	mu                    sync.RWMutex
 	eventuallyThreadCount uint32
 	prevThreadCount       uint32
 	proofIDs              []bool
@@ -134,22 +133,22 @@ func (p *ProoferData) changed() bool {
 }
 
 func (p *ProoferData) activeThreadIncrement(threadNum uint32) {
-	p.Lock()
-	defer p.Unlock()
+	p.mu.Lock()
+	defer p.mu.Unlock()
 
 	p.proofIDs[threadNum] = true
 }
 
 func (p *ProoferData) activeThreadDecrement(threadNum uint32) {
-	p.Lock()
-	defer p.Unlock()
+	p.mu.Lock()
+	defer p.mu.Unlock()
 
 	p.proofIDs[threadNum] = false
 }
 
 func (p *ProoferData) targetThreadCount() uint32 {
-	p.Lock()
-	defer p.Unlock()
+	p.mu.Lock()
+	defer p.mu.Unlock()
 
 	return p.eventuallyThreadCount
 }
@@ -175,26 +174,26 @@ func ProofProxy() {
 func proofForwarder() error {
 
 	in, err := zmq.NewSocket(zmq.PULL)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	defer in.Close()
 
 	in.SetLinger(0)
 	err = in.Bind(proofRequest)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	out, err := zmq.NewSocket(zmq.PUSH)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	defer out.Close()
 
 	_ = out.SetLinger(0)
 	err = out.Bind(dispatch)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -227,14 +226,14 @@ func (p *ProoferData) createProofer(threadCount uint32) {
 	for i := uint32(0); i < threadCount; i++ {
 		p.eventuallyThreadCount++
 		proofID, err := p.nextProoferID()
-		if nil != err {
+		if err != nil {
 			return
 		}
 		prflog := logger.New(fmt.Sprintf("proofer-%d", proofID))
 		prflog.Infof("add new goroutine (%d out of this round increament %d)",
 			i+1, threadCount)
 		err = p.ProofThread(prflog, uint32(proofID))
-		if nil != err {
+		if err != nil {
 			prflog.Criticalf("proof[%d]: error: %s", proofID, err)
 			exitwithstatus.Message("proofer: proof[%d]: error: %s", proofID, err)
 		}
@@ -263,26 +262,26 @@ func (p *ProoferData) ProofThread(log *logger.L, threadNum uint32) error {
 
 	// block request channel
 	request, err := zmq.NewSocket(zmq.PULL)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	request.SetLinger(0)
 	err = request.Connect(dispatch)
-	if nil != err {
+	if err != nil {
 		request.Close()
 		return err
 	}
 
 	submit, err := zmq.NewSocket(zmq.PUSH)
-	if nil != err {
+	if err != nil {
 		request.Close()
 		return err
 	}
 
 	submit.SetLinger(0)
 	err = submit.Connect(submission)
-	if nil != err {
+	if err != nil {
 		request.Close()
 		submit.Close()
 		return err
@@ -311,7 +310,7 @@ func (p *ProoferData) ProofThread(log *logger.L, threadNum uint32) error {
 	receiver:
 		for {
 			request, err := request.RecvMessageBytes(0)
-			if nil != err {
+			if err != nil {
 				log.Criticalf("RecvMessageBytes error: %s", err)
 				logger.Panicf("proofer error: %s", err)
 			}
@@ -352,7 +351,7 @@ func (p *ProoferData) ProofThread(log *logger.L, threadNum uint32) error {
 					readyList, _ := poller.Poll(0) // time.Millisecond)
 					//log.Infof("ready list: %v", readyList)
 					//log.Infof("ready list length: %d", len(readyList))
-					if 1 == len(readyList) {
+					if len(readyList) == 1 {
 						log.Info("new request, break nonceLoop")
 						break nonceLoop
 					}
@@ -365,11 +364,11 @@ func (p *ProoferData) ProofThread(log *logger.L, threadNum uint32) error {
 
 				count++
 
-				if 0 == i%10 {
+				if i%10 == 0 {
 					log.Infof("nonce[%d]: 0x%08x", i, blk.Nonce)
 				}
 				// possible value if leading zero byte
-				if 0 == digest[31] {
+				if digest[31] == 0 {
 
 					log.Infof("job: %q nonce: 0x%016x", item.Job, blk.Nonce)
 					log.Infof("digest: %v", digest)

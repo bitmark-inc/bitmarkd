@@ -58,7 +58,7 @@ func processSetupCommand(program string, arguments []string) bool {
 		publicKeyFilename := getFilenameWithDirectory(arguments, peerPublicKeyFilename)
 		privateKeyFilename := getFilenameWithDirectory(arguments, peerPrivateKeyFilename)
 		err := zmqutil.MakeKeyPair(publicKeyFilename, privateKeyFilename)
-		if nil != err {
+		if err != nil {
 			fmt.Printf("generate private key: %q and public key: %q error: %s\n", privateKeyFilename, publicKeyFilename, err)
 			exitwithstatus.Exit(1)
 		}
@@ -71,14 +71,14 @@ func processSetupCommand(program string, arguments []string) bool {
 		addresses := []string{}
 		if len(arguments) >= 2 {
 			for _, a := range arguments[1:] {
-				if "" != a {
+				if a != "" {
 					addresses = append(addresses, a)
 				}
 			}
 		}
 
-		err := makeSelfSignedCertificate("rpc", certificateFilename, privateKeyFilename, 0 != len(addresses), addresses)
-		if nil != err {
+		err := makeSelfSignedCertificate("rpc", certificateFilename, privateKeyFilename, len(addresses) != 0, addresses)
+		if err != nil {
 			fmt.Printf("generate RPC key: %q and certificate: %q error: %s\n", privateKeyFilename, certificateFilename, err)
 			exitwithstatus.Exit(1)
 		}
@@ -88,7 +88,7 @@ func processSetupCommand(program string, arguments []string) bool {
 		publicKeyFilename := getFilenameWithDirectory(arguments, proofPublicKeyFilename)
 		privateKeyFilename := getFilenameWithDirectory(arguments, proofPrivateKeyFilename)
 		err := zmqutil.MakeKeyPair(publicKeyFilename, privateKeyFilename)
-		if nil != err {
+		if err != nil {
 			fmt.Printf("generate private key: %q and public key: %q error: %s\n", privateKeyFilename, publicKeyFilename, err)
 			exitwithstatus.Exit(1)
 		}
@@ -96,11 +96,11 @@ func processSetupCommand(program string, arguments []string) bool {
 		liveSigningKeyFilename := getFilenameWithDirectory(arguments, proofLiveSigningKeyFilename)
 		testSigningKeyFilename := getFilenameWithDirectory(arguments, proofTestSigningKeyFilename)
 
-		if err := makeSigningKey(false, liveSigningKeyFilename); nil != err {
+		if err := makeSigningKey(false, liveSigningKeyFilename); err != nil {
 			fmt.Printf("generate the signing key for livenet: %q error: %s\n", liveSigningKeyFilename, err)
 			goto signing_key_failed
 		}
-		if err := makeSigningKey(true, testSigningKeyFilename); nil != err {
+		if err := makeSigningKey(true, testSigningKeyFilename); err != nil {
 			fmt.Printf(" generate the signing key for testnet: %q error: %s\n", testSigningKeyFilename, err)
 			goto signing_key_failed
 		}
@@ -246,7 +246,7 @@ func processDataCommand(log *logger.L, arguments []string, options *Configuratio
 		}
 
 		n, err := strconv.ParseUint(arguments[0], 10, 64)
-		if nil != err {
+		if err != nil {
 			exitwithstatus.Message("error in block number: %s", err)
 		}
 		if n < 2 {
@@ -261,7 +261,7 @@ func processDataCommand(log *logger.L, arguments []string, options *Configuratio
 		if len(arguments) > 1 {
 
 			nEnd, err = strconv.ParseUint(arguments[1], 10, 64)
-			if nil != err {
+			if err != nil {
 				exitwithstatus.Message("error in ending block number: %s", err)
 			}
 			if nEnd < n {
@@ -276,19 +276,19 @@ func processDataCommand(log *logger.L, arguments []string, options *Configuratio
 
 		if output != "" && output != "-" {
 			fd, err = os.Create(output)
-			if nil != err {
+			if err != nil {
 				exitwithstatus.Message("error: creating: %q error: %s", output, err)
 			}
 		}
 
 		fmt.Fprintf(fd, "[\n")
 		for ; n <= nEnd; n += 1 {
-			block, err := blockdump.BlockDump(n, binaryOnly)
-			if nil != err {
+			blk, err := blockdump.BlockDump(n, binaryOnly)
+			if err != nil {
 				exitwithstatus.Message("dump block error: %s", err)
 			}
-			s, err := json.MarshalIndent(block, "  ", "  ")
-			if nil != err {
+			s, err := json.MarshalIndent(blk, "  ", "  ")
+			if err != nil {
 				exitwithstatus.Message("dump block JSON error: %s", err)
 			}
 
@@ -302,11 +302,11 @@ func processDataCommand(log *logger.L, arguments []string, options *Configuratio
 			exitwithstatus.Message("missing file name argument")
 		}
 		filename := arguments[0]
-		if "" == filename {
+		if filename == "" {
 			exitwithstatus.Message("missing file name")
 		}
 		err := saveBinaryBlocks(filename)
-		if nil != err {
+		if err != nil {
 			exitwithstatus.Message("failed writing: %q  error: %s", filename, err)
 		}
 
@@ -315,11 +315,11 @@ func processDataCommand(log *logger.L, arguments []string, options *Configuratio
 			exitwithstatus.Message("missing file name argument")
 		}
 		filename := arguments[0]
-		if "" == filename {
+		if filename == "" {
 			exitwithstatus.Message("missing file name")
 		}
 		err := restoreBinaryBlocks(filename)
-		if nil != err {
+		if err != nil {
 			exitwithstatus.Message("failed writing: %q  error: %s", filename, err)
 		}
 
@@ -330,14 +330,14 @@ func processDataCommand(log *logger.L, arguments []string, options *Configuratio
 		}
 
 		n, err := strconv.ParseUint(arguments[0], 10, 64)
-		if nil != err {
+		if err != nil {
 			exitwithstatus.Message("error in block number: %s", err)
 		}
 		if n < 2 {
 			exitwithstatus.Message("error: invalid block number: %d must be greater than 1", n)
 		}
 		err = block.DeleteDownToBlock(n)
-		if nil != err {
+		if err != nil {
 			exitwithstatus.Message("block delete error: %s", err)
 		}
 		fmt.Printf("reduced height to: %d\n", blockheader.Height())
@@ -359,43 +359,43 @@ func dnsTXT(options *Configuration) {
 	rpc := options.ClientRPC
 
 	keypair, err := tls.X509KeyPair([]byte(rpc.Certificate), []byte(rpc.PrivateKey))
-	if nil != err {
+	if err != nil {
 		exitwithstatus.Message("error: cannot decode certificate: %q  error: %s", rpc.Certificate, err)
 	}
 
 	fingerprint := CertificateFingerprint(keypair.Certificate[0])
 
-	if 0 == len(rpc.Announce) {
+	if len(rpc.Announce) == 0 {
 		exitwithstatus.Message("error: no rpc announce fields given")
 	}
 
 	rpcIP4, rpcIP6, rpcPort := getFirstConnections(rpc.Announce)
-	if 0 == rpcPort {
+	if rpcPort == 0 {
 		exitwithstatus.Message("error: cannot determine rpc port")
 	}
 
 	peering := options.Peering
 
 	publicKey, err := zmqutil.ReadPublicKey(peering.PublicKey)
-	if nil != err {
+	if err != nil {
 		exitwithstatus.Message("error: cannot read public key: %q  error: %s", peering.PublicKey, err)
 	}
 
-	if 0 == len(peering.Announce) {
+	if len(peering.Announce) == 0 {
 		exitwithstatus.Message("error: no rpc announce fields given")
 	}
 
 	listenIP4, listenIP6, listenPort := getFirstConnections(peering.Announce)
-	if 0 == listenPort {
+	if listenPort == 0 {
 		exitwithstatus.Message("error: cannot determine listen port")
 	}
 
 	IPs := ""
-	if "" != rpcIP4 && rpcIP4 == listenIP4 {
+	if rpcIP4 != "" && rpcIP4 == listenIP4 {
 		IPs = rpcIP4
 	}
-	if "" != rpcIP6 && rpcIP6 == listenIP6 {
-		if "" == IPs {
+	if rpcIP6 != "" && rpcIP6 == listenIP6 {
+		if IPs == "" {
 			IPs = rpcIP6
 		} else {
 			IPs += ";" + rpcIP6
@@ -420,24 +420,24 @@ func getFirstConnections(connections []string) (string, string, int) {
 
 scan_connections:
 	for i, c := range connections {
-		if "" == c {
+		if c == "" {
 			continue scan_connections
 		}
 		v6, IP, port, err := splitConnection(c)
-		if nil != err {
+		if err != nil {
 			exitwithstatus.Message("error: cannot decode[%d]: %q  error: %s", i, c, err)
 		}
 		if v6 {
-			if "" == IP6 {
+			if IP6 == "" {
 				IP6 = IP
-				if 0 == initialPort || port == initialPort {
+				if initialPort == 0 || port == initialPort {
 					initialPort = port
 				}
 			}
 		} else {
-			if "" == IP4 {
+			if IP4 == "" {
 				IP4 = IP
-				if 0 == initialPort || port == initialPort {
+				if initialPort == 0 || port == initialPort {
 					initialPort = port
 				}
 			}
@@ -449,24 +449,24 @@ scan_connections:
 // split connection into ip and port
 func splitConnection(hostPort string) (bool, string, int, error) {
 	host, port, err := net.SplitHostPort(hostPort)
-	if nil != err {
+	if err != nil {
 		return false, "", 0, fault.InvalidIpAddress
 	}
 
 	IP := net.ParseIP(strings.TrimSpace(host))
-	if nil == IP {
+	if IP == nil {
 		return false, "", 0, fault.InvalidIpAddress
 	}
 
 	numericPort, err := strconv.Atoi(strings.TrimSpace(port))
-	if nil != err {
+	if err != nil {
 		return false, "", 0, err
 	}
 	if numericPort < 1 || numericPort > 65535 {
 		return false, "", 0, fault.InvalidPortNumber
 	}
 
-	if nil != IP.To4() {
+	if IP.To4() != nil {
 		return false, IP.String(), numericPort, nil
 	}
 	return true, "[" + IP.String() + "]", numericPort, nil
@@ -485,12 +485,12 @@ func getFilenameWithDirectory(arguments []string, name string) string {
 
 func makeSigningKey(testnet bool, fileName string) error {
 	seed, err := account.NewBase58EncodedSeedV2(testnet)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	data := "SEED:" + seed + "\n"
-	if err = ioutil.WriteFile(fileName, []byte(data), 0600); nil != err {
+	if err = ioutil.WriteFile(fileName, []byte(data), 0o600); err != nil {
 		return fmt.Errorf("error writing signing key file error: %s", err)
 	}
 

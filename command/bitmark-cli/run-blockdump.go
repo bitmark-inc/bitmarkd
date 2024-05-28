@@ -34,7 +34,7 @@ func runBlockDump(c *cli.Context) error {
 	}
 
 	client, err := rpccalls.NewClient(m.testnet, m.config.Connections[m.connectionOffset], m.verbose, m.e)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	defer client.Close()
@@ -46,7 +46,7 @@ func runBlockDump(c *cli.Context) error {
 	}
 
 	response, err := client.GetBlocks(blockDumpConfig)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

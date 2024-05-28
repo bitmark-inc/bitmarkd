@@ -10,9 +10,9 @@ package merkle
 // FullMerkleTree - compute merkle root from a set of transaction ids
 //
 // structure is:
-//   1. N * transaction digests
-//   2. level 1..m digests
-//   3. merkle root digest
+//  1. N * transaction digests
+//  2. level 1..m digests
+//  3. merkle root digest
 func FullMerkleTree(txIds []Digest) []Digest {
 
 	// compute length of ids + all tree levels including root
@@ -25,7 +25,7 @@ func FullMerkleTree(txIds []Digest) []Digest {
 
 	// add initial ids
 	tree := make([]Digest, totalLength)
-	copy(tree[:], txIds)
+	copy(tree, txIds)
 
 	n := idCount
 	j := 0
@@ -71,10 +71,12 @@ func MinimumMerkleTree(ids []Digest) []Digest {
 				j = i // compensate for odd number
 			}
 			var b []byte
-			if 1 == start {
-				b = append(ids[i][:], ids[j][:]...)
+			if start == 1 {
+				b = append(b, ids[i][:]...)
+				b = append(b, ids[j][:]...)
 			} else {
-				b = append(tree[i][:], tree[j][:]...)
+				b = append(b, tree[i][:]...)
+				b = append(b, tree[j][:]...)
 			}
 			tree[n] = NewDigest(b)
 			n += 1

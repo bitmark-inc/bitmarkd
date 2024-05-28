@@ -42,7 +42,7 @@ type verifiedSwapInfo struct {
 
 // storeSwap - verify and store a swap request
 func storeSwap(swap *transactionrecord.ShareSwap, shareQuantityHandle storage.Handle, shareHandle storage.Handle, ownerDataHandle storage.Handle, blockOwnerPaymentHandle storage.Handle) (*SwapInfo, bool, error) {
-	if nil == shareQuantityHandle || nil == shareHandle || nil == ownerDataHandle || nil == blockOwnerPaymentHandle {
+	if shareQuantityHandle == nil || shareHandle == nil || ownerDataHandle == nil || blockOwnerPaymentHandle == nil {
 		return nil, false, fault.NilPointer
 	}
 
@@ -80,7 +80,7 @@ func storeSwap(swap *transactionrecord.ShareSwap, shareQuantityHandle storage.Ha
 	// if already seen just return pay id and previous payments if present
 	entry, ok := globalData.pendingTransactions[payId]
 	if ok {
-		if nil != entry.payments {
+		if entry.payments != nil {
 			result.Payments = entry.payments
 		} else {
 			// this would mean that reservoir data is corrupt
@@ -140,19 +140,19 @@ func storeSwap(swap *transactionrecord.ShareSwap, shareQuantityHandle storage.Ha
 
 // CheckSwapBalances - check sufficient balance on both accounts to be able to execute a swap request
 func CheckSwapBalances(trx storage.Transaction, swap *transactionrecord.ShareSwap, shareQuantityHandle storage.Handle) (uint64, uint64, error) {
-	if nil == shareQuantityHandle {
+	if shareQuantityHandle == nil {
 		return 0, 0, fault.NilPointer
 	}
 
 	// check incoming quantity
-	if 0 == swap.QuantityOne || 0 == swap.QuantityTwo {
+	if swap.QuantityOne == 0 || swap.QuantityTwo == 0 {
 		return 0, 0, fault.ShareQuantityTooSmall
 	}
 
 	oKeyOne := append(swap.OwnerOne.Bytes(), swap.ShareIdOne[:]...)
 	var balanceOne uint64
 	var ok bool
-	if nil == trx {
+	if trx == nil {
 		balanceOne, ok = shareQuantityHandle.GetN(oKeyOne)
 	} else {
 		balanceOne, ok = trx.GetN(shareQuantityHandle, oKeyOne)
@@ -165,7 +165,7 @@ func CheckSwapBalances(trx storage.Transaction, swap *transactionrecord.ShareSwa
 
 	oKeyTwo := append(swap.OwnerTwo.Bytes(), swap.ShareIdTwo[:]...)
 	var balanceTwo uint64
-	if nil == trx {
+	if trx == nil {
 		balanceTwo, ok = shareQuantityHandle.GetN(oKeyTwo)
 	} else {
 		balanceTwo, ok = trx.GetN(shareQuantityHandle, oKeyTwo)
@@ -182,7 +182,7 @@ func CheckSwapBalances(trx storage.Transaction, swap *transactionrecord.ShareSwa
 // verify that a swap is ok
 // ensure lock is held before calling
 func verifySwap(swap *transactionrecord.ShareSwap, shareQuantityHandle storage.Handle, shareHandle storage.Handle, ownerDataHandle storage.Handle) (*verifiedSwapInfo, bool, error) {
-	if nil == shareQuantityHandle || nil == shareHandle || nil == ownerDataHandle {
+	if shareQuantityHandle == nil || shareHandle == nil || ownerDataHandle == nil {
 		return nil, false, fault.NilPointer
 	}
 
@@ -192,13 +192,13 @@ func verifySwap(swap *transactionrecord.ShareSwap, shareQuantityHandle storage.H
 	}
 
 	balanceOne, balanceTwo, err := CheckSwapBalances(nil, swap, shareQuantityHandle)
-	if nil != err {
+	if err != nil {
 		return nil, false, err
 	}
 
 	// pack swap and check signature
 	packedSwap, err := swap.Pack(swap.OwnerOne)
-	if nil != err {
+	if err != nil {
 		return nil, false, err
 	}
 
@@ -233,11 +233,11 @@ func verifySwap(swap *transactionrecord.ShareSwap, shareQuantityHandle storage.H
 	// ***** FIX THIS: should share two's owner dat be used for double charge?
 	// the owner data is under tx id of share record
 	_ /*totalValue*/, shareTxId := shareHandle.GetNB(swap.ShareIdOne[:])
-	if nil == shareTxId {
+	if shareTxId == nil {
 		return nil, false, fault.DoubleTransferAttempt
 	}
 	ownerData, err := ownership.GetOwnerDataB(nil, shareTxId, ownerDataHandle)
-	if nil != err {
+	if err != nil {
 		return nil, false, fault.DoubleTransferAttempt
 	}
 	// log.Infof("ownerData: %x", ownerData)

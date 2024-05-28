@@ -8,11 +8,10 @@ package account
 import (
 	"bytes"
 
-	"golang.org/x/crypto/ed25519"
-	"golang.org/x/crypto/sha3"
-
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
+	"golang.org/x/crypto/ed25519"
+	"golang.org/x/crypto/sha3"
 )
 
 // PrivateKey - base type for PrivateKey
@@ -50,7 +49,7 @@ type NothingPrivateKey struct {
 func PrivateKeyFromBase58(privateKeyBase58Encoded string) (*PrivateKey, error) {
 	// Decode the privateKey
 	privateKeyDecoded := util.FromBase58(privateKeyBase58Encoded)
-	if 0 == len(privateKeyDecoded) {
+	if len(privateKeyDecoded) == 0 {
 		return nil, fault.CannotDecodePrivateKey
 	}
 
@@ -58,7 +57,7 @@ func PrivateKeyFromBase58(privateKeyBase58Encoded string) (*PrivateKey, error) {
 	keyVariant, keyVariantLength := util.FromVarint64(privateKeyDecoded)
 
 	// Check key type
-	if 0 == keyVariantLength || keyVariant&publicKeyCode == publicKeyCode {
+	if keyVariantLength == 0 || keyVariant&publicKeyCode == publicKeyCode {
 		return nil, fault.NotPrivateKey
 	}
 
@@ -69,7 +68,7 @@ func PrivateKeyFromBase58(privateKeyBase58Encoded string) (*PrivateKey, error) {
 	}
 
 	// network selection
-	isTest := 0 != keyVariant&testKeyCode
+	isTest := keyVariant&testKeyCode != 0
 
 	// Compute key length
 	keyLength := len(privateKeyDecoded) - keyVariantLength - checksumLength
@@ -99,7 +98,7 @@ func PrivateKeyFromBase58(privateKeyBase58Encoded string) (*PrivateKey, error) {
 		}
 		return privateKey, nil
 	case Nothing:
-		if 2 != keyLength {
+		if keyLength != 2 {
 			return nil, fault.InvalidKeyLength
 		}
 		priv := privateKeyDecoded[keyVariantLength:checksumStart]
@@ -125,7 +124,7 @@ func PrivateKeyFromBytes(privateKeyBytes []byte) (*PrivateKey, error) {
 	keyVariant, keyVariantLength := util.FromVarint64(privateKeyBytes)
 
 	// Check key type
-	if 0 == keyVariantLength || keyVariant&publicKeyCode == publicKeyCode {
+	if keyVariantLength == 0 || keyVariant&publicKeyCode == publicKeyCode {
 		return nil, fault.NotPrivateKey
 	}
 
@@ -136,7 +135,7 @@ func PrivateKeyFromBytes(privateKeyBytes []byte) (*PrivateKey, error) {
 	}
 
 	// network selection
-	isTest := 0 != keyVariant&testKeyCode
+	isTest := keyVariant&testKeyCode != 0
 
 	// Compute key length
 	keyLength := len(privateKeyBytes) - keyVariantLength
@@ -159,7 +158,7 @@ func PrivateKeyFromBytes(privateKeyBytes []byte) (*PrivateKey, error) {
 		}
 		return privateKey, nil
 	case Nothing:
-		if 2 != keyLength {
+		if keyLength != 2 {
 			return nil, fault.InvalidKeyLength
 		}
 		priv := privateKeyBytes[keyVariantLength:]
@@ -178,7 +177,7 @@ func PrivateKeyFromBytes(privateKeyBytes []byte) (*PrivateKey, error) {
 // UnmarshalText - convert string to private key structure
 func (privateKey *PrivateKey) UnmarshalText(s []byte) error {
 	a, err := PrivateKeyFromBase58(string(s))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	privateKey.PrivateKeyInterface = a.PrivateKeyInterface
@@ -210,7 +209,7 @@ func (privateKey *ED25519PrivateKey) Account() *Account {
 
 // PrivateKeyBytes - fetch the private key as byte slice
 func (privateKey *ED25519PrivateKey) PrivateKeyBytes() []byte {
-	return privateKey.PrivateKey[:]
+	return privateKey.PrivateKey
 }
 
 // Bytes - byte slice for encoded key
@@ -219,7 +218,7 @@ func (privateKey *ED25519PrivateKey) Bytes() []byte {
 	if privateKey.Test {
 		keyVariant |= testKeyCode
 	}
-	return append([]byte{keyVariant}, privateKey.PrivateKey[:]...)
+	return append([]byte{keyVariant}, privateKey.PrivateKey...)
 }
 
 // String - base58 encoding of encoded key
@@ -255,7 +254,7 @@ func (privateKey *NothingPrivateKey) Account() *Account {
 
 // PrivateKeyBytes - fetch the private key as byte slice
 func (privateKey *NothingPrivateKey) PrivateKeyBytes() []byte {
-	return privateKey.PrivateKey[:]
+	return privateKey.PrivateKey
 }
 
 // Bytes - byte slice for encoded key
@@ -264,7 +263,7 @@ func (privateKey *NothingPrivateKey) Bytes() []byte {
 	if privateKey.Test {
 		keyVariant |= testKeyCode
 	}
-	return append([]byte{keyVariant}, privateKey.PrivateKey[:]...)
+	return append([]byte{keyVariant}, privateKey.PrivateKey...)
 }
 
 // String - base58 encoding of encoded key

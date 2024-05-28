@@ -64,7 +64,7 @@ func IsBlockToAdjustDifficulty(height uint64, version uint16) bool {
 }
 
 func isDifficultyAdjustmentBlock(height uint64) bool {
-	return 0 == height%difficulty.AdjustTimespanInBlocks
+	return height%difficulty.AdjustTimespanInBlocks == 0
 }
 
 // ValidHeaderVersion - valid incoming block version

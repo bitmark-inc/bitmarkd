@@ -21,7 +21,7 @@ func New() *Tree {
 
 // IsEmpty - true if tree contains some data
 func (tree *Tree) IsEmpty() bool {
-	return nil == tree.root
+	return tree.root == nil
 }
 
 // Count - number of nodes currently in the tree

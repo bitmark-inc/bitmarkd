@@ -28,7 +28,7 @@ func TestPackShareBalanceOne(t *testing.T) {
 
 	var link merkle.Digest
 	err := merkleDigestFromLE("79a67be2b3d313bd490363fb0d27901c46ed53d3f7b21f60d48bc42439b06084", &link)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to link error: %s", err)
 	}
 
@@ -61,7 +61,7 @@ func TestPackShareBalanceOne(t *testing.T) {
 
 	// test the packer
 	packed, err := r.Pack(ownerOneAccount)
-	if nil != err {
+	if err != nil {
 		t.Errorf("pack error: %s", err)
 	}
 
@@ -85,7 +85,7 @@ func TestPackShareBalanceOne(t *testing.T) {
 
 	// test the unpacker
 	unpacked, n, err := packed.Unpack(true)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("unpack error: %s", err)
 	}
 	if len(packed) != n {
@@ -106,7 +106,7 @@ func TestPackShareBalanceOne(t *testing.T) {
 		balance,
 	}
 	b, err := json.MarshalIndent(item, "", "  ")
-	if nil != err {
+	if err != nil {
 		t.Fatalf("json error: %s", err)
 	}
 
@@ -128,7 +128,7 @@ func TestPackShareBalanceValueNotZero(t *testing.T) {
 
 	var link merkle.Digest
 	err := merkleDigestFromLE("79a67be2b3d313bd490363fb0d27901c46ed53d3f7b21f60d48bc42439b06084", &link)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to link error: %s", err)
 	}
 

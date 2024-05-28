@@ -112,7 +112,7 @@ func NewRPC(
 		tlsConfig:       tlsConfig,
 	}
 
-	if 0 == len(configuration.Listen) {
+	if len(configuration.Listen) == 0 {
 		log.Errorf("missing %s listen", logName)
 		return nil, fault.MissingParameters
 	}
@@ -124,11 +124,11 @@ func NewRPC(
 
 config_loop:
 	for _, address := range configuration.Announce {
-		if "" == address {
+		if address == "" {
 			continue config_loop
 		}
 		c, err := util.NewConnection(address)
-		if nil != err {
+		if err != nil {
 			log.Errorf("invalid %s listen announce: %q  error: %s", logName, address, err)
 			return nil, err
 		}
@@ -136,14 +136,14 @@ config_loop:
 	}
 
 	err := ann.Set(certificateFingerprint, l)
-	if nil != err {
+	if err != nil {
 		log.Criticalf("announce.Set error: %s", err)
 		return nil, err
 	}
 
 	// validate all listen addresses
 	r.ipType, err = parseListenAddress(configuration.Listen, r.log)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -153,13 +153,13 @@ config_loop:
 func parseListenAddress(addrs []string, log *logger.L) ([]string, error) {
 	parsed := make([]string, len(addrs))
 	for i, listen := range addrs {
-		if '*' == listen[0] {
+		if listen[0] == '*' {
 			// change "*:PORT" to "[::]:PORT"
 			// on the assumption that this will listen on tcp4 and tcp6
 			addrs[i] = "[::]" + ":" + strings.Split(listen, ":")[1]
 			listen = "::"
 			parsed[i] = "tcp"
-		} else if '[' == listen[0] {
+		} else if listen[0] == '[' {
 			listen = strings.Split(listen[1:], "]:")[0]
 			parsed[i] = "tcp6"
 		} else {
@@ -167,7 +167,7 @@ func parseListenAddress(addrs []string, log *logger.L) ([]string, error) {
 			parsed[i] = "tcp4"
 		}
 
-		if ip := net.ParseIP(listen); nil == ip {
+		if ip := net.ParseIP(listen); ip == nil {
 			err := fault.InvalidIpAddress
 			log.Errorf("rpc server listen error: %s", err)
 			return nil, err

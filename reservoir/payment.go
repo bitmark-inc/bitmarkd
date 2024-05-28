@@ -22,7 +22,7 @@ type PaymentSegment [currency.Count]*transactionrecord.Payment
 
 // get payment record from a specific block given the blocks 8 byte big endian key
 func getPayments(transferBlockNumber uint64, issueBlockNumber uint64, previousTransfer transactionrecord.BitmarkTransfer, blockOwnerPaymentHandle storage.Handle) []transactionrecord.PaymentAlternative {
-	if nil == blockOwnerPaymentHandle {
+	if blockOwnerPaymentHandle == nil {
 		return []transactionrecord.PaymentAlternative{}
 	}
 
@@ -48,7 +48,7 @@ func getPayments(transferBlockNumber uint64, issueBlockNumber uint64, previousTr
 
 	// last transfer payment if there is one otherwise issuer gets double
 	transferPayment := getPayment(tKey, blockOwnerPaymentHandle)
-	if nil == transferPayment {
+	if transferPayment == nil {
 		for _, ip := range payments {
 			ip[0].Amount *= 2
 		}
@@ -70,7 +70,7 @@ func getPayments(transferBlockNumber uint64, issueBlockNumber uint64, previousTr
 	}
 
 	// optional payment record (if previous record was transfer and contains such)
-	if nil != previousTransfer && nil != previousTransfer.GetPayment() {
+	if previousTransfer != nil && previousTransfer.GetPayment() != nil {
 
 		i := previousTransfer.GetPayment().Currency.Index() // zero based index (panics if any problem)
 
@@ -86,11 +86,11 @@ func getPayments(transferBlockNumber uint64, issueBlockNumber uint64, previousTr
 
 // get a payment record from a specific block given the blocks 8 byte big endian key
 func getPayment(blockNumberKey []byte, blockOwnerPaymentHandle storage.Handle) *PaymentSegment {
-	if nil == blockOwnerPaymentHandle {
+	if blockOwnerPaymentHandle == nil {
 		return nil
 	}
 
-	if 8 != len(blockNumberKey) {
+	if len(blockNumberKey) != 8 {
 		logger.Panicf("payment.getPayment: block number need 8 bytes: %x", blockNumberKey)
 	}
 
@@ -100,12 +100,12 @@ func getPayment(blockNumberKey []byte, blockOwnerPaymentHandle storage.Handle) *
 	}
 
 	paymentData := blockOwnerPaymentHandle.Get(blockNumberKey)
-	if nil == paymentData {
+	if paymentData == nil {
 		logger.Panicf("payment.getPayment: no block payment data for block number: %x", blockNumberKey)
 	}
 
 	cMap, _, err := currency.UnpackMap(paymentData, mode.IsTesting())
-	if nil != err {
+	if err != nil {
 		logger.Panicf("payment.getPayment: block payment data error: %s", err)
 	}
 
@@ -114,7 +114,7 @@ func getPayment(blockNumberKey []byte, blockOwnerPaymentHandle storage.Handle) *
 	for c, address := range cMap {
 		i := c.Index() // zero based index
 		fee, err := c.GetFee()
-		if nil != err {
+		if err != nil {
 			logger.Panicf("payment.getPayment: get fee returned error: %s", err)
 		}
 

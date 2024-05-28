@@ -89,7 +89,7 @@ func setup(t *testing.T) (int, listeners.Listener) {
 		fixtures.Certificate(fixturePath),
 		fixtures.Key(fixturePath),
 	)
-	if nil != err {
+	if err != nil {
 		t.Error("get certificate with error: ", err)
 		t.FailNow()
 	}
@@ -100,7 +100,7 @@ func setup(t *testing.T) (int, listeners.Listener) {
 		tlsConf,
 		testHandler{},
 	)
-	if nil != err {
+	if err != nil {
 		t.Error("NewHTTPS with error: ", err)
 		t.FailNow()
 	}
@@ -126,7 +126,7 @@ func TestHttpsListenerServeRPC(t *testing.T) {
 	time.Sleep(time.Millisecond) // make sure server is ready
 	url := fmt.Sprintf("https://127.0.0.1:%d/bitmarkd/", port)
 	resp, err := client.Get(url + "rpc")
-	if nil != err {
+	if err != nil {
 		t.Error("client get with error: ", err)
 		t.FailNow()
 	}
@@ -148,7 +148,7 @@ func TestHttpsListenerServeDetails(t *testing.T) {
 	time.Sleep(time.Millisecond)
 	url := fmt.Sprintf("https://127.0.0.1:%d/bitmarkd/", port)
 	resp, err := client.Get(url + "details")
-	if nil != err {
+	if err != nil {
 		t.Error("client get with error: ", err)
 		t.FailNow()
 	}
@@ -170,7 +170,7 @@ func TestHttpsListenerServePeers(t *testing.T) {
 	time.Sleep(time.Millisecond)
 	url := fmt.Sprintf("https://127.0.0.1:%d/bitmarkd/", port)
 	resp, err := client.Get(url + "peers")
-	if nil != err {
+	if err != nil {
 		t.Error("client get with error: ", err)
 		t.FailNow()
 	}
@@ -192,7 +192,7 @@ func TestHttpsListenerServeConnections(t *testing.T) {
 	time.Sleep(time.Millisecond)
 	url := fmt.Sprintf("https://127.0.0.1:%d/bitmarkd/", port)
 	resp, err := client.Get(url + "connections")
-	if nil != err {
+	if err != nil {
 		t.Error("client get with error: ", err)
 		t.FailNow()
 	}
@@ -214,7 +214,7 @@ func TestHttpsListenerServeRoot(t *testing.T) {
 	time.Sleep(time.Millisecond)
 	url := fmt.Sprintf("https://127.0.0.1:%d/bitmarkd/", port)
 	resp, err := client.Get(url)
-	if nil != err {
+	if err != nil {
 		t.Error("client get with error: ", err)
 		t.FailNow()
 	}

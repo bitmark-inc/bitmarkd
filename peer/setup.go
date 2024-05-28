@@ -78,12 +78,12 @@ func Initialise(configuration *Configuration, version string, fastsync bool) err
 
 	// read the keys
 	privateKey, err := zmqutil.ReadPrivateKey(configuration.PrivateKey)
-	if nil != err {
+	if err != nil {
 		globalData.log.Errorf("read private key file: %q  error: %s", configuration.PrivateKey, err)
 		return err
 	}
 	publicKey, err := zmqutil.ReadPublicKey(configuration.PublicKey)
-	if nil != err {
+	if err != nil {
 		globalData.log.Errorf("read public key file: %q  error: %s", configuration.PublicKey, err)
 		return err
 	}
@@ -94,14 +94,14 @@ func Initialise(configuration *Configuration, version string, fastsync bool) err
 
 	// set up announcer before any connections
 	err = setAnnounce(configuration, publicKey)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
-	if err := globalData.lstn.initialise(privateKey, publicKey, configuration.Listen, version); nil != err {
+	if err := globalData.lstn.initialise(privateKey, publicKey, configuration.Listen, version); err != nil {
 		return err
 	}
-	if err := globalData.conn.initialise(privateKey, publicKey, configuration.Connect, configuration.DynamicConnections, configuration.PreferIPv6, fastsync); nil != err {
+	if err := globalData.conn.initialise(privateKey, publicKey, configuration.Connect, configuration.DynamicConnections, configuration.PreferIPv6, fastsync); err != nil {
 		return err
 	}
 
@@ -130,17 +130,17 @@ func setAnnounce(configuration *Configuration, publicKey []byte) error {
 
 process_listen:
 	for i, address := range configuration.Announce {
-		if "" == address {
+		if address == "" {
 			continue process_listen
 		}
 		c, err := util.NewConnection(address)
-		if nil != err {
+		if err != nil {
 			globalData.log.Errorf("announce listen[%d]=%q  error: %s", i, address, err)
 			return err
 		}
 		l = append(l, c.Pack()...)
 	}
-	if err := announce.SetSelf(publicKey, l); nil != err {
+	if err := announce.SetSelf(publicKey, l); err != nil {
 		globalData.log.Errorf("announce.SetPeer error: %s", err)
 		return err
 	}
@@ -175,8 +175,9 @@ func PublicKey() []byte {
 }
 
 // GetCounts - return connection counts:
-//   incoming - total peers connecting to all listeners
-//   outgoing - total outgoing connections
+//
+//	incoming - total peers connecting to all listeners
+//	outgoing - total outgoing connections
 func GetCounts() (uint64, uint64) {
 	return globalData.lstn.connections, uint64(globalData.clientCount)
 }

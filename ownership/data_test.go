@@ -72,7 +72,7 @@ func TestPackAssetData(t *testing.T) {
 	}
 
 	unpacked, err := packed.Unpack()
-	if nil != err {
+	if err != nil {
 		t.Fatalf("unpack error: %s", err)
 	}
 
@@ -124,7 +124,7 @@ func TestPackBlockData(t *testing.T) {
 	}
 
 	unpacked, err := packed.Unpack()
-	if nil != err {
+	if err != nil {
 		t.Fatalf("unpack error: %s", err)
 	}
 
@@ -196,7 +196,7 @@ func TestPackShareData(t *testing.T) {
 	}
 
 	unpacked, err := packed.Unpack()
-	if nil != err {
+	if err != nil {
 		t.Fatalf("unpack error: %s", err)
 	}
 

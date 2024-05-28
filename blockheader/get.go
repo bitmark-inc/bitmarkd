@@ -57,7 +57,7 @@ func DigestForBlock(number uint64) (blockdigest.Digest, error) {
 	}
 
 	digest, err := genDigestFromPool(storage.Pool.Blocks, n)
-	if nil != err {
+	if err != nil {
 		return blockdigest.Digest{}, err
 	}
 
@@ -67,7 +67,7 @@ func DigestForBlock(number uint64) (blockdigest.Digest, error) {
 
 func ClearCache() {
 	cacheLock.Lock()
-	cached = *new([cacheSize]cachedBlockDigest)
+	cached = [cacheSize]cachedBlockDigest{}
 	cacheLock.Unlock()
 }
 
@@ -100,7 +100,7 @@ func addToCache(blockNumber uint64, digest blockdigest.Digest) {
 
 func genDigestFromPool(pool storage.Handle, blockNumber []byte) (blockdigest.Digest, error) {
 	packed := pool.Get(blockNumber)
-	if nil == packed {
+	if packed == nil {
 		return blockdigest.Digest{}, fault.BlockNotFound
 	}
 

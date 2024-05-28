@@ -29,7 +29,7 @@ func ParseConfigurationFile(fileName string, config interface{}) error {
 
 	// prepare global "interface_public_ips" table
 	addrList, err := net.InterfaceAddrs()
-	if nil == err {
+	if err == nil {
 
 		// RFC 1918 (Address Allocation for Private Internets) [/8 /12 and /16]
 		rfc1918_8 := net.ParseIP("10.0.0.0")
@@ -48,13 +48,13 @@ func ParseConfigurationFile(fileName string, config interface{}) error {
 	ip_loop:
 		for _, a := range addrList {
 			ip, _, err := net.ParseCIDR(a.String())
-			if nil != err || !ip.IsGlobalUnicast() {
+			if err != nil || !ip.IsGlobalUnicast() {
 				// exclude most non-routable addresses
 				// like loopback and IPv6 link local
 				continue ip_loop
 			}
 
-			if ip4 := ip.To4(); nil != ip4 {
+			if ip4 := ip.To4(); ip4 != nil {
 				// mask to specific IPv4 network sizes
 				ip4_8 := ip4.Mask(net.CIDRMask(8, 32))
 				ip4_12 := ip4.Mask(net.CIDRMask(12, 32))

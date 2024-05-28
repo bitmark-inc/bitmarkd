@@ -9,9 +9,8 @@ import (
 	"fmt"
 	"os"
 
-	"golang.org/x/crypto/ssh/terminal"
-
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 var passwordConsole *terminal.Terminal
@@ -22,12 +21,12 @@ func getTerminal() (*terminal.Terminal, int, *terminal.State) {
 		panic(err)
 	}
 
-	if nil != passwordConsole {
+	if passwordConsole != nil {
 		return passwordConsole, 0, oldState
 	}
 
 	tmpIO, err := os.OpenFile("/dev/tty", os.O_RDWR, os.ModePerm)
-	if nil != err {
+	if err != nil {
 		panic("No console")
 	}
 
@@ -41,7 +40,7 @@ func promptNewPassword() (string, error) {
 	password, err := console.ReadPassword("Set new password (length >= 8): ")
 	terminal.Restore(fd, state)
 
-	if nil != err {
+	if err != nil {
 		fmt.Printf("Get password fail: %s\n", err)
 		return "", err
 	}
@@ -55,7 +54,7 @@ func promptNewPassword() (string, error) {
 	verifyPassword, err := console.ReadPassword("Confirm new password: ")
 	terminal.Restore(fd, state)
 
-	if nil != err {
+	if err != nil {
 		fmt.Printf("verify failed: %s\n", err)
 		return "", fault.PasswordMismatch
 	}
@@ -72,7 +71,7 @@ func promptPassword(name string) (string, error) {
 	password, err := console.ReadPassword("Password for: " + name + ": ")
 	terminal.Restore(fd, state)
 
-	if nil != err {
+	if err != nil {
 		fmt.Printf("read password error: %s\n", err)
 		return "", err
 	}

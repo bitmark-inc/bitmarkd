@@ -39,7 +39,7 @@ func BlockDump(number uint64, decodeTxs bool) (*blockResult, error) {
 	binary.BigEndian.PutUint64(n, number)
 
 	packed := storage.Pool.Blocks.Get(n)
-	if nil == packed {
+	if packed == nil {
 		return nil, fault.BlockNotFound
 	}
 
@@ -52,7 +52,7 @@ func BlockDecode(packed []byte, number uint64, decodeTxs bool) (*blockResult, er
 	br := blockrecord.Get()
 
 	header, digest, data, err := br.ExtractHeader(packed, number, false)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -71,7 +71,7 @@ func BlockDecode(packed []byte, number uint64, decodeTxs bool) (*blockResult, er
 loop:
 	for i := 1; true; i += 1 {
 		transaction, n, err := transactionrecord.Packed(data).Unpack(mode.IsTesting())
-		if nil != err {
+		if err != nil {
 			return nil, err
 		}
 		name, _ := transactionrecord.RecordName(transaction)
@@ -82,7 +82,7 @@ loop:
 			Data:  transaction,
 		}
 		data = data[n:]
-		if 0 == len(data) {
+		if len(data) == 0 {
 			break loop
 		}
 	}

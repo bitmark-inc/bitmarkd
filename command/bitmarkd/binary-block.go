@@ -20,12 +20,13 @@ import (
 
 // save blocks above genesis block to a file
 // record format:
-//   big endian record length (n)   8 bytes
-//   block data                     n bytes
+//
+//	big endian record length (n)   8 bytes
+//	block data                     n bytes
 func saveBinaryBlocks(filename string) error {
 
 	fh, err := os.Create(filename)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	defer fh.Close()
@@ -44,7 +45,7 @@ loop:
 			fmt.Printf(".")
 		}
 		buffer, err := getBinaryBlock(n)
-		if nil != err {
+		if err != nil {
 			if started && fault.BlockNotFound == err {
 				break loop
 			}
@@ -54,11 +55,11 @@ loop:
 		l := make([]byte, 8)
 		binary.BigEndian.PutUint64(l, uint64(len(buffer)))
 		err = writeRecord(fh, l)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 		err = writeRecord(fh, buffer)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 	}
@@ -68,7 +69,7 @@ loop:
 func writeRecord(fh *os.File, buffer []byte) error {
 	l := len(buffer)
 	k, err := fh.Write(buffer)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	if l != k {
@@ -85,7 +86,7 @@ func getBinaryBlock(number uint64) ([]byte, error) {
 	binary.BigEndian.PutUint64(n, number)
 
 	packed := storage.Pool.Blocks.Get(n)
-	if nil == packed {
+	if packed == nil {
 		return nil, fault.BlockNotFound
 	}
 	return packed, nil
@@ -95,7 +96,7 @@ func getBinaryBlock(number uint64) ([]byte, error) {
 // record format: (as save above)
 func restoreBinaryBlocks(filename string) error {
 	fh, err := os.Open(filename)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	defer fh.Close()
@@ -117,14 +118,14 @@ loop:
 		err := readRecord(fh, l)
 		if err == io.EOF {
 			break loop
-		} else if nil != err {
+		} else if err != nil {
 			return err
 		}
 		size := binary.BigEndian.Uint64(l)
 
 		buffer := make([]byte, size)
 		err = readRecord(fh, buffer)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 		block.StoreIncoming(buffer, nil, block.NoRescanVerified)
@@ -135,7 +136,7 @@ loop:
 func readRecord(fh *os.File, buffer []byte) error {
 	l := len(buffer)
 	k, err := fh.Read(buffer)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	if k != l {

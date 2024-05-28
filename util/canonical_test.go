@@ -40,7 +40,7 @@ func TestCanonical(t *testing.T) {
 
 		// create a connection item
 		c, err := NewConnection(d.in)
-		if nil != err {
+		if err != nil {
 			t.Fatalf("NewConnection failed on:[%d] %q  error: %s", i, d.in, err)
 		}
 
@@ -94,7 +94,7 @@ func TestCanonicalIP(t *testing.T) {
 
 	for i, d := range testData {
 		c, err := NewConnection(d.ip)
-		if nil == err {
+		if err == nil {
 			s, v6 := c.CanonicalIPandPort("")
 			t.Fatalf("eroneoulssly converted:[%d]: %q  to(%t): %q", i, d.ip, v6, s)
 		}
@@ -115,7 +115,7 @@ func TestCanonicalPort(t *testing.T) {
 
 	for i, d := range testData {
 		c, err := NewConnection(d)
-		if nil == err {
+		if err == nil {
 			s, v6 := c.CanonicalIPandPort("")
 			t.Fatalf("eroneoulssly converted:[%d]: %q  to(%t): %q", i, d, v6, s)
 		}
@@ -128,7 +128,7 @@ func TestCanonicalPort(t *testing.T) {
 // helper
 func makePacked(h string) PackedConnection {
 	b, err := hex.DecodeString(h)
-	if nil != err {
+	if err != nil {
 		panic(err)
 	}
 	return b
@@ -202,11 +202,11 @@ func TestCanonicalUnpack(t *testing.T) {
 
 		v4, v6 := p.Unpack46()
 		v4s := "<nil>"
-		if nil != v4 {
+		if v4 != nil {
 			v4s, _ = v4.CanonicalIPandPort("")
 		}
 		v6s := "<nil>"
-		if nil != v6 {
+		if v6 != nil {
 			v6s, _ = v6.CanonicalIPandPort("")
 		}
 		if data.v4 != v4s {
@@ -222,7 +222,7 @@ func TestCanonicalUnpack(t *testing.T) {
 			c, n := p.Unpack()
 			p = p[n:]
 
-			if nil == c {
+			if c == nil {
 				// only signal error if nil was not just after last address
 				if k != al {
 					t.Errorf("unpack:[%d]: nil connection, n: %d", i, n)

@@ -66,7 +66,7 @@ func loggerConfiguration() logger.Configuration {
 }
 
 func setupLogger(t *testing.T) {
-	_ = os.Mkdir(logDirectory, 0770)
+	_ = os.Mkdir(logDirectory, 0o770)
 	logging = loggerConfiguration()
 	_ = logger.Initialise(logging)
 }
@@ -87,7 +87,7 @@ func TestGetConfig(t *testing.T) {
 	defer teardown()
 
 	oldConfig, _ := reader.GetConfig()
-	if nil != oldConfig {
+	if oldConfig != nil {
 		t.Errorf("Cannot get configuration")
 	}
 

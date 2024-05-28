@@ -313,14 +313,13 @@ func (w *p2pWatcher) sync() {
 						// The loop will retry the fetching process if there are other errors
 						w.log.Warnf("fetch header error: %s", err)
 					}
-				} else {
-					if p.LastBlock() <= w.lastHeight {
-						if err := w.sleep(30 * time.Second); err == fault.ProcessStopping {
-							w.log.Trace("stop syncing…")
-							return
-						}
+				} else if p.LastBlock() <= w.lastHeight {
+					if err := w.sleep(30 * time.Second); err == fault.ProcessStopping {
+						w.log.Trace("stop syncing…")
+						return
 					}
 				}
+
 			}
 		}
 
@@ -609,7 +608,7 @@ loop:
 			amounts[addr.String()] = uint64(txout.Value)
 
 			address2, err := litecoin.TransformAddress(addr.String())
-			if nil == err && address2 != addr.String() {
+			if err == nil && address2 != addr.String() {
 				amounts[address2] = uint64(txout.Value)
 			}
 
@@ -642,7 +641,7 @@ func (w *p2pWatcher) onPeerBlock(p *peer.Peer, msg *wire.MsgBlock, buf []byte) e
 		id, amounts := w.examineTransaction(tx)
 		if id != nil {
 			var payId pay.PayId
-			copy(payId[:], id[:])
+			copy(payId[:], id)
 			txId := tx.TxHash().String()
 
 			w.log.Debugf("Find a potential payment. payId: %s, txId: %s", payId.String(), txId)

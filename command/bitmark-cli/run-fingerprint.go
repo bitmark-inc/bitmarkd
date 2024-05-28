@@ -24,7 +24,7 @@ func runFingerprint(c *cli.Context) error {
 	m := c.App.Metadata["config"].(*metadata)
 
 	fileName, err := checkFileName(c.String("file"))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -33,12 +33,12 @@ func runFingerprint(c *cli.Context) error {
 	}
 
 	file, err := os.Open(fileName)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	data, err := ioutil.ReadAll(file)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

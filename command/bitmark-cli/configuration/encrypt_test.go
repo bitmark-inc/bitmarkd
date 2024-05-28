@@ -18,22 +18,22 @@ func TestEncryptDecrypt(t *testing.T) {
 
 	for _, password := range passwords {
 		salt, key, err := hashPassword(password)
-		if nil != err {
+		if err != nil {
 			t.Fatalf("hash error: %s", err)
 		}
 
 		encrypted, err := encryptData(plainText, key)
-		if nil != err {
+		if err != nil {
 			t.Fatalf("encrypt error: %s", err)
 		}
 
 		key2, err := generateKey(password, salt)
-		if nil != err {
+		if err != nil {
 			t.Fatalf("generateKey error: %s", err)
 		}
 
 		decrypted, err := decryptData(encrypted, key2)
-		if nil != err {
+		if err != nil {
 			t.Fatalf("decrypt error: %s", err)
 		}
 
@@ -74,18 +74,18 @@ func TestDecryptionAnNoDuplication(t *testing.T) {
 
 		var salt Salt
 		err := salt.UnmarshalText([]byte(item.salt))
-		if nil != err {
+		if err != nil {
 			t.Fatalf("%d: unmarshal salt error: %s", i, err)
 		}
 
 		key, err := generateKey(item.password, &salt)
-		if nil != err {
+		if err != nil {
 			t.Fatalf("generateKey failed: %s", err)
 		}
 
 		// this will get a different ivec each time no will never be the same
 		newEncrypted, err := encryptData(plainText, key)
-		if nil != err {
+		if err != nil {
 			t.Fatalf("%d: encrypt error: %s", i, err)
 		}
 
@@ -99,7 +99,7 @@ func TestDecryptionAnNoDuplication(t *testing.T) {
 		}
 
 		decrypted, err := decryptData(item.ciphertext, key)
-		if nil != err {
+		if err != nil {
 			t.Fatalf("%d: decrypt error: %s", i, err)
 		}
 
@@ -110,12 +110,12 @@ func TestDecryptionAnNoDuplication(t *testing.T) {
 
 		// test password mismatch
 		key, err = generateKey("A Bad Password", &salt)
-		if nil != err {
+		if err != nil {
 			t.Fatalf("generateKey failed: %s", err)
 		}
 
 		_, err = decryptData(item.ciphertext, key)
-		if nil == err {
+		if err == nil {
 			t.Errorf("%d: unexpected decryption success", i)
 		}
 	}

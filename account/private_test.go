@@ -47,7 +47,7 @@ loop:
 		buffer := []byte{byte(test.algorithm << 4)}
 		buffer = append(buffer, test.privateKey...)
 		privateKey, err := account.PrivateKeyFromBytes(buffer)
-		if nil != err {
+		if err != nil {
 			t.Errorf("%d: Create privateKey from bytes failed: %s", index, err)
 			continue loop
 		}
@@ -61,7 +61,7 @@ func TestPrivateValidBase58(t *testing.T) {
 loop:
 	for index, test := range testPrivateKey {
 		prv, err := account.PrivateKeyFromBase58(test.base58PrivateKey)
-		if nil != err {
+		if err != nil {
 			t.Errorf("%d: from base58 error: %s", index, err)
 			continue loop
 		}
@@ -79,7 +79,7 @@ loop:
 		j := `"` + test.base58PrivateKey + `"`
 		var a account.PrivateKey
 		err = json.Unmarshal([]byte(j), &a)
-		if nil != err {
+		if err != nil {
 			t.Errorf("%d: from JSON string error: %s", index, err)
 			continue loop
 		}

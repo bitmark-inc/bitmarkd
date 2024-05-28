@@ -30,7 +30,7 @@ func setup(t *testing.T) {
 	})
 
 	err := blockheader.Initialise()
-	if nil != err {
+	if err != nil {
 		t.Fatalf("initialise error: %s", err)
 	}
 }
@@ -38,7 +38,7 @@ func setup(t *testing.T) {
 // post test cleanup
 func teardown(t *testing.T) {
 	err := blockheader.Finalise()
-	if nil != err {
+	if err != nil {
 		t.Fatalf("finalise error: %s", err)
 	}
 	logger.Finalise()

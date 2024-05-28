@@ -27,7 +27,7 @@ func memstats() {
 		runtime.ReadMemStats(&m)
 
 		text, err := json.Marshal(m)
-		if nil != err {
+		if err != nil {
 			log.Errorf("marshal error: %s", err)
 		} else {
 			log.Infof("stats: %s", text)

@@ -18,17 +18,17 @@ func runTransfer(c *cli.Context) error {
 	m := c.App.Metadata["config"].(*metadata)
 
 	txId, err := checkTxId(c.String("txid"))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	to, recipient, err := checkRecipient(c, "receiver", m.config)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	from, owner, err := checkOwnerWithPasswordPrompt(c.GlobalString("identity"), m.config, c)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -39,7 +39,7 @@ func runTransfer(c *cli.Context) error {
 	}
 
 	client, err := rpccalls.NewClient(m.testnet, m.config.Connections[m.connectionOffset], m.verbose, m.e)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	defer client.Close()
@@ -53,7 +53,7 @@ func runTransfer(c *cli.Context) error {
 	if c.Bool("unratified") {
 
 		response, err := client.Transfer(transferConfig)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 
@@ -61,7 +61,7 @@ func runTransfer(c *cli.Context) error {
 
 	} else {
 		response, err := client.SingleSignedTransfer(transferConfig)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 

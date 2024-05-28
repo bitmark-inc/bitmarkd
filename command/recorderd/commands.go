@@ -37,7 +37,7 @@ func processSetupCommand(program string, arguments []string) bool {
 		privateKeyFilename := getFilenameWithDirectory(arguments, recorderdPrivateKeyFilename)
 
 		err := zmqutil.MakeKeyPair(publicKeyFilename, privateKeyFilename)
-		if nil != err {
+		if err != nil {
 			fmt.Printf("cannot generate private key: %q and public key: %q\n", privateKeyFilename, publicKeyFilename)
 			fmt.Printf("error generating server key pair: %v\n", err)
 			exitwithstatus.Exit(1)

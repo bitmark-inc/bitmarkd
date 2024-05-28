@@ -10,11 +10,10 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/bitmark-inc/bitmarkd/storage/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/syndtr/goleveldb/leveldb"
-
-	"github.com/bitmark-inc/bitmarkd/storage/mocks"
 )
 
 const (
@@ -30,7 +29,7 @@ var (
 
 func initialiseVars() {
 	trx = new(leveldb.Batch)
-	if nil == db {
+	if db == nil {
 		db, _ = leveldb.OpenFile(dbName, nil)
 	}
 }

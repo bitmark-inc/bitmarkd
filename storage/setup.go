@@ -11,11 +11,10 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/syndtr/goleveldb/leveldb"
-	ldb_opt "github.com/syndtr/goleveldb/leveldb/opt"
-
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/logger"
+	"github.com/syndtr/goleveldb/leveldb"
+	ldb_opt "github.com/syndtr/goleveldb/leveldb/opt"
 )
 
 // exported storage pools
@@ -80,7 +79,7 @@ func Initialise(dbPrefix string, readOnly bool) error {
 
 	ok := false
 
-	if nil != poolData.bitmarksDB {
+	if poolData.bitmarksDB != nil {
 		return fault.AlreadyInitialised
 	}
 
@@ -110,13 +109,13 @@ func Initialise(dbPrefix string, readOnly bool) error {
 	ltcDatabase := dbPrefix + "-ltc.leveldb"
 
 	db, _, err := getDB(btcDatabase, readOnly)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	PaymentStorage.Btc = NewLevelDBPaymentStore(db)
 
 	db, _, err = getDB(ltcDatabase, readOnly)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	PaymentStorage.Ltc = NewLevelDBPaymentStore(db)
@@ -157,7 +156,7 @@ func setupPools(bitmarksDBAccess Access) error {
 		prefixTag := fieldInfo.Tag.Get("prefix")
 		poolTag := fieldInfo.Tag.Get("pool")
 
-		if 1 != len(prefixTag) || 0 == len(poolTag) {
+		if len(prefixTag) != 1 || poolTag == "" {
 			return fmt.Errorf("pool: %v has invalid prefix: %q, poolTag: %s", fieldInfo, prefixTag, poolTag)
 		}
 
@@ -191,7 +190,7 @@ func openBitmarkdDB(dbPrefix string, readOnly bool) (int, error) {
 	name := fmt.Sprintf("%s-%s.leveldb", dbPrefix, bitmarksDBName)
 
 	db, version, err := getDB(name, readOnly)
-	if nil != err {
+	if err != nil {
 		return 0, err
 	}
 	poolData.bitmarksDB = db
@@ -218,7 +217,7 @@ func validateBitmarksDBVersion(bitmarksDBVersion int, readOnly bool) error {
 
 	if 0 < bitmarksDBVersion && bitmarksDBVersion < currentBitmarksDBVersion {
 		needMigration = true
-	} else if 0 == bitmarksDBVersion {
+	} else if bitmarksDBVersion == 0 {
 		// database was empty so tag as current version
 		err := putVersion(poolData.bitmarksDB, currentBitmarksDBVersion)
 		if err != nil {
@@ -230,22 +229,22 @@ func validateBitmarksDBVersion(bitmarksDBVersion int, readOnly bool) error {
 }
 
 func dbClose() {
-	if nil != poolData.bitmarksDB {
-		if err := poolData.bitmarksDB.Close(); nil != err {
+	if poolData.bitmarksDB != nil {
+		if err := poolData.bitmarksDB.Close(); err != nil {
 			logger.Criticalf("close bitmarkd db with error: %s", err)
 		}
 		poolData.bitmarksDB = nil
 	}
 
-	if nil != PaymentStorage.Btc {
-		if err := PaymentStorage.Btc.Close(); nil != err {
+	if PaymentStorage.Btc != nil {
+		if err := PaymentStorage.Btc.Close(); err != nil {
 			logger.Criticalf("close btc db with error: %s", err)
 		}
 		PaymentStorage.Btc = nil
 	}
 
-	if nil != PaymentStorage.Ltc {
-		if err := PaymentStorage.Ltc.Close(); nil != err {
+	if PaymentStorage.Ltc != nil {
+		if err := PaymentStorage.Ltc.Close(); err != nil {
 			logger.Criticalf("close btc db with error: %s", err)
 		}
 		PaymentStorage.Ltc = nil
@@ -260,8 +259,9 @@ func Finalise() {
 }
 
 // return:
-//   database handle
-//   version number
+//
+//	database handle
+//	version number
 func getDB(name string, readOnly bool) (*leveldb.DB, int, error) {
 	opt := &ldb_opt.Options{
 		ErrorIfExist:   false,
@@ -270,24 +270,24 @@ func getDB(name string, readOnly bool) (*leveldb.DB, int, error) {
 	}
 
 	db, err := leveldb.OpenFile(name, opt)
-	if nil != err {
+	if err != nil {
 		return nil, 0, err
 	}
 
 	versionValue, err := db.Get(versionKey, nil)
 	if leveldb.ErrNotFound == err {
 		return db, 0, nil
-	} else if nil != err {
+	} else if err != nil {
 		e := db.Close()
-		if nil != e {
+		if e != nil {
 			logger.Criticalf("close %s database with error: %s", name, e)
 		}
 		return nil, 0, err
 	}
 
-	if 4 != len(versionValue) {
+	if len(versionValue) != 4 {
 		e := db.Close()
-		if nil != e {
+		if e != nil {
 			logger.Criticalf("close %s database with error: %s", name, e)
 		}
 		return nil, 0, fmt.Errorf("incompatible database version length: expected: %d  actual: %d", 4, len(versionValue))
@@ -311,7 +311,7 @@ func IsMigrationNeed() bool {
 
 func NewDBTransaction() (Transaction, error) {
 	err := poolData.trx.Begin()
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 	return poolData.trx, nil

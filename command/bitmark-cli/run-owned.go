@@ -18,9 +18,9 @@ func runOwned(c *cli.Context) error {
 	m := c.App.Metadata["config"].(*metadata)
 
 	ownerId := c.String("owner")
-	if "" == ownerId {
+	if ownerId == "" {
 		ownerId = c.GlobalString("identity")
-		if "" == ownerId {
+		if ownerId == "" {
 			ownerId = m.config.DefaultIdentity
 		}
 	}
@@ -39,12 +39,12 @@ func runOwned(c *cli.Context) error {
 	}
 
 	owner, err := m.config.Account(ownerId)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	client, err := rpccalls.NewClient(m.testnet, m.config.Connections[m.connectionOffset], m.verbose, m.e)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	defer client.Close()
@@ -56,7 +56,7 @@ func runOwned(c *cli.Context) error {
 	}
 
 	response, err := client.GetOwned(ownedConfig)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

@@ -59,10 +59,10 @@ func validateTxOwnerRecords(txId merkle.Digest, owner *account.Account) error {
 	txIndexKey := append(owner.Bytes(), txId[:]...)
 	count := storage.Pool.OwnerTxIndex.Get(txIndexKey)
 
-	ownerListKey := append(owner.Bytes(), count[:]...)
+	ownerListKey := append(owner.Bytes(), count...)
 	txIdFromList := storage.Pool.OwnerList.Get(ownerListKey)
 
-	if !reflect.DeepEqual(txIdFromList[:], txId[:]) {
+	if !reflect.DeepEqual(txIdFromList, txId[:]) {
 		return fault.DataInconsistent
 	}
 	return nil
@@ -86,7 +86,7 @@ func validateBlockOwnerRecord(txId merkle.Digest, payments currency.Map) error {
 	}
 
 	globalData.log.Debugf("validate whether the payment info identical. txId: %s", txId)
-	if !reflect.DeepEqual(storage.Pool.BlockOwnerPayment.Get(blockNumberKey[:]), packedPayment) {
+	if !reflect.DeepEqual(storage.Pool.BlockOwnerPayment.Get(blockNumberKey), packedPayment) {
 		globalData.log.Error("payment info data is not consistent")
 		return fault.DataInconsistent
 	}
@@ -207,6 +207,13 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 				}
 			}
 
+		case *transactionrecord.BitmarkShare, *transactionrecord.ShareGrant, *transactionrecord.ShareSwap:
+			globalData.log.Debugf("validate whether the share transaction indexed. txId: %s", txId)
+			if !storage.Pool.Transactions.Has(txId[:]) {
+				globalData.log.Error("tx is not indexed")
+				return fault.TransactionIsNotIndexed
+			}
+
 		case transactionrecord.BitmarkTransfer:
 			globalData.log.Debugf("validate whether the transfer transaction indexed. txId: %s", txId)
 			if !storage.Pool.Transactions.Has(txId[:]) {
@@ -219,7 +226,7 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 				return fault.PreviousTransactionWasNotDeleted
 			}
 
-			if _, ok := priorTxOwnerTxs[txId.String()]; !ok && nil != tx.GetOwner() {
+			if _, ok := priorTxOwnerTxs[txId.String()]; !ok && tx.GetOwner() != nil {
 				// validate tx ownership indexed only if the txId is not in priorBlockOwnerTxs
 				if err := validateTxOwnerRecords(txId, tx.GetOwner()); err != nil {
 					globalData.log.Error("transaction ownership validation failed")
@@ -229,13 +236,6 @@ func validateTransactionData(header *blockrecord.Header, digest blockdigest.Dige
 			// add the prior tx id into map
 			priorTxOwnerTxs[tx.GetLink().String()] = struct{}{}
 
-		//nolint:ignore SA4020 XXX: unreachable case clause here
-		case *transactionrecord.BitmarkShare, *transactionrecord.ShareGrant, *transactionrecord.ShareSwap:
-			globalData.log.Debugf("validate whether the share transaction indexed. txId: %s", txId)
-			if !storage.Pool.Transactions.Has(txId[:]) {
-				globalData.log.Error("tx is not indexed")
-				return fault.TransactionIsNotIndexed
-			}
 		default:
 			globalData.log.Errorf("unexpected transaction record: %+v", tx)
 			return fault.UnexpectedTransactionRecord
@@ -310,7 +310,7 @@ func Initialise(blockHandle storage.Handle) error {
 	log.Info("starting…")
 
 	// check handle exist
-	if nil == blockHandle {
+	if blockHandle == nil {
 		log.Critical("storage pool is not initialised")
 		return fault.NilPointer
 	}
@@ -321,7 +321,7 @@ func Initialise(blockHandle storage.Handle) error {
 		globalData.Unlock()
 		err := doBlockHeaderHash()
 		globalData.Lock()
-		if nil != err {
+		if err != nil {
 			log.Criticalf("blocks migration error: %s", err)
 			return err
 		}
@@ -336,7 +336,7 @@ func Initialise(blockHandle storage.Handle) error {
 
 		// start validating block indexes
 		header, digest, err := validateAndReturnLastBlock(last)
-		if nil != err {
+		if err != nil {
 			log.Criticalf("failed to validate blocks from storage  error: %s", err)
 			return err
 		}
@@ -348,7 +348,7 @@ func Initialise(blockHandle storage.Handle) error {
 	}
 
 	// initialise background tasks
-	if err := globalData.blk.initialise(); nil != err {
+	if err := globalData.blk.initialise(); err != nil {
 		return err
 	}
 
@@ -402,7 +402,7 @@ func LastBlockHash(pool storage.Handle) string {
 	if last, ok := pool.LastElement(); ok {
 
 		_, digest, _, err := br.ExtractHeader(last.Value, 0, false)
-		if nil != err {
+		if err != nil {
 			log.Criticalf("failed to unpack block: %d from storage error: %s", binary.BigEndian.Uint64(last.Key), err)
 			return ""
 		}

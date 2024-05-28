@@ -34,7 +34,7 @@ func (u *upstreamData) ActiveInThePast(d time.Duration) bool {
 
 // Destroy - shutdown a connection and terminate its background processes
 func (u *upstreamData) Destroy() {
-	if nil != u {
+	if u != nil {
 		close(u.shutdown)
 	}
 }
@@ -89,16 +89,16 @@ func (u *upstreamData) RemoteDigestOfHeight(blockNumber uint64) (blockdigest.Dig
 	u.Lock()
 	var data [][]byte
 	err := u.client.Send("H", parameter)
-	if nil == err {
+	if err == nil {
 		data, err = u.client.Receive(0)
 	}
 	u.Unlock()
 
-	if nil != err {
+	if err != nil {
 		return blockdigest.Digest{}, err
 	}
 
-	if 2 != len(data) {
+	if len(data) != 2 {
 		return blockdigest.Digest{}, fault.InvalidPeerResponse
 	}
 
@@ -127,16 +127,16 @@ func (u *upstreamData) GetBlockData(blockNumber uint64) ([]byte, error) {
 	u.Lock()
 	var data [][]byte
 	err := u.client.Send("B", parameter)
-	if nil == err {
+	if err == nil {
 		data, err = u.client.Receive(0)
 	}
 	u.Unlock()
 
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
-	if 2 != len(data) {
+	if len(data) != 2 {
 		return nil, fault.InvalidPeerResponse
 	}
 
@@ -155,17 +155,17 @@ func (u *upstreamData) RemoteHeight() (uint64, error) {
 	u.log.Infof("RemoteHeight: client: %s", u.client)
 
 	err := u.client.Send("N")
-	if nil != err {
+	if err != nil {
 		u.log.Errorf("RemoteHeight: %s send error: %s", u.client, err)
 		return 0, err
 	}
 
 	data, err := u.client.Receive(0)
-	if nil != err {
+	if err != nil {
 		u.log.Errorf("RemoteHeight: %s receive error: %s", u.client, err)
 		return 0, err
 	}
-	if 2 != len(data) {
+	if len(data) != 2 {
 		return 0, fmt.Errorf("RemoteHeight: received: %d  expected: 2", len(data))
 	}
 
@@ -173,7 +173,7 @@ func (u *upstreamData) RemoteHeight() (uint64, error) {
 	case "E":
 		return 0, fmt.Errorf("RemoteHeight: error response: %q", data[1])
 	case "N":
-		if 8 != len(data[1]) {
+		if len(data[1]) != 8 {
 			return 0, fmt.Errorf("RemoteHeight: invalid response: %q", data[1])
 		}
 		height := binary.BigEndian.Uint64(data[1])
@@ -193,12 +193,12 @@ func (u *upstreamData) CachedRemoteDigestOfLocalHeight() blockdigest.Digest {
 func (u *upstreamData) RemoteAddr() (string, error) {
 	var err error
 
-	if nil == u.client {
+	if u.client == nil {
 		err = fault.ClientSocketNotCreated
 	} else if !u.client.IsConnected() {
 		err = fault.ClientSocketNotConnected
 	}
-	if nil != err {
+	if err != nil {
 		u.log.Warnf("remote address not available error: %s", err)
 		return "", err
 	}

@@ -21,7 +21,7 @@ func Save(filename string, configuration *Configuration) error {
 	os.Remove(tempFile)
 
 	f, err := os.Create(tempFile)
-	if nil != err {
+	if err != nil {
 		fmt.Printf("Create file fail: %s\n", err)
 		return err
 	}
@@ -29,7 +29,7 @@ func Save(filename string, configuration *Configuration) error {
 	enc := json.NewEncoder(f)
 	enc.SetIndent("", "  ")
 	err = enc.Encode(configuration)
-	if nil != err {
+	if err != nil {
 		f.Close()
 		return err
 	}
@@ -37,15 +37,15 @@ func Save(filename string, configuration *Configuration) error {
 	f.Close()
 
 	err = os.Remove(previousFile)
-	if nil != err && !strings.Contains(err.Error(), "no such file") {
+	if err != nil && !strings.Contains(err.Error(), "no such file") {
 		return err
 	}
 	err = os.Rename(filename, previousFile)
-	if nil != err && !strings.Contains(err.Error(), "no such file") {
+	if err != nil && !strings.Contains(err.Error(), "no such file") {
 		return err
 	}
 	err = os.Rename(tempFile, filename)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

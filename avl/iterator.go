@@ -12,10 +12,10 @@ func (tree *Tree) First() *Node {
 
 // internal: lowest node in a sub-tree
 func (tree *Node) first() *Node {
-	if nil == tree {
+	if tree == nil {
 		return nil
 	}
-	for nil != tree.left {
+	for tree.left != nil {
 		tree = tree.left
 	}
 	return tree
@@ -28,10 +28,10 @@ func (tree *Tree) Last() *Node {
 
 // internal: highest node in a sub-tree
 func (tree *Node) last() *Node {
-	if nil == tree {
+	if tree == nil {
 		return nil
 	}
-	for nil != tree.right {
+	for tree.right != nil {
 		tree = tree.right
 	}
 	return tree
@@ -40,14 +40,14 @@ func (tree *Node) last() *Node {
 // Next - given a node, return the node with the next highest key
 // value or nil if no more nodes.
 func (tree *Node) Next() *Node {
-	if nil == tree.right {
+	if tree.right == nil {
 		key := tree.key
 		for {
 			tree = tree.up
-			if nil == tree {
+			if tree == nil {
 				return nil
 			}
-			if 1 == tree.key.Compare(key) { // tree.key > key
+			if tree.key.Compare(key) == 1 { // tree.key > key
 				return tree
 			}
 		}
@@ -58,11 +58,11 @@ func (tree *Node) Next() *Node {
 // Prev - given a node, return the node with the lowest key value or
 // nil if no more nodes
 func (tree *Node) Prev() *Node {
-	if nil == tree.left {
+	if tree.left == nil {
 		key := tree.key
 		for {
 			tree = tree.up
-			if nil == tree {
+			if tree == nil {
 				return nil
 			}
 			if -1 == tree.key.Compare(key) { // tree.key < key

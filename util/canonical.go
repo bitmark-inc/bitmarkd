@@ -23,19 +23,19 @@ type Connection struct {
 // NewConnection - create a connection from an Host:Port string
 func NewConnection(hostPort string) (*Connection, error) {
 	host, port, err := net.SplitHostPort(hostPort)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
 	host = strings.TrimSpace(host)
 
 	IP := net.ParseIP(host)
-	if "*" == host && nil == IP {
+	if host == "*" && IP == nil {
 		IP = net.ParseIP("::")
 	}
-	if nil == IP {
+	if IP == nil {
 		ips, err := net.LookupIP(host)
-		if nil != err {
+		if err != nil {
 			return nil, err
 		}
 		if len(ips) < 1 {
@@ -45,7 +45,7 @@ func NewConnection(hostPort string) (*Connection, error) {
 	}
 
 	numericPort, err := strconv.Atoi(strings.TrimSpace(port))
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 	if numericPort < 1 || numericPort > 65535 {
@@ -60,14 +60,14 @@ func NewConnection(hostPort string) (*Connection, error) {
 
 // NewConnections -  convert an array of connections
 func NewConnections(hostPort []string) ([]*Connection, error) {
-	if 0 == len(hostPort) {
+	if len(hostPort) == 0 {
 		return nil, fault.InvalidLength
 	}
 	c := make([]*Connection, len(hostPort))
 	for i, hp := range hostPort {
 		var err error
 		c[i], err = NewConnection(hp)
-		if nil != err {
+		if err != nil {
 			return nil, err
 		}
 	}
@@ -85,15 +85,16 @@ func ConnectionFromIPandPort(ip net.IP, port uint16) *Connection {
 // CanonicalIPandPort - make the IP:Port into canonical string
 //
 // examples:
-//   IPv4:  127.0.0.1:1234
-//   IPv6:  [::1]:1234
+//
+//	IPv4:  127.0.0.1:1234
+//	IPv6:  [::1]:1234
 //
 // prefix is optional and can be empty ("")
 // returns prefixed string and IPv6 flag
 func (conn *Connection) CanonicalIPandPort(prefix string) (string, bool) {
 
 	port := int(conn.port)
-	if nil != conn.ip.To4() {
+	if conn.ip.To4() != nil {
 		return prefix + conn.ip.String() + ":" + strconv.Itoa(port), false
 	}
 	return prefix + "[" + conn.ip.String() + "]:" + strconv.Itoa(port), true
@@ -118,7 +119,7 @@ type PackedConnection []byte
 func (conn *Connection) Pack() PackedConnection {
 	b := []byte(conn.ip)
 	length := len(b)
-	if 4 != length && 16 != length {
+	if length != 4 && length != 16 {
 		logger.Panicf("connection.Pack: invalid IP length: %d", length)
 	}
 	size := length + 3 // count++port.high++port.low++ip
@@ -135,7 +136,7 @@ func (conn *Connection) Pack() PackedConnection {
 // if successful returns connection and number of bytes used
 // so an array can be unpacked more easily
 func (packed PackedConnection) Unpack() (*Connection, int) {
-	if nil == packed {
+	if packed == nil {
 		return nil, 0
 	}
 	count := len(packed)
@@ -143,7 +144,7 @@ func (packed PackedConnection) Unpack() (*Connection, int) {
 		return nil, 0
 	}
 	n := packed[0]
-	if 7 != n && 19 != n { // only valid values
+	if n != 7 && n != 19 { // only valid values
 		return nil, 0
 	}
 
@@ -167,20 +168,20 @@ func (packed PackedConnection) Unpack46() (*Connection, *Connection) {
 		conn, n := packed.Unpack()
 		packed = packed[n:]
 
-		if nil == conn {
+		if conn == nil {
 			return ipv4Connection, ipv6Connection
 		}
 
-		if nil != conn.ip.To4() {
-			if nil == ipv4Connection {
+		if conn.ip.To4() != nil {
+			if ipv4Connection == nil {
 				ipv4Connection = conn
 			}
-		} else if nil == ipv6Connection {
+		} else if ipv6Connection == nil {
 			ipv6Connection = conn
 		}
 
 		// if both kinds found
-		if nil != ipv4Connection && nil != ipv6Connection {
+		if ipv4Connection != nil && ipv6Connection != nil {
 			return ipv4Connection, ipv6Connection
 		}
 	}

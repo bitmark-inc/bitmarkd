@@ -42,7 +42,7 @@ type httpsListener struct {
 func (h httpsListener) Serve() error {
 	for _, listen := range h.listenIPAndPort {
 		h.log.Infof("starting server: %s on: %q", httpsLogName, listen)
-		if '*' == listen[0] {
+		if listen[0] == '*' {
 			// change "*:PORT" to "[::]:PORT"
 			// on the assumption that this will listen on tcp4 and tcp6
 			listen = "[::]" + ":" + strings.Split(listen, ":")[1]
@@ -58,10 +58,10 @@ type tcpKeepAliveListener struct {
 	*net.TCPListener
 }
 
-func doServeHTTPS(addr string, handler http.Handler, cfg *tls.Config) {
+func doServeHTTPS(addr string, hdlr http.Handler, cfg *tls.Config) {
 	s := &http.Server{
 		Addr:           addr,
-		Handler:        handler,
+		Handler:        hdlr,
 		ReadTimeout:    readWriteTimeout,
 		WriteTimeout:   readWriteTimeout,
 		MaxHeaderBytes: 1 << 20,
@@ -85,7 +85,7 @@ func NewHTTPS(
 	tlsConfig *tls.Config,
 	hdlr handler.Handler,
 ) (Listener, error) {
-	if 0 == len(configuration.Listen) {
+	if len(configuration.Listen) == 0 {
 		log.Infof("disable: %s", httpsLogName)
 		return nil, nil
 	}
@@ -108,7 +108,7 @@ func NewHTTPS(
 		local[path] = set
 		for i, ip := range addresses {
 			_, cidr, err := net.ParseCIDR(strings.Trim(ip, " "))
-			if nil != err {
+			if err != nil {
 				return nil, err
 			}
 			set[i] = cidr

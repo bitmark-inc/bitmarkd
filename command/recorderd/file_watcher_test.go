@@ -69,7 +69,7 @@ func TestStart(t *testing.T) {
 	defer teardown()
 
 	emptyFile, err := os.Create(fileWatcher.filePath)
-	if nil != err {
+	if err != nil {
 		t.Errorf("create empty file error: %v", err)
 	}
 	emptyFile.Close()
@@ -100,8 +100,8 @@ func TestStart(t *testing.T) {
 	go fileWatcher.Start()
 	time.Sleep(time.Duration(1) * time.Second)
 
-	err = ioutil.WriteFile(fileWatcher.filePath, []byte("test"), 0777)
-	if nil != err {
+	err = ioutil.WriteFile(fileWatcher.filePath, []byte("test"), 0o777)
+	if err != nil {
 		t.Errorf("write file error: %v", err)
 	}
 

@@ -19,26 +19,26 @@ func runBlockTransfer(c *cli.Context) error {
 	m := c.App.Metadata["config"].(*metadata)
 
 	txId, err := checkTxId(c.String("txid"))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	to, newOwner, err := checkRecipient(c, "receiver", m.config)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	bitcoinAddress, err := checkCoinAddress(currency.Bitcoin, c.String("bitcoin"), m.testnet)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	litecoinAddress, err := checkCoinAddress(currency.Litecoin, c.String("litecoin"), m.testnet)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	from, owner, err := checkOwnerWithPasswordPrompt(c.GlobalString("identity"), m.config, c)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -54,7 +54,7 @@ func runBlockTransfer(c *cli.Context) error {
 	}
 
 	client, err := rpccalls.NewClient(m.testnet, m.config.Connections[m.connectionOffset], m.verbose, m.e)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	defer client.Close()
@@ -67,7 +67,7 @@ func runBlockTransfer(c *cli.Context) error {
 	}
 
 	response, err := client.SingleSignedBlockTransfer(transferConfig)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

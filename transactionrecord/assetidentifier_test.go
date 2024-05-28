@@ -45,7 +45,7 @@ func TestInvalidAssetIdentifiers(t *testing.T) {
 			t.Errorf("%d: expected fault.NotAssetIdentifier but got: %v", i, err)
 			return
 		}
-		if 0 != n {
+		if n != 0 {
 			t.Errorf("%d: testing: %q", i, textAssetIdentifier)
 			t.Errorf("%d: hex to link scanned: %d  expected: 0", i, n)
 			return
@@ -83,10 +83,10 @@ func TestAssetIdentifier(t *testing.T) {
 
 	var asset transactionrecord.AssetIdentifier
 	n, err := fmt.Sscan("37de3195b879cf5692a564e7f19bd6203e3fd8cffa8064ebe86ec8fff8dbf326ffa4d65cfef8350db4d72d93406f54fa0d06ce98005a939995ed05cc34fb7344", &asset)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to link error: %s", err)
 	}
-	if 1 != n {
+	if n != 1 {
 		t.Fatalf("hex to link scanned: %d  expected: 1", n)
 	}
 
@@ -104,7 +104,7 @@ func TestAssetIdentifier(t *testing.T) {
 		asset,
 	}
 	convertedJSON, err := json.Marshal(item)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("marshal json error: %s", err)
 	}
 	if expectedJSON != string(convertedJSON) {
@@ -117,7 +117,7 @@ func TestAssetIdentifier(t *testing.T) {
 		AssetIdentifier transactionrecord.AssetIdentifier
 	}
 	err = json.Unmarshal([]byte(expectedJSON), &newItem)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("unmarshal json error: %s", err)
 	}
 
@@ -154,7 +154,7 @@ func TestAssetIdentifierFromBytes(t *testing.T) {
 
 	var assetId transactionrecord.AssetIdentifier
 	err := transactionrecord.AssetIdentifierFromBytes(&assetId, valid)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("AssetIdentifierFromBytes error: %s", err)
 	}
 

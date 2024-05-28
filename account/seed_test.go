@@ -60,7 +60,7 @@ func checkSeed(t *testing.T, seed string, address string, privateKeyHex string, 
 	privateKey := decodeHex(privateKeyHex)
 
 	k, err := account.PrivateKeyFromBase58Seed(seed)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("seed error: %s", err)
 	}
 
@@ -74,12 +74,12 @@ func checkSeed(t *testing.T, seed string, address string, privateKeyHex string, 
 	}
 
 	accExpected, err := account.AccountFromBase58(address)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("account from base58 error: %s", err)
 	}
 
 	accActual := k.Account()
-	if nil == accActual {
+	if accActual == nil {
 		t.Fatal("account from private key returned nil")
 	}
 

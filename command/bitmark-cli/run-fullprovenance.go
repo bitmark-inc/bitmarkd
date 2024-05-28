@@ -17,7 +17,7 @@ func runFullProvenance(c *cli.Context) error {
 	m := c.App.Metadata["config"].(*metadata)
 
 	bitmarkId, err := checkTxId(c.String("bitmarkid"))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -26,7 +26,7 @@ func runFullProvenance(c *cli.Context) error {
 	}
 
 	client, err := rpccalls.NewClient(m.testnet, m.config.Connections[m.connectionOffset], m.verbose, m.e)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	defer client.Close()
@@ -43,7 +43,7 @@ func runFullProvenance(c *cli.Context) error {
 	}
 
 	response, err := client.GetFullProvenance(fullProvenanceConfig)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

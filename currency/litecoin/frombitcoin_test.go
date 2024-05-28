@@ -49,7 +49,7 @@ func TestConvert(t *testing.T) {
 
 	for i, item := range addresses {
 		actualLtc, err := litecoin.FromBitcoin(item.btc)
-		if nil != err {
+		if err != nil {
 			t.Fatalf("%d: error: %s", i, err)
 		}
 		if actualLtc != item.ltc {
@@ -57,7 +57,7 @@ func TestConvert(t *testing.T) {
 		}
 
 		ltcVersion, _, err := litecoin.ValidateAddress(actualLtc)
-		if nil != err {
+		if err != nil {
 			t.Fatalf("%d: verify error: %s", i, err)
 		}
 

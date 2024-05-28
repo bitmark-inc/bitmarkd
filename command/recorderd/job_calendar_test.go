@@ -6,7 +6,7 @@
 package main
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"reflect"
 	"sync"
@@ -57,7 +57,7 @@ func setupTestCalendar() *JobCalendarData {
 }
 
 func setupTestCalendarLogger() {
-	_ = os.Mkdir(logDirectory, 0770)
+	_ = os.Mkdir(logDirectory, 0o770)
 	calendarLogging = loggerConfiguration()
 	_ = logger.Initialise(calendarLogging)
 }
@@ -156,7 +156,7 @@ func TestWeekDayCurrent2Target(t *testing.T) {
 
 func TestConvertStr2NumberWithLimit(t *testing.T) {
 	j := &JobCalendarData{}
-	timeErr := fmt.Errorf(defaultTimeStrErrorMsg)
+	timeErr := errors.New(defaultTimeStrErrorMsg)
 	expects := []struct {
 		str      string
 		r        NumberRange
@@ -321,7 +321,7 @@ func TestScheduleEvents(t *testing.T) {
 				},
 				stop: []time.Time{
 					time.Date(now.Year(), now.Month(), now.Day(), 4, 56, 0, 0, now.Location()),
-					time.Date(now.Year(), now.Month(), now.Day(), 18, 00, 0, 0, now.Location()),
+					time.Date(now.Year(), now.Month(), now.Day(), 18, 0, 0, 0, now.Location()),
 				},
 			},
 			[]SingleEvent{
@@ -331,7 +331,7 @@ func TestScheduleEvents(t *testing.T) {
 				},
 				{
 					start: time.Date(now.Year(), now.Month(), now.Day(), 12, 33, 0, 0, now.Location()),
-					stop:  time.Date(now.Year(), now.Month(), now.Day(), 18, 00, 0, 0, now.Location()),
+					stop:  time.Date(now.Year(), now.Month(), now.Day(), 18, 0, 0, 0, now.Location()),
 				},
 			},
 		},

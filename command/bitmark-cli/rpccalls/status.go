@@ -20,7 +20,7 @@ func (client *Client) GetTransactionStatus(statusConfig *TransactionStatusData) 
 
 	var txId merkle.Digest
 	err := txId.UnmarshalText([]byte(statusConfig.TxId))
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 

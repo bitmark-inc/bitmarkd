@@ -61,12 +61,12 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 
 	if shouldFastSync {
 		h, _, d, err := br.ExtractHeader(packedBlock, height+1, true)
-		if nil != err {
+		if err != nil {
 			globalData.log.Errorf("extract header error: %s", err)
 			return err
 		}
 		nextH, _, _, err := br.ExtractHeader(packedNextBlock, height+2, true)
-		if nil != err {
+		if err != nil {
 			globalData.log.Errorf("extract header error: %s", err)
 			return err
 		}
@@ -75,7 +75,7 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 		data = d
 	} else {
 		h, di, d, err := br.ExtractHeader(packedBlock, height+1, false)
-		if nil != err {
+		if err != nil {
 			globalData.log.Errorf("extract header error: %s", err)
 			return err
 		}
@@ -161,7 +161,7 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 		// check all transactions are valid
 		for i := uint16(0); i < header.TransactionCount; i++ {
 			transaction, n, err := transactionrecord.Packed(data).Unpack(mode.IsTesting())
-			if nil != err {
+			if err != nil {
 				return err
 			}
 			txId := merkle.NewDigest(data[:n])
@@ -171,13 +171,13 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 
 			case *transactionrecord.OldBaseData:
 				_, err := tx.Pack(tx.Owner)
-				if nil != err {
+				if err != nil {
 					return err
 				}
 
 			case *transactionrecord.AssetData:
 				_, err := tx.Pack(tx.Registrant)
-				if nil != err {
+				if err != nil {
 					return err
 				}
 				assetId := tx.AssetId()
@@ -188,7 +188,7 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 
 			case *transactionrecord.BitmarkIssue:
 				_, err := tx.Pack(tx.Owner)
-				if nil != err {
+				if err != nil {
 					return err
 				}
 				if !suppressDuplicateRecordChecks && storage.Pool.Transactions.Has(txId[:]) {
@@ -204,11 +204,11 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 				tr := tx.(transactionrecord.BitmarkTransfer)
 				link := tr.GetLink()
 				_, linkOwner := ownership.OwnerOf(nil, link)
-				if nil == linkOwner {
+				if linkOwner == nil {
 					return fault.LinkToInvalidOrUnconfirmedTransaction
 				}
 				_, err := tx.Pack(linkOwner)
-				if nil != err {
+				if err != nil {
 					return err
 				}
 
@@ -217,7 +217,7 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 				}
 
 				ownerData, err := ownership.GetOwnerData(nil, link, storage.Pool.OwnerData)
-				if nil != err {
+				if err != nil {
 					return fault.DoubleTransferAttempt
 				}
 				_, ok := ownerData.(*ownership.ShareOwnerData)
@@ -229,7 +229,7 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 
 			case *transactionrecord.BlockFoundation:
 				_, err := tx.Pack(tx.Owner)
-				if nil != err {
+				if err != nil {
 					return err
 				}
 
@@ -237,7 +237,7 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 				link := tx.Link
 				_, linkOwner := ownership.OwnerOf(nil, link)
 				_, err = tx.Pack(linkOwner)
-				if nil != err {
+				if err != nil {
 					return err
 				}
 				if !ownership.CurrentlyOwns(nil, linkOwner, link, storage.Pool.OwnerTxIndex) {
@@ -246,12 +246,12 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 
 				// get the block number that is being transferred by this record
 				thisBN := storage.Pool.BlockOwnerTxIndex.Get(link[:])
-				if nil == thisBN {
+				if thisBN == nil {
 					return fault.LinkToInvalidOrUnconfirmedTransaction
 				}
 
 				err = transactionrecord.CheckPayments(tx.Version, mode.IsTesting(), tx.Payments)
-				if nil != err {
+				if err != nil {
 					return err
 				}
 
@@ -261,16 +261,16 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 			case *transactionrecord.BitmarkShare:
 				link := tx.Link
 				_, linkOwner := ownership.OwnerOf(nil, link)
-				if nil == linkOwner {
+				if linkOwner == nil {
 					return fault.LinkToInvalidOrUnconfirmedTransaction
 				}
 				_, err := tx.Pack(linkOwner)
-				if nil != err {
+				if err != nil {
 					return err
 				}
 
 				ownerData, err := ownership.GetOwnerData(nil, link, storage.Pool.OwnerData)
-				if nil != err {
+				if err != nil {
 					return fault.DoubleTransferAttempt
 				}
 				_, ok := ownerData.(*ownership.AssetOwnerData)
@@ -282,21 +282,21 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 
 			case *transactionrecord.ShareGrant:
 				_, err := tx.Pack(tx.Owner)
-				if nil != err {
+				if err != nil {
 					return err
 				}
 				_, err = reservoir.CheckGrantBalance(nil, tx, storage.Pool.ShareQuantity)
-				if nil != err {
+				if err != nil {
 					return err
 				}
 
 			case *transactionrecord.ShareSwap:
 				_, err := tx.Pack(tx.OwnerOne)
-				if nil != err {
+				if err != nil {
 					return err
 				}
 				_, _, err = reservoir.CheckSwapBalances(nil, tx, storage.Pool.ShareQuantity)
-				if nil != err {
+				if err != nil {
 					return err
 				}
 
@@ -344,11 +344,11 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 
 	case *transactionrecord.BlockFoundation:
 		err := transactionrecord.CheckPayments(tx.Version, mode.IsTesting(), tx.Payments)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 		packedPayments, err = tx.Payments.Pack(mode.IsTesting())
-		if nil != err {
+		if err != nil {
 			return err
 		}
 		packedFoundation = txs[0].packed
@@ -356,7 +356,7 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 
 	case *transactionrecord.OldBaseData:
 		err := tx.Currency.ValidateAddress(tx.PaymentAddress, mode.IsTesting())
-		if nil != err {
+		if err != nil {
 			return err
 		}
 		currencies := make(currency.Map)
@@ -366,14 +366,15 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 			// second tx is another base record
 			currencies[tx1.Currency] = tx1.PaymentAddress
 			txStart = 2
-			packedFoundation = append(txs[0].packed, txs[1].packed...)
+			packedFoundation = append([]byte{}, txs[0].packed...)
+			packedFoundation = append(packedFoundation, txs[1].packed...)
 		} else {
 			// else if single base block generate corresponding Litecoin address
 			currencies[currency.Litecoin], _ = litecoin.FromBitcoin(tx.PaymentAddress)
 			packedFoundation = txs[0].packed
 		}
 		packedPayments, err = currencies.Pack(mode.IsTesting())
-		if nil != err {
+		if err != nil {
 			return err
 		}
 		blockOwner = tx.Owner
@@ -387,7 +388,7 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 	}
 
 	trx, err := storage.NewDBTransaction()
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -465,7 +466,7 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 			// payments for the block being transferred
 			// not to be confused with this block's packed payments
 			pkPayments, err := tx.Payments.Pack(mode.IsTesting())
-			if nil != err {
+			if err != nil {
 				trx.Abort()
 				// packing was checked earlier, an error here is memory corruption
 				logger.Panicf("pack, should not error: %s", err)
@@ -527,7 +528,7 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 			share := storage.Pool.ShareQuantity
 
 			// update balances
-			if 0 == oAccountBalance {
+			if oAccountBalance == 0 {
 				trx.Delete(share, oKey)
 			} else {
 				trx.PutN(share, oKey, oAccountBalance)
@@ -584,7 +585,7 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 
 			share := storage.Pool.ShareQuantity
 			// update database share one
-			if 0 == ownerOneShareOneAccountBalance {
+			if ownerOneShareOneAccountBalance == 0 {
 				trx.Delete(share, ownerOneShareOneKey)
 			} else {
 				trx.PutN(share, ownerOneShareOneKey, ownerOneShareOneAccountBalance)
@@ -592,7 +593,7 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 			trx.PutN(share, ownerTwoShareOneKey, ownerTwoShareOneAccountBalance)
 
 			// update database share two
-			if 0 == ownerTwoShareTwoAccountBalance {
+			if ownerTwoShareTwoAccountBalance == 0 {
 				trx.Delete(share, ownerTwoShareTwoKey)
 			} else {
 				trx.PutN(share, ownerTwoShareTwoKey, ownerTwoShareTwoAccountBalance)
@@ -675,7 +676,7 @@ func StoreIncoming(packedBlock, packedNextBlock []byte, performRescan rescanType
 	globalData.log.Debugf("stored block: %d time elapsed: %f", header.Number, time.Since(start).Seconds())
 
 	err = trx.Commit()
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

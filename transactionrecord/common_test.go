@@ -52,7 +52,7 @@ func TestGenerateKeypair(t *testing.T) {
 		// display key pair and fail the test
 		// use the displayed values to modify data below
 		publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
-		if nil != err {
+		if err != nil {
 			t.Errorf("key pair generation error: %s", err)
 			return
 		}
@@ -213,7 +213,7 @@ loop:
 		p := make(transactionrecord.Packed, i)
 		copy(p, packed[:i])
 		unpacked, n, err := p.Unpack(true)
-		if nil != err {
+		if err != nil {
 			continue loop
 		}
 

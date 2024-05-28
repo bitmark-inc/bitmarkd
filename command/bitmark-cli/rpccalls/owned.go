@@ -30,7 +30,7 @@ func (client *Client) GetOwned(ownedConfig *OwnedData) (*owner.BitmarksReply, er
 
 	reply := &owner.BitmarksReply{}
 	err := client.client.Call("Owner.Bitmarks", ownedArgs, reply)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 

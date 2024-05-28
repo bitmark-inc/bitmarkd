@@ -8,13 +8,12 @@ package publish
 import (
 	"time"
 
-	zmq "github.com/pebbe/zmq4"
-
 	"github.com/bitmark-inc/bitmarkd/messagebus"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
+	zmq "github.com/pebbe/zmq4"
 )
 
 const (
@@ -40,14 +39,14 @@ func (brdc *broadcaster) initialise(privateKey []byte, publicKey []byte, broadca
 	log.Info("initialising…")
 
 	c, err := util.NewConnections(broadcast)
-	if nil != err {
+	if err != nil {
 		log.Errorf("ip and port error: %s", err)
 		return err
 	}
 
 	// allocate IPv4 and IPv6 sockets
 	brdc.socket4, brdc.socket6, err = zmqutil.NewBind(log, zmq.PUB, broadcasterZapDomain, privateKey, publicKey, c)
-	if nil != err {
+	if err != nil {
 		log.Errorf("bind error: %s", err)
 		return err
 	}
@@ -73,14 +72,14 @@ loop:
 			break loop
 		case item := <-queue:
 			log.Infof("sending: %s  data: %x", item.Command, item.Parameters)
-			if nil == brdc.socket4 && nil == brdc.socket6 {
+			if brdc.socket4 == nil && brdc.socket6 == nil {
 				log.Error("no IPv4 or IPv6 socket for broadcast")
 			}
-			if err := brdc.process(brdc.socket4, &item); nil != err {
+			if err := brdc.process(brdc.socket4, &item); err != nil {
 				log.Criticalf("IPv4 error: %s", err)
 				logger.Panicf("broadcaster: IPv4 error: %s", err)
 			}
-			if err := brdc.process(brdc.socket6, &item); nil != err {
+			if err := brdc.process(brdc.socket6, &item); err != nil {
 				log.Criticalf("IPv6 error: %s", err)
 				logger.Panicf("broadcaster: IPv6 error: %s", err)
 			}
@@ -93,24 +92,24 @@ loop:
 			}
 			log.Info("send heartbeat")
 
-			if nil == brdc.socket4 && nil == brdc.socket6 {
+			if brdc.socket4 == nil && brdc.socket6 == nil {
 				log.Error("no IPv4 or IPv6 socket for heartbeat")
 			}
-			if err := brdc.process(brdc.socket4, beat); nil != err {
+			if err := brdc.process(brdc.socket4, beat); err != nil {
 				log.Criticalf("IPv4 error: %s", err)
 				logger.Panicf("broadcaster: IPv4 error: %s", err)
 			}
-			if err := brdc.process(brdc.socket6, beat); nil != err {
+			if err := brdc.process(brdc.socket6, beat); err != nil {
 				log.Criticalf("IPv6 error: %s", err)
 				logger.Panicf("broadcaster: IPv6 error: %s", err)
 			}
 		}
 	}
 	log.Info("shutting down…")
-	if nil != brdc.socket4 {
+	if brdc.socket4 != nil {
 		brdc.socket4.Close()
 	}
-	if nil != brdc.socket6 {
+	if brdc.socket6 != nil {
 		brdc.socket6.Close()
 	}
 	log.Info("stopped")
@@ -118,17 +117,17 @@ loop:
 
 // process some items into a block and publish it
 func (brdc *broadcaster) process(socket *zmq.Socket, item *messagebus.Message) error {
-	if nil == socket {
+	if socket == nil {
 		return nil
 	}
 
 	_, err := socket.Send(brdc.chain, zmq.SNDMORE|zmq.DONTWAIT)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	_, err = socket.Send(item.Command, zmq.SNDMORE|zmq.DONTWAIT)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -139,7 +138,7 @@ func (brdc *broadcaster) process(socket *zmq.Socket, item *messagebus.Message) e
 		} else {
 			_, err = socket.SendBytes(p, zmq.SNDMORE|zmq.DONTWAIT)
 		}
-		if nil != err {
+		if err != nil {
 			return err
 		}
 	}

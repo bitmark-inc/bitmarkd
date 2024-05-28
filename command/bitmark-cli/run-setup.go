@@ -11,9 +11,8 @@ import (
 	"path"
 	"strings"
 
-	"github.com/urfave/cli"
-
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
+	"github.com/urfave/cli"
 )
 
 func runSetup(c *cli.Context) error {
@@ -22,22 +21,22 @@ func runSetup(c *cli.Context) error {
 	testnet := m.testnet
 
 	name, err := checkName(c.GlobalString("identity"))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	connect, err := checkConnect(c.String("connect"))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	description, err := checkDescription(c.String("description"))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	seed, err := checkSeed(c.String("seed"), c.Bool("new"), m.testnet)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -52,8 +51,8 @@ func runSetup(c *cli.Context) error {
 	// Create the folder hierarchy for configuration if not existing
 	configDir := path.Dir(m.file)
 	d, err := checkFileExists(configDir)
-	if nil != err {
-		if err = os.MkdirAll(configDir, 0750); nil != err {
+	if err != nil {
+		if err := os.MkdirAll(configDir, 0o750); err != nil {
 			return err
 		}
 	} else if !d {
@@ -68,15 +67,15 @@ func runSetup(c *cli.Context) error {
 	}
 
 	password := c.GlobalString("password")
-	if "" == password {
+	if password == "" {
 		password, err = promptNewPassword()
-		if nil != err {
+		if err != nil {
 			return err
 		}
 	}
 
 	err = config.AddIdentity(name, description, seed, password)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

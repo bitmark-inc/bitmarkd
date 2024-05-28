@@ -14,7 +14,7 @@ func (tree *Tree) Get(index int) *Node {
 }
 
 func get(index int, tree *Node) *Node {
-	if nil == tree {
+	if tree == nil {
 		return nil
 	}
 

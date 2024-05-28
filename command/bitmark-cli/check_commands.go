@@ -12,23 +12,22 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/urfave/cli"
-
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/urfave/cli"
 )
 
 // identity is required, but not check the config file
 func checkName(name string) (string, error) {
-	if "" == name {
+	if name == "" {
 		return "", fault.IdentityNameIsRequired
 	}
 
 	// account names cannot be identities to prevent confusion
 	_, err := account.AccountFromBase58(name)
-	if nil == err {
+	if err == nil {
 		return "", fault.InvalidIdentityName
 	}
 
@@ -37,7 +36,7 @@ func checkName(name string) (string, error) {
 
 // check for non-blank file name
 func checkFileName(fileName string) (string, error) {
-	if "" == fileName {
+	if fileName == "" {
 		return "", fault.FileNameIsRequired
 	}
 
@@ -47,24 +46,22 @@ func checkFileName(fileName string) (string, error) {
 // connect is required.
 func checkConnect(connect string) (string, error) {
 	connect = strings.TrimSpace(connect)
-	if "" == connect {
+	if connect == "" {
 		return "", fault.ConnectIsRequired
 	}
 
-	// XXX: We should not need to []string{} variable s
-	//nolint:ignore SA4006 ignore this lint till somebody revisit this code
-	s := []string{}
-	if '[' == connect[0] { // IPv6
+	var s []string
+	if connect[0] == '[' { // IPv6
 		s = strings.Split(connect, "]:")
 	} else { // Ipv4 or host
 		s = strings.Split(connect, ":")
 	}
-	if 2 != len(s) {
+	if len(s) != 2 {
 		return "", fault.ConnectRequiresPortNumberSuffix
 	}
 
 	port, err := strconv.Atoi(s[1])
-	if nil != err || port < 1 || port > 65535 {
+	if err != nil || port < 1 || port > 65535 {
 		return "", fault.InvalidPortNumber
 	}
 
@@ -73,7 +70,7 @@ func checkConnect(connect string) (string, error) {
 
 // description is required
 func checkDescription(description string) (string, error) {
-	if "" == description {
+	if description == "" {
 		return "", fault.DescriptionIsRequired
 	}
 
@@ -82,7 +79,7 @@ func checkDescription(description string) (string, error) {
 
 // asset fingerprint is required field
 func checkAssetFingerprint(fingerprint string) (string, error) {
-	if "" == fingerprint {
+	if fingerprint == "" {
 		return "", fault.AssetFingerprintIsRequired
 	}
 	return fingerprint, nil
@@ -90,14 +87,14 @@ func checkAssetFingerprint(fingerprint string) (string, error) {
 
 // asset metadata is required field
 func checkAssetMetadata(meta string) (string, error) {
-	if "" == meta {
+	if meta == "" {
 		return "", fault.AssetMetadataIsRequired
 	}
 	meta, err := strconv.Unquote(`"` + meta + `"`)
-	if nil != err {
+	if err != nil {
 		return "", err
 	}
-	if 1 == len(strings.Split(meta, "\u0000"))%2 {
+	if len(strings.Split(meta, "\u0000"))%2 == 1 {
 		return "", fault.AssetMetadataMustBeMap
 	}
 	return meta, nil
@@ -105,11 +102,11 @@ func checkAssetMetadata(meta string) (string, error) {
 
 // txid is required field ensure 32 hex bytes
 func checkTxId(txId string) (string, error) {
-	if 64 != len(txId) {
+	if len(txId) != 64 {
 		return "", fault.TransactionIdIsRequired
 	}
 	_, err := hex.DecodeString(txId)
-	if nil != err {
+	if err != nil {
 		return "", err
 
 	}
@@ -118,7 +115,7 @@ func checkTxId(txId string) (string, error) {
 
 // transfer tx is required field
 func checkTransferTx(txId string) (string, error) {
-	if "" == txId {
+	if txId == "" {
 		return "", fault.TransactionHexDataIsRequired
 	}
 
@@ -127,25 +124,25 @@ func checkTransferTx(txId string) (string, error) {
 
 // make sure a seed can be decoded
 // strip the "SEED:" prefix if given
-func checkSeed(seed string, new bool, testnet bool) (string, error) {
+func checkSeed(seed string, newSeed bool, testnet bool) (string, error) {
 
-	if new && "" == seed {
+	if newSeed && seed == "" {
 		var err error
 		seed, err = account.NewBase58EncodedSeedV2(testnet)
-		if nil != err {
+		if err != nil {
 			return "", err
 		}
 	}
 	seed = strings.TrimPrefix(seed, "SEED:")
 
 	// failed to get a seed
-	if "" == seed {
+	if seed == "" {
 		return "", fault.IncompatibleOptions
 	}
 
 	// ensure can decode
 	_, err := account.PrivateKeyFromBase58Seed(seed)
-	if nil != err {
+	if err != nil {
 		return "", err
 	}
 	return seed, nil
@@ -154,7 +151,7 @@ func checkSeed(seed string, new bool, testnet bool) (string, error) {
 // get decrypted identity - prompts for password or uses agent
 // only use owner to sign things
 func checkOwnerWithPasswordPrompt(name string, config *configuration.Configuration, c *cli.Context) (string, *configuration.Private, error) {
-	if "" == name {
+	if name == "" {
 		name = config.DefaultIdentity
 	}
 
@@ -166,20 +163,20 @@ func checkOwnerWithPasswordPrompt(name string, config *configuration.Configurati
 	password := c.GlobalString("password")
 
 	// check owner password
-	if "" != agent {
+	if agent != "" {
 		password, err = passwordFromAgent(name, "Password for bitmark-cli", agent, clearCache)
-		if nil != err {
+		if err != nil {
 			return "", nil, err
 		}
-	} else if "" == password {
+	} else if password == "" {
 		password, err = promptPassword(name)
-		if nil != err {
+		if err != nil {
 			return "", nil, err
 		}
 
 	}
 	owner, err := config.Private(password, name)
-	if nil != err {
+	if err != nil {
 		return "", nil, err
 	}
 	return name, owner, nil
@@ -189,12 +186,12 @@ func checkOwnerWithPasswordPrompt(name string, config *configuration.Configurati
 // used for any non-signing account process (e.g. provenance listing)
 func checkRecipient(c *cli.Context, name string, config *configuration.Configuration) (string, *account.Account, error) {
 	recipient := c.String(name)
-	if "" == recipient {
+	if recipient == "" {
 		return "", nil, fmt.Errorf("%s is required", name)
 	}
 
 	newOwner, err := config.Account(recipient)
-	if nil != err {
+	if err != nil {
 		return "", nil, err
 	}
 
@@ -203,7 +200,7 @@ func checkRecipient(c *cli.Context, name string, config *configuration.Configura
 
 // coin address is a required field
 func checkCoinAddress(c currency.Currency, address string, testnet bool) (string, error) {
-	if "" == address {
+	if address == "" {
 		return "", fault.CurrencyAddressIsRequired
 	}
 	err := c.ValidateAddress(address, testnet)
@@ -212,11 +209,11 @@ func checkCoinAddress(c currency.Currency, address string, testnet bool) (string
 
 // signature is required field ensure 64 hex bytes
 func checkSignature(s string) ([]byte, error) {
-	if 128 != len(s) {
+	if len(s) != 128 {
 		return nil, fault.TransactionIdIsRequired
 	}
 	h, err := hex.DecodeString(s)
-	if nil != err {
+	if err != nil {
 		return nil, err
 
 	}
@@ -226,7 +223,7 @@ func checkSignature(s string) ([]byte, error) {
 // check if file exists
 func checkFileExists(name string) (bool, error) {
 	s, err := os.Stat(name)
-	if nil != err {
+	if err != nil {
 		return false, err
 	}
 	return s.IsDir(), nil

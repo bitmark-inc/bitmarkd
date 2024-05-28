@@ -36,7 +36,7 @@ func main() {
 	}
 
 	program, options, arguments, err := getoptions.GetOS(flags)
-	if nil != err {
+	if err != nil {
 		exitwithstatus.Message("%s: getoptions error: %s", program, err)
 	}
 
@@ -59,7 +59,7 @@ func main() {
 		}
 	}
 
-	if 1 != len(options["config-file"]) {
+	if len(options["config-file"]) != 1 {
 		exitwithstatus.Message("%s: only one config-file option is required, %d were detected", program, len(options["config-file"]))
 	}
 
@@ -73,17 +73,17 @@ func main() {
 	reader.SetCalendar(calendar)
 
 	err = reader.FirstRefresh(configurationFile)
-	if nil != err {
+	if err != nil {
 		exitwithstatus.Message("%s: failed to read configuration from: %q  error: %s", program, configurationFile, err)
 	}
 
 	theConfiguration, err := reader.GetConfig()
-	if nil != err {
+	if err != nil {
 		exitwithstatus.Message("%s: configuration is not found", program)
 	}
 
 	// start logging
-	if err = logger.Initialise(theConfiguration.Logging); nil != err {
+	if err = logger.Initialise(theConfiguration.Logging); err != nil {
 		exitwithstatus.Message("%s: logger setup failed with error: %s", program, err)
 	}
 	defer logger.Finalise()
@@ -93,7 +93,7 @@ func main() {
 		remove: make(chan struct{}, 1),
 	}
 	watcher, err := newFileWatcher(configurationFile, logger.New(FileWatcherLoggerPrefix), watcherChannel)
-	if nil != err {
+	if err != nil {
 		exitwithstatus.Message("%s: file watcher setup failed with error: %s",
 			program,
 			err,
@@ -104,7 +104,7 @@ func main() {
 
 	configLogger := logger.New(ReaderLoggerPrefix)
 	err = reader.SetLog(configLogger)
-	if nil != err {
+	if err != nil {
 		exitwithstatus.Message("%s: new logger '%s' failed with error: %s", program, ReaderLoggerPrefix, err)
 	}
 
@@ -124,8 +124,8 @@ func main() {
 
 	// optional PID file
 	// use if not running under a supervisor program like daemon(8)
-	if "" != theConfiguration.PidFile {
-		lockFile, err := os.OpenFile(theConfiguration.PidFile, os.O_WRONLY|os.O_EXCL|os.O_CREATE, os.ModeExclusive|0600)
+	if theConfiguration.PidFile != "" {
+		lockFile, err := os.OpenFile(theConfiguration.PidFile, os.O_WRONLY|os.O_EXCL|os.O_CREATE, os.ModeExclusive|0o600)
 		if err != nil {
 			if os.IsExist(err) {
 				exitwithstatus.Message("%s: another instance is already running", program)
@@ -140,7 +140,7 @@ func main() {
 	// // if requested start profiling
 	// if "" != theConfiguration.ProfileFile {
 	// 	f, err := os.Create(theConfiguration.ProfileFile)
-	// 	if nil != err {
+	// 	if err != nil {
 	// 		log.Criticalf("cannot open profile output file: '%s'  error: %s", theConfiguration.ProfileFile, err)
 	// 		exitwithstatus.Exit(1)
 	// 	}
@@ -154,16 +154,16 @@ func main() {
 	defer mode.Finalise()
 
 	// ensure keys are set
-	if "" == theConfiguration.Peering.PublicKey || "" == theConfiguration.Peering.PrivateKey {
+	if theConfiguration.Peering.PublicKey == "" || theConfiguration.Peering.PrivateKey == "" {
 		exitwithstatus.Message("%s: both peering Public and Private keys must be specified", program)
 	}
 	publicKey, err := zmqutil.ReadPublicKey(theConfiguration.Peering.PublicKey)
-	if nil != err {
+	if err != nil {
 		log.Criticalf("read error on: %s  error: %s", theConfiguration.Peering.PublicKey, err)
 		exitwithstatus.Message("%s: failed reading Public Key: %q  error: %s", program, theConfiguration.Peering.PublicKey, err)
 	}
 	privateKey, err := zmqutil.ReadPrivateKey(theConfiguration.Peering.PrivateKey)
-	if nil != err {
+	if err != nil {
 		log.Criticalf("read error on: %s  error: %s", theConfiguration.Peering.PrivateKey, err)
 		exitwithstatus.Message("%s: failed reading Private Key: %q  error: %s", program, theConfiguration.Peering.PrivateKey, err)
 	}
@@ -191,7 +191,7 @@ func main() {
 
 	// initialise encryption
 	err = zmqutil.StartAuthentication()
-	if nil != err {
+	if err != nil {
 		log.Criticalf("zmq.AuthStart(): error: %s", err)
 		exitwithstatus.Message("%s: zmq.AuthStart() error: %s", program, err)
 	}
@@ -215,20 +215,20 @@ connection_setup:
 	for i, remote := range theConfiguration.Peering.Connect {
 
 		serverPublicKey, err := zmqutil.ReadPublicKey(remote.PublicKey)
-		if nil != err {
+		if err != nil {
 			log.Warnf("client: %d invalid server publickey: %q error: %s", i, remote.PublicKey, err)
 			continue connection_setup
 		}
 
 		bc, err := util.NewConnection(remote.Blocks)
-		if nil != err {
+		if err != nil {
 			log.Warnf("client: %d invalid blocks publisher: %q error: %s", i, remote.Blocks, err)
 			continue connection_setup
 		}
 		blocksAddress, blocksv6 := bc.CanonicalIPandPort("tcp://")
 
 		sc, err := util.NewConnection(remote.Submit)
-		if nil != err {
+		if err != nil {
 			log.Warnf("client: %d invalid submit address: %q error: %s", i, remote.Submit, err)
 			continue connection_setup
 		}
@@ -238,27 +238,27 @@ connection_setup:
 
 		mlog := logger.New(fmt.Sprintf("submitter-%d", i))
 		err = Submitter(i, submitAddress, submitv6, serverPublicKey, publicKey, privateKey, mlog)
-		if nil != err {
+		if err != nil {
 			log.Warnf("submitter: %d failed error: %s", i, err)
 			continue connection_setup
 		}
 
 		slog := logger.New(fmt.Sprintf("subscriber-%d", i))
 		err = Subscribe(i, blocksAddress, blocksv6, serverPublicKey, publicKey, privateKey, slog, proofer)
-		if nil != err {
+		if err != nil {
 			log.Warnf("subscribe: %d failed error: %s", i, err)
 			continue connection_setup
 		}
 	}
 
 	// erase the private key from memory
-	//nolint:ignore SA4006 we want to make sure we clean privateKey
+	//lint:ignore SA4006 we want to make sure we clean privateKey
 	privateKey = []byte{}
 
 	// abort if no clients were connected
 
 	// wait for CTRL-C before shutting down to allow manual testing
-	if 0 == len(options["quiet"]) {
+	if len(options["quiet"]) == 0 {
 		fmt.Printf("\n\nWaiting for CTRL-C (SIGINT) or 'kill <pid>' (SIGTERM)…")
 	}
 
@@ -267,7 +267,7 @@ connection_setup:
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-ch
 	log.Infof("received signal: %v", sig)
-	if 0 == len(options["quiet"]) {
+	if len(options["quiet"]) == 0 {
 		fmt.Printf("\nreceived signal: %v\n", sig)
 		fmt.Printf("\nshutting down...\n")
 	}

@@ -25,7 +25,7 @@ func (client *Client) DecodeBlock(blockDecodeConfig *BlockDecodeData) (*node.Blo
 
 	reply := &node.BlockDecodeReply{}
 	err := client.client.Call("Node.BlockDecode", blockDecodeArgs, reply)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 

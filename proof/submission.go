@@ -12,14 +12,13 @@ import (
 	"strings"
 	"time"
 
-	zmq "github.com/pebbe/zmq4"
-
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/counter"
 	"github.com/bitmark-inc/bitmarkd/mode"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
+	zmq "github.com/pebbe/zmq4"
 )
 
 const (
@@ -49,7 +48,7 @@ func (sub *submission) initialise(configuration *Configuration) error {
 	var err error
 	// signalling channel
 	sub.sigReceive, sub.sigSend, err = zmqutil.NewSignalPair(submissionSignal)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -63,11 +62,11 @@ func (sub *submission) initialise(configuration *Configuration) error {
 
 	// read the keys
 	privateKey, err := zmqutil.ReadPrivateKey(configuration.PrivateKey)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	publicKey, err := zmqutil.ReadPublicKey(configuration.PublicKey)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -79,7 +78,7 @@ func (sub *submission) initialise(configuration *Configuration) error {
 
 	// allocate IPv4 and IPv6 sockets
 	sub.socket4, sub.socket6, err = zmqutil.NewBind(log, zmq.REP, submissionZapDomain, privateKey, publicKey, c)
-	if nil != err {
+	if err != nil {
 		log.Errorf("bind error: %s", err)
 		return err
 	}
@@ -91,12 +90,12 @@ func newInternalHasherReceiver(sub *submission) error {
 	var err error
 
 	sub.socket4, err = zmq.NewSocket(internalHasherProtocol)
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("create internal reply hasher socket with error: %s", err)
 	}
 
 	err = sub.socket4.Connect(internalHasherReply)
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("connect internal reply hasher socket with error: %s", err)
 	}
 
@@ -113,10 +112,10 @@ func (sub *submission) Run(args interface{}, shutdown <-chan struct{}) {
 
 	go func() {
 		poller := zmq.NewPoller()
-		if nil != sub.socket4 {
+		if sub.socket4 != nil {
 			poller.Add(sub.socket4, zmq.POLLIN)
 		}
-		if nil != sub.socket6 {
+		if sub.socket6 != nil {
 			poller.Add(sub.socket6, zmq.POLLIN)
 		}
 		poller.Add(sub.sigReceive, zmq.POLLIN)
@@ -135,10 +134,10 @@ func (sub *submission) Run(args interface{}, shutdown <-chan struct{}) {
 			}
 		}
 		sub.sigReceive.Close()
-		if nil != sub.socket4 {
+		if sub.socket4 != nil {
 			sub.socket4.Close()
 		}
-		if nil != sub.socket6 {
+		if sub.socket6 != nil {
 			sub.socket6.Close()
 		}
 	}()
@@ -155,7 +154,7 @@ func (sub *submission) process(socket *zmq.Socket) {
 	log := sub.log
 
 	data, err := socket.RecvMessage(0)
-	if nil != err {
+	if err != nil {
 		log.Errorf("JSON encode error: %s", err)
 		return
 	}
@@ -165,7 +164,7 @@ func (sub *submission) process(socket *zmq.Socket) {
 	ok := false
 	var request SubmittedItem
 	err = json.Unmarshal([]byte(data[0]), &request)
-	if nil != err {
+	if err != nil {
 		log.Errorf("JSON decode error: %s", err)
 	} else {
 
@@ -210,7 +209,7 @@ func (sub *submission) process(socket *zmq.Socket) {
 send_loop:
 	for retry := 1; retry <= sendRetries; retry += 1 {
 		_, err = socket.SendBytes(result, 0|zmq.DONTWAIT)
-		if nil == err {
+		if err == nil {
 			break send_loop
 		}
 		log.Warnf("send try: %d/%d  error: %s", retry, sendRetries, err)

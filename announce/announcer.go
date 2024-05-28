@@ -26,8 +26,9 @@ func SendRegistration(client zmqutil.Client, fn string) error {
 
 // AddPeer - add a peer announcement to the in-memory tree
 // returns:
-//   true  if this was a new/updated entry
-//   false if the update was within the limits (to prevent continuous relaying)
+//
+//	true  if this was a new/updated entry
+//	false if the update was within the limits (to prevent continuous relaying)
 func AddPeer(publicKey []byte, listeners []byte, timestamp uint64) bool {
 	return globalData.receptors.Add(publicKey, listeners, timestamp)
 }

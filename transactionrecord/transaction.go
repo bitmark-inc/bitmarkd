@@ -93,9 +93,9 @@ type Payment struct {
 
 // PaymentAlternative - a single payment possibility - for use in RPC layers
 // up to entries:
-//   1. issue block owner payment
-//   2. last transfer block owner payment (can merge with 1 if same address)
-//   3. optional transfer payment
+//  1. issue block owner payment
+//  2. last transfer block owner payment (can merge with 1 if same address)
+//  3. optional transfer payment
 type PaymentAlternative []*Payment
 
 // BitmarkTransfer - to access field of various transfer types
@@ -183,7 +183,7 @@ type ShareSwap struct {
 // Type - returns the record type code
 func (record Packed) Type() TagType {
 	recordType, n := util.FromVarint64(record)
-	if 0 == n {
+	if n == 0 {
 		return NullTag
 	}
 	return TagType(recordType)

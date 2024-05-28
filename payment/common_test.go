@@ -39,7 +39,7 @@ func removeFiles() {
 // configure for testing
 func setup() error {
 	removeFiles()
-	os.Mkdir(testingDirName, 0700)
+	os.Mkdir(testingDirName, 0o700)
 
 	logging := logger.Configuration{
 		Directory: testingDirName,
@@ -59,7 +59,7 @@ func setup() error {
 
 	// open database
 	err := storage.Initialise(databaseFileName, false)
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("storage initialise error: %s", err.Error())
 	}
 

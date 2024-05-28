@@ -56,7 +56,7 @@ func main() {
 	}
 
 	program, options, arguments, err := getoptions.GetOS(flags)
-	if nil != err {
+	if err != nil {
 		exitwithstatus.Message("%s: getoptions error: %s", program, err)
 	}
 
@@ -79,7 +79,7 @@ func main() {
 		return
 	}
 
-	if len(options["help"]) > 0 || 0 == len(arguments) || 1 != len(options["file"]) {
+	if len(options["help"]) > 0 || len(arguments) == 0 || len(options["file"]) != 1 {
 		exitwithstatus.Message("usage: %s [--help] [--verbose] [--quiet] [--count=N] --file=FILE tag [--list] [key-prefix]", program)
 	}
 
@@ -88,13 +88,13 @@ func main() {
 
 	colour := len(options["colour"]) > 0
 	ascii := len(options["ascii"]) > 0
-	delete := len(options["delete"]) > 0
+	del := len(options["delete"]) > 0
 	verbose := len(options["verbose"]) > 0
 
 	count := 10
 	if len(options["count"]) > 0 {
 		count, err = strconv.Atoi(options["count"][0])
-		if nil != err {
+		if err != nil {
 			exitwithstatus.Message("%s: convert count error: %s", program, err)
 		}
 		if count < 1 {
@@ -111,7 +111,7 @@ func main() {
 	prefix := []byte(nil)
 	if len(arguments) > 1 {
 		prefix, err = hex.DecodeString(arguments[1])
-		if nil != err {
+		if err != nil {
 			exitwithstatus.Message("%s: convert prefix error: %s", program, err)
 		}
 	}
@@ -128,14 +128,14 @@ func main() {
 	}
 
 	// start logging
-	if err = logger.Initialise(logging); nil != err {
+	if err = logger.Initialise(logging); err != nil {
 		exitwithstatus.Message("%s: logger setup failed with error: %s", program, err)
 	}
 	defer logger.Finalise()
 
 	// start of main processing
 	err = storage.Initialise(filename, storage.ReadOnly)
-	if nil != err {
+	if err != nil {
 		exitwithstatus.Message("%s: storage setup failed with error: %s", program, err)
 	}
 
@@ -187,7 +187,7 @@ tag_scan:
 	}
 
 	data, err := cursor.Fetch(count)
-	if nil != err {
+	if err != nil {
 		exitwithstatus.Message("%s: error on Fetch: %s", program, err)
 	}
 
@@ -231,14 +231,14 @@ print_loop:
 		} else {
 			fmt.Printf("%d: %sVal: %s%x%s\n", i, cv1, cv2, e.Value, ce)
 		}
-		if delete {
+		if del {
 		delete_loop:
 			for {
 				fmt.Printf("%d: %sDelete Key: %s%x%s ? [yNq]: ", i, cd1, cd2, e.Key, ce)
 
 				buffer := make([]byte, 100)
 				n, err := os.Stdin.Read(buffer)
-				if nil != err {
+				if err != nil {
 					exitwithstatus.Message("%s: error on Stdin.Read: %e", program, err)
 				}
 

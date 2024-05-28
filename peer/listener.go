@@ -11,8 +11,6 @@ import (
 	"fmt"
 	"syscall"
 
-	zmq "github.com/pebbe/zmq4"
-
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -21,6 +19,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
+	zmq "github.com/pebbe/zmq4"
 )
 
 const (
@@ -64,34 +63,34 @@ func (lstn *listener) initialise(privateKey []byte, publicKey []byte, listen []s
 	log.Info("initialising…")
 
 	c, err := util.NewConnections(listen)
-	if nil != err {
+	if err != nil {
 		log.Errorf("ip and port error: %s", err)
 		return err
 	}
 
 	// signalling channel
 	lstn.sigReceive, lstn.sigSend, err = zmqutil.NewSignalPair(listenerSignal)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	// allocate IPv4 and IPv6 sockets
 	lstn.socket4, lstn.socket6, err = zmqutil.NewBind(log, zmq.REP, listenerZapDomain, privateKey, publicKey, c)
-	if nil != err {
+	if err != nil {
 		log.Errorf("bind error: %s", err)
 		return err
 	}
 
-	if nil != lstn.socket4 {
+	if lstn.socket4 != nil {
 		lstn.monitor4, err = zmqutil.NewMonitor(lstn.socket4, listenerIPv4MonitorSignal, zmq.EVENT_ALL)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 	}
 
-	if nil != lstn.socket6 {
+	if lstn.socket6 != nil {
 		lstn.monitor6, err = zmqutil.NewMonitor(lstn.socket6, listenerIPv6MonitorSignal, zmq.EVENT_ALL)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 	}
@@ -108,11 +107,11 @@ func (lstn *listener) Run(args interface{}, shutdown <-chan struct{}) {
 
 	go func() {
 		poller := zmq.NewPoller()
-		if nil != lstn.socket4 {
+		if lstn.socket4 != nil {
 			poller.Add(lstn.socket4, zmq.POLLIN)
 			poller.Add(lstn.monitor4, zmq.POLLIN)
 		}
-		if nil != lstn.socket6 {
+		if lstn.socket6 != nil {
 			poller.Add(lstn.socket6, zmq.POLLIN)
 			poller.Add(lstn.monitor6, zmq.POLLIN)
 		}
@@ -138,10 +137,10 @@ func (lstn *listener) Run(args interface{}, shutdown <-chan struct{}) {
 		}
 		log.Info("shutting down")
 		lstn.sigReceive.Close()
-		if nil != lstn.socket4 {
+		if lstn.socket4 != nil {
 			lstn.socket4.Close()
 		}
-		if nil != lstn.socket6 {
+		if lstn.socket6 != nil {
 			lstn.socket6.Close()
 		}
 		log.Info("stopped")
@@ -173,7 +172,7 @@ func (lstn *listener) processOne(i int, socket *zmq.Socket) bool {
 		lstn.log.Infof("processed: %d events", i)
 		return false
 	}
-	if nil != err {
+	if err != nil {
 		log.Errorf("receive: %d error: %s", i, err)
 		return false
 	}
@@ -215,11 +214,11 @@ func (lstn *listener) processOne(i int, socket *zmq.Socket) bool {
 		binary.BigEndian.PutUint64(result, blockNumber)
 
 	case "B": // get packed block
-		if 1 != len(parameters) {
+		if len(parameters) != 1 {
 			err = fault.MissingParameters
-		} else if 8 == len(parameters[0]) {
+		} else if len(parameters[0]) == 8 {
 			result = storage.Pool.Blocks.Get(parameters[0])
-			if nil == result {
+			if result == nil {
 				err = fault.BlockNotFound
 			}
 		} else {
@@ -227,12 +226,12 @@ func (lstn *listener) processOne(i int, socket *zmq.Socket) bool {
 		}
 
 	case "H": // get block hash
-		if 1 != len(parameters) {
+		if len(parameters) != 1 {
 			err = fault.MissingParameters
-		} else if 8 == len(parameters[0]) {
+		} else if len(parameters[0]) == 8 {
 			number := binary.BigEndian.Uint64(parameters[0])
 			d, e := blockheader.DigestForBlock(number)
-			if nil == e {
+			if e == nil {
 				result = d[:]
 			} else {
 				err = e
@@ -255,7 +254,7 @@ func (lstn *listener) processOne(i int, socket *zmq.Socket) bool {
 		timestamp := binary.BigEndian.Uint64(parameters[3])
 		announce.AddPeer(parameters[1], parameters[2], timestamp) // publicKey, listeners, timestamp
 		publicKey, listeners, ts, err := announce.GetRandom(parameters[1])
-		if nil != err {
+		if err != nil {
 			listenerSendError(socket, err)
 			return true
 		}
@@ -281,7 +280,7 @@ func (lstn *listener) processOne(i int, socket *zmq.Socket) bool {
 		result = []byte{'A'}
 	}
 
-	if nil != err {
+	if err != nil {
 		listenerSendError(socket, err)
 		return true
 	}
@@ -300,13 +299,13 @@ func (lstn *listener) processOne(i int, socket *zmq.Socket) bool {
 func (lstn *listener) handleEvent(socket *zmq.Socket) {
 
 loop:
-	for i := 0; true; i = i + 1 {
+	for i := 0; true; i++ {
 		ev, addr, v, err := socket.RecvEvent(zmq.DONTWAIT)
 		if zmq.Errno(syscall.EAGAIN) == zmq.AsErrno(err) {
 			lstn.log.Infof("received: %d events", i)
 			break loop
 		}
-		if nil != err {
+		if err != nil {
 			lstn.log.Errorf("receive event: %d error: %s", i, err)
 			return
 		}

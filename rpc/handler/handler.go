@@ -125,7 +125,7 @@ func (h *handler) RPC(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(http.StatusOK)
 	err := server.ServeRequest(serverCodec)
-	if nil != err {
+	if err != nil {
 		sendInternalServerError(w)
 		return
 	}
@@ -144,12 +144,12 @@ func (h *handler) isAllowed(api string, r *http.Request) bool {
 	}
 
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if nil != err {
+	if err != nil {
 		return false
 	}
 
 	addr := net.ParseIP(host)
-	if nil == addr {
+	if addr == nil {
 		return false
 	}
 
@@ -276,8 +276,9 @@ type entry struct {
 // (restricted to local_allow)
 //
 // query parameters:
-//   public_key=<64-hex-characters>   [32 byte public key in hex]
-//   count=<int>                      [1..100  default: 10]
+//
+//	public_key=<64-hex-characters>   [32 byte public key in hex]
+//	count=<int>                      [1..100  default: 10]
 func (h *handler) Peers(w http.ResponseWriter, r *http.Request) {
 	if http.MethodGet != r.Method {
 		sendMethodNotAllowed(w)
@@ -301,14 +302,14 @@ func (h *handler) Peers(w http.ResponseWriter, r *http.Request) {
 	// public_key parsing
 	startkey := []byte{}
 	k, err := hex.DecodeString(r.Form.Get("public_key"))
-	if nil == err && 32 == len(k) {
+	if err == nil && len(k) == 32 {
 		startkey = k
 	}
 
 	// count parsing
 	count := defaultCount
 	n, err := strconv.Atoi(r.Form.Get("count"))
-	if nil == err && n >= 1 && n <= maximumCount {
+	if err == nil && n >= 1 && n <= maximumCount {
 		count = n
 	}
 	peers := make([]entry, 0, count)
@@ -316,7 +317,7 @@ func (h *handler) Peers(w http.ResponseWriter, r *http.Request) {
 item_loop:
 	for i := 0; i < count; i += 1 {
 		publicKey, listeners, timestamp, err := announce.GetNext(startkey)
-		if nil != err {
+		if err != nil {
 			sendInternalServerError(w)
 			return
 		}
@@ -333,7 +334,7 @@ item_loop:
 	lc_loop:
 		for {
 			conn, n := lPack.Unpack()
-			if nil == conn {
+			if conn == nil {
 				break lc_loop
 			}
 			lc = append(lc, conn.String())
@@ -353,7 +354,7 @@ item_loop:
 // send an JSON encoded reply
 func sendReply(w http.ResponseWriter, data interface{}) {
 	text, err := json.Marshal(data)
-	if nil != err {
+	if err != nil {
 		sendInternalServerError(w)
 		return
 	}
@@ -393,7 +394,7 @@ func sendError(w http.ResponseWriter, message string, code int) {
 		Code:  code,
 		Error: message,
 	})
-	if nil != err {
+	if err != nil {
 		// manually composed error just in case JSON fails
 		http.Error(w, `{"code":500,"error":"Internal server Error"}`, http.StatusInternalServerError)
 		return

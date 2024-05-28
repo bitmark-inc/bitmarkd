@@ -367,7 +367,7 @@ func transactionStatus(txId merkle.Digest) TransactionState {
 // move transaction(s) to verified cache
 func setVerified(payId pay.PayId, detail *PaymentDetail) bool {
 
-	if nil == detail {
+	if detail == nil {
 		globalData.log.Warn("payment was not provided")
 		return false
 	}
@@ -548,7 +548,7 @@ func rescanItem(item *transactionData) {
 		tr := tx.(transactionrecord.BitmarkTransfer)
 		link := tr.GetLink()
 		_, linkOwner := ownership.OwnerOf(nil, link)
-		if nil == linkOwner || !ownership.CurrentlyOwns(nil, linkOwner, link, storage.Pool.OwnerTxIndex) {
+		if linkOwner == nil || !ownership.CurrentlyOwns(nil, linkOwner, link, storage.Pool.OwnerTxIndex) {
 			internalDeleteByTxId(txId)
 		}
 
@@ -559,20 +559,20 @@ func rescanItem(item *transactionData) {
 	case *transactionrecord.BlockOwnerTransfer:
 		link := tx.Link
 		_, linkOwner := ownership.OwnerOf(nil, link)
-		if nil == linkOwner || !ownership.CurrentlyOwns(nil, linkOwner, link, storage.Pool.OwnerTxIndex) {
+		if linkOwner == nil || !ownership.CurrentlyOwns(nil, linkOwner, link, storage.Pool.OwnerTxIndex) {
 			internalDeleteByTxId(txId)
 		}
 
 	case *transactionrecord.BitmarkShare:
 		link := tx.Link
 		_, linkOwner := ownership.OwnerOf(nil, link)
-		if nil == linkOwner || !ownership.CurrentlyOwns(nil, linkOwner, link, storage.Pool.OwnerTxIndex) {
+		if linkOwner == nil || !ownership.CurrentlyOwns(nil, linkOwner, link, storage.Pool.OwnerTxIndex) {
 			internalDeleteByTxId(txId)
 		}
 
 	case *transactionrecord.ShareGrant:
 		_, err := CheckGrantBalance(nil, tx, storage.Pool.ShareQuantity)
-		if nil != err {
+		if err != nil {
 			internalDeleteByTxId(txId)
 		} else {
 			k := makeSpendKey(tx.Owner, tx.ShareId)
@@ -581,7 +581,7 @@ func rescanItem(item *transactionData) {
 
 	case *transactionrecord.ShareSwap:
 		_, _, err := CheckSwapBalances(nil, tx, storage.Pool.ShareQuantity)
-		if nil != err {
+		if err != nil {
 			internalDeleteByTxId(txId)
 		} else {
 			k := makeSpendKey(tx.OwnerOne, tx.ShareIdOne)

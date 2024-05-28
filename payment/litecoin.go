@@ -256,7 +256,7 @@ scan_vouts:
 			address := vout.ScriptPubKey.Addresses[0]
 			amounts[address] += satoshi.FromByteString(vout.Value)
 			address2, err := litecoin.TransformAddress(address)
-			if nil == err && address2 != address {
+			if err == nil && address2 != address {
 				amounts[address2] += satoshi.FromByteString(vout.Value)
 			}
 		}

@@ -86,7 +86,7 @@ func Initialise(configuration *Configuration) error {
 		for c := currency.First; c <= currency.Last; c++ {
 			switch c {
 			case currency.Bitcoin:
-				if nil == configuration.Bitcoin {
+				if configuration.Bitcoin == nil {
 					return fault.MissingPaymentBitcoinSection
 				}
 				handler, err := newBitcoinHandler(configuration.Bitcoin)
@@ -95,7 +95,7 @@ func Initialise(configuration *Configuration) error {
 				}
 				globalData.handlers[currency.Bitcoin.String()] = handler
 			case currency.Litecoin:
-				if nil == configuration.Litecoin {
+				if configuration.Litecoin == nil {
 					return fault.MissingPaymentLitecoinSection
 				}
 				handler, err := newLitecoinHandler(configuration.Litecoin)
@@ -157,7 +157,7 @@ func Finalise() error {
 	globalData.log.Flush()
 
 	// stop background if one was started
-	if nil != globalData.background {
+	if globalData.background != nil {
 		globalData.background.StopAndWait()
 	}
 

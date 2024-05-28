@@ -14,9 +14,6 @@ import (
 	"strings"
 	"time"
 
-	zmq "github.com/pebbe/zmq4"
-	"golang.org/x/crypto/ed25519"
-
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/blockheader"
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
@@ -33,6 +30,8 @@ import (
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
+	zmq "github.com/pebbe/zmq4"
+	"golang.org/x/crypto/ed25519"
 )
 
 // tags for the signing key data
@@ -70,7 +69,7 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 	for c, currencyAddress := range configuration.PaymentAddr {
 		var paymentCurrency currency.Currency
 		_, err := fmt.Sscan(c, &paymentCurrency)
-		if nil != err {
+		if err != nil {
 			log.Errorf("currency: %q  error: %s", c, err)
 			return err
 		}
@@ -78,7 +77,7 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 		switch paymentCurrency {
 		case currency.Bitcoin:
 			cType, _, err := bitcoin.ValidateAddress(currencyAddress)
-			if nil != err {
+			if err != nil {
 				log.Errorf("validate bitcoin address error: %s", err)
 				return err
 			}
@@ -100,7 +99,7 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 			}
 		case currency.Litecoin:
 			cType, _, err := litecoin.ValidateAddress(currencyAddress)
-			if nil != err {
+			if err != nil {
 				return err
 			}
 			switch cType {
@@ -127,7 +126,7 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 	s := strings.TrimSpace(configuration.SigningKey)
 	if strings.HasPrefix(s, taggedSeed) {
 		privateKey, err := account.PrivateKeyFromBase58Seed(s[len(taggedSeed):])
-		if nil != err {
+		if err != nil {
 			return err
 		}
 		pub.privateKey = privateKey.PrivateKeyBytes()
@@ -138,7 +137,7 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 			return err
 		}
 		privateKey, err := account.PrivateKeyFromBytes(b)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 		pub.privateKey = privateKey.PrivateKeyBytes()
@@ -157,12 +156,12 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 
 	// read the keys
 	privateKey, err := zmqutil.ReadPrivateKey(configuration.PrivateKey)
-	if nil != err {
+	if err != nil {
 		log.Errorf("read private key file: %q  error: %s", configuration.PrivateKey, err)
 		return err
 	}
 	publicKey, err := zmqutil.ReadPublicKey(configuration.PublicKey)
-	if nil != err {
+	if err != nil {
 		log.Errorf("read public key file: %q  error: %s", configuration.PublicKey, err)
 		return err
 	}
@@ -174,7 +173,7 @@ func (pub *publisher) initialise(configuration *Configuration) error {
 
 	// allocate IPv4 and IPv6 sockets
 	pub.socket4, pub.socket6, err = zmqutil.NewBind(log, zmq.PUB, publisherZapDomain, privateKey, publicKey, c)
-	if nil != err {
+	if err != nil {
 		log.Errorf("bind error: %s", err)
 		return err
 	}
@@ -186,12 +185,12 @@ func newInternalHasherRequester(pub *publisher) error {
 	var err error
 
 	pub.socket4, err = zmq.NewSocket(internalHasherProtocol)
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("create internal request hasher socket with error: %s", err)
 	}
 
 	err = pub.socket4.Bind(internalHasherRequest)
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("bind internal hasher request socket with error: %s", err)
 	}
 
@@ -221,10 +220,10 @@ loop:
 			pub.process()
 		}
 	}
-	if nil != pub.socket4 {
+	if pub.socket4 != nil {
 		pub.socket4.Close()
 	}
-	if nil != pub.socket6 {
+	if pub.socket6 != nil {
 		pub.socket6.Close()
 	}
 }
@@ -239,14 +238,14 @@ func (pub *publisher) process() {
 
 	// note: fetch one less tx because of foundation record
 	pooledTxIds, transactions, err := reservoir.FetchVerified(blockrecord.MaximumTransactions - 1)
-	if nil != err {
+	if err != nil {
 		pub.log.Errorf("Error on Fetch: %v", err)
 		return
 	}
 
 	txCount := len(pooledTxIds)
 
-	if 0 == txCount {
+	if txCount == 0 {
 		pub.log.Info("verified pool is empty")
 		return
 	}
@@ -266,12 +265,12 @@ func (pub *publisher) process() {
 
 	// sign the record and attach signature
 	partiallyPacked, _ := blockFoundation.Pack(pub.owner) // ignore error to get packed without signature
-	signature := ed25519.Sign(pub.privateKey[:], partiallyPacked)
-	blockFoundation.Signature = signature[:]
+	signature := ed25519.Sign(pub.privateKey, partiallyPacked)
+	blockFoundation.Signature = signature
 
 	// re-pack to makesure signature is valid
 	packedBI, err := blockFoundation.Pack(pub.owner)
-	if nil != err {
+	if err != nil {
 		pub.log.Criticalf("pack block foundation error: %s", err)
 		logger.Panicf("publisher packed block foundation error: %s", err)
 	}
@@ -341,11 +340,11 @@ func (pub *publisher) process() {
 	pub.log.Infof("json to send: %s", data)
 
 	// ***** FIX THIS: is the DONTWAIT flag needed or not?
-	if nil != pub.socket4 {
+	if pub.socket4 != nil {
 		_, err = pub.socket4.SendBytes(data, 0|zmq.DONTWAIT)
 		logger.PanicIfError("publisher 4", err)
 	}
-	if nil != pub.socket6 {
+	if pub.socket6 != nil {
 		_, err = pub.socket6.SendBytes(data, 0|zmq.DONTWAIT)
 		logger.PanicIfError("publisher 6", err)
 	}

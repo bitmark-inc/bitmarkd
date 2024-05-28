@@ -8,8 +8,6 @@ package rpccalls
 import (
 	"encoding/hex"
 
-	"golang.org/x/crypto/ed25519"
-
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/command/bitmark-cli/configuration"
 	"github.com/bitmark-inc/bitmarkd/currency"
@@ -18,6 +16,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/pay"
 	"github.com/bitmark-inc/bitmarkd/rpc/blockowner"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
+	"golang.org/x/crypto/ed25519"
 )
 
 // BlockTransferData - data for a block transfer request
@@ -47,15 +46,15 @@ func (client *Client) SingleSignedBlockTransfer(blockTransferConfig *BlockTransf
 
 	var link merkle.Digest
 	err := link.UnmarshalText([]byte(blockTransferConfig.TxId))
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
 	packed, blockTransfer, err := makeBlockTransferOneSignature(client.testnet, link, blockTransferConfig.Payments, blockTransferConfig.Owner, blockTransferConfig.NewOwner)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
-	if nil == blockTransfer {
+	if blockTransfer == nil {
 		return nil, fault.MakeBlockTransferFailed
 	}
 
@@ -74,19 +73,19 @@ func (client *Client) CountersignBlockTransfer(blockTransfer *transactionrecord.
 
 	var reply blockowner.TransferReply
 	err := client.client.Call("BlockOwner.Transfer", blockTransfer, &reply)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
 	tpid, err := reply.PayId.MarshalText()
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
 	commands := make(map[string]string)
 	for _, payment := range reply.Payments {
-		currency := payment[0].Currency
-		commands[currency.String()] = paymentCommand(client.testnet, currency, string(tpid), payment)
+		c := payment[0].Currency
+		commands[c.String()] = paymentCommand(client.testnet, c, string(tpid), payment)
 	}
 
 	client.printJson("BlockTransfer Reply", reply)
@@ -117,19 +116,18 @@ func makeBlockTransferOneSignature(testnet bool, link merkle.Digest, payments cu
 
 	// pack without signature
 	packed, err := r.Pack(ownerAccount)
-	if nil == err {
+	if err == nil {
 		return nil, nil, fault.MakeBlockTransferFailed
 	} else if fault.InvalidSignature != err {
 		return nil, nil, err
 	}
 
 	// attach signature
-	signature := ed25519.Sign(owner.PrivateKey.PrivateKeyBytes(), packed)
-	r.Signature = signature[:]
+	r.Signature = ed25519.Sign(owner.PrivateKey.PrivateKeyBytes(), packed)
 
 	// include first signature by packing again
 	packed, err = r.Pack(ownerAccount)
-	if nil == err {
+	if err == nil {
 		return nil, nil, fault.MakeBlockTransferFailed
 	} else if fault.InvalidSignature != err {
 		return nil, nil, err

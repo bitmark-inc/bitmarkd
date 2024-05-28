@@ -9,11 +9,10 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 
-	"golang.org/x/crypto/nacl/secretbox"
-
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/go-argon2"
+	"golang.org/x/crypto/nacl/secretbox"
 )
 
 type Private struct {
@@ -27,22 +26,22 @@ func decryptIdentity(password string, identity *Identity) (*Private, error) {
 
 	salt := new(Salt)
 	err := salt.UnmarshalText([]byte(identity.Salt))
-	if nil != err || "" == identity.Data {
+	if err != nil || identity.Data == "" {
 		return nil, fault.NotPrivateKey
 	}
 
 	key, err := generateKey(password, salt)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
 	seed, err := decryptData(identity.Data, key)
-	if nil != err {
+	if err != nil {
 		return nil, fault.WrongPassword
 	}
 
 	privateKey, err := account.PrivateKeyFromBase58Seed(seed)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -56,12 +55,12 @@ func decryptIdentity(password string, identity *Identity) (*Private, error) {
 
 func hashPassword(password string) (*Salt, *[32]byte, error) {
 	salt, err := MakeSalt()
-	if nil != err {
+	if err != nil {
 		return nil, nil, err
 	}
 
 	cipher, err := generateKey(password, salt)
-	if nil != err {
+	if err != nil {
 		return nil, nil, err
 	}
 
@@ -82,7 +81,7 @@ func generateKey(password string, salt *Salt) (*[32]byte, error) {
 	}
 
 	hash, err := argon2.Hash(ctx, []byte(password), saltBytes)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -96,8 +95,8 @@ func generateKey(password string, salt *Salt) (*[32]byte, error) {
 func encryptData(data string, secretKey *[32]byte) (string, error) {
 
 	// ensure data not too small or too large
-	len := len(data)
-	if len < 32 || len >= 16384 {
+	l := len(data)
+	if l < 32 || l >= 16384 {
 		return "", fault.CryptoFailed
 	}
 
@@ -119,12 +118,12 @@ func encryptData(data string, secretKey *[32]byte) (string, error) {
 // decrypt a hex string and return plaintext
 func decryptData(ciphertext string, secretKey *[32]byte) (string, error) {
 
-	if "" == ciphertext {
+	if ciphertext == "" {
 		return "", fault.CryptoFailed
 	}
 
 	encrypted, err := hex.DecodeString(ciphertext)
-	if nil != err {
+	if err != nil {
 		return "", err
 	}
 	if len(encrypted) <= 24 {

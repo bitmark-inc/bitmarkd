@@ -6,8 +6,6 @@
 package assets
 
 import (
-	"golang.org/x/time/rate"
-
 	"github.com/bitmark-inc/bitmarkd/asset"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/mode"
@@ -16,6 +14,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
+	"golang.org/x/time/rate"
 )
 
 // Assets - type for the RPC
@@ -62,12 +61,12 @@ func Register(assets []*transactionrecord.AssetData, pool storage.Handle) ([]Sta
 	packed := []byte{}
 	for i, argument := range assets {
 		assetId, packedAsset, err := asset.Cache(argument, pool)
-		if nil != err {
+		if err != nil {
 			return nil, nil, err
 		}
 
 		assetStatus[i].AssetId = assetId
-		if nil == packedAsset {
+		if packedAsset == nil {
 			assetStatus[i].Duplicate = true
 		} else {
 			packed = append(packed, packedAsset...)
@@ -103,7 +102,7 @@ func (assets *Assets) Get(arguments *GetArguments, reply *GetReply) error {
 	log := assets.Log
 	count := len(arguments.Fingerprints)
 
-	if err := ratelimit.LimitN(assets.Limiter, count, maximumAssets); nil != err {
+	if err := ratelimit.LimitN(assets.Limiter, count, maximumAssets); err != nil {
 		return err
 	}
 
@@ -121,17 +120,17 @@ loop:
 
 		confirmed := true
 		_, packedAsset := assets.Pool.GetNB(assetId[:])
-		if nil == packedAsset {
+		if packedAsset == nil {
 
 			confirmed = false
 			packedAsset = asset.Get(assetId)
-			if nil == packedAsset {
+			if packedAsset == nil {
 				continue loop
 			}
 		}
 
 		assetTx, _, err := transactionrecord.Packed(packedAsset).Unpack(assets.IsTestingChain())
-		if nil != err {
+		if err != nil {
 			continue loop
 		}
 

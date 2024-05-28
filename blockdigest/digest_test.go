@@ -11,11 +11,10 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/difficulty"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestScanFmt(t *testing.T) {
@@ -25,11 +24,11 @@ func TestScanFmt(t *testing.T) {
 
 	var d blockdigest.Digest
 	n, err := fmt.Sscan(stringDigest, &d)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to digest error: %s", err)
 	}
 
-	if 1 != n {
+	if n != 1 {
 		t.Fatalf("scanned %d items expected to scan 1", n)
 	}
 
@@ -63,15 +62,15 @@ func TestScanFmt(t *testing.T) {
 
 	var expectedBig big.Int
 	n, err = fmt.Sscanf(stringDigest, "%x", &expectedBig)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to big error: %s", err)
 	}
 
-	if 1 != n {
+	if n != 1 {
 		t.Fatalf("scanned %d items expected to scan 1", n)
 	}
 
-	if 0 != d.Cmp(&expectedBig) {
+	if d.Cmp(&expectedBig) != 0 {
 		t.Errorf("digest: %s != expected: %s", d, expectedBig.Text(16))
 	}
 
@@ -87,11 +86,11 @@ func TestDigest(t *testing.T) {
 
 	var expected blockdigest.Digest
 	n, err := fmt.Sscan(stringDigest, &expected)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to digest error: %s", err)
 	}
 
-	if 1 != n {
+	if n != 1 {
 		t.Fatalf("scanned %d items expected to scan 1", n)
 	}
 
@@ -122,11 +121,11 @@ func TestBlockDataDigest(t *testing.T) {
 
 	var expected blockdigest.Digest
 	n, err := fmt.Sscan(stringDigest, &expected)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to digest error: %s", err)
 	}
 
-	if 1 != n {
+	if n != 1 {
 		t.Fatalf("scanned %d items expected to scan 1", n)
 	}
 
@@ -136,7 +135,7 @@ func TestBlockDataDigest(t *testing.T) {
 
 	// test JSON
 	buffer, err := json.Marshal(d)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("marshal JSON error: %s", err)
 	}
 
@@ -146,7 +145,7 @@ func TestBlockDataDigest(t *testing.T) {
 
 	var jd blockdigest.Digest
 	err = json.Unmarshal([]byte(expectedJSON), &jd)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("unmarshal JSON error: %s", err)
 	}
 

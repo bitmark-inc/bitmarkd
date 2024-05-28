@@ -71,7 +71,7 @@ func TestAssetsPut(t *testing.T) {
 
 	tempData := make([]byte, 8)
 	copy(tempData, blockNumber)
-	expected := binary.BigEndian.Uint64(tempData[:])
+	expected := binary.BigEndian.Uint64(tempData)
 
 	assert.Equal(t, expected, data, "wrong asset data")
 	assert.Equal(t, []byte{assetID}, key, "wrong asset key")
@@ -87,7 +87,7 @@ func TestTransactionsPut(t *testing.T) {
 
 	tempData := make([]byte, 8)
 	copy(tempData, blockNumber)
-	expected := binary.BigEndian.Uint64(tempData[:])
+	expected := binary.BigEndian.Uint64(tempData)
 
 	assert.Equal(t, expected, data, "wrong transaction data")
 	assert.Equal(t, []byte{txID}, key, "wrong transaction key")
@@ -103,7 +103,7 @@ func TestBlockPut(t *testing.T) {
 
 	tempData := make([]byte, 9)
 	copy(tempData, packedBlock)
-	expected := binary.BigEndian.Uint64(tempData[:])
+	expected := binary.BigEndian.Uint64(tempData)
 
 	assert.Equal(t, expected, data, "wrong block data")
 	assert.Equal(t, []byte{blockID}, key, "wrong block key")
@@ -119,7 +119,7 @@ func TestBlockHeaderHashPut(t *testing.T) {
 
 	tempData := make([]byte, 9)
 	copy(tempData, packedBlockHeader)
-	expected := binary.BigEndian.Uint64(tempData[:])
+	expected := binary.BigEndian.Uint64(tempData)
 
 	assert.Equal(t, expected, data, "wrong block header data")
 	assert.Equal(t, []byte{blockHeaderID}, key, "wrong block header key")
@@ -135,7 +135,7 @@ func TestBlockOwnerPaymentPut(t *testing.T) {
 
 	tempData := make([]byte, 9)
 	copy(tempData, packedBlockOwnerPayment)
-	expected := binary.BigEndian.Uint64(tempData[:])
+	expected := binary.BigEndian.Uint64(tempData)
 
 	assert.Equal(t, expected, data, "wrong block owner payment data")
 	assert.Equal(t, []byte{blockOwnerPaymentID}, key, "wrong block owner payment key")
@@ -151,7 +151,7 @@ func TestBlockOwnerTXPut(t *testing.T) {
 
 	tempData := make([]byte, 9)
 	copy(tempData, packedBlockOwnerTX)
-	expected := binary.BigEndian.Uint64(tempData[:])
+	expected := binary.BigEndian.Uint64(tempData)
 
 	assert.Equal(t, expected, data, "wrong block owner tx data")
 	assert.Equal(t, []byte{blockOwnerTXID}, key, "wrong block owner tx key")
@@ -167,7 +167,7 @@ func TestOwnerNextCountPut(t *testing.T) {
 
 	tempData := make([]byte, 9)
 	copy(tempData, packedOwnerNextCount)
-	expected := binary.BigEndian.Uint64(tempData[:])
+	expected := binary.BigEndian.Uint64(tempData)
 
 	assert.Equal(t, expected, data, "wrong owner next count data")
 	assert.Equal(t, []byte{ownerNextCountID}, key, "wrong owner next count key")
@@ -183,7 +183,7 @@ func TestOwnerListPut(t *testing.T) {
 
 	tempData := make([]byte, 9)
 	copy(tempData, packedOwnerList)
-	expected := binary.BigEndian.Uint64(tempData[:])
+	expected := binary.BigEndian.Uint64(tempData)
 
 	assert.Equal(t, expected, data, "wrong owner list data")
 	assert.Equal(t, []byte{ownerListID}, key, "wrong owner list key")
@@ -199,7 +199,7 @@ func TestOwnerTXIDPut(t *testing.T) {
 
 	tempData := make([]byte, 9)
 	copy(tempData, packedOwnerTXID)
-	expected := binary.BigEndian.Uint64(tempData[:])
+	expected := binary.BigEndian.Uint64(tempData)
 
 	assert.Equal(t, expected, data, "wrong owner tx id data")
 	assert.Equal(t, []byte{ownerTXID}, key, "wrong owner tx id key")
@@ -215,7 +215,7 @@ func TestOwnerDataPut(t *testing.T) {
 
 	tempData := make([]byte, 9)
 	copy(tempData, packedOwnerData)
-	expected := binary.BigEndian.Uint64(tempData[:])
+	expected := binary.BigEndian.Uint64(tempData)
 
 	assert.Equal(t, expected, data, "wrong owner data")
 	assert.Equal(t, []byte{ownerDataID}, key, "wrong owner data key")
@@ -231,7 +231,7 @@ func TestSharePut(t *testing.T) {
 
 	tempData := make([]byte, 9)
 	copy(tempData, packedShares)
-	expected := binary.BigEndian.Uint64(tempData[:])
+	expected := binary.BigEndian.Uint64(tempData)
 
 	assert.Equal(t, expected, data, "wrong share data")
 	assert.Equal(t, []byte{sharesID}, key, "wrong share key")
@@ -247,7 +247,7 @@ func TestShareQuantityPut(t *testing.T) {
 
 	tempData := make([]byte, 9)
 	copy(tempData, packedShareQuantity)
-	expected := binary.BigEndian.Uint64(tempData[:])
+	expected := binary.BigEndian.Uint64(tempData)
 
 	assert.Equal(t, expected, data, "wrong share quantity data")
 	assert.Equal(t, []byte{shareQuantityID}, key, "wrong share quantity key")

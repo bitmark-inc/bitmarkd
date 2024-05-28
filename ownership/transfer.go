@@ -75,18 +75,18 @@ func transfer(
 	// get count for current owner record
 	dKey := append(currentOwner.Bytes(), previousTxId[:]...)
 	dCount := trx.Get(storage.Pool.OwnerTxIndex, dKey)
-	if nil == dCount {
+	if dCount == nil {
 		logger.Criticalf("ownership.Transfer: dKey: %x", dKey)
 		logger.Criticalf("ownership.Transfer: block number: %d", transferBlockNumber)
 		logger.Criticalf("ownership.Transfer: previous tx id: %#v", previousTxId)
 		logger.Criticalf("ownership.Transfer: transfer tx id: %#v", transferTxId)
 		logger.Criticalf("ownership.Transfer: current owner: %x  %v", currentOwner.Bytes(), currentOwner)
-		if nil != newOwner {
+		if newOwner != nil {
 			logger.Criticalf("ownership.Transfer: new     owner: %x  %v", newOwner.Bytes(), newOwner)
 		}
 
 		// ow, err := listBitmarksFor(currentOwner, 0, 999)
-		// if nil != err {
+		// if err != nil {
 		// 	logger.Criticalf("lbf: error: %s", err)
 		// } else {
 		// 	logger.Criticalf("lbf: %#v", ow)
@@ -97,7 +97,7 @@ func transfer(
 
 	// delete the current owners records
 	ownerData, err := GetOwnerData(trx, previousTxId, storage.Pool.OwnerData)
-	if nil != err {
+	if err != nil {
 		logger.Criticalf("ownership.Transfer: invalid owner data for tx id: %s  error: %s", previousTxId, err)
 		logger.Panic("ownership.Transfer: Ownership database corrupt")
 	}
@@ -110,7 +110,7 @@ func transfer(
 	trx.Delete(storage.Pool.OwnerData, previousTxId[:])
 
 	// if no new owner only above delete was needed
-	if nil == newOwner && 0 == quantity {
+	if newOwner == nil && quantity == 0 {
 		return
 	}
 
@@ -119,7 +119,7 @@ func transfer(
 	case *AssetOwnerData:
 
 		// create a share - only from an asset
-		if 0 != quantity {
+		if quantity != 0 {
 
 			// convert initial quantity to 8 byte big endian
 			quantityBytes := make([]byte, 8)
@@ -129,11 +129,13 @@ func transfer(
 			shareId := ownerData.issueTxId
 
 			// the total quantity of this type of share
-			shareData := append(quantityBytes, transferTxId[:]...)
+			shareData := append([]byte{}, quantityBytes...)
+			shareData = append(shareData, transferTxId[:]...)
 			trx.Put(storage.Pool.Shares, shareId[:], shareData, []byte{})
 
 			// initially total quantity goes to the creator
-			fKey := append(currentOwner.Bytes(), shareId[:]...)
+			fKey := append([]byte{}, currentOwner.Bytes()...)
+			fKey = append(fKey, shareId[:]...)
 			trx.Put(storage.Pool.ShareQuantity, fKey, quantityBytes, []byte{})
 
 			// convert to share and update
@@ -153,7 +155,7 @@ func transfer(
 
 	case *BlockOwnerData:
 		// create a share - only from an asset
-		if 0 != quantity {
+		if quantity != 0 {
 
 			// panic if not an asset (this should have been checked earlier)
 			logger.Criticalf("ownership.Transfer: ownerData for key: %x is not an asset", oKey)
@@ -167,7 +169,7 @@ func transfer(
 	case *ShareOwnerData:
 
 		// create a share - only from an asset
-		if 0 != quantity {
+		if quantity != 0 {
 
 			// panic if not an asset (this should have been checked earlier)
 			logger.Criticalf("ownership.Transfer: ownerData for key: %x is not an asset", oKey)
@@ -203,7 +205,7 @@ func create(
 	// increment the count for owner
 	nKey := owner.Bytes()
 	count := trx.Get(storage.Pool.OwnerNextCount, nKey)
-	if nil == count {
+	if count == nil {
 		count = []byte{0, 0, 0, 0, 0, 0, 0, 0}
 	} else if uint64ByteSize != len(count) {
 		logger.Panic("OwnerNextCount database corrupt")
@@ -273,13 +275,13 @@ func OwnerOf(trx storage.Transaction, txId merkle.Digest) (uint64, *account.Acco
 	var blockNumber uint64
 	var packed []byte
 
-	if nil == trx {
+	if trx == nil {
 		blockNumber, packed = storage.Pool.Transactions.GetNB(txId[:])
 	} else {
 		blockNumber, packed = trx.GetNB(storage.Pool.Transactions, txId[:])
 	}
 
-	if nil == packed {
+	if packed == nil {
 		return 0, nil
 	}
 
@@ -317,7 +319,7 @@ func CurrentlyOwns(
 ) bool {
 	dKey := append(owner.Bytes(), txId[:]...)
 
-	if nil == trx {
+	if trx == nil {
 		return pool.Has(dKey)
 	}
 	return trx.Has(pool, dKey)

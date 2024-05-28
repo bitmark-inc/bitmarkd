@@ -9,12 +9,11 @@ import (
 	"net"
 	"time"
 
-	"github.com/miekg/dns"
-
 	"github.com/bitmark-inc/bitmarkd/announce/receptor"
 	"github.com/bitmark-inc/bitmarkd/background"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
+	"github.com/miekg/dns"
 )
 
 // startup node connection information is provided through DNS TXT records.
@@ -44,7 +43,7 @@ loop:
 		case <-timer:
 			timer = time.After(interval(d.domainName, d.log))
 			txts, err := d.lookuper.Lookup(d.domainName)
-			if nil != err {
+			if err != nil {
 				continue loop
 			}
 
@@ -64,12 +63,12 @@ func interval(domain string, log *logger.L) time.Duration {
 	// reading default configuration file
 	conf, err := dns.ClientConfigFromFile(configFile)
 
-	if nil != err {
+	if err != nil {
 		log.Warnf("reading %s error: %s", configFile, err)
 		goto done
 	}
 
-	if 0 == len(conf.Servers) {
+	if len(conf.Servers) == 0 {
 		log.Warnf("cannot get dns name server")
 		goto done
 	}
@@ -90,12 +89,12 @@ loop:
 		msg.SetQuestion(domain+".", dns.TypeSOA) // fixed for type SOA
 
 		r, _, err := c.Exchange(&msg, s)
-		if nil != err {
+		if err != nil {
 			log.Debugf("exchange with dns server %q error: %s", s, err)
 			continue loop
 		}
 
-		if 0 == len(r.Ns) && 0 == len(r.Answer) && 0 == len(r.Extra) {
+		if len(r.Ns) == 0 && len(r.Answer) == 0 && len(r.Extra) == 0 {
 			log.Debugf("no resource record found by dns server %q", s)
 			continue loop
 		}
@@ -122,7 +121,7 @@ done:
 
 // get TTL record from a resource record
 func ttl(rrs []dns.RR) uint32 {
-	if 0 == len(rrs) {
+	if len(rrs) == 0 {
 		return 0
 	}
 	for _, rr := range rrs {
@@ -147,7 +146,7 @@ func New(log *logger.L, domainName string, receptors receptor.Receptor, f func(s
 	}
 
 	txts, err := d.lookuper.Lookup(d.domainName)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -160,16 +159,16 @@ func addTXTs(txts []DnsTXT, log *logger.L, receptors receptor.Receptor) {
 	for i, t := range txts {
 		var listeners []byte
 
-		if nil != t.IPv4 {
+		if t.IPv4 != nil {
 			c1 := util.ConnectionFromIPandPort(t.IPv4, t.ConnectPort)
 			listeners = append(listeners, c1.Pack()...)
 		}
-		if nil != t.IPv6 {
+		if t.IPv6 != nil {
 			c2 := util.ConnectionFromIPandPort(t.IPv6, t.ConnectPort)
 			listeners = append(listeners, c2.Pack()...)
 		}
 
-		if nil == t.IPv4 && nil == t.IPv6 {
+		if t.IPv4 == nil && t.IPv6 == nil {
 			log.Debugf("result[%d]: ignoring invalid record", i)
 		} else {
 			log.Infof("result[%d]: adding: %x", i, listeners)

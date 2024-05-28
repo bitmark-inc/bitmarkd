@@ -11,13 +11,12 @@ import (
 	"reflect"
 	"testing"
 
-	"golang.org/x/crypto/ed25519"
-
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
+	"golang.org/x/crypto/ed25519"
 )
 
 // test the packing/unpacking of base record
@@ -72,8 +71,8 @@ func TestPackBlockFoundation(t *testing.T) {
 
 	// test the packer
 	packed, err := r.Pack(proofedByAccount)
-	if nil != err {
-		if nil != packed {
+	if err != nil {
+		if packed != nil {
 			t.Errorf("partial packed:\n%s", util.FormatBytes("expected", packed))
 		}
 		t.Fatalf("pack error: %s", err)
@@ -103,7 +102,7 @@ func TestPackBlockFoundation(t *testing.T) {
 
 	// test the unpacker
 	unpacked, n, err := packed.Unpack(true)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("unpack error: %s", err)
 	}
 
@@ -125,7 +124,7 @@ func TestPackBlockFoundation(t *testing.T) {
 		BlockFoundation: blockFoundation,
 	}
 	b, err := json.MarshalIndent(item, "", "  ")
-	if nil != err {
+	if err != nil {
 		t.Fatalf("json error: %s", err)
 	}
 
@@ -157,7 +156,7 @@ func TestPackBlockFoundationWithZeroAccount(t *testing.T) {
 
 	// test the packer
 	_, err := r.Pack(proofedByAccount)
-	if nil == err {
+	if err == nil {
 		t.Fatalf("pack should have failed")
 	}
 	if fault.InvalidOwnerOrRegistrant != err {

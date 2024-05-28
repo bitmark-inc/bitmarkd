@@ -8,11 +8,10 @@ package account
 import (
 	"bytes"
 
-	"golang.org/x/crypto/ed25519"
-	"golang.org/x/crypto/sha3"
-
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
+	"golang.org/x/crypto/ed25519"
+	"golang.org/x/crypto/sha3"
 )
 
 // enumeration of supported key algorithms
@@ -75,7 +74,7 @@ type NothingAccount struct {
 func AccountFromBase58(accountBase58Encoded string) (*Account, error) {
 	// Decode the account
 	accountDecoded := util.FromBase58(accountBase58Encoded)
-	if 0 == len(accountDecoded) {
+	if len(accountDecoded) == 0 {
 		return nil, fault.CannotDecodeAccount
 	}
 
@@ -83,7 +82,7 @@ func AccountFromBase58(accountBase58Encoded string) (*Account, error) {
 	keyVariant, keyVariantLength := util.FromVarint64(accountDecoded)
 
 	// Check key type
-	if 0 == keyVariantLength || keyVariant&publicKeyCode != publicKeyCode {
+	if keyVariantLength == 0 || keyVariant&publicKeyCode != publicKeyCode {
 		return nil, fault.NotPublicKey
 	}
 
@@ -94,7 +93,7 @@ func AccountFromBase58(accountBase58Encoded string) (*Account, error) {
 	}
 
 	// network selection
-	isTest := 0 != keyVariant&testKeyCode
+	isTest := keyVariant&testKeyCode != 0
 
 	// Compute key length
 	keyLength := len(accountDecoded) - keyVariantLength - checksumLength
@@ -124,7 +123,7 @@ func AccountFromBase58(accountBase58Encoded string) (*Account, error) {
 		}
 		return account, nil
 	case Nothing:
-		if 2 != keyLength {
+		if keyLength != 2 {
 			return nil, fault.InvalidKeyLength
 		}
 		publicKey := accountDecoded[keyVariantLength:checksumStart]
@@ -150,7 +149,7 @@ func AccountFromBytes(accountBytes []byte) (*Account, error) {
 	keyVariant, keyVariantLength := util.FromVarint64(accountBytes)
 
 	// Check key type
-	if 0 == keyVariantLength || keyVariant&publicKeyCode != publicKeyCode {
+	if keyVariantLength == 0 || keyVariant&publicKeyCode != publicKeyCode {
 		return nil, fault.NotPublicKey
 	}
 
@@ -161,7 +160,7 @@ func AccountFromBytes(accountBytes []byte) (*Account, error) {
 	}
 
 	// network selection
-	isTest := 0 != keyVariant&testKeyCode
+	isTest := keyVariant&testKeyCode != 0
 
 	// Compute key length
 	keyLength := len(accountBytes) - keyVariantLength
@@ -184,7 +183,7 @@ func AccountFromBytes(accountBytes []byte) (*Account, error) {
 		}
 		return account, nil
 	case Nothing:
-		if 2 != keyLength {
+		if keyLength != 2 {
 			return nil, fault.InvalidKeyLength
 		}
 		publicKey := accountBytes[keyVariantLength:]
@@ -203,7 +202,7 @@ func AccountFromBytes(accountBytes []byte) (*Account, error) {
 // UnmarshalText - create account from text string
 func (account *Account) UnmarshalText(s []byte) error {
 	a, err := AccountFromBase58(string(s))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	account.AccountInterface = a.AccountInterface
@@ -220,7 +219,7 @@ func (account *ED25519Account) KeyType() int {
 
 // PublicKeyBytes - fetch the public key as byte slice
 func (account *ED25519Account) PublicKeyBytes() []byte {
-	return account.PublicKey[:]
+	return account.PublicKey
 }
 
 // CheckSignature - check the signature of a message
@@ -230,7 +229,7 @@ func (account *ED25519Account) CheckSignature(message []byte, signature Signatur
 		return fault.InvalidSignature
 	}
 
-	if !ed25519.Verify(account.PublicKey[:], message, signature) {
+	if !ed25519.Verify(account.PublicKey, message, signature) {
 		return fault.InvalidSignature
 	}
 	return nil
@@ -242,7 +241,7 @@ func (account *ED25519Account) Bytes() []byte {
 	if account.Test {
 		keyVariant |= testKeyCode
 	}
-	return append([]byte{keyVariant}, account.PublicKey[:]...)
+	return append([]byte{keyVariant}, account.PublicKey...)
 }
 
 // String - base58 encoding of encoded key
@@ -266,7 +265,7 @@ func (account ED25519Account) IsTesting() bool {
 // IsZero - return whether the public key is all zero or not
 func (account ED25519Account) IsZero() bool {
 	for _, b := range account.PublicKey {
-		if 0 != b {
+		if b != 0 {
 			return false
 		}
 	}
@@ -283,7 +282,7 @@ func (account *NothingAccount) KeyType() int {
 
 // PublicKeyBytes - fetch the public key as byte slice
 func (account *NothingAccount) PublicKeyBytes() []byte {
-	return account.PublicKey[:]
+	return account.PublicKey
 }
 
 // CheckSignature - check the signature of a message
@@ -297,7 +296,7 @@ func (account *NothingAccount) Bytes() []byte {
 	if account.Test {
 		keyVariant |= testKeyCode
 	}
-	return append([]byte{keyVariant}, account.PublicKey[:]...)
+	return append([]byte{keyVariant}, account.PublicKey...)
 }
 
 // String - base58 encoding of encoded key
@@ -321,7 +320,7 @@ func (account NothingAccount) IsTesting() bool {
 // IsZero - return whether the public key is all zero or not
 func (account NothingAccount) IsZero() bool {
 	for _, b := range account.PublicKey {
-		if 0 != b {
+		if b != 0 {
 			return false
 		}
 	}

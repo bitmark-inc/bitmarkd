@@ -31,7 +31,7 @@ func (currency Currency) ValidateAddress(address string, testnet bool) error {
 
 	case Bitcoin:
 		version, _, err := bitcoin.ValidateAddress(address)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 		if bitcoin.IsTestnet(version) != testnet {
@@ -41,7 +41,7 @@ func (currency Currency) ValidateAddress(address string, testnet bool) error {
 
 	case Litecoin:
 		version, _, err := litecoin.ValidateAddress(address)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 		if litecoin.IsTestnet(version) != testnet {

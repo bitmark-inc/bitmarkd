@@ -79,7 +79,7 @@ func enqueueToJobQueue(item *PublishedItem, txdata []byte) {
 	jobQueue.count += 1 // wraps (uint16)
 	item.Job = fmt.Sprintf("%04x", jobQueue.count)
 	n := jobQueue.count % queueSize
-	if nil != jobQueue.entries[n] {
+	if jobQueue.entries[n] != nil {
 		clearEntry(jobQueue.entries[n])
 		jobQueue.entries[n] = nil
 	}
@@ -99,13 +99,13 @@ func matchToJobQueue(received *SubmittedItem, log *logger.L) (success bool) {
 	var entry *entryType
 search:
 	for _, e := range jobQueue.entries {
-		if nil != e && nil != e.item && e.item.Job == job {
+		if e != nil && e.item != nil && e.item.Job == job {
 			entry = e
 			break search
 		}
 	}
 
-	if nil == entry {
+	if entry == nil {
 		return
 	}
 
@@ -139,12 +139,14 @@ search:
 		// broadcast this packedBlock for processing
 		messagebus.Bus.Blockstore.Send("local", packedBlock)
 		success = true
+
+	default:
 	}
 
 cleanup:
 	// erase the queue
 	for i := range jobQueue.entries {
-		if nil != jobQueue.entries[i] {
+		if jobQueue.entries[i] != nil {
 			clearEntry(jobQueue.entries[i])
 			jobQueue.entries[i] = nil
 		}

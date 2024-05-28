@@ -54,7 +54,7 @@ func main() {
 	}
 
 	program, options, arguments, err := getoptions.GetOS(flags)
-	if nil != err {
+	if err != nil {
 		exitwithstatus.Message("%s: getoptions error: %s", program, err)
 	}
 
@@ -74,14 +74,14 @@ func main() {
 		return
 	}
 
-	if 1 != len(options["config-file"]) {
+	if len(options["config-file"]) != 1 {
 		exitwithstatus.Message("%s: only one config-file option is required, %d were detected", program, len(options["config-file"]))
 	}
 
 	// read options and parse the configuration file
 	configurationFile := options["config-file"][0]
 	theConfiguration, err := getConfiguration(configurationFile)
-	if nil != err {
+	if err != nil {
 		exitwithstatus.Message("%s: failed to read configuration from: %q  error: %s", program, configurationFile, err)
 	}
 
@@ -92,7 +92,7 @@ func main() {
 	}
 
 	// start logging
-	if err = logger.Initialise(theConfiguration.Logging); nil != err {
+	if err = logger.Initialise(theConfiguration.Logging); err != nil {
 		exitwithstatus.Message("%s: logger setup failed with error: %s", program, err)
 	}
 	defer logger.Finalise()
@@ -110,8 +110,8 @@ func main() {
 
 	// optional PID file
 	// use if not running under a supervisor program like daemon(8)
-	if "" != theConfiguration.PidFile {
-		lockFile, err := os.OpenFile(theConfiguration.PidFile, os.O_WRONLY|os.O_EXCL|os.O_CREATE, os.ModeExclusive|0600)
+	if theConfiguration.PidFile != "" {
+		lockFile, err := os.OpenFile(theConfiguration.PidFile, os.O_WRONLY|os.O_EXCL|os.O_CREATE, os.ModeExclusive|0o600)
 		if err != nil {
 			if os.IsExist(err) {
 				exitwithstatus.Message("%s: another instance is already running", program)
@@ -125,7 +125,7 @@ func main() {
 
 	// set the initial system mode - before any background tasks are started
 	err = mode.Initialise(theConfiguration.Chain)
-	if nil != err {
+	if err != nil {
 		log.Criticalf("mode initialise error: %s", err)
 		exitwithstatus.Message("mode initialise error: %s", err)
 	}
@@ -134,7 +134,7 @@ func main() {
 	// start a profiling http server
 	// this uses the default builtin HTTP handler
 	// and is not associated with the normal ClientRPC HTTPS server
-	if "" != theConfiguration.ProfileHTTP {
+	if theConfiguration.ProfileHTTP != "" {
 		go func() {
 			log.Warnf("profile listener on: %s", theConfiguration.ProfileHTTP)
 			err = http.ListenAndServe(theConfiguration.ProfileHTTP, nil)
@@ -155,7 +155,7 @@ func main() {
 	// start the data storage
 	log.Info("initialise storage")
 	err = storage.Initialise(theConfiguration.Database.Name, storage.ReadWrite)
-	if nil != err {
+	if err != nil {
 		log.Criticalf("storage initialise error: %s", err)
 		exitwithstatus.Message("storage initialise error: %s", err)
 	}
@@ -167,7 +167,7 @@ func main() {
 
 	// start asset cache
 	err = asset.Initialise()
-	if nil != err {
+	if err != nil {
 		log.Criticalf("asset initialise error: %s", err)
 		exitwithstatus.Message("asset initialise error: %s", err)
 	}
@@ -189,7 +189,7 @@ func main() {
 	// start the reservoir (verified transaction data cache)
 	log.Info("initialise reservoir")
 	err = reservoir.Initialise(theConfiguration.CacheDirectory, handles, theConfiguration.Payment.AutoVerify)
-	if nil != err {
+	if err != nil {
 		log.Criticalf("reservoir initialise error: %s", err)
 		exitwithstatus.Message("reservoir initialise error: %s", err)
 	}
@@ -198,7 +198,7 @@ func main() {
 	// block header data
 	log.Info("initialise blockheader")
 	err = blockheader.Initialise()
-	if nil != err {
+	if err != nil {
 		log.Criticalf("blockheader initialise error: %s", err)
 		exitwithstatus.Message("blockheader initialise error: %s", err)
 	}
@@ -211,7 +211,7 @@ func main() {
 	// block data storage - depends on storage and mode
 	log.Info("initialise block")
 	err = block.Initialise(storage.Pool.Blocks)
-	if nil != err {
+	if err != nil {
 		log.Criticalf("block initialise error: %s", err)
 		exitwithstatus.Message("block initialise error: %s", err)
 	}
@@ -227,7 +227,7 @@ func main() {
 	if blockrecord.IsDifficultyAppliedVersion(blockHeaderVersion) && difficulty.AdjustTimespanInBlocks < height {
 		log.Info("initialise difficulty based on existing blocks")
 		_, _, err = blockrecord.AdjustDifficultyAtBlock(blockheader.Height())
-		if nil != err {
+		if err != nil {
 			log.Criticalf("initialise difficulty error: %s", err)
 			exitwithstatus.Message("initialise difficulty error: %s", err)
 		}
@@ -236,7 +236,7 @@ func main() {
 	ownership.Initialise(storage.Pool.OwnerList, storage.Pool.OwnerData)
 
 	err = reservoir.LoadFromFile(handles)
-	if nil != err && !os.IsNotExist(err) {
+	if err != nil && !os.IsNotExist(err) {
 		log.Criticalf("reservoir reload error: %s", err)
 		exitwithstatus.Message("reservoir reload error: %s", err)
 	}
@@ -268,7 +268,7 @@ func main() {
 		nodesDomain = theConfiguration.Nodes // just assume it is a domain name
 	}
 	err = announce.Initialise(nodesDomain, theConfiguration.CacheDirectory, net.LookupTXT)
-	if nil != err {
+	if err != nil {
 		log.Criticalf("announce initialise error: %s", err)
 		exitwithstatus.Message("announce initialise error: %s", err)
 	}
@@ -276,7 +276,7 @@ func main() {
 
 	// start payment services
 	err = payment.Initialise(&theConfiguration.Payment)
-	if nil != err {
+	if err != nil {
 		log.Criticalf("payment initialise  error: %s", err)
 		exitwithstatus.Message("payment initialise error: %s", err)
 	}
@@ -284,14 +284,14 @@ func main() {
 
 	// initialise encryption
 	err = zmqutil.StartAuthentication()
-	if nil != err {
+	if err != nil {
 		log.Criticalf("zmq.AuthStart: error: %s", err)
 		exitwithstatus.Message("zmq.AuthStart: error: %s", err)
 	}
 
 	// start up the peering background processes
 	err = peer.Initialise(&theConfiguration.Peering, version, theConfiguration.Fastsync)
-	if nil != err {
+	if err != nil {
 		log.Criticalf("peer initialise error: %s", err)
 		exitwithstatus.Message("peer initialise error: %s", err)
 	}
@@ -299,7 +299,7 @@ func main() {
 
 	// start up the publishing background processes
 	err = publish.Initialise(&theConfiguration.Publishing, version)
-	if nil != err {
+	if err != nil {
 		log.Criticalf("publish initialise error: %s", err)
 		exitwithstatus.Message("publish initialise error: %s", err)
 	}
@@ -307,7 +307,7 @@ func main() {
 
 	// start up the rpc background processes
 	err = rpc.Initialise(&theConfiguration.ClientRPC, &theConfiguration.HttpsRPC, version, announce.Get())
-	if nil != err {
+	if err != nil {
 		log.Criticalf("rpc initialise error: %s", err)
 		exitwithstatus.Message("peer initialise error: %s", err)
 	}
@@ -315,7 +315,7 @@ func main() {
 
 	// start proof background processes
 	err = proof.Initialise(&theConfiguration.Proofing)
-	if nil != err {
+	if err != nil {
 		log.Criticalf("proof initialise error: %s", err)
 		exitwithstatus.Message("proof initialise error: %s", err)
 	}
@@ -327,7 +327,7 @@ func main() {
 	}
 
 	// wait for CTRL-C before shutting down to allow manual testing
-	if 0 == len(options["quiet"]) {
+	if len(options["quiet"]) == 0 {
 		fmt.Printf("\n\nWaiting for CTRL-C (SIGINT) or 'kill <pid>' (SIGTERM)…")
 	}
 
@@ -336,7 +336,7 @@ func main() {
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-ch
 	log.Infof("received signal: %v", sig)
-	if 0 == len(options["quiet"]) {
+	if len(options["quiet"]) == 0 {
 		fmt.Printf("\nreceived signal: %v\n", sig)
 		fmt.Printf("\nshutting down…\n")
 	}

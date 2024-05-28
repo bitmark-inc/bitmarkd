@@ -25,12 +25,12 @@ func (tree *Tree) Print(printData bool) int {
 
 // internal print - returns the maximum depth of the tree
 func printTree(tree *Node, prefix string, br branch, printData bool) int {
-	if nil == tree {
+	if tree == nil {
 		return 0
 	}
 	rd := 0
 	ld := 0
-	if nil != tree.right {
+	if tree.right != nil {
 		t := "       "
 		if left == br {
 			t = "|      "
@@ -46,7 +46,7 @@ func printTree(tree *Node, prefix string, br branch, printData bool) int {
 		fmt.Printf("%s/------+ ", prefix)
 	}
 	up := interface{}(nil)
-	if nil != tree.up {
+	if tree.up != nil {
 		up = tree.up.key
 	}
 	if printData {
@@ -54,7 +54,7 @@ func printTree(tree *Node, prefix string, br branch, printData bool) int {
 	} else {
 		fmt.Printf("%q ^%v\n", tree.key, up)
 	}
-	if nil != tree.left {
+	if tree.left != nil {
 		t := "       "
 		if right == br {
 			t = "|      "

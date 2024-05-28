@@ -17,12 +17,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/bitmark-inc/bitmarkd/announce"
 	"github.com/bitmark-inc/bitmarkd/rpc/fixtures"
 	"github.com/bitmark-inc/bitmarkd/rpc/handler"
 	"github.com/bitmark-inc/logger"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -72,7 +71,7 @@ func TestRoot(t *testing.T) {
 		uint64(5),
 	)
 
-	req := httptest.NewRequest("GET", "http://not.found", nil)
+	req := httptest.NewRequest("GET", "http://not.found", http.NoBody)
 	w := httptest.NewRecorder()
 	h.Root(w, req)
 
@@ -140,7 +139,7 @@ func TestRPCWhenWrongHTTPMethod(t *testing.T) {
 		uint64(5),
 	)
 
-	req := httptest.NewRequest("GET", "http://not.exist", nil)
+	req := httptest.NewRequest("GET", "http://not.exist", http.NoBody)
 	w := httptest.NewRecorder()
 	h.RPC(w, req)
 
@@ -166,7 +165,7 @@ func TestRPCWhenTooManyConnections(t *testing.T) {
 		uint64(0),
 	)
 
-	req := httptest.NewRequest("POST", "http://not.exist", nil)
+	req := httptest.NewRequest("POST", "http://not.exist", http.NoBody)
 	w := httptest.NewRecorder()
 	h.RPC(w, req)
 
@@ -228,7 +227,7 @@ func TestPeers(t *testing.T) {
 	params := make(url.Values)
 	params["peerid"] = []string{"12345"}
 
-	req := httptest.NewRequest("GET", "http://test.com?"+params.Encode(), nil)
+	req := httptest.NewRequest("GET", "http://test.com?"+params.Encode(), http.NoBody)
 	w := httptest.NewRecorder()
 
 	h.Peers(w, req)
@@ -253,7 +252,7 @@ func TestPeersWhenWrongHTTPMethod(t *testing.T) {
 		uint64(5),
 	)
 
-	req := httptest.NewRequest("POST", "http://not.exist", nil)
+	req := httptest.NewRequest("POST", "http://not.exist", http.NoBody)
 	w := httptest.NewRecorder()
 	h.Peers(w, req)
 
@@ -277,7 +276,7 @@ func TestPeersWhenNotAllow(t *testing.T) {
 		uint64(5),
 	)
 
-	req := httptest.NewRequest("GET", "http://test.com", nil)
+	req := httptest.NewRequest("GET", "http://test.com", http.NoBody)
 	w := httptest.NewRecorder()
 
 	h.Peers(w, req)
@@ -307,7 +306,7 @@ func TestPeersWhenTooManyConnections(t *testing.T) {
 	allow["peers"] = []*net.IPNet{ipNet}
 	h.SetAllow(allow)
 
-	req := httptest.NewRequest("GET", "http://not.exist", nil)
+	req := httptest.NewRequest("GET", "http://not.exist", http.NoBody)
 	w := httptest.NewRecorder()
 	h.Peers(w, req)
 
@@ -336,7 +335,7 @@ func TestConnections(t *testing.T) {
 	allow["connections"] = []*net.IPNet{ipNet}
 	h.SetAllow(allow)
 
-	req := httptest.NewRequest("GET", "http://test.com", nil)
+	req := httptest.NewRequest("GET", "http://test.com", http.NoBody)
 	w := httptest.NewRecorder()
 	h.Connections(w, req)
 
@@ -359,7 +358,7 @@ func TestConnectionWhenWrongHTTPMethod(t *testing.T) {
 		uint64(5),
 	)
 
-	req := httptest.NewRequest("POST", "http://not.exist", nil)
+	req := httptest.NewRequest("POST", "http://not.exist", http.NoBody)
 	w := httptest.NewRecorder()
 	h.Connections(w, req)
 
@@ -383,7 +382,7 @@ func TestConnectionsWhenNotAllow(t *testing.T) {
 		uint64(5),
 	)
 
-	req := httptest.NewRequest("GET", "http://test.com", nil)
+	req := httptest.NewRequest("GET", "http://test.com", http.NoBody)
 	w := httptest.NewRecorder()
 
 	h.Connections(w, req)
@@ -413,7 +412,7 @@ func TestConnectionsWhenTooManyConnections(t *testing.T) {
 	allow["connections"] = []*net.IPNet{ipNet}
 	h.SetAllow(allow)
 
-	req := httptest.NewRequest("GET", "http://not.exist", nil)
+	req := httptest.NewRequest("GET", "http://not.exist", http.NoBody)
 	w := httptest.NewRecorder()
 	h.Connections(w, req)
 
@@ -442,7 +441,7 @@ func TestDetails(t *testing.T) {
 	allow["details"] = []*net.IPNet{ipNet}
 	h.SetAllow(allow)
 
-	req := httptest.NewRequest("GET", "http://test.com", nil)
+	req := httptest.NewRequest("GET", "http://test.com", http.NoBody)
 	w := httptest.NewRecorder()
 
 	h.Details(w, req)
@@ -466,7 +465,7 @@ func TestDetailsWhenWrongHTTPMethod(t *testing.T) {
 		uint64(5),
 	)
 
-	req := httptest.NewRequest("POST", "http://not.exist", nil)
+	req := httptest.NewRequest("POST", "http://not.exist", http.NoBody)
 	w := httptest.NewRecorder()
 	h.Details(w, req)
 
@@ -490,7 +489,7 @@ func TestDetailsWhenNotAllow(t *testing.T) {
 		uint64(5),
 	)
 
-	req := httptest.NewRequest("GET", "http://test.com", nil)
+	req := httptest.NewRequest("GET", "http://test.com", http.NoBody)
 	w := httptest.NewRecorder()
 
 	h.Details(w, req)
@@ -520,7 +519,7 @@ func TestDetailsWhenTooManyConnections(t *testing.T) {
 	allow["details"] = []*net.IPNet{ipNet}
 	h.SetAllow(allow)
 
-	req := httptest.NewRequest("GET", "http://not.exist", nil)
+	req := httptest.NewRequest("GET", "http://not.exist", http.NoBody)
 	w := httptest.NewRecorder()
 	h.Details(w, req)
 

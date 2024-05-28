@@ -115,7 +115,7 @@ func (j *JobCalendarData) SetLog(l *logger.L) {
 }
 
 func (j *JobCalendarData) RunForever() bool {
-	return 0 == len(j.flattenEvents.stop)
+	return len(j.flattenEvents.stop) == 0
 }
 
 func (j *JobCalendarData) Refresh(calendar ConfigCalendar) {
@@ -181,7 +181,7 @@ loop:
 }
 
 func isEventAlreadyExist(times []time.Time, event time.Time) (bool, int) {
-	if 0 == len(times) {
+	if len(times) == 0 {
 		return false, defaultIndex
 	}
 	for i, v := range times {
@@ -269,7 +269,7 @@ func (j *JobCalendarData) PickNextStopEvent(event time.Time) interface{} {
 }
 
 func (j *JobCalendarData) RescheduleStartEventsPrior(event time.Time) {
-	if 0 == len(j.flattenEvents.start) || j.flattenEvents.start[0].After(event) {
+	if len(j.flattenEvents.start) == 0 || j.flattenEvents.start[0].After(event) {
 		return
 	}
 	times := j.flattenEvents.start
@@ -289,7 +289,7 @@ loop:
 }
 
 func (j *JobCalendarData) RescheduleStopEventsPrior(event time.Time) {
-	if 0 == len(j.flattenEvents.stop) || j.flattenEvents.stop[0].After(event) {
+	if len(j.flattenEvents.stop) == 0 || j.flattenEvents.stop[0].After(event) {
 		return
 	}
 	times := j.flattenEvents.stop
@@ -329,7 +329,7 @@ func (j *JobCalendarData) parseClockStr(clock string) (TimeData, error) {
 	}
 
 	t, err := time.Parse("15:04", clock)
-	if nil != err {
+	if err != nil {
 		j.log.Errorf("%s\n", err.Error())
 		return TimeData{}, err
 	}
@@ -356,11 +356,11 @@ func (j *JobCalendarData) parseTimePeriod(period string) (TimeData, TimeData, er
 		return TimeData{}, TimeData{}, fmt.Errorf(defaultTimePeriodErrorMsg)
 	}
 	timeFirst, err := j.parseClockStr(clocks[0])
-	if nil != err {
+	if err != nil {
 		return TimeData{}, TimeData{}, fmt.Errorf(defaultTimePeriodErrorMsg)
 	}
 	timeSecond, err := j.parseClockStr(clocks[1])
-	if nil != err {
+	if err != nil {
 		return TimeData{}, TimeData{}, fmt.Errorf(defaultTimePeriodErrorMsg)
 	}
 
@@ -462,7 +462,7 @@ loop:
 			continue loop
 		}
 		t1, t2, err := j.parseTimePeriod(period)
-		if nil != err {
+		if err != nil {
 			j.log.Errorf("error parse time period %s, error: %s", period, err)
 			continue loop
 		}
@@ -480,7 +480,7 @@ loop:
 		)
 	}
 
-	if 0 == len(flattenEvents.start) {
+	if len(flattenEvents.start) == 0 {
 		j.log.Debugf("empty flatten start event, add start event to day start")
 		j.scheduleStartEventWhenDayBegin(day)
 		return
@@ -499,12 +499,12 @@ func (j *JobCalendarData) scheduleStartEventWhenDayBegin(day time.Weekday) {
 	}
 }
 
-func (j *JobCalendarData) isSameCalendar(new ConfigCalendar) bool {
-	equal := reflect.DeepEqual(j.rawData, new)
+func (j *JobCalendarData) isSameCalendar(newc ConfigCalendar) bool {
+	equal := reflect.DeepEqual(j.rawData, newc)
 	if !equal {
 		j.log.Debug("config changed")
 		j.log.Debugf("previous: %+v", j.rawData)
-		j.log.Debugf("new: %+v", new)
+		j.log.Debugf("new: %+v", newc)
 	}
 	return equal
 }

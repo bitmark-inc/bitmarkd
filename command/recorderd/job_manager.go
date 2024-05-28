@@ -35,11 +35,11 @@ type JobManagerData struct {
 	wg          sync.WaitGroup
 }
 
-func newJobManager(calendar JobCalendar, proofer Proofer, rescheduleChannel <-chan struct{}, logger *logger.L) JobManager {
+func newJobManager(calendar JobCalendar, proofer Proofer, rescheduleChannel <-chan struct{}, log *logger.L) JobManager {
 	return &JobManagerData{
 		calendar: calendar,
 		proofer:  proofer,
-		log:      logger,
+		log:      log,
 		channels: JobManagerChannel{
 			rescheduleChannel: rescheduleChannel,
 			startEventChannel: make(chan struct{}, 1),
@@ -81,7 +81,7 @@ loop:
 			intf := j.calendar.PickNextStartEvent(now)
 			j.calendar.RescheduleStartEventsPrior(now)
 
-			if nil == intf {
+			if intf == nil {
 				intf = j.calendar.PickNextStartEvent(now)
 			}
 
@@ -112,7 +112,7 @@ loop:
 			intf := j.calendar.PickNextStopEvent(now)
 			j.calendar.RescheduleStopEventsPrior(now)
 
-			if nil == intf {
+			if intf == nil {
 				intf = j.calendar.PickNextStopEvent(now)
 			}
 

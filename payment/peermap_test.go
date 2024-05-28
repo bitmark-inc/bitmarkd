@@ -21,7 +21,7 @@ func TestPeerMapLen(t *testing.T) {
 	}
 
 	p, err := peer.NewOutboundPeer(&peer.Config{}, address)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("can not create peer: %s", err)
 	}
 
@@ -38,7 +38,7 @@ func TestPeerMapAdd(t *testing.T) {
 	m := NewPeerMap()
 
 	p, err := peer.NewOutboundPeer(&peer.Config{}, address)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("can not create peer: %s", err)
 	}
 
@@ -55,7 +55,7 @@ func TestPeerMapAddAndGet(t *testing.T) {
 	m := NewPeerMap()
 
 	p, err := peer.NewOutboundPeer(&peer.Config{}, address)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("can not create peer: %s", err)
 	}
 	m.Add(address, p)
@@ -96,7 +96,7 @@ func TestPeerMapAddAndDelete(t *testing.T) {
 	m := NewPeerMap()
 
 	p, err := peer.NewOutboundPeer(&peer.Config{}, address)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("can not create peer: %s", err)
 	}
 
@@ -119,7 +119,7 @@ func TestPeerMapDeleteNonExist(t *testing.T) {
 
 	m := NewPeerMap()
 	p, err := peer.NewOutboundPeer(&peer.Config{}, address1)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("can not create peer: %s", err)
 	}
 

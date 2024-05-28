@@ -10,10 +10,7 @@ import (
 	"math/rand"
 	"net"
 	"net/rpc"
-	"os"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 
 	"github.com/bitmark-inc/bitmarkd/counter"
 	"github.com/bitmark-inc/bitmarkd/fault"
@@ -31,6 +28,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/rpc/transaction"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
+	"github.com/stretchr/testify/assert"
 )
 
 var port string
@@ -49,7 +47,9 @@ func TestMain(m *testing.M) {
 
 	rc := m.Run()
 
-	os.Exit(rc)
+	if rc != 0 {
+		panic("m.run returned non-zero value")
+	}
 }
 
 // following tests make sure proper methods are registered to server

@@ -10,8 +10,6 @@ import (
 	"errors"
 	"strings"
 
-	"golang.org/x/time/rate"
-
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/messagebus"
@@ -23,6 +21,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/storage"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
+	"golang.org/x/time/rate"
 )
 
 const (
@@ -67,7 +66,7 @@ func New(log *logger.L, pools reservoir.Handles, isNormalMode func(mode.Mode) bo
 
 // Transfer - transfer a bitmark
 func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransferCountersigned, reply *TransferReply) error {
-	if err := ratelimit.Limit(bitmark.Limiter); nil != err {
+	if err := ratelimit.Limit(bitmark.Limiter); err != nil {
 		return err
 	}
 
@@ -76,7 +75,7 @@ func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransferCou
 
 	log.Infof("Bitmark.Transfer: %+v", transfer)
 
-	if nil == arguments || nil == arguments.Owner {
+	if arguments == nil || arguments.Owner == nil {
 		return fault.InvalidItem
 	}
 
@@ -89,7 +88,7 @@ func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransferCou
 	}
 
 	// for unratified transfers
-	if 0 == len(arguments.Countersignature) {
+	if len(arguments.Countersignature) == 0 {
 		transfer = &transactionrecord.BitmarkTransferUnratified{
 			Link:      arguments.Link,
 			Escrow:    arguments.Escrow,
@@ -101,7 +100,7 @@ func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransferCou
 	// save transfer/check for duplicate
 	stored, duplicate, err := bitmark.Rsvr.StoreTransfer(transfer)
 
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -161,7 +160,7 @@ type ProvenanceReply struct {
 // Provenance - list the provenance from s transaction id
 func (bitmark *Bitmark) Provenance(arguments *ProvenanceArguments, reply *ProvenanceReply) error {
 
-	if err := ratelimit.LimitN(bitmark.Limiter, arguments.Count, maximumProvenanceCount); nil != err {
+	if err := ratelimit.LimitN(bitmark.Limiter, arguments.Count, maximumProvenanceCount); err != nil {
 		return err
 	}
 
@@ -178,12 +177,12 @@ loop:
 	for i := 0; i < count; i += 1 {
 
 		inBlock, packed := bitmark.PoolTransactions.GetNB(id[:])
-		if nil == packed {
+		if packed == nil {
 			break loop
 		}
 
 		transaction, _, err := transactionrecord.Packed(packed).Unpack(mode.IsTesting())
-		if nil != err {
+		if err != nil {
 			break loop
 		}
 
@@ -200,7 +199,7 @@ loop:
 		switch tx := transaction.(type) {
 
 		case *transactionrecord.OldBaseData:
-			if 0 == i {
+			if i == 0 {
 				h.IsOwner = ownership.CurrentlyOwns(nil, tx.Owner, id, bitmark.PoolOwnerTxIndex)
 			}
 
@@ -208,7 +207,7 @@ loop:
 			break loop
 
 		case *transactionrecord.BlockFoundation:
-			if 0 == i {
+			if i == 0 {
 				h.IsOwner = ownership.CurrentlyOwns(nil, tx.Owner, id, bitmark.PoolOwnerTxIndex)
 			}
 
@@ -216,17 +215,17 @@ loop:
 			break loop
 
 		case *transactionrecord.BitmarkIssue:
-			if 0 == i {
+			if i == 0 {
 				h.IsOwner = ownership.CurrentlyOwns(nil, tx.Owner, id, bitmark.PoolOwnerTxIndex)
 			}
 			provenance = append(provenance, h)
 
 			inBlock, packedAsset := bitmark.PoolAssets.GetNB(tx.AssetId[:])
-			if nil == packedAsset {
+			if packedAsset == nil {
 				break loop
 			}
 			assetTx, _, err := transactionrecord.Packed(packedAsset).Unpack(mode.IsTesting())
-			if nil != err {
+			if err != nil {
 				break loop
 			}
 
@@ -245,7 +244,7 @@ loop:
 		case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned, *transactionrecord.BlockOwnerTransfer:
 			tr := tx.(transactionrecord.BitmarkTransfer)
 
-			if 0 == i {
+			if i == 0 {
 				h.IsOwner = ownership.CurrentlyOwns(nil, tr.GetOwner(), id, bitmark.PoolOwnerTxIndex)
 			}
 
@@ -296,7 +295,7 @@ var errDone = errors.New("scanning is done")
 // FullProvenance - list the provenance from s transaction id
 func (bitmark *Bitmark) FullProvenance(arguments *FullProvenanceArguments, reply *FullProvenanceReply) error {
 
-	if err := ratelimit.LimitN(bitmark.Limiter, 1, 1); nil != err {
+	if err := ratelimit.LimitN(bitmark.Limiter, 1, 1); err != nil {
 		return err
 	}
 
@@ -315,13 +314,13 @@ func (bitmark *Bitmark) FullProvenance(arguments *FullProvenanceArguments, reply
 
 	err := cursor.Map(func(key []byte, value []byte) error {
 		if bytes.Equal(bitmarkId[:], value[9:9+32]) {
-			copy(id[:], key[:])
+			copy(id[:], key)
 			return errDone
 		}
 		return nil
 	})
 
-	if nil == err {
+	if err == nil {
 		return fault.TransactionIsNotAnIssue
 	} else if errDone != err {
 		return err
@@ -333,12 +332,12 @@ loop:
 	for i := 0; true; i += 1 {
 
 		inBlock, packed := bitmark.PoolTransactions.GetNB(id[:])
-		if nil == packed {
+		if packed == nil {
 			break loop
 		}
 
 		transaction, _, err := transactionrecord.Packed(packed).Unpack(mode.IsTesting())
-		if nil != err {
+		if err != nil {
 			break loop
 		}
 
@@ -355,7 +354,7 @@ loop:
 		switch tx := transaction.(type) {
 
 		case *transactionrecord.OldBaseData:
-			if 0 == i {
+			if i == 0 {
 				h.IsOwner = ownership.CurrentlyOwns(nil, tx.Owner, id, bitmark.PoolOwnerTxIndex)
 			}
 
@@ -363,7 +362,7 @@ loop:
 			break loop
 
 		case *transactionrecord.BlockFoundation:
-			if 0 == i {
+			if i == 0 {
 				h.IsOwner = ownership.CurrentlyOwns(nil, tx.Owner, id, bitmark.PoolOwnerTxIndex)
 			}
 
@@ -371,17 +370,17 @@ loop:
 			break loop
 
 		case *transactionrecord.BitmarkIssue:
-			if 0 == i {
+			if i == 0 {
 				h.IsOwner = ownership.CurrentlyOwns(nil, tx.Owner, id, bitmark.PoolOwnerTxIndex)
 			}
 			provenance = append(provenance, h)
 
 			inBlock, packedAsset := bitmark.PoolAssets.GetNB(tx.AssetId[:])
-			if nil == packedAsset {
+			if packedAsset == nil {
 				break loop
 			}
 			assetTx, _, err := transactionrecord.Packed(packedAsset).Unpack(mode.IsTesting())
-			if nil != err {
+			if err != nil {
 				break loop
 			}
 
@@ -407,7 +406,7 @@ loop:
 		case *transactionrecord.BitmarkTransferUnratified, *transactionrecord.BitmarkTransferCountersigned, *transactionrecord.BlockOwnerTransfer:
 			tr := tx.(transactionrecord.BitmarkTransfer)
 
-			if 0 == i {
+			if i == 0 {
 				h.IsOwner = ownership.CurrentlyOwns(nil, tr.GetOwner(), id, bitmark.PoolOwnerTxIndex)
 			}
 

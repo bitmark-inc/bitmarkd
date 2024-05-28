@@ -29,13 +29,13 @@ func TestPackShareSwap(t *testing.T) {
 
 	var shareIdOne merkle.Digest
 	err := merkleDigestFromLE("630c041cd1f586bcb9097e816189185c1e0379f67bbfc2f0626724f542047873", &shareIdOne)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to shareIdOne error: %s", err)
 	}
 
 	var shareIdTwo merkle.Digest
 	err = merkleDigestFromLE("79a67be2b3d313bd490363fb0d27901c46ed53d3f7b21f60d48bc42439b06084", &shareIdTwo)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to shareIdTwo error: %s", err)
 	}
 
@@ -92,7 +92,7 @@ func TestPackShareSwap(t *testing.T) {
 
 	// test the packer
 	packed, err := r.Pack(ownerOneAccount)
-	if nil != err {
+	if err != nil {
 		t.Errorf("pack error: %s", err)
 	}
 
@@ -116,7 +116,7 @@ func TestPackShareSwap(t *testing.T) {
 
 	// test the unpacker
 	unpacked, n, err := packed.Unpack(true)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("unpack error: %s", err)
 	}
 	if len(packed) != n {
@@ -137,7 +137,7 @@ func TestPackShareSwap(t *testing.T) {
 		swap,
 	}
 	b, err := json.MarshalIndent(item, "", "  ")
-	if nil != err {
+	if err != nil {
 		t.Fatalf("json error: %s", err)
 	}
 
@@ -160,13 +160,13 @@ func TestPackShareSwapQuantityOneNotZero(t *testing.T) {
 
 	var shareIdOne merkle.Digest
 	err := merkleDigestFromLE("630c041cd1f586bcb9097e816189185c1e0379f67bbfc2f0626724f542047873", &shareIdOne)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to shareIdOne error: %s", err)
 	}
 
 	var shareIdTwo merkle.Digest
 	err = merkleDigestFromLE("79a67be2b3d313bd490363fb0d27901c46ed53d3f7b21f60d48bc42439b06084", &shareIdTwo)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to shareIdTwo error: %s", err)
 	}
 
@@ -227,13 +227,13 @@ func TestPackShareSwapQuantityTwoNotZero(t *testing.T) {
 
 	var shareIdOne merkle.Digest
 	err := merkleDigestFromLE("630c041cd1f586bcb9097e816189185c1e0379f67bbfc2f0626724f542047873", &shareIdOne)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to shareIdOne error: %s", err)
 	}
 
 	var shareIdTwo merkle.Digest
 	err = merkleDigestFromLE("79a67be2b3d313bd490363fb0d27901c46ed53d3f7b21f60d48bc42439b06084", &shareIdTwo)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to shareIdTwo error: %s", err)
 	}
 
@@ -294,13 +294,13 @@ func TestPackShareSwapSharesDoNotMatch(t *testing.T) {
 
 	var shareIdOne merkle.Digest
 	err := merkleDigestFromLE("630c041cd1f586bcb9097e816189185c1e0379f67bbfc2f0626724f542047873", &shareIdOne)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to shareIdOne error: %s", err)
 	}
 
 	var shareIdTwo merkle.Digest
 	err = merkleDigestFromLE("630c041cd1f586bcb9097e816189185c1e0379f67bbfc2f0626724f542047873", &shareIdTwo)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to shareIdTwo error: %s", err)
 	}
 

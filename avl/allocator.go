@@ -35,8 +35,8 @@ var freeNodes int  // number of nodes in the pool
 // allocate a new node, reuses reclaimed nodes if any are available
 func newNode(key Item, value interface{}) *Node {
 	m.Lock()
-	if nil == pool {
-		if 0 != freeNodes {
+	if pool == nil {
+		if freeNodes != 0 {
 			panic("pool corrupt")
 		}
 		totalNodes += 1

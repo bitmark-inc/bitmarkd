@@ -29,12 +29,12 @@ func runSeed(c *cli.Context) error {
 	m := c.App.Metadata["config"].(*metadata)
 
 	name, owner, err := checkOwnerWithPasswordPrompt(c.GlobalString("identity"), m.config, c)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	phrase, err := account.Base58EncodedSeedToPhrase(owner.Seed)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

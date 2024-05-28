@@ -36,7 +36,7 @@ func ValidateAddress(address string) (Version, AddressBytes, error) {
 	addr := util.FromBase58(address)
 	addressBytes := AddressBytes{}
 
-	if 25 != len(addr) {
+	if len(addr) != 25 {
 		return vNull, addressBytes, fault.InvalidLitecoinAddress
 	}
 
@@ -66,7 +66,7 @@ func ValidateAddress(address string) (Version, AddressBytes, error) {
 // TransformAddress - convert address to/from new version prefix
 func TransformAddress(address string) (string, error) {
 	version, addressBytes, err := ValidateAddress(address)
-	if nil != err {
+	if err != nil {
 		return "", err
 	}
 	switch version {

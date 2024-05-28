@@ -54,7 +54,7 @@ func (salt *Salt) MarshalText() []byte {
 func (salt *Salt) UnmarshalText(s []byte) error {
 	buffer := make([]byte, hex.DecodedLen(len(s)))
 	byteCount, err := hex.Decode(buffer, s)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

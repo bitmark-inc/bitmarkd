@@ -53,7 +53,7 @@ func FromVarint64(buffer []byte) (uint64, int) {
 		count += 1
 		if count < Varint64MaximumBytes {
 			result |= currByte & 0x7f << shift
-			if 0 == currByte&0x80 {
+			if currByte&0x80 == 0 {
 				return result, count
 			}
 		} else {
@@ -73,7 +73,7 @@ loop:
 	for count := 0; count < Varint64MaximumBytes; count += 1 {
 		currentByte := buffer[count]
 		result = append(result, currentByte)
-		if 0 == currentByte&0x80 {
+		if currentByte&0x80 == 0 {
 			break loop
 		}
 	}
@@ -88,7 +88,7 @@ func ClippedVarint64(buffer []byte, minimum int, maximum int) (int, int) {
 	}
 
 	value, count := FromVarint64(buffer)
-	if 0 == count {
+	if count == 0 {
 		return 0, 0
 	}
 	iValue := int(value)

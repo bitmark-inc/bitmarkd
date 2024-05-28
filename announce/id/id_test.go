@@ -9,9 +9,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/bitmark-inc/bitmarkd/announce/id"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCompare(t *testing.T) {
@@ -21,7 +20,10 @@ func TestCompare(t *testing.T) {
 
 	assert.Equal(t, -1, id1.Compare(id2), "wrong comparison")
 	assert.Equal(t, 1, id2.Compare(id1), "wrong comparison")
+
+	//lint:ignore dupArg // really check the argument against itself
 	assert.Equal(t, 0, id3.Compare(id3), "wrong comparison")
+
 }
 
 func TestString(t *testing.T) {

@@ -14,13 +14,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/pebbe/zmq4"
-	zmq "github.com/pebbe/zmq4"
-
 	"github.com/bitmark-inc/bitmarkd/counter"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/logger"
+	zmq "github.com/pebbe/zmq4"
 )
 
 // re-export zmq constants
@@ -62,8 +60,9 @@ type Client interface {
 // clientData - structure to hold a client connection
 //
 // prefix:
-//   REQ socket this adds an item before send
-//   SUB socket this adds/changes subscription
+//
+//	REQ socket this adds an item before send
+//	SUB socket this adds/changes subscription
 type clientData struct {
 	Client
 
@@ -82,7 +81,7 @@ type clientData struct {
 	number          uint64
 	queue           chan Event
 	monitorEvents   zmq.Event
-	monitorShutdown *zmq4.Socket
+	monitorShutdown *zmq.Socket
 	// monitorShutdown chan struct{}
 	// monitorStopped  chan struct{}
 }
@@ -162,14 +161,14 @@ func (client *clientData) openSocket() error {
 	// create a secure random identifier
 	randomIdBytes := make([]byte, identifierSize)
 	_, err := rand.Read(randomIdBytes)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	randomIdentifier := string(randomIdBytes)
 
 	// create a new socket
 	socket, err := zmq.NewSocket(client.socketType)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -178,27 +177,27 @@ func (client *clientData) openSocket() error {
 
 	// set up as client
 	err = socket.SetCurveServer(0)
-	if nil != err {
+	if err != nil {
 		goto failure
 	}
 	err = socket.SetCurvePublickey(string(client.publicKey))
-	if nil != err {
+	if err != nil {
 		goto failure
 	}
 	err = socket.SetCurveSecretkey(string(client.privateKey))
-	if nil != err {
+	if err != nil {
 		goto failure
 	}
 
 	// local identitity is a random value
 	err = socket.SetIdentity(randomIdentifier)
-	if nil != err {
+	if err != nil {
 		goto failure
 	}
 
 	// destination identity is its public key
 	err = socket.SetCurveServerkey(string(client.serverPublicKey))
-	if nil != err {
+	if err != nil {
 		goto failure
 	}
 
@@ -206,18 +205,18 @@ func (client *clientData) openSocket() error {
 	socket.SetImmediate(true)
 
 	// zero => do not set timeout
-	if 0 != client.timeout {
+	if client.timeout != 0 {
 		err = socket.SetSndtimeo(client.timeout)
-		if nil != err {
+		if err != nil {
 			goto failure
 		}
 		err = socket.SetRcvtimeo(client.timeout)
-		if nil != err {
+		if err != nil {
 			goto failure
 		}
 	}
 	err = socket.SetLinger(100 * time.Millisecond)
-	if nil != err {
+	if err != nil {
 		goto failure
 	}
 
@@ -225,18 +224,18 @@ func (client *clientData) openSocket() error {
 	switch client.socketType {
 	case zmq.REQ:
 		err = socket.SetReqCorrelate(1)
-		if nil != err {
+		if err != nil {
 			goto failure
 		}
 		err = socket.SetReqRelaxed(1)
-		if nil != err {
+		if err != nil {
 			goto failure
 		}
 
 	case zmq.SUB:
 		// set subscription prefix - empty => receive everything
 		err = socket.SetSubscribe(client.prefix)
-		if nil != err {
+		if err != nil {
 			goto failure
 		}
 
@@ -244,19 +243,19 @@ func (client *clientData) openSocket() error {
 	}
 
 	err = socket.SetTcpKeepalive(1)
-	if nil != err {
+	if err != nil {
 		goto failure
 	}
 	err = socket.SetTcpKeepaliveCnt(5)
-	if nil != err {
+	if err != nil {
 		goto failure
 	}
 	err = socket.SetTcpKeepaliveIdle(60)
-	if nil != err {
+	if err != nil {
 		goto failure
 	}
 	err = socket.SetTcpKeepaliveIntvl(60)
-	if nil != err {
+	if err != nil {
 		goto failure
 	}
 
@@ -264,11 +263,11 @@ func (client *clientData) openSocket() error {
 	// and disable exponential back-off
 	// should give around 20 retries in the announce timeout
 	err = socket.SetReconnectIvl(2 * time.Minute)
-	if nil != err {
+	if err != nil {
 		goto failure
 	}
 	err = socket.SetReconnectIvlMax(0)
-	if nil != err {
+	if err != nil {
 		goto failure
 	}
 
@@ -276,51 +275,51 @@ func (client *clientData) openSocket() error {
 	// ***** FIX THIS: socket disconnects, perhaps after IVL value
 	// heartbeat (constants from socket.go)
 	// err = socket.SetHeartbeatIvl(heartbeatInterval)
-	// if nil != err {
+	// if err != nil {
 	// 	goto failure
 	// }
 	// err = socket.SetHeartbeatTimeout(heartbeatTimeout)
-	// if nil != err {
+	// if err != nil {
 	// 	goto failure
 	// }
 	// err = socket.SetHeartbeatTtl(heartbeatTTL)
-	// if nil != err {
+	// if err != nil {
 	// 	goto failure
 	// }
 
 	// see socket.go for constants
 	err = socket.SetMaxmsgsize(maximumPacketSize)
-	if nil != err {
+	if err != nil {
 		goto failure
 	}
 
 	// set IPv6 state before connect
 	err = socket.SetIpv6(client.v6)
-	if nil != err {
+	if err != nil {
 		goto failure
 	}
 
 	// new connection
 	err = socket.Connect(client.address)
-	if nil != err {
+	if err != nil {
 		goto failure
 	}
 
 	client.socket = socket
 
-	if 0 != client.monitorEvents {
+	if client.monitorEvents != 0 {
 
 		n := sequenceCounter.Increment()
 		monitorConnection := fmt.Sprintf(monitorFormat, client.number, n)
 		monitorSignal := fmt.Sprintf(signalFormat, client.number, n)
 
 		sigReceive, sigSend, err := NewSignalPair(monitorSignal)
-		if nil != err {
+		if err != nil {
 			logger.Panicf("cannot create signal for: %s  error: %s", monitorSignal, err)
 		}
 
 		m, err := NewMonitor(client.socket, monitorConnection, client.monitorEvents)
-		if nil != err {
+		if err != nil {
 			logger.Panicf("cannot create monitor for: %s  error: %s", monitorConnection, err)
 		}
 		client.monitorShutdown = sigSend
@@ -340,19 +339,19 @@ func (client *clientData) closeSocket() error {
 	client.Lock()
 	defer client.Unlock()
 
-	if nil == client.socket {
+	if client.socket == nil {
 		return nil
 	}
 
 	// if already connected, disconnect first
-	if "" != client.address {
+	if client.address != "" {
 		client.socket.Disconnect(client.address)
 	}
 
 	// close sockets
 	err := client.socket.Close()
 	client.socket = nil
-	if nil != client.monitorShutdown {
+	if client.monitorShutdown != nil {
 		client.monitorShutdown.SendMessage("stop")
 		client.monitorShutdown.Close()
 		client.monitorShutdown = nil
@@ -369,7 +368,7 @@ func (client *clientData) Connect(conn *util.Connection, serverPublicKey []byte,
 
 	// if already connected, disconnect first
 	err := client.closeSocket()
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	client.address = ""
@@ -390,7 +389,7 @@ func (client *clientData) Connect(conn *util.Connection, serverPublicKey []byte,
 
 // IsConnected - check if connected to a node
 func (client *clientData) IsConnected() bool {
-	return "" != client.address && nil != client.socket
+	return client.address != "" && client.socket != nil
 }
 
 // IsConnectedTo - check if connected to a specific node
@@ -402,11 +401,11 @@ func (client *clientData) IsConnectedTo(serverPublicKey []byte) bool {
 func (client *clientData) Reconnect() error {
 
 	err := client.closeSocket()
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	err = client.openSocket()
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	return nil
@@ -424,7 +423,7 @@ func (client *clientData) Close() error {
 // CloseClients - disconnect old addresses and close all
 func CloseClients(clients []Client) {
 	for _, client := range clients {
-		if nil != client {
+		if client != nil {
 			client.Close()
 		}
 	}
@@ -435,17 +434,17 @@ func (client *clientData) Send(items ...interface{}) error {
 	client.Lock()
 	defer client.Unlock()
 
-	if nil == client.socket || "" == client.address {
+	if client.socket == nil || client.address == "" {
 		return fault.NotConnected
 	}
 
-	if 0 == len(items) {
+	if len(items) == 0 {
 		logger.Panicf("zmqutil.Client.Send no arguments provided")
 	}
 
-	if "" != client.prefix {
+	if client.prefix != "" {
 		_, err := client.socket.Send(client.prefix, zmq.SNDMORE)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 	}
@@ -458,18 +457,18 @@ func (client *clientData) Send(items ...interface{}) error {
 		switch it := item.(type) {
 		case string:
 			_, err := client.socket.Send(it, zmq.SNDMORE)
-			if nil != err {
+			if err != nil {
 				return err
 			}
 		case []byte:
 			_, err := client.socket.SendBytes(it, zmq.SNDMORE)
-			if nil != err {
+			if err != nil {
 				return err
 			}
 		case [][]byte:
 			for _, sub := range it {
 				_, err := client.socket.SendBytes(sub, zmq.SNDMORE)
-				if nil != err {
+				if err != nil {
 					return err
 				}
 			}
@@ -481,16 +480,16 @@ func (client *clientData) Send(items ...interface{}) error {
 	switch it := final.(type) {
 	case string:
 		_, err := client.socket.Send(it, 0)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 	case []byte:
 		_, err := client.socket.SendBytes(it, 0)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 	case [][]byte:
-		if 0 == len(it) {
+		if len(it) == 0 {
 			logger.Panicf("zmqutil.Client.Send empty [][]byte")
 		}
 		n := len(it) - 1
@@ -499,12 +498,12 @@ func (client *clientData) Send(items ...interface{}) error {
 
 		for _, sub := range a {
 			_, err := client.socket.SendBytes(sub, zmq.SNDMORE)
-			if nil != err {
+			if err != nil {
 				return err
 			}
 		}
 		_, err := client.socket.SendBytes(last, 0)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 
@@ -520,7 +519,7 @@ func (client *clientData) Receive(flags zmq.Flag) ([][]byte, error) {
 	client.Lock()
 	defer client.Unlock()
 
-	if nil == client.socket || "" == client.address {
+	if client.socket == nil || client.address == "" {
 		return nil, fault.NotConnected
 	}
 	data, err := client.socket.RecvMessageBytes(flags)
@@ -536,7 +535,7 @@ type Connected struct {
 // ConnectedTo - return representation of client connection
 func (client *clientData) ConnectedTo() *Connected {
 
-	if "" == client.address {
+	if client.address == "" {
 		return nil
 	}
 	return &Connected{
@@ -590,7 +589,7 @@ loop:
 			case sigReceive:
 				// receive the "stop" message
 				_, err := sigReceive.RecvMessageBytes(0)
-				if nil != err {
+				if err != nil {
 					logger.Panicf("poller: sigReceive error: %s", err)
 				}
 
@@ -616,7 +615,7 @@ loop:
 		if zmq.Errno(syscall.EAGAIN) == zmq.AsErrno(err) {
 			break loop
 		}
-		if nil != err {
+		if err != nil {
 			return err
 		}
 

@@ -9,9 +9,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"golang.org/x/crypto/sha3"
-
 	"github.com/bitmark-inc/bitmarkd/fault"
+	"golang.org/x/crypto/sha3"
 )
 
 // DigestLength - number of bytes in the digest
@@ -63,7 +62,7 @@ func (digest *Digest) Scan(state fmt.ScanState, verb rune) error {
 		}
 		return false
 	})
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	if len(token) != hex.EncodedLen(DigestLength) {
@@ -72,7 +71,7 @@ func (digest *Digest) Scan(state fmt.ScanState, verb rune) error {
 
 	buffer := make([]byte, hex.DecodedLen(len(token)))
 	byteCount, err := hex.Decode(buffer, token)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -96,7 +95,7 @@ func (digest *Digest) UnmarshalText(s []byte) error {
 		return fault.NotLink
 	}
 	// byteCount, err := hex.Decode(digest[:], s)
-	// if nil != err {
+	// if err != nil {
 	// 	return err
 	// }
 	// if DigestLength != byteCount {
@@ -106,7 +105,7 @@ func (digest *Digest) UnmarshalText(s []byte) error {
 
 	buffer := make([]byte, hex.DecodedLen(len(s)))
 	byteCount, err := hex.Decode(buffer, s)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	for i, v := range buffer[:byteCount] {

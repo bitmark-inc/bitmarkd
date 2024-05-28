@@ -68,7 +68,7 @@ func TestBackup(t *testing.T) {
 	err := receptor.Backup(backupFile, tree)
 	assert.Nil(t, err, "wrong store")
 
-	f, err := os.OpenFile(backupFile, os.O_RDONLY, 0600)
+	f, err := os.OpenFile(backupFile, os.O_RDONLY, 0o600)
 	assert.Nil(t, err, "peer file read error")
 	defer f.Close()
 

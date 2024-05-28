@@ -42,7 +42,7 @@ loop:
 		inner_loop:
 			for {
 				e := l.Front()
-				if nil == e {
+				if e == nil {
 					delay = time.After(time.Minute)
 					break inner_loop
 				}

@@ -51,7 +51,7 @@ func New(log *logger.L, start time.Time, rsvr reservoir.Reservoir) *Transaction 
 
 // Status - query transaction status
 func (t *Transaction) Status(arguments *Arguments, reply *StatusReply) error {
-	if err := ratelimit.Limit(t.Limiter); nil != err {
+	if err := ratelimit.Limit(t.Limiter); err != nil {
 		return err
 	}
 

@@ -43,12 +43,12 @@ type WatcherChannel struct {
 
 func newFileWatcher(targetFile string, log *logger.L, channel WatcherChannel) (FileWatcher, error) {
 	watcher, err := fsnotify.NewWatcher()
-	if nil != err {
+	if err != nil {
 		log.Errorf("new watcher with error: %s", err.Error())
 	}
 
 	filePath, err := filepath.Abs(filepath.Clean(targetFile))
-	if nil != err {
+	if err != nil {
 		log.Errorf("parse file %s error: %v", targetFile, err)
 	}
 
@@ -67,7 +67,7 @@ func newFileWatcher(targetFile string, log *logger.L, channel WatcherChannel) (F
 
 func (w *FileWatcherData) Start() error {
 	err := w.watcher.Add(w.filePath)
-	if nil != err {
+	if err != nil {
 		w.log.Errorf("watcher add error: %v, abort", err)
 		return err
 	}

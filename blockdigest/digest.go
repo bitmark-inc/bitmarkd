@@ -56,13 +56,13 @@ func NewDigest(record []byte) Digest {
 }
 
 // Cmp - convert the hash to its equivalent big.Int
-func (digest Digest) Cmp(difficulty *big.Int) int {
+func (digest Digest) Cmp(diff *big.Int) int {
 	bigEndian := reversed(digest)
 	result := new(big.Int)
-	return result.SetBytes(bigEndian[:]).Cmp(difficulty)
+	return result.SetBytes(bigEndian).Cmp(diff)
 }
 
-//IsEmpty - is digest empty
+// IsEmpty - is digest empty
 func (digest Digest) IsEmpty() bool {
 	return digest == Digest{}
 }
@@ -75,7 +75,7 @@ func (digest Digest) IsValidByDifficulty(diff *difficulty.Difficulty, chainName 
 
 	reversedDigest := reversed(digest)
 	bigEndian := new(big.Int)
-	bigEndian.SetBytes(reversedDigest[:])
+	bigEndian.SetBytes(reversedDigest)
 	return bigEndian.Cmp(diff.BigInt()) <= 0
 }
 
@@ -123,12 +123,12 @@ func (digest *Digest) Scan(state fmt.ScanState, verb rune) error {
 		}
 		return false
 	})
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	buffer := make([]byte, hex.DecodedLen(len(token)))
 	byteCount, err := hex.Decode(buffer, token)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -150,7 +150,7 @@ func (digest Digest) MarshalText() ([]byte, error) {
 func (digest *Digest) UnmarshalText(s []byte) error {
 	buffer := make([]byte, hex.DecodedLen(len(s)))
 	byteCount, err := hex.Decode(buffer, s)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	for i, v := range buffer[:byteCount] {

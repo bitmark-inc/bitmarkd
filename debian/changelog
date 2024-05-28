@@ -1,3 +1,10 @@
+bitmarkd (0.15.6-1ubuntu1) bionic; urgency=medium
+
+  * update dependencies
+  * tidy up using gocritic
+
+ -- Christopher Hall <hsw@bitmark.com>  Tue, 23 Jan 2024 03:07:55 +0000
+
 bitmarkd (0.15.5-1ubuntu1) bionic; urgency=medium
 
   * update several dependencies especially zmq and crypto

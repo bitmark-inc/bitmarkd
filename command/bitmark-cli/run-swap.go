@@ -18,12 +18,12 @@ func runSwap(c *cli.Context) error {
 	m := c.App.Metadata["config"].(*metadata)
 
 	to, recipient, err := checkRecipient(c, "receiver", m.config)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	shareIdOne, err := checkTxId(c.String("share-id-one"))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -33,7 +33,7 @@ func runSwap(c *cli.Context) error {
 	}
 
 	shareIdTwo, err := checkTxId(c.String("share-id-two"))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -45,7 +45,7 @@ func runSwap(c *cli.Context) error {
 	beforeBlock := c.Uint64("before-block")
 
 	from, owner, err := checkOwnerWithPasswordPrompt(c.GlobalString("identity"), m.config, c)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -60,7 +60,7 @@ func runSwap(c *cli.Context) error {
 	}
 
 	client, err := rpccalls.NewClient(m.testnet, m.config.Connections[m.connectionOffset], m.verbose, m.e)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	defer client.Close()
@@ -76,7 +76,7 @@ func runSwap(c *cli.Context) error {
 	}
 
 	response, err := client.Swap(swapConfig)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

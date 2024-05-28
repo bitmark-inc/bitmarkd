@@ -50,7 +50,7 @@ func Parse(s string) (*DnsTXT, error) {
 words:
 	for i, w := range strings.Split(strings.TrimSpace(s), " ") {
 
-		if 0 == i {
+		if i == 0 {
 			if _, ok := supported[w]; ok {
 				continue words
 			}
@@ -58,12 +58,12 @@ words:
 		}
 
 		// ignore empty
-		if "" == w {
+		if w == "" {
 			continue words
 		}
 
 		// require form: <letter>=<word>
-		if len(w) < 3 || '=' != w[1] {
+		if len(w) < 3 || w[1] != '=' {
 			return nil, fault.InvalidDnsTxtRecord
 		}
 
@@ -74,19 +74,19 @@ words:
 		case 'a':
 		addresses:
 			for _, address := range strings.Split(parameter, ";") {
-				if '[' == address[0] {
+				if address[0] == '[' {
 					end := len(address) - 1
-					if ']' == address[end] {
+					if address[end] == ']' {
 						address = address[1:end]
 					}
 				}
 				IP := net.ParseIP(address)
-				if nil == IP {
+				if IP == nil {
 					err = fault.InvalidIpAddress
 					break addresses
 				} else {
 					err = nil
-					if nil != IP.To4() {
+					if IP.To4() != nil {
 						t.IPv4 = IP
 					} else {
 						t.IPv6 = IP
@@ -108,7 +108,7 @@ words:
 				err = fault.InvalidPublicKey
 			} else {
 				t.PublicKey, err = hex.DecodeString(parameter)
-				if nil != err {
+				if err != nil {
 					err = fault.InvalidPublicKey
 				}
 			}
@@ -118,7 +118,7 @@ words:
 				err = fault.InvalidFingerprint
 			} else {
 				t.CertificateFingerprint, err = hex.DecodeString(parameter)
-				if nil != err {
+				if err != nil {
 					err = fault.InvalidFingerprint
 				}
 			}
@@ -126,7 +126,7 @@ words:
 		default:
 			err = fault.InvalidDnsTxtRecord
 		}
-		if nil != err {
+		if err != nil {
 			return nil, err
 		}
 	}
@@ -141,7 +141,7 @@ words:
 
 func getPort(s string) (uint16, error) {
 	port, err := strconv.Atoi(s)
-	if nil != err {
+	if err != nil {
 		return 0, fault.InvalidPortNumber
 	}
 	if port < minPortNumber || port > maxPortNumber {

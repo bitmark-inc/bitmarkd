@@ -40,7 +40,7 @@ var validItems = []item{
 func TestValidBase58EncodedSeedToPhrase(t *testing.T) {
 	for _, item := range validItems {
 		phrase, err := account.Base58EncodedSeedToPhrase(item.base58Seed)
-		if nil != err {
+		if err != nil {
 			t.Errorf("actual error: %s, expected no error", err)
 		}
 

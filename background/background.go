@@ -58,7 +58,7 @@ func Start(processes Processes, args interface{}) *T {
 // Stop - stop a set of background processes
 func (t *T) Stop() {
 
-	if nil == t {
+	if t == nil {
 		return
 	}
 

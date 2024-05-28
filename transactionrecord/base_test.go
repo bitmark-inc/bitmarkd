@@ -64,7 +64,7 @@ func TestPackBaseData(t *testing.T) {
 
 	// test the packer
 	packed, err := r.Pack(proofedByAccount)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("pack error: %s", err)
 	}
 
@@ -92,7 +92,7 @@ func TestPackBaseData(t *testing.T) {
 
 	// test the unpacker
 	unpacked, n, err := packed.Unpack(true)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("unpack error: %s", err)
 	}
 
@@ -114,7 +114,7 @@ func TestPackBaseData(t *testing.T) {
 		BaseData: baseData,
 	}
 	b, err := json.MarshalIndent(item, "", "  ")
-	if nil != err {
+	if err != nil {
 		t.Fatalf("json error: %s", err)
 	}
 
@@ -143,7 +143,7 @@ func TestPackBaseDataWithZeroAccount(t *testing.T) {
 
 	// test the packer
 	_, err := r.Pack(proofedByAccount)
-	if nil == err {
+	if err == nil {
 		t.Fatalf("pack should have failed")
 	}
 	if fault.InvalidOwnerOrRegistrant != err {

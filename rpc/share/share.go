@@ -6,8 +6,6 @@
 package share
 
 import (
-	"golang.org/x/time/rate"
-
 	"github.com/bitmark-inc/bitmarkd/account"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
@@ -19,6 +17,7 @@ import (
 	"github.com/bitmark-inc/bitmarkd/rpc/ratelimit"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
+	"golang.org/x/time/rate"
 )
 
 // Share
@@ -60,7 +59,7 @@ type CreateReply struct {
 // Create - create fractional bitmark
 func (share *Share) Create(bmfr *transactionrecord.BitmarkShare, reply *CreateReply) error {
 
-	if err := ratelimit.Limit(share.Limiter); nil != err {
+	if err := ratelimit.Limit(share.Limiter); err != nil {
 		return err
 	}
 
@@ -74,7 +73,7 @@ func (share *Share) Create(bmfr *transactionrecord.BitmarkShare, reply *CreateRe
 
 	// save transfer/check for duplicate
 	stored, duplicate, err := share.Rsvr.StoreTransfer(bmfr)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -122,7 +121,7 @@ type BalanceReply struct {
 // Balance - list balances for an account
 func (share *Share) Balance(arguments *BalanceArguments, reply *BalanceReply) error {
 
-	if err := ratelimit.Limit(share.Limiter); nil != err {
+	if err := ratelimit.Limit(share.Limiter); err != nil {
 		return err
 	}
 
@@ -130,7 +129,7 @@ func (share *Share) Balance(arguments *BalanceArguments, reply *BalanceReply) er
 
 	log.Infof("Share.Balance: %+v", arguments)
 
-	if nil == arguments || nil == arguments.Owner {
+	if arguments == nil || arguments.Owner == nil {
 		return fault.InvalidItem
 	}
 
@@ -151,7 +150,7 @@ func (share *Share) Balance(arguments *BalanceArguments, reply *BalanceReply) er
 	}
 
 	result, err := share.Rsvr.ShareBalance(arguments.Owner, arguments.ShareId, arguments.Count)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -174,7 +173,7 @@ type GrantReply struct {
 // Grant - grant a number of shares to another account
 func (share *Share) Grant(arguments *transactionrecord.ShareGrant, reply *GrantReply) error {
 
-	if err := ratelimit.Limit(share.Limiter); nil != err {
+	if err := ratelimit.Limit(share.Limiter); err != nil {
 		return err
 	}
 
@@ -182,7 +181,7 @@ func (share *Share) Grant(arguments *transactionrecord.ShareGrant, reply *GrantR
 
 	log.Infof("Share.Grant: %+v", arguments)
 
-	if nil == arguments || nil == arguments.Owner || nil == arguments.Recipient {
+	if arguments == nil || arguments.Owner == nil || arguments.Recipient == nil {
 		return fault.InvalidItem
 	}
 
@@ -204,7 +203,7 @@ func (share *Share) Grant(arguments *transactionrecord.ShareGrant, reply *GrantR
 
 	// save transfer/check for duplicate
 	stored, duplicate, err := share.Rsvr.StoreGrant(arguments)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -247,7 +246,7 @@ type SwapReply struct {
 // Swap - atomically swap shares between accounts
 func (share *Share) Swap(arguments *transactionrecord.ShareSwap, reply *SwapReply) error {
 
-	if err := ratelimit.Limit(share.Limiter); nil != err {
+	if err := ratelimit.Limit(share.Limiter); err != nil {
 		return err
 	}
 
@@ -255,7 +254,7 @@ func (share *Share) Swap(arguments *transactionrecord.ShareSwap, reply *SwapRepl
 
 	log.Infof("Share.Swap: %+v", arguments)
 
-	if nil == arguments || nil == arguments.OwnerOne || nil == arguments.OwnerTwo {
+	if arguments == nil || arguments.OwnerOne == nil || arguments.OwnerTwo == nil {
 		return fault.InvalidItem
 	}
 
@@ -277,7 +276,7 @@ func (share *Share) Swap(arguments *transactionrecord.ShareSwap, reply *SwapRepl
 
 	// save transfer/check for duplicate
 	stored, duplicate, err := share.Rsvr.StoreSwap(arguments)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

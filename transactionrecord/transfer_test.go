@@ -11,13 +11,12 @@ import (
 	"reflect"
 	"testing"
 
-	"golang.org/x/crypto/ed25519"
-
 	"github.com/bitmark-inc/bitmarkd/currency"
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
+	"golang.org/x/crypto/ed25519"
 )
 
 // test the packing/unpacking of Bitmark transfer record
@@ -31,7 +30,7 @@ func TestPackBitmarkTransferOne(t *testing.T) {
 
 	var link merkle.Digest
 	err := merkleDigestFromLE("79a67be2b3d313bd490363fb0d27901c46ed53d3f7b21f60d48bc42439b06084", &link)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to link error: %s", err)
 	}
 
@@ -68,8 +67,8 @@ func TestPackBitmarkTransferOne(t *testing.T) {
 
 	// test the packer
 	packed, err := r.Pack(issuerAccount)
-	if nil != err {
-		if nil != packed {
+	if err != nil {
+		if packed != nil {
 			t.Errorf("partial packed:\n%s", util.FormatBytes("expected", packed))
 		}
 		t.Errorf("pack error: %s", err)
@@ -95,7 +94,7 @@ func TestPackBitmarkTransferOne(t *testing.T) {
 
 	// test the unpacker
 	unpacked, n, err := packed.Unpack(true)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("unpack error: %s", err)
 	}
 	if len(packed) != n {
@@ -116,7 +115,7 @@ func TestPackBitmarkTransferOne(t *testing.T) {
 		bmt,
 	}
 	b, err := json.MarshalIndent(item, "", "  ")
-	if nil != err {
+	if err != nil {
 		t.Fatalf("json error: %s", err)
 	}
 
@@ -141,7 +140,7 @@ func TestPackBitmarkTransferTwo(t *testing.T) {
 
 	var link merkle.Digest
 	err := merkleDigestFromLE("630c041cd1f586bcb9097e816189185c1e0379f67bbfc2f0626724f542047873", &link)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to link error: %s", err)
 	}
 
@@ -188,8 +187,8 @@ func TestPackBitmarkTransferTwo(t *testing.T) {
 
 	// test the packer
 	packed, err := r.Pack(ownerOneAccount)
-	if nil != err {
-		if nil != packed {
+	if err != nil {
+		if packed != nil {
 			t.Errorf("partial packed:\n%s", util.FormatBytes("expected", packed))
 		}
 		t.Errorf("pack error: %s", err)
@@ -215,7 +214,7 @@ func TestPackBitmarkTransferTwo(t *testing.T) {
 
 	// test the unpacker
 	unpacked, n, err := packed.Unpack(true)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("unpack error: %s", err)
 	}
 	if len(packed) != n {
@@ -236,7 +235,7 @@ func TestPackBitmarkTransferTwo(t *testing.T) {
 		bmt,
 	}
 	b, err := json.MarshalIndent(item, "", "  ")
-	if nil != err {
+	if err != nil {
 		t.Fatalf("json error: %s", err)
 	}
 
@@ -261,7 +260,7 @@ func TestPackBitmarkTransferThree(t *testing.T) {
 
 	var link merkle.Digest
 	err := merkleDigestFromLE("14eb103a0c8fb22e50e73ae9b4ff88595b1cd5f60c4afb690d8fbd014c3ed091", &link)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to link error: %s", err)
 	}
 
@@ -299,8 +298,8 @@ func TestPackBitmarkTransferThree(t *testing.T) {
 
 	// test the packer
 	packed, err := r.Pack(ownerTwoAccount)
-	if nil != err {
-		if nil != packed {
+	if err != nil {
+		if packed != nil {
 			t.Errorf("partial packed:\n%s", util.FormatBytes("expected", packed))
 		}
 		t.Errorf("pack error: %s", err)
@@ -326,7 +325,7 @@ func TestPackBitmarkTransferThree(t *testing.T) {
 
 	// test the unpacker
 	unpacked, n, err := packed.Unpack(true)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("unpack error: %s", err)
 	}
 	if len(packed) != n {
@@ -347,7 +346,7 @@ func TestPackBitmarkTransferThree(t *testing.T) {
 		bmt,
 	}
 	b, err := json.MarshalIndent(item, "", "  ")
-	if nil != err {
+	if err != nil {
 		t.Fatalf("json error: %s", err)
 	}
 
@@ -372,7 +371,7 @@ func TestPackBitmarkTransferDestroy(t *testing.T) {
 
 	var link merkle.Digest
 	err := merkleDigestFromLE("14eb103a0c8fb22e50e73ae9b4ff88595b1cd5f60c4afb690d8fbd014c3ed091", &link)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to link error: %s", err)
 	}
 
@@ -410,8 +409,8 @@ func TestPackBitmarkTransferDestroy(t *testing.T) {
 
 	// test the packer
 	packed, err := r.Pack(ownerTwoAccount)
-	if nil != err {
-		if nil != packed {
+	if err != nil {
+		if packed != nil {
 			t.Errorf("partial packed:\n%s", util.FormatBytes("expected", packed))
 		}
 		t.Errorf("pack error: %s", err)
@@ -437,7 +436,7 @@ func TestPackBitmarkTransferDestroy(t *testing.T) {
 
 	// test the unpacker
 	unpacked, n, err := packed.Unpack(true)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("unpack error: %s", err)
 	}
 	if len(packed) != n {
@@ -458,7 +457,7 @@ func TestPackBitmarkTransferDestroy(t *testing.T) {
 		bmt,
 	}
 	b, err := json.MarshalIndent(item, "", "  ")
-	if nil != err {
+	if err != nil {
 		t.Fatalf("json error: %s", err)
 	}
 
@@ -480,7 +479,7 @@ func TestPackBitmarkTransferWithZeroAccount(t *testing.T) {
 
 	var link merkle.Digest
 	err := merkleDigestFromLE("79a67be2b3d313bd490363fb0d27901c46ed53d3f7b21f60d48bc42439b06084", &link)
-	if nil != err {
+	if err != nil {
 		t.Fatalf("hex to link error: %s", err)
 	}
 
@@ -492,7 +491,7 @@ func TestPackBitmarkTransferWithZeroAccount(t *testing.T) {
 
 	// test the packer
 	_, err = r.Pack(ownerDeletedAccount)
-	if nil == err {
+	if err == nil {
 		t.Fatalf("pack should have failed")
 	}
 	if fault.InvalidOwnerOrRegistrant != err {

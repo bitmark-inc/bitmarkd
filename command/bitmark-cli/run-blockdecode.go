@@ -18,12 +18,12 @@ func runBlockDecode(c *cli.Context) error {
 	m := c.App.Metadata["config"].(*metadata)
 
 	packed := c.String("packed")
-	if "" == packed {
+	if packed == "" {
 		return fmt.Errorf("empty packed")
 	}
 
 	p64, err := base64.StdEncoding.DecodeString(packed)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -32,7 +32,7 @@ func runBlockDecode(c *cli.Context) error {
 	}
 
 	client, err := rpccalls.NewClient(m.testnet, m.config.Connections[m.connectionOffset], m.verbose, m.e)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	defer client.Close()
@@ -42,7 +42,7 @@ func runBlockDecode(c *cli.Context) error {
 	}
 
 	response, err := client.DecodeBlock(blockDecodeConfig)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

@@ -73,7 +73,7 @@ func TestFromVarint64(t *testing.T) {
 	// expect result:0  and count:0
 	for i, item := range varint64TruncatedTests {
 		result, count := util.FromVarint64(item)
-		if 0 != result || 0 != count {
+		if result != 0 || count != 0 {
 			t.Errorf("%d: FromVarint64(%x) -> %d, %d  expected: 0, 0", i, item, result, count)
 		}
 	}
@@ -113,7 +113,7 @@ func TestClippedVarint64(t *testing.T) {
 	for i, item := range testItems {
 		// incorrect range give error
 		result0, count0 := util.ClippedVarint64(item.encoded, item.maximum, item.minimum)
-		if 0 != result0 || 0 != count0 {
+		if result0 != 0 || count0 != 0 {
 			t.Errorf("%d: ClipVarint64(%x) -> %d  expected: 0			", i, item.encoded, result0)
 		}
 

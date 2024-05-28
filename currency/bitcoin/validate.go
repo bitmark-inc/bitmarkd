@@ -34,7 +34,7 @@ func ValidateAddress(address string) (Version, AddressBytes, error) {
 	addr := util.FromBase58(address)
 	addressBytes := AddressBytes{}
 
-	if 25 != len(addr) {
+	if len(addr) != 25 {
 		return vNull, addressBytes, fault.InvalidBitcoinAddress
 	}
 
