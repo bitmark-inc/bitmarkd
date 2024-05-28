@@ -225,8 +225,8 @@ func (r *receptor) Random(publicKey []byte) ([]byte, []byte, time.Time, error) {
 
 loop:
 	for tries := 1; tries <= 5; tries += 1 {
-		max := big.NewInt(int64(r.connectable.Count()))
-		num, err := rand.Int(rand.Reader, max)
+		bigCount := big.NewInt(int64(r.connectable.Count()))
+		num, err := rand.Int(rand.Reader, bigCount)
 		if err != nil {
 			continue loop
 		}

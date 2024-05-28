@@ -42,7 +42,7 @@ func runList(c *cli.Context) error {
 		jsonData := make([]item, len(names))
 
 		for i, name := range names {
-			jsonData[i].HasSecret = len(identities[name].Salt) > 0
+			jsonData[i].HasSecret = identities[name].Salt != ""
 			jsonData[i].Name = name
 			jsonData[i].Account = identities[name].Account
 			jsonData[i].Description = identities[name].Description
@@ -53,7 +53,7 @@ func runList(c *cli.Context) error {
 	} else {
 		for _, name := range names {
 			flag := "--"
-			if len(identities[name].Salt) > 0 {
+			if identities[name].Salt != "" {
 				flag = "SK"
 			}
 			fmt.Fprintf(m.w, "%s %-20s  %s  %q\n", flag, name, identities[name].Account, identities[name].Description)

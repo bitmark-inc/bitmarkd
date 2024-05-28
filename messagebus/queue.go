@@ -82,7 +82,7 @@ func init() {
 		queueSize := defaultQueueSize
 
 		// if size specified and valid positive integer override default
-		if len(sizeTag) > 0 {
+		if sizeTag != "" {
 			s, err := strconv.Atoi(sizeTag)
 			if err == nil && s > 0 {
 				queueSize = s

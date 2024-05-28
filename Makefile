@@ -70,6 +70,30 @@ vet:
 clean:
 	rm -rf bin
 
+.PHONY: get-gocritic
+get-gocritic:
+	go install -v github.com/go-critic/go-critic/cmd/gocritic@latest
+
+CR_DISABLED = paramTypeCombine
+CR_DISABLED += unnamedResult
+CR_DISABLED += unlabelStmt
+CR_DISABLED += commentFormatting
+CR_DISABLED += commentedOutCode
+CR_DISABLED += ifElseChain
+CR_DISABLED += sloppyTestFuncName
+CR_DISABLED += hugeParam
+
+CR_DISABLED += redundantSprint
+CR_DISABLED += commentedOutImport
+
+SP = ${EMPTY} ${EMPTY}
+CM = ${EMPTY},${EMPTY}
+DIS = $(subst ${SP},${CM},${CR_DISABLED})
+
+.PRONY: critic
+critic:
+	gocritic check -enableAll -enable='#opinionated' -disable="${DIS}" ./...
+
 
 # Makefile debugging
 
