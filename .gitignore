@@ -3,6 +3,12 @@
 *.dll
 *.so
 *.dylib
+bin/
+
+# local files
+local-*/
+vendor/
+port-tuple.mk
 
 # Test binary, build with `go test -c`
 *.test
