@@ -106,6 +106,13 @@ DIS = $(subst ${SP},${CM},${CR_DISABLED})
 critic:
 	gocritic check -enableAll -enable='#opinionated' -disable="${DIS}" ./...
 
+# display top level targets
+.PHONY: help
+help:
+	@$(foreach m, ${MAKEFILE_LIST},                          \
+	  printf 'toplevel targets from: %s\n' '${m}'          ; \
+	  awk '/^[.]PHONY/{ print "  " $$2 }' '${m}' | sort -u ; \
+	)
 
 # Makefile debugging
 
