@@ -1,0 +1,52 @@
+# simbm.conf  -*- mode: libucl -*-
+
+# "." is a special case - it uses the path from the configuration file
+# as the data directory.
+# all keys and logs are relative to this directory
+# unless the are overridden with absolute paths.
+#data_directory = "."
+data_directory = "/var/lib/simbm"
+
+# optional pid file if not absolute path then is created relative to
+# the data directory
+# pidfile = "simbm.pid"
+
+# select the chain of the network for peer connections
+# cross chain networking connects will not work
+#chain = bitmark
+#chain = testing
+chain = local
+
+# proofer listening ports
+proofer {
+
+  public_key = simbm-local.public
+  private_key = simbm-local.private
+
+  publish =  "127.0.0.1:3749"
+  submit =  "127.0.0.1:3750"
+}
+
+# logging configuration
+logging {
+  size = 1048576
+  count = 10
+
+  # set the logging level for various modules
+  # modules not overridden with get the value from "*"
+  # the default value for "*" is "critical"
+  levels {
+    "*" = info
+    # "*" = debug
+
+    # data
+    mode = info
+
+    # mining
+    submit = info
+    publish = info
+
+    # other
+    main = info
+  }
+}

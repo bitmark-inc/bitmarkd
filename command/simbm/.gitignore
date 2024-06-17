@@ -1,0 +1,5 @@
+# .gitignore
+
+just-testing/
+*.log
+*.conf
