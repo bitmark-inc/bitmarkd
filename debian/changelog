@@ -1,3 +1,11 @@
+bitmarkd (0.15.7-1ubuntu1) bionic; urgency=medium
+
+  * update dependencies
+  * preserve "lost" historic commands
+  * add FreeBSD tuple building to Makefile
+
+ -- Christopher Hall <hsw@bitmark.com>  Mon, 17 Jun 2024 03:00:12 +0000
+
 bitmarkd (0.15.6-1ubuntu1) bionic; urgency=medium
 
   * update dependencies
