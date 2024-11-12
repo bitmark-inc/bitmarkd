@@ -52,19 +52,6 @@ update-deps:
 	env GOPRIVATE='github.com/bitmark-inc/' go get -u ./...
 	go mod tidy
 
-PORT_TUPLE = port-tuple.mk
-
-# for FreeBSD ports
-.PHONY: tuple
-tuple:
-	rm -f "${PORT_TUPLE}"
-	rm -rf vendor/
-	go mod vendor
-	modules2tuple vendor/modules.txt > "${PORT_TUPLE}"
-	@printf '\n===> tuple data written to: %s\n\n' "${PORT_TUPLE}"
-	rm -r vendor/
-
-
 # TESTING
 
 .PHONY: test
