@@ -21,7 +21,7 @@ require (
 	github.com/yuin/gluamapper v0.0.0-20150323120927-d836955830e7
 	github.com/yuin/gopher-lua v1.1.1
 	golang.org/x/crypto v0.31.0
-	golang.org/x/sync v0.9.0
+	golang.org/x/sync v0.10.0
 	golang.org/x/time v0.8.0
 )
 
@@ -31,7 +31,7 @@ require (
 	github.com/btcsuite/btclog v0.0.0-20241017175713-3428138b75c7 // indirect
 	github.com/btcsuite/go-socks v0.0.0-20170105172521-4720035b7bfd // indirect
 	github.com/cihub/seelog v0.0.0-20170130134532-f561c5e57575 // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.6 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/decred/dcrd/crypto/blake256 v1.1.0 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
@@ -41,9 +41,9 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	golang.org/x/mod v0.22.0 // indirect
-	golang.org/x/net v0.31.0 // indirect
+	golang.org/x/net v0.33.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/term v0.27.0 // indirect
-	golang.org/x/tools v0.27.0 // indirect
+	golang.org/x/tools v0.28.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
