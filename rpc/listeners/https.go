@@ -37,6 +37,7 @@ type httpsListener struct {
 	listenIPAndPort []string
 	tlsConfig       *tls.Config
 	mux             *http.ServeMux
+	readOnly        bool
 }
 
 func (h httpsListener) Serve() error {
@@ -84,6 +85,7 @@ func NewHTTPS(
 	log *logger.L,
 	tlsConfig *tls.Config,
 	hdlr handler.Handler,
+	readOnly bool,
 ) (Listener, error) {
 	if len(configuration.Listen) == 0 {
 		log.Infof("disable: %s", httpsLogName)
@@ -99,6 +101,7 @@ func NewHTTPS(
 		log:             log,
 		listenIPAndPort: configuration.Listen,
 		tlsConfig:       tlsConfig,
+		readOnly:        readOnly,
 	}
 
 	// create access control and format strings to match http.Request.RemoteAddr

@@ -37,6 +37,7 @@ type Bitmarks struct {
 	Rsvr                  reservoir.Reservoir
 	PoolAssets            storage.Handle
 	PoolBlockOwnerPayment storage.Handle
+	ReadOnly              bool
 }
 
 // IssueStatus - results from an issue
@@ -50,7 +51,12 @@ type CreateArguments struct {
 	Issues []*transactionrecord.BitmarkIssue `json:"issues"`
 }
 
-func New(log *logger.L, pools reservoir.Handles, isNormalMode func(mode.Mode) bool, rsvr reservoir.Reservoir) *Bitmarks {
+func New(log *logger.L,
+	pools reservoir.Handles,
+	isNormalMode func(mode.Mode) bool,
+	rsvr reservoir.Reservoir,
+	readOnly bool,
+) *Bitmarks {
 	return &Bitmarks{
 		Log:                   log,
 		Limiter:               rate.NewLimiter(rateLimitBitmarks, rateBurstBitmarks),
@@ -58,6 +64,7 @@ func New(log *logger.L, pools reservoir.Handles, isNormalMode func(mode.Mode) bo
 		Rsvr:                  rsvr,
 		PoolAssets:            pools.Assets,
 		PoolBlockOwnerPayment: pools.BlockOwnerPayment,
+		ReadOnly:              readOnly,
 	}
 }
 
@@ -73,6 +80,10 @@ type CreateReply struct {
 
 // Create - create assets and issues
 func (bitmarks *Bitmarks) Create(arguments *CreateArguments, reply *CreateReply) error {
+
+	if bitmarks.ReadOnly {
+		return fault.NotAvailableInReadOnlyMode
+	}
 
 	log := bitmarks.Log
 	assetCount := len(arguments.Assets)
@@ -180,6 +191,9 @@ type ProofReply struct {
 func (bitmarks *Bitmarks) Proof(arguments *ProofArguments, reply *ProofReply) error {
 	if err := ratelimit.Limit(bitmarks.Limiter); err != nil {
 		return err
+	}
+	if bitmarks.ReadOnly {
+		return fault.NotAvailableInReadOnlyMode
 	}
 
 	log := bitmarks.Log

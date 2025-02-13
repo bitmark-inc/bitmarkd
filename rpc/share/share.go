@@ -34,14 +34,20 @@ type Share struct {
 	Limiter      *rate.Limiter
 	IsNormalMode func(mode.Mode) bool
 	Rsvr         reservoir.Reservoir
+	ReadOnly     bool
 }
 
-func New(log *logger.L, isNormalMode func(mode.Mode) bool, rsvr reservoir.Reservoir) *Share {
+func New(log *logger.L,
+	isNormalMode func(mode.Mode) bool,
+	rsvr reservoir.Reservoir,
+	readOnly bool,
+) *Share {
 	return &Share{
 		Log:          log,
 		Limiter:      rate.NewLimiter(rateLimitShare, rateBurstShare),
 		IsNormalMode: isNormalMode,
 		Rsvr:         rsvr,
+		ReadOnly:     readOnly,
 	}
 }
 
@@ -61,6 +67,9 @@ func (share *Share) Create(bmfr *transactionrecord.BitmarkShare, reply *CreateRe
 
 	if err := ratelimit.Limit(share.Limiter); err != nil {
 		return err
+	}
+	if share.ReadOnly {
+		return fault.NotAvailableInReadOnlyMode
 	}
 
 	log := share.Log
@@ -176,6 +185,9 @@ func (share *Share) Grant(arguments *transactionrecord.ShareGrant, reply *GrantR
 	if err := ratelimit.Limit(share.Limiter); err != nil {
 		return err
 	}
+	if share.ReadOnly {
+		return fault.NotAvailableInReadOnlyMode
+	}
 
 	log := share.Log
 
@@ -248,6 +260,9 @@ func (share *Share) Swap(arguments *transactionrecord.ShareSwap, reply *SwapRepl
 
 	if err := ratelimit.Limit(share.Limiter); err != nil {
 		return err
+	}
+	if share.ReadOnly {
+		return fault.NotAvailableInReadOnlyMode
 	}
 
 	log := share.Log

@@ -1,3 +1,21 @@
+bitmarkd (0.16.0-1ubuntu1) bionic; urgency=medium
+
+  * Add a read-only configuration item to reject any RPC
+    that modifies the block chain.  Otherwise the node
+    participates in the P2P network as normal and can
+    also proof blocks.
+
+  * Add a standalone configuration item that turns off P2P
+    communication.  The external or internal hasher can be
+    used to run the node as a single node blockchain server.
+
+  * If both read-only and standalone are set the node also
+    turns off payment, proof, and opens the DB in read-only
+    to act as a completely read-only server.  This allows
+    the node to be an archive of a specific Database Snapshot.
+
+ -- Christopher Hall <hsw@bitmark.com>  Thu, 13 Feb 2025 08:55:41 +0000
+
 bitmarkd (0.15.8-1ubuntu1) bionic; urgency=medium
 
   * update dependencies

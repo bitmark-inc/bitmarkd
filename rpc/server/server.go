@@ -27,7 +27,7 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-func Create(log *logger.L, version string, rpcCount *counter.Counter) *rpc.Server {
+func Create(log *logger.L, version string, rpcCount *counter.Counter, readOnly bool) *rpc.Server {
 
 	start := time.Now().UTC()
 	pools := reservoir.Handles{
@@ -43,14 +43,14 @@ func Create(log *logger.L, version string, rpcCount *counter.Counter) *rpc.Serve
 
 	server := rpc.NewServer()
 
-	_ = server.Register(assets.New(log, pools, mode.Is, mode.IsTesting))
-	_ = server.Register(bitmark.New(log, pools, mode.Is, mode.IsTesting, reservoir.Get()))
-	_ = server.Register(bitmarks.New(log, pools, mode.Is, reservoir.Get()))
-	_ = server.Register(owner.New(log, pools, ownership.Get()))
-	_ = server.Register(node.New(log, pools, start, version, rpcCount, announce.Get()))
-	_ = server.Register(transaction.New(log, start, reservoir.Get()))
-	_ = server.Register(blockowner.New(log, pools, mode.Is, mode.IsTesting, reservoir.Get(), blockrecord.Get()))
-	_ = server.Register(share.New(log, mode.Is, reservoir.Get()))
+	_ = server.Register(assets.New(log, pools, mode.Is, mode.IsTesting, readOnly))
+	_ = server.Register(bitmark.New(log, pools, mode.Is, mode.IsTesting, reservoir.Get(), readOnly))
+	_ = server.Register(bitmarks.New(log, pools, mode.Is, reservoir.Get(), readOnly))
+	_ = server.Register(owner.New(log, pools, ownership.Get(), readOnly))
+	_ = server.Register(node.New(log, pools, start, version, rpcCount, announce.Get(), readOnly))
+	_ = server.Register(transaction.New(log, start, reservoir.Get(), readOnly))
+	_ = server.Register(blockowner.New(log, pools, mode.Is, mode.IsTesting, reservoir.Get(), blockrecord.Get(), readOnly))
+	_ = server.Register(share.New(log, mode.Is, reservoir.Get(), readOnly))
 
 	return server
 }

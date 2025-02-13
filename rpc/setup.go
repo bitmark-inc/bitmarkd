@@ -35,7 +35,12 @@ type rpcData struct {
 var globalData rpcData
 
 // Initialise - setup peer background processes
-func Initialise(rpcConfiguration *listeners.RPCConfiguration, httpsConfiguration *listeners.HTTPSConfiguration, version string, ann announce.Announce) error {
+func Initialise(rpcConfiguration *listeners.RPCConfiguration,
+	httpsConfiguration *listeners.HTTPSConfiguration,
+	version string,
+	ann announce.Announce,
+	readOnly bool,
+) error {
 
 	globalData.Lock()
 	defer globalData.Unlock()
@@ -62,7 +67,7 @@ func Initialise(rpcConfiguration *listeners.RPCConfiguration, httpsConfiguration
 	log.Infof("rpc certificate: SHA3-256 fingerprint: %x", tlsFingerprint)
 
 	// servers
-	s := server.Create(globalData.log, version, &globalData.rpcCounter)
+	s := server.Create(globalData.log, version, &globalData.rpcCounter, readOnly)
 
 	rpcListener, err := listeners.NewRPC(
 		rpcConfiguration,
@@ -72,6 +77,7 @@ func Initialise(rpcConfiguration *listeners.RPCConfiguration, httpsConfiguration
 		ann,
 		tlsConfig,
 		tlsFingerprint,
+		readOnly,
 	)
 	if err != nil {
 		return err
@@ -99,6 +105,7 @@ func Initialise(rpcConfiguration *listeners.RPCConfiguration, httpsConfiguration
 		globalData.log,
 		tlsConfig,
 		hdlr,
+		readOnly,
 	)
 	if err != nil {
 		return err

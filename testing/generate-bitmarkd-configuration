@@ -48,6 +48,8 @@ usage: ${##*/0} [options] index-numbers...
        --console             -k            log to console
        --more                -m            more logging output
        --auto-verify         -a            make all payments optional and auto-verify all tx
+       --read-only           -R            set read-only mode
+       --standalone          -S            set standalone mode
        --update              -u            overwrite an existing configuration, does not change exiting keys
        --debug               -D            show debug information
 EOF
@@ -76,6 +78,8 @@ log_count=100
 log_console=false
 log_default=error
 auto_verify=false
+read_only=false
+standalone=false
 update=no
 
 
@@ -172,6 +176,14 @@ do
 
     (a|auto-verify)
       auto_verify=true
+      ;;
+
+    (R|read-only)
+      read_only=true
+      ;;
+
+    (S|standalone)
+      standalone=true
       ;;
 
     (m|more)
@@ -285,6 +297,8 @@ do
       -v connections="${connections}" \
       -v payment_mode="${payment_mode}" \
       -v auto_verify="${auto_verify}" \
+      -v read_only="${read_only}" \
+      -v standalone="${standalone}" \
       -v bitcoin_test="${bitcoin_test}" \
       -v bitcoin_live="${bitcoin_live}" \
       -v litecoin_test="${litecoin_test}" \
@@ -305,6 +319,18 @@ do
     # special logging detection
     /^M[.]logging/ {
       check_logging = 1
+    }
+
+    # detect read_only
+    /^M[.]read_only/ {
+      drop_this = 1
+      print "M.read_only = " read_only
+    }
+
+    # detect standalone
+    /^M[.]standalone/ {
+      drop_this = 1
+      print "M.standalone = " standalone
     }
 
     # special to detect proofing block

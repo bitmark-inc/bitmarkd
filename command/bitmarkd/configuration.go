@@ -77,6 +77,8 @@ type Configuration struct {
 	Fastsync      bool         `gluamapper:"fast_sync" json:"fast_sync"`
 	ProfileHTTP   string       `gluamapper:"profile_http" json:"profile_http"`
 	Database      DatabaseType `gluamapper:"database" json:"database"`
+	ReadOnly      bool         `gluamapper:"read_only" json:"read_only"`
+	Standalone    bool         `gluamapper:"standalone" json:"standalone"`
 
 	CacheDirectory string `gluamapper:"cache_directory" json:"cache_directory"`
 
@@ -106,6 +108,8 @@ func getConfiguration(configurationFileName string) (*Configuration, error) {
 		PidFile:        "", // no PidFile by default
 		Chain:          chain.Bitmark,
 		CacheDirectory: defaultBitmarkCacheDirectory,
+		ReadOnly:       false,
+		Standalone:     false,
 
 		Database: DatabaseType{
 			Directory: defaultLevelDBDirectory,

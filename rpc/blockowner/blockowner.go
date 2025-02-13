@@ -39,6 +39,7 @@ type BlockOwner struct {
 	IsNormalMode   func(mode.Mode) bool
 	IsTestingChain func() bool
 	Rsvr           reservoir.Reservoir
+	ReadOnly       bool
 }
 
 // TxIDForBlockArguments - get the id for a given block number
@@ -51,7 +52,14 @@ type TxIDForBlockReply struct {
 	TxId merkle.Digest `json:"txId"`
 }
 
-func New(log *logger.L, pools reservoir.Handles, isNormalMode func(mode.Mode) bool, isTestingChain func() bool, rsvr reservoir.Reservoir, br blockrecord.Record) *BlockOwner {
+func New(log *logger.L,
+	pools reservoir.Handles,
+	isNormalMode func(mode.Mode) bool,
+	isTestingChain func() bool,
+	rsvr reservoir.Reservoir,
+	br blockrecord.Record,
+	readOnly bool,
+) *BlockOwner {
 	return &BlockOwner{
 		Log:            log,
 		Limiter:        rate.NewLimiter(rateLimitBlockOwner, rateBurstBlockOwner),
@@ -60,6 +68,7 @@ func New(log *logger.L, pools reservoir.Handles, isNormalMode func(mode.Mode) bo
 		IsNormalMode:   isNormalMode,
 		IsTestingChain: isTestingChain,
 		Rsvr:           rsvr,
+		ReadOnly:       readOnly,
 	}
 }
 
@@ -111,6 +120,9 @@ func (bitmark *BlockOwner) Transfer(transfer *transactionrecord.BlockOwnerTransf
 
 	if err := ratelimit.Limit(bitmark.Limiter); err != nil {
 		return err
+	}
+	if bitmark.ReadOnly {
+		return fault.NotAvailableInReadOnlyMode
 	}
 
 	log := bitmark.Log
