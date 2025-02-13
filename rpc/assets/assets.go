@@ -24,6 +24,7 @@ type Assets struct {
 	Pool           storage.Handle
 	IsNormalMode   func(mode.Mode) bool
 	IsTestingChain func() bool
+	ReadOnly       bool
 }
 
 const (
@@ -43,13 +44,19 @@ type RegisterReply struct {
 	Assets []Status `json:"assets"`
 }
 
-func New(log *logger.L, pools reservoir.Handles, isNormalMode func(mode.Mode) bool, isTestingChain func() bool) *Assets {
+func New(log *logger.L,
+	pools reservoir.Handles,
+	isNormalMode func(mode.Mode) bool,
+	isTestingChain func() bool,
+	readOnly bool,
+) *Assets {
 	return &Assets{
 		Log:            log,
 		Limiter:        rate.NewLimiter(rateLimitAssets, rateBurstAssets),
 		Pool:           pools.Assets,
 		IsNormalMode:   isNormalMode,
 		IsTestingChain: isTestingChain,
+		ReadOnly:       readOnly,
 	}
 }
 

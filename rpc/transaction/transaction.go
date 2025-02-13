@@ -8,13 +8,12 @@ package transaction
 import (
 	"time"
 
-	"golang.org/x/time/rate"
-
 	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/reservoir"
 	"github.com/bitmark-inc/bitmarkd/rpc/ratelimit"
 	"github.com/bitmark-inc/logger"
+	"golang.org/x/time/rate"
 )
 
 const (
@@ -24,10 +23,11 @@ const (
 
 // Transaction - an RPC entry for transaction related functions
 type Transaction struct {
-	Log     *logger.L
-	Limiter *rate.Limiter
-	Start   time.Time
-	Rsvr    reservoir.Reservoir
+	Log      *logger.L
+	Limiter  *rate.Limiter
+	Start    time.Time
+	Rsvr     reservoir.Reservoir
+	ReadOnly bool
 }
 
 // Arguments - arguments for status RPC request
@@ -40,12 +40,17 @@ type StatusReply struct {
 	Status string `json:"status"`
 }
 
-func New(log *logger.L, start time.Time, rsvr reservoir.Reservoir) *Transaction {
+func New(log *logger.L,
+	start time.Time,
+	rsvr reservoir.Reservoir,
+	readOnly bool,
+) *Transaction {
 	return &Transaction{
-		Log:     log,
-		Limiter: rate.NewLimiter(rateLimitTransaction, rateBurstTransaction),
-		Start:   start,
-		Rsvr:    rsvr,
+		Log:      log,
+		Limiter:  rate.NewLimiter(rateLimitTransaction, rateBurstTransaction),
+		Start:    start,
+		Rsvr:     rsvr,
+		ReadOnly: readOnly,
 	}
 }
 

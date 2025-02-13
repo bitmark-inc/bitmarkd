@@ -137,6 +137,15 @@ M.nodes = nodes or "chain"
 -- the data directory
 M.cache_directory = M.chain .. "-cache"
 
+-- put the node into read-only mode
+-- all RPCs that would monify the blockchain are forbidden
+M.read_only = false
+
+-- put the node into standalone mode
+-- all peer communication is shut down
+-- and normal mode is set
+M.standalone = false
+
 -- fast sync mode introduces a new mechanism for initial synchronization
 -- that speeds up the bitmark node to get it ready operating.
 M.fast_sync = true

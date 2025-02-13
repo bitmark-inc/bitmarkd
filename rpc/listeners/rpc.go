@@ -34,6 +34,7 @@ type rpcListener struct {
 	tlsConfig       *tls.Config
 	ipType          []string
 	listenIPAndPort []string
+	readOnly        bool
 }
 
 func (r rpcListener) Serve() error {
@@ -93,6 +94,7 @@ func NewRPC(
 	ann announce.Announce,
 	tlsConfig *tls.Config,
 	certificateFingerprint [32]byte,
+	readOnly bool,
 ) (Listener, error) {
 	if configuration.MaximumConnections < minConnectionCount {
 		log.Errorf("invalid %s maximum connection limit: %d", logName, configuration.MaximumConnections)
@@ -110,6 +112,7 @@ func NewRPC(
 		server:          server,
 		count:           count,
 		tlsConfig:       tlsConfig,
+		readOnly:        readOnly,
 	}
 
 	if len(configuration.Listen) == 0 {

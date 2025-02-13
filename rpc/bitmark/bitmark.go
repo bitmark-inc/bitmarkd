@@ -40,6 +40,7 @@ type Bitmark struct {
 	PoolAssets       storage.Handle
 	PoolOwnerTxIndex storage.Handle
 	PoolOwnerData    storage.Handle
+	ReadOnly         bool
 }
 
 // TransferReply - result from transfer RPC
@@ -50,7 +51,13 @@ type TransferReply struct {
 	Payments  map[string]transactionrecord.PaymentAlternative `json:"payments"`
 }
 
-func New(log *logger.L, pools reservoir.Handles, isNormalMode func(mode.Mode) bool, isTestingChain func() bool, rsvr reservoir.Reservoir) *Bitmark {
+func New(log *logger.L,
+	pools reservoir.Handles,
+	isNormalMode func(mode.Mode) bool,
+	isTestingChain func() bool,
+	rsvr reservoir.Reservoir,
+	readOnly bool,
+) *Bitmark {
 	return &Bitmark{
 		Log:              log,
 		Limiter:          rate.NewLimiter(rateLimitBitmark, rateBurstBitmark),
@@ -61,6 +68,7 @@ func New(log *logger.L, pools reservoir.Handles, isNormalMode func(mode.Mode) bo
 		PoolAssets:       pools.Assets,
 		PoolOwnerTxIndex: pools.OwnerTxIndex,
 		PoolOwnerData:    pools.OwnerData,
+		ReadOnly:         readOnly,
 	}
 }
 
@@ -68,6 +76,9 @@ func New(log *logger.L, pools reservoir.Handles, isNormalMode func(mode.Mode) bo
 func (bitmark *Bitmark) Transfer(arguments *transactionrecord.BitmarkTransferCountersigned, reply *TransferReply) error {
 	if err := ratelimit.Limit(bitmark.Limiter); err != nil {
 		return err
+	}
+	if bitmark.ReadOnly {
+		return fault.NotAvailableInReadOnlyMode
 	}
 
 	log := bitmark.Log

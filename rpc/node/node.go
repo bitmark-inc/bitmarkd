@@ -41,6 +41,7 @@ type Node struct {
 	Announce announce.Announce
 	Pool     storage.Handle
 	counter  *counter.Counter
+	ReadOnly bool
 }
 
 // limit for count
@@ -60,7 +61,14 @@ type Reply struct {
 	NextStart uint64      `json:"nextStart,string"`
 }
 
-func New(log *logger.L, pools reservoir.Handles, start time.Time, version string, ctr *counter.Counter, ann announce.Announce) *Node {
+func New(log *logger.L,
+	pools reservoir.Handles,
+	start time.Time,
+	version string,
+	ctr *counter.Counter,
+	ann announce.Announce,
+	readOnly bool,
+) *Node {
 	return &Node{
 		Log:      log,
 		Limiter:  rate.NewLimiter(rateLimitNode, rateBurstNode),
@@ -69,6 +77,7 @@ func New(log *logger.L, pools reservoir.Handles, start time.Time, version string
 		Announce: ann,
 		Pool:     pools.Blocks,
 		counter:  ctr,
+		ReadOnly: readOnly,
 	}
 }
 

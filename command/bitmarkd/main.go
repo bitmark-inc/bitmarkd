@@ -145,6 +145,8 @@ func main() {
 	// general info
 	log.Infof("test mode: %v", mode.IsTesting())
 	log.Infof("database: %q", theConfiguration.Database)
+	log.Infof("read only: %t", theConfiguration.ReadOnly)
+	log.Infof("standalone: %t", theConfiguration.Standalone)
 
 	// connection info
 	log.Debugf("%s = %#v", "ClientRPC", theConfiguration.ClientRPC)
@@ -154,7 +156,15 @@ func main() {
 
 	// start the data storage
 	log.Info("initialise storage")
-	err = storage.Initialise(theConfiguration.Database.Name, storage.ReadWrite)
+	storageAccessMode := storage.ReadWrite
+	// If read-only and standalone then open databases in read-only mode
+	// since in this state nothing can change them.  However, if read-only
+	// without standalone, then P2P transactions should still be able to
+	// update the blockchain.
+	if theConfiguration.ReadOnly && theConfiguration.Standalone {
+		storageAccessMode = storage.ReadOnly
+	}
+	err = storage.Initialise(theConfiguration.Database.Name, storageAccessMode)
 	if err != nil {
 		log.Criticalf("storage initialise error: %s", err)
 		exitwithstatus.Message("storage initialise error: %s", err)
@@ -242,45 +252,50 @@ func main() {
 	}
 
 	// network announcements need to be before peer and rpc initialisation
-	log.Info("initialise announce")
-	nodesDomain := "" // initially none
-	switch theConfiguration.Nodes {
-	case "":
-		log.Critical("nodes cannot be blank choose from: none, chain or sub.domain.tld")
-		exitwithstatus.Message("nodes cannot be blank choose from: none, chain or sub.domain.tld")
-	case "none":
-		nodesDomain = "" // nodes disabled
-	case "chain":
-		switch cn := mode.ChainName(); cn { // ***** FIX THIS: is there a better way?
-		case chain.Local:
-			nodesDomain = "nodes.localdomain"
-		case chain.Testing:
-			nodesDomain = "nodes.test.bitmark.com"
-		case chain.Bitmark:
-			nodesDomain = "nodes.live.bitmark.com"
+	if !theConfiguration.Standalone || true {
+		log.Info("initialise announce")
+		nodesDomain := "" // initially none
+		switch theConfiguration.Nodes {
+		case "":
+			log.Critical("nodes cannot be blank choose from: none, chain or sub.domain.tld")
+			exitwithstatus.Message("nodes cannot be blank choose from: none, chain or sub.domain.tld")
+		case "none":
+			nodesDomain = "" // nodes disabled
+		case "chain":
+			switch cn := mode.ChainName(); cn { // ***** FIX THIS: is there a better way?
+			case chain.Local:
+				nodesDomain = "nodes.localdomain"
+			case chain.Testing:
+				nodesDomain = "nodes.test.bitmark.com"
+			case chain.Bitmark:
+				nodesDomain = "nodes.live.bitmark.com"
+			default:
+				log.Criticalf("unexpected chain name: %q", cn)
+				exitwithstatus.Message("unexpected chain name: %q", cn)
+			}
 		default:
-			log.Criticalf("unexpected chain name: %q", cn)
-			exitwithstatus.Message("unexpected chain name: %q", cn)
+			// domain names are complex to validate so just rely on
+			// trying to fetch the TXT records for validation
+			nodesDomain = theConfiguration.Nodes // just assume it is a domain name
 		}
-	default:
-		// domain names are complex to validate so just rely on
-		// trying to fetch the TXT records for validation
-		nodesDomain = theConfiguration.Nodes // just assume it is a domain name
+		err = announce.Initialise(nodesDomain, theConfiguration.CacheDirectory, net.LookupTXT)
+		if err != nil {
+			log.Criticalf("announce initialise error: %s", err)
+			exitwithstatus.Message("announce initialise error: %s", err)
+		}
+		defer announce.Finalise()
 	}
-	err = announce.Initialise(nodesDomain, theConfiguration.CacheDirectory, net.LookupTXT)
-	if err != nil {
-		log.Criticalf("announce initialise error: %s", err)
-		exitwithstatus.Message("announce initialise error: %s", err)
-	}
-	defer announce.Finalise()
 
 	// start payment services
-	err = payment.Initialise(&theConfiguration.Payment)
-	if err != nil {
-		log.Criticalf("payment initialise  error: %s", err)
-		exitwithstatus.Message("payment initialise error: %s", err)
+	if !(theConfiguration.Standalone && theConfiguration.ReadOnly) {
+		log.Info("initialise payment")
+		err = payment.Initialise(&theConfiguration.Payment)
+		if err != nil {
+			log.Criticalf("payment initialise  error: %s", err)
+			exitwithstatus.Message("payment initialise error: %s", err)
+		}
+		defer payment.Finalise()
 	}
-	defer payment.Finalise()
 
 	// initialise encryption
 	err = zmqutil.StartAuthentication()
@@ -290,23 +305,34 @@ func main() {
 	}
 
 	// start up the peering background processes
-	err = peer.Initialise(&theConfiguration.Peering, version, theConfiguration.Fastsync)
-	if err != nil {
-		log.Criticalf("peer initialise error: %s", err)
-		exitwithstatus.Message("peer initialise error: %s", err)
+	if !theConfiguration.Standalone {
+		log.Info("initialise peering")
+		err = peer.Initialise(&theConfiguration.Peering, version, theConfiguration.Fastsync)
+		if err != nil {
+			log.Criticalf("peer initialise error: %s", err)
+			exitwithstatus.Message("peer initialise error: %s", err)
+		}
+		defer peer.Finalise()
 	}
-	defer peer.Finalise()
 
 	// start up the publishing background processes
-	err = publish.Initialise(&theConfiguration.Publishing, version)
-	if err != nil {
-		log.Criticalf("publish initialise error: %s", err)
-		exitwithstatus.Message("publish initialise error: %s", err)
+	if !theConfiguration.Standalone {
+		err = publish.Initialise(&theConfiguration.Publishing, version)
+		if err != nil {
+			log.Criticalf("publish initialise error: %s", err)
+			exitwithstatus.Message("publish initialise error: %s", err)
+		}
+		defer publish.Finalise()
 	}
-	defer publish.Finalise()
 
 	// start up the rpc background processes
-	err = rpc.Initialise(&theConfiguration.ClientRPC, &theConfiguration.HttpsRPC, version, announce.Get())
+	err = rpc.Initialise(
+		&theConfiguration.ClientRPC,
+		&theConfiguration.HttpsRPC,
+		version,
+		announce.Get(),
+		theConfiguration.ReadOnly,
+	)
 	if err != nil {
 		log.Criticalf("rpc initialise error: %s", err)
 		exitwithstatus.Message("peer initialise error: %s", err)
@@ -314,16 +340,24 @@ func main() {
 	defer rpc.Finalise()
 
 	// start proof background processes
-	err = proof.Initialise(&theConfiguration.Proofing)
-	if err != nil {
-		log.Criticalf("proof initialise error: %s", err)
-		exitwithstatus.Message("proof initialise error: %s", err)
+	if !(theConfiguration.Standalone && theConfiguration.ReadOnly) {
+		log.Info("initialise proofing")
+		err = proof.Initialise(&theConfiguration.Proofing)
+		if err != nil {
+			log.Criticalf("proof initialise error: %s", err)
+			exitwithstatus.Message("proof initialise error: %s", err)
+		}
+		defer proof.Finalise()
 	}
-	defer proof.Finalise()
-
 	// if memory logging enabled
 	if len(options["memory-stats"]) > 0 {
 		go memstats()
+	}
+
+	// if standalone set as synced
+	if theConfiguration.Standalone {
+		log.Info("standalone: set mode normal")
+		mode.Set(mode.Normal)
 	}
 
 	// wait for CTRL-C before shutting down to allow manual testing

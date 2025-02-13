@@ -29,6 +29,7 @@ type Owner struct {
 	PoolTransactions storage.Handle
 	PoolAssets       storage.Handle
 	Ownership        ownership.Ownership
+	ReadOnly         bool
 }
 
 // Owner bitmarks
@@ -68,13 +69,18 @@ type BlockAsset struct {
 	Number uint64 `json:"number"`
 }
 
-func New(log *logger.L, pools reservoir.Handles, os ownership.Ownership) *Owner {
+func New(log *logger.L,
+	pools reservoir.Handles,
+	os ownership.Ownership,
+	readOnly bool,
+) *Owner {
 	return &Owner{
 		Log:              log,
 		Limiter:          rate.NewLimiter(rateLimitOwner, rateBurstOwner),
 		PoolTransactions: pools.Transactions,
 		PoolAssets:       pools.Assets,
 		Ownership:        os,
+		ReadOnly:         readOnly,
 	}
 }
 
